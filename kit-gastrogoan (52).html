@@ -313,6 +313,7 @@ td.wrap{white-space:normal}
     <div class="app-logo-icon" id="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
+  <span id="sync-badge" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap"></span>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
 </header>
 
@@ -825,13 +826,104 @@ td.wrap{white-space:normal}
 
 <div class="toast" id="toast"></div>
 
+<!-- Firebase: sincronización en la nube entre dispositivos -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
 <script>
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
-   App standalone — todos los datos en localStorage
+   App con sincronización en la nube (Firebase) y respaldo local
    ============================================================ */
 
 const DB_KEY = 'gastrogoan_data_v1';
+
+/* ============================================================
+   NUBE — Configuración de Firebase
+   Pega aquí la configuración de tu proyecto Firebase para activar
+   la sincronización entre dispositivos. Si se deja en null, la app
+   funciona solo en local (este navegador).
+
+   Ejemplo:
+   const FIREBASE_CONFIG = {
+     apiKey: "AIza...",
+     authDomain: "mi-restaurante.firebaseapp.com",
+     databaseURL: "https://mi-restaurante-default-rtdb.europe-west1.firebasedatabase.app",
+     projectId: "mi-restaurante",
+     storageBucket: "mi-restaurante.appspot.com",
+     messagingSenderId: "123456789",
+     appId: "1:123456789:web:abc123"
+   };
+   ============================================================ */
+const FIREBASE_CONFIG = null;
+
+let cloudRef = null;
+let lastSyncedJson = '';
+
+/* Rellena claves que falten en los datos remotos (Firebase no guarda arrays/objetos vacíos) */
+function withDefaults(def, data){
+  if(data === undefined || data === null) return def;
+  if(Array.isArray(def)) return Array.isArray(data) ? data : def;
+  if(typeof def === 'object' && def !== null && typeof data === 'object' && !Array.isArray(data)){
+    const out = {...data};
+    Object.keys(def).forEach(k => { out[k] = withDefaults(def[k], data[k]); });
+    return out;
+  }
+  return data;
+}
+
+function updateSyncBadge(state){
+  const el = document.getElementById('sync-badge');
+  if(!el) return;
+  if(state === 'local'){ el.style.display = 'none'; return; }
+  el.style.display = 'inline-block';
+  if(state === 'online'){ el.textContent = '☁ Nube conectada'; el.style.background = 'rgba(52,199,89,.2)'; el.style.color = '#7BE495'; }
+  else if(state === 'offline'){ el.textContent = '☁ Sin conexión'; el.style.background = 'rgba(255,204,0,.2)'; el.style.color = '#FFD60A'; }
+  else { el.textContent = '☁ Error de nube'; el.style.background = 'rgba(255,69,58,.2)'; el.style.color = '#FF6B61'; }
+}
+
+function refreshAfterRemoteChange(){
+  renderHeader();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) return; // no interrumpir al usuario mientras edita
+  const active = document.querySelector('.view.active');
+  if(active) renderView(active.id.replace('view-',''));
+}
+
+function initCloud(){
+  if(!FIREBASE_CONFIG){ updateSyncBadge('local'); return; }
+  if(typeof firebase === 'undefined'){ console.error('Firebase no disponible (¿sin internet?)'); updateSyncBadge('error'); return; }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    cloudRef = firebase.database().ref('gastrogoan/db');
+    cloudRef.on('value', snap => {
+      const val = snap.val();
+      if(val === null){
+        // Nube vacía: subir los datos locales como punto de partida
+        lastSyncedJson = JSON.stringify(DB);
+        cloudRef.set(JSON.parse(lastSyncedJson));
+        updateSyncBadge('online');
+        return;
+      }
+      const json = JSON.stringify(val);
+      updateSyncBadge('online');
+      if(json === lastSyncedJson) return; // cambio propio, ya aplicado
+      lastSyncedJson = json;
+      DB = withDefaults(defaultData(), val);
+      localStorage.setItem(DB_KEY, JSON.stringify(DB));
+      refreshAfterRemoteChange();
+    }, err => {
+      console.error('Error de sincronización', err);
+      updateSyncBadge('error');
+    });
+    firebase.database().ref('.info/connected').on('value', s => {
+      updateSyncBadge(s.val() ? 'online' : 'offline');
+    });
+  }catch(e){
+    console.error('Error iniciando la nube', e);
+    updateSyncBadge('error');
+  }
+}
 
 const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
@@ -906,12 +998,21 @@ function loadDB(){
 }
 
 function saveDB(){
-  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  const json = JSON.stringify(DB);
+  localStorage.setItem(DB_KEY, json);
+  if(cloudRef){
+    lastSyncedJson = json;
+    cloudRef.set(JSON.parse(json)).catch(e => {
+      console.error('Error guardando en la nube', e);
+      updateSyncBadge('error');
+    });
+  }
 }
 
 function genId(){
-  const id = DB.nextId || 1;
-  DB.nextId = id + 1;
+  // Id único incluso si varios dispositivos crean datos a la vez
+  const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+  DB.nextId = Math.max(DB.nextId || 1, id + 1);
   return id;
 }
 
@@ -2649,6 +2750,7 @@ function renderTableOrderModal(orderId){
   `).join('');
 
   const total = orderTotal(order);
+  const pendingCount = orderPendingKitchenLines(order).reduce((s,l)=>s+l.qty, 0);
 
   openModal(`
     <div class="modal-header">
@@ -2670,10 +2772,44 @@ function renderTableOrderModal(orderId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
+      <button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id})" ${!pendingCount?'disabled':''}><i class="ti ti-chef-hat"></i> Marchar a cocina${pendingCount?` (${pendingCount})`:''}</button>
       <button class="btn" onclick="printBill(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-receipt"></i> Cuenta</button>
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
+}
+
+function orderPendingKitchenLines(order){
+  return (order.items||[])
+    .map(l => ({name: l.name, qty: l.qty - (l.marchada||0), notas: l.notas||''}))
+    .filter(l => l.qty > 0);
+}
+
+function marcharComanda(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const pending = orderPendingKitchenLines(order);
+  if(!pending.length){ showToast('No hay platos nuevos que marchar'); return; }
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  const hora = new Date().toTimeString().slice(0,5);
+  const lines = pending.map(l => `${fmtNum(l.qty)} x ${l.name}`).join('\n');
+
+  const win = window.open('', '_blank', 'width=320,height=520');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Comanda Cocina</title></head><body style="font-family:monospace;padding:16px;font-size:14px;white-space:pre-wrap;font-weight:bold">
+*** COCINA ***
+${table ? escapeHtml(table.name) + (order.pax?` · ${order.pax} pers.`:'') : (order.tipo==='delivery'?'DELIVERY':'TAKE AWAY')}${order.clienteNombre?' - '+escapeHtml(order.clienteNombre):''}
+Hora: ${hora}
+------------------------------
+${escapeHtml(lines)}
+------------------------------
+</body></html>`);
+  win.document.close();
+  win.print();
+
+  (order.items||[]).forEach(l => { l.marchada = l.qty; });
+  saveDB();
+  renderTableOrderModal(order.id);
+  showToast('Comanda marchada a cocina');
 }
 
 function printBill(orderId){
@@ -5584,6 +5720,7 @@ function goManualChapter(i){
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
   renderHeader();
+  initCloud();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
