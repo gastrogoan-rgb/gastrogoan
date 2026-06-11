@@ -197,6 +197,9 @@ td.wrap{white-space:normal}
 .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
 .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 
+.cat-heading{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal-d);background:var(--teal-l);padding:8px 14px;border-radius:8px;margin:18px 0 10px}
+.cat-heading:first-child{margin-top:0}
+
 /* Empty state */
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty i{font-size:32px;display:block;margin-bottom:10px;color:var(--border)}
@@ -435,11 +438,14 @@ td.wrap{white-space:normal}
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="escandallo-search" placeholder="Buscar plato..." oninput="renderEscandallo()">
+          <select id="escandallo-filter-cat" onchange="renderEscandallo()">
+            <option value="">Todas las categorías</option>
+          </select>
         </div>
         <button class="btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
       </div>
 
-      <div class="grid grid-2" id="escandallo-list"></div>
+      <div id="escandallo-list"></div>
     </section>
 
     <!-- ========== FICHAS TÉCNICAS ========== -->
@@ -448,8 +454,11 @@ td.wrap{white-space:normal}
       <div class="view-title">Fichas Técnicas</div>
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
       <div class="toolbar">
-        <div class="left"></div>
-        <button class="btn btn-primary" onclick="openFichaModal()"><i class="ti ti-plus"></i> Nueva Ficha</button>
+        <div class="left">
+          <select id="fichas-filter-cat" onchange="renderFichas()">
+            <option value="">Todas las categorías</option>
+          </select>
+        </div>
       </div>
       <div id="fichas-list"></div>
     </section>
@@ -832,6 +841,7 @@ function defaultData(){
   return {
     ingredients: [],
     recipes: [],
+    recipeCategories: [], // user-defined categories for Escandallo/Carta/Fichas
     fichas: [],
     menuItems: [],
     cartas: [],          // {id, nombre, tipo, desde, hasta, dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
@@ -1602,9 +1612,43 @@ function recipeCostBreakdown(r){
 function recipeCost(r){
   return recipeCostBreakdown(r).total;
 }
+function populateRecipeCategoryFilter(selectId){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+    DB.recipeCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+    '<option value="__none__">Sin categoría</option>';
+  sel.value = current;
+}
+
+function groupRecipesByCategory(recipes){
+  const groups = {};
+  recipes.forEach(r => {
+    const cat = r.category || '';
+    if(!groups[cat]) groups[cat] = [];
+    groups[cat].push(r);
+  });
+  const ordered = [];
+  DB.recipeCategories.forEach(cat => {
+    if(groups[cat]) ordered.push([cat, groups[cat]]);
+  });
+  Object.keys(groups).forEach(cat => {
+    if(cat && !DB.recipeCategories.includes(cat)) ordered.push([cat, groups[cat]]);
+  });
+  if(groups['']) ordered.push(['Sin categoría', groups['']]);
+  return ordered;
+}
+
 function renderEscandallo(){
+  populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
-  const recipes = DB.recipes.filter(r => !search || r.name.toLowerCase().includes(search));
+  const cat = document.getElementById('escandallo-filter-cat').value;
+  const recipes = DB.recipes.filter(r => {
+    const matchSearch = !search || r.name.toLowerCase().includes(search);
+    const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
+    return matchSearch && matchCat;
+  });
   const box = document.getElementById('escandallo-list');
 
   if(!DB.recipes.length){
@@ -1616,7 +1660,13 @@ function renderEscandallo(){
     return;
   }
 
-  box.innerHTML = recipes.map(r => {
+  box.innerHTML = groupRecipesByCategory(recipes).map(([catName, group]) => `
+    <h3 class="cat-heading">${escapeHtml(catName)}</h3>
+    <div class="grid grid-2">${group.map(r => renderEscandalloCard(r)).join('')}</div>
+  `).join('');
+}
+
+function renderEscandalloCard(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
@@ -1661,7 +1711,6 @@ function renderEscandallo(){
         </div>
       </div>
     `;
-  }).join('');
 }
 
 let recipeModalLines = [];
@@ -1715,6 +1764,14 @@ function renderRecipeModal(id, r){
         <label>Consumibles (%)</label>
         <input type="number" id="recipe-consumibles" value="${r.consumiblesPct!=null?r.consumiblesPct:5}" step="0.5" min="0" max="99" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
       </div>
+      <div class="field">
+        <label>Categoría</label>
+        <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
+          <option value="">Sin categoría</option>
+          ${DB.recipeCategories.map(c=>`<option value="${escapeHtml(c)}" ${(r.category||'')===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+          <option value="__new__">+ Nueva categoría...</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
@@ -1738,15 +1795,6 @@ function renderRecipeModal(id, r){
         </div>
       </div>
       ` : `<p style="font-size:13px;color:var(--muted)">Añade primero ingredientes en la Mega Lista.</p>`}
-    </div>
-
-    <div class="field">
-      <label>Modo de elaboración</label>
-      <textarea id="recipe-steps" placeholder="Pasos de elaboración...">${escapeHtml(r.steps||'')}</textarea>
-    </div>
-    <div class="field">
-      <label>Presentación / emplatado</label>
-      <textarea id="recipe-presentation" placeholder="Notas de presentación...">${escapeHtml(r.presentation||'')}</textarea>
     </div>
 
     <div class="grid grid-3" style="margin-bottom:10px">
@@ -1785,21 +1833,34 @@ function removeRecipeLine(idx, id){
   recipeModalLines.splice(idx,1);
   renderRecipeModal(id, currentRecipeFormState(id));
 }
+function onRecipeCategoryChange(id){
+  const sel = document.getElementById('recipe-category');
+  if(sel.value === '__new__'){
+    const name = prompt('Nombre de la nueva categoría');
+    const state = currentRecipeFormState(id);
+    if(name && name.trim()){
+      const cat = name.trim();
+      if(!DB.recipeCategories.includes(cat)) DB.recipeCategories.push(cat);
+      state.category = cat;
+    } else {
+      state.category = '';
+    }
+    renderRecipeModal(id, state);
+  }
+}
 function currentRecipeFormState(id){
   const nameEl = document.getElementById('recipe-name');
   const priceEl = document.getElementById('recipe-price');
   const comensalesEl = document.getElementById('recipe-comensales');
   const consumiblesEl = document.getElementById('recipe-consumibles');
-  const stepsEl = document.getElementById('recipe-steps');
-  const presEl = document.getElementById('recipe-presentation');
+  const categoryEl = document.getElementById('recipe-category');
   const r = id ? getRecipe(id) : {};
   return {
     name: nameEl ? nameEl.value : (r.name||''),
     price: priceEl ? priceEl.value : (r.price||0),
     comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
     consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
-    steps: stepsEl ? stepsEl.value : (r.steps||''),
-    presentation: presEl ? presEl.value : (r.presentation||''),
+    category: categoryEl ? categoryEl.value : (r.category||''),
   };
 }
 
@@ -1809,8 +1870,8 @@ function saveRecipe(id){
   const price = parseFloat(document.getElementById('recipe-price').value) || 0;
   const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
   const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
-  const steps = document.getElementById('recipe-steps').value.trim();
-  const presentation = document.getElementById('recipe-presentation').value.trim();
+  const categoryEl = document.getElementById('recipe-category');
+  const category = categoryEl ? categoryEl.value : '';
   const ingredients = recipeModalLines.map(l => ({...l}));
 
   // Alérgenos derivados de los ingredientes
@@ -1822,9 +1883,9 @@ function saveRecipe(id){
 
   if(id){
     const r = getRecipe(id);
-    Object.assign(r, {name, price, comensales, consumiblesPct, steps, presentation, ingredients, allergens:[...allergenSet]});
+    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet]});
   }else{
-    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, steps, presentation, ingredients, allergens:[...allergenSet]});
+    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet]});
   }
   saveDB();
   closeModal();
@@ -1856,71 +1917,63 @@ let fichaModalState = null;
 function getFicha(id){ return DB.fichas.find(f => f.id === id); }
 
 function renderFichas(){
+  populateRecipeCategoryFilter('fichas-filter-cat');
+  const cat = document.getElementById('fichas-filter-cat').value;
+  const recipes = DB.recipes.filter(r => {
+    return !cat || (cat==='__none__' ? !r.category : r.category===cat);
+  });
   const box = document.getElementById('fichas-list');
   let html = '';
 
-  const linkedIds = new Set(DB.fichas.map(f => f.recipeId).filter(Boolean));
-  const pending = DB.recipes.filter(r => !linkedIds.has(r.id));
-  if(pending.length){
-    html += `
-      <div class="card" style="margin-bottom:16px">
-        <h3><i class="ti ti-link"></i> Platos del Escandallo sin ficha técnica</h3>
-        <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Haz clic en un plato para crear su ficha técnica con los ingredientes y gramajes ya cargados.</p>
-        <div class="grid grid-3">
-          ${pending.map(r => `
-            <div class="card" style="cursor:pointer;margin-bottom:0" onclick="openFichaModal(null, ${r.id})">
-              <strong>${escapeHtml(r.name)}</strong>
-              <div style="font-size:12px;color:var(--brand-orange);margin-top:4px">Crear ficha <i class="ti ti-arrow-right"></i></div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  if(!DB.fichas.length){
-    html += `<div class="empty"><i class="ti ti-file-description"></i>No hay fichas técnicas creadas.</div>`;
-    box.innerHTML = html;
+  if(!DB.recipes.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos. Crea primero un escandallo.</div>`;
     return;
   }
 
-  html += `<div class="grid grid-2">` + DB.fichas.map(f => {
-    const ingredientsHtml = (f.ingredients||[]).filter(Boolean).map(i => `<li>${escapeHtml(i)}</li>`).join('');
-    const stepsHtml = (f.pasos||[]).filter(Boolean).map((p,i) => `<li>${escapeHtml(p)}</li>`).join('');
-    return `
-      <div class="card">
-        <h3 style="justify-content:space-between">
-          <span><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span>
-          ${f.recipeId ? '<span class="badge badge-green">Vinculada</span>' : ''}
-        </h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-          ${f.comensales ? `👥 ${f.comensales} comensal${f.comensales!==1?'es':''}` : ''}
-          ${f.tiempo ? ` · ⏱ ${escapeHtml(String(f.tiempo))} min` : ''}
-          ${f.temp ? ` · ${escapeHtml(f.temp)}` : ''}
-        </div>
+  if(!recipes.length){
+    html += `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+  } else {
+    html += groupRecipesByCategory(recipes).map(([catName, group]) => `
+      <h3 class="cat-heading">${escapeHtml(catName)}</h3>
+      <div class="grid grid-2">${group.map(r => renderFichaCard(r)).join('')}</div>
+    `).join('');
+  }
 
-        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Ingredientes</p>
-        <ul style="margin:0 0 12px 18px;font-size:13.5px;line-height:1.7">${ingredientsHtml || '<li>Sin ingredientes</li>'}</ul>
-
-        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Modo de elaboración</p>
-        <ol style="margin:0 0 12px 18px;font-size:13.5px;line-height:1.7">${stepsHtml || '<li><em>Sin especificar</em></li>'}</ol>
-
-        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Presentación</p>
-        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(f.presentation) || '<em>Sin especificar</em>'}</p>
-
-        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Alérgenos</p>
-        <div style="margin-bottom:12px">${(f.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '<span class="badge badge-gray">Ninguno</span>'}</div>
-
+  const orphanFichas = DB.fichas.filter(f => !f.recipeId || !getRecipe(f.recipeId));
+  if(orphanFichas.length){
+    html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="grid grid-2">` + orphanFichas.map(f => `
+      <div class="card" style="cursor:pointer" onclick="openFichaModal(${f.id})">
+        <h3 style="justify-content:space-between"><span><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="openFichaModal(${f.id})"><i class="ti ti-edit"></i> Editar</button>
-          <button class="btn btn-sm" onclick="printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
       </div>
-    `;
-  }).join('') + `</div>`;
+    `).join('') + `</div>`;
+  }
 
   box.innerHTML = html;
+}
+
+function renderFichaCard(r){
+  const ficha = DB.fichas.find(f => f.recipeId === r.id);
+  return `
+    <div class="card" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
+      <h3 style="justify-content:space-between">
+        <span><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
+        ${ficha ? '<span class="badge badge-green">Vinculada</span>' : '<span class="badge badge-amber">Sin ficha</span>'}
+      </h3>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        ${ficha ? 'Haz clic para ver o editar la ficha técnica.' : 'Haz clic para crear la ficha técnica de este plato.'}
+      </div>
+      ${ficha ? `
+        <div class="actions-cell">
+          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> Imprimir</button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> Eliminar ficha</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 function openFichaModal(id, recipeId){
