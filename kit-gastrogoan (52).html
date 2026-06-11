@@ -826,7 +826,7 @@ function defaultData(){
     employees: [],       // {id, name, rol, color}
     shifts: {},          // { employeeId: ['','','','','','',''] }
     turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
-    workDistribution: {}, // { employeeId: ['','','','','','',''] }
+    workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
     cleaningTasks: [],
     limpieza: {
       manosPasos: ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'],
@@ -4196,9 +4196,47 @@ function deleteMantenimientoEquipo(id){
 }
 
 /* ============================================================
-   DISTRIBUCIÓN DEL TRABAJO — Tareas por empleado y turno
+   DISTRIBUCIÓN DEL TRABAJO — Master-detail por empleado
    ============================================================ */
+let distCurrentEmployeeId = null;
+
+function migrateWorkDistribution(){
+  DB.workDistribution = DB.workDistribution || {};
+  Object.keys(DB.workDistribution).forEach(empId => {
+    const val = DB.workDistribution[empId];
+    if(Array.isArray(val)){
+      const produccion = {};
+      val.forEach((txt, idx) => {
+        if(txt && txt.trim()) produccion[idx] = [txt.trim()];
+      });
+      DB.workDistribution[empId] = { platos: [], produccion };
+    } else if(val && !val.produccion){
+      DB.workDistribution[empId] = { platos: val.platos || [], produccion: val.produccion || {} };
+    }
+  });
+}
+
+function getDistEmpData(empId){
+  if(!DB.workDistribution[empId]) DB.workDistribution[empId] = { platos: [], produccion: {} };
+  const d = DB.workDistribution[empId];
+  if(!d.platos) d.platos = [];
+  if(!d.produccion) d.produccion = {};
+  return d;
+}
+
+function getAllDishNames(){
+  const names = new Set();
+  DB.recipes.forEach(r => { if(r.name) names.add(r.name); });
+  DB.cartas.forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      (sec.platos||[]).forEach(p => { if(p.nombre) names.add(p.nombre); });
+    });
+  });
+  return [...names].sort((a,b)=>a.localeCompare(b));
+}
+
 function renderDistribucion(){
+  migrateWorkDistribution();
   const box = document.getElementById('distribucion-content');
 
   if(!DB.employees.length){
@@ -4209,32 +4247,206 @@ function renderDistribucion(){
     return;
   }
 
-  const headerCells = WEEK_DAYS.map(d=>`<th>${d}</th>`).join('');
-  const rows = DB.employees.map(emp => {
-    const tasks = DB.workDistribution[emp.id] || ['','','','','','',''];
-    const cells = tasks.map((val, idx) => `
-      <td><input type="text" value="${escapeHtml(val)}" placeholder="—" style="width:130px;padding:5px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateWorkDistribution(${emp.id}, ${idx}, this.value)"></td>
-    `).join('');
-    return `<tr><td><strong>${escapeHtml(emp.name)}</strong></td>${cells}</tr>`;
+  if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId)){
+    renderDistDetail();
+  } else {
+    distCurrentEmployeeId = null;
+    renderDistList();
+  }
+}
+
+function renderDistList(){
+  const box = document.getElementById('distribucion-content');
+  const cards = DB.employees.map(emp => {
+    const d = getDistEmpData(emp.id);
+    const nPlatos = d.platos.length;
+    const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
+    return `
+      <div class="card" style="cursor:pointer" onclick="openDistEmployee(${emp.id})">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+          <strong>${escapeHtml(emp.name)}</strong>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||'Sin rol')}</div>
+        <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
+          <span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos} plato${nPlatos!==1?'s':''}</span>
+          <span><i class="ti ti-clipboard-list"></i> ${nTareas} tarea${nTareas!==1?'s':''}</span>
+        </div>
+      </div>
+    `;
   }).join('');
 
   box.innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Empleado</th>${headerCells}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px">Indica la tarea o responsabilidad de cada empleado para cada día (ej. "Cocina caliente", "Recepción de pedidos", "Limpieza cámaras"). Los empleados se gestionan desde Horario del Personal.</p>
+    <div class="toolbar"><div class="left"></div><button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> Imprimir todo</button></div>
+    <div class="grid grid-3">${cards}</div>
   `;
 }
+
+function openDistEmployee(id){
+  distCurrentEmployeeId = id;
+  renderDistribucion();
+}
+
+function backToDistList(){
+  distCurrentEmployeeId = null;
+  renderDistribucion();
+}
+
+function renderDistDetail(){
+  const box = document.getElementById('distribucion-content');
+  const emp = DB.employees.find(e=>e.id===distCurrentEmployeeId);
+  if(!emp){ backToDistList(); return; }
+  const d = getDistEmpData(emp.id);
+  const allDishes = getAllDishNames();
+
+  const platosHtml = d.platos.length
+    ? d.platos.map((pl,i)=>`
+        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+          <span>${escapeHtml(pl)}</span>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+        </div>
+      `).join('')
+    : '<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>Sin platos asignados</div>';
+
+  const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
+    .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
+
+  const diasHtml = WEEK_DAYS.map((label, idx) => {
+    const tareas = d.produccion[idx] || [];
+    const tareasHtml = tareas.map((t,i)=>`
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input type="text" value="${escapeHtml(t)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updateDistTarea(${idx},${i},this.value)">
+        <button class="btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
+      </div>
+    `).join('');
+    return `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label}</div>
+        ${tareasHtml}
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <input type="text" id="dist-tarea-${idx}" placeholder="Nueva tarea..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
+          <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm btn-default" onclick="backToDistList()"><i class="ti ti-arrow-left"></i> Equipo</button>
+        <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
+        <strong>${escapeHtml(emp.name)}</strong>
+        <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
+      </div>
+      <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> Imprimir</button>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="kpi"><div class="label">Platos a su cargo</div><div class="value">${d.platos.length}</div></div>
+      <div class="kpi"><div class="label">Tareas de producción</div><div class="value">${nTareas}</div></div>
+    </div>
+
+    <div class="card">
+      <h3><i class="ti ti-tools-kitchen-2"></i> Platos a su cargo</h3>
+      ${platosHtml}
+      <div class="field-row" style="margin-top:8px">
+        <select id="dist-plato-sel" style="flex:1">
+          <option value="">— Selecciona plato —</option>
+          ${platosOptions}
+        </select>
+        <button class="btn btn-default" onclick="addDistPlato()">Asignar</button>
+      </div>
+      <div class="field-row" style="margin-top:6px">
+        <input type="text" id="dist-plato-manual" placeholder="O escribe un plato manualmente..." style="flex:1" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
+        <button class="btn btn-default" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> Añadir</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="ti ti-clipboard-list"></i> Plan de producción semanal</h3>
+      ${diasHtml}
+    </div>
+  `;
+}
+
 function addEmployeeFromDistribucion(){
   openEmployeeModal();
 }
-function updateWorkDistribution(employeeId, dayIdx, value){
-  if(!DB.workDistribution[employeeId]) DB.workDistribution[employeeId] = ['','','','','','',''];
-  DB.workDistribution[employeeId][dayIdx] = value;
+
+function addDistPlato(){
+  const sel = document.getElementById('dist-plato-sel');
+  const nombre = sel.value;
+  if(!nombre) return;
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(!d.platos.includes(nombre)) d.platos.push(nombre);
   saveDB();
+  renderDistDetail();
+}
+
+function addDistPlatoManual(){
+  const inp = document.getElementById('dist-plato-manual');
+  const nombre = inp.value.trim();
+  if(!nombre) return;
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(!d.platos.includes(nombre)) d.platos.push(nombre);
+  saveDB();
+  renderDistDetail();
+}
+
+function removeDistPlato(idx){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  d.platos.splice(idx,1);
+  saveDB();
+  renderDistDetail();
+}
+
+function addDistTarea(dayIdx){
+  const inp = document.getElementById('dist-tarea-'+dayIdx);
+  const val = inp.value.trim();
+  if(!val) return;
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
+  d.produccion[dayIdx].push(val);
+  saveDB();
+  renderDistDetail();
+}
+
+function updateDistTarea(dayIdx, idx, val){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(d.produccion[dayIdx]) d.produccion[dayIdx][idx] = val;
+  saveDB();
+}
+
+function removeDistTarea(dayIdx, idx){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(d.produccion[dayIdx]){
+    d.produccion[dayIdx].splice(idx,1);
+    saveDB();
+    renderDistDetail();
+  }
+}
+
+function printDistribucion(empId){
+  migrateWorkDistribution();
+  const targets = empId ? DB.employees.filter(e=>e.id===empId) : DB.employees;
+  let html = `<h2 style="margin:0 0 16px">Distribución del trabajo</h2>`;
+  targets.forEach(emp => {
+    const d = getDistEmpData(emp.id);
+    html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
+      <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
+    if(d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
+    WEEK_DAYS.forEach((label, idx) => {
+      const t = d.produccion[idx] || [];
+      if(t.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${t.map(escapeHtml).join(' · ')}</div>`;
+    });
+    html += `</div>`;
+  });
+  const w = window.open('', '_blank', 'width=620,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Distribución del trabajo</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
 }
 
 /* ============================================================
