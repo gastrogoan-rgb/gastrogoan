@@ -217,6 +217,9 @@ td.wrap{white-space:normal}
 .ge-tab-panel{display:none}
 .ge-tab-panel.active{display:block}
 
+.dia-pill{padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
+.dia-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);font-weight:700}
+
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
 .ge-sec-head h4{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
@@ -319,17 +322,39 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Panel de Control</div>
       <div class="view-subtitle">Resumen general de tu negocio</div>
+
+      <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
       <div class="grid grid-4" id="dashboard-kpis"></div>
+
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
+        <div id="dashboard-resultado"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-trending-up"></i> Ventas últimos 12 meses</h3>
+        <div id="dashboard-trend"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-scale"></i> Punto de equilibrio</h3>
+        <div id="dashboard-breakeven"></div>
+      </div>
 
       <div class="grid grid-2" style="margin-top:16px">
         <div class="card">
-          <h3><i class="ti ti-alert-triangle"></i> Alertas de Stock</h3>
-          <div id="dashboard-stock-alerts"></div>
+          <h3><i class="ti ti-alert-triangle"></i> Alertas</h3>
+          <div id="dashboard-alerts"></div>
         </div>
         <div class="card">
-          <h3><i class="ti ti-clock-alert"></i> Pedidos Pendientes</h3>
-          <div id="dashboard-pending-orders"></div>
+          <h3><i class="ti ti-calendar-event"></i> Próximas Reservas</h3>
+          <div id="dashboard-reservas"></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-bolt"></i> Acceso Rápido</h3>
+        <div class="grid grid-4" id="dashboard-shortcuts"></div>
       </div>
     </section>
 
@@ -410,26 +435,59 @@ td.wrap{white-space:normal}
       <div id="fichas-list"></div>
     </section>
 
-    <!-- ========== CARTA DIGITAL ========== -->
+    <!-- ========== CARTA ========== -->
     <section class="view" id="view-carta">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
-      <div class="view-title">Carta Digital</div>
-      <div class="view-subtitle">Menús por horario y disponibilidad</div>
+      <div class="view-title">Carta</div>
+      <div class="view-subtitle">Gestiona tus menús y cartas · Vincula con Escandallo</div>
 
-      <div class="toolbar">
-        <div class="left">
-          <select id="carta-filter-schedule" onchange="renderCarta()">
-            <option value="">Todos los horarios</option>
-            <option value="desayuno">Desayuno</option>
-            <option value="almuerzo">Almuerzo</option>
-            <option value="cena">Cena</option>
-            <option value="todo-dia">Todo el día</option>
-          </select>
+      <!-- LIST VIEW -->
+      <div id="carta-list-view">
+        <div class="toolbar">
+          <div class="left"></div>
+          <button class="btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
         </div>
-        <button class="btn btn-primary" onclick="openMenuItemModal()"><i class="ti ti-plus"></i> Añadir a la Carta</button>
+        <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
+        <div id="carta-list"></div>
       </div>
 
-      <div id="carta-list"></div>
+      <!-- EDITOR VIEW -->
+      <div id="carta-editor-view" style="display:none">
+        <div class="toolbar">
+          <div class="left">
+            <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> Cartas</button>
+            <input type="text" id="carta-f-nombre" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
+          </div>
+          <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> Guardar</button>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Tipo de carta</label>
+            <input type="text" id="carta-f-tipo" list="carta-tipos-list" placeholder="Ej. MEDIODÍA, NOCHE...">
+            <datalist id="carta-tipos-list">
+              <option>MEDIODÍA</option><option>NOCHE</option><option>FIN DE SEMANA</option><option>DEGUSTACIÓN</option><option>TEMPORADA</option><option>GENERAL</option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label>Hora inicio</label>
+            <input type="time" id="carta-f-desde">
+          </div>
+          <div class="field">
+            <label>Hora fin</label>
+            <input type="time" id="carta-f-hasta">
+          </div>
+        </div>
+        <div class="field">
+          <label>Días activos</label>
+          <div id="carta-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        </div>
+        <div class="toolbar">
+          <div class="left"></div>
+          <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> Importar del Escandallo</button>
+          <button class="btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
+        </div>
+        <div id="carta-secciones"></div>
+      </div>
     </section>
 
     <!-- ========== TPV ========== -->
@@ -754,6 +812,8 @@ function defaultData(){
     recipes: [],
     fichas: [],
     menuItems: [],
+    cartas: [],          // {id, nombre, tipo, desde, hasta, dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
+    activeCartaId: null,
     stock: {},          // { ingredientId: { qty, min } }
     purchaseOrders: [],
     providers: [],        // {id, nombre, tel, email, contacto, pago, dir, iban, notas}
@@ -972,10 +1032,25 @@ document.getElementById('modal-overlay').addEventListener('click', (e)=>{
 /* ============================================================
    DASHBOARD
    ============================================================ */
+function geTotalFijos(){
+  return (DB.ge.fijos||[]).reduce((s,g)=>s+parseFloat(g.importe||0),0);
+}
+function geTotalVariablesMes(year, month){
+  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+}
+function salesTotalForRange(startDate, endDate){
+  return DB.sales.filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);
+}
+function salesTotalForMonth(year, month){
+  const start = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const end = `${year}-${String(month+1).padStart(2,'0')}-31`;
+  return salesTotalForRange(start, end);
+}
+
 function renderDashboard(){
   const totalIngredients = DB.ingredients.length;
   const totalRecipes = DB.recipes.length;
-  const totalMenuItems = DB.menuItems.length;
+  const totalMenuItems = DB.cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
 
   const stockAlerts = DB.ingredients.filter(ing => {
     const s = DB.stock[ing.id];
@@ -990,13 +1065,25 @@ function renderDashboard(){
     if(pcts.length) avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length;
   }
 
-  const todaySales = DB.sales.filter(s => s.date === todayStr()).reduce((sum,s)=>sum+s.total,0);
+  const today = new Date();
+  const todayDate = todayStr();
+  const weekAgo = dateStr(new Date(today.getTime() - 6*86400000));
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+
+  const todaySales = salesTotalForRange(todayDate, todayDate);
+  const weekSales = salesTotalForRange(weekAgo, todayDate);
+  const monthSales = salesTotalForRange(monthStart, todayDate);
+
+  document.getElementById('dashboard-period-kpis').innerHTML = `
+    <div class="kpi ok"><div class="label"><i class="ti ti-cash"></i> Ventas hoy</div><div class="value">${fmtMoney(todaySales)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> Ventas últimos 7 días</div><div class="value">${fmtMoney(weekSales)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Ventas mes en curso</div><div class="value">${fmtMoney(monthSales)}</div></div>
+  `;
 
   const kpis = [
     {label:'Ingredientes', value: totalIngredients, icon:'ti-list-details', cls:''},
     {label:'Platos / Recetas', value: totalRecipes, icon:'ti-chef-hat', cls:''},
     {label:'Items en Carta', value: totalMenuItems, icon:'ti-toolsKitchen', cls:''},
-    {label:'Ventas hoy', value: fmtMoney(todaySales), icon:'ti-cash', cls:'ok'},
     {label:'Alertas de Stock', value: stockAlerts.length, icon:'ti-alert-triangle', cls: stockAlerts.length ? 'warn':'ok'},
     {label:'Pedidos pendientes', value: pendingOrders.length, icon:'ti-shopping-cart', cls: pendingOrders.length ? 'warn':'ok'},
     {label:'Food Cost medio', value: DB.recipes.length ? avgFoodCost.toFixed(1)+'%' : '—', icon:'ti-percentage', cls: avgFoodCost>35?'warn':'ok'},
@@ -1010,27 +1097,125 @@ function renderDashboard(){
     </div>
   `).join('');
 
-  // Stock alerts
-  const alertsBox = document.getElementById('dashboard-stock-alerts');
-  if(!stockAlerts.length){
-    alertsBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>Sin alertas de stock</div>`;
+  // Resultado del mes (P&L)
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const facturacion = salesTotalForMonth(year, month);
+  const variables = geTotalVariablesMes(year, month);
+  const fijos = geTotalFijos();
+  const resultado = facturacion - variables - fijos;
+  const fcPct = facturacion > 0 ? (avgFoodCost) : 0;
+  document.getElementById('dashboard-resultado').innerHTML = `
+    <div class="grid grid-4">
+      <div class="kpi"><div class="label">Facturación (mes)</div><div class="value">${fmtMoney(facturacion)}</div></div>
+      <div class="kpi"><div class="label">Gastos variables</div><div class="value">${fmtMoney(variables)}</div></div>
+      <div class="kpi"><div class="label">Gastos fijos</div><div class="value">${fmtMoney(fijos)}</div></div>
+      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">Resultado</div><div class="value">${fmtMoney(resultado)}</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:13px;color:var(--muted)">% Food Cost medio: <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> (objetivo ${DB.ge.config.foodCostObj||35}%)</div>
+  `;
+
+  // 12-month sales trend
+  const trend = [];
+  for(let i=11; i>=0; i--){
+    const d = new Date(year, month - i, 1);
+    trend.push({label: MONTH_NAMES[d.getMonth()].slice(0,3), value: salesTotalForMonth(d.getFullYear(), d.getMonth())});
+  }
+  const maxVal = Math.max(...trend.map(t=>t.value), 1);
+  document.getElementById('dashboard-trend').innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
+      ${trend.map(t => `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${t.value>0?fmtMoney(t.value):''}</div>
+          <div style="width:100%;background:var(--brand-orange);border-radius:4px 4px 0 0;height:${Math.max(2,(t.value/maxVal*100))}%"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Breakeven tracking
+  const cfg = DB.ge.config || {};
+  const tick = parseFloat(cfg.ticketMedio) || 0;
+  const cub = parseFloat(cfg.cubiertosActuales) || 0;
+  const dias = parseFloat(cfg.diasApertura) || 0;
+  const fc = parseFloat(cfg.foodCostObj) || 35;
+  let breakevenHtml;
+  let breakevenAlert = null;
+  if(!tick || !dias){
+    breakevenHtml = `<div class="empty">Configura el ticket medio y los días de apertura en Gestión Económica → Punto de Equilibrio.</div>`;
   }else{
-    alertsBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
-      stockAlerts.map(ing => {
-        const s = DB.stock[ing.id];
-        return `<tr><td>${escapeHtml(ing.name)}</td><td><span class="badge badge-red">${fmtNum(s.qty)} / ${fmtNum(s.min)} ${ing.unit}</span></td></tr>`;
+    const cvCub = tick * (fc/100);
+    const contribCub = tick - cvCub;
+    if(contribCub > 0){
+      const cubNec = Math.ceil(fijos / contribCub);
+      const diff = cub - cubNec;
+      breakevenHtml = `
+        <div class="grid grid-3">
+          <div class="kpi"><div class="label">Cubiertos necesarios/mes</div><div class="value">${cubNec}</div></div>
+          <div class="kpi"><div class="label">Cubiertos actuales/mes</div><div class="value">${cub}</div></div>
+          <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">Diferencia</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
+        </div>
+        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'✅ Por encima del punto de equilibrio':'⚠️ Por debajo del punto de equilibrio'}</div>
+      `;
+      if(diff < 0) breakevenAlert = `Estás ${Math.abs(diff)} cubiertos/mes por debajo del punto de equilibrio`;
+    }else{
+      breakevenHtml = `<div class="empty">No se puede calcular: revisa el % food cost.</div>`;
+    }
+  }
+  document.getElementById('dashboard-breakeven').innerHTML = breakevenHtml;
+
+  // Próximas reservas
+  const upcoming = DB.reservations
+    .filter(r => r.status==='confirmada' && r.date >= todayDate)
+    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time))
+    .slice(0,6);
+  const reservasBox = document.getElementById('dashboard-reservas');
+  if(!upcoming.length){
+    reservasBox.innerHTML = `<div class="empty"><i class="ti ti-calendar-off"></i>No hay próximas reservas</div>`;
+  }else{
+    reservasBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
+      upcoming.map(r => {
+        const client = DB.clients.find(c=>c.id===r.clientId);
+        return `<tr><td>${r.date}</td><td><strong>${escapeHtml(r.time)}</strong></td><td>${escapeHtml(client?client.name:(r.clientName||'—'))}</td><td>${r.people}p</td></tr>`;
       }).join('') + `</tbody></table></div>`;
   }
 
-  // Pending orders
-  const ordersBox = document.getElementById('dashboard-pending-orders');
-  if(!pendingOrders.length){
-    ordersBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>No hay pedidos pendientes</div>`;
+  // Dynamic alerts feed
+  const alerts = [];
+  stockAlerts.forEach(ing => alerts.push({icon:'ti-package', cls:'warn', text:`Stock bajo de ${ing.name}`}));
+  pendingOrders.forEach(o => alerts.push({icon:'ti-shopping-cart', cls:'warn', text:`Pedido a ${o.supplier} en estado ${o.estado}`}));
+  if(breakevenAlert) alerts.push({icon:'ti-scale', cls:'warn', text: breakevenAlert});
+  if(avgFoodCost > (cfg.foodCostObj||35)) alerts.push({icon:'ti-percentage', cls:'warn', text:`Food cost medio (${avgFoodCost.toFixed(1)}%) por encima del objetivo (${cfg.foodCostObj||35}%)`});
+  const todayReservas = DB.reservations.filter(r=>r.date===todayDate && r.status==='confirmada');
+  if(todayReservas.length) alerts.push({icon:'ti-calendar-event', cls:'ok', text:`${todayReservas.length} reserva(s) para hoy`});
+
+  const alertsBox = document.getElementById('dashboard-alerts');
+  if(!alerts.length){
+    alertsBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>Sin alertas. Todo en orden.</div>`;
   }else{
-    ordersBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
-      pendingOrders.map(o => `<tr><td>${escapeHtml(o.supplier)}</td><td>${o.date}</td><td><span class="badge badge-amber">${o.estado}</span></td></tr>`).join('') +
-      `</tbody></table></div>`;
+    alertsBox.innerHTML = alerts.map(a => `
+      <div class="kpi ${a.cls}" style="text-align:left;margin-bottom:8px"><div class="label"><i class="ti ${a.icon}"></i> ${escapeHtml(a.text)}</div></div>
+    `).join('');
   }
+
+  // Quick access shortcuts
+  const shortcuts = [
+    {view:'tpv', icon:'ti-device-desktop', label:'TPV'},
+    {view:'pedidos', icon:'ti-shopping-cart', label:'Pedidos'},
+    {view:'megalista', icon:'ti-list-details', label:'Mega Lista'},
+    {view:'escandallo', icon:'ti-calculator', label:'Escandallo'},
+    {view:'horarios', icon:'ti-calendar-time', label:'Horarios'},
+    {view:'limpieza', icon:'ti-spray', label:'Plan de Limpieza'},
+    {view:'reservas', icon:'ti-calendar-event', label:'Reservas'},
+    {view:'economia', icon:'ti-coin', label:'Gestión Económica'},
+  ];
+  document.getElementById('dashboard-shortcuts').innerHTML = shortcuts.map(s => `
+    <div class="card" style="text-align:center;cursor:pointer" onclick="navigate('${s.view}')">
+      <i class="ti ${s.icon}" style="font-size:24px;color:var(--brand-orange)"></i>
+      <div style="margin-top:6px;font-weight:600;font-size:13px">${s.label}</div>
+    </div>
+  `).join('');
 }
 function todayStr(){
   return new Date().toISOString().slice(0,10);
@@ -1514,7 +1699,11 @@ function saveRecipe(id){
 function deleteRecipe(id){
   if(!confirm('¿Eliminar este plato?')) return;
   DB.recipes = DB.recipes.filter(r => r.id !== id);
-  DB.menuItems = DB.menuItems.filter(m => m.recipeId !== id);
+  DB.cartas.forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      sec.platos = (sec.platos||[]).filter(p => p.recipeId !== id);
+    });
+  });
   saveDB();
   renderEscandallo();
   showToast('Plato eliminado');
@@ -1816,164 +2005,282 @@ function printFicha(id){
 }
 
 /* ============================================================
-   CARTA DIGITAL — Menús por horario y disponibilidad
+   CARTA — Sistema multi-carta con secciones y horarios
    ============================================================ */
-const SCHEDULE_LABELS = {
-  'desayuno':'Desayuno', 'almuerzo':'Almuerzo', 'cena':'Cena', 'todo-dia':'Todo el día'
-};
-const MENU_CATEGORIES = ['Entrantes','Principales','Postres','Bebidas','Menú del día','Otros'];
+const CARTA_TIPOS = ['MEDIODÍA','NOCHE','FIN DE SEMANA','DEGUSTACIÓN','TEMPORADA','GENERAL'];
+let cartaEdit = null; // {id, nombre, tipo, desde, hasta, dias:[], secciones:[]}
+
+function migrateCartas(){
+  if((!DB.cartas || !DB.cartas.length) && DB.menuItems && DB.menuItems.length){
+    const groups = {};
+    DB.menuItems.forEach(m => {
+      const cat = (m.category || 'Otros').toUpperCase();
+      const r = getRecipe(m.recipeId);
+      (groups[cat] = groups[cat] || []).push({
+        id: genId(),
+        recipeId: m.recipeId,
+        nombre: r ? r.name : (m.name || 'Plato'),
+        precio: m.price != null ? m.price : (r ? r.price : 0),
+        disponible: m.available !== false
+      });
+    });
+    DB.cartas = [{
+      id: genId(), nombre:'CARTA GENERAL', tipo:'GENERAL', desde:'', hasta:'', dias:[0,1,2,3,4,5,6],
+      secciones: Object.keys(groups).map(cat => ({id: genId(), nombre: cat, platos: groups[cat]}))
+    }];
+    DB.menuItems = [];
+    saveDB();
+  }
+  if(!DB.cartas) DB.cartas = [];
+}
+
+function fmtCartaDias(dias){
+  if(!dias || !dias.length) return '—';
+  if(dias.length===7) return 'Todos los días';
+  return dias.map(d=>WEEK_DAYS[d].slice(0,3)).join(', ');
+}
+function fmtCartaHorario(c){
+  if(!c.desde && !c.hasta) return '—';
+  return (c.desde||'--:--') + ' – ' + (c.hasta||'--:--');
+}
 
 function renderCarta(){
-  const filterSchedule = document.getElementById('carta-filter-schedule').value;
-  let items = DB.menuItems.filter(m => !filterSchedule || m.schedule === filterSchedule);
+  migrateCartas();
+  document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
+  document.getElementById('carta-editor-view').style.display = cartaEdit ? '' : 'none';
+  if(cartaEdit) renderCartaEditor();
+  else renderCartaList();
+}
+
+function renderCartaList(){
+  const totalPlatos = DB.cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
+  document.getElementById('carta-stats').innerHTML = `
+    <div class="kpi"><div class="label">Cartas / Menús</div><div class="value">${DB.cartas.length}</div></div>
+    <div class="kpi"><div class="label">Total platos</div><div class="value">${totalPlatos}</div></div>
+  `;
   const box = document.getElementById('carta-list');
-
-  if(!DB.menuItems.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-toolsKitchen"></i>No hay platos en la carta. Crea platos en Escandallo y añádelos aquí.</div>`;
+  if(!DB.cartas.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-book-off"></i>Sin cartas aún. Crea tu primera carta e importa platos del Escandallo.</div>`;
     return;
   }
-  if(!items.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados para este horario.</div>`;
+  box.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Horario</th><th>Días</th><th>Secciones</th><th>Platos</th><th></th></tr></thead>
+        <tbody>
+          ${DB.cartas.map(c => {
+            const nsec = (c.secciones||[]).length;
+            const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
+            return `<tr>
+              <td><strong>${escapeHtml(c.nombre)}</strong>${DB.activeCartaId===c.id?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
+              <td><span class="badge badge-blue">${escapeHtml(c.tipo||'—')}</span></td>
+              <td style="font-size:12px;color:var(--muted)">${fmtCartaHorario(c)}</td>
+              <td style="font-size:12px;color:var(--muted)">${fmtCartaDias(c.dias)}</td>
+              <td>${nsec}</td>
+              <td>${nplat}</td>
+              <td class="actions-cell">
+                <button class="btn btn-sm btn-icon" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i></button>
+                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteCarta(${c.id})"><i class="ti ti-trash"></i></button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function newCarta(){
+  cartaEdit = {id: genId(), nombre:'', tipo:'GENERAL', desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones:[]};
+  renderCarta();
+}
+function openCarta(id){
+  const c = DB.cartas.find(x=>x.id===id);
+  if(!c) return;
+  cartaEdit = JSON.parse(JSON.stringify(c));
+  renderCarta();
+}
+function backToCartaList(){
+  cartaEdit = null;
+  renderCarta();
+}
+function deleteCarta(id){
+  if(!confirm('¿Eliminar esta carta?')) return;
+  DB.cartas = DB.cartas.filter(c=>c.id!==id);
+  if(DB.activeCartaId===id) DB.activeCartaId = null;
+  saveDB();
+  renderCarta();
+  showToast('Carta eliminada');
+}
+function saveCarta(){
+  const nombre = document.getElementById('carta-f-nombre').value.trim();
+  if(!nombre){ showToast('Ponle un nombre a la carta'); return; }
+  cartaEdit.nombre = nombre.toUpperCase();
+  cartaEdit.tipo = (document.getElementById('carta-f-tipo').value||'').trim().toUpperCase() || 'GENERAL';
+  cartaEdit.desde = document.getElementById('carta-f-desde').value;
+  cartaEdit.hasta = document.getElementById('carta-f-hasta').value;
+  const idx = DB.cartas.findIndex(c=>c.id===cartaEdit.id);
+  if(idx>=0) DB.cartas[idx] = cartaEdit;
+  else DB.cartas.push(cartaEdit);
+  saveDB();
+  cartaEdit = null;
+  renderCarta();
+  showToast('Carta guardada');
+}
+
+function renderCartaEditor(){
+  document.getElementById('carta-f-nombre').value = cartaEdit.nombre || '';
+  document.getElementById('carta-f-tipo').value = cartaEdit.tipo || '';
+  document.getElementById('carta-f-desde').value = cartaEdit.desde || '';
+  document.getElementById('carta-f-hasta').value = cartaEdit.hasta || '';
+  renderCartaDias();
+  renderCartaSecciones();
+}
+function renderCartaDias(){
+  document.getElementById('carta-dias').innerHTML = WEEK_DAYS.map((d,i)=>`
+    <span class="dia-pill ${cartaEdit.dias.includes(i)?'active':''}" onclick="toggleCartaDia(${i})">${d.slice(0,3)}</span>
+  `).join('');
+}
+function toggleCartaDia(i){
+  const idx = cartaEdit.dias.indexOf(i);
+  if(idx>=0) cartaEdit.dias.splice(idx,1);
+  else cartaEdit.dias.push(i);
+  cartaEdit.dias.sort();
+  renderCartaDias();
+}
+
+function renderCartaSecciones(){
+  const box = document.getElementById('carta-secciones');
+  if(!cartaEdit.secciones.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin secciones. Crea una sección o importa platos del Escandallo.</div>`;
     return;
   }
-
-  // Group by category
-  const groups = {};
-  items.forEach(m => {
-    const cat = m.category || 'Otros';
-    (groups[cat] = groups[cat] || []).push(m);
-  });
-
-  box.innerHTML = Object.keys(groups).map(cat => `
-    <div class="card">
-      <h3><i class="ti ti-tag"></i> ${escapeHtml(cat)}</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Plato</th><th>Precio</th><th>Horario</th><th>Disponible</th><th></th></tr></thead>
-          <tbody>
-            ${groups[cat].map(m => {
-              const r = getRecipe(m.recipeId);
-              return `
-                <tr>
-                  <td>${escapeHtml(r ? r.name : m.name || '—')}</td>
-                  <td>${fmtMoney(m.price != null ? m.price : (r ? r.price : 0))}</td>
-                  <td><span class="badge badge-blue">${SCHEDULE_LABELS[m.schedule]||m.schedule}</span></td>
-                  <td>
-                    <label style="display:flex;align-items:center;gap:6px">
-                      <input type="checkbox" ${m.available ? 'checked':''} onchange="toggleMenuAvailability(${m.id})" style="width:auto">
-                      ${m.available ? '<span class="badge badge-green">Sí</span>' : '<span class="badge badge-red">No</span>'}
-                    </label>
-                  </td>
-                  <td class="actions-cell">
-                    <button class="btn btn-sm btn-icon" onclick="openMenuItemModal(${m.id})"><i class="ti ti-edit"></i></button>
-                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteMenuItem(${m.id})"><i class="ti ti-trash"></i></button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
+  box.innerHTML = cartaEdit.secciones.map(sec => `
+    <div class="ge-section">
+      <div class="ge-sec-head">
+        <h4>${escapeHtml(sec.nombre)}</h4>
+        <div class="actions-cell">
+          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> Plato manual</button>
+          <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> Escandallo</button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
+        </div>
       </div>
+      ${(sec.platos||[]).length ? sec.platos.map(p => `
+        <div class="ge-item">
+          <span style="flex:1;font-weight:600">${escapeHtml(p.nombre)}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
+          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
+        </div>
+      `).join('') : `<div class="empty" style="padding:14px">Sin platos en esta sección.</div>`}
     </div>
   `).join('');
 }
 
-function toggleMenuAvailability(id){
-  const m = DB.menuItems.find(x => x.id === id);
-  if(!m) return;
-  m.available = !m.available;
-  saveDB();
-  renderCarta();
+function newCartaSection(){
+  const nombre = prompt('Nombre de la sección (ej. ENTRANTES)');
+  if(!nombre || !nombre.trim()) return;
+  cartaEdit.secciones.push({id: genId(), nombre: nombre.trim().toUpperCase(), platos:[]});
+  renderCartaSecciones();
+}
+function removeCartaSection(secId){
+  if(!confirm('¿Eliminar esta sección y todos sus platos?')) return;
+  cartaEdit.secciones = cartaEdit.secciones.filter(s=>s.id!==secId);
+  renderCartaSecciones();
+}
+function toggleCartaPlato(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  p.disponible = p.disponible===false ? true : false;
+  renderCartaSecciones();
+}
+function removeCartaPlato(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  sec.platos = sec.platos.filter(p=>p.id!==platoId);
+  renderCartaSecciones();
+}
+function addCartaPlato(secId){
+  const nombre = prompt('Nombre del plato');
+  if(!nombre || !nombre.trim()) return;
+  const precioStr = prompt('Precio (€)');
+  const precio = parseFloat((precioStr||'').replace(',','.'));
+  if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true});
+  renderCartaSecciones();
 }
 
-function openMenuItemModal(id){
-  if(!DB.recipes.length){
-    showToast('Crea primero platos en Escandallo');
-    return;
-  }
-  const m = id ? DB.menuItems.find(x => x.id === id) : {recipeId: DB.recipes[0].id, category: MENU_CATEGORIES[0], schedule:'todo-dia', price:null, available:true};
-  const recipe = getRecipe(m.recipeId);
-
+function importFromEscandallo(secId){
+  if(!DB.recipes.length){ showToast('No hay platos en el Escandallo'); return; }
+  const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Añadir'} Item de Carta</h3>
+      <h3>Importar del Escandallo</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="field">
-      <label>Plato</label>
-      <select id="menu-recipe">
-        ${DB.recipes.map(r => `<option value="${r.id}" ${m.recipeId===r.id?'selected':''}>${escapeHtml(r.name)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Categoría</label>
-        <select id="menu-category">
-          ${MENU_CATEGORIES.map(c=>`<option value="${c}" ${m.category===c?'selected':''}>${c}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label>Horario</label>
-        <select id="menu-schedule">
-          ${Object.entries(SCHEDULE_LABELS).map(([k,v])=>`<option value="${k}" ${m.schedule===k?'selected':''}>${v}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="field">
-      <label>Precio en carta (€) — vacío para usar el PVP del escandallo (${fmtMoney(recipe?recipe.price:0)})</label>
-      <input type="number" id="menu-price" value="${m.price!=null?m.price:''}" step="0.01" min="0" placeholder="Opcional">
-    </div>
-    <div class="field">
+    <div class="field" style="margin-bottom:8px">
       <label style="display:flex;align-items:center;gap:6px">
-        <input type="checkbox" id="menu-available" ${m.available!==false?'checked':''} style="width:auto"> Disponible
+        <input type="checkbox" id="import-esc-all" onchange="toggleImportEscAll(this.checked)" style="width:auto"> Seleccionar todo
       </label>
+    </div>
+    <div id="import-esc-list" style="max-height:320px;overflow:auto">
+      ${DB.recipes.map(r => {
+        const done = existingIds.has(r.id);
+        return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
+          <input type="checkbox" value="${r.id}" ${done?'disabled checked':''} style="width:auto">
+          <span style="flex:1">${escapeHtml(r.name)}</span>
+          <span style="font-family:monospace;color:var(--brand-orange);font-weight:600">${fmtMoney(r.price)}</span>
+        </label>`;
+      }).join('')}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveMenuItem(${id||'null'})">Guardar</button>
+      <button class="btn btn-primary" onclick="confirmImportEsc(${secId==null?'null':secId})">Importar</button>
     </div>
   `);
 }
-
-function saveMenuItem(id){
-  const recipeId = parseInt(document.getElementById('menu-recipe').value);
-  const category = document.getElementById('menu-category').value;
-  const schedule = document.getElementById('menu-schedule').value;
-  const priceVal = document.getElementById('menu-price').value;
-  const price = priceVal === '' ? null : parseFloat(priceVal);
-  const available = document.getElementById('menu-available').checked;
-
-  if(id){
-    const m = DB.menuItems.find(x => x.id === id);
-    Object.assign(m, {recipeId, category, schedule, price, available});
-  }else{
-    DB.menuItems.push({id: genId(), recipeId, category, schedule, price, available});
-  }
-  saveDB();
-  closeModal();
-  renderCarta();
-  showToast('Carta actualizada');
+function toggleImportEscAll(checked){
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:disabled)').forEach(c=>c.checked=checked);
 }
-
-function deleteMenuItem(id){
-  if(!confirm('¿Quitar este plato de la carta?')) return;
-  DB.menuItems = DB.menuItems.filter(m => m.id !== id);
-  saveDB();
-  renderCarta();
-  showToast('Eliminado de la carta');
+function confirmImportEsc(secId){
+  const checked = [...document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)')].map(c=>parseInt(c.value));
+  if(!checked.length){ showToast('Selecciona al menos un plato'); return; }
+  let sec;
+  if(secId != null){
+    sec = cartaEdit.secciones.find(s=>s.id===secId);
+  }else{
+    sec = cartaEdit.secciones.find(s=>s.nombre==='IMPORTADOS');
+    if(!sec){ sec = {id: genId(), nombre:'IMPORTADOS', platos:[]}; cartaEdit.secciones.push(sec); }
+  }
+  checked.forEach(rid => {
+    const r = getRecipe(rid);
+    if(!r) return;
+    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, disponible:true});
+  });
+  closeModal();
+  renderCartaSecciones();
+  showToast(checked.length + ' platos importados');
 }
 
 /* ============================================================
    TPV — Comandas, mesas y tickets
    ============================================================ */
-function getMenuItemPrice(m){
-  if(m.price != null) return m.price;
-  const r = getRecipe(m.recipeId);
-  return r ? (r.price||0) : 0;
+function getActiveCarta(){
+  return DB.cartas.find(c=>c.id===DB.activeCartaId) || null;
 }
-function getMenuItemName(m){
-  const r = getRecipe(m.recipeId);
-  return r ? r.name : (m.name || 'Plato');
+function setActiveCarta(id){
+  DB.activeCartaId = id ? parseInt(id) : null;
+  saveDB();
+  renderTPV();
+}
+function findCartaPlato(platoId){
+  const c = getActiveCarta();
+  if(!c) return null;
+  for(const sec of (c.secciones||[])){
+    const p = (sec.platos||[]).find(x=>x.id===platoId);
+    if(p) return p;
+  }
+  return null;
 }
 const TPV_ZONES = ['Interior','Terraza'];
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
@@ -1983,12 +2290,28 @@ function getOpenOrderForTable(tableId){
 }
 
 function renderTPV(){
+  migrateCartas();
   const box = document.getElementById('tpv-content');
 
   const todaySalesArr = DB.sales.filter(s => s.date === todayStr());
   const todayTotal = todaySalesArr.reduce((sum,s)=>sum+s.total,0);
   const ticketCount = todaySalesArr.length;
   const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
+
+  const activeCarta = getActiveCarta();
+  const cartaSelHtml = `
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <i class="ti ti-book-2"></i>
+      <span style="font-weight:600;font-size:14px">Carta activa:</span>
+      <select id="tpv-carta-sel" onchange="setActiveCarta(this.value)" style="flex:1;max-width:280px">
+        <option value="">— Sin carta seleccionada —</option>
+        ${DB.cartas.map(c=>`<option value="${c.id}" ${DB.activeCartaId===c.id?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('')}
+      </select>
+      <span style="font-size:12px;color:var(--muted)">
+        ${activeCarta ? (activeCarta.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0) + ' platos disponibles' : 'Selecciona una carta para tomar comandas'}
+      </span>
+    </div>
+  `;
 
   const kpiHtml = `
     <div class="grid grid-3" style="margin-bottom:14px">
@@ -2042,6 +2365,7 @@ function renderTPV(){
   `;
 
   box.innerHTML = `
+    ${cartaSelHtml}
     ${kpiHtml}
     <div class="toolbar">
       <div class="left"></div>
@@ -2102,21 +2426,15 @@ function renderTableOrderModal(orderId){
   const titleText = table ? table.name
     : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
-  const available = DB.menuItems.filter(m => m.available !== false);
+  const activeCarta = getActiveCarta();
+  const secciones = activeCarta ? (activeCarta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)) : [];
 
-  // group available items by category
-  const groups = {};
-  available.forEach(m => {
-    const cat = m.category || 'Otros';
-    (groups[cat] = groups[cat] || []).push(m);
-  });
-
-  const menuHtml = Object.keys(groups).length ? Object.keys(groups).map(cat => `
-    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(cat)}</p>
+  const menuHtml = secciones.length ? secciones.map(sec => `
+    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${groups[cat].map(m => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${m.id})">${escapeHtml(getMenuItemName(m))} · ${fmtMoney(getMenuItemPrice(m))}</button>`).join('')}
+      ${sec.platos.filter(p=>p.disponible!==false).map(p => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</button>`).join('')}
     </div>
-  `).join('') : `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles en la Carta Digital.</p>`;
+  `).join('') : `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona una carta activa en TPV con platos disponibles.</p>`;
 
   const linesHtml = (order.items||[]).map((line, idx) => `
     <tr>
@@ -2171,15 +2489,15 @@ function requestBill(orderId){
   showToast('Cuenta pedida');
 }
 
-function addOrderItem(orderId, menuItemId){
+function addOrderItem(orderId, secId, platoId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  const m = DB.menuItems.find(x => x.id === menuItemId);
-  if(!order || !m) return;
-  const price = getMenuItemPrice(m);
-  const name = getMenuItemName(m);
-  const existing = order.items.find(l => l.menuItemId === menuItemId);
+  const c = getActiveCarta();
+  const sec = c ? (c.secciones||[]).find(s=>s.id===secId) : null;
+  const p = sec ? (sec.platos||[]).find(x=>x.id===platoId) : null;
+  if(!order || !p) return;
+  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId);
   if(existing) existing.qty += 1;
-  else order.items.push({menuItemId, name, price, qty:1});
+  else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1});
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -2252,8 +2570,7 @@ function finalizeCharge(orderId){
 
   // Descontar stock según ingredientes de la receta
   order.items.forEach(line => {
-    const m = DB.menuItems.find(x => x.id === line.menuItemId);
-    const r = m ? getRecipe(m.recipeId) : null;
+    const r = line.recipeId ? getRecipe(line.recipeId) : null;
     if(!r) return;
     (r.ingredients||[]).forEach(ri => {
       const s = getStockEntry(ri.ingredientId);
