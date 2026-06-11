@@ -2471,7 +2471,6 @@ function findCartaPlato(platoId){
   }
   return null;
 }
-const TPV_ZONES = ['Interior','Terraza'];
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
 
 function getOpenOrderForTable(tableId){
@@ -2510,30 +2509,29 @@ function renderTPV(){
     </div>
   `;
 
-  const zonesHtml = TPV_ZONES.map(zone => {
-    const tables = DB.tables.filter(t => (t.zone||'Interior') === zone);
-    const cards = tables.map(t => {
-      const order = getOpenOrderForTable(t.id);
-      const total = order ? orderTotal(order) : 0;
-      let badge = '<span class="badge badge-green">Libre</span>';
-      if(order && order.status==='cuenta') badge = '<span class="badge badge-purple">Cuenta pedida</span>';
-      else if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
-      return `
-        <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
-          <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-          ${badge}
-          ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
-          <div style="margin-top:10px">
-            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
-          </div>
-        </div>
-      `;
-    }).join('');
+  const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
+  const mesaCards = sortedTables.map(t => {
+    const order = getOpenOrderForTable(t.id);
+    const total = order ? orderTotal(order) : 0;
+    let badge = '<span class="badge badge-green">Libre</span>';
+    if(order && order.status==='cuenta') badge = '<span class="badge badge-purple">Cuenta pedida</span>';
+    else if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
     return `
-      <h3 style="margin-top:16px"><i class="ti ti-map-pin"></i> ${zone}</h3>
-      <div class="grid grid-4">${cards || '<div class="empty">Sin mesas en esta zona</div>'}</div>
+      <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
+        <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
+        ${badge}
+        ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
+        ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
+        <div style="margin-top:10px">
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
     `;
   }).join('');
+  const zonesHtml = `
+    <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+    <div class="grid grid-4">${mesaCards || '<div class="empty">No hay mesas. Crea las mesas con el orden y numeración de tu restaurante.</div>'}</div>
+  `;
 
   const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && (o.tipo==='takeaway'||o.tipo==='delivery'));
   const toGoHtml = `
@@ -2566,10 +2564,9 @@ function renderTPV(){
 }
 
 function addTable(){
-  const name = prompt('Nombre o número de la mesa:');
+  const name = prompt('Número o nombre de la mesa:');
   if(!name) return;
-  const zone = confirm('¿Es una mesa de Terraza?\n\nAceptar = Terraza · Cancelar = Interior') ? 'Terraza' : 'Interior';
-  DB.tables.push({id: genId(), name: name.trim(), zone});
+  DB.tables.push({id: genId(), name: name.trim()});
   saveDB();
   renderTPV();
 }
@@ -2592,8 +2589,9 @@ function openTableOrder(tableId, orderId){
   }else{
     order = getOpenOrderForTable(tableId);
     if(!order){
-      const table = DB.tables.find(t => t.id === tableId);
-      order = {id: genId(), tableId, tipo:'mesa', zona: table ? (table.zone||'Interior') : null, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
+      const pax = parseInt(prompt('¿Cuántas personas?', '2')) || 0;
+      if(pax <= 0) return;
+      order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
       DB.tpvOrders.push(order);
       saveDB();
     }
@@ -2603,7 +2601,7 @@ function openTableOrder(tableId, orderId){
 
 function newToGoOrder(tipo){
   const clienteNombre = prompt(tipo==='delivery' ? 'Nombre del cliente (delivery):' : 'Nombre para el pedido (take away):') || '';
-  const order = {id: genId(), tableId:null, tipo, zona:null, clienteNombre: clienteNombre.trim(), status:'abierta', items:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId:null, tipo, clienteNombre: clienteNombre.trim(), status:'abierta', items:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -2612,7 +2610,7 @@ function newToGoOrder(tipo){
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const titleText = table ? table.name
+  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`
     : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const activeCarta = getActiveCarta();
@@ -2645,7 +2643,7 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     <div class="table-wrap" style="margin-bottom:10px">
       <table>
@@ -2767,7 +2765,7 @@ function finalizeCharge(orderId){
     });
   });
 
-  const sale = {id: genId(), date: todayStr(), total, tableId: order.tableId, zona: order.zona, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
   DB.sales.push(sale);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -5209,12 +5207,8 @@ function renderMiNegocio(){
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Mesas interior</label>
+          <label>Número de mesas</label>
           <input type="number" id="mn-mesas-int" value="${escapeHtml(b.mesasInt||'')}" placeholder="8">
-        </div>
-        <div class="field">
-          <label>Mesas terraza</label>
-          <input type="number" id="mn-mesas-ext" value="${escapeHtml(b.mesasExt||'')}" placeholder="0">
         </div>
       </div>
       <div class="field">
@@ -5283,14 +5277,10 @@ function renderHeader(){
 }
 
 function syncMesasConfig(){
-  const mesasInt = parseInt(document.getElementById('mn-mesas-int').value) || 0;
-  const mesasExt = parseInt(document.getElementById('mn-mesas-ext').value) || 0;
-  [['Interior', mesasInt], ['Terraza', mesasExt]].forEach(([zone, count]) => {
-    const existing = DB.tables.filter(t => (t.zone||'Interior') === zone);
-    for(let i = existing.length + 1; i <= count; i++){
-      DB.tables.push({id: genId(), name: `Mesa ${zone==='Terraza'?'T':''}${i}`, zone});
-    }
-  });
+  const count = parseInt(document.getElementById('mn-mesas-int').value) || 0;
+  for(let i = DB.tables.length + 1; i <= count; i++){
+    DB.tables.push({id: genId(), name: `Mesa ${i}`});
+  }
   saveDB();
   showToast('Mesas sincronizadas con el TPV');
 }
@@ -5310,7 +5300,6 @@ function saveBusiness(){
     cif: document.getElementById('mn-cif').value.trim(),
     prop: document.getElementById('mn-prop').value.trim(),
     mesasInt: document.getElementById('mn-mesas-int').value.trim(),
-    mesasExt: document.getElementById('mn-mesas-ext').value.trim(),
     aforo: document.getElementById('mn-aforo').value.trim(),
     ig: document.getElementById('mn-ig').value.trim(),
     fb: document.getElementById('mn-fb').value.trim(),
@@ -5506,7 +5495,7 @@ const MANUAL_CHAPTERS = [
     title:'🖥 TPV',
     content:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
-    <p>Las mesas se organizan por zonas (Interior, Terraza...). Configura el número de mesas en Mi Negocio y sincronízalas.</p>
+    <p>Crea las mesas con la numeración y el orden propios de tu restaurante. Al abrir una comanda se pide el número de personas.</p>
     <h4>Comandas</h4>
     <ul>
       <li>Selecciona la <strong>carta activa</strong> arriba</li>
@@ -5549,7 +5538,7 @@ const MANUAL_CHAPTERS = [
     <h4>Identidad y contacto</h4>
     <p>Logo, nombre, tipo de negocio, dirección, teléfono, redes sociales — aparecen en la cabecera y en los tickets.</p>
     <h4>Operativa</h4>
-    <p>Configura el número de mesas en interior y terraza y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
+    <p>Configura el número de mesas y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
     <h4>Acceso propietario (PIN)</h4>
     <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>`
   },
