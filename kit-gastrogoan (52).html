@@ -313,7 +313,8 @@ td.wrap{white-space:normal}
     <div class="app-logo-icon" id="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
-  <span id="sync-badge" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap"></span>
+  <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
+  <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
 </header>
 
@@ -857,8 +858,34 @@ const DB_KEY = 'gastrogoan_data_v1';
    ============================================================ */
 const FIREBASE_CONFIG = null;
 
+const CLOUD_KEY = 'gastrogoan_cloud_v1';
+const CLOUD_SKIP_KEY = 'gastrogoan_cloud_skip_v1';
+
 let cloudRef = null;
+let cloudConfig = null;
 let lastSyncedJson = '';
+
+function getCloudConfig(){
+  // 1) Código de conexión en el enlace (#conexion=...)
+  try{
+    const h = location.hash.match(/conexion=([^&]+)/);
+    if(h){
+      const cfg = JSON.parse(atob(decodeURIComponent(h[1])));
+      if(cfg && cfg.apiKey){
+        localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
+        history.replaceState(null, '', location.pathname);
+        return cfg;
+      }
+    }
+  }catch(e){}
+  // 2) Configuración guardada en este dispositivo
+  try{
+    const raw = localStorage.getItem(CLOUD_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  // 3) Configuración incrustada en el archivo (opcional)
+  return FIREBASE_CONFIG;
+}
 
 /* Rellena claves que falten en los datos remotos (Firebase no guarda arrays/objetos vacíos) */
 function withDefaults(def, data){
@@ -891,10 +918,11 @@ function refreshAfterRemoteChange(){
 }
 
 function initCloud(){
-  if(!FIREBASE_CONFIG){ updateSyncBadge('local'); return; }
+  cloudConfig = getCloudConfig();
+  if(!cloudConfig){ updateSyncBadge('local'); return; }
   if(typeof firebase === 'undefined'){ console.error('Firebase no disponible (¿sin internet?)'); updateSyncBadge('error'); return; }
   try{
-    firebase.initializeApp(FIREBASE_CONFIG);
+    firebase.initializeApp(cloudConfig);
     cloudRef = firebase.database().ref('gastrogoan/db');
     cloudRef.on('value', snap => {
       const val = snap.val();
@@ -923,6 +951,151 @@ function initCloud(){
     console.error('Error iniciando la nube', e);
     updateSyncBadge('error');
   }
+}
+
+/* ============================================================
+   ASISTENTE DE CONEXIÓN A LA NUBE
+   ============================================================ */
+function parseFirebaseConfigText(txt){
+  const m = (txt||'').match(/\{[\s\S]*\}/);
+  if(!m) return null;
+  try{ return JSON.parse(m[0]); }catch(e){}
+  try{ return (new Function('return (' + m[0] + ')'))(); }catch(e){ return null; }
+}
+
+function getConnectionCode(){
+  return cloudConfig ? btoa(JSON.stringify(cloudConfig)) : '';
+}
+
+function openCloudWelcome(){
+  openModal(`
+    <div style="text-align:center;padding:8px 4px">
+      <div style="font-size:44px;margin-bottom:6px">☁️</div>
+      <h2 style="margin-bottom:6px">¡Bienvenido a GastroGoan!</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:4px"><strong style="color:var(--brand-orange)">PASO 1 · OBLIGATORIO ANTES DE EMPEZAR</strong></p>
+      <p style="font-size:14px;margin-bottom:16px">Conecta tu restaurante a la nube para que <strong>todos tus dispositivos</strong> (TPV, móviles de camareros, pantalla de cocina) trabajen juntos y sincronizados.</p>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('guia')"><i class="ti ti-rocket"></i> Soy el dueño — Configurar la nube (10 min)</button>
+      <button class="btn" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('codigo')"><i class="ti ti-device-mobile"></i> Soy camarero — Tengo un código de conexión</button>
+      <button class="btn" style="width:100%;border:none;color:var(--muted);font-weight:400" onclick="skipCloudSetup()">Más tarde — usar solo en este dispositivo</button>
+    </div>
+  `);
+}
+
+function skipCloudSetup(){
+  localStorage.setItem(CLOUD_SKIP_KEY, '1');
+  closeModal();
+  showToast('Puedes conectar la nube cuando quieras desde el botón ☁ Nube');
+}
+
+function openCloudWizard(tab){
+  tab = tab || (cloudConfig ? 'estado' : 'guia');
+  const tabBtn = (key, label) => `<button class="ge-tab ${tab===key?'active':''}" onclick="openCloudWizard('${key}')">${label}</button>`;
+
+  let body = '';
+  if(tab === 'guia'){
+    body = `
+      <p style="font-size:13.5px;margin-bottom:12px">Sigue estos pasos <strong>una sola vez</strong> desde un ordenador. Es <strong>gratis</strong> y tus datos quedan en tu propia cuenta de Google.</p>
+      <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>console.firebase.google.com</strong> e inicia sesión con tu cuenta de Google (Gmail).</div></div>
+      <div class="manual-step"><div class="sn">2</div><div class="st">Pulsa <strong>"Crear proyecto"</strong> → escribe el nombre de tu restaurante → <strong>desactiva</strong> Google Analytics → Crear proyecto.</div></div>
+      <div class="manual-step"><div class="sn">3</div><div class="st">En el menú izquierdo: <strong>Compilación → Realtime Database</strong> → "Crear base de datos" → ubicación <strong>Bélgica (europe-west1)</strong> → empezar en <strong>modo de prueba</strong> → Habilitar.</div></div>
+      <div class="manual-step"><div class="sn">4</div><div class="st">En la pestaña <strong>"Reglas"</strong> de la base de datos, sustituye el texto por:<br><code style="display:block;background:var(--brand-cream);padding:8px;border-radius:6px;margin-top:6px;font-size:12px">{ "rules": { ".read": true, ".write": true } }</code>y pulsa <strong>Publicar</strong>. <em>(Imprescindible: si no, la nube se apaga sola a los 30 días)</em></div></div>
+      <div class="manual-step"><div class="sn">5</div><div class="st">Ve a <strong>⚙ Configuración del proyecto</strong> (rueda dentada arriba a la izquierda) → baja hasta <strong>"Tus apps"</strong> → pulsa el icono <strong>&lt;/&gt;</strong> (Web) → ponle un nombre → <strong>Registrar app</strong>.</div></div>
+      <div class="manual-step"><div class="sn">6</div><div class="st">Copia el bloque que empieza por <code>const firebaseConfig = {...}</code> y <strong>pégalo aquí abajo</strong>:</div></div>
+      <div class="field" style="margin-top:10px">
+        <textarea id="cloud-config-paste" rows="6" placeholder='const firebaseConfig = {&#10;  apiKey: "AIza...",&#10;  authDomain: "...",&#10;  databaseURL: "https://...firebasedatabase.app",&#10;  ...&#10;};' style="font-family:monospace;font-size:12px"></textarea>
+      </div>
+      <div id="cloud-config-error" style="display:none;background:var(--red-l);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:10px"></div>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px" onclick="connectCloudFromPaste()"><i class="ti ti-plug-connected"></i> Conectar mi restaurante a la nube</button>
+    `;
+  } else if(tab === 'codigo'){
+    body = `
+      <p style="font-size:13.5px;margin-bottom:12px">Si el dueño ya configuró la nube, pídele el <strong>código de conexión</strong> (te lo puede enviar por WhatsApp) y pégalo aquí:</p>
+      <div class="field">
+        <textarea id="cloud-code-paste" rows="4" placeholder="Pega aquí el código de conexión..." style="font-family:monospace;font-size:12px"></textarea>
+      </div>
+      <div id="cloud-code-error" style="display:none;background:var(--red-l);color:var(--red);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:10px"></div>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px" onclick="connectCloudFromCode()"><i class="ti ti-plug-connected"></i> Conectar este dispositivo</button>
+    `;
+  } else { // estado
+    const code = getConnectionCode();
+    body = cloudConfig ? `
+      <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> Este dispositivo está conectado a la nube</div>
+      <p style="font-size:13.5px;margin-bottom:8px"><strong>Para conectar más dispositivos</strong> (móviles de camareros, tablet de cocina): envíales este código por WhatsApp y que lo peguen en <em>"Soy camarero — Tengo un código de conexión"</em>:</p>
+      <div class="field">
+        <textarea id="cloud-share-code" rows="4" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${code}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn" style="flex:1" onclick="copyConnectionCode()"><i class="ti ti-copy"></i> Copiar código</button>
+        <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Código de conexión GastroGoan:\n\n' + code)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</a>
+      </div>
+      <button class="btn btn-danger" style="width:100%" onclick="disconnectCloud()"><i class="ti ti-plug-connected-x"></i> Desconectar la nube de este dispositivo</button>
+    ` : `
+      <div class="empty"><i class="ti ti-cloud-off"></i>Este dispositivo aún no está conectado a la nube.</div>
+    `;
+  }
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cloud"></i> Nube — Sincronización entre dispositivos</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <nav class="ge-tab-row" style="margin-bottom:14px">
+      ${tabBtn('guia','Configurar (dueño)')}
+      ${tabBtn('codigo','Tengo un código')}
+      ${cloudConfig ? tabBtn('estado','Estado y compartir') : ''}
+    </nav>
+    ${body}
+  `);
+}
+
+function showCloudError(elId, msg){
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function applyCloudConfig(cfg){
+  localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
+  localStorage.removeItem(CLOUD_SKIP_KEY);
+  showToast('Nube configurada. Conectando...');
+  setTimeout(() => location.reload(), 800);
+}
+
+function connectCloudFromPaste(){
+  const cfg = parseFirebaseConfigText(document.getElementById('cloud-config-paste').value);
+  if(!cfg || !cfg.apiKey || !cfg.projectId){
+    showCloudError('cloud-config-error', 'No se reconoce la configuración. Asegúrate de copiar el bloque completo que empieza por "const firebaseConfig = {" (paso 6).');
+    return;
+  }
+  if(!cfg.databaseURL){
+    showCloudError('cloud-config-error', 'Falta la dirección de la base de datos (databaseURL). Comprueba que creaste la Realtime Database (paso 3) ANTES de registrar la app web (paso 5). Si ya la creaste, copia la dirección que aparece arriba en la página de Realtime Database (https://...firebasedatabase.app) y añádela así dentro del bloque: databaseURL: "esa dirección",');
+    return;
+  }
+  applyCloudConfig(cfg);
+}
+
+function connectCloudFromCode(){
+  const raw = (document.getElementById('cloud-code-paste').value || '').trim();
+  let cfg = null;
+  try{ cfg = JSON.parse(atob(raw)); }catch(e){}
+  if(!cfg || !cfg.apiKey || !cfg.databaseURL){
+    showCloudError('cloud-code-error', 'El código no es válido. Pídele al dueño que lo copie desde ☁ Nube → "Estado y compartir" y te lo envíe completo.');
+    return;
+  }
+  applyCloudConfig(cfg);
+}
+
+function copyConnectionCode(){
+  const el = document.getElementById('cloud-share-code');
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
+  showToast('Código copiado');
+}
+
+function disconnectCloud(){
+  if(!confirm('¿Desconectar la nube de este dispositivo? Los datos seguirán en la nube; este dispositivo pasará a trabajar solo en local.')) return;
+  localStorage.removeItem(CLOUD_KEY);
+  location.reload();
 }
 
 const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
@@ -5724,6 +5897,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
+  // Primera vez: el asistente de nube es lo primero que ve el empresario
+  if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)){
+    openCloudWelcome();
+  }
 });
 </script>
 
