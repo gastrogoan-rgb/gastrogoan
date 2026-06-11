@@ -357,6 +357,7 @@ td.wrap{white-space:normal}
               <th>Categoría</th>
               <th>Proveedor</th>
               <th>Unidad</th>
+              <th>Compra</th>
               <th>Precio/ud</th>
               <th>Alérgenos</th>
               <th></th>
@@ -365,6 +366,20 @@ td.wrap{white-space:normal}
           <tbody id="megalista-tbody"></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- ========== PROVEEDORES ========== -->
+    <section class="view" id="view-proveedores">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Proveedores</div>
+      <div class="view-subtitle">Contactos y condiciones de compra</div>
+
+      <div class="toolbar">
+        <div class="left"></div>
+        <button class="btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> Nuevo Proveedor</button>
+      </div>
+
+      <div class="grid grid-2" id="proveedores-list"></div>
     </section>
 
     <!-- ========== ESCANDALLO ========== -->
@@ -742,6 +757,7 @@ function defaultData(){
     menuItems: [],
     stock: {},          // { ingredientId: { qty, min } }
     purchaseOrders: [],
+    providers: [],        // {id, nombre, tel, email, contacto, pago, dir, iban, notas}
     tables: [],
     tpvOrders: [],
     sales: [],
@@ -832,6 +848,7 @@ const FOLDERS = {
     chips:['Mega Lista','Escandallo','Ficha Técnica','Carta'],
     modules:[
       {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
+      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
       {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
       {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y alérgenos'},
       {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
@@ -893,6 +910,7 @@ function renderView(view){
     case 'folder': renderFolder(); break;
     case 'dashboard': renderDashboard(); break;
     case 'megalista': renderMegalista(); break;
+    case 'proveedores': renderProveedores(); break;
     case 'escandallo': renderEscandallo(); break;
     case 'fichas': renderFichas(); break;
     case 'carta': renderCarta(); break;
@@ -965,7 +983,7 @@ function renderDashboard(){
     return s && s.qty <= s.min;
   });
 
-  const pendingOrders = DB.purchaseOrders.filter(o => o.status !== 'recibido');
+  const pendingOrders = DB.purchaseOrders.filter(o => o.estado !== 'RECIBIDO');
 
   let avgFoodCost = 0;
   if(DB.recipes.length){
@@ -1011,7 +1029,7 @@ function renderDashboard(){
     ordersBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>No hay pedidos pendientes</div>`;
   }else{
     ordersBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
-      pendingOrders.map(o => `<tr><td>${escapeHtml(o.supplier)}</td><td>${o.date}</td><td><span class="badge badge-amber">${o.status}</span></td></tr>`).join('') +
+      pendingOrders.map(o => `<tr><td>${escapeHtml(o.supplier)}</td><td>${o.date}</td><td><span class="badge badge-amber">${o.estado}</span></td></tr>`).join('') +
       `</tbody></table></div>`;
   }
 }
@@ -1043,7 +1061,7 @@ function renderMegalista(){
 
   const tbody = document.getElementById('megalista-tbody');
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
     return;
   }
 
@@ -1053,6 +1071,7 @@ function renderMegalista(){
       <td><span class="badge badge-gray">${escapeHtml(ing.category||'—')}</span></td>
       <td>${escapeHtml(ing.supplier||'—')}</td>
       <td>${escapeHtml(ing.unit)}</td>
+      <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
       <td>${fmtMoney(ing.price)}</td>
       <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
       <td class="actions-cell">
@@ -1064,7 +1083,7 @@ function renderMegalista(){
 }
 
 function openIngredientModal(id){
-  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:'',unit:'kg',price:0,allergens:[]};
+  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:'',unit:'kg',price:0,packQty:1,packPrice:0,allergens:[]};
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -1089,7 +1108,7 @@ function openIngredientModal(id){
       </div>
       <div class="field">
         <label>Unidad</label>
-        <select id="ing-unit">
+        <select id="ing-unit" onchange="updateIngPackPrice()">
           ${UNITS.map(u=>`<option value="${u}" ${ing.unit===u?'selected':''}>${u}</option>`).join('')}
         </select>
       </div>
@@ -1099,10 +1118,20 @@ function openIngredientModal(id){
         <label>Proveedor</label>
         <input type="text" id="ing-supplier" value="${escapeHtml(ing.supplier)}" placeholder="Ej. Mercadona">
       </div>
+    </div>
+    <div class="field-row">
       <div class="field">
-        <label>Precio por unidad (€)</label>
-        <input type="number" id="ing-price" value="${ing.price}" step="0.01" min="0">
+        <label>Cantidad por compra</label>
+        <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
       </div>
+      <div class="field">
+        <label>Precio de la compra (€)</label>
+        <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
+      </div>
+    </div>
+    <div class="field" style="background:var(--brand-cream);border-radius:8px;padding:8px 12px">
+      <label>Precio por unidad (calculado)</label>
+      <div id="ing-unit-price" style="font-weight:700;font-size:16px">${fmtMoney(ing.price)} / ${escapeHtml(ing.unit)}</div>
     </div>
     <div class="field">
       <label>Alérgenos</label>
@@ -1117,21 +1146,31 @@ function openIngredientModal(id){
   `);
 }
 
+function updateIngPackPrice(){
+  const qty = parseFloat(document.getElementById('ing-pack-qty').value) || 0;
+  const packPrice = parseFloat(document.getElementById('ing-pack-price').value) || 0;
+  const unit = document.getElementById('ing-unit').value;
+  const price = qty > 0 ? packPrice / qty : 0;
+  document.getElementById('ing-unit-price').textContent = `${fmtMoney(price)} / ${unit}`;
+}
+
 function saveIngredient(id){
   const name = document.getElementById('ing-name').value.trim();
   if(!name){ showToast('El nombre es obligatorio'); return; }
   const category = document.getElementById('ing-category').value;
   const unit = document.getElementById('ing-unit').value;
   const supplier = document.getElementById('ing-supplier').value.trim();
-  const price = parseFloat(document.getElementById('ing-price').value) || 0;
+  const packQty = parseFloat(document.getElementById('ing-pack-qty').value) || 0;
+  const packPrice = parseFloat(document.getElementById('ing-pack-price').value) || 0;
+  const price = packQty > 0 ? packPrice / packQty : 0;
   const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
 
   if(id){
     const ing = getIngredient(id);
-    Object.assign(ing, {name, category, unit, supplier, price, allergens});
+    Object.assign(ing, {name, category, unit, supplier, price, packQty, packPrice, allergens});
   }else{
     const newId = genId();
-    DB.ingredients.push({id:newId, name, category, unit, supplier, price, allergens});
+    DB.ingredients.push({id:newId, name, category, unit, supplier, price, packQty, packPrice, allergens});
     getStockEntry(newId);
   }
   saveDB();
@@ -2118,74 +2157,396 @@ function chargeOrder(orderId){
 }
 
 /* ============================================================
-   PEDIDOS — Gestión de compras a proveedores
+   PROVEEDORES — Contactos y condiciones de compra
    ============================================================ */
-function renderPedidos(){
-  const box = document.getElementById('pedidos-list');
-  if(!DB.purchaseOrders.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-shopping-cart"></i>No hay pedidos. Crea uno nuevo.</div>`;
+function renderProveedores(){
+  const box = document.getElementById('proveedores-list');
+  if(!DB.providers.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>No hay proveedores. Añade el primero.</div>`;
     return;
   }
-  box.innerHTML = DB.purchaseOrders.slice().reverse().map(o => {
-    const linesHtml = (o.items||[]).map(line => {
-      const ing = getIngredient(line.ingredientId);
-      return ing ? `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${fmtMoney(ing.price * line.qty)}</td></tr>` : '';
-    }).join('');
-    const total = (o.items||[]).reduce((sum,line)=>{
-      const ing = getIngredient(line.ingredientId);
-      return sum + (ing ? ing.price*line.qty : 0);
-    },0);
+  box.innerHTML = DB.providers.map(p => `
+    <div class="card">
+      <h3 style="justify-content:space-between">
+        <span><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</span>
+        <span class="actions-cell">
+          <button class="btn btn-sm btn-icon" onclick="openProviderModal(${p.id})"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="deleteProvider(${p.id})"><i class="ti ti-trash"></i></button>
+        </span>
+      </h3>
+      ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
+      ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
+      ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
+      ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
+      ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
+      ${p.pago ? `<span class="badge badge-gray">${escapeHtml(p.pago)}</span>` : ''}
+      ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function openProviderModal(id){
+  const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:''};
+  openModal(`
+    <div class="modal-header">
+      <h3>${id?'Editar':'Nuevo'} Proveedor</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field"><label>Nombre</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="Ej. Makro"></div>
+    <div class="field-row">
+      <div class="field"><label>Persona de contacto</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
+      <div class="field"><label>Forma de pago</label>
+        <select id="prov-pago">
+          ${['Contado','Transferencia','Recibo domiciliado','Otro'].map(o=>`<option ${p.pago===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Teléfono</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
+      <div class="field"><label>Email</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
+    </div>
+    <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
+    <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
+    <div class="field"><label>Notas</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProvider(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveProvider(id){
+  const nombre = document.getElementById('prov-nombre').value.trim();
+  if(!nombre){ showToast('El nombre es obligatorio'); return; }
+  const data = {
+    nombre,
+    contacto: document.getElementById('prov-contacto').value.trim(),
+    pago: document.getElementById('prov-pago').value,
+    tel: document.getElementById('prov-tel').value.trim(),
+    email: document.getElementById('prov-email').value.trim(),
+    dir: document.getElementById('prov-dir').value.trim(),
+    iban: document.getElementById('prov-iban').value.trim(),
+    notas: document.getElementById('prov-notas').value.trim()
+  };
+  if(id){
+    Object.assign(DB.providers.find(p=>p.id===id), data);
+  }else{
+    DB.providers.push({id: genId(), ...data});
+  }
+  saveDB();
+  closeModal();
+  renderProveedores();
+  showToast('Proveedor guardado');
+}
+
+function deleteProvider(id){
+  if(!confirm('¿Eliminar este proveedor?')) return;
+  DB.providers = DB.providers.filter(p=>p.id!==id);
+  saveDB();
+  renderProveedores();
+}
+
+function getProviderByName(name){
+  return DB.providers.find(p => p.nombre.trim().toLowerCase() === (name||'').trim().toLowerCase());
+}
+
+/* ============================================================
+   PEDIDOS — Gestión de compras a proveedores
+   ============================================================ */
+const PEDIDO_ESTADOS = ['BORRADOR','ENVIADO','RECIBIDO'];
+const PEDIDO_BADGE = {BORRADOR:'badge-gray', ENVIADO:'badge-amber', RECIBIDO:'badge-green'};
+let pedidoDetailId = null;
+
+function getPurchaseOrder(id){ return DB.purchaseOrders.find(o => o.id === id); }
+
+function pedidoSuppliers(){
+  const fromProviders = DB.providers.map(p => p.nombre);
+  const fromIngredients = DB.ingredients.map(i => i.supplier).filter(Boolean);
+  return [...new Set([...fromProviders, ...fromIngredients])].sort();
+}
+
+function renderPedidos(){
+  if(pedidoDetailId && getPurchaseOrder(pedidoDetailId)){
+    renderPedidoDetail();
+  }else{
+    pedidoDetailId = null;
+    renderPedidoList();
+  }
+}
+
+function renderPedidoList(){
+  const box = document.getElementById('pedidos-list');
+  const orders = DB.purchaseOrders;
+  const counts = {BORRADOR:0, ENVIADO:0, RECIBIDO:0};
+  orders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
+
+  const kpiHtml = `
+    <div class="grid grid-4" style="margin-bottom:14px">
+      <div class="kpi"><div class="label">Borradores</div><div class="value">${counts.BORRADOR}</div></div>
+      <div class="kpi warn"><div class="label">Enviados</div><div class="value">${counts.ENVIADO}</div></div>
+      <div class="kpi ok"><div class="label">Recibidos</div><div class="value">${counts.RECIBIDO}</div></div>
+      <div class="kpi"><div class="label">Total</div><div class="value">${orders.length}</div></div>
+    </div>
+  `;
+
+  if(!orders.length){
+    box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>No hay pedidos. Crea uno nuevo.</div>`;
+    return;
+  }
+
+  const sorted = orders.slice().sort((a,b) => b.date.localeCompare(a.date));
+  box.innerHTML = kpiHtml + sorted.map(o => {
+    const itemCount = (o.items||[]).length;
+    const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     return `
-      <div class="card">
+      <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between">
           <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-          ${o.status==='recibido' ? '<span class="badge badge-green">Recibido</span>' : '<span class="badge badge-amber">Pendiente</span>'}
+          <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
         </h3>
-        <div class="table-wrap" style="margin-bottom:10px">
-          <table>
-            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Coste estimado</th></tr></thead>
-            <tbody>${linesHtml || '<tr><td colspan="3"><div class="empty" style="padding:10px">Sin items</div></td></tr>'}</tbody>
-          </table>
-        </div>
-        <div class="kpi" style="margin-bottom:10px;max-width:220px">
-          <div class="label">Total estimado</div>
-          <div class="value" style="font-size:18px">${fmtMoney(total)}</div>
-        </div>
-        <div class="actions-cell">
-          ${o.status!=='recibido' ? `<button class="btn btn-sm btn-primary" onclick="markOrderReceived(${o.id})"><i class="ti ti-check"></i> Marcar recibido</button>` : ''}
-          <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
-        </div>
+        <div style="color:var(--muted);font-size:13px">${itemCount} producto${itemCount!==1?'s':''} · ${withQty} con cantidad</div>
       </div>
     `;
   }).join('');
 }
 
+function openPedido(id){
+  pedidoDetailId = id;
+  renderPedidoDetail();
+}
+
+function backToPedidoList(){
+  pedidoDetailId = null;
+  renderPedidoList();
+}
+
+function renderPedidoDetail(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  const box = document.getElementById('pedidos-list');
+  if(!o){ pedidoDetailId = null; renderPedidoList(); return; }
+
+  const isRecibido = o.estado === 'RECIBIDO';
+  const showRecepcion = o.estado === 'ENVIADO' || o.estado === 'RECIBIDO';
+  const r = o.recepcion || {};
+
+  const itemsHtml = (o.items||[]).map((line, idx) => {
+    const ing = getIngredient(line.ingredientId);
+    return `
+      <tr>
+        <td>${ing ? escapeHtml(ing.name) : '—'}</td>
+        <td>${ing ? escapeHtml(ing.unit) : ''}</td>
+        <td><input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)"></td>
+        <td style="${isRecibido?'':'display:none'}"><input type="number" value="${line.cantidadRecibida||0}" step="0.01" min="0" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updatePedidoItem(${idx}, 'cantidadRecibida', this.value)"></td>
+      </tr>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <button class="btn btn-sm" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> Volver a pedidos</button>
+    <div class="card" style="margin-top:10px">
+      <h3 style="justify-content:space-between">
+        <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
+        <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
+      </h3>
+      <div class="table-wrap" style="margin-bottom:10px">
+        <table>
+          <thead><tr><th>Ingrediente</th><th>Ud</th><th>Cantidad pedida</th><th style="${isRecibido?'':'display:none'}">Cantidad recibida</th></tr></thead>
+          <tbody>${itemsHtml || '<tr><td colspan="4"><div class="empty" style="padding:10px">Sin items</div></td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <div class="field">
+        <label>Notas</label>
+        <textarea id="pedido-notas" rows="2" onchange="updatePedidoNotas(this.value)">${escapeHtml(o.notas||'')}</textarea>
+      </div>
+
+      ${showRecepcion ? `
+      <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
+        <h3><i class="ti ti-clipboard-check"></i> Recepción / APPCC</h3>
+        <div class="field-row">
+          <div class="field"><label>Fecha</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
+          <div class="field"><label>Hora</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Temperatura (°C)</label><input type="number" step="0.1" id="rec-temp" value="${r.temp!=null?r.temp:''}"></div>
+          <div class="field"><label>Condición del producto</label>
+            <select id="rec-condicion">
+              <option ${r.condicion==='OK'||!r.condicion?'selected':''}>OK</option>
+              <option ${r.condicion==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Caducidad / fecha consumo</label>
+            <select id="rec-caducidad">
+              <option ${r.caducidad==='OK'||!r.caducidad?'selected':''}>OK</option>
+              <option ${r.caducidad==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+            </select>
+          </div>
+          <div class="field"><label>Cuadre con albarán</label>
+            <select id="rec-albaran">
+              <option ${r.albaran==='OK'||!r.albaran?'selected':''}>OK</option>
+              <option ${r.albaran==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Responsable</label>
+          <input type="text" id="rec-resp" value="${escapeHtml(r.responsable||'')}">
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea>
+        </div>
+        <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> Guardar recepción</button>
+      </div>
+      ` : ''}
+
+      <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
+        ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> Marcar enviado</button>` : ''}
+        ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> Marcar recibido</button>` : ''}
+        <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
+        <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
+        <button class="btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  `;
+}
+
+function updatePedidoItem(idx, field, value){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  o.items[idx][field] = parseFloat(value) || 0;
+  saveDB();
+}
+
+function updatePedidoNotas(value){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  o.notas = value;
+  saveDB();
+}
+
+function savePedidoRecepcion(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  o.recepcion = {
+    fecha: document.getElementById('rec-fecha').value,
+    hora: document.getElementById('rec-hora').value,
+    temp: document.getElementById('rec-temp').value,
+    condicion: document.getElementById('rec-condicion').value,
+    caducidad: document.getElementById('rec-caducidad').value,
+    albaran: document.getElementById('rec-albaran').value,
+    responsable: document.getElementById('rec-resp').value.trim(),
+    obs: document.getElementById('rec-obs').value.trim()
+  };
+  saveDB();
+  showToast('Recepción guardada');
+}
+
+function changePedidoEstado(estado){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  o.estado = estado;
+  if(estado === 'RECIBIDO'){
+    (o.items||[]).forEach(line => {
+      const s = getStockEntry(line.ingredientId);
+      const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+      s.qty = (s.qty||0) + (recibida||0);
+    });
+    renderStock();
+  }
+  saveDB();
+  renderPedidoDetail();
+  showToast(estado === 'RECIBIDO' ? 'Pedido recibido y stock actualizado' : 'Pedido marcado como enviado');
+}
+
+function pedidoTexto(o){
+  const rows = (o.items||[]).map(line => {
+    const ing = getIngredient(line.ingredientId);
+    return ing ? `  • ${ing.name}: ${fmtNum(line.cantidad)} ${ing.unit}` : '';
+  }).join('\n');
+  return `🛒 PEDIDO A ${o.supplier}\nFecha: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
+}
+
+function sendPedidoWhatsapp(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  const prov = getProviderByName(o.supplier);
+  const tel = prov && prov.tel ? prov.tel.replace(/\D/g,'') : '';
+  const txt = encodeURIComponent(pedidoTexto(o));
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+}
+
+function sendPedidoEmail(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  const prov = getProviderByName(o.supplier);
+  const to = prov && prov.email ? prov.email : '';
+  const subject = encodeURIComponent('Pedido '+o.supplier+' — '+o.date);
+  const body = encodeURIComponent(pedidoTexto(o));
+  window.location.href = 'mailto:'+to+'?subject='+subject+'&body='+body;
+}
+
+function printPedido(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  const txt = pedidoTexto(o);
+  const win = window.open('', '_blank', 'width=400,height=500');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
+  win.document.close();
+  win.print();
+}
+
+let orderModalSupplier = '';
 let orderModalLines = [];
 
 function openOrderModal(){
   if(!DB.ingredients.length){ showToast('Añade ingredientes en Mega Lista primero'); return; }
+  orderModalSupplier = '';
   orderModalLines = [];
   renderOrderModal();
 }
 
 function renderOrderModal(){
-  const ingredientOptions = DB.ingredients.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
-  const linesHtml = orderModalLines.map((line, idx) => {
-    const ing = getIngredient(line.ingredientId);
-    return `
-      <tr>
-        <td>${ing ? escapeHtml(ing.name) : '—'}</td>
-        <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${idx}, this.value)"></td>
-        <td>${ing ? escapeHtml(ing.unit) : ''}</td>
-        <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderLine(${idx})"><i class="ti ti-x"></i></button></td>
-      </tr>
-    `;
-  }).join('');
+  const suppliers = pedidoSuppliers();
+  const supplierOptions = `<option value="">— Selecciona proveedor —</option>` +
+    suppliers.map(s => `<option value="${escapeHtml(s)}" ${orderModalSupplier===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
 
-  const supplierField = document.getElementById('order-supplier');
   const dateField = document.getElementById('order-date');
-  const supplierVal = supplierField ? supplierField.value : '';
   const dateVal = dateField ? dateField.value : todayStr();
+
+  let itemsHtml = '';
+  if(orderModalSupplier){
+    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier);
+    if(!ings.length){
+      itemsHtml = `<div class="empty" style="padding:10px">Este proveedor no tiene ingredientes asociados en Mega Lista</div>`;
+    }else{
+      const rows = orderModalLines.map(line => {
+        const ing = getIngredient(line.ingredientId);
+        const s = getStockEntry(ing.id);
+        return `
+          <tr>
+            <td>${escapeHtml(ing.name)}</td>
+            <td>${escapeHtml(ing.unit)}</td>
+            <td>${fmtNum(s.qty)}</td>
+            <td>${fmtNum(s.min)}</td>
+            <td><input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)"></td>
+          </tr>
+        `;
+      }).join('');
+      itemsHtml = `
+        <div class="table-wrap" style="margin-bottom:8px">
+          <table>
+            <thead><tr><th>Ingrediente</th><th>Ud</th><th>Stock actual</th><th>Mínimo</th><th>Cantidad a pedir</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> Sugerir por déficit de stock</button>
+      `;
+    }
+  }
 
   openModal(`
     <div class="modal-header">
@@ -2195,89 +2556,62 @@ function renderOrderModal(){
     <div class="field-row">
       <div class="field">
         <label>Proveedor</label>
-        <input type="text" id="order-supplier" value="${escapeHtml(supplierVal)}" placeholder="Ej. Makro">
+        <select id="order-supplier" onchange="selectOrderSupplier(this.value)">${supplierOptions}</select>
       </div>
       <div class="field">
         <label>Fecha</label>
-        <input type="date" id="order-date" value="${dateVal}">
+        <input type="date" id="order-date" value="${dateVal || todayStr()}">
       </div>
     </div>
-    <div class="field">
-      <label>Artículos</label>
-      <div class="table-wrap" style="margin-bottom:8px">
-        <table>
-          <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Ud</th><th></th></tr></thead>
-          <tbody>${linesHtml || '<tr><td colspan="4"><div class="empty" style="padding:10px">Añade artículos</div></td></tr>'}</tbody>
-        </table>
-      </div>
-      <div class="field-row">
-        <div class="field" style="margin-bottom:0">
-          <select id="order-add-ingredient">${ingredientOptions}</select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <input type="number" id="order-add-qty" placeholder="Cantidad" step="0.01" min="0" value="1">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <button class="btn" style="width:100%" onclick="addOrderLine()"><i class="ti ti-plus"></i> Añadir</button>
-        </div>
-      </div>
+    <div class="field" id="order-items-field">
+      <label>Artículos del proveedor</label>
+      ${itemsHtml || '<div class="empty" style="padding:10px">Selecciona un proveedor para cargar sus artículos</div>'}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="savePurchaseOrder()">Guardar Pedido</button>
     </div>
   `);
-  document.getElementById('order-supplier').value = supplierVal;
-  document.getElementById('order-date').value = dateVal || todayStr();
+  const dEl = document.getElementById('order-date');
+  if(dEl) dEl.value = dateVal || todayStr();
 }
 
-function addOrderLine(){
-  const ingredientId = parseInt(document.getElementById('order-add-ingredient').value);
-  const qty = parseFloat(document.getElementById('order-add-qty').value) || 0;
-  if(!ingredientId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
-  const existing = orderModalLines.find(l => l.ingredientId === ingredientId);
-  if(existing) existing.qty += qty;
-  else orderModalLines.push({ingredientId, qty});
+function selectOrderSupplier(supplier){
+  orderModalSupplier = supplier;
+  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
   renderOrderModal();
 }
-function updateOrderLineQty(idx, value){
-  orderModalLines[idx].qty = parseFloat(value) || 0;
+
+function sugerirPorDeficit(){
+  orderModalLines.forEach(line => {
+    const s = getStockEntry(line.ingredientId);
+    line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
+  });
   renderOrderModal();
+  showToast('Cantidades sugeridas según déficit de stock');
 }
-function removeOrderLine(idx){
-  orderModalLines.splice(idx,1);
-  renderOrderModal();
+
+function updateOrderLineQty(ingredientId, value){
+  const line = orderModalLines.find(l => l.ingredientId === ingredientId);
+  if(line) line.cantidad = parseFloat(value) || 0;
 }
 
 function savePurchaseOrder(){
-  const supplier = document.getElementById('order-supplier').value.trim();
-  if(!supplier){ showToast('Indica el proveedor'); return; }
-  if(!orderModalLines.length){ showToast('Añade al menos un artículo'); return; }
+  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return; }
   const date = document.getElementById('order-date').value || todayStr();
-  DB.purchaseOrders.push({id: genId(), supplier, date, status:'pendiente', items: orderModalLines.map(l=>({...l}))});
+  const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
+  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return; }
+  DB.purchaseOrders.push({id: genId(), supplier: orderModalSupplier, date, estado:'BORRADOR', items, notas:'', recepcion:null});
   saveDB();
   closeModal();
   renderPedidos();
   showToast('Pedido creado');
 }
 
-function markOrderReceived(id){
-  const o = DB.purchaseOrders.find(x => x.id === id);
-  if(!o || o.status === 'recibido') return;
-  (o.items||[]).forEach(line => {
-    const s = getStockEntry(line.ingredientId);
-    s.qty = (s.qty||0) + line.qty;
-  });
-  o.status = 'recibido';
-  saveDB();
-  renderPedidos();
-  renderStock();
-  showToast('Pedido recibido y stock actualizado');
-}
-
 function deleteOrder(id){
   if(!confirm('¿Eliminar este pedido?')) return;
   DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
+  if(pedidoDetailId === id) pedidoDetailId = null;
   saveDB();
   renderPedidos();
 }
