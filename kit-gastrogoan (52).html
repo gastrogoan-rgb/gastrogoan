@@ -68,41 +68,50 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-back{margin-bottom:16px}
 
 /* ===== Home (selección de área) ===== */
-.home-hero{text-align:center;padding:30px 16px 10px}
-.home-hero h1{font-size:26px;font-weight:800;margin-bottom:6px}
-.home-hero p{color:var(--muted);font-size:15px}
+.home-hero{
+  background:linear-gradient(135deg,var(--dark) 0%,#1A1A1A 100%);
+  padding:48px 28px 36px;text-align:center;
+  margin:-22px -22px 0;border-radius:0 0 24px 24px;
+}
+.home-hero .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,0,.15);color:var(--brand-yellow);border:1px solid rgba(255,255,0,.35);font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;margin-bottom:16px}
+.home-hero h1{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
+.home-hero p{color:rgba(255,255,255,.55);font-size:15px}
 
-.folder-grid{margin-top:24px}
+.folder-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;padding:32px 0 8px;max-width:960px;margin:0 auto}
 .folder-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:18px;
-  padding:34px 22px;text-align:center;cursor:pointer;
-  border-top:5px solid var(--folder-color, var(--teal));
-  transition:transform .15s, box-shadow .15s;
+  border-radius:18px;padding:28px;cursor:pointer;
+  position:relative;overflow:hidden;min-height:220px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  border:1px solid rgba(255,255,255,.08);
+  transition:transform .2s, box-shadow .2s;
 }
-.folder-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
-.folder-icon{
-  width:72px;height:72px;border-radius:50%;
-  background:var(--folder-color, var(--teal));color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:34px;
-  margin:0 auto 16px;
-}
-.folder-card h2{font-size:19px;font-weight:800;margin-bottom:6px}
-.folder-card p{color:var(--muted);font-size:13.5px}
-.folder-card .folder-count{margin-top:10px;font-size:12px;font-weight:700;color:var(--folder-color, var(--teal))}
+.folder-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.folder-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--folder-color, var(--teal))}
+.folder-card.folder-cocina{background:linear-gradient(140deg,#1A1A1A,#2A1500)}
+.folder-card.folder-sala{background:linear-gradient(140deg,#0A0A1A,#1A1A1A)}
+.folder-card.folder-gestion{background:linear-gradient(140deg,#150A00,#2A1200)}
+.folder-icon{font-size:40px;margin-bottom:10px;display:block}
+.folder-card h2{font-size:26px;font-weight:800;color:#fff;margin-bottom:6px}
+.folder-card p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:16px}
+.folder-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px}
+.folder-chip{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1)}
+.folder-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:9px 16px;border-radius:9px;width:fit-content;color:var(--teal);background:rgba(223,112,57,.12);border:1px solid rgba(223,112,57,.3)}
+.folder-count{display:none}
 
 /* ===== Folder (módulos de un área) ===== */
+.folder-top{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.folder-top-title{font-size:22px;font-weight:800}
+
 .module-card{
-  cursor:pointer;text-align:center;
-  transition:transform .15s, box-shadow .15s;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
+  cursor:pointer;transition:all .18s;position:relative;overflow:hidden;text-align:left;
 }
-.module-card:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.06)}
-.module-icon{
-  width:50px;height:50px;border-radius:12px;
-  background:var(--teal-l);color:var(--teal-d);
-  display:flex;align-items:center;justify-content:center;font-size:22px;
-  margin:0 auto 10px;
-}
-.module-card h3{justify-content:center}
+.module-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--teal)}
+.module-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.1);border-color:var(--teal)}
+.module-icon{font-size:28px;margin-bottom:8px;display:block;color:var(--teal-d)}
+.module-card h3{font-size:16px;font-weight:700;margin-bottom:4px;justify-content:flex-start;gap:0}
+.module-card p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+.module-open{font-size:13px;font-weight:600;color:var(--teal);display:flex;align-items:center;gap:4px}
 
 /* ===== Cards / generic ===== */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
@@ -192,9 +201,76 @@ td.wrap{white-space:normal}
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ===== Gestión Económica ===== */
+.ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
+.ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0}
+.ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit}
+.ge-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
+.ge-tab:hover:not(.active){color:var(--text)}
+.ge-tab-panel{display:none}
+.ge-tab-panel.active{display:block}
+
+.ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
+.ge-sec-head h4{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.ge-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border)}
+.ge-item:last-child{border-bottom:none}
+.ge-total-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--teal);color:#fff;font-weight:700;font-size:15px;border-radius:12px}
+
+.ge-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+.ge-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px}
+.ge-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.ge-kpi .val{font-size:22px;font-weight:700;margin-top:4px}
+.ge-kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.ge-input-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.ge-input-row label{flex:1;font-size:14px;font-weight:500}
+.ge-input-row input{width:120px;text-align:right;font-size:14px;font-family:monospace}
+.ge-pe-result{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.ge-pe-result .pe-lbl{font-size:14px;color:var(--muted)}
+.ge-pe-result .pe-val{font-size:18px;font-weight:700;font-family:monospace}
+
+.ge-grid{display:grid;gap:0;overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+.ge-grid table{width:100%;border-collapse:collapse;font-size:13px}
+.ge-grid th{padding:8px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap}
+.ge-grid th:first-child{text-align:left;min-width:160px}
+.ge-grid td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;white-space:nowrap}
+.ge-grid td:first-child{text-align:left;font-family:inherit;font-weight:600;background:var(--brand-cream);border-left:3px solid var(--teal)}
+.ge-grid tr:last-child td{border-bottom:none}
+.ge-grid tr.highlight td{background:var(--teal-l);font-weight:700}
+.ge-grid tr.total td{background:var(--brand-black);color:#fff;font-weight:700}
+.ge-grid td.pos{color:var(--green)}
+.ge-grid td.neg{color:var(--red)}
+
+.month-pill{padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-weight:500}
+.month-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
+.month-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.ge-link-note{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-d);background:var(--teal-l);padding:4px 10px;border-radius:6px;margin-bottom:4px}
+
+.vis-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.vis-section h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:0 0 12px}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;padding:0 2px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bar-fill{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+.bar-lbl{font-size:9px;color:var(--muted);white-space:nowrap}
+
+.te-row{display:grid;grid-template-columns:1fr 70px 90px 90px 90px 70px;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.te-row:last-child{border-bottom:none}
+.te-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:0 16px 10px}
+.te-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.dist-config{display:flex;gap:10px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;align-items:center}
+.dist-field{display:flex;align-items:center;gap:6px;font-size:13px}
+.dist-field input{width:50px;text-align:right;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:6px}
+.kpi-mini{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center}
+.kpi-mini .v{font-size:18px;font-weight:700;margin:4px 0}
+.kpi-mini .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.te-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px}
+
 /* Responsive */
 @media (max-width: 880px){
   .content{padding:14px}
+  .home-hero{margin:-14px -14px 0}
+  .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
 }
 </style>
 </head>
@@ -214,16 +290,19 @@ td.wrap{white-space:normal}
     <!-- ========== HOME ========== -->
     <section class="view" id="view-home">
       <div class="home-hero">
-        <h1>¿Con qué área quieres trabajar?</h1>
+        <div class="hero-badge"><i class="ti ti-star"></i> Kit profesional de gestión hostelera</div>
+        <h1>¿Con qué área vamos a trabajar?</h1>
         <p>Selecciona un área para acceder a sus herramientas</p>
       </div>
-      <div class="grid grid-3 folder-grid" id="home-folders"></div>
+      <div class="folder-grid" id="home-folders"></div>
     </section>
 
     <!-- ========== FOLDER (módulos de un área) ========== -->
     <section class="view" id="view-folder">
-      <button class="btn btn-sm btn-back" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> Volver</button>
-      <div class="view-title" id="folder-title"></div>
+      <div class="folder-top">
+        <button class="btn btn-sm btn-back" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> Inicio</button>
+        <div class="folder-top-title" id="folder-title"></div>
+      </div>
       <div class="view-subtitle" id="folder-subtitle"></div>
       <div class="grid grid-3" id="folder-modules"></div>
     </section>
@@ -385,8 +464,167 @@ td.wrap{white-space:normal}
     <section class="view" id="view-economia">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Gestión Económica</div>
-      <div class="view-subtitle">Gastos, P&amp;L y punto de equilibrio</div>
-      <div id="economia-content"></div>
+      <div class="view-subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
+
+      <nav class="ge-tab-row">
+        <button class="ge-tab active" onclick="GE.tab('fijos')">💰 Gastos Fijos</button>
+        <button class="ge-tab" onclick="GE.tab('variables')">🛒 Gastos Variables</button>
+        <button class="ge-tab" onclick="GE.tab('cdr')">📊 Cuenta de Resultados</button>
+        <button class="ge-tab" onclick="GE.tab('pe')">⚖️ Punto de Equilibrio</button>
+        <button class="ge-tab" onclick="GE.tab('capex')">🏗 CAPEX</button>
+        <button class="ge-tab" onclick="GE.tab('resultado')">📈 Resultado</button>
+        <button class="ge-tab" onclick="GE.tab('tesoreria')">🏦 Tesorería</button>
+      </nav>
+
+      <!-- GASTOS FIJOS -->
+      <div id="ge-fijos" class="ge-tab-panel active">
+        <div class="ge-kpi-grid" id="gf-kpis"></div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>Personal (nóminas + SS)</h4>
+            <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> Añadir</button></div>
+          <div id="gf-personal"></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>Gastos Fijos Generales</h4>
+            <button class="btn btn-sm" onclick="GE.newGF('FIJOS')"><i class="ti ti-plus"></i> Añadir</button></div>
+          <div id="gf-fijos"></div>
+        </div>
+        <div class="vis-section" id="gf-dist-visual" style="display:none">
+          <h4>Distribución sobre ventas <span class="ge-auto">AUTO</span></h4>
+          <div id="gf-visual-content"></div>
+        </div>
+        <div class="ge-total-bar"><span>TOTAL GASTOS FIJOS MENSUALES</span><span id="gf-total-val">0 €</span></div>
+      </div>
+
+      <!-- GASTOS VARIABLES -->
+      <div id="ge-variables" class="ge-tab-panel">
+        <div class="month-sel" id="gv-months"></div>
+        <div class="ge-kpi-grid" id="gv-kpis"></div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
+            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> Añadir compra</button></div>
+          <div id="gv-list"></div>
+          <div id="gv-empty" class="empty" style="display:none">Sin compras registradas este mes.</div>
+        </div>
+        <div class="ge-total-bar"><span id="gv-total-lbl">TOTAL VARIABLES MES</span><span id="gv-total-val">0 €</span></div>
+      </div>
+
+      <!-- CUENTA DE RESULTADOS -->
+      <div id="ge-cdr" class="ge-tab-panel">
+        <div class="vis-section" style="margin-bottom:14px">
+          <h4>Resultado mensual <span class="ge-auto">AUTO</span></h4>
+          <div id="cdr-chart" class="bar-chart"></div>
+        </div>
+        <div style="margin-bottom:14px">
+          <span class="ge-link-note"><i class="ti ti-plug"></i> Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span>
+        </div>
+        <div class="ge-grid"><table id="cdr-table"></table></div>
+      </div>
+
+      <!-- PUNTO DE EQUILIBRIO -->
+      <div id="ge-pe" class="ge-tab-panel">
+        <div style="margin-bottom:14px">
+          <span class="ge-link-note"><i class="ti ti-plug"></i> Costes fijos vinculados a Gastos Fijos</span>
+        </div>
+        <div class="grid grid-2">
+          <div>
+            <div class="ge-section">
+              <div class="ge-sec-head"><h4>Datos de entrada</h4></div>
+              <div class="ge-input-row">
+                <label>Costes fijos totales <span class="ge-auto">AUTO</span></label>
+                <input type="number" id="pe-fijos" readonly style="background:var(--teal-l);color:var(--teal-d);border-color:var(--teal)">
+              </div>
+              <div class="ge-input-row">
+                <label>Ticket medio (€/cubierto)</label>
+                <input type="number" id="pe-ticket" min="0" step="0.5" oninput="GE.calcPE()">
+              </div>
+              <div class="ge-input-row">
+                <label>Cubiertos actuales/mes</label>
+                <input type="number" id="pe-cubiertos" min="0" step="1" oninput="GE.calcPE()">
+              </div>
+              <div class="ge-input-row">
+                <label>Días de apertura/mes</label>
+                <input type="number" id="pe-dias" min="0" max="31" step="1" oninput="GE.calcPE()">
+              </div>
+              <div class="ge-input-row">
+                <label>Food cost objetivo (%)</label>
+                <input type="number" id="pe-fc" min="0" max="100" step="0.5" value="35" oninput="GE.calcPE()">
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="ge-section">
+              <div class="ge-sec-head"><h4>Resultados <span class="ge-auto">AUTO</span></h4></div>
+              <div class="ge-pe-result"><span class="pe-lbl">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
+              <div class="ge-pe-result" style="background:var(--amber-l)"><span class="pe-lbl" style="font-weight:700">Cubiertos para cubrir gastos</span><span class="pe-val" id="pe-r3" style="color:var(--amber-dark)">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl">Cubiertos por día necesarios</span><span class="pe-val" id="pe-r4">—</span></div>
+              <div class="ge-pe-result" style="background:var(--green-l)"><span class="pe-lbl" style="font-weight:700">Ventas mínimas mensuales</span><span class="pe-val" id="pe-r5" style="color:var(--green)">—</span></div>
+            </div>
+            <div class="ge-section" style="margin-top:12px">
+              <div class="ge-sec-head"><h4>Comparativa</h4></div>
+              <div class="vis-section" style="margin-bottom:0">
+                <h4>Cobertura actual vs equilibrio</h4>
+                <div id="pe-gauge" style="margin-top:4px"></div>
+              </div>
+              <div class="ge-pe-result"><span class="pe-lbl">Cubiertos actuales vs necesarios</span><span class="pe-val" id="pe-r6">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl">Estado del negocio</span><span id="pe-estado" style="font-size:14px;font-weight:700">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAPEX -->
+      <div id="ge-capex" class="ge-tab-panel">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+          <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> Nueva inversión</button>
+        </div>
+        <div class="ge-grid"><table id="capex-table">
+          <thead><tr>
+            <th style="text-align:left">Descripción</th>
+            <th>Fecha</th><th>Importe</th><th>IVA</th><th>Total</th><th>Estado</th><th style="width:60px"></th>
+          </tr></thead>
+          <tbody id="capex-tbody"></tbody>
+          <tfoot><tr class="total">
+            <td>TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td>
+          </tr></tfoot>
+        </table></div>
+        <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p>Sin inversiones registradas</p></div>
+      </div>
+
+      <!-- RESULTADO -->
+      <div id="ge-resultado" class="ge-tab-panel">
+        <div style="margin-bottom:14px">
+          <span class="ge-link-note"><i class="ti ti-plug"></i> Calculado automáticamente de Cuenta de Resultados + CAPEX</span>
+        </div>
+        <div class="ge-grid"><table id="res-table"></table></div>
+      </div>
+
+      <!-- TESORERÍA -->
+      <div id="ge-tesoreria" class="ge-tab-panel">
+        <div class="month-sel" id="te-months"></div>
+        <div class="te-kpis" id="te-kpis"></div>
+        <div class="dist-config">
+          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo:</span>
+          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">M.Prima <input type="number" id="te-pct-mp" value="35" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">IVA tipo <input type="number" id="te-iva-tipo" value="10" min="0" max="21" oninput="GE.renderTesoreria()">%</div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>Distribución de tesorería <span class="ge-auto">AUTO</span></h4></div>
+          <div class="te-row" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;background:var(--bg)">
+            <span>Concepto</span><span style="text-align:right">%</span><span style="text-align:right">Objetivo</span>
+            <span style="text-align:right">Real</span><span style="text-align:right">Dif.</span><span style="text-align:center">Estado</span>
+          </div>
+          <div id="te-rows"></div>
+        </div>
+        <div class="vis-section">
+          <h4>Resultado mensual anual <span class="ge-auto">AUTO</span></h4>
+          <div id="te-annual-chart" class="bar-chart"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ========== HORARIOS ========== -->
@@ -494,7 +732,6 @@ function defaultData(){
     purchaseOrders: [],
     tables: [],
     tpvOrders: [],
-    expenses: [],
     sales: [],
     employees: [],
     shifts: {},          // { employeeId: ['','','','','','',''] }
@@ -503,6 +740,12 @@ function defaultData(){
     clients: [],
     reservations: [],
     business: {name:'', address:'', phone:'', email:'', schedule:'', description:''},
+    ge: {
+      fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
+      variables: [], // {id, mes, año, categoria, proveedor, importe, fecha}
+      capex: [],     // {id, descripcion, importe, iva, fecha, estadoPago}
+      config: {ticketMedio:15, cubiertosActuales:50, diasApertura:26, foodCostObj:35}
+    },
     nextId: 1
   };
 }
@@ -562,7 +805,9 @@ function getStockEntry(ingredientId){
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
-    title:'Cocina', subtitle:'Producción, recetas e inventario', icon:'ti-tools-kitchen-2', color:'var(--teal)',
+    title:'Cocina', subtitle:'Producción, recetas e inventario', icon:'ti-tools-kitchen-2', color:'var(--teal)', emoji:'👨‍🍳',
+    desc:'Gestiona ingredientes, costes de recetas, fichas técnicas y carta.',
+    chips:['Mega Lista','Escandallo','Ficha Técnica','Carta'],
     modules:[
       {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
       {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
@@ -576,7 +821,9 @@ const FOLDERS = {
     ]
   },
   sala: {
-    title:'Sala', subtitle:'Clientes, reservas y servicio', icon:'ti-users', color:'var(--blue)',
+    title:'Sala', subtitle:'Clientes, reservas y servicio', icon:'ti-users', color:'var(--brand-yellow)', emoji:'🍽️',
+    desc:'Gestiona el servicio. Clientes, reservas y punto de venta.',
+    chips:['Clientes','Reservas','TPV'],
     modules:[
       {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
       {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
@@ -584,7 +831,9 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    title:'Gestión', subtitle:'Administración del negocio', icon:'ti-coin', color:'var(--amber)',
+    title:'Gestión', subtitle:'Administración del negocio', icon:'ti-coin', color:'var(--teal)', emoji:'📊',
+    desc:'Control económico completo. Gastos, P&L, tesorería y KPIs.',
+    chips:['Gestión Económica','Panel de Control','Mi Negocio','Manual'],
     modules:[
       {id:'economia', name:'Gestión Económica', icon:'ti-coin', desc:'Gastos, P&L y punto de equilibrio'},
       {id:'dashboard', name:'Panel de Control', icon:'ti-layout-dashboard', desc:'KPIs centralizados'},
@@ -628,7 +877,7 @@ function renderView(view){
     case 'tpv': renderTPV(); break;
     case 'stock': renderStock(); break;
     case 'pedidos': renderPedidos(); break;
-    case 'economia': renderEconomia(); break;
+    case 'economia': GE.init(); break;
     case 'horarios': renderHorarios(); break;
     case 'limpieza': renderLimpieza(); break;
     case 'clientes': renderClientes(); break;
@@ -641,11 +890,14 @@ function renderView(view){
 
 function renderHome(){
   document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
-    <div class="folder-card" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
-      <div class="folder-icon"><i class="ti ${f.icon}"></i></div>
-      <h2>${f.title}</h2>
-      <p>${f.subtitle}</p>
-      <div class="folder-count">${f.modules.length} módulos</div>
+    <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
+      <div>
+        <span class="folder-icon">${f.emoji}</span>
+        <h2>${f.title}</h2>
+        <p>${f.desc}</p>
+        <div class="folder-chips">${f.chips.map(c=>`<span class="folder-chip">${escapeHtml(c)}</span>`).join('')}</div>
+      </div>
+      <div class="folder-btn"><i class="ti ti-arrow-right"></i> Entrar</div>
     </div>
   `).join('');
 }
@@ -653,13 +905,14 @@ function renderHome(){
 function renderFolder(){
   const f = FOLDERS[currentFolder];
   if(!f){ navigate('home'); return; }
-  document.getElementById('folder-title').textContent = f.title;
+  document.getElementById('folder-title').innerHTML = `${f.emoji} ${escapeHtml(f.title)}`;
   document.getElementById('folder-subtitle').textContent = f.subtitle;
   document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
-    <div class="card module-card" onclick="navigate('${m.id}')">
-      <div class="module-icon"><i class="ti ${m.icon}"></i></div>
+    <div class="module-card" onclick="navigate('${m.id}')">
+      <i class="ti ${m.icon} module-icon"></i>
       <h3>${escapeHtml(m.name)}</h3>
-      <p style="color:var(--muted);font-size:13px">${escapeHtml(m.desc)}</p>
+      <p>${escapeHtml(m.desc)}</p>
+      <div class="module-open"><i class="ti ti-arrow-right"></i> Abrir</div>
     </div>
   `).join('');
 }
@@ -1718,160 +1971,519 @@ function deleteOrder(id){
 }
 
 /* ============================================================
-   GESTIÓN ECONÓMICA — Gastos, P&L y punto de equilibrio
+   GESTIÓN ECONÓMICA — Gastos, P&L, punto de equilibrio,
+   CAPEX, resultado y tesorería (7 pestañas)
    ============================================================ */
-const EXPENSE_CATEGORIES = ['Alquiler','Personal','Suministros','Marketing','Mantenimiento','Seguros','Impuestos','Otros'];
+const GE = (function(){
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const TABS = ['fijos','variables','cdr','pe','capex','resultado','tesoreria'];
+  const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
+  const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
+  const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
+  let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
+  const currentYear = new Date().getFullYear();
 
-function renderEconomia(){
-  const box = document.getElementById('economia-content');
+  function ge(){ return DB.ge; }
+  function fijos(){ return ge().fijos; }
+  function variables(){ return ge().variables; }
+  function capex(){ return ge().capex; }
+  function config(){ return ge().config; }
 
-  const revenue = DB.sales.reduce((s,sale)=>s+sale.total,0);
-  const foodCost = DB.sales.reduce((sum, sale) => {
-    return sum + (sale.items||[]).reduce((s2, line) => {
-      const m = DB.menuItems.find(x=>x.id===line.menuItemId);
-      const r = m ? getRecipe(m.recipeId) : null;
-      return s2 + (r ? recipeCost(r) * line.qty : 0);
-    }, 0);
-  }, 0);
-  const grossMargin = revenue - foodCost;
+  function proveedores(){ return [...new Set(DB.ingredients.map(i=>i.supplier).filter(Boolean))]; }
 
-  const fixedExpenses = DB.expenses.filter(e=>e.frequency==='mensual').reduce((s,e)=>s+e.amount,0);
-  const oneOffExpenses = DB.expenses.filter(e=>e.frequency==='puntual').reduce((s,e)=>s+e.amount,0);
-  const totalExpenses = fixedExpenses + oneOffExpenses;
-
-  const netResult = grossMargin - totalExpenses;
-
-  const variableCostRatio = revenue > 0 ? foodCost / revenue : 0;
-  let breakeven = null;
-  if(variableCostRatio < 1 && fixedExpenses > 0){
-    breakeven = fixedExpenses / (1 - variableCostRatio);
+  function init(){ tab('fijos'); }
+  function tab(t){
+    document.querySelectorAll('.ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===t));
+    document.querySelectorAll('.ge-tab-panel').forEach(el=>el.classList.remove('active'));
+    document.getElementById('ge-'+t).classList.add('active');
+    if(t==='fijos') renderFijos();
+    if(t==='variables') renderVariables();
+    if(t==='cdr') renderCDR();
+    if(t==='pe') renderPE();
+    if(t==='capex') renderCapex();
+    if(t==='resultado') renderResultado();
+    if(t==='tesoreria') renderTesoreria();
   }
 
-  const expensesRows = DB.expenses.length ? DB.expenses.map(e => `
-    <tr>
-      <td>${escapeHtml(e.name)}</td>
-      <td><span class="badge badge-gray">${escapeHtml(e.category)}</span></td>
-      <td>${fmtMoney(e.amount)}</td>
-      <td>${e.frequency==='mensual' ? '<span class="badge badge-blue">Mensual</span>' : '<span class="badge badge-purple">Puntual</span>'}</td>
-      <td>${escapeHtml(e.date||'—')}</td>
-      <td class="actions-cell">
-        <button class="btn btn-sm btn-icon" onclick="openExpenseModal(${e.id})"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteExpense(${e.id})"><i class="ti ti-trash"></i></button>
-      </td>
-    </tr>
-  `).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">No hay gastos registrados</div></td></tr>`;
+  /* -- Helpers -- */
+  function totalFijos(){ return fijos().reduce((s,g)=>s+parseFloat(g.importe||0),0); }
+  function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+parseFloat(g.importe||0),0); }
+  function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+parseFloat(g.importe||0),0); }
+  function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
+  function totalVariablesMes(mes, año=currentYear){ return variablesMes(mes,año).reduce((s,v)=>s+parseFloat(v.importe||0),0); }
+  function facturacionMes(mes){
+    const mesStr = `${currentYear}-${String(mes+1).padStart(2,'0')}`;
+    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
+  }
+  function resultadoMes(mes){
+    return facturacionMes(mes) - totalVariablesMes(mes) - totalFijos();
+  }
 
-  box.innerHTML = `
-    <div class="grid grid-4" style="margin-bottom:16px">
-      <div class="kpi ok"><div class="label">Ingresos (TPV)</div><div class="value">${fmtMoney(revenue)}</div></div>
-      <div class="kpi"><div class="label">Coste de mercancía</div><div class="value">${fmtMoney(foodCost)}</div></div>
-      <div class="kpi"><div class="label">Margen bruto</div><div class="value">${fmtMoney(grossMargin)}</div></div>
-      <div class="kpi ${netResult>=0?'ok':'warn'}"><div class="label">Resultado neto</div><div class="value">${fmtMoney(netResult)}</div></div>
-    </div>
+  /* -- GASTOS FIJOS -- */
+  function renderFijos(){
+    const personal = fijos().filter(g=>g.categoria==='PERSONAL');
+    const generales = fijos().filter(g=>g.categoria==='FIJOS');
+    const tp = totalPersonal(), tg = totalGF(), tot = tp+tg;
+    document.getElementById('gf-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">Personal mensual</div><div class="val">${fmtMoney(tp)}</div><div class="sub">Objetivo: 30% ventas</div></div>
+      <div class="ge-kpi"><div class="lbl">Gastos fijos generales</div><div class="val">${fmtMoney(tg)}</div><div class="sub">Objetivo: 20% ventas</div></div>
+      <div class="ge-kpi"><div class="lbl">Total mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(tot)}</div><div class="sub">Ventas mínimas: ${fmtMoney(tot/0.5)}</div></div>`;
+    renderGFList('gf-personal', personal);
+    renderGFList('gf-fijos', generales);
+    document.getElementById('gf-total-val').textContent = fmtMoney(tot);
 
-    <div class="grid grid-2" style="margin-bottom:16px">
-      <div class="card">
-        <h3><i class="ti ti-report-money"></i> Cuenta de resultados (P&amp;L)</h3>
-        <div class="table-wrap"><table>
-          <tbody>
-            <tr><td>Ingresos por ventas</td><td style="text-align:right">${fmtMoney(revenue)}</td></tr>
-            <tr><td>(–) Coste de mercancía vendida</td><td style="text-align:right">${fmtMoney(foodCost)}</td></tr>
-            <tr><td><strong>Margen bruto</strong></td><td style="text-align:right"><strong>${fmtMoney(grossMargin)}</strong></td></tr>
-            <tr><td>(–) Gastos fijos mensuales</td><td style="text-align:right">${fmtMoney(fixedExpenses)}</td></tr>
-            <tr><td>(–) Gastos puntuales</td><td style="text-align:right">${fmtMoney(oneOffExpenses)}</td></tr>
-            <tr><td><strong>Resultado neto</strong></td><td style="text-align:right"><strong>${fmtMoney(netResult)}</strong></td></tr>
-          </tbody>
-        </table></div>
+    const fac12 = MESES.map((_,i)=>facturacionMes(i)).reduce((s,v)=>s+v,0)/12;
+    const visEl = document.getElementById('gf-dist-visual');
+    const visContent = document.getElementById('gf-visual-content');
+    if(fac12 > 0){
+      visEl.style.display = 'block';
+      const items = [
+        {lbl:'Personal', v:tp, pct:tp/fac12*100, color:'var(--blue)'},
+        {lbl:'Gastos Fijos', v:tg, pct:tg/fac12*100, color:'var(--purple)'},
+      ];
+      visContent.innerHTML = items.map(it=>`
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span style="font-weight:600">${it.lbl}</span>
+            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--teal-d)'}">${it.pct.toFixed(1)}% ventas</span></span>
+          </div>
+          <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(it.pct/50*100,100)}%;background:${it.color};border-radius:4px;transition:width .4s"></div>
+          </div>
+        </div>`).join('');
+    }else{
+      visEl.style.display = 'none';
+    }
+  }
+  function renderGFList(elId, items){
+    document.getElementById(elId).innerHTML = items.length ? items.map(g=>`
+      <div class="ge-item">
+        <span style="flex:1;font-size:14px;font-weight:500">${escapeHtml(g.nombre)}</span>
+        <span style="font-size:12px;color:var(--muted);margin-right:8px">${g.diaPago?'día '+g.diaPago:''}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(parseFloat(g.importe||0))}</span>
+        <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
+      </div>`).join('')
+    : `<div class="empty" style="padding:12px 16px">Sin gastos. Añade el primero.</div>`;
+  }
+  function newGF(cat){
+    editingGF = null;
+    openGFModal(cat==='PERSONAL'?'Personal (nómina/SS)':'Gasto fijo', {nombre:'',importe:'',diaPago:'',categoria:cat});
+  }
+  function editGF(id){
+    const g = fijos().find(x=>x.id===id); if(!g) return;
+    editingGF = id;
+    openGFModal('Editar gasto', g);
+  }
+  function openGFModal(title, g){
+    const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${s}">`).join('');
+    openModal(`
+      <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="field">
+        <label>Concepto</label>
+        <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}">
+        <datalist id="gf-sugerencias">${sugerencias}</datalist>
       </div>
-      <div class="card">
-        <h3><i class="ti ti-scale"></i> Punto de Equilibrio</h3>
-        <p style="font-size:13.5px;color:var(--muted);margin-bottom:10px">Ingresos necesarios para cubrir los gastos fijos mensuales, según el ratio de coste variable actual (${(variableCostRatio*100).toFixed(1)}%).</p>
-        ${breakeven != null
-          ? `<div class="kpi" style="max-width:260px"><div class="label">Punto de equilibrio mensual</div><div class="value">${fmtMoney(breakeven)}</div></div>`
-          : `<div class="empty" style="padding:14px">Registra gastos fijos mensuales y ventas para calcular el punto de equilibrio.</div>`
-        }
+      <div class="field-row">
+        <div class="field"><label>Importe (€/mes)</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}"></div>
+        <div class="field"><label>Día de pago</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
       </div>
-    </div>
+      <input type="hidden" id="gf-f-cat" value="${g.categoria}">
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="GE.saveGF()">Guardar</button>
+      </div>
+    `);
+  }
+  function saveGF(){
+    const nombre = document.getElementById('gf-f-nombre').value.trim();
+    const importe = parseFloat(document.getElementById('gf-f-importe').value);
+    if(!nombre){ showToast('El concepto es obligatorio'); return; }
+    if(isNaN(importe) || importe<0){ showToast('Introduce el importe'); return; }
+    const data = {nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null, categoria:document.getElementById('gf-f-cat').value};
+    if(editingGF){
+      Object.assign(fijos().find(x=>x.id===editingGF), data);
+    }else{
+      fijos().push({id:genId(), ...data});
+    }
+    saveDB();
+    closeModal();
+    renderFijos();
+    showToast('Gasto guardado');
+  }
+  function deleteGF(id){
+    if(!confirm('¿Eliminar?')) return;
+    ge().fijos = fijos().filter(g=>g.id!==id);
+    saveDB();
+    renderFijos();
+  }
 
-    <div class="toolbar">
-      <div class="left"><h3 style="margin:0"><i class="ti ti-receipt"></i> Gastos</h3></div>
-      <button class="btn btn-primary" onclick="openExpenseModal()"><i class="ti ti-plus"></i> Nuevo Gasto</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Concepto</th><th>Categoría</th><th>Importe</th><th>Frecuencia</th><th>Fecha</th><th></th></tr></thead>
-        <tbody>${expensesRows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-function openExpenseModal(id){
-  const e = id ? DB.expenses.find(x=>x.id===id) : {name:'',category:EXPENSE_CATEGORIES[0],amount:0,frequency:'mensual',date:todayStr()};
-  openModal(`
-    <div class="modal-header">
-      <h3>${id?'Editar':'Nuevo'} Gasto</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Concepto</label>
-      <input type="text" id="expense-name" value="${escapeHtml(e.name)}" placeholder="Ej. Alquiler local">
-    </div>
-    <div class="field-row">
+  /* -- GASTOS VARIABLES -- */
+  function renderVariables(){
+    document.getElementById('gv-months').innerHTML = MESES.map((m,i)=>`
+      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonth(${i})">${m}</div>`).join('');
+    const mes = activeMonth, tvMes = totalVariablesMes(mes), fac = facturacionMes(mes);
+    const fcPct = fac>0 ? (tvMes/fac*100) : 0;
+    document.getElementById('gv-sec-title').textContent = `Compras — ${MESES[mes]} ${currentYear}`;
+    document.getElementById('gv-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">Total compras mes</div><div class="val">${fmtMoney(tvMes)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Facturación mes <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(fac)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>35?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${fac>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: 35%</div></div>`;
+    const items = variablesMes(mes);
+    const list = document.getElementById('gv-list');
+    const empty = document.getElementById('gv-empty');
+    if(!items.length){ list.innerHTML=''; empty.style.display='block'; }
+    else{
+      empty.style.display='none';
+      const bycat = {};
+      items.forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
+      list.innerHTML = Object.entries(bycat).map(([cat,its])=>`
+        <div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>
+        ${its.map(v=>`<div class="ge-item">
+          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}</span>
+          <span style="font-size:12px;color:var(--muted);margin-right:8px">${escapeHtml(v.fecha||'')}</span>
+          <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(v.importe||0))}</span>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
+        </div>`).join('')}`).join('');
+    }
+    document.getElementById('gv-total-lbl').textContent = `TOTAL VARIABLES ${MESES[mes].toUpperCase()}`;
+    document.getElementById('gv-total-val').textContent = fmtMoney(tvMes);
+  }
+  function setMonth(m){ activeMonth = m; renderVariables(); }
+  function newGV(){
+    const provs = proveedores().map(p=>`<option value="${escapeHtml(p)}">`).join('');
+    const fecha = `${currentYear}-${String(activeMonth+1).padStart(2,'0')}-01`;
+    openModal(`
+      <div class="modal-header"><h3>Añadir compra</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
         <label>Categoría</label>
-        <select id="expense-category">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${e.category===c?'selected':''}>${c}</option>`).join('')}</select>
+        <select id="gv-f-cat">${VARIABLE_CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
       </div>
       <div class="field">
-        <label>Importe (€)</label>
-        <input type="number" id="expense-amount" value="${e.amount}" step="0.01" min="0">
+        <label>Proveedor</label>
+        <input type="text" id="gv-f-prov" list="gv-prov-list">
+        <datalist id="gv-prov-list">${provs}</datalist>
       </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Frecuencia</label>
-        <select id="expense-frequency">
-          <option value="mensual" ${e.frequency==='mensual'?'selected':''}>Mensual (gasto fijo)</option>
-          <option value="puntual" ${e.frequency==='puntual'?'selected':''}>Puntual</option>
-        </select>
+      <div class="field-row">
+        <div class="field"><label>Importe (€)</label><input type="number" id="gv-f-imp" min="0" step="0.01"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="gv-f-fecha" value="${fecha}"></div>
       </div>
-      <div class="field">
-        <label>Fecha</label>
-        <input type="date" id="expense-date" value="${e.date||todayStr()}">
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="GE.saveGV()">Guardar</button>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveExpense(${id||'null'})">Guardar</button>
-    </div>
-  `);
-}
-
-function saveExpense(id){
-  const name = document.getElementById('expense-name').value.trim();
-  if(!name){ showToast('El concepto es obligatorio'); return; }
-  const category = document.getElementById('expense-category').value;
-  const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
-  const frequency = document.getElementById('expense-frequency').value;
-  const date = document.getElementById('expense-date').value || todayStr();
-
-  if(id){
-    Object.assign(DB.expenses.find(x=>x.id===id), {name, category, amount, frequency, date});
-  }else{
-    DB.expenses.push({id: genId(), name, category, amount, frequency, date});
+    `);
   }
-  saveDB();
-  closeModal();
-  renderEconomia();
-  showToast('Gasto guardado');
-}
+  function saveGV(){
+    const imp = parseFloat(document.getElementById('gv-f-imp').value);
+    if(isNaN(imp) || imp<=0){ showToast('Introduce el importe'); return; }
+    variables().push({
+      id: genId(), mes: activeMonth, año: currentYear,
+      categoria: document.getElementById('gv-f-cat').value,
+      proveedor: document.getElementById('gv-f-prov').value.trim().toUpperCase() || 'SIN PROVEEDOR',
+      importe: imp,
+      fecha: document.getElementById('gv-f-fecha').value
+    });
+    saveDB();
+    closeModal();
+    renderVariables();
+    showToast('Compra guardada');
+  }
+  function deleteGV(id){
+    if(!confirm('¿Eliminar?')) return;
+    ge().variables = variables().filter(v=>v.id!==id);
+    saveDB();
+    renderVariables();
+  }
 
-function deleteExpense(id){
-  if(!confirm('¿Eliminar este gasto?')) return;
-  DB.expenses = DB.expenses.filter(e=>e.id!==id);
-  saveDB();
-  renderEconomia();
-}
+  /* -- CUENTA DE RESULTADOS -- */
+  function renderCDR(){
+    const tf = totalFijos();
+    const rows = [
+      {lbl:'Facturación (TPV)', vals:MESES.map((_,i)=>facturacionMes(i)), auto:true, bold:true},
+      {lbl:'Gastos Variables', vals:MESES.map((_,i)=>-totalVariablesMes(i)), auto:true},
+      {lbl:'Gastos Fijos', vals:MESES.map(()=>-tf), auto:true},
+      {lbl:'Resultado Mensual', vals:MESES.map((_,i)=>resultadoMes(i)), auto:true, highlight:true, isResult:true},
+    ];
+    const quarters = ['T1','T2','T3','T4'];
+    let html = `<thead><tr><th>Concepto</th>${MESES.map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">AÑO</th></tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const total = r.vals.reduce((s,v)=>s+v,0);
+      const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
+      const cls = r.highlight ? (r.isResult?'total':'highlight') : '';
+      html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
+      r.vals.forEach(v=>{
+        const c = r.isResult ? (v>=0?'pos':'neg') : '';
+        html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v)):'—'}</td>`;
+      });
+      q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)">${v!==0?fmtMoney(Math.abs(v)):'—'}</td>`; });
+      html += `<td style="background:rgba(0,0,0,.1)">${total!==0?fmtMoney(Math.abs(total)):'—'}</td></tr>`;
+    });
+    html += '</tbody>';
+    document.getElementById('cdr-table').innerHTML = html;
+    document.getElementById('cdr-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i)})));
+  }
+
+  /* -- PUNTO DE EQUILIBRIO -- */
+  function renderPE(){
+    const tf = totalFijos();
+    document.getElementById('pe-fijos').value = tf.toFixed(2);
+    document.getElementById('pe-ticket').value = config().ticketMedio || '';
+    document.getElementById('pe-cubiertos').value = config().cubiertosActuales || '';
+    document.getElementById('pe-dias').value = config().diasApertura || '';
+    document.getElementById('pe-fc').value = config().foodCostObj || 35;
+    calcPE();
+  }
+  function calcPE(){
+    const fij = parseFloat(document.getElementById('pe-fijos').value) || 0;
+    const tick = parseFloat(document.getElementById('pe-ticket').value) || 0;
+    const cub = parseFloat(document.getElementById('pe-cubiertos').value) || 0;
+    const dias = parseFloat(document.getElementById('pe-dias').value) || 0;
+    const fc = parseFloat(document.getElementById('pe-fc').value) || 35;
+    Object.assign(config(), {ticketMedio:tick, cubiertosActuales:cub, diasApertura:dias, foodCostObj:fc});
+    saveDB();
+    if(!tick || !dias){
+      ['pe-r1','pe-r2','pe-r3','pe-r4','pe-r5','pe-r6'].forEach(id=>document.getElementById(id).textContent='—');
+      return;
+    }
+    const cvCub = tick*(fc/100);
+    const contribCub = tick - cvCub;
+    if(contribCub<=0){ document.getElementById('pe-r3').textContent='No calculable'; return; }
+    const cubNec = Math.ceil(fij/contribCub);
+    const cubDia = Math.ceil(cubNec/dias);
+    const ventasMin = cubNec*tick;
+    document.getElementById('pe-r1').textContent = fmtMoney(cvCub)+'/cubierto';
+    document.getElementById('pe-r2').textContent = fmtMoney(contribCub)+'/cubierto';
+    document.getElementById('pe-r3').textContent = cubNec+' cubiertos/mes';
+    document.getElementById('pe-r4').textContent = cubDia+' cubiertos/día';
+    document.getElementById('pe-r5').textContent = fmtMoney(ventasMin);
+    const diff = cub - cubNec;
+    document.getElementById('pe-r6').textContent = (diff>=0?'+':'')+diff+' cubiertos';
+    const estadoEl = document.getElementById('pe-estado');
+    estadoEl.textContent = diff>=0 ? '✅ Por encima del equilibrio' : '⚠️ Por debajo del equilibrio';
+    estadoEl.style.color = diff>=0 ? 'var(--green)' : 'var(--red)';
+    peGauge(cub, cubNec);
+  }
+  function peGauge(cub, cubNec){
+    const el = document.getElementById('pe-gauge'); if(!el) return;
+    const max = Math.max(cub, cubNec, 1)*1.2;
+    const pctAct = Math.min(cub/max*100, 100);
+    const pctNec = Math.min(cubNec/max*100, 100);
+    const ok = cub >= cubNec;
+    el.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>0</span><span style="color:var(--amber-dark);font-weight:600">Equilibrio: ${cubNec} cub.</span><span>${Math.ceil(max)}</span>
+      </div>
+      <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
+        <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
+        <div style="position:absolute;left:${pctNec}%;top:34px;transform:translateX(-50%);font-size:10px;color:var(--amber-dark);font-weight:700;white-space:nowrap">← equilibrio</div>
+      </div>
+      <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
+        ${ok?'✅ Estás por encima del equilibrio':'⚠️ Estás por debajo del equilibrio'} · ${cub} cubiertos actuales
+      </div>`;
+  }
+
+  /* -- CAPEX -- */
+  function renderCapex(){
+    const tbody = document.getElementById('capex-tbody');
+    const empty = document.getElementById('capex-empty');
+    if(!capex().length){
+      tbody.innerHTML='';
+      empty.style.display='block';
+      ['capex-base','capex-iva','capex-total'].forEach(id=>document.getElementById(id).textContent='—');
+      return;
+    }
+    empty.style.display='none';
+    let base=0, ivaT=0;
+    tbody.innerHTML = capex().map(c=>{
+      const imp=parseFloat(c.importe||0), ivaPct=parseFloat(c.iva||0);
+      const ivaAmt=imp*ivaPct/100, tot=imp+ivaAmt;
+      base+=imp; ivaT+=ivaAmt;
+      const cs = c.estadoPago==='PAGADO' ? {bg:'var(--green-l)',tx:'var(--green)'}
+        : c.estadoPago==='PARCIAL' ? {bg:'var(--amber-l)',tx:'var(--amber-dark)'}
+        : {bg:'var(--red-l)',tx:'var(--red)'};
+      return `<tr>
+        <td style="text-align:left;font-weight:600">${escapeHtml(c.descripcion)}</td>
+        <td>${escapeHtml(c.fecha||'—')}</td>
+        <td>${fmtMoney(imp)}</td>
+        <td>${fmtMoney(ivaAmt)}</td>
+        <td>${fmtMoney(tot)}</td>
+        <td><span class="badge" style="background:${cs.bg};color:${cs.tx}">${c.estadoPago}</span></td>
+        <td style="text-align:left">
+          <button class="btn btn-sm btn-icon" onclick="GE.editCapex(${c.id})"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteCapex(${c.id})"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('');
+    document.getElementById('capex-base').textContent = fmtMoney(base);
+    document.getElementById('capex-iva').textContent = fmtMoney(ivaT);
+    document.getElementById('capex-total').textContent = fmtMoney(base+ivaT);
+  }
+  function newCapex(){
+    editingCX = null;
+    openCapexModal('Nueva inversión', {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE'});
+  }
+  function editCapex(id){
+    const c = capex().find(x=>x.id===id); if(!c) return;
+    editingCX = id;
+    openCapexModal('Editar inversión', c);
+  }
+  function openCapexModal(title, c){
+    openModal(`
+      <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="field"><label>Descripción</label><input type="text" id="cx-f-desc" value="${escapeHtml(c.descripcion)}"></div>
+      <div class="field-row">
+        <div class="field"><label>Importe (€)</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
+        <div class="field"><label>IVA (%)</label><input type="number" id="cx-f-iva" min="0" max="100" value="${c.iva||21}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input type="date" id="cx-f-fecha" value="${c.fecha||''}"></div>
+        <div class="field"><label>Estado</label>
+          <select id="cx-f-estado">
+            ${['PAGADO','PENDIENTE','PARCIAL'].map(s=>`<option ${c.estadoPago===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="GE.saveCapex()">Guardar</button>
+      </div>
+    `);
+  }
+  function saveCapex(){
+    const desc = document.getElementById('cx-f-desc').value.trim();
+    const imp = parseFloat(document.getElementById('cx-f-imp').value);
+    if(!desc){ showToast('La descripción es obligatoria'); return; }
+    if(isNaN(imp) || imp<=0){ showToast('Introduce el importe'); return; }
+    const data = {
+      descripcion: desc.toUpperCase(), importe: imp,
+      iva: parseFloat(document.getElementById('cx-f-iva').value)||0,
+      fecha: document.getElementById('cx-f-fecha').value,
+      estadoPago: document.getElementById('cx-f-estado').value
+    };
+    if(editingCX){
+      Object.assign(capex().find(x=>x.id===editingCX), data);
+    }else{
+      capex().push({id:genId(), ...data});
+    }
+    saveDB();
+    closeModal();
+    renderCapex();
+    showToast('Inversión guardada');
+  }
+  function deleteCapex(id){
+    if(!confirm('¿Eliminar esta inversión?')) return;
+    ge().capex = capex().filter(c=>c.id!==id);
+    saveDB();
+    renderCapex();
+  }
+
+  /* -- RESULTADO TRIMESTRAL/ANUAL -- */
+  function renderResultado(){
+    const tf = totalFijos();
+    const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
+    const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
+    function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
+    const amort = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12*3; // amortización 5 años, por trimestre
+
+    const conceptos = [
+      {lbl:'Ventas Netas', fn:m=>facturacionMes(m), bold:true},
+      {lbl:'Coste de Ventas (MP)', fn:m=>totalVariablesMes(m)},
+      {lbl:'Margen Bruto', fn:m=>facturacionMes(m)-totalVariablesMes(m), highlight:true, bold:true},
+      {lbl:'Gastos Explotación', fn:()=>tf*3},
+      {lbl:'EBITDA Operativo', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf, highlight:true, bold:true},
+      {lbl:'Amortizaciones CAPEX', fn:()=>amort, auto:true},
+      {lbl:'Resultado Antes Impuestos', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-amort/3, bold:true},
+      {lbl:'Resultado Neto', fn:m=>{ const r=facturacionMes(m)-totalVariablesMes(m)-tf-amort/3; return r>0?r*0.75:r; }, isResult:true, bold:true},
+    ];
+    let html = `<thead><tr><th style="text-align:left">Concepto</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
+    conceptos.forEach(c=>{
+      html += `<tr class="${c.isResult?'total':c.highlight?'highlight':''}"><td>${c.lbl}${c.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
+      qMonths.forEach(months=>{
+        const v = qVal(months, c.fn);
+        const cls = c.isResult ? (v>=0?'pos':'neg') : '';
+        html += `<td class="${cls}">${fmtMoney(Math.abs(v))}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    document.getElementById('res-table').innerHTML = html;
+  }
+
+  /* -- TESORERÍA -- */
+  function renderTesoreria(){
+    document.getElementById('te-months').innerHTML = MESES.map((m,i)=>`
+      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}</div>`).join('');
+
+    const ivaTipo = (parseFloat(document.getElementById('te-iva-tipo')?.value)||10)/100;
+    const pctPer = (parseFloat(document.getElementById('te-pct-per')?.value)||30)/100;
+    const pctGF = (parseFloat(document.getElementById('te-pct-gf')?.value)||20)/100;
+    const pctMP = (parseFloat(document.getElementById('te-pct-mp')?.value)||35)/100;
+    const pctOG = (parseFloat(document.getElementById('te-pct-og')?.value)||5)/100;
+    const pctBen = Math.max(0, 1-pctPer-pctGF-pctMP-pctOG);
+
+    const facBruta = facturacionMes(activeMonth);
+    const ivaReserva = facBruta*(ivaTipo/(1+ivaTipo));
+    const facNeta = facBruta - ivaReserva;
+
+    document.getElementById('te-kpis').innerHTML = `
+      <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Desde TPV</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">IVA a reservar (${(ivaTipo*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaReserva)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda</div></div>
+      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base distribución</div></div>`;
+
+    const realPer = totalPersonal();
+    const realGF = totalGF();
+    const realMP = totalVariablesMes(activeMonth);
+    const realOG = 0;
+    const realBen = facNeta - realPer - realGF - realMP;
+
+    const rows = [
+      {lbl:'Personal (nóminas + SS)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
+      {lbl:'Gastos Fijos Generales', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
+      {lbl:'Materia Prima / Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
+      {lbl:'Otros Gastos', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
+      {lbl:'Beneficio estimado', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
+    ];
+
+    document.getElementById('te-rows').innerHTML = rows.map(r=>{
+      const diff = r.real - r.obj;
+      const ok = r.isBen ? (r.real>=0) : (Math.abs(diff)/Math.max(r.obj,1) < 0.1);
+      const warn = !r.isBen && diff > r.obj*0.1;
+      const estado = r.isBen ? (r.real>=0?'✅':'❌') : (ok?'✅':warn?'⚠️':'❌');
+      const diffColor = r.isBen ? (r.real>=0?'var(--green)':'var(--red)') : (diff<=0?'var(--green)':'var(--red)');
+      const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
+      const barColor = barPct>110?'var(--red)':barPct>90?'var(--green)':'var(--amber)';
+      return `<div class="te-row">
+        <span style="font-size:14px;font-weight:600">${r.lbl}</span>
+        <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
+        <span style="text-align:right;font-family:monospace">${fmtMoney(r.obj)}</span>
+        <span style="text-align:right;font-family:monospace;font-weight:700">${r.real?fmtMoney(r.real):'—'}</span>
+        <span style="text-align:right;font-family:monospace;color:${diffColor}">${r.real?(diff>0?'+':'')+fmtMoney(diff):'—'}</span>
+        <span style="text-align:center;font-size:16px">${estado}</span>
+      </div>
+      <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
+    }).join('');
+
+    document.getElementById('te-annual-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i)})));
+  }
+  function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
+
+  function barChartHTML(data){
+    const vals = data.map(d=>d.v);
+    const max = Math.max(...vals.map(Math.abs), 1);
+    return data.map(d=>{
+      const pct = Math.abs(d.v)/max*100;
+      const color = d.v>=0 ? 'var(--teal)' : 'var(--red)';
+      return `<div class="bar-col" title="${d.lbl}: ${fmtMoney(d.v)}">
+        <div class="bar-fill" style="height:${pct*0.7}px;background:${color}"></div>
+        <div class="bar-lbl">${d.lbl}</div>
+      </div>`;
+    }).join('');
+  }
+
+  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria};
+})();
 
 /* ============================================================
    HORARIOS — Turnos del personal
