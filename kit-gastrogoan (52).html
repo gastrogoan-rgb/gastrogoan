@@ -33,7 +33,6 @@
   --text:#1A1A1A;--muted:#7A6A58;
 
   --radius:12px;
-  --sidebar-w:240px;
   --header-h:60px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -55,41 +54,55 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 }
 .app-logo-text{font-weight:700;font-size:16px;letter-spacing:.2px}
 .app-logo-sub{font-weight:400;color:#cfcfcf;font-size:13px}
-.menu-toggle{
-  display:none;
-  background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;
-  margin-left:auto;
-}
+.menu-toggle{display:none}
 
 /* ===== Layout ===== */
-.app-shell{display:flex;min-height:calc(100vh - var(--header-h))}
-.sidebar{
-  width:var(--sidebar-w);flex:none;
-  background:var(--dark2);
-  padding:14px 10px;
-  position:sticky;top:var(--header-h);
-  height:calc(100vh - var(--header-h));
-  overflow-y:auto;
-}
-.nav-item{
-  display:flex;align-items:center;gap:12px;
-  padding:11px 14px;border-radius:10px;
-  color:#d8d4cd;text-decoration:none;
-  font-size:14px;font-weight:500;
-  cursor:pointer;margin-bottom:2px;
-  border:none;background:transparent;width:100%;text-align:left;
-}
-.nav-item i{font-size:18px;width:20px;text-align:center}
-.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
-.nav-item.active{background:var(--teal);color:#fff}
-
-.content{flex:1;padding:22px;max-width:1400px;width:100%;margin:0 auto;min-width:0}
+.content{padding:22px;max-width:1400px;width:100%;margin:0 auto;min-width:0}
 
 .view{display:none}
 .view.active{display:block}
 
 .view-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .view-subtitle{color:var(--muted);font-size:14px;margin-bottom:18px}
+
+.btn-back{margin-bottom:16px}
+
+/* ===== Home (selección de área) ===== */
+.home-hero{text-align:center;padding:30px 16px 10px}
+.home-hero h1{font-size:26px;font-weight:800;margin-bottom:6px}
+.home-hero p{color:var(--muted);font-size:15px}
+
+.folder-grid{margin-top:24px}
+.folder-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:34px 22px;text-align:center;cursor:pointer;
+  border-top:5px solid var(--folder-color, var(--teal));
+  transition:transform .15s, box-shadow .15s;
+}
+.folder-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
+.folder-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--folder-color, var(--teal));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  margin:0 auto 16px;
+}
+.folder-card h2{font-size:19px;font-weight:800;margin-bottom:6px}
+.folder-card p{color:var(--muted);font-size:13.5px}
+.folder-card .folder-count{margin-top:10px;font-size:12px;font-weight:700;color:var(--folder-color, var(--teal))}
+
+/* ===== Folder (módulos de un área) ===== */
+.module-card{
+  cursor:pointer;text-align:center;
+  transition:transform .15s, box-shadow .15s;
+}
+.module-card:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.06)}
+.module-icon{
+  width:50px;height:50px;border-radius:12px;
+  background:var(--teal-l);color:var(--teal-d);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  margin:0 auto 10px;
+}
+.module-card h3{justify-content:center}
 
 /* ===== Cards / generic ===== */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
@@ -181,13 +194,6 @@ td.wrap{white-space:normal}
 
 /* Responsive */
 @media (max-width: 880px){
-  .menu-toggle{display:block}
-  .sidebar{
-    position:fixed;left:0;top:var(--header-h);
-    transform:translateX(-100%);transition:.2s;z-index:100;
-    box-shadow:4px 0 16px rgba(0,0,0,.2);
-  }
-  .sidebar.open{transform:translateX(0)}
   .content{padding:14px}
 }
 </style>
@@ -200,30 +206,31 @@ td.wrap{white-space:normal}
     <div class="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
     <span class="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
-  <button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
 </header>
-
-<div class="app-shell">
-  <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar">
-    <button class="nav-item" data-view="dashboard" onclick="navigate('dashboard')"><i class="ti ti-layout-dashboard"></i> Panel de Control</button>
-    <button class="nav-item" data-view="megalista" onclick="navigate('megalista')"><i class="ti ti-list-details"></i> Mega Lista</button>
-    <button class="nav-item" data-view="escandallo" onclick="navigate('escandallo')"><i class="ti ti-calculator"></i> Escandallo</button>
-    <button class="nav-item" data-view="fichas" onclick="navigate('fichas')"><i class="ti ti-file-description"></i> Fichas Técnicas</button>
-    <button class="nav-item" data-view="carta" onclick="navigate('carta')"><i class="ti ti-toolsKitchen"></i> Carta Digital</button>
-    <button class="nav-item" data-view="tpv" onclick="navigate('tpv')"><i class="ti ti-device-desktop"></i> TPV</button>
-    <button class="nav-item" data-view="stock" onclick="navigate('stock')"><i class="ti ti-package"></i> Stock</button>
-    <button class="nav-item" data-view="pedidos" onclick="navigate('pedidos')"><i class="ti ti-shopping-cart"></i> Pedidos</button>
-    <button class="nav-item" data-view="economia" onclick="navigate('economia')"><i class="ti ti-coin"></i> Gestión Económica</button>
-    <button class="nav-item" data-view="horarios" onclick="navigate('horarios')"><i class="ti ti-calendar-time"></i> Horarios</button>
-    <button class="nav-item" data-view="limpieza" onclick="navigate('limpieza')"><i class="ti ti-spray"></i> Plan de Limpieza</button>
-  </nav>
 
   <!-- Content -->
   <main class="content" id="content">
 
+    <!-- ========== HOME ========== -->
+    <section class="view" id="view-home">
+      <div class="home-hero">
+        <h1>¿Con qué área quieres trabajar?</h1>
+        <p>Selecciona un área para acceder a sus herramientas</p>
+      </div>
+      <div class="grid grid-3 folder-grid" id="home-folders"></div>
+    </section>
+
+    <!-- ========== FOLDER (módulos de un área) ========== -->
+    <section class="view" id="view-folder">
+      <button class="btn btn-sm btn-back" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title" id="folder-title"></div>
+      <div class="view-subtitle" id="folder-subtitle"></div>
+      <div class="grid grid-3" id="folder-modules"></div>
+    </section>
+
     <!-- ========== DASHBOARD ========== -->
     <section class="view" id="view-dashboard">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Panel de Control</div>
       <div class="view-subtitle">Resumen general de tu negocio</div>
       <div class="grid grid-4" id="dashboard-kpis"></div>
@@ -242,6 +249,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== MEGA LISTA ========== -->
     <section class="view" id="view-megalista">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Mega Lista</div>
       <div class="view-subtitle">Gestión de ingredientes y proveedores</div>
 
@@ -275,6 +283,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== ESCANDALLO ========== -->
     <section class="view" id="view-escandallo">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Escandallo</div>
       <div class="view-subtitle">Cálculo automático de costes de platos</div>
 
@@ -290,6 +299,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== FICHAS TÉCNICAS ========== -->
     <section class="view" id="view-fichas">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Fichas Técnicas</div>
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
       <div class="grid grid-2" id="fichas-list"></div>
@@ -297,6 +307,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== CARTA DIGITAL ========== -->
     <section class="view" id="view-carta">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Carta Digital</div>
       <div class="view-subtitle">Menús por horario y disponibilidad</div>
 
@@ -318,6 +329,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== TPV ========== -->
     <section class="view" id="view-tpv">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">TPV</div>
       <div class="view-subtitle">Comandas, mesas y tickets</div>
       <div id="tpv-content"></div>
@@ -325,6 +337,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== STOCK ========== -->
     <section class="view" id="view-stock">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Stock</div>
       <div class="view-subtitle">Inventario con alertas de mínimos</div>
 
@@ -356,6 +369,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== PEDIDOS ========== -->
     <section class="view" id="view-pedidos">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Pedidos</div>
       <div class="view-subtitle">Gestión de compras a proveedores</div>
 
@@ -369,6 +383,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== GESTIÓN ECONÓMICA ========== -->
     <section class="view" id="view-economia">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Gestión Económica</div>
       <div class="view-subtitle">Gastos, P&amp;L y punto de equilibrio</div>
       <div id="economia-content"></div>
@@ -376,20 +391,80 @@ td.wrap{white-space:normal}
 
     <!-- ========== HORARIOS ========== -->
     <section class="view" id="view-horarios">
-      <div class="view-title">Horarios</div>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Horario del Personal</div>
       <div class="view-subtitle">Turnos del personal</div>
       <div id="horarios-content"></div>
     </section>
 
     <!-- ========== PLAN DE LIMPIEZA ========== -->
     <section class="view" id="view-limpieza">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Plan de Limpieza</div>
       <div class="view-subtitle">APPCC e higiene alimentaria</div>
       <div id="limpieza-content"></div>
     </section>
 
+    <!-- ========== DISTRIBUCIÓN DEL TRABAJO ========== -->
+    <section class="view" id="view-distribucion">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Distribución del Trabajo</div>
+      <div class="view-subtitle">Tareas asignadas por empleado y día</div>
+      <div id="distribucion-content"></div>
+    </section>
+
+    <!-- ========== CLIENTES ========== -->
+    <section class="view" id="view-clientes">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Clientes</div>
+      <div class="view-subtitle">Fichas de cliente y fidelización</div>
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" class="search-input" id="clientes-search" placeholder="Buscar cliente..." oninput="renderClientes()">
+        </div>
+        <button class="btn btn-primary" onclick="openClientModal()"><i class="ti ti-plus"></i> Nuevo Cliente</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Visitas</th><th>Puntos</th><th>Notas</th><th></th></tr>
+          </thead>
+          <tbody id="clientes-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== RESERVAS ========== -->
+    <section class="view" id="view-reservas">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Reservas</div>
+      <div class="view-subtitle">Reservas de mesas vinculadas al TPV</div>
+      <div class="toolbar">
+        <div class="left">
+          <input type="date" id="reservas-filter-date" onchange="renderReservas()">
+        </div>
+        <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+      </div>
+      <div id="reservas-list"></div>
+    </section>
+
+    <!-- ========== MI NEGOCIO ========== -->
+    <section class="view" id="view-minegocio">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Mi Negocio</div>
+      <div class="view-subtitle">Datos generales del establecimiento</div>
+      <div id="minegocio-content"></div>
+    </section>
+
+    <!-- ========== MANUAL DE USO ========== -->
+    <section class="view" id="view-manual">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Manual de Uso</div>
+      <div class="view-subtitle">Guía rápida de cada módulo</div>
+      <div id="manual-content"></div>
+    </section>
+
   </main>
-</div>
 
 <!-- ========== MODALS ========== -->
 <div class="modal-overlay" id="modal-overlay">
@@ -423,7 +498,11 @@ function defaultData(){
     sales: [],
     employees: [],
     shifts: {},          // { employeeId: ['','','','','','',''] }
+    workDistribution: {}, // { employeeId: ['','','','','','',''] }
     cleaningTasks: [],
+    clients: [],
+    reservations: [],
+    business: {name:'', address:'', phone:'', email:'', schedule:'', description:''},
     nextId: 1
   };
 }
@@ -480,24 +559,67 @@ function getStockEntry(ingredientId){
   return DB.stock[ingredientId];
 }
 
+/* ============== Áreas de trabajo ============== */
+const FOLDERS = {
+  cocina: {
+    title:'Cocina', subtitle:'Producción, recetas e inventario', icon:'ti-tools-kitchen-2', color:'var(--teal)',
+    modules:[
+      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
+      {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
+      {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y alérgenos'},
+      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
+      {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
+      {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores'},
+      {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
+      {id:'distribucion', name:'Distribución del Trabajo', icon:'ti-clipboard-list', desc:'Tareas por empleado y turno'},
+      {id:'limpieza', name:'Plan de Limpieza', icon:'ti-spray', desc:'APPCC e higiene alimentaria'},
+    ]
+  },
+  sala: {
+    title:'Sala', subtitle:'Clientes, reservas y servicio', icon:'ti-users', color:'var(--blue)',
+    modules:[
+      {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
+      {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
+      {id:'tpv', name:'TPV', icon:'ti-device-desktop', desc:'Comandas, mesas y tickets'},
+    ]
+  },
+  gestion: {
+    title:'Gestión', subtitle:'Administración del negocio', icon:'ti-coin', color:'var(--amber)',
+    modules:[
+      {id:'economia', name:'Gestión Económica', icon:'ti-coin', desc:'Gastos, P&L y punto de equilibrio'},
+      {id:'dashboard', name:'Panel de Control', icon:'ti-layout-dashboard', desc:'KPIs centralizados'},
+      {id:'minegocio', name:'Mi Negocio', icon:'ti-building-store', desc:'Datos del establecimiento'},
+      {id:'manual', name:'Manual de Uso', icon:'ti-book', desc:'Guía rápida de la app'},
+    ]
+  }
+};
+const MODULE_FOLDER = {};
+Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => MODULE_FOLDER[m.id] = key));
+
+let currentFolder = null;
+
 /* ============== Navigation ============== */
 function goHome(){
-  navigate('dashboard');
+  navigate('home');
+}
+function openFolder(key){
+  currentFolder = key;
+  navigate('folder');
 }
 function navigate(view){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('view-' + view);
   if(target) target.classList.add('active');
-  const navBtn = document.querySelector(`.nav-item[data-view="${view}"]`);
-  if(navBtn) navBtn.classList.add('active');
 
-  closeSidebar();
+  if(MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
+
   renderView(view);
   location.hash = view;
 }
 function renderView(view){
   switch(view){
+    case 'home': renderHome(); break;
+    case 'folder': renderFolder(); break;
     case 'dashboard': renderDashboard(); break;
     case 'megalista': renderMegalista(); break;
     case 'escandallo': renderEscandallo(); break;
@@ -509,13 +631,37 @@ function renderView(view){
     case 'economia': renderEconomia(); break;
     case 'horarios': renderHorarios(); break;
     case 'limpieza': renderLimpieza(); break;
+    case 'clientes': renderClientes(); break;
+    case 'reservas': renderReservas(); break;
+    case 'distribucion': renderDistribucion(); break;
+    case 'minegocio': renderMiNegocio(); break;
+    case 'manual': renderManual(); break;
   }
 }
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('open');
+
+function renderHome(){
+  document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
+    <div class="folder-card" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
+      <div class="folder-icon"><i class="ti ${f.icon}"></i></div>
+      <h2>${f.title}</h2>
+      <p>${f.subtitle}</p>
+      <div class="folder-count">${f.modules.length} módulos</div>
+    </div>
+  `).join('');
 }
-function closeSidebar(){
-  document.getElementById('sidebar').classList.remove('open');
+
+function renderFolder(){
+  const f = FOLDERS[currentFolder];
+  if(!f){ navigate('home'); return; }
+  document.getElementById('folder-title').textContent = f.title;
+  document.getElementById('folder-subtitle').textContent = f.subtitle;
+  document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
+    <div class="card module-card" onclick="navigate('${m.id}')">
+      <div class="module-icon"><i class="ti ${m.icon}"></i></div>
+      <h3>${escapeHtml(m.name)}</h3>
+      <p style="color:var(--muted);font-size:13px">${escapeHtml(m.desc)}</p>
+    </div>
+  `).join('');
 }
 
 /* ============== Modal helpers ============== */
@@ -1895,11 +2041,383 @@ function deleteCleaningTask(id){
 }
 
 /* ============================================================
+   DISTRIBUCIÓN DEL TRABAJO — Tareas por empleado y turno
+   ============================================================ */
+function renderDistribucion(){
+  const box = document.getElementById('distribucion-content');
+
+  if(!DB.employees.length){
+    box.innerHTML = `
+      <div class="toolbar"><div class="left"></div><button class="btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
+      <div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos para asignarles tareas.</div>
+    `;
+    return;
+  }
+
+  const headerCells = WEEK_DAYS.map(d=>`<th>${d}</th>`).join('');
+  const rows = DB.employees.map(emp => {
+    const tasks = DB.workDistribution[emp.id] || ['','','','','','',''];
+    const cells = tasks.map((val, idx) => `
+      <td><input type="text" value="${escapeHtml(val)}" placeholder="—" style="width:130px;padding:5px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateWorkDistribution(${emp.id}, ${idx}, this.value)"></td>
+    `).join('');
+    return `<tr><td><strong>${escapeHtml(emp.name)}</strong></td>${cells}</tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Empleado</th>${headerCells}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Indica la tarea o responsabilidad de cada empleado para cada día (ej. "Cocina caliente", "Recepción de pedidos", "Limpieza cámaras"). Los empleados se gestionan desde Horario del Personal.</p>
+  `;
+}
+function addEmployeeFromDistribucion(){
+  addEmployee();
+  renderDistribucion();
+}
+function updateWorkDistribution(employeeId, dayIdx, value){
+  if(!DB.workDistribution[employeeId]) DB.workDistribution[employeeId] = ['','','','','','',''];
+  DB.workDistribution[employeeId][dayIdx] = value;
+  saveDB();
+}
+
+/* ============================================================
+   CLIENTES — Fichas de cliente y fidelización
+   ============================================================ */
+function renderClientes(){
+  const search = document.getElementById('clientes-search').value.toLowerCase();
+  const items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
+  const tbody = document.getElementById('clientes-tbody');
+
+  if(!items.length){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-address-book"></i>No hay clientes registrados.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(c => `
+    <tr>
+      <td><strong>${escapeHtml(c.name)}</strong></td>
+      <td>${escapeHtml(c.phone||'—')}</td>
+      <td>${escapeHtml(c.email||'—')}</td>
+      <td><span class="badge badge-blue">${c.visits||0}</span></td>
+      <td><span class="badge badge-amber">${c.points||0} pts</span></td>
+      <td class="wrap">${escapeHtml(c.notes||'—')}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Registrar visita"><i class="ti ti-plus"></i></button>
+        <button class="btn btn-sm btn-icon" onclick="openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openClientModal(id){
+  const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',visits:0,points:0};
+  openModal(`
+    <div class="modal-header">
+      <h3>${id?'Editar':'Nuevo'} Cliente</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="client-name" value="${escapeHtml(c.name)}" placeholder="Nombre del cliente">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="text" id="client-phone" value="${escapeHtml(c.phone)}" placeholder="Ej. 600 123 456">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="client-email" value="${escapeHtml(c.email)}" placeholder="cliente@email.com">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Visitas registradas</label>
+        <input type="number" id="client-visits" value="${c.visits||0}" min="0">
+      </div>
+      <div class="field">
+        <label>Puntos de fidelización</label>
+        <input type="number" id="client-points" value="${c.points||0}" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Alergias / preferencias</label>
+      <input type="text" id="client-allergies" value="${escapeHtml(c.allergies||'')}" placeholder="Ej. Alérgico a frutos secos, prefiere mesa junto a ventana">
+    </div>
+    <div class="field">
+      <label>Notas</label>
+      <textarea id="client-notes" placeholder="Notas adicionales...">${escapeHtml(c.notes||'')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveClient(id){
+  const name = document.getElementById('client-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const phone = document.getElementById('client-phone').value.trim();
+  const email = document.getElementById('client-email').value.trim();
+  const visits = parseInt(document.getElementById('client-visits').value) || 0;
+  const points = parseInt(document.getElementById('client-points').value) || 0;
+  const allergies = document.getElementById('client-allergies').value.trim();
+  const notes = document.getElementById('client-notes').value.trim();
+
+  if(id){
+    Object.assign(DB.clients.find(x=>x.id===id), {name, phone, email, visits, points, allergies, notes});
+  }else{
+    DB.clients.push({id: genId(), name, phone, email, visits, points, allergies, notes});
+  }
+  saveDB();
+  closeModal();
+  renderClientes();
+  showToast('Cliente guardado');
+}
+
+function adjustClientVisit(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  c.visits = (c.visits||0) + 1;
+  c.points = (c.points||0) + 10;
+  saveDB();
+  renderClientes();
+  showToast('Visita registrada (+10 puntos)');
+}
+
+function deleteClient(id){
+  if(!confirm('¿Eliminar este cliente?')) return;
+  DB.clients = DB.clients.filter(c=>c.id!==id);
+  DB.reservations = DB.reservations.filter(r=>r.clientId!==id);
+  saveDB();
+  renderClientes();
+}
+
+/* ============================================================
+   RESERVAS — Reservas vinculadas a mesas del TPV
+   ============================================================ */
+const RESERVATION_STATUS = {confirmada:'Confirmada', cancelada:'Cancelada', completada:'Completada'};
+
+function renderReservas(){
+  const dateInput = document.getElementById('reservas-filter-date');
+  if(!dateInput.value) dateInput.value = todayStr();
+  const date = dateInput.value;
+
+  const items = DB.reservations.filter(r => r.date === date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+  const box = document.getElementById('reservas-list');
+
+  if(!items.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`;
+    return;
+  }
+
+  box.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+      ${items.map(r => {
+        const client = DB.clients.find(c=>c.id===r.clientId);
+        const table = DB.tables.find(t=>t.id===r.tableId);
+        const statusBadge = r.status==='confirmada' ? '<span class="badge badge-green">Confirmada</span>'
+          : r.status==='cancelada' ? '<span class="badge badge-red">Cancelada</span>'
+          : '<span class="badge badge-blue">Completada</span>';
+        return `
+          <tr>
+            <td><strong>${escapeHtml(r.time)}</strong></td>
+            <td>${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
+            <td>${r.people}</td>
+            <td>${table ? escapeHtml(table.name) : '<span class="badge badge-gray">Sin asignar</span>'}</td>
+            <td class="wrap">${escapeHtml(r.notes||'—')}</td>
+            <td>${statusBadge}</td>
+            <td class="actions-cell">
+              <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
+              <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function openReservationModal(id){
+  const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: document.getElementById('reservas-filter-date').value || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
+
+  const clientOptions = `<option value="">— Cliente sin ficha —</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  const tableOptions = `<option value="">Sin asignar</option>` + DB.tables.map(t=>`<option value="${t.id}" ${r.tableId===t.id?'selected':''}>${escapeHtml(t.name)}</option>`).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${id?'Editar':'Nueva'} Reserva</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Cliente</label>
+      <select id="reservation-client">${clientOptions}</select>
+    </div>
+    <div class="field">
+      <label>Nombre (si no tiene ficha de cliente)</label>
+      <input type="text" id="reservation-client-name" value="${escapeHtml(r.clientName||'')}" placeholder="Nombre para la reserva">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="reservation-date" value="${r.date}">
+      </div>
+      <div class="field">
+        <label>Hora</label>
+        <input type="time" id="reservation-time" value="${r.time}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Nº de personas</label>
+        <input type="number" id="reservation-people" value="${r.people}" min="1">
+      </div>
+      <div class="field">
+        <label>Mesa (TPV)</label>
+        <select id="reservation-table">${tableOptions}</select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Estado</label>
+      <select id="reservation-status">
+        ${Object.entries(RESERVATION_STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?'selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field">
+      <label>Notas</label>
+      <textarea id="reservation-notes" placeholder="Notas de la reserva...">${escapeHtml(r.notes||'')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReservation(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveReservation(id){
+  const clientIdVal = document.getElementById('reservation-client').value;
+  const clientId = clientIdVal ? parseInt(clientIdVal) : null;
+  const clientName = document.getElementById('reservation-client-name').value.trim();
+  const date = document.getElementById('reservation-date').value || todayStr();
+  const time = document.getElementById('reservation-time').value || '20:00';
+  const people = parseInt(document.getElementById('reservation-people').value) || 1;
+  const tableIdVal = document.getElementById('reservation-table').value;
+  const tableId = tableIdVal ? parseInt(tableIdVal) : null;
+  const status = document.getElementById('reservation-status').value;
+  const notes = document.getElementById('reservation-notes').value.trim();
+
+  if(!clientId && !clientName){ showToast('Indica un cliente o un nombre'); return; }
+
+  if(id){
+    Object.assign(DB.reservations.find(x=>x.id===id), {clientId, clientName, date, time, people, tableId, notes, status});
+  }else{
+    DB.reservations.push({id: genId(), clientId, clientName, date, time, people, tableId, notes, status});
+  }
+  saveDB();
+  closeModal();
+  renderReservas();
+  showToast('Reserva guardada');
+}
+
+function deleteReservation(id){
+  if(!confirm('¿Eliminar esta reserva?')) return;
+  DB.reservations = DB.reservations.filter(r=>r.id!==id);
+  saveDB();
+  renderReservas();
+}
+
+/* ============================================================
+   MI NEGOCIO — Datos del establecimiento
+   ============================================================ */
+function renderMiNegocio(){
+  const b = DB.business || {};
+  document.getElementById('minegocio-content').innerHTML = `
+    <div class="card" style="max-width:640px">
+      <div class="field">
+        <label>Nombre del establecimiento</label>
+        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="Ej. Restaurante GastroGoan">
+      </div>
+      <div class="field">
+        <label>Dirección</label>
+        <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="text" id="business-phone" value="${escapeHtml(b.phone||'')}" placeholder="Ej. 900 000 000">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="business-email" value="${escapeHtml(b.email||'')}" placeholder="contacto@negocio.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Horario de apertura</label>
+        <input type="text" id="business-schedule" value="${escapeHtml(b.schedule||'')}" placeholder="Ej. Lun-Dom 12:00-00:00">
+      </div>
+      <div class="field">
+        <label>Descripción</label>
+        <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  `;
+}
+
+function saveBusiness(){
+  DB.business = {
+    name: document.getElementById('business-name').value.trim(),
+    address: document.getElementById('business-address').value.trim(),
+    phone: document.getElementById('business-phone').value.trim(),
+    email: document.getElementById('business-email').value.trim(),
+    schedule: document.getElementById('business-schedule').value.trim(),
+    description: document.getElementById('business-description').value.trim(),
+  };
+  saveDB();
+  showToast('Datos del negocio guardados');
+}
+
+/* ============================================================
+   MANUAL DE USO — Guía rápida de la app
+   ============================================================ */
+function renderManual(){
+  document.getElementById('manual-content').innerHTML = Object.values(FOLDERS).map(f => `
+    <div class="card">
+      <h3><i class="ti ${f.icon}"></i> ${escapeHtml(f.title)}</h3>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:10px">${escapeHtml(f.subtitle)}</p>
+      <ul style="margin-left:18px;line-height:1.9;font-size:13.5px">
+        ${f.modules.map(m=>`<li><strong>${escapeHtml(m.name)}</strong> — ${escapeHtml(m.desc)}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('') + `
+    <div class="card">
+      <h3><i class="ti ti-info-circle"></i> Cómo funciona</h3>
+      <p style="font-size:13.5px;line-height:1.7">
+        1. En <strong>Mega Lista</strong> añade tus ingredientes y proveedores.<br>
+        2. En <strong>Escandallo</strong> crea tus platos con esos ingredientes para calcular el coste y el margen.<br>
+        3. En <strong>Carta</strong> publica los platos con su precio y disponibilidad.<br>
+        4. En <strong>TPV</strong> crea mesas, toma comandas y cobra — esto descuenta el stock automáticamente y registra la venta.<br>
+        5. En <strong>Pedidos</strong> registra las compras a proveedores; al marcarlas como recibidas se actualiza el stock.<br>
+        6. En <strong>Gestión Económica</strong> añade tus gastos fijos y puntuales para ver el P&amp;L y el punto de equilibrio.<br>
+        7. Todos los datos se guardan automáticamente en este navegador (localStorage), sin necesidad de servidor ni conexión.
+      </p>
+    </div>
+  `;
+}
+
+/* ============================================================
    INIT
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
-  const initial = (location.hash || '#dashboard').replace('#','');
-  navigate(initial);
+  const initial = (location.hash || '#home').replace('#','');
+  if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
+  navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
 });
 </script>
 
