@@ -222,6 +222,22 @@ td.wrap{white-space:normal}
 .dia-pill{padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
 .dia-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);font-weight:700}
 
+.manual-wrap{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.manual-nav{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg)}
+.manual-chapter{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+.manual-chapter.active{color:var(--teal-d);border-left-color:var(--teal);background:var(--teal-l);font-weight:700}
+.manual-chapter:hover:not(.active){color:var(--text);background:var(--border)}
+.manual-detail{padding:20px}
+.manual-detail h3{font-size:16px;font-weight:700;margin:0 0 12px;color:var(--text)}
+.manual-detail h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:18px 0 8px}
+.manual-detail p{font-size:14px;line-height:1.6;color:var(--text);margin-bottom:10px}
+.manual-detail ul{margin:0 0 12px 18px;font-size:14px;line-height:1.8;color:var(--text)}
+.manual-step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:8px}
+.manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.manual-step .st{font-size:13px;line-height:1.5}
+.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d)}
+@media (max-width:720px){.manual-wrap{grid-template-columns:1fr}.manual-nav{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}.manual-chapter{border-left:none;border-bottom:3px solid transparent}.manual-chapter.active{border-left:none;border-bottom-color:var(--teal)}}
+
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
 .ge-sec-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--brand-cream);border-bottom:1px solid var(--border);border-left:4px solid var(--teal)}
 .ge-sec-head h4{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
@@ -785,7 +801,10 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Manual de Uso</div>
       <div class="view-subtitle">Guía rápida de cada módulo</div>
-      <div id="manual-content"></div>
+      <div class="manual-wrap">
+        <div class="manual-nav" id="manual-nav"></div>
+        <div class="manual-detail" id="manual-detail"></div>
+      </div>
     </section>
 
   </main>
@@ -5076,29 +5095,237 @@ function saveBusiness(){
 /* ============================================================
    MANUAL DE USO — Guía rápida de la app
    ============================================================ */
+let manualChapter = 0;
+const MANUAL_CHAPTERS = [
+  {
+    title:'🚀 Cómo empezar',
+    content:`<h3>Primeros pasos</h3>
+    <p>El Kit sigue un orden lógico. Completa los módulos en secuencia y cada uno alimentará al siguiente automáticamente.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mi Negocio</strong> — Rellena los datos de tu establecimiento. Personalizan la app y aparecen en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Lista</strong> — Añade todos tus ingredientes con precio de compra y proveedor. Es la base de todo.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Escandallo</strong> — Crea tus recetas con los ingredientes de la Mega Lista. El sistema calcula el coste automáticamente.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Fichas Técnicas</strong> — Añade los pasos de elaboración y alérgenos. Se crean automáticamente desde el Escandallo.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Carta</strong> — Crea tu menú importando los platos del Escandallo. Puedes tener varias cartas por horario.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>TPV</strong> — Gestiona mesas, comandas, clientes y reservas. Las ventas alimentan la Gestión Económica automáticamente.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Gestión Económica</strong> — Registra gastos fijos y compras a proveedores. El P&amp;L y el punto de equilibrio se calculan solos.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Panel de Control</strong> — Consulta aquí cada día para tener todo el negocio a la vista en segundos.</div></div>
+    <div class="manual-tip">💡 Los datos persisten automáticamente. No hay que guardar archivos ni hacer copias — todo se guarda en el navegador (localStorage).</div>`
+  },
+  {
+    title:'📋 Mega Lista',
+    content:`<h3>Ingredientes y proveedores</h3>
+    <p>Aquí registras todos los ingredientes y productos que compras, con su precio y proveedor.</p>
+    <h4>Campos clave</h4>
+    <ul>
+      <li><strong>Nombre:</strong> identifica el producto</li>
+      <li><strong>Proveedor:</strong> de dónde lo compras</li>
+      <li><strong>Cantidad de compra:</strong> el formato en el que lo compras (ej. 1000 g si compras 1 kg)</li>
+      <li><strong>Unidad:</strong> g/ml para todo lo que se pesa o mide, UNIDAD para lo que se cuenta (huevos, limones...)</li>
+      <li><strong>Precio:</strong> lo que pagas por esa cantidad de compra</li>
+    </ul>
+    <div class="manual-tip">💡 Cuando actualices el precio de un ingrediente, el coste de todas las recetas del Escandallo que lo usen se actualizará automáticamente.</div>`
+  },
+  {
+    title:'🏭 Proveedores',
+    content:`<h3>Contactos y condiciones</h3>
+    <p>Mantén un listado de tus proveedores con datos de contacto, condiciones de pago y plazos de entrega.</p>
+    <h4>Para qué sirve</h4>
+    <ul>
+      <li>Vincula cada ingrediente de la Mega Lista a su proveedor</li>
+      <li>Consulta teléfono/email rápidamente al hacer un pedido</li>
+      <li>Sirve de base para el módulo de Pedidos</li>
+    </ul>`
+  },
+  {
+    title:'🧮 Escandallo',
+    content:`<h3>Coste de los platos</h3>
+    <p>Calcula el coste real de cada plato usando los precios de la Mega Lista.</p>
+    <h4>Cómo crear una receta</h4>
+    <ul>
+      <li>Haz clic en <strong>Nueva receta</strong> y ponle nombre</li>
+      <li>Selecciona los ingredientes del desplegable (viene de tu Mega Lista)</li>
+      <li>Indica la <strong>cantidad neta</strong> en gramos que lleva el plato</li>
+      <li>Indica la <strong>merma</strong> — el % de producto que se pierde al limpiar o preparar (ej. 20% en pescado)</li>
+      <li>El sistema calcula la <strong>cantidad bruta</strong> (lo que realmente consumes) y el <strong>coste</strong></li>
+    </ul>
+    <h4>Consumibles</h4>
+    <p>Porcentaje que añades para cubrir ingredientes de difícil medición: aceite, sal, agua, energía. Valor habitual: 5-8%.</p>
+    <h4>PVP y food cost</h4>
+    <p>Pon el precio de venta y el sistema calcula tu food cost. Verde (&lt;30%), ámbar (30-35%), rojo (&gt;35%).</p>
+    <div class="manual-tip">💡 La merma se calcula como: cantidad bruta = cantidad neta × (1 + merma%). Si necesitas 100g netos con 20% de merma, debes usar 120g brutos.</div>`
+  },
+  {
+    title:'📄 Fichas Técnicas',
+    content:`<h3>Elaboración y alérgenos</h3>
+    <p>Estandariza la elaboración de cada receta para que cualquier persona del equipo la ejecute igual.</p>
+    <h4>Creación automática desde Escandallo</h4>
+    <p>Al entrar en Fichas Técnicas verás las recetas del Escandallo que aún no tienen ficha. Selecciónala y se pre-rellena con nombre, comensales e ingredientes con gramajes.</p>
+    <h4>Qué añadir en la ficha</h4>
+    <ul>
+      <li><strong>Pasos de elaboración</strong> — numerados, claros y en orden</li>
+      <li><strong>Alérgenos</strong> — marca los 14 alérgenos reglamentarios de la UE</li>
+      <li><strong>Presentación</strong> — cómo se emplata y sirve</li>
+    </ul>
+    <h4>Imprimir</h4>
+    <p>El botón <strong>Imprimir</strong> genera una hoja limpia, lista para plastificar y colgar en cocina.</p>`
+  },
+  {
+    title:'🍽 Carta',
+    content:`<h3>Menú por horarios</h3>
+    <p>Crea y gestiona tus menús. Puedes tener varias cartas activas según horario (mediodía, noche, fin de semana).</p>
+    <h4>Crear una carta</h4>
+    <ul>
+      <li>Dale un nombre y tipo (Mediodía, Noche, Degustación...)</li>
+      <li>Define el horario: días de la semana y horas</li>
+      <li>Usa <strong>Importar del Escandallo</strong> para añadir tus platos automáticamente</li>
+      <li>Organiza por secciones: Entrantes, Principales, Postres...</li>
+      <li>Añade <strong>platos manuales</strong> que no estén en el Escandallo</li>
+    </ul>
+    <h4>Disponibilidad de platos</h4>
+    <p>Cada plato tiene un interruptor <strong>Disponible / No disponible</strong>. Los platos no disponibles no aparecen en el TPV.</p>
+    <h4>Vinculación con el TPV</h4>
+    <p>En el TPV selecciona qué carta está activa. Las comandas solo muestran los platos de esa carta.</p>`
+  },
+  {
+    title:'📦 Stock',
+    content:`<h3>Inventario y alertas de mínimos</h3>
+    <p>Controla las existencias de cada ingrediente y recibe avisos cuando bajan del mínimo configurado.</p>
+    <ul>
+      <li>Define un <strong>stock mínimo</strong> por ingrediente</li>
+      <li>El stock se descuenta automáticamente al cerrar comandas en el TPV (según los gramajes del Escandallo)</li>
+      <li>El stock aumenta automáticamente al recibir un pedido en el módulo Pedidos</li>
+    </ul>
+    <div class="manual-tip">💡 Revisa los avisos de stock bajo antes de hacer un nuevo pedido a proveedores.</div>`
+  },
+  {
+    title:'🛒 Pedidos',
+    content:`<h3>Compras a proveedores</h3>
+    <p>Gestiona el ciclo de vida completo de un pedido a proveedor.</p>
+    <h4>Estados</h4>
+    <ul>
+      <li><strong>Borrador</strong> — estás preparando el pedido, puedes añadir/quitar líneas</li>
+      <li><strong>Enviado</strong> — el pedido se ha comunicado al proveedor</li>
+      <li><strong>Recibido</strong> — al marcarlo como recibido, el Stock se actualiza automáticamente con las cantidades pedidas</li>
+    </ul>
+    <div class="manual-tip">💡 Solo los pedidos en estado Recibido afectan al Stock y a la Gestión Económica.</div>`
+  },
+  {
+    title:'📅 Horario del Personal',
+    content:`<h3>Turnos del equipo</h3>
+    <p>Crea tu equipo y planifica los turnos semanales en formato calendario.</p>
+    <ul>
+      <li>Da de alta a cada empleado con su rol y un color identificativo</li>
+      <li>Asigna turnos por día de la semana (mañana, tarde, partido...)</li>
+      <li>Consulta de un vistazo la cobertura de cada día</li>
+    </ul>`
+  },
+  {
+    title:'📋 Distribución del Trabajo',
+    content:`<h3>Tareas por empleado y turno</h3>
+    <p>Vista maestro-detalle: selecciona un empleado del equipo para ver y editar su asignación.</p>
+    <h4>Platos a su cargo</h4>
+    <p>Asigna a cada empleado los platos de los que es responsable, eligiéndolos del Escandallo/Carta o escribiéndolos manualmente.</p>
+    <h4>Plan de producción semanal</h4>
+    <p>Añade tareas concretas para cada día de la semana (ej. "Mise en place", "Limpiar cámara fría").</p>
+    <h4>Imprimir</h4>
+    <p>Genera una hoja con la asignación de un empleado o de todo el equipo, lista para imprimir y repartir.</p>`
+  },
+  {
+    title:'🧽 Plan de Limpieza',
+    content:`<h3>APPCC e higiene alimentaria</h3>
+    <p>Suite de 6 pestañas para cumplir con los registros obligatorios de Análisis de Peligros y Puntos de Control Crítico (APPCC).</p>
+    <ul>
+      <li><strong>Manos</strong> — registro de lavado de manos</li>
+      <li><strong>Limpieza</strong> — calendario de tareas de limpieza por zona y frecuencia</li>
+      <li><strong>Temperaturas</strong> — control de cámaras y equipos de frío</li>
+      <li><strong>Alérgenos</strong> — registro de control de alérgenos</li>
+      <li><strong>Plagas</strong> — control de plagas</li>
+      <li><strong>Mantenimiento</strong> — incidencias y revisiones de equipos</li>
+    </ul>
+    <div class="manual-tip">💡 Mantener estos registros al día es obligatorio para las inspecciones sanitarias.</div>`
+  },
+  {
+    title:'👤 Clientes',
+    content:`<h3>Fichas y fidelización</h3>
+    <p>Base de datos de clientes con métricas calculadas automáticamente a partir de las ventas del TPV: visitas, ticket medio y última visita.</p>
+    <ul>
+      <li>Los enlaces de WhatsApp y email son directos</li>
+      <li>Un semáforo indica clientes activos, en riesgo o inactivos según su frecuencia de visita</li>
+    </ul>`
+  },
+  {
+    title:'📆 Reservas',
+    content:`<h3>Reservas vinculadas a mesas</h3>
+    <p>Gestiona reservas en vista Día, Semana o Mes.</p>
+    <ul>
+      <li>Al crear una reserva, si el cliente no está en la base de datos, se te ofrece añadirlo</li>
+      <li>Las reservas de hoy y de mañana aparecen en el Panel de Control</li>
+    </ul>`
+  },
+  {
+    title:'🖥 TPV',
+    content:`<h3>Comandas, mesas y tickets</h3>
+    <h4>Plano de sala</h4>
+    <p>Las mesas se organizan por zonas (Interior, Terraza...). Configura el número de mesas en Mi Negocio y sincronízalas.</p>
+    <h4>Comandas</h4>
+    <ul>
+      <li>Selecciona la <strong>carta activa</strong> arriba</li>
+      <li>Haz clic en una <strong>mesa</strong> para abrir la comanda</li>
+      <li>Añade platos de la carta activa, ajusta cantidades</li>
+      <li><strong>Cobrar</strong> — abre el desglose de pago con calculadora de cambio, genera el ticket imprimible, registra la venta y libera la mesa</li>
+    </ul>
+    <h4>Para llevar / Delivery</h4>
+    <p>También puedes registrar ventas para llevar o a domicilio sin asignarlas a una mesa.</p>
+    <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`
+  },
+  {
+    title:'📊 Gestión Económica',
+    content:`<h3>Control financiero completo</h3>
+    <h4>Gastos Fijos</h4><p>Registra todos los gastos mensuales que no varían: nóminas, alquiler, seguros, suministros. Se usan automáticamente en el Punto de Equilibrio y la Cuenta de Resultados.</p>
+    <h4>Gastos Variables</h4><p>Registra cada compra a proveedor mes a mes. El food cost se calcula automáticamente comparando con la facturación del TPV.</p>
+    <h4>Cuenta de Resultados</h4><p>Vista mensual con facturación (del TPV), gastos (de las otras pestañas) y resultado, todo calculado automáticamente.</p>
+    <h4>Punto de Equilibrio</h4><p>Introduce ticket medio, cubiertos actuales y días de apertura. El sistema te dice cuántos cubiertos necesitas para no perder dinero.</p>
+    <h4>CAPEX</h4><p>Registro de inversiones y equipamientos con seguimiento de pagos.</p>
+    <h4>Resultado</h4><p>P&amp;L trimestral y anual automático: Ventas → Margen Bruto → EBITDA → Resultado Neto.</p>
+    <h4>Tesorería</h4><p>Muestra cómo distribuir la facturación entre Personal, Gastos Fijos, Materia Prima, Otros y Beneficio. Configura los porcentajes objetivo y comprueba si estás en línea.</p>`
+  },
+  {
+    title:'📈 Panel de Control',
+    content:`<h3>KPIs centralizados</h3>
+    <p>Tu centro de mando diario. Lee datos de todos los módulos y los presenta en una sola pantalla.</p>
+    <ul>
+      <li><strong>KPIs del periodo:</strong> ventas de hoy, de la semana y del mes</li>
+      <li><strong>Resultado:</strong> facturación, gastos y resultado del mes</li>
+      <li><strong>Tendencia:</strong> gráfico de ventas mensuales del año</li>
+      <li><strong>Punto de equilibrio:</strong> situación frente al objetivo</li>
+      <li><strong>Alertas:</strong> avisos automáticos si algo va mal (food cost alto, resultado negativo, fichas pendientes, stock bajo)</li>
+      <li><strong>Próximas reservas</strong> y accesos directos a los módulos más usados</li>
+    </ul>
+    <div class="manual-tip">💡 Revisa el Panel de Control cada mañana antes de abrir. En 30 segundos sabes cómo está tu negocio.</div>`
+  },
+  {
+    title:'🏪 Mi Negocio',
+    content:`<h3>Datos del establecimiento</h3>
+    <h4>Identidad y contacto</h4>
+    <p>Logo, nombre, tipo de negocio, dirección, teléfono, redes sociales — aparecen en la cabecera y en los tickets.</p>
+    <h4>Operativa</h4>
+    <p>Configura el número de mesas en interior y terraza y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
+    <h4>Acceso propietario (PIN)</h4>
+    <p>Define un PIN y marca qué módulos quieres proteger (por ejemplo Gestión Económica o Mega Lista). Al intentar entrar en un módulo protegido se pedirá el PIN. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>`
+  },
+];
+
 function renderManual(){
-  document.getElementById('manual-content').innerHTML = Object.values(FOLDERS).map(f => `
-    <div class="card">
-      <h3><i class="ti ${f.icon}"></i> ${escapeHtml(f.title)}</h3>
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:10px">${escapeHtml(f.subtitle)}</p>
-      <ul style="margin-left:18px;line-height:1.9;font-size:13.5px">
-        ${f.modules.map(m=>`<li><strong>${escapeHtml(m.name)}</strong> — ${escapeHtml(m.desc)}</li>`).join('')}
-      </ul>
-    </div>
-  `).join('') + `
-    <div class="card">
-      <h3><i class="ti ti-info-circle"></i> Cómo funciona</h3>
-      <p style="font-size:13.5px;line-height:1.7">
-        1. En <strong>Mega Lista</strong> añade tus ingredientes y proveedores.<br>
-        2. En <strong>Escandallo</strong> crea tus platos con esos ingredientes para calcular el coste y el margen.<br>
-        3. En <strong>Carta</strong> publica los platos con su precio y disponibilidad.<br>
-        4. En <strong>TPV</strong> crea mesas, toma comandas y cobra — esto descuenta el stock automáticamente y registra la venta.<br>
-        5. En <strong>Pedidos</strong> registra las compras a proveedores; al marcarlas como recibidas se actualiza el stock.<br>
-        6. En <strong>Gestión Económica</strong> añade tus gastos fijos y puntuales para ver el P&amp;L y el punto de equilibrio.<br>
-        7. Todos los datos se guardan automáticamente en este navegador (localStorage), sin necesidad de servidor ni conexión.
-      </p>
-    </div>
-  `;
+  const nav = document.getElementById('manual-nav');
+  const detail = document.getElementById('manual-detail');
+  nav.innerHTML = MANUAL_CHAPTERS.map((ch,i) => `
+    <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${ch.title}</div>
+  `).join('');
+  detail.innerHTML = MANUAL_CHAPTERS[manualChapter].content;
+}
+function goManualChapter(i){
+  manualChapter = i;
+  renderManual();
 }
 
 /* ============================================================
