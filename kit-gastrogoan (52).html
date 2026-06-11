@@ -173,6 +173,13 @@ td.wrap{white-space:normal}
 .badge-purple{background:var(--purple-l);color:var(--purple)}
 .badge-gray{background:#eee;color:#555}
 
+/* ===== Fichas Técnicas ===== */
+.alg-pill{display:inline-block;padding:5px 12px;border-radius:99px;font-size:11.5px;font-weight:700;background:#eee;color:#666;cursor:pointer;border:1px solid var(--border);user-select:none}
+.alg-pill.on{background:var(--red-l);color:var(--red);border-color:var(--red)}
+.alg-grid{display:flex;flex-wrap:wrap;gap:6px}
+.step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
+
 /* ===== Modal ===== */
 .modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
@@ -381,7 +388,11 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Fichas Técnicas</div>
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
-      <div class="grid grid-2" id="fichas-list"></div>
+      <div class="toolbar">
+        <div class="left"></div>
+        <button class="btn btn-primary" onclick="openFichaModal()"><i class="ti ti-plus"></i> Nueva Ficha</button>
+      </div>
+      <div id="fichas-list"></div>
     </section>
 
     <!-- ========== CARTA DIGITAL ========== -->
@@ -727,6 +738,7 @@ function defaultData(){
   return {
     ingredients: [],
     recipes: [],
+    fichas: [],
     menuItems: [],
     stock: {},          // { ingredientId: { qty, min } }
     purchaseOrders: [],
@@ -1206,12 +1218,20 @@ function recipeFoodCostPct(r){
   const cost = recipeCost(r);
   return (cost / r.price) * 100;
 }
+function recipeIngredientCost(line){
+  const ing = getIngredient(line.ingredientId);
+  if(!ing) return 0;
+  const bruto = line.qty * (1 + (line.merma||0)/100);
+  return ing.price * bruto;
+}
+function recipeCostBreakdown(r){
+  const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line), 0);
+  const consPct = r.consumiblesPct || 0;
+  const costeCons = costeIng * consPct / 100;
+  return {costeIng, costeCons, total: costeIng + costeCons};
+}
 function recipeCost(r){
-  return (r.ingredients||[]).reduce((sum, line) => {
-    const ing = getIngredient(line.ingredientId);
-    if(!ing) return sum;
-    return sum + (ing.price * line.qty);
-  }, 0);
+  return recipeCostBreakdown(r).total;
 }
 function renderEscandallo(){
   const search = document.getElementById('escandallo-search').value.toLowerCase();
@@ -1228,7 +1248,8 @@ function renderEscandallo(){
   }
 
   box.innerHTML = recipes.map(r => {
-    const cost = recipeCost(r);
+    const breakdown = recipeCostBreakdown(r);
+    const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
     const margin = (r.price||0) - cost;
     const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
@@ -1239,8 +1260,9 @@ function renderEscandallo(){
     const lines = (r.ingredients||[]).map(line => {
       const ing = getIngredient(line.ingredientId);
       if(!ing) return '';
-      const lineCost = ing.price * line.qty;
-      return `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${fmtMoney(lineCost)}</td></tr>`;
+      const lineCost = recipeIngredientCost(line);
+      const merma = line.merma||0;
+      return `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td></tr>`;
     }).join('');
 
     return `
@@ -1249,10 +1271,14 @@ function renderEscandallo(){
           <span><i class="ti ti-chef-hat"></i> ${escapeHtml(r.name)}</span>
           ${pctBadge}
         </h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+          ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
+          ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+        </div>
         <div class="table-wrap" style="margin-bottom:10px">
           <table>
-            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Coste</th></tr></thead>
-            <tbody>${lines || '<tr><td colspan="3"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th></tr></thead>
+            <tbody>${lines || '<tr><td colspan="4"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
           </table>
         </div>
         <div class="grid grid-3" style="margin-bottom:10px">
@@ -1272,16 +1298,13 @@ function renderEscandallo(){
 let recipeModalLines = [];
 
 function openRecipeModal(id){
-  const r = id ? getRecipe(id) : {name:'', price:0, ingredients:[], steps:'', presentation:'', allergens:[]};
+  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[]};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
   renderRecipeModal(id, r);
 }
 
 function renderRecipeModal(id, r){
-  const cost = recipeModalLines.reduce((sum, line) => {
-    const ing = getIngredient(line.ingredientId);
-    return sum + (ing ? ing.price * line.qty : 0);
-  }, 0);
+  const breakdown = recipeCostBreakdown({...r, ingredients: recipeModalLines});
 
   const ingredientOptions = DB.ingredients.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
 
@@ -1292,7 +1315,8 @@ function renderRecipeModal(id, r){
         <td>${ing ? escapeHtml(ing.name) : '—'}</td>
         <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
         <td>${ing ? escapeHtml(ing.unit) : ''}</td>
-        <td>${ing ? fmtMoney(ing.price * line.qty) : '—'}</td>
+        <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>
+        <td>${ing ? fmtMoney(recipeIngredientCost(line)) : '—'}</td>
         <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
       </tr>
     `;
@@ -1313,13 +1337,23 @@ function renderRecipeModal(id, r){
         <input type="number" id="recipe-price" value="${r.price||0}" step="0.01" min="0">
       </div>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Comensales</label>
+        <input type="number" id="recipe-comensales" value="${r.comensales||2}" step="1" min="1">
+      </div>
+      <div class="field">
+        <label>Consumibles (%)</label>
+        <input type="number" id="recipe-consumibles" value="${r.consumiblesPct!=null?r.consumiblesPct:5}" step="0.5" min="0" max="99" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
+      </div>
+    </div>
 
     <div class="field">
       <label>Ingredientes</label>
       <div class="table-wrap" style="margin-bottom:8px">
         <table>
-          <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Ud</th><th>Coste</th><th></th></tr></thead>
-          <tbody>${linesHtml || '<tr><td colspan="5"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
+          <thead><tr><th>Ingrediente</th><th>Cantidad neta</th><th>Ud</th><th>Merma %</th><th>Coste</th><th></th></tr></thead>
+          <tbody>${linesHtml || '<tr><td colspan="6"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
         </table>
       </div>
       ${DB.ingredients.length ? `
@@ -1346,9 +1380,10 @@ function renderRecipeModal(id, r){
       <textarea id="recipe-presentation" placeholder="Notas de presentación...">${escapeHtml(r.presentation||'')}</textarea>
     </div>
 
-    <div class="kpi" style="margin-bottom:10px">
-      <div class="label">Coste total actual</div>
-      <div class="value" style="font-size:18px">${fmtMoney(cost)}</div>
+    <div class="grid grid-3" style="margin-bottom:10px">
+      <div class="kpi"><div class="label">Coste ingredientes</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeIng)}</div></div>
+      <div class="kpi"><div class="label">Consumibles</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeCons)}</div></div>
+      <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total)}</div></div>
     </div>
 
     <div class="modal-footer">
@@ -1364,12 +1399,17 @@ function addRecipeLine(id){
   if(!ingredientId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
   const existing = recipeModalLines.find(l => l.ingredientId === ingredientId);
   if(existing){ existing.qty += qty; }
-  else { recipeModalLines.push({ingredientId, qty}); }
+  else { recipeModalLines.push({ingredientId, qty, merma:0}); }
   renderRecipeModal(id, currentRecipeFormState(id));
 }
 function updateRecipeLineQty(idx, value, id){
   const qty = parseFloat(value) || 0;
   recipeModalLines[idx].qty = qty;
+  renderRecipeModal(id, currentRecipeFormState(id));
+}
+function updateRecipeLineMerma(idx, value, id){
+  const merma = parseFloat(value) || 0;
+  recipeModalLines[idx].merma = merma;
   renderRecipeModal(id, currentRecipeFormState(id));
 }
 function removeRecipeLine(idx, id){
@@ -1379,12 +1419,16 @@ function removeRecipeLine(idx, id){
 function currentRecipeFormState(id){
   const nameEl = document.getElementById('recipe-name');
   const priceEl = document.getElementById('recipe-price');
+  const comensalesEl = document.getElementById('recipe-comensales');
+  const consumiblesEl = document.getElementById('recipe-consumibles');
   const stepsEl = document.getElementById('recipe-steps');
   const presEl = document.getElementById('recipe-presentation');
   const r = id ? getRecipe(id) : {};
   return {
     name: nameEl ? nameEl.value : (r.name||''),
     price: priceEl ? priceEl.value : (r.price||0),
+    comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
+    consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
     steps: stepsEl ? stepsEl.value : (r.steps||''),
     presentation: presEl ? presEl.value : (r.presentation||''),
   };
@@ -1394,6 +1438,8 @@ function saveRecipe(id){
   const name = document.getElementById('recipe-name').value.trim();
   if(!name){ showToast('El nombre es obligatorio'); return; }
   const price = parseFloat(document.getElementById('recipe-price').value) || 0;
+  const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
+  const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
   const steps = document.getElementById('recipe-steps').value.trim();
   const presentation = document.getElementById('recipe-presentation').value.trim();
   const ingredients = recipeModalLines.map(l => ({...l}));
@@ -1407,9 +1453,9 @@ function saveRecipe(id){
 
   if(id){
     const r = getRecipe(id);
-    Object.assign(r, {name, price, steps, presentation, ingredients, allergens:[...allergenSet]});
+    Object.assign(r, {name, price, comensales, consumiblesPct, steps, presentation, ingredients, allergens:[...allergenSet]});
   }else{
-    DB.recipes.push({id: genId(), name, price, steps, presentation, ingredients, allergens:[...allergenSet]});
+    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, steps, presentation, ingredients, allergens:[...allergenSet]});
   }
   saveDB();
   closeModal();
@@ -1429,40 +1475,296 @@ function deleteRecipe(id){
 /* ============================================================
    FICHAS TÉCNICAS — Elaboración estándar y alérgenos
    ============================================================ */
+const ALLERGEN_LIST = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
+const FICHA_TEMPS = ['CALIENTE','FRÍO','AMBIENTE'];
+
+let fichaModalState = null;
+
+function getFicha(id){ return DB.fichas.find(f => f.id === id); }
+
 function renderFichas(){
   const box = document.getElementById('fichas-list');
-  if(!DB.recipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos creados. Crea platos en Escandallo para generar sus fichas técnicas.</div>`;
+  let html = '';
+
+  const linkedIds = new Set(DB.fichas.map(f => f.recipeId).filter(Boolean));
+  const pending = DB.recipes.filter(r => !linkedIds.has(r.id));
+  if(pending.length){
+    html += `
+      <div class="card" style="margin-bottom:16px">
+        <h3><i class="ti ti-link"></i> Platos del Escandallo sin ficha técnica</h3>
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Haz clic en un plato para crear su ficha técnica con los ingredientes y gramajes ya cargados.</p>
+        <div class="grid grid-3">
+          ${pending.map(r => `
+            <div class="card" style="cursor:pointer;margin-bottom:0" onclick="openFichaModal(null, ${r.id})">
+              <strong>${escapeHtml(r.name)}</strong>
+              <div style="font-size:12px;color:var(--brand-orange);margin-top:4px">Crear ficha <i class="ti ti-arrow-right"></i></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if(!DB.fichas.length){
+    html += `<div class="empty"><i class="ti ti-file-description"></i>No hay fichas técnicas creadas.</div>`;
+    box.innerHTML = html;
     return;
   }
-  box.innerHTML = DB.recipes.map(r => {
-    const cost = recipeCost(r);
-    const ingredientsHtml = (r.ingredients||[]).map(line => {
-      const ing = getIngredient(line.ingredientId);
-      return ing ? `<li>${fmtNum(line.qty)} ${escapeHtml(ing.unit)} — ${escapeHtml(ing.name)}</li>` : '';
-    }).join('');
+
+  html += `<div class="grid grid-2">` + DB.fichas.map(f => {
+    const ingredientsHtml = (f.ingredients||[]).filter(Boolean).map(i => `<li>${escapeHtml(i)}</li>`).join('');
+    const stepsHtml = (f.pasos||[]).filter(Boolean).map((p,i) => `<li>${escapeHtml(p)}</li>`).join('');
     return `
       <div class="card">
-        <h3><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</h3>
+        <h3 style="justify-content:space-between">
+          <span><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span>
+          ${f.recipeId ? '<span class="badge badge-green">Vinculada</span>' : ''}
+        </h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+          ${f.comensales ? `👥 ${f.comensales} comensal${f.comensales!==1?'es':''}` : ''}
+          ${f.tiempo ? ` · ⏱ ${escapeHtml(String(f.tiempo))} min` : ''}
+          ${f.temp ? ` · ${escapeHtml(f.temp)}` : ''}
+        </div>
+
         <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Ingredientes</p>
         <ul style="margin:0 0 12px 18px;font-size:13.5px;line-height:1.7">${ingredientsHtml || '<li>Sin ingredientes</li>'}</ul>
 
         <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Modo de elaboración</p>
-        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(r.steps) || '<em>Sin especificar</em>'}</p>
+        <ol style="margin:0 0 12px 18px;font-size:13.5px;line-height:1.7">${stepsHtml || '<li><em>Sin especificar</em></li>'}</ol>
 
         <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Presentación</p>
-        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(r.presentation) || '<em>Sin especificar</em>'}</p>
+        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(f.presentation) || '<em>Sin especificar</em>'}</p>
 
         <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Alérgenos</p>
-        <div style="margin-bottom:12px">${(r.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '<span class="badge badge-gray">Ninguno detectado</span>'}</div>
+        <div style="margin-bottom:12px">${(f.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '<span class="badge badge-gray">Ninguno</span>'}</div>
 
-        <div class="grid grid-2">
-          <div class="kpi"><div class="label">Coste por ración</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
-          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+        <div class="actions-cell">
+          <button class="btn btn-sm" onclick="openFichaModal(${f.id})"><i class="ti ti-edit"></i> Editar</button>
+          <button class="btn btn-sm" onclick="printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + `</div>`;
+
+  box.innerHTML = html;
+}
+
+function openFichaModal(id, recipeId){
+  if(id){
+    const f = getFicha(id);
+    fichaModalState = JSON.parse(JSON.stringify(f));
+  } else if(recipeId){
+    const r = getRecipe(recipeId);
+    fichaModalState = {
+      id: null, name: r.name, recipeId: r.id, comensales: r.comensales||2,
+      tiempo: '', temp: 'CALIENTE',
+      ingredients: (r.ingredients||[]).map(line => {
+        const ing = getIngredient(line.ingredientId);
+        return ing ? `${fmtNum(line.qty)} ${ing.unit} — ${ing.name}` : '';
+      }).filter(Boolean),
+      pasos: r.steps ? r.steps.split('\n').filter(Boolean) : [''],
+      allergens: [...(r.allergens||[])],
+      presentation: r.presentation || ''
+    };
+    if(!fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
+    if(!fichaModalState.pasos.length) fichaModalState.pasos = [''];
+  } else {
+    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, tiempo:'', temp:'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
+  }
+  renderFichaModal();
+}
+
+function renderFichaModal(){
+  const f = fichaModalState;
+
+  const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.map(r =>
+    `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
+  ).join('');
+
+  const ingredientsHtml = f.ingredients.map((ing, idx) => `
+    <div class="field-row" style="margin-bottom:6px">
+      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" oninput="updateFichaIngredient(${idx}, this.value)">
+      <button class="btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredient(${idx})" ${f.ingredients.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+    </div>
+  `).join('');
+
+  const stepsHtml = f.pasos.map((p, idx) => `
+    <div class="step-row">
+      <div class="step-num">${idx+1}</div>
+      <textarea placeholder="Describe el paso de elaboración..." style="flex:1" oninput="updateFichaStep(${idx}, this.value)">${escapeHtml(p)}</textarea>
+      <button class="btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+    </div>
+  `).join('');
+
+  const allergenHtml = ALLERGEN_LIST.map(a => `
+    <div class="alg-pill${(f.allergens||[]).includes(a)?' on':''}" onclick="toggleFichaAllergen('${escapeHtml(a)}')">${a}</div>
+  `).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${f.id ? 'Editar' : 'Nueva'} Ficha Técnica</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Nombre del plato</label>
+        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky">
+      </div>
+      <div class="field">
+        <label>Vincular a Escandallo</label>
+        <select id="ficha-recipe">${recipeOptions}</select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Comensales</label>
+        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1">
+      </div>
+      <div class="field">
+        <label>Tiempo de elaboración (min)</label>
+        <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0">
+      </div>
+      <div class="field">
+        <label>Temperatura de servicio</label>
+        <select id="ficha-temp">${FICHA_TEMPS.map(t=>`<option value="${t}"${t===f.temp?' selected':''}>${t}</option>`).join('')}</select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Ingredientes</label>
+      <div id="ficha-ingredients">${ingredientsHtml}</div>
+      <button class="btn btn-sm" onclick="addFichaIngredient()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
+    </div>
+
+    <div class="field">
+      <label>Modo de elaboración (pasos)</label>
+      <div id="ficha-steps">${stepsHtml}</div>
+      <button class="btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> Añadir paso</button>
+    </div>
+
+    <div class="field">
+      <label>Presentación / emplatado</label>
+      <textarea id="ficha-presentation" placeholder="Notas de presentación...">${escapeHtml(f.presentation||'')}</textarea>
+    </div>
+
+    <div class="field">
+      <label>Alérgenos</label>
+      <div class="alg-grid">${allergenHtml}</div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveFicha()">Guardar</button>
+    </div>
+  `);
+}
+
+function syncFichaModalFields(){
+  const f = fichaModalState;
+  const nameEl = document.getElementById('ficha-name');
+  const recipeEl = document.getElementById('ficha-recipe');
+  const comensalesEl = document.getElementById('ficha-comensales');
+  const tiempoEl = document.getElementById('ficha-tiempo');
+  const tempEl = document.getElementById('ficha-temp');
+  const presEl = document.getElementById('ficha-presentation');
+  if(nameEl) f.name = nameEl.value;
+  if(recipeEl) f.recipeId = recipeEl.value ? parseInt(recipeEl.value) : '';
+  if(comensalesEl) f.comensales = comensalesEl.value;
+  if(tiempoEl) f.tiempo = tiempoEl.value;
+  if(tempEl) f.temp = tempEl.value;
+  if(presEl) f.presentation = presEl.value;
+}
+
+function updateFichaIngredient(idx, value){ fichaModalState.ingredients[idx] = value; }
+function addFichaIngredient(){ syncFichaModalFields(); fichaModalState.ingredients.push(''); renderFichaModal(); }
+function removeFichaIngredient(idx){
+  if(fichaModalState.ingredients.length<=1) return;
+  syncFichaModalFields();
+  fichaModalState.ingredients.splice(idx,1);
+  renderFichaModal();
+}
+
+function updateFichaStep(idx, value){ fichaModalState.pasos[idx] = value; }
+function addFichaStep(){ syncFichaModalFields(); fichaModalState.pasos.push(''); renderFichaModal(); }
+function removeFichaStep(idx){
+  if(fichaModalState.pasos.length<=1) return;
+  syncFichaModalFields();
+  fichaModalState.pasos.splice(idx,1);
+  renderFichaModal();
+}
+
+function toggleFichaAllergen(a){
+  syncFichaModalFields();
+  if(!fichaModalState.allergens) fichaModalState.allergens = [];
+  const i = fichaModalState.allergens.indexOf(a);
+  if(i>=0) fichaModalState.allergens.splice(i,1); else fichaModalState.allergens.push(a);
+  renderFichaModal();
+}
+
+function saveFicha(){
+  syncFichaModalFields();
+  const f = fichaModalState;
+  const name = (f.name||'').trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const data = {
+    name,
+    recipeId: f.recipeId || '',
+    comensales: parseInt(f.comensales)||1,
+    tiempo: f.tiempo ? parseInt(f.tiempo) : '',
+    temp: f.temp || 'CALIENTE',
+    ingredients: f.ingredients.filter(i => i && i.trim()),
+    pasos: f.pasos.filter(p => p && p.trim()),
+    allergens: f.allergens || [],
+    presentation: (f.presentation||'').trim()
+  };
+  if(f.id){
+    Object.assign(getFicha(f.id), data);
+  } else {
+    DB.fichas.push({id: genId(), ...data});
+  }
+  saveDB();
+  closeModal();
+  renderFichas();
+  showToast('Ficha técnica guardada');
+}
+
+function deleteFicha(id){
+  if(!confirm('¿Eliminar esta ficha técnica?')) return;
+  DB.fichas = DB.fichas.filter(f => f.id !== id);
+  saveDB();
+  renderFichas();
+  showToast('Ficha eliminada');
+}
+
+function printFicha(id){
+  const f = getFicha(id);
+  if(!f) return;
+  const algs = (f.allergens||[]).length
+    ? f.allergens.map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
+    : 'Ninguno';
+  const ings = (f.ingredients||[]).map(i=>`<li style="margin:3px 0">${escapeHtml(i)}</li>`).join('');
+  const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
+  const win = window.open('', '_blank', 'width=800,height=1000');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(f.name)}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
+  h1{font-size:18pt;margin:0 0 4px}h2{font-size:11pt;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}
+  .meta{display:flex;gap:20px;font-size:10pt;color:#555;margin-bottom:16px}.meta span{background:#f5f5f3;padding:4px 10px;border-radius:4px}
+  ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
+  <h1>${escapeHtml(f.name)}</h1>
+  <div class="meta">
+    ${f.comensales?`<span>👥 ${f.comensales} comensal${f.comensales!==1?'es':''}</span>`:''}
+    ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}
+    ${f.temp?`<span>${escapeHtml(f.temp)}</span>`:''}
+  </div>
+  <h2>Ingredientes</h2><ul>${ings || '<li>Sin ingredientes</li>'}</ul>
+  <h2>Modo de elaboración</h2>${steps || '<p>Sin especificar</p>'}
+  <h2>Presentación</h2><p>${escapeHtml(f.presentation) || 'Sin especificar'}</p>
+  <h2>Alérgenos</h2><div>${algs}</div>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 /* ============================================================
