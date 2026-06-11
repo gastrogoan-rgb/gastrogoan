@@ -3787,6 +3787,8 @@ const SHIFT_TYPES = {
 
 let horariosTab = 'semana';
 let horariosWeekOffset = 0;
+let horariosDate = todayStr();
+let horariosMonthOffset = 0;
 
 function getWeekDates(offset){
   const now = new Date();
@@ -3811,7 +3813,9 @@ function renderHorarios(){
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
+      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> Día</button>
       <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> Semana</button>
+      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> Mes</button>
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> Personal</button>
     </nav>
     <div id="horarios-tab-content"></div>
@@ -3821,7 +3825,132 @@ function renderHorarios(){
 function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
+  else if(horariosTab === 'dia') renderHorariosDia();
+  else if(horariosTab === 'mes') renderHorariosMes();
   else renderHorariosSemana();
+}
+
+function goToHorariosDia(date){
+  horariosDate = date;
+  horariosTab = 'dia';
+  renderHorarios();
+}
+
+function renderHorariosDia(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+
+  if(!DB.employees.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
+    return;
+  }
+
+  const date = horariosDate;
+  const turnos = (DB.turnos||[]).filter(t => t.fecha === date);
+
+  const rows = DB.employees.map(emp => {
+    const t = turnos.find(x => x.employeeId===emp.id);
+    if(t){
+      const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
+      const hh = hoursBetween(t.entrada, t.salida);
+      return `
+        <tr>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:6px">
+              <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+              <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
+            </span>
+          </td>
+          <td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px">${t.tipo} - ${tipo.label}</span></td>
+          <td>${t.tipo!=='D' ? `${escapeHtml(t.entrada)} - ${escapeHtml(t.salida)}` : '—'}</td>
+          <td>${hh>0?hh.toFixed(1)+'h':'—'}</td>
+          <td class="wrap">${escapeHtml(t.notas||'—')}</td>
+          <td class="actions-cell">
+            <button class="btn btn-sm btn-icon" onclick="openTurnoModal(${t.id})"><i class="ti ti-edit"></i></button>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${t.id})"><i class="ti ti-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    }
+    return `
+      <tr>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:6px">
+            <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+            <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
+          </span>
+        </td>
+        <td colspan="4"><span style="color:var(--muted)">Sin turno asignado</span></td>
+        <td class="actions-cell">
+          <button class="btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> Asignar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
+      </div>
+      <button class="btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> Nuevo Turno</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Empleado</th><th>Turno</th><th>Horario</th><th>Horas</th><th>Notas</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderHorariosMes(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth() + horariosMonthOffset, 1);
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const counts = {};
+  (DB.turnos||[]).forEach(t => { if(t.tipo !== 'D') counts[t.fecha] = (counts[t.fecha]||0) + 1; });
+
+  let cells = '';
+  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = dateStr(new Date(year, month, day));
+    const count = counts[ds] || 0;
+    const isToday = ds === todayStr();
+    cells += `
+      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToHorariosDia('${ds}')">
+        <div style="font-weight:700">${day}</div>
+        ${count ? `<span class="badge badge-blue">${count} turno${count!==1?'s':''}</span>` : ''}
+      </div>
+    `;
+  }
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm" onclick="horariosMonthOffset--;renderHorarios()"><i class="ti ti-chevron-left"></i></button>
+        <button class="btn btn-sm" onclick="horariosMonthOffset=0;renderHorarios()">Hoy</button>
+        <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
+        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+      </div>
+      <button class="btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
+      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
 }
 
 function renderHorariosSemana(){
@@ -3950,7 +4079,7 @@ function saveTurno(id){
   }
   saveDB();
   closeModal();
-  renderHorariosSemana();
+  renderHorariosTab();
   showToast('Turno guardado');
 }
 
@@ -3959,7 +4088,7 @@ function deleteTurno(id){
   DB.turnos = (DB.turnos||[]).filter(t => t.id!==id);
   saveDB();
   closeModal();
-  renderHorariosSemana();
+  renderHorariosTab();
 }
 
 function renderHorariosPersonal(){
