@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kit de Gestión Hostelera · GastroGoan</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* GastroGoan brand */
+  --brand-orange:#DF7039;
+  --brand-yellow:#FFFF00;
+  --brand-cream:#F6EDD5;
+  --brand-black:#000000;
+
+  /* Interface — primario = naranja GastroGoan */
+  --dark:#000000;--dark2:#1A1A1A;
+  --teal:#DF7039;--teal-l:#FDEEE4;--teal-d:#8B3A18;
+  --mid:#1A1A1A;
+
+  /* Acento = amarillo GastroGoan (uso controlado) */
+  --amber:#C8821A;--amber-l:#FDEEE4;--amber-dark:#6B3A10;
+
+  /* Semánticos (sin cambio — universales) */
+  --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#042C53;
+  --green:#3B6D11;--green-l:#EAF3DE;
+  --purple:#533BAB;--purple-l:#EEEDFE;
+  --red-l:#FCEBEB;--red:#E24B4A;
+
+  /* Layout */
+  --bg:#F6EDD5;--surface:#FFFFFF;--border:#DFD0B8;
+  --text:#1A1A1A;--muted:#7A6A58;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header" id="app-header">
+  <a class="app-logo" href="#" onclick="goHome();return false">
+    <div class="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
+    <span class="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
+  </a>
+</header>
+
+<main style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+  <h1>Kit de Gestión Hostelera · GastroGoan</h1>
+  <p>Módulo de gestión profesional para restaurantes, bares y establecimientos de hostelería.</p>
+  
+  <section style="margin-top: 30px;">
+    <h2>Características principales</h2>
+    <ul style="font-size: 16px; line-height: 1.8;">
+      <li>📋 <strong>Mega Lista</strong> - Gestión de ingredientes y proveedores</li>
+      <li>🧮 <strong>Escandallo</strong> - Cálculo automático de costes de platos</li>
+      <li>📄 <strong>Fichas Técnicas</strong> - Elaboración estándar y alérgenos</li>
+      <li>🍽️ <strong>Carta Digital</strong> - Menús por horario y disponibilidad</li>
+      <li>🖥️ <strong>TPV Integrado</strong> - Comandas, mesas y tickets</li>
+      <li>💰 <strong>Gestión Económica</strong> - Gastos, P&L y punto de equilibrio</li>
+      <li>📊 <strong>Panel de Control</strong> - Dashboard centralizado de KPIs</li>
+      <li>📦 <strong>Stock</strong> - Inventario con alertas de mínimos</li>
+      <li>🛒 <strong>Pedidos</strong> - Gestión de compras a proveedores</li>
+      <li>🗓️ <strong>Horarios</strong> - Turnos del personal</li>
+      <li>🧹 <strong>Plan de Limpieza</strong> - APPCC e higiene alimentaria</li>
+    </ul>
+  </section>
+
+  <section style="margin-top: 30px; padding: 20px; background: #FDEEE4; border-radius: 12px;">
+    <h3>Almacenamiento local seguro</h3>
+    <p>Todos tus datos se guardan en el navegador (localStorage). No se envía información a servidores externos. Tu información es 100% privada.</p>
+  </section>
+
+  <footer style="margin-top: 50px; padding: 20px; text-align: center; color: #7A6A58; border-top: 1px solid #DFD0B8;">
+    <p>Kit de Gestión Hostelera · GastroGoan 2024</p>
+  </footer>
+</main>
+
+<script>
+function goHome() {
+  console.log('Ir a inicio');
+}
+</script>
+
+</body>
+</html>
