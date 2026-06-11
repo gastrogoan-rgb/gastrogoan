@@ -826,7 +826,7 @@ const DB_KEY = 'gastrogoan_data_v1';
 
 const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
-const UNITS = ['kg','g','l','ml','ud'];
+const UNITS = ['g','ud'];
 
 function defaultData(){
   return {
@@ -862,7 +862,7 @@ function defaultData(){
       name:'', address:'', phone:'', email:'', schedule:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
       mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
-      pin:'', protectedModules:[]
+      pin:'1234', pinSet:false
     },
     ge: {
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
@@ -881,7 +881,14 @@ function loadDB(){
     const raw = localStorage.getItem(DB_KEY);
     if(!raw) return defaultData();
     const data = JSON.parse(raw);
-    return Object.assign(defaultData(), data);
+    const merged = Object.assign(defaultData(), data);
+    merged.business = {...defaultData().business, ...(data.business||{})};
+    if(merged.business.pinSet === undefined){
+      if(merged.business.pin){ merged.business.pinSet = true; }
+      else { merged.business.pin = '1234'; merged.business.pinSet = false; }
+    }
+    delete merged.business.protectedModules;
+    return merged;
   }catch(e){
     console.error('Error cargando datos', e);
     return defaultData();
@@ -982,9 +989,11 @@ function openFolder(key){
 }
 let ownerUnlocked = false;
 
-function isProtectedModule(view){
-  const b = DB.business || {};
-  return !!b.pin && (b.protectedModules||[]).includes(view);
+function isGestionLocked(view){
+  if(ownerUnlocked) return false;
+  if(MODULE_FOLDER[view] === 'gestion') return true;
+  if(view === 'folder' && currentFolder === 'gestion') return true;
+  return false;
 }
 
 function lockOwnerArea(){
@@ -994,7 +1003,7 @@ function lockOwnerArea(){
 }
 
 function navigate(view){
-  if(isProtectedModule(view) && !ownerUnlocked){
+  if(isGestionLocked(view)){
     requestOwnerPin(view);
     return;
   }
@@ -1010,33 +1019,69 @@ function navigate(view){
 }
 
 function requestOwnerPin(targetView){
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> Acceso protegido</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Introduce el PIN de propietario</label>
-      <input type="password" id="owner-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Desbloquear</button>
-    </div>
-  `);
+  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
+  if(!DB.business.pinSet){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-lock"></i> Configura tu acceso a Gestión</h3>
+      </div>
+      <p style="font-size:13px;color:var(--muted)">Esta sección es solo para el propietario. Introduce el PIN actual (por defecto <strong>1234</strong>) y crea uno nuevo.</p>
+      <div class="field">
+        <label>PIN actual</label>
+        <input type="password" id="owner-pin-input" ${pinInputAttrs}>
+      </div>
+      <div class="field">
+        <label>Nuevo PIN (4 dígitos)</label>
+        <input type="password" id="owner-pin-new" ${pinInputAttrs}>
+      </div>
+      <div class="field">
+        <label>Repite el nuevo PIN</label>
+        <input type="password" id="owner-pin-new2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Continuar</button>
+      </div>
+    `);
+  } else {
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-lock"></i> Acceso protegido</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="field">
+        <label>Introduce el PIN de acceso</label>
+        <input type="password" id="owner-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Desbloquear</button>
+      </div>
+    `);
+  }
   setTimeout(()=>document.getElementById('owner-pin-input')?.focus(), 50);
 }
 
 function verifyOwnerPin(targetView){
   const val = document.getElementById('owner-pin-input').value;
-  if(val === DB.business.pin){
-    ownerUnlocked = true;
-    document.getElementById('lock-btn').style.display = '';
-    closeModal();
-    navigate(targetView);
-  }else{
+  if(val !== DB.business.pin){
     showToast('PIN incorrecto');
+    return;
   }
+  if(!DB.business.pinSet){
+    const n1 = document.getElementById('owner-pin-new').value;
+    const n2 = document.getElementById('owner-pin-new2').value;
+    if(!/^\d{4}$/.test(n1)){ showToast('El nuevo PIN debe tener 4 dígitos'); return; }
+    if(n1 !== n2){ showToast('Los PIN no coinciden'); return; }
+    DB.business.pin = n1;
+    DB.business.pinSet = true;
+    saveDB();
+    showToast('PIN actualizado');
+  }
+  ownerUnlocked = true;
+  document.getElementById('lock-btn').style.display = '';
+  closeModal();
+  navigate(targetView);
 }
 function renderView(view){
   switch(view){
@@ -1342,7 +1387,21 @@ function renderMegalista(){
 }
 
 function openIngredientModal(id){
-  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:'',unit:'kg',price:0,packQty:1,packPrice:0,allergens:[]};
+  if(!DB.providers.length){
+    openModal(`
+      <div class="modal-header">
+        <h3>Necesitas un proveedor</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <p style="font-size:13.5px;line-height:1.6">Antes de añadir ingredientes, da de alta al menos un proveedor con sus datos de contacto.</p>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> Nuevo Proveedor</button>
+      </div>
+    `);
+    return;
+  }
+  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:DB.providers[0].nombre,unit:'g',price:0,packQty:1,packPrice:0,allergens:[]};
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -1375,7 +1434,9 @@ function openIngredientModal(id){
     <div class="field-row">
       <div class="field">
         <label>Proveedor</label>
-        <input type="text" id="ing-supplier" value="${escapeHtml(ing.supplier)}" placeholder="Ej. Mercadona">
+        <select id="ing-supplier">
+          ${DB.providers.map(p=>`<option value="${escapeHtml(p.nombre)}" ${ing.supplier===p.nombre?'selected':''}>${escapeHtml(p.nombre)}</option>`).join('')}
+        </select>
       </div>
     </div>
     <div class="field-row">
@@ -4871,37 +4932,24 @@ function deleteReservation(id){
    MI NEGOCIO — Datos del establecimiento
    ============================================================ */
 const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
-const PROTECTABLE_MODULES = [
-  {id:'economia', name:'Gestión Económica'},
-  {id:'dashboard', name:'Panel de Control'},
-  {id:'megalista', name:'Mega Lista'},
-  {id:'proveedores', name:'Proveedores'},
-  {id:'escandallo', name:'Escandallo'},
-  {id:'fichas', name:'Fichas Técnicas'},
-  {id:'carta', name:'Carta'},
-  {id:'pedidos', name:'Pedidos'},
-];
 
 function renderMiNegocio(){
   const b = DB.business || {};
   document.getElementById('minegocio-content').innerHTML = `
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> Acceso propietario</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El acceso a Gestión está protegido por PIN. Cámbialo cuando quieras.</p>
       <div class="field-row">
         <div class="field">
-          <label>PIN de acceso (4 dígitos)</label>
-          <input type="password" id="mn-pin" maxlength="4" inputmode="numeric" placeholder="••••" value="${escapeHtml(b.pin||'')}" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          <small style="color:var(--muted)">Vacío = sin PIN. Protege los módulos que marques abajo.</small>
+          <label>Nuevo PIN (4 dígitos)</label>
+          <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+        <div class="field">
+          <label>Repite el nuevo PIN</label>
+          <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
       </div>
-      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 6px;text-transform:uppercase">Módulos protegidos</label>
-      <div class="grid grid-2">
-        ${PROTECTABLE_MODULES.map(m => `
-          <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;background:#fff;padding:8px 10px;border-radius:7px;border:1px solid var(--border)">
-            <input type="checkbox" class="mn-prot" value="${m.id}" ${(b.protectedModules||[]).includes(m.id)?'checked':''} style="width:auto"> ${escapeHtml(m.name)}
-          </label>
-        `).join('')}
-      </div>
+      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> Cambiar PIN</button>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -5084,12 +5132,22 @@ function saveBusiness(){
     aforo: document.getElementById('mn-aforo').value.trim(),
     ig: document.getElementById('mn-ig').value.trim(),
     fb: document.getElementById('mn-fb').value.trim(),
-    pin: document.getElementById('mn-pin').value.trim(),
-    protectedModules: [...document.querySelectorAll('.mn-prot:checked')].map(c=>c.value),
   };
   saveDB();
   renderHeader();
   showToast('Datos del negocio guardados');
+}
+
+function changeOwnerPin(){
+  const n1 = document.getElementById('mn-pin-new').value;
+  const n2 = document.getElementById('mn-pin-new2').value;
+  if(!/^\d{4}$/.test(n1)){ showToast('El PIN debe tener 4 dígitos'); return; }
+  if(n1 !== n2){ showToast('Los PIN no coinciden'); return; }
+  DB.business.pin = n1;
+  DB.business.pinSet = true;
+  saveDB();
+  renderMiNegocio();
+  showToast('PIN actualizado');
 }
 
 /* ============================================================
@@ -5311,7 +5369,7 @@ const MANUAL_CHAPTERS = [
     <h4>Operativa</h4>
     <p>Configura el número de mesas en interior y terraza y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
     <h4>Acceso propietario (PIN)</h4>
-    <p>Define un PIN y marca qué módulos quieres proteger (por ejemplo Gestión Económica o Mega Lista). Al intentar entrar en un módulo protegido se pedirá el PIN. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>`
+    <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>`
   },
 ];
 
