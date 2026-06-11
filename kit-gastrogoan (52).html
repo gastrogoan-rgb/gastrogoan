@@ -799,7 +799,7 @@ function setStockQty(ingredientId){
 }
 
 /* ============================================================
-   ESCANDALLO — placeholder (se implementa en siguiente paso)
+   ESCANDALLO — Cálculo automático de costes de platos
    ============================================================ */
 function recipeFoodCostPct(r){
   if(!r.price) return Infinity;
@@ -814,24 +814,404 @@ function recipeCost(r){
   }, 0);
 }
 function renderEscandallo(){
-  document.getElementById('escandallo-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const search = document.getElementById('escandallo-search').value.toLowerCase();
+  const recipes = DB.recipes.filter(r => !search || r.name.toLowerCase().includes(search));
+  const box = document.getElementById('escandallo-list');
+
+  if(!DB.recipes.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay platos. Crea el primer escandallo.</div>`;
+    return;
+  }
+  if(!recipes.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    return;
+  }
+
+  box.innerHTML = recipes.map(r => {
+    const cost = recipeCost(r);
+    const pct = recipeFoodCostPct(r);
+    const margin = (r.price||0) - cost;
+    const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
+      : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
+      : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
+      : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
+
+    const lines = (r.ingredients||[]).map(line => {
+      const ing = getIngredient(line.ingredientId);
+      if(!ing) return '';
+      const lineCost = ing.price * line.qty;
+      return `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${fmtMoney(lineCost)}</td></tr>`;
+    }).join('');
+
+    return `
+      <div class="card">
+        <h3 style="justify-content:space-between">
+          <span><i class="ti ti-chef-hat"></i> ${escapeHtml(r.name)}</span>
+          ${pctBadge}
+        </h3>
+        <div class="table-wrap" style="margin-bottom:10px">
+          <table>
+            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Coste</th></tr></thead>
+            <tbody>${lines || '<tr><td colspan="3"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="grid grid-3" style="margin-bottom:10px">
+          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:18px">${fmtMoney(margin)}</div></div>
+        </div>
+        <div class="actions-cell">
+          <button class="btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
-function openRecipeModal(){ showToast('Próximamente'); }
+
+let recipeModalLines = [];
+
+function openRecipeModal(id){
+  const r = id ? getRecipe(id) : {name:'', price:0, ingredients:[], steps:'', presentation:'', allergens:[]};
+  recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
+  renderRecipeModal(id, r);
+}
+
+function renderRecipeModal(id, r){
+  const cost = recipeModalLines.reduce((sum, line) => {
+    const ing = getIngredient(line.ingredientId);
+    return sum + (ing ? ing.price * line.qty : 0);
+  }, 0);
+
+  const ingredientOptions = DB.ingredients.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
+
+  const linesHtml = recipeModalLines.map((line, idx) => {
+    const ing = getIngredient(line.ingredientId);
+    return `
+      <tr>
+        <td>${ing ? escapeHtml(ing.name) : '—'}</td>
+        <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
+        <td>${ing ? escapeHtml(ing.unit) : ''}</td>
+        <td>${ing ? fmtMoney(ing.price * line.qty) : '—'}</td>
+        <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
+      </tr>
+    `;
+  }).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${id ? 'Editar' : 'Nuevo'} Plato</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Nombre del plato</label>
+        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="Ej. Solomillo al Whisky">
+      </div>
+      <div class="field">
+        <label>Precio de venta (PVP €)</label>
+        <input type="number" id="recipe-price" value="${r.price||0}" step="0.01" min="0">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Ingredientes</label>
+      <div class="table-wrap" style="margin-bottom:8px">
+        <table>
+          <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Ud</th><th>Coste</th><th></th></tr></thead>
+          <tbody>${linesHtml || '<tr><td colspan="5"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
+        </table>
+      </div>
+      ${DB.ingredients.length ? `
+      <div class="field-row">
+        <div class="field" style="margin-bottom:0">
+          <select id="recipe-add-ingredient">${ingredientOptions}</select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <input type="number" id="recipe-add-qty" placeholder="Cantidad" step="0.01" min="0" value="1">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <button class="btn" style="width:100%" onclick="addRecipeLine(${id||'null'})"><i class="ti ti-plus"></i> Añadir</button>
+        </div>
+      </div>
+      ` : `<p style="font-size:13px;color:var(--muted)">Añade primero ingredientes en la Mega Lista.</p>`}
+    </div>
+
+    <div class="field">
+      <label>Modo de elaboración</label>
+      <textarea id="recipe-steps" placeholder="Pasos de elaboración...">${escapeHtml(r.steps||'')}</textarea>
+    </div>
+    <div class="field">
+      <label>Presentación / emplatado</label>
+      <textarea id="recipe-presentation" placeholder="Notas de presentación...">${escapeHtml(r.presentation||'')}</textarea>
+    </div>
+
+    <div class="kpi" style="margin-bottom:10px">
+      <div class="label">Coste total actual</div>
+      <div class="value" style="font-size:18px">${fmtMoney(cost)}</div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRecipe(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function addRecipeLine(id){
+  const ingredientId = parseInt(document.getElementById('recipe-add-ingredient').value);
+  const qty = parseFloat(document.getElementById('recipe-add-qty').value) || 0;
+  if(!ingredientId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
+  const existing = recipeModalLines.find(l => l.ingredientId === ingredientId);
+  if(existing){ existing.qty += qty; }
+  else { recipeModalLines.push({ingredientId, qty}); }
+  renderRecipeModal(id, currentRecipeFormState(id));
+}
+function updateRecipeLineQty(idx, value, id){
+  const qty = parseFloat(value) || 0;
+  recipeModalLines[idx].qty = qty;
+  renderRecipeModal(id, currentRecipeFormState(id));
+}
+function removeRecipeLine(idx, id){
+  recipeModalLines.splice(idx,1);
+  renderRecipeModal(id, currentRecipeFormState(id));
+}
+function currentRecipeFormState(id){
+  const nameEl = document.getElementById('recipe-name');
+  const priceEl = document.getElementById('recipe-price');
+  const stepsEl = document.getElementById('recipe-steps');
+  const presEl = document.getElementById('recipe-presentation');
+  const r = id ? getRecipe(id) : {};
+  return {
+    name: nameEl ? nameEl.value : (r.name||''),
+    price: priceEl ? priceEl.value : (r.price||0),
+    steps: stepsEl ? stepsEl.value : (r.steps||''),
+    presentation: presEl ? presEl.value : (r.presentation||''),
+  };
+}
+
+function saveRecipe(id){
+  const name = document.getElementById('recipe-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const price = parseFloat(document.getElementById('recipe-price').value) || 0;
+  const steps = document.getElementById('recipe-steps').value.trim();
+  const presentation = document.getElementById('recipe-presentation').value.trim();
+  const ingredients = recipeModalLines.map(l => ({...l}));
+
+  // Alérgenos derivados de los ingredientes
+  const allergenSet = new Set();
+  ingredients.forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    (ing && ing.allergens || []).forEach(a => allergenSet.add(a));
+  });
+
+  if(id){
+    const r = getRecipe(id);
+    Object.assign(r, {name, price, steps, presentation, ingredients, allergens:[...allergenSet]});
+  }else{
+    DB.recipes.push({id: genId(), name, price, steps, presentation, ingredients, allergens:[...allergenSet]});
+  }
+  saveDB();
+  closeModal();
+  renderEscandallo();
+  showToast('Plato guardado');
+}
+
+function deleteRecipe(id){
+  if(!confirm('¿Eliminar este plato?')) return;
+  DB.recipes = DB.recipes.filter(r => r.id !== id);
+  DB.menuItems = DB.menuItems.filter(m => m.recipeId !== id);
+  saveDB();
+  renderEscandallo();
+  showToast('Plato eliminado');
+}
 
 /* ============================================================
-   FICHAS TÉCNICAS — placeholder
+   FICHAS TÉCNICAS — Elaboración estándar y alérgenos
    ============================================================ */
 function renderFichas(){
-  document.getElementById('fichas-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('fichas-list');
+  if(!DB.recipes.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos creados. Crea platos en Escandallo para generar sus fichas técnicas.</div>`;
+    return;
+  }
+  box.innerHTML = DB.recipes.map(r => {
+    const cost = recipeCost(r);
+    const ingredientsHtml = (r.ingredients||[]).map(line => {
+      const ing = getIngredient(line.ingredientId);
+      return ing ? `<li>${fmtNum(line.qty)} ${escapeHtml(ing.unit)} — ${escapeHtml(ing.name)}</li>` : '';
+    }).join('');
+    return `
+      <div class="card">
+        <h3><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</h3>
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Ingredientes</p>
+        <ul style="margin:0 0 12px 18px;font-size:13.5px;line-height:1.7">${ingredientsHtml || '<li>Sin ingredientes</li>'}</ul>
+
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Modo de elaboración</p>
+        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(r.steps) || '<em>Sin especificar</em>'}</p>
+
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Presentación</p>
+        <p style="font-size:13.5px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap">${escapeHtml(r.presentation) || '<em>Sin especificar</em>'}</p>
+
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin-bottom:6px">Alérgenos</p>
+        <div style="margin-bottom:12px">${(r.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '<span class="badge badge-gray">Ninguno detectado</span>'}</div>
+
+        <div class="grid grid-2">
+          <div class="kpi"><div class="label">Coste por ración</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /* ============================================================
-   CARTA DIGITAL — placeholder
+   CARTA DIGITAL — Menús por horario y disponibilidad
    ============================================================ */
+const SCHEDULE_LABELS = {
+  'desayuno':'Desayuno', 'almuerzo':'Almuerzo', 'cena':'Cena', 'todo-dia':'Todo el día'
+};
+const MENU_CATEGORIES = ['Entrantes','Principales','Postres','Bebidas','Menú del día','Otros'];
+
 function renderCarta(){
-  document.getElementById('carta-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const filterSchedule = document.getElementById('carta-filter-schedule').value;
+  let items = DB.menuItems.filter(m => !filterSchedule || m.schedule === filterSchedule);
+  const box = document.getElementById('carta-list');
+
+  if(!DB.menuItems.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-toolsKitchen"></i>No hay platos en la carta. Crea platos en Escandallo y añádelos aquí.</div>`;
+    return;
+  }
+  if(!items.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados para este horario.</div>`;
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  items.forEach(m => {
+    const cat = m.category || 'Otros';
+    (groups[cat] = groups[cat] || []).push(m);
+  });
+
+  box.innerHTML = Object.keys(groups).map(cat => `
+    <div class="card">
+      <h3><i class="ti ti-tag"></i> ${escapeHtml(cat)}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Plato</th><th>Precio</th><th>Horario</th><th>Disponible</th><th></th></tr></thead>
+          <tbody>
+            ${groups[cat].map(m => {
+              const r = getRecipe(m.recipeId);
+              return `
+                <tr>
+                  <td>${escapeHtml(r ? r.name : m.name || '—')}</td>
+                  <td>${fmtMoney(m.price != null ? m.price : (r ? r.price : 0))}</td>
+                  <td><span class="badge badge-blue">${SCHEDULE_LABELS[m.schedule]||m.schedule}</span></td>
+                  <td>
+                    <label style="display:flex;align-items:center;gap:6px">
+                      <input type="checkbox" ${m.available ? 'checked':''} onchange="toggleMenuAvailability(${m.id})" style="width:auto">
+                      ${m.available ? '<span class="badge badge-green">Sí</span>' : '<span class="badge badge-red">No</span>'}
+                    </label>
+                  </td>
+                  <td class="actions-cell">
+                    <button class="btn btn-sm btn-icon" onclick="openMenuItemModal(${m.id})"><i class="ti ti-edit"></i></button>
+                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteMenuItem(${m.id})"><i class="ti ti-trash"></i></button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join('');
 }
-function openMenuItemModal(){ showToast('Próximamente'); }
+
+function toggleMenuAvailability(id){
+  const m = DB.menuItems.find(x => x.id === id);
+  if(!m) return;
+  m.available = !m.available;
+  saveDB();
+  renderCarta();
+}
+
+function openMenuItemModal(id){
+  if(!DB.recipes.length){
+    showToast('Crea primero platos en Escandallo');
+    return;
+  }
+  const m = id ? DB.menuItems.find(x => x.id === id) : {recipeId: DB.recipes[0].id, category: MENU_CATEGORIES[0], schedule:'todo-dia', price:null, available:true};
+  const recipe = getRecipe(m.recipeId);
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${id ? 'Editar' : 'Añadir'} Item de Carta</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Plato</label>
+      <select id="menu-recipe">
+        ${DB.recipes.map(r => `<option value="${r.id}" ${m.recipeId===r.id?'selected':''}>${escapeHtml(r.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoría</label>
+        <select id="menu-category">
+          ${MENU_CATEGORIES.map(c=>`<option value="${c}" ${m.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Horario</label>
+        <select id="menu-schedule">
+          ${Object.entries(SCHEDULE_LABELS).map(([k,v])=>`<option value="${k}" ${m.schedule===k?'selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Precio en carta (€) — vacío para usar el PVP del escandallo (${fmtMoney(recipe?recipe.price:0)})</label>
+      <input type="number" id="menu-price" value="${m.price!=null?m.price:''}" step="0.01" min="0" placeholder="Opcional">
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="menu-available" ${m.available!==false?'checked':''} style="width:auto"> Disponible
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMenuItem(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveMenuItem(id){
+  const recipeId = parseInt(document.getElementById('menu-recipe').value);
+  const category = document.getElementById('menu-category').value;
+  const schedule = document.getElementById('menu-schedule').value;
+  const priceVal = document.getElementById('menu-price').value;
+  const price = priceVal === '' ? null : parseFloat(priceVal);
+  const available = document.getElementById('menu-available').checked;
+
+  if(id){
+    const m = DB.menuItems.find(x => x.id === id);
+    Object.assign(m, {recipeId, category, schedule, price, available});
+  }else{
+    DB.menuItems.push({id: genId(), recipeId, category, schedule, price, available});
+  }
+  saveDB();
+  closeModal();
+  renderCarta();
+  showToast('Carta actualizada');
+}
+
+function deleteMenuItem(id){
+  if(!confirm('¿Quitar este plato de la carta?')) return;
+  DB.menuItems = DB.menuItems.filter(m => m.id !== id);
+  saveDB();
+  renderCarta();
+  showToast('Eliminado de la carta');
+}
 
 /* ============================================================
    TPV — placeholder
