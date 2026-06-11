@@ -745,10 +745,20 @@ function defaultData(){
     tables: [],
     tpvOrders: [],
     sales: [],
-    employees: [],
+    employees: [],       // {id, name, rol, color}
     shifts: {},          // { employeeId: ['','','','','','',''] }
+    turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
     workDistribution: {}, // { employeeId: ['','','','','','',''] }
     cleaningTasks: [],
+    limpieza: {
+      manosPasos: ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'],
+      tareas: [],          // {id, area, producto}
+      checks: {},          // {weekKey: {tareaId: {lun:bool,...}}}
+      temperaturas: [],    // {id, fecha, hora, equipo, temp, estado, responsable}
+      alergenos: [],       // {id, fecha, plato, alergenos, verificado, notas}
+      plagas: [],          // {id, fecha, area, hallazgos, accion, proxima}
+      mantenimiento: []    // {id, nombre, ultimo, proximo, responsable, estado, notas}
+    },
     clients: [],
     reservations: [],
     business: {name:'', address:'', phone:'', email:'', schedule:'', description:''},
@@ -2791,167 +2801,556 @@ const GE = (function(){
    HORARIOS — Turnos del personal
    ============================================================ */
 const WEEK_DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const WEEK_DAY_KEYS = ['lun','mar','mie','jue','vie','sab','dom'];
+const SHIFT_TYPES = {
+  M: {label:'Mañana', bg:'#DBEAFE', tx:'#1E40AF'},
+  T: {label:'Tarde', bg:'#FEF9C3', tx:'#854D0E'},
+  P: {label:'Partido', bg:'#DCFCE7', tx:'#166534'},
+  D: {label:'Descanso', bg:'#F3F4F6', tx:'#6B7280'},
+  C: {label:'Otro', bg:'#EDE9FE', tx:'#5B21B6'}
+};
+
+let horariosTab = 'semana';
+let horariosWeekOffset = 0;
+
+function getWeekDates(offset){
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day-1) + offset*7);
+  return Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
+}
+function dateStr(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function hoursBetween(t1, t2){
+  if(!t1 || !t2) return 0;
+  const [h1,m1] = t1.split(':').map(Number), [h2,m2] = t2.split(':').map(Number);
+  let diff = (h2*60+m2) - (h1*60+m1);
+  if(diff < 0) diff += 24*60;
+  return diff/60;
+}
 
 function renderHorarios(){
   const box = document.getElementById('horarios-content');
+  box.innerHTML = `
+    <nav class="ge-tab-row">
+      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> Semana</button>
+      <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> Personal</button>
+    </nav>
+    <div id="horarios-tab-content"></div>
+  `;
+  renderHorariosTab();
+}
+function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
+function renderHorariosTab(){
+  if(horariosTab === 'personal') renderHorariosPersonal();
+  else renderHorariosSemana();
+}
+
+function renderHorariosSemana(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
 
   if(!DB.employees.length){
-    box.innerHTML = `
-      <div class="toolbar"><div class="left"></div><button class="btn btn-primary" onclick="addEmployee()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
-      <div class="empty"><i class="ti ti-users"></i>No hay empleados. Añade el primero para crear horarios.</div>
-    `;
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
     return;
   }
 
-  const headerCells = WEEK_DAYS.map(d=>`<th>${d}</th>`).join('');
+  const dates = getWeekDates(horariosWeekOffset);
+  const dateStrs = dates.map(dateStr);
+  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const headerCells = dates.map((d,i) => `<th>${WEEK_DAYS[i].slice(0,3)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
+
   const rows = DB.employees.map(emp => {
-    const shifts = DB.shifts[emp.id] || ['','','','','','',''];
-    const cells = shifts.map((val, idx) => `
-      <td><input type="text" value="${escapeHtml(val)}" placeholder="—" style="width:100px;padding:5px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateShift(${emp.id}, ${idx}, this.value)"></td>
-    `).join('');
-    return `<tr><td><strong>${escapeHtml(emp.name)}</strong></td>${cells}<td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${emp.id})"><i class="ti ti-trash"></i></button></td></tr>`;
+    let totalH = 0;
+    const cells = dateStrs.map(ds => {
+      const t = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
+      if(t){
+        const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
+        const hh = hoursBetween(t.entrada, t.salida);
+        if(hh > 0) totalH += hh;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(t.entrada)}-${escapeHtml(t.salida)}</span>`:''}</span></td>`;
+      }
+      return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
+    }).join('');
+    return `<tr>
+      <td>
+        <span style="display:inline-flex;align-items:center;gap:6px">
+          <span style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+          <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
+        </span>
+      </td>
+      ${cells}
+      <td style="text-align:center;font-weight:700">${totalH>0?totalH.toFixed(1)+'h':'—'}</td>
+    </tr>`;
   }).join('');
 
   box.innerHTML = `
     <div class="toolbar">
-      <div class="left"></div>
-      <button class="btn btn-primary" onclick="addEmployee()"><i class="ti ti-plus"></i> Añadir Empleado</button>
+      <div class="left">
+        <button class="btn btn-sm" onclick="horariosWeekOffset--; renderHorariosSemana()"><i class="ti ti-chevron-left"></i></button>
+        <strong style="margin:0 8px">${label}</strong>
+        <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
+        <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">Hoy</button>
+      </div>
+      <button class="btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Empleado</th>${headerCells}<th></th></tr></thead>
+        <thead><tr><th>Empleado</th>${headerCells}<th>Total h.</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px">Escribe el turno de cada día (ej. "09:00-17:00" o "Libre").</p>
   `;
 }
 
-function addEmployee(){
-  const name = prompt('Nombre del empleado:');
-  if(!name) return;
-  const id = genId();
-  DB.employees.push({id, name: name.trim()});
-  DB.shifts[id] = ['','','','','','',''];
-  saveDB();
-  renderHorarios();
+function openTurnoModal(id, employeeId, fecha){
+  if(!DB.employees.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
+  let t = id ? (DB.turnos||[]).find(x => x.id===id) : null;
+  const state = t ? {...t} : {id:null, employeeId: employeeId||DB.employees[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
+  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${state.id ? 'Editar' : 'Nuevo'} Turno</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Empleado</label>
+        <select id="turno-employee">${empOptions}</select>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="turno-fecha" value="${state.fecha}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Tipo de turno</label>
+        <select id="turno-tipo">${tipoOptions}</select>
+      </div>
+      <div class="field">
+        <label>Entrada</label>
+        <input type="time" id="turno-entrada" value="${state.entrada}">
+      </div>
+      <div class="field">
+        <label>Salida</label>
+        <input type="time" id="turno-salida" value="${state.salida}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Notas</label>
+      <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="Notas del turno...">
+    </div>
+    <div class="modal-footer">
+      ${state.id ? `<button class="btn btn-danger" onclick="deleteTurno(${state.id})">Eliminar</button>` : ''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">Guardar</button>
+    </div>
+  `);
 }
-function updateShift(employeeId, dayIdx, value){
-  if(!DB.shifts[employeeId]) DB.shifts[employeeId] = ['','','','','','',''];
-  DB.shifts[employeeId][dayIdx] = value;
+
+function saveTurno(id){
+  const data = {
+    employeeId: parseInt(document.getElementById('turno-employee').value),
+    fecha: document.getElementById('turno-fecha').value,
+    tipo: document.getElementById('turno-tipo').value,
+    entrada: document.getElementById('turno-entrada').value,
+    salida: document.getElementById('turno-salida').value,
+    notas: document.getElementById('turno-notas').value.trim()
+  };
+  if(!DB.turnos) DB.turnos = [];
+  if(id){
+    const t = DB.turnos.find(x => x.id===id);
+    Object.assign(t, data);
+  } else {
+    DB.turnos.push({id: genId(), ...data});
+  }
   saveDB();
+  closeModal();
+  renderHorariosSemana();
+  showToast('Turno guardado');
 }
+
+function deleteTurno(id){
+  if(!confirm('¿Eliminar este turno?')) return;
+  DB.turnos = (DB.turnos||[]).filter(t => t.id!==id);
+  saveDB();
+  closeModal();
+  renderHorariosSemana();
+}
+
+function renderHorariosPersonal(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+  const cards = DB.employees.map(e => `
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
+        <div><strong>${escapeHtml(e.name)}</strong><div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div></div>
+      </div>
+      <div class="actions-cell">
+        <button class="btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
+    </div>
+    ${DB.employees.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añade el primero.</div>`}
+  `;
+}
+
+function openEmployeeModal(id){
+  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039'};
+  openModal(`
+    <div class="modal-header">
+      <h3>${id ? 'Editar' : 'Nuevo'} Empleado</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="emp-name" value="${escapeHtml(e.name)}" placeholder="Nombre del empleado">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Rol</label>
+        <input type="text" id="emp-rol" value="${escapeHtml(e.rol||'')}" placeholder="Ej. Cocinero, Camarero...">
+      </div>
+      <div class="field">
+        <label>Color identificativo</label>
+        <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${id ? `<button class="btn btn-danger" onclick="deleteEmployee(${id})">Eliminar</button>` : ''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveEmployee(id){
+  const name = document.getElementById('emp-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const rol = document.getElementById('emp-rol').value.trim();
+  const color = document.getElementById('emp-color').value;
+  if(id){
+    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color});
+  } else {
+    DB.employees.push({id: genId(), name, rol, color});
+  }
+  saveDB();
+  closeModal();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-horarios') renderHorarios();
+  else if(active && active.id === 'view-distribucion') renderDistribucion();
+  showToast('Empleado guardado');
+}
+
 function deleteEmployee(id){
   if(!confirm('¿Eliminar este empleado?')) return;
-  DB.employees = DB.employees.filter(e=>e.id!==id);
+  DB.employees = DB.employees.filter(e => e.id!==id);
+  DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   delete DB.shifts[id];
+  delete DB.workDistribution[id];
   saveDB();
-  renderHorarios();
+  closeModal();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-horarios') renderHorarios();
+  else if(active && active.id === 'view-distribucion') renderDistribucion();
 }
 
 /* ============================================================
    PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
-const CLEANING_FREQUENCIES = {diaria:'Diaria', semanal:'Semanal', mensual:'Mensual'};
+const LIMPIEZA_TABS = ['manos','semana','temperaturas','alergenos','plagas','mantenimiento'];
+const LIMPIEZA_TAB_LABELS = {
+  manos: '🧼 Higiene de Manos', semana: '🧹 Limpieza Semanal', temperaturas: '🌡️ Temperaturas',
+  alergenos: '⚠️ Alérgenos', plagas: '🐜 Plagas', mantenimiento: '🔧 Mantenimiento'
+};
+const LIMPIEZA_LOG_CONFIG = {
+  temperaturas: {fields:['fecha','hora','equipo','temp','estado','responsable'], labels:['Fecha','Hora','Equipo','Tª (°C)','Estado','Responsable']},
+  alergenos: {fields:['fecha','plato','alergenos','verificado','notas'], labels:['Fecha','Plato/Elaboración','Alérgenos presentes','Verificado por','Notas']},
+  plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labels:['Fecha','Área','Hallazgos','Acción tomada','Próxima revisión']}
+};
+const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
+
+let limpiezaTab = 'manos';
+
+function ensureLimpiezaData(){
+  if(!DB.limpieza) DB.limpieza = {};
+  const l = DB.limpieza;
+  if(!l.manosPasos) l.manosPasos = [...LIMPIEZA_DEFAULT_MANOS];
+  if(!l.tareas) l.tareas = [];
+  if(!l.checks) l.checks = {};
+  if(!l.temperaturas) l.temperaturas = [];
+  if(!l.alergenos) l.alergenos = [];
+  if(!l.plagas) l.plagas = [];
+  if(!l.mantenimiento) l.mantenimiento = [];
+}
+
+function getLimpiezaSemanaKey(){
+  const d = new Date();
+  const day = d.getDay() || 7;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day-1));
+  return dateStr(mon);
+}
 
 function cleaningTasksToday(){
-  return (DB.cleaningTasks||[]).filter(t => t.frequency==='diaria' && !(t.log && t.log[todayStr()]));
+  ensureLimpiezaData();
+  const dk = WEEK_DAY_KEYS[(new Date().getDay()+6)%7];
+  const semana = getLimpiezaSemanaKey();
+  const checks = DB.limpieza.checks[semana] || {};
+  return DB.limpieza.tareas.filter(t => !(checks[t.id] && checks[t.id][dk]));
 }
 
 function renderLimpieza(){
+  ensureLimpiezaData();
   const box = document.getElementById('limpieza-content');
+  box.innerHTML = `
+    <nav class="ge-tab-row">
+      ${LIMPIEZA_TABS.map(t => `<button class="ge-tab ${limpiezaTab===t?'active':''}" onclick="setLimpiezaTab('${t}')">${LIMPIEZA_TAB_LABELS[t]}</button>`).join('')}
+    </nav>
+    <div id="limpieza-tab-content"></div>
+  `;
+  renderLimpiezaTab();
+}
+function setLimpiezaTab(t){ limpiezaTab = t; renderLimpieza(); }
+function renderLimpiezaTab(){
+  switch(limpiezaTab){
+    case 'manos': renderLimpiezaManos(); break;
+    case 'semana': renderLimpiezaSemana(); break;
+    case 'temperaturas': renderLimpiezaLog('temperaturas'); break;
+    case 'alergenos': renderLimpiezaLog('alergenos'); break;
+    case 'plagas': renderLimpiezaLog('plagas'); break;
+    case 'mantenimiento': renderLimpiezaMantenimiento(); break;
+  }
+}
 
-  const rows = (DB.cleaningTasks||[]).map(t => {
-    const done = !!(t.log && t.log[todayStr()]);
-    return `
-      <tr>
-        <td><strong>${escapeHtml(t.name)}</strong></td>
-        <td>${escapeHtml(t.area||'—')}</td>
-        <td><span class="badge badge-blue">${CLEANING_FREQUENCIES[t.frequency]||t.frequency}</span></td>
-        <td>
-          <label style="display:flex;align-items:center;gap:6px">
-            <input type="checkbox" ${done?'checked':''} onchange="toggleCleaningDone(${t.id})" style="width:auto">
-            ${done ? '<span class="badge badge-green">Hecho hoy</span>' : '<span class="badge badge-amber">Pendiente</span>'}
-          </label>
-        </td>
-        <td class="actions-cell"><button class="btn btn-sm btn-icon btn-danger" onclick="deleteCleaningTask(${t.id})"><i class="ti ti-trash"></i></button></td>
-      </tr>
-    `;
-  }).join('');
+function renderLimpiezaManos(){
+  const box = document.getElementById('limpieza-tab-content');
+  const pasos = DB.limpieza.manosPasos;
+  box.innerHTML = `
+    <div class="grid grid-2">
+      <div class="card">
+        <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> Protocolo de lavado de manos</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
+        ${pasos.map((p,i) => `
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+            <div class="step-num">${i+1}</div>
+            <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)">
+            <button class="btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+          </div>
+        `).join('')}
+        <button class="btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
+      </div>
+      <div>
+        <div class="card">
+          <h3>⏰ Cuándo lavarse las manos</h3>
+          <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:2">
+            <li>Al incorporarse al trabajo</li>
+            <li>Tras manipular residuos</li>
+            <li>Después de tocar la cara o el cabello</li>
+            <li>Tras usar los aseos</li>
+            <li>Al cambiar de producto crudo a cocinado</li>
+            <li>Después de comer o fumar</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>✅ Duración mínima</h3>
+          <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">20 segundos</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">Equivale a cantar "Cumpleaños feliz" dos veces</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function updateManosPaso(i, val){ DB.limpieza.manosPasos[i] = val; saveDB(); }
+function addManosPaso(){ DB.limpieza.manosPasos.push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
+function removeManosPaso(i){
+  if(DB.limpieza.manosPasos.length<=1) return;
+  DB.limpieza.manosPasos.splice(i,1);
+  saveDB();
+  renderLimpiezaManos();
+}
+function printManosProtocolo(){
+  const pasos = DB.limpieza.manosPasos;
+  const html = `<h2>Protocolo de lavado de manos</h2><ol>${pasos.map(p=>`<li style="margin-bottom:8px">${escapeHtml(p)}</li>`).join('')}</ol>`;
+  const w = window.open('', '_blank', 'width=500,height=600');
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Protocolo de lavado de manos</title><style>body{font-family:Arial,sans-serif;padding:24px;font-size:14px}</style></head><body>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+function renderLimpiezaSemana(){
+  const box = document.getElementById('limpieza-tab-content');
+  const tareas = DB.limpieza.tareas;
+  const semana = getLimpiezaSemanaKey();
+  const checks = DB.limpieza.checks[semana] || {};
 
   box.innerHTML = `
     <div class="toolbar">
-      <div class="left"></div>
-      <button class="btn btn-primary" onclick="openCleaningModal()"><i class="ti ti-plus"></i> Nueva Tarea</button>
+      <div class="left" style="font-size:13px;color:var(--muted)">Semana del ${semana}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="addLimpiezaTarea()"><i class="ti ti-plus"></i> Añadir tarea</button>
+        <button class="btn btn-sm" onclick="printLimpiezaSemana()"><i class="ti ti-printer"></i> Imprimir</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tarea</th><th>Zona</th><th>Frecuencia</th><th>Estado</th><th></th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="5"><div class="empty" style="padding:14px">No hay tareas de limpieza definidas.</div></td></tr>'}</tbody>
+        <thead><tr><th>Área / Tarea</th>${WEEK_DAYS.map(d=>`<th style="text-align:center">${d.slice(0,3)}</th>`).join('')}<th></th></tr></thead>
+        <tbody>${tareas.length ? tareas.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.area)}</strong>${t.producto?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(t.producto)}</span>`:''}</td>
+            ${WEEK_DAY_KEYS.map(dk => `<td style="text-align:center"><input type="checkbox" style="width:18px;height:18px" ${(checks[t.id]&&checks[t.id][dk])?'checked':''} onchange="toggleLimpiezaCheck(${t.id},'${dk}',this.checked)"></td>`).join('')}
+            <td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaTarea(${t.id})"><i class="ti ti-trash"></i></button></td>
+          </tr>
+        `).join('') : `<tr><td colspan="9"><div class="empty" style="padding:14px">No hay áreas de limpieza definidas.</div></td></tr>`}</tbody>
       </table>
     </div>
   `;
 }
-
-function openCleaningModal(){
-  openModal(`
-    <div class="modal-header">
-      <h3>Nueva Tarea de Limpieza</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Tarea</label>
-      <input type="text" id="cleaning-name" placeholder="Ej. Limpieza de cámaras frigoríficas">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Zona</label>
-        <input type="text" id="cleaning-area" placeholder="Ej. Cocina">
-      </div>
-      <div class="field">
-        <label>Frecuencia</label>
-        <select id="cleaning-frequency">
-          <option value="diaria">Diaria</option>
-          <option value="semanal">Semanal</option>
-          <option value="mensual">Mensual</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveCleaningTask()">Guardar</button>
-    </div>
-  `);
+function addLimpiezaTarea(){
+  const area = prompt('Área o tarea de limpieza (ej. Campana extractora, Suelo cocina...):');
+  if(!area) return;
+  const producto = prompt('Producto limpiador (opcional):') || '';
+  DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim()});
+  saveDB();
+  renderLimpiezaSemana();
+}
+function deleteLimpiezaTarea(id){
+  if(!confirm('¿Eliminar esta tarea?')) return;
+  DB.limpieza.tareas = DB.limpieza.tareas.filter(t => t.id!==id);
+  saveDB();
+  renderLimpiezaSemana();
+}
+function toggleLimpiezaCheck(tareaId, dia, val){
+  const semana = getLimpiezaSemanaKey();
+  if(!DB.limpieza.checks[semana]) DB.limpieza.checks[semana] = {};
+  if(!DB.limpieza.checks[semana][tareaId]) DB.limpieza.checks[semana][tareaId] = {};
+  DB.limpieza.checks[semana][tareaId][dia] = val;
+  saveDB();
+}
+function printLimpiezaSemana(){
+  const tareas = DB.limpieza.tareas;
+  const html = `<h2>Plan de limpieza semanal</h2><table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:12px"><tr><th>Área/Tarea</th>${WEEK_DAYS.map(d=>`<th>${d}</th>`).join('')}</tr>` +
+    tareas.map(t => `<tr><td>${escapeHtml(t.area)}${t.producto?'<br><small>'+escapeHtml(t.producto)+'</small>':''}</td>${WEEK_DAYS.map(()=>'<td style="text-align:center">☐</td>').join('')}</tr>`).join('') + `</table>`;
+  const w = window.open('', '_blank', 'width=800,height=600');
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plan de limpieza semanal</title><style>body{font-family:Arial,sans-serif;padding:20px}</style></head><body>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
 }
 
-function saveCleaningTask(){
-  const name = document.getElementById('cleaning-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
-  const area = document.getElementById('cleaning-area').value.trim();
-  const frequency = document.getElementById('cleaning-frequency').value;
-  DB.cleaningTasks.push({id: genId(), name, area, frequency, log:{}});
+function renderLimpiezaLog(key){
+  const box = document.getElementById('limpieza-tab-content');
+  const cfg = LIMPIEZA_LOG_CONFIG[key];
+  const entries = DB.limpieza[key];
+
+  const formFields = cfg.fields.map((f,i) => {
+    let input;
+    if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
+    else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}">`;
+    else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
+    else input = `<input type="text" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
+    return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
+  }).join('');
+
+  const rows = entries.length ? [...entries].slice().reverse().map(e => `
+    <tr>${cfg.fields.map(f => f==='estado'
+      ? `<td style="font-weight:700;color:${e[f]==='OK'?'var(--green)':'var(--red)'}">${e[f]==='OK'?'✅ OK':'❌ No OK'}</td>`
+      : `<td>${escapeHtml(String(e[f]||'—'))}</td>`).join('')}<td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
+  `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">Sin registros todavía.</div></td></tr>`;
+
+  box.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
+      <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> Registrar</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${cfg.labels.map(l=>`<th>${l}</th>`).join('')}<th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+function addLimpiezaLogEntry(key){
+  const cfg = LIMPIEZA_LOG_CONFIG[key];
+  const entry = {id: genId()};
+  cfg.fields.forEach(f => {
+    const el = document.getElementById(`lp-${key}-${f}`);
+    entry[f] = el ? el.value : '';
+  });
+  DB.limpieza[key].push(entry);
   saveDB();
-  closeModal();
-  renderLimpieza();
-  showToast('Tarea creada');
+  renderLimpiezaLog(key);
+}
+function deleteLimpiezaLogEntry(key, id){
+  if(!confirm('¿Eliminar este registro?')) return;
+  DB.limpieza[key] = DB.limpieza[key].filter(e => e.id!==id);
+  saveDB();
+  renderLimpiezaLog(key);
 }
 
-function toggleCleaningDone(id){
-  const t = DB.cleaningTasks.find(x=>x.id===id);
-  if(!t) return;
-  if(!t.log) t.log = {};
-  const key = todayStr();
-  if(t.log[key]) delete t.log[key];
-  else t.log[key] = true;
-  saveDB();
-  renderLimpieza();
+function renderLimpiezaMantenimiento(){
+  const box = document.getElementById('limpieza-tab-content');
+  const equipos = DB.limpieza.mantenimiento;
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Equipo</th><th>Último mantenimiento</th><th>Próximo</th><th>Responsable</th><th>Estado</th><th>Notas</th><th></th></tr></thead>
+        <tbody>${equipos.length ? equipos.map(e => `
+          <tr>
+            <td><strong>${escapeHtml(e.nombre)}</strong></td>
+            <td><input type="date" value="${e.ultimo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)"></td>
+            <td><input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)"></td>
+            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)"></td>
+            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)">
+              ${['OK','Pendiente','Urgente'].map(opt=>`<option value="${opt}"${e.estado===opt?' selected':''}>${opt}</option>`).join('')}
+            </select></td>
+            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)"></td>
+            <td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
+          </tr>
+        `).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">Sin equipos registrados.</div></td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
 }
-
-function deleteCleaningTask(id){
-  if(!confirm('¿Eliminar esta tarea de limpieza?')) return;
-  DB.cleaningTasks = DB.cleaningTasks.filter(t=>t.id!==id);
+function addMantenimientoEquipo(){
+  const nombre = prompt('Nombre del equipo (ej. Cámara frigorífica, Horno, Freidora...):');
+  if(!nombre) return;
+  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:''});
   saveDB();
-  renderLimpieza();
+  renderLimpiezaMantenimiento();
+}
+function updateMantenimientoEquipo(id, field, val){
+  const e = DB.limpieza.mantenimiento.find(x => x.id===id);
+  if(e) e[field] = val;
+  saveDB();
+}
+function deleteMantenimientoEquipo(id){
+  if(!confirm('¿Eliminar este equipo?')) return;
+  DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
+  saveDB();
+  renderLimpiezaMantenimiento();
 }
 
 /* ============================================================
@@ -2988,8 +3387,7 @@ function renderDistribucion(){
   `;
 }
 function addEmployeeFromDistribucion(){
-  addEmployee();
-  renderDistribucion();
+  openEmployeeModal();
 }
 function updateWorkDistribution(employeeId, dayIdx, value){
   if(!DB.workDistribution[employeeId]) DB.workDistribution[employeeId] = ['','','','','','',''];
