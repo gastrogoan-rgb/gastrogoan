@@ -421,7 +421,8 @@ function defaultData(){
     tpvOrders: [],
     expenses: [],
     sales: [],
-    shifts: [],
+    employees: [],
+    shifts: {},          // { employeeId: ['','','','','','',''] }
     cleaningTasks: [],
     nextId: 1
   };
@@ -1214,42 +1215,683 @@ function deleteMenuItem(id){
 }
 
 /* ============================================================
-   TPV — placeholder
+   TPV — Comandas, mesas y tickets
    ============================================================ */
+function getMenuItemPrice(m){
+  if(m.price != null) return m.price;
+  const r = getRecipe(m.recipeId);
+  return r ? (r.price||0) : 0;
+}
+function getMenuItemName(m){
+  const r = getRecipe(m.recipeId);
+  return r ? r.name : (m.name || 'Plato');
+}
+function getOpenOrderForTable(tableId){
+  return DB.tpvOrders.find(o => o.tableId === tableId && o.status === 'abierta');
+}
+
 function renderTPV(){
-  document.getElementById('tpv-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('tpv-content');
+
+  let tablesHtml;
+  if(!DB.tables.length){
+    tablesHtml = `<div class="empty"><i class="ti ti-device-desktop"></i>No hay mesas creadas.</div>`;
+  }else{
+    tablesHtml = `<div class="grid grid-4">` + DB.tables.map(t => {
+      const order = getOpenOrderForTable(t.id);
+      const total = order ? orderTotal(order) : 0;
+      return `
+        <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
+          <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
+          ${order
+            ? `<span class="badge badge-amber">Ocupada</span><div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>`
+            : `<span class="badge badge-green">Libre</span>`
+          }
+          <div style="margin-top:10px">
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('') + `</div>`;
+  }
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>
+    </div>
+    ${tablesHtml}
+  `;
+}
+
+function addTable(){
+  const name = prompt('Nombre o número de la mesa:');
+  if(!name) return;
+  DB.tables.push({id: genId(), name: name.trim()});
+  saveDB();
+  renderTPV();
+}
+function deleteTable(id){
+  if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
+  if(!confirm('¿Eliminar esta mesa?')) return;
+  DB.tables = DB.tables.filter(t => t.id !== id);
+  saveDB();
+  renderTPV();
+}
+
+function orderTotal(order){
+  return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0);
+}
+
+function openTableOrder(tableId){
+  let order = getOpenOrderForTable(tableId);
+  if(!order){
+    order = {id: genId(), tableId, status:'abierta', items:[], createdAt: new Date().toISOString()};
+    DB.tpvOrders.push(order);
+    saveDB();
+  }
+  renderTableOrderModal(order.id);
+}
+
+function renderTableOrderModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const table = DB.tables.find(t => t.id === order.tableId);
+  const available = DB.menuItems.filter(m => m.available !== false);
+
+  // group available items by category
+  const groups = {};
+  available.forEach(m => {
+    const cat = m.category || 'Otros';
+    (groups[cat] = groups[cat] || []).push(m);
+  });
+
+  const menuHtml = Object.keys(groups).length ? Object.keys(groups).map(cat => `
+    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(cat)}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${groups[cat].map(m => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${m.id})">${escapeHtml(getMenuItemName(m))} · ${fmtMoney(getMenuItemPrice(m))}</button>`).join('')}
+    </div>
+  `).join('') : `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles en la Carta Digital.</p>`;
+
+  const linesHtml = (order.items||[]).map((line, idx) => `
+    <tr>
+      <td>${escapeHtml(line.name)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+          ${line.qty}
+          <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+        </div>
+      </td>
+      <td>${fmtMoney(line.price * line.qty)}</td>
+      <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button></td>
+    </tr>
+  `).join('');
+
+  const total = orderTotal(order);
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(table.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap" style="margin-bottom:10px">
+      <table>
+        <thead><tr><th>Plato</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody>${linesHtml || '<tr><td colspan="4"><div class="empty" style="padding:10px">Comanda vacía</div></td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">Total</div>
+      <div class="value">${fmtMoney(total)}</div>
+    </div>
+    <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+      ${menuHtml}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
+      <button class="btn btn-primary" onclick="chargeOrder(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
+    </div>
+  `);
+}
+
+function addOrderItem(orderId, menuItemId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const m = DB.menuItems.find(x => x.id === menuItemId);
+  if(!order || !m) return;
+  const price = getMenuItemPrice(m);
+  const name = getMenuItemName(m);
+  const existing = order.items.find(l => l.menuItemId === menuItemId);
+  if(existing) existing.qty += 1;
+  else order.items.push({menuItemId, name, price, qty:1});
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+function changeOrderItemQty(orderId, idx, delta){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order.items[idx];
+  line.qty += delta;
+  if(line.qty <= 0) order.items.splice(idx,1);
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+function removeOrderItem(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  order.items.splice(idx,1);
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function chargeOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
+  const total = orderTotal(order);
+
+  // Descontar stock según ingredientes de la receta
+  order.items.forEach(line => {
+    const m = DB.menuItems.find(x => x.id === line.menuItemId);
+    const r = m ? getRecipe(m.recipeId) : null;
+    if(!r) return;
+    (r.ingredients||[]).forEach(ri => {
+      const s = getStockEntry(ri.ingredientId);
+      s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+    });
+  });
+
+  DB.sales.push({id: genId(), date: todayStr(), total, tableId: order.tableId, items: order.items.map(l=>({...l}))});
+  order.status = 'pagada';
+  order.closedAt = new Date().toISOString();
+  saveDB();
+  closeModal();
+  renderTPV();
+  showToast('Mesa cobrada');
 }
 
 /* ============================================================
-   PEDIDOS — placeholder
+   PEDIDOS — Gestión de compras a proveedores
    ============================================================ */
 function renderPedidos(){
-  document.getElementById('pedidos-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('pedidos-list');
+  if(!DB.purchaseOrders.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-shopping-cart"></i>No hay pedidos. Crea uno nuevo.</div>`;
+    return;
+  }
+  box.innerHTML = DB.purchaseOrders.slice().reverse().map(o => {
+    const linesHtml = (o.items||[]).map(line => {
+      const ing = getIngredient(line.ingredientId);
+      return ing ? `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${fmtMoney(ing.price * line.qty)}</td></tr>` : '';
+    }).join('');
+    const total = (o.items||[]).reduce((sum,line)=>{
+      const ing = getIngredient(line.ingredientId);
+      return sum + (ing ? ing.price*line.qty : 0);
+    },0);
+    return `
+      <div class="card">
+        <h3 style="justify-content:space-between">
+          <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
+          ${o.status==='recibido' ? '<span class="badge badge-green">Recibido</span>' : '<span class="badge badge-amber">Pendiente</span>'}
+        </h3>
+        <div class="table-wrap" style="margin-bottom:10px">
+          <table>
+            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Coste estimado</th></tr></thead>
+            <tbody>${linesHtml || '<tr><td colspan="3"><div class="empty" style="padding:10px">Sin items</div></td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="kpi" style="margin-bottom:10px;max-width:220px">
+          <div class="label">Total estimado</div>
+          <div class="value" style="font-size:18px">${fmtMoney(total)}</div>
+        </div>
+        <div class="actions-cell">
+          ${o.status!=='recibido' ? `<button class="btn btn-sm btn-primary" onclick="markOrderReceived(${o.id})"><i class="ti ti-check"></i> Marcar recibido</button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
-function openOrderModal(){ showToast('Próximamente'); }
+
+let orderModalLines = [];
+
+function openOrderModal(){
+  if(!DB.ingredients.length){ showToast('Añade ingredientes en Mega Lista primero'); return; }
+  orderModalLines = [];
+  renderOrderModal();
+}
+
+function renderOrderModal(){
+  const ingredientOptions = DB.ingredients.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
+  const linesHtml = orderModalLines.map((line, idx) => {
+    const ing = getIngredient(line.ingredientId);
+    return `
+      <tr>
+        <td>${ing ? escapeHtml(ing.name) : '—'}</td>
+        <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${idx}, this.value)"></td>
+        <td>${ing ? escapeHtml(ing.unit) : ''}</td>
+        <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderLine(${idx})"><i class="ti ti-x"></i></button></td>
+      </tr>
+    `;
+  }).join('');
+
+  const supplierField = document.getElementById('order-supplier');
+  const dateField = document.getElementById('order-date');
+  const supplierVal = supplierField ? supplierField.value : '';
+  const dateVal = dateField ? dateField.value : todayStr();
+
+  openModal(`
+    <div class="modal-header">
+      <h3>Nuevo Pedido</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Proveedor</label>
+        <input type="text" id="order-supplier" value="${escapeHtml(supplierVal)}" placeholder="Ej. Makro">
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="order-date" value="${dateVal}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Artículos</label>
+      <div class="table-wrap" style="margin-bottom:8px">
+        <table>
+          <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Ud</th><th></th></tr></thead>
+          <tbody>${linesHtml || '<tr><td colspan="4"><div class="empty" style="padding:10px">Añade artículos</div></td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="field-row">
+        <div class="field" style="margin-bottom:0">
+          <select id="order-add-ingredient">${ingredientOptions}</select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <input type="number" id="order-add-qty" placeholder="Cantidad" step="0.01" min="0" value="1">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <button class="btn" style="width:100%" onclick="addOrderLine()"><i class="ti ti-plus"></i> Añadir</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePurchaseOrder()">Guardar Pedido</button>
+    </div>
+  `);
+  document.getElementById('order-supplier').value = supplierVal;
+  document.getElementById('order-date').value = dateVal || todayStr();
+}
+
+function addOrderLine(){
+  const ingredientId = parseInt(document.getElementById('order-add-ingredient').value);
+  const qty = parseFloat(document.getElementById('order-add-qty').value) || 0;
+  if(!ingredientId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
+  const existing = orderModalLines.find(l => l.ingredientId === ingredientId);
+  if(existing) existing.qty += qty;
+  else orderModalLines.push({ingredientId, qty});
+  renderOrderModal();
+}
+function updateOrderLineQty(idx, value){
+  orderModalLines[idx].qty = parseFloat(value) || 0;
+  renderOrderModal();
+}
+function removeOrderLine(idx){
+  orderModalLines.splice(idx,1);
+  renderOrderModal();
+}
+
+function savePurchaseOrder(){
+  const supplier = document.getElementById('order-supplier').value.trim();
+  if(!supplier){ showToast('Indica el proveedor'); return; }
+  if(!orderModalLines.length){ showToast('Añade al menos un artículo'); return; }
+  const date = document.getElementById('order-date').value || todayStr();
+  DB.purchaseOrders.push({id: genId(), supplier, date, status:'pendiente', items: orderModalLines.map(l=>({...l}))});
+  saveDB();
+  closeModal();
+  renderPedidos();
+  showToast('Pedido creado');
+}
+
+function markOrderReceived(id){
+  const o = DB.purchaseOrders.find(x => x.id === id);
+  if(!o || o.status === 'recibido') return;
+  (o.items||[]).forEach(line => {
+    const s = getStockEntry(line.ingredientId);
+    s.qty = (s.qty||0) + line.qty;
+  });
+  o.status = 'recibido';
+  saveDB();
+  renderPedidos();
+  renderStock();
+  showToast('Pedido recibido y stock actualizado');
+}
+
+function deleteOrder(id){
+  if(!confirm('¿Eliminar este pedido?')) return;
+  DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
+  saveDB();
+  renderPedidos();
+}
 
 /* ============================================================
-   GESTIÓN ECONÓMICA — placeholder
+   GESTIÓN ECONÓMICA — Gastos, P&L y punto de equilibrio
    ============================================================ */
+const EXPENSE_CATEGORIES = ['Alquiler','Personal','Suministros','Marketing','Mantenimiento','Seguros','Impuestos','Otros'];
+
 function renderEconomia(){
-  document.getElementById('economia-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('economia-content');
+
+  const revenue = DB.sales.reduce((s,sale)=>s+sale.total,0);
+  const foodCost = DB.sales.reduce((sum, sale) => {
+    return sum + (sale.items||[]).reduce((s2, line) => {
+      const m = DB.menuItems.find(x=>x.id===line.menuItemId);
+      const r = m ? getRecipe(m.recipeId) : null;
+      return s2 + (r ? recipeCost(r) * line.qty : 0);
+    }, 0);
+  }, 0);
+  const grossMargin = revenue - foodCost;
+
+  const fixedExpenses = DB.expenses.filter(e=>e.frequency==='mensual').reduce((s,e)=>s+e.amount,0);
+  const oneOffExpenses = DB.expenses.filter(e=>e.frequency==='puntual').reduce((s,e)=>s+e.amount,0);
+  const totalExpenses = fixedExpenses + oneOffExpenses;
+
+  const netResult = grossMargin - totalExpenses;
+
+  const variableCostRatio = revenue > 0 ? foodCost / revenue : 0;
+  let breakeven = null;
+  if(variableCostRatio < 1 && fixedExpenses > 0){
+    breakeven = fixedExpenses / (1 - variableCostRatio);
+  }
+
+  const expensesRows = DB.expenses.length ? DB.expenses.map(e => `
+    <tr>
+      <td>${escapeHtml(e.name)}</td>
+      <td><span class="badge badge-gray">${escapeHtml(e.category)}</span></td>
+      <td>${fmtMoney(e.amount)}</td>
+      <td>${e.frequency==='mensual' ? '<span class="badge badge-blue">Mensual</span>' : '<span class="badge badge-purple">Puntual</span>'}</td>
+      <td>${escapeHtml(e.date||'—')}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-icon" onclick="openExpenseModal(${e.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteExpense(${e.id})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">No hay gastos registrados</div></td></tr>`;
+
+  box.innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:16px">
+      <div class="kpi ok"><div class="label">Ingresos (TPV)</div><div class="value">${fmtMoney(revenue)}</div></div>
+      <div class="kpi"><div class="label">Coste de mercancía</div><div class="value">${fmtMoney(foodCost)}</div></div>
+      <div class="kpi"><div class="label">Margen bruto</div><div class="value">${fmtMoney(grossMargin)}</div></div>
+      <div class="kpi ${netResult>=0?'ok':'warn'}"><div class="label">Resultado neto</div><div class="value">${fmtMoney(netResult)}</div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <h3><i class="ti ti-report-money"></i> Cuenta de resultados (P&amp;L)</h3>
+        <div class="table-wrap"><table>
+          <tbody>
+            <tr><td>Ingresos por ventas</td><td style="text-align:right">${fmtMoney(revenue)}</td></tr>
+            <tr><td>(–) Coste de mercancía vendida</td><td style="text-align:right">${fmtMoney(foodCost)}</td></tr>
+            <tr><td><strong>Margen bruto</strong></td><td style="text-align:right"><strong>${fmtMoney(grossMargin)}</strong></td></tr>
+            <tr><td>(–) Gastos fijos mensuales</td><td style="text-align:right">${fmtMoney(fixedExpenses)}</td></tr>
+            <tr><td>(–) Gastos puntuales</td><td style="text-align:right">${fmtMoney(oneOffExpenses)}</td></tr>
+            <tr><td><strong>Resultado neto</strong></td><td style="text-align:right"><strong>${fmtMoney(netResult)}</strong></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h3><i class="ti ti-scale"></i> Punto de Equilibrio</h3>
+        <p style="font-size:13.5px;color:var(--muted);margin-bottom:10px">Ingresos necesarios para cubrir los gastos fijos mensuales, según el ratio de coste variable actual (${(variableCostRatio*100).toFixed(1)}%).</p>
+        ${breakeven != null
+          ? `<div class="kpi" style="max-width:260px"><div class="label">Punto de equilibrio mensual</div><div class="value">${fmtMoney(breakeven)}</div></div>`
+          : `<div class="empty" style="padding:14px">Registra gastos fijos mensuales y ventas para calcular el punto de equilibrio.</div>`
+        }
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="left"><h3 style="margin:0"><i class="ti ti-receipt"></i> Gastos</h3></div>
+      <button class="btn btn-primary" onclick="openExpenseModal()"><i class="ti ti-plus"></i> Nuevo Gasto</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Concepto</th><th>Categoría</th><th>Importe</th><th>Frecuencia</th><th>Fecha</th><th></th></tr></thead>
+        <tbody>${expensesRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openExpenseModal(id){
+  const e = id ? DB.expenses.find(x=>x.id===id) : {name:'',category:EXPENSE_CATEGORIES[0],amount:0,frequency:'mensual',date:todayStr()};
+  openModal(`
+    <div class="modal-header">
+      <h3>${id?'Editar':'Nuevo'} Gasto</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Concepto</label>
+      <input type="text" id="expense-name" value="${escapeHtml(e.name)}" placeholder="Ej. Alquiler local">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoría</label>
+        <select id="expense-category">${EXPENSE_CATEGORIES.map(c=>`<option value="${c}" ${e.category===c?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Importe (€)</label>
+        <input type="number" id="expense-amount" value="${e.amount}" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Frecuencia</label>
+        <select id="expense-frequency">
+          <option value="mensual" ${e.frequency==='mensual'?'selected':''}>Mensual (gasto fijo)</option>
+          <option value="puntual" ${e.frequency==='puntual'?'selected':''}>Puntual</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="expense-date" value="${e.date||todayStr()}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExpense(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveExpense(id){
+  const name = document.getElementById('expense-name').value.trim();
+  if(!name){ showToast('El concepto es obligatorio'); return; }
+  const category = document.getElementById('expense-category').value;
+  const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+  const frequency = document.getElementById('expense-frequency').value;
+  const date = document.getElementById('expense-date').value || todayStr();
+
+  if(id){
+    Object.assign(DB.expenses.find(x=>x.id===id), {name, category, amount, frequency, date});
+  }else{
+    DB.expenses.push({id: genId(), name, category, amount, frequency, date});
+  }
+  saveDB();
+  closeModal();
+  renderEconomia();
+  showToast('Gasto guardado');
+}
+
+function deleteExpense(id){
+  if(!confirm('¿Eliminar este gasto?')) return;
+  DB.expenses = DB.expenses.filter(e=>e.id!==id);
+  saveDB();
+  renderEconomia();
 }
 
 /* ============================================================
-   HORARIOS — placeholder
+   HORARIOS — Turnos del personal
    ============================================================ */
+const WEEK_DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
 function renderHorarios(){
-  document.getElementById('horarios-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('horarios-content');
+
+  if(!DB.employees.length){
+    box.innerHTML = `
+      <div class="toolbar"><div class="left"></div><button class="btn btn-primary" onclick="addEmployee()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
+      <div class="empty"><i class="ti ti-users"></i>No hay empleados. Añade el primero para crear horarios.</div>
+    `;
+    return;
+  }
+
+  const headerCells = WEEK_DAYS.map(d=>`<th>${d}</th>`).join('');
+  const rows = DB.employees.map(emp => {
+    const shifts = DB.shifts[emp.id] || ['','','','','','',''];
+    const cells = shifts.map((val, idx) => `
+      <td><input type="text" value="${escapeHtml(val)}" placeholder="—" style="width:100px;padding:5px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateShift(${emp.id}, ${idx}, this.value)"></td>
+    `).join('');
+    return `<tr><td><strong>${escapeHtml(emp.name)}</strong></td>${cells}<td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${emp.id})"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn btn-primary" onclick="addEmployee()"><i class="ti ti-plus"></i> Añadir Empleado</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Empleado</th>${headerCells}<th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Escribe el turno de cada día (ej. "09:00-17:00" o "Libre").</p>
+  `;
+}
+
+function addEmployee(){
+  const name = prompt('Nombre del empleado:');
+  if(!name) return;
+  const id = genId();
+  DB.employees.push({id, name: name.trim()});
+  DB.shifts[id] = ['','','','','','',''];
+  saveDB();
+  renderHorarios();
+}
+function updateShift(employeeId, dayIdx, value){
+  if(!DB.shifts[employeeId]) DB.shifts[employeeId] = ['','','','','','',''];
+  DB.shifts[employeeId][dayIdx] = value;
+  saveDB();
+}
+function deleteEmployee(id){
+  if(!confirm('¿Eliminar este empleado?')) return;
+  DB.employees = DB.employees.filter(e=>e.id!==id);
+  delete DB.shifts[id];
+  saveDB();
+  renderHorarios();
 }
 
 /* ============================================================
-   PLAN DE LIMPIEZA — placeholder
+   PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
+const CLEANING_FREQUENCIES = {diaria:'Diaria', semanal:'Semanal', mensual:'Mensual'};
+
 function cleaningTasksToday(){
-  return DB.cleaningTasks || [];
+  return (DB.cleaningTasks||[]).filter(t => t.frequency==='diaria' && !(t.log && t.log[todayStr()]));
 }
+
 function renderLimpieza(){
-  document.getElementById('limpieza-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+  const box = document.getElementById('limpieza-content');
+
+  const rows = (DB.cleaningTasks||[]).map(t => {
+    const done = !!(t.log && t.log[todayStr()]);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(t.name)}</strong></td>
+        <td>${escapeHtml(t.area||'—')}</td>
+        <td><span class="badge badge-blue">${CLEANING_FREQUENCIES[t.frequency]||t.frequency}</span></td>
+        <td>
+          <label style="display:flex;align-items:center;gap:6px">
+            <input type="checkbox" ${done?'checked':''} onchange="toggleCleaningDone(${t.id})" style="width:auto">
+            ${done ? '<span class="badge badge-green">Hecho hoy</span>' : '<span class="badge badge-amber">Pendiente</span>'}
+          </label>
+        </td>
+        <td class="actions-cell"><button class="btn btn-sm btn-icon btn-danger" onclick="deleteCleaningTask(${t.id})"><i class="ti ti-trash"></i></button></td>
+      </tr>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn btn-primary" onclick="openCleaningModal()"><i class="ti ti-plus"></i> Nueva Tarea</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tarea</th><th>Zona</th><th>Frecuencia</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5"><div class="empty" style="padding:14px">No hay tareas de limpieza definidas.</div></td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openCleaningModal(){
+  openModal(`
+    <div class="modal-header">
+      <h3>Nueva Tarea de Limpieza</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Tarea</label>
+      <input type="text" id="cleaning-name" placeholder="Ej. Limpieza de cámaras frigoríficas">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Zona</label>
+        <input type="text" id="cleaning-area" placeholder="Ej. Cocina">
+      </div>
+      <div class="field">
+        <label>Frecuencia</label>
+        <select id="cleaning-frequency">
+          <option value="diaria">Diaria</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCleaningTask()">Guardar</button>
+    </div>
+  `);
+}
+
+function saveCleaningTask(){
+  const name = document.getElementById('cleaning-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const area = document.getElementById('cleaning-area').value.trim();
+  const frequency = document.getElementById('cleaning-frequency').value;
+  DB.cleaningTasks.push({id: genId(), name, area, frequency, log:{}});
+  saveDB();
+  closeModal();
+  renderLimpieza();
+  showToast('Tarea creada');
+}
+
+function toggleCleaningDone(id){
+  const t = DB.cleaningTasks.find(x=>x.id===id);
+  if(!t) return;
+  if(!t.log) t.log = {};
+  const key = todayStr();
+  if(t.log[key]) delete t.log[key];
+  else t.log[key] = true;
+  saveDB();
+  renderLimpieza();
+}
+
+function deleteCleaningTask(id){
+  if(!confirm('¿Eliminar esta tarea de limpieza?')) return;
+  DB.cleaningTasks = DB.cleaningTasks.filter(t=>t.id!==id);
+  saveDB();
+  renderLimpieza();
 }
 
 /* ============================================================
