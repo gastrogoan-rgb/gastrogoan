@@ -31,8 +31,165 @@
   /* Layout */
   --bg:#F6EDD5;--surface:#FFFFFF;--border:#DFD0B8;
   --text:#1A1A1A;--muted:#7A6A58;
+
+  --radius:12px;
+  --sidebar-w:240px;
+  --header-h:60px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ===== Header ===== */
+.app-header{
+  height:var(--header-h);
+  display:flex;align-items:center;
+  padding:0 16px;
+  background:var(--dark);
+  position:sticky;top:0;z-index:50;
+  gap:12px;
+}
+.app-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
+.app-logo-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--teal);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.app-logo-text{font-weight:700;font-size:16px;letter-spacing:.2px}
+.app-logo-sub{font-weight:400;color:#cfcfcf;font-size:13px}
+.menu-toggle{
+  display:none;
+  background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;
+  margin-left:auto;
+}
+
+/* ===== Layout ===== */
+.app-shell{display:flex;min-height:calc(100vh - var(--header-h))}
+.sidebar{
+  width:var(--sidebar-w);flex:none;
+  background:var(--dark2);
+  padding:14px 10px;
+  position:sticky;top:var(--header-h);
+  height:calc(100vh - var(--header-h));
+  overflow-y:auto;
+}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-radius:10px;
+  color:#d8d4cd;text-decoration:none;
+  font-size:14px;font-weight:500;
+  cursor:pointer;margin-bottom:2px;
+  border:none;background:transparent;width:100%;text-align:left;
+}
+.nav-item i{font-size:18px;width:20px;text-align:center}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:var(--teal);color:#fff}
+
+.content{flex:1;padding:22px;max-width:1400px;width:100%;margin:0 auto;min-width:0}
+
+.view{display:none}
+.view.active{display:block}
+
+.view-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.view-subtitle{color:var(--muted);font-size:14px;margin-bottom:18px}
+
+/* ===== Cards / generic ===== */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.kpi .value{font-size:24px;font-weight:700;margin-top:6px}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.warn .value{color:var(--red)}
+.kpi.ok .value{color:var(--green)}
+
+/* ===== Buttons ===== */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:14px;font-weight:600;
+  cursor:pointer;text-decoration:none;
+}
+.btn:hover{filter:brightness(.97)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+.btn-icon{padding:7px 9px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
+.toolbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1}
+
+/* ===== Forms ===== */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text)}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+  font-size:14px;font-family:inherit;background:#fff;color:var(--text);
+}
+.field textarea{resize:vertical;min-height:70px}
+.field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.search-input{max-width:280px}
+
+/* ===== Table ===== */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+th{background:var(--teal-l);color:var(--teal-d);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+tr:last-child td{border-bottom:none}
+td.wrap{white-space:normal}
+.actions-cell{display:flex;gap:6px}
+
+/* ===== Badges ===== */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700}
+.badge-green{background:var(--green-l);color:var(--green)}
+.badge-red{background:var(--red-l);color:var(--red)}
+.badge-amber{background:var(--amber-l);color:var(--amber-dark)}
+.badge-blue{background:var(--blue-l);color:var(--blue-d)}
+.badge-purple{background:var(--purple-l);color:var(--purple)}
+.badge-gray{background:#eee;color:#555}
+
+/* ===== Modal ===== */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  align-items:center;justify-content:center;z-index:200;padding:16px;
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:#fff;border-radius:var(--radius);width:100%;max-width:540px;
+  max-height:90vh;overflow-y:auto;padding:20px;
+}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-header h3{font-size:17px}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+
+/* Empty state */
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty i{font-size:32px;display:block;margin-bottom:10px;color:var(--border)}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--dark2);color:#fff;padding:12px 20px;border-radius:8px;
+  font-size:14px;font-weight:600;z-index:300;opacity:0;transition:.25s;
+  pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Responsive */
+@media (max-width: 880px){
+  .menu-toggle{display:block}
+  .sidebar{
+    position:fixed;left:0;top:var(--header-h);
+    transform:translateX(-100%);transition:.2s;z-index:100;
+    box-shadow:4px 0 16px rgba(0,0,0,.2);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .content{padding:14px}
+}
 </style>
 </head>
 <body>
@@ -43,43 +200,685 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
     <span class="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
+  <button class="menu-toggle" id="menu-toggle" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
 </header>
 
-<main style="padding: 20px; max-width: 1200px; margin: 0 auto;">
-  <h1>Kit de Gestión Hostelera · GastroGoan</h1>
-  <p>Módulo de gestión profesional para restaurantes, bares y establecimientos de hostelería.</p>
-  
-  <section style="margin-top: 30px;">
-    <h2>Características principales</h2>
-    <ul style="font-size: 16px; line-height: 1.8;">
-      <li>📋 <strong>Mega Lista</strong> - Gestión de ingredientes y proveedores</li>
-      <li>🧮 <strong>Escandallo</strong> - Cálculo automático de costes de platos</li>
-      <li>📄 <strong>Fichas Técnicas</strong> - Elaboración estándar y alérgenos</li>
-      <li>🍽️ <strong>Carta Digital</strong> - Menús por horario y disponibilidad</li>
-      <li>🖥️ <strong>TPV Integrado</strong> - Comandas, mesas y tickets</li>
-      <li>💰 <strong>Gestión Económica</strong> - Gastos, P&L y punto de equilibrio</li>
-      <li>📊 <strong>Panel de Control</strong> - Dashboard centralizado de KPIs</li>
-      <li>📦 <strong>Stock</strong> - Inventario con alertas de mínimos</li>
-      <li>🛒 <strong>Pedidos</strong> - Gestión de compras a proveedores</li>
-      <li>🗓️ <strong>Horarios</strong> - Turnos del personal</li>
-      <li>🧹 <strong>Plan de Limpieza</strong> - APPCC e higiene alimentaria</li>
-    </ul>
-  </section>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <button class="nav-item" data-view="dashboard" onclick="navigate('dashboard')"><i class="ti ti-layout-dashboard"></i> Panel de Control</button>
+    <button class="nav-item" data-view="megalista" onclick="navigate('megalista')"><i class="ti ti-list-details"></i> Mega Lista</button>
+    <button class="nav-item" data-view="escandallo" onclick="navigate('escandallo')"><i class="ti ti-calculator"></i> Escandallo</button>
+    <button class="nav-item" data-view="fichas" onclick="navigate('fichas')"><i class="ti ti-file-description"></i> Fichas Técnicas</button>
+    <button class="nav-item" data-view="carta" onclick="navigate('carta')"><i class="ti ti-toolsKitchen"></i> Carta Digital</button>
+    <button class="nav-item" data-view="tpv" onclick="navigate('tpv')"><i class="ti ti-device-desktop"></i> TPV</button>
+    <button class="nav-item" data-view="stock" onclick="navigate('stock')"><i class="ti ti-package"></i> Stock</button>
+    <button class="nav-item" data-view="pedidos" onclick="navigate('pedidos')"><i class="ti ti-shopping-cart"></i> Pedidos</button>
+    <button class="nav-item" data-view="economia" onclick="navigate('economia')"><i class="ti ti-coin"></i> Gestión Económica</button>
+    <button class="nav-item" data-view="horarios" onclick="navigate('horarios')"><i class="ti ti-calendar-time"></i> Horarios</button>
+    <button class="nav-item" data-view="limpieza" onclick="navigate('limpieza')"><i class="ti ti-spray"></i> Plan de Limpieza</button>
+  </nav>
 
-  <section style="margin-top: 30px; padding: 20px; background: #FDEEE4; border-radius: 12px;">
-    <h3>Almacenamiento local seguro</h3>
-    <p>Todos tus datos se guardan en el navegador (localStorage). No se envía información a servidores externos. Tu información es 100% privada.</p>
-  </section>
+  <!-- Content -->
+  <main class="content" id="content">
 
-  <footer style="margin-top: 50px; padding: 20px; text-align: center; color: #7A6A58; border-top: 1px solid #DFD0B8;">
-    <p>Kit de Gestión Hostelera · GastroGoan 2024</p>
-  </footer>
-</main>
+    <!-- ========== DASHBOARD ========== -->
+    <section class="view" id="view-dashboard">
+      <div class="view-title">Panel de Control</div>
+      <div class="view-subtitle">Resumen general de tu negocio</div>
+      <div class="grid grid-4" id="dashboard-kpis"></div>
+
+      <div class="grid grid-2" style="margin-top:16px">
+        <div class="card">
+          <h3><i class="ti ti-alert-triangle"></i> Alertas de Stock</h3>
+          <div id="dashboard-stock-alerts"></div>
+        </div>
+        <div class="card">
+          <h3><i class="ti ti-clock-alert"></i> Pedidos Pendientes</h3>
+          <div id="dashboard-pending-orders"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MEGA LISTA ========== -->
+    <section class="view" id="view-megalista">
+      <div class="view-title">Mega Lista</div>
+      <div class="view-subtitle">Gestión de ingredientes y proveedores</div>
+
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" class="search-input" id="megalista-search" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
+          <select id="megalista-filter-cat" onchange="renderMegalista()">
+            <option value="">Todas las categorías</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th>Categoría</th>
+              <th>Proveedor</th>
+              <th>Unidad</th>
+              <th>Precio/ud</th>
+              <th>Alérgenos</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="megalista-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== ESCANDALLO ========== -->
+    <section class="view" id="view-escandallo">
+      <div class="view-title">Escandallo</div>
+      <div class="view-subtitle">Cálculo automático de costes de platos</div>
+
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" class="search-input" id="escandallo-search" placeholder="Buscar plato..." oninput="renderEscandallo()">
+        </div>
+        <button class="btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+      </div>
+
+      <div class="grid grid-2" id="escandallo-list"></div>
+    </section>
+
+    <!-- ========== FICHAS TÉCNICAS ========== -->
+    <section class="view" id="view-fichas">
+      <div class="view-title">Fichas Técnicas</div>
+      <div class="view-subtitle">Elaboración estándar y alérgenos</div>
+      <div class="grid grid-2" id="fichas-list"></div>
+    </section>
+
+    <!-- ========== CARTA DIGITAL ========== -->
+    <section class="view" id="view-carta">
+      <div class="view-title">Carta Digital</div>
+      <div class="view-subtitle">Menús por horario y disponibilidad</div>
+
+      <div class="toolbar">
+        <div class="left">
+          <select id="carta-filter-schedule" onchange="renderCarta()">
+            <option value="">Todos los horarios</option>
+            <option value="desayuno">Desayuno</option>
+            <option value="almuerzo">Almuerzo</option>
+            <option value="cena">Cena</option>
+            <option value="todo-dia">Todo el día</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openMenuItemModal()"><i class="ti ti-plus"></i> Añadir a la Carta</button>
+      </div>
+
+      <div id="carta-list"></div>
+    </section>
+
+    <!-- ========== TPV ========== -->
+    <section class="view" id="view-tpv">
+      <div class="view-title">TPV</div>
+      <div class="view-subtitle">Comandas, mesas y tickets</div>
+      <div id="tpv-content"></div>
+    </section>
+
+    <!-- ========== STOCK ========== -->
+    <section class="view" id="view-stock">
+      <div class="view-title">Stock</div>
+      <div class="view-subtitle">Inventario con alertas de mínimos</div>
+
+      <div class="toolbar">
+        <div class="left">
+          <input type="text" class="search-input" id="stock-search" placeholder="Buscar en stock..." oninput="renderStock()">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+            <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> Solo alertas
+          </label>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th>Stock actual</th>
+              <th>Mínimo</th>
+              <th>Unidad</th>
+              <th>Estado</th>
+              <th>Ajustar</th>
+            </tr>
+          </thead>
+          <tbody id="stock-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== PEDIDOS ========== -->
+    <section class="view" id="view-pedidos">
+      <div class="view-title">Pedidos</div>
+      <div class="view-subtitle">Gestión de compras a proveedores</div>
+
+      <div class="toolbar">
+        <div class="left"></div>
+        <button class="btn btn-primary" onclick="openOrderModal()"><i class="ti ti-plus"></i> Nuevo Pedido</button>
+      </div>
+
+      <div id="pedidos-list"></div>
+    </section>
+
+    <!-- ========== GESTIÓN ECONÓMICA ========== -->
+    <section class="view" id="view-economia">
+      <div class="view-title">Gestión Económica</div>
+      <div class="view-subtitle">Gastos, P&amp;L y punto de equilibrio</div>
+      <div id="economia-content"></div>
+    </section>
+
+    <!-- ========== HORARIOS ========== -->
+    <section class="view" id="view-horarios">
+      <div class="view-title">Horarios</div>
+      <div class="view-subtitle">Turnos del personal</div>
+      <div id="horarios-content"></div>
+    </section>
+
+    <!-- ========== PLAN DE LIMPIEZA ========== -->
+    <section class="view" id="view-limpieza">
+      <div class="view-title">Plan de Limpieza</div>
+      <div class="view-subtitle">APPCC e higiene alimentaria</div>
+      <div id="limpieza-content"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ========== MODALS ========== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-function goHome() {
-  console.log('Ir a inicio');
+/* ============================================================
+   GASTROGOAN · KIT DE GESTIÓN HOSTELERA
+   App standalone — todos los datos en localStorage
+   ============================================================ */
+
+const DB_KEY = 'gastrogoan_data_v1';
+
+const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
+const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
+const UNITS = ['kg','g','l','ml','ud'];
+
+function defaultData(){
+  return {
+    ingredients: [],
+    recipes: [],
+    menuItems: [],
+    stock: {},          // { ingredientId: { qty, min } }
+    purchaseOrders: [],
+    tables: [],
+    tpvOrders: [],
+    expenses: [],
+    sales: [],
+    shifts: [],
+    cleaningTasks: [],
+    nextId: 1
+  };
 }
+
+let DB = loadDB();
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(!raw) return defaultData();
+    const data = JSON.parse(raw);
+    return Object.assign(defaultData(), data);
+  }catch(e){
+    console.error('Error cargando datos', e);
+    return defaultData();
+  }
+}
+
+function saveDB(){
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+}
+
+function genId(){
+  const id = DB.nextId || 1;
+  DB.nextId = id + 1;
+  return id;
+}
+
+/* ============== Helpers ============== */
+function fmtMoney(v){
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+}
+function fmtNum(v, dec=2){
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:0,maximumFractionDigits:dec});
+}
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function getIngredient(id){
+  return DB.ingredients.find(i => i.id === id);
+}
+function getRecipe(id){
+  return DB.recipes.find(r => r.id === id);
+}
+function getStockEntry(ingredientId){
+  if(!DB.stock[ingredientId]) DB.stock[ingredientId] = {qty:0, min:0};
+  return DB.stock[ingredientId];
+}
+
+/* ============== Navigation ============== */
+function goHome(){
+  navigate('dashboard');
+}
+function navigate(view){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('view-' + view);
+  if(target) target.classList.add('active');
+  const navBtn = document.querySelector(`.nav-item[data-view="${view}"]`);
+  if(navBtn) navBtn.classList.add('active');
+
+  closeSidebar();
+  renderView(view);
+  location.hash = view;
+}
+function renderView(view){
+  switch(view){
+    case 'dashboard': renderDashboard(); break;
+    case 'megalista': renderMegalista(); break;
+    case 'escandallo': renderEscandallo(); break;
+    case 'fichas': renderFichas(); break;
+    case 'carta': renderCarta(); break;
+    case 'tpv': renderTPV(); break;
+    case 'stock': renderStock(); break;
+    case 'pedidos': renderPedidos(); break;
+    case 'economia': renderEconomia(); break;
+    case 'horarios': renderHorarios(); break;
+    case 'limpieza': renderLimpieza(); break;
+  }
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+/* ============== Modal helpers ============== */
+function openModal(html){
+  document.getElementById('modal-box').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('modal-box').innerHTML = '';
+}
+document.getElementById('modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'modal-overlay') closeModal();
+});
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const totalIngredients = DB.ingredients.length;
+  const totalRecipes = DB.recipes.length;
+  const totalMenuItems = DB.menuItems.length;
+
+  const stockAlerts = DB.ingredients.filter(ing => {
+    const s = DB.stock[ing.id];
+    return s && s.qty <= s.min;
+  });
+
+  const pendingOrders = DB.purchaseOrders.filter(o => o.status !== 'recibido');
+
+  let avgFoodCost = 0;
+  if(DB.recipes.length){
+    const pcts = DB.recipes.map(r => recipeFoodCostPct(r)).filter(p => isFinite(p));
+    if(pcts.length) avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length;
+  }
+
+  const todaySales = DB.sales.filter(s => s.date === todayStr()).reduce((sum,s)=>sum+s.total,0);
+
+  const kpis = [
+    {label:'Ingredientes', value: totalIngredients, icon:'ti-list-details', cls:''},
+    {label:'Platos / Recetas', value: totalRecipes, icon:'ti-chef-hat', cls:''},
+    {label:'Items en Carta', value: totalMenuItems, icon:'ti-toolsKitchen', cls:''},
+    {label:'Ventas hoy', value: fmtMoney(todaySales), icon:'ti-cash', cls:'ok'},
+    {label:'Alertas de Stock', value: stockAlerts.length, icon:'ti-alert-triangle', cls: stockAlerts.length ? 'warn':'ok'},
+    {label:'Pedidos pendientes', value: pendingOrders.length, icon:'ti-shopping-cart', cls: pendingOrders.length ? 'warn':'ok'},
+    {label:'Food Cost medio', value: DB.recipes.length ? avgFoodCost.toFixed(1)+'%' : '—', icon:'ti-percentage', cls: avgFoodCost>35?'warn':'ok'},
+    {label:'Tareas limpieza hoy', value: cleaningTasksToday().length, icon:'ti-spray', cls:''}
+  ];
+
+  document.getElementById('dashboard-kpis').innerHTML = kpis.map(k => `
+    <div class="kpi ${k.cls}">
+      <div class="label"><i class="ti ${k.icon}"></i> ${k.label}</div>
+      <div class="value">${k.value}</div>
+    </div>
+  `).join('');
+
+  // Stock alerts
+  const alertsBox = document.getElementById('dashboard-stock-alerts');
+  if(!stockAlerts.length){
+    alertsBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>Sin alertas de stock</div>`;
+  }else{
+    alertsBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
+      stockAlerts.map(ing => {
+        const s = DB.stock[ing.id];
+        return `<tr><td>${escapeHtml(ing.name)}</td><td><span class="badge badge-red">${fmtNum(s.qty)} / ${fmtNum(s.min)} ${ing.unit}</span></td></tr>`;
+      }).join('') + `</tbody></table></div>`;
+  }
+
+  // Pending orders
+  const ordersBox = document.getElementById('dashboard-pending-orders');
+  if(!pendingOrders.length){
+    ordersBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>No hay pedidos pendientes</div>`;
+  }else{
+    ordersBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
+      pendingOrders.map(o => `<tr><td>${escapeHtml(o.supplier)}</td><td>${o.date}</td><td><span class="badge badge-amber">${o.status}</span></td></tr>`).join('') +
+      `</tbody></table></div>`;
+  }
+}
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+/* ============================================================
+   MEGA LISTA — Ingredientes y proveedores
+   ============================================================ */
+function populateCategoryFilter(){
+  const sel = document.getElementById('megalista-filter-cat');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+    CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = current;
+}
+
+function renderMegalista(){
+  populateCategoryFilter();
+  const search = document.getElementById('megalista-search').value.toLowerCase();
+  const cat = document.getElementById('megalista-filter-cat').value;
+
+  let items = DB.ingredients.filter(i => {
+    const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
+    const matchCat = !cat || i.category === cat;
+    return matchSearch && matchCat;
+  });
+
+  const tbody = document.getElementById('megalista-tbody');
+  if(!items.length){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(ing => `
+    <tr>
+      <td><strong>${escapeHtml(ing.name)}</strong></td>
+      <td><span class="badge badge-gray">${escapeHtml(ing.category||'—')}</span></td>
+      <td>${escapeHtml(ing.supplier||'—')}</td>
+      <td>${escapeHtml(ing.unit)}</td>
+      <td>${fmtMoney(ing.price)}</td>
+      <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openIngredientModal(id){
+  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:'',unit:'kg',price:0,allergens:[]};
+  const allergenChecks = ALLERGENS.map(a => `
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
+      <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
+    </label>
+  `).join('');
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${id ? 'Editar' : 'Nuevo'} Ingrediente</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="ing-name" value="${escapeHtml(ing.name)}" placeholder="Ej. Tomate Pera">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoría</label>
+        <select id="ing-category">
+          ${CATEGORIES.map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Unidad</label>
+        <select id="ing-unit">
+          ${UNITS.map(u=>`<option value="${u}" ${ing.unit===u?'selected':''}>${u}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Proveedor</label>
+        <input type="text" id="ing-supplier" value="${escapeHtml(ing.supplier)}" placeholder="Ej. Mercadona">
+      </div>
+      <div class="field">
+        <label>Precio por unidad (€)</label>
+        <input type="number" id="ing-price" value="${ing.price}" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Alérgenos</label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px">
+        ${allergenChecks}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveIngredient(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveIngredient(id){
+  const name = document.getElementById('ing-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const category = document.getElementById('ing-category').value;
+  const unit = document.getElementById('ing-unit').value;
+  const supplier = document.getElementById('ing-supplier').value.trim();
+  const price = parseFloat(document.getElementById('ing-price').value) || 0;
+  const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
+
+  if(id){
+    const ing = getIngredient(id);
+    Object.assign(ing, {name, category, unit, supplier, price, allergens});
+  }else{
+    const newId = genId();
+    DB.ingredients.push({id:newId, name, category, unit, supplier, price, allergens});
+    getStockEntry(newId);
+  }
+  saveDB();
+  closeModal();
+  renderMegalista();
+  showToast('Ingrediente guardado');
+}
+
+function deleteIngredient(id){
+  if(!confirm('¿Eliminar este ingrediente? Se eliminará también de recetas y stock.')) return;
+  DB.ingredients = DB.ingredients.filter(i => i.id !== id);
+  delete DB.stock[id];
+  DB.recipes.forEach(r => {
+    r.ingredients = r.ingredients.filter(line => line.ingredientId !== id);
+  });
+  saveDB();
+  renderMegalista();
+  showToast('Ingrediente eliminado');
+}
+
+/* ============================================================
+   STOCK
+   ============================================================ */
+function renderStock(){
+  const search = document.getElementById('stock-search').value.toLowerCase();
+  const onlyAlerts = document.getElementById('stock-only-alerts').checked;
+
+  let items = DB.ingredients.filter(ing => {
+    const s = getStockEntry(ing.id);
+    const matchSearch = !search || ing.name.toLowerCase().includes(search);
+    const matchAlert = !onlyAlerts || s.qty <= s.min;
+    return matchSearch && matchAlert;
+  });
+
+  const tbody = document.getElementById('stock-tbody');
+  if(!items.length){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay artículos en stock.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(ing => {
+    const s = getStockEntry(ing.id);
+    const low = s.qty <= s.min;
+    return `
+      <tr>
+        <td><strong>${escapeHtml(ing.name)}</strong></td>
+        <td>${fmtNum(s.qty)}</td>
+        <td>
+          <input type="number" value="${s.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"
+            onchange="updateStockMin(${ing.id}, this.value)">
+        </td>
+        <td>${escapeHtml(ing.unit)}</td>
+        <td>${low ? '<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> Bajo mínimo</span>' : '<span class="badge badge-green">OK</span>'}</td>
+        <td class="actions-cell">
+          <button class="btn btn-sm btn-icon" onclick="adjustStock(${ing.id}, 1)"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-sm btn-icon" onclick="adjustStock(${ing.id}, -1)"><i class="ti ti-minus"></i></button>
+          <button class="btn btn-sm" onclick="setStockQty(${ing.id})">Ajustar</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updateStockMin(ingredientId, value){
+  const s = getStockEntry(ingredientId);
+  s.min = parseFloat(value) || 0;
+  saveDB();
+  renderStock();
+}
+
+function adjustStock(ingredientId, delta){
+  const s = getStockEntry(ingredientId);
+  s.qty = Math.max(0, (s.qty||0) + delta);
+  saveDB();
+  renderStock();
+}
+
+function setStockQty(ingredientId){
+  const s = getStockEntry(ingredientId);
+  const val = prompt('Nueva cantidad en stock:', s.qty);
+  if(val === null) return;
+  const num = parseFloat(val);
+  if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
+  s.qty = num;
+  saveDB();
+  renderStock();
+}
+
+/* ============================================================
+   ESCANDALLO — placeholder (se implementa en siguiente paso)
+   ============================================================ */
+function recipeFoodCostPct(r){
+  if(!r.price) return Infinity;
+  const cost = recipeCost(r);
+  return (cost / r.price) * 100;
+}
+function recipeCost(r){
+  return (r.ingredients||[]).reduce((sum, line) => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return sum;
+    return sum + (ing.price * line.qty);
+  }, 0);
+}
+function renderEscandallo(){
+  document.getElementById('escandallo-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+function openRecipeModal(){ showToast('Próximamente'); }
+
+/* ============================================================
+   FICHAS TÉCNICAS — placeholder
+   ============================================================ */
+function renderFichas(){
+  document.getElementById('fichas-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+
+/* ============================================================
+   CARTA DIGITAL — placeholder
+   ============================================================ */
+function renderCarta(){
+  document.getElementById('carta-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+function openMenuItemModal(){ showToast('Próximamente'); }
+
+/* ============================================================
+   TPV — placeholder
+   ============================================================ */
+function renderTPV(){
+  document.getElementById('tpv-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+
+/* ============================================================
+   PEDIDOS — placeholder
+   ============================================================ */
+function renderPedidos(){
+  document.getElementById('pedidos-list').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+function openOrderModal(){ showToast('Próximamente'); }
+
+/* ============================================================
+   GESTIÓN ECONÓMICA — placeholder
+   ============================================================ */
+function renderEconomia(){
+  document.getElementById('economia-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+
+/* ============================================================
+   HORARIOS — placeholder
+   ============================================================ */
+function renderHorarios(){
+  document.getElementById('horarios-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+
+/* ============================================================
+   PLAN DE LIMPIEZA — placeholder
+   ============================================================ */
+function cleaningTasksToday(){
+  return DB.cleaningTasks || [];
+}
+function renderLimpieza(){
+  document.getElementById('limpieza-content').innerHTML = `<div class="empty"><i class="ti ti-tools"></i>Módulo en construcción.</div>`;
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  const initial = (location.hash || '#dashboard').replace('#','');
+  navigate(initial);
+});
 </script>
 
 </body>
