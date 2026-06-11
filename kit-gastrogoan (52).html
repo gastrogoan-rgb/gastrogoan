@@ -691,7 +691,7 @@ td.wrap{white-space:normal}
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Visitas</th><th>Puntos</th><th>Notas</th><th></th></tr>
+            <tr><th>Nombre</th><th>Contacto</th><th>Visitas</th><th>Ticket medio</th><th>Última visita</th><th>Fidelización</th><th>Notas</th><th></th></tr>
           </thead>
           <tbody id="clientes-tbody"></tbody>
         </table>
@@ -703,13 +703,12 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Reservas</div>
       <div class="view-subtitle">Reservas de mesas vinculadas al TPV</div>
-      <div class="toolbar">
-        <div class="left">
-          <input type="date" id="reservas-filter-date" onchange="renderReservas()">
-        </div>
-        <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
-      </div>
-      <div id="reservas-list"></div>
+      <nav class="ge-tab-row">
+        <button class="ge-tab" id="reservas-tab-dia" onclick="setReservasTab('dia')">Día</button>
+        <button class="ge-tab" id="reservas-tab-semana" onclick="setReservasTab('semana')">Semana</button>
+        <button class="ge-tab" id="reservas-tab-mes" onclick="setReservasTab('mes')">Mes</button>
+      </nav>
+      <div id="reservas-tab-content"></div>
     </section>
 
     <!-- ========== MI NEGOCIO ========== -->
@@ -1976,48 +1975,88 @@ function getMenuItemName(m){
   const r = getRecipe(m.recipeId);
   return r ? r.name : (m.name || 'Plato');
 }
+const TPV_ZONES = ['Interior','Terraza'];
+const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+
 function getOpenOrderForTable(tableId){
-  return DB.tpvOrders.find(o => o.tableId === tableId && o.status === 'abierta');
+  return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
 }
 
 function renderTPV(){
   const box = document.getElementById('tpv-content');
 
-  let tablesHtml;
-  if(!DB.tables.length){
-    tablesHtml = `<div class="empty"><i class="ti ti-device-desktop"></i>No hay mesas creadas.</div>`;
-  }else{
-    tablesHtml = `<div class="grid grid-4">` + DB.tables.map(t => {
+  const todaySalesArr = DB.sales.filter(s => s.date === todayStr());
+  const todayTotal = todaySalesArr.reduce((sum,s)=>sum+s.total,0);
+  const ticketCount = todaySalesArr.length;
+  const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
+
+  const kpiHtml = `
+    <div class="grid grid-3" style="margin-bottom:14px">
+      <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
+      <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
+      <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+    </div>
+  `;
+
+  const zonesHtml = TPV_ZONES.map(zone => {
+    const tables = DB.tables.filter(t => (t.zone||'Interior') === zone);
+    const cards = tables.map(t => {
       const order = getOpenOrderForTable(t.id);
       const total = order ? orderTotal(order) : 0;
+      let badge = '<span class="badge badge-green">Libre</span>';
+      if(order && order.status==='cuenta') badge = '<span class="badge badge-purple">Cuenta pedida</span>';
+      else if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
       return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
           <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-          ${order
-            ? `<span class="badge badge-amber">Ocupada</span><div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>`
-            : `<span class="badge badge-green">Libre</span>`
-          }
+          ${badge}
+          ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
           <div style="margin-top:10px">
             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
           </div>
         </div>
       `;
-    }).join('') + `</div>`;
-  }
+    }).join('');
+    return `
+      <h3 style="margin-top:16px"><i class="ti ti-map-pin"></i> ${zone}</h3>
+      <div class="grid grid-4">${cards || '<div class="empty">Sin mesas en esta zona</div>'}</div>
+    `;
+  }).join('');
+
+  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && (o.tipo==='takeaway'||o.tipo==='delivery'));
+  const toGoHtml = `
+    <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
+    <div class="grid grid-4">
+      ${toGoOrders.map(o => `
+        <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
+          <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
+          ${o.status==='cuenta' ? '<span class="badge badge-purple">Cuenta pedida</span>' : '<span class="badge badge-amber">Abierto</span>'}
+          <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
+        </div>
+      `).join('')}
+      <div class="card" style="text-align:center;display:flex;flex-direction:column;gap:8px;justify-content:center">
+        <button class="btn btn-sm" onclick="newToGoOrder('takeaway')"><i class="ti ti-shopping-bag"></i> Nuevo Take Away</button>
+        <button class="btn btn-sm" onclick="newToGoOrder('delivery')"><i class="ti ti-moped"></i> Nuevo Delivery</button>
+      </div>
+    </div>
+  `;
 
   box.innerHTML = `
+    ${kpiHtml}
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>
     </div>
-    ${tablesHtml}
+    ${zonesHtml}
+    ${toGoHtml}
   `;
 }
 
 function addTable(){
   const name = prompt('Nombre o número de la mesa:');
   if(!name) return;
-  DB.tables.push({id: genId(), name: name.trim()});
+  const zone = confirm('¿Es una mesa de Terraza?\n\nAceptar = Terraza · Cancelar = Interior') ? 'Terraza' : 'Interior';
+  DB.tables.push({id: genId(), name: name.trim(), zone});
   saveDB();
   renderTPV();
 }
@@ -2033,19 +2072,36 @@ function orderTotal(order){
   return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0);
 }
 
-function openTableOrder(tableId){
-  let order = getOpenOrderForTable(tableId);
-  if(!order){
-    order = {id: genId(), tableId, status:'abierta', items:[], createdAt: new Date().toISOString()};
-    DB.tpvOrders.push(order);
-    saveDB();
+function openTableOrder(tableId, orderId){
+  let order;
+  if(orderId){
+    order = DB.tpvOrders.find(o => o.id === orderId);
+  }else{
+    order = getOpenOrderForTable(tableId);
+    if(!order){
+      const table = DB.tables.find(t => t.id === tableId);
+      order = {id: genId(), tableId, tipo:'mesa', zona: table ? (table.zone||'Interior') : null, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
+      DB.tpvOrders.push(order);
+      saveDB();
+    }
   }
+  renderTableOrderModal(order.id);
+}
+
+function newToGoOrder(tipo){
+  const clienteNombre = prompt(tipo==='delivery' ? 'Nombre del cliente (delivery):' : 'Nombre para el pedido (take away):') || '';
+  const order = {id: genId(), tableId:null, tipo, zona:null, clienteNombre: clienteNombre.trim(), status:'abierta', items:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
   renderTableOrderModal(order.id);
 }
 
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  const table = DB.tables.find(t => t.id === order.tableId);
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  const titleText = table ? table.name
+    : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const available = DB.menuItems.filter(m => m.available !== false);
 
   // group available items by category
@@ -2081,7 +2137,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(table.name)}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="table-wrap" style="margin-bottom:10px">
@@ -2099,9 +2155,20 @@ function renderTableOrderModal(orderId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
-      <button class="btn btn-primary" onclick="chargeOrder(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
+      ${order.status!=='cuenta' ? `<button class="btn" onclick="requestBill(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-receipt"></i> Pedir cuenta</button>` : ''}
+      <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
+}
+
+function requestBill(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.status = 'cuenta';
+  saveDB();
+  closeModal();
+  renderTPV();
+  showToast('Cuenta pedida');
 }
 
 function addOrderItem(orderId, menuItemId){
@@ -2131,10 +2198,57 @@ function removeOrderItem(orderId, idx){
   renderTableOrderModal(orderId);
 }
 
-function chargeOrder(orderId){
+function openPaymentModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length) return;
   const total = orderTotal(order);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash"></i> Cobrar</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">Total a cobrar</div>
+      <div class="value">${fmtMoney(total)}</div>
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="payment-method" onchange="togglePaymentCash()">
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" id="payment-cash-field">
+      <label>Importe entregado (€)</label>
+      <input type="number" id="payment-cash" step="0.01" min="0" value="${total.toFixed(2)}" oninput="updatePaymentChange(${total})">
+    </div>
+    <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
+      <div class="label">Cambio</div>
+      <div class="value" id="payment-change">${fmtMoney(0)}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
+      <button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> Confirmar cobro</button>
+    </div>
+  `);
+}
+
+function togglePaymentCash(){
+  const method = document.getElementById('payment-method').value;
+  const isCash = method === 'Efectivo';
+  document.getElementById('payment-cash-field').style.display = isCash ? '' : 'none';
+  document.getElementById('payment-change-kpi').style.display = isCash ? '' : 'none';
+}
+
+function updatePaymentChange(total){
+  const cash = parseFloat(document.getElementById('payment-cash').value) || 0;
+  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, cash - total));
+}
+
+function finalizeCharge(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
+  const total = orderTotal(order);
+  const metodoPago = document.getElementById('payment-method').value;
 
   // Descontar stock según ingredientes de la receta
   order.items.forEach(line => {
@@ -2147,13 +2261,34 @@ function chargeOrder(orderId){
     });
   });
 
-  DB.sales.push({id: genId(), date: todayStr(), total, tableId: order.tableId, items: order.items.map(l=>({...l}))});
+  const sale = {id: genId(), date: todayStr(), total, tableId: order.tableId, zona: order.zona, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  DB.sales.push(sale);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
   saveDB();
   closeModal();
   renderTPV();
-  showToast('Mesa cobrada');
+  printTicket(sale);
+  showToast('Cobro registrado');
+}
+
+function printTicket(sale){
+  const lines = sale.items.map(l => `${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)).join('\n');
+  const win = window.open('', '_blank', 'width=320,height=520');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
+${escapeHtml(DB.business.name||'GastroGoan')}
+${sale.date}
+${sale.tipo==='delivery'?'Delivery':sale.tipo==='takeaway'?'Take Away':'Mesa'}${sale.clienteNombre?' - '+escapeHtml(sale.clienteNombre):''}
+------------------------------
+${escapeHtml(lines)}
+------------------------------
+TOTAL: ${fmtMoney(sale.total)}
+Pago: ${escapeHtml(sale.metodoPago||'')}
+
+¡Gracias por su visita!
+</body></html>`);
+  win.document.close();
+  win.print();
 }
 
 /* ============================================================
@@ -3732,35 +3867,61 @@ function updateWorkDistribution(employeeId, dayIdx, value){
 /* ============================================================
    CLIENTES — Fichas de cliente y fidelización
    ============================================================ */
+function clientSalesStats(c){
+  const matches = DB.sales.filter(s => s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase());
+  const visitas = matches.length;
+  const total = matches.reduce((sum,s)=>sum+s.total,0);
+  const ticketMedio = visitas ? total/visitas : 0;
+  const lastDate = matches.length ? matches.map(s=>s.date).sort().slice(-1)[0] : null;
+  let recency = null;
+  if(lastDate){
+    recency = Math.floor((new Date(todayStr()) - new Date(lastDate)) / 86400000);
+  }
+  return {visitas, ticketMedio, lastDate, recency};
+}
+
 function renderClientes(){
   const search = document.getElementById('clientes-search').value.toLowerCase();
   const items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
   const tbody = document.getElementById('clientes-tbody');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-address-book"></i>No hay clientes registrados.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-address-book"></i>No hay clientes registrados.</div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = items.map(c => `
+  tbody.innerHTML = items.map(c => {
+    const stats = clientSalesStats(c);
+    const score = stats.visitas + Math.floor((c.points||0)/10);
+    let loyaltyBadge;
+    if(score >= 10) loyaltyBadge = '<span class="badge badge-green">Fiel</span>';
+    else if(score >= 3) loyaltyBadge = '<span class="badge badge-amber">Habitual</span>';
+    else loyaltyBadge = '<span class="badge badge-gray">Nuevo</span>';
+    return `
     <tr>
-      <td><strong>${escapeHtml(c.name)}</strong></td>
-      <td>${escapeHtml(c.phone||'—')}</td>
-      <td>${escapeHtml(c.email||'—')}</td>
-      <td><span class="badge badge-blue">${c.visits||0}</span></td>
-      <td><span class="badge badge-amber">${c.points||0} pts</span></td>
+      <td><strong>${escapeHtml(c.name)}</strong>${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td>
+        ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
+        ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
+        ${!c.phone && !c.email ? '—' : ''}
+      </td>
+      <td><span class="badge badge-blue">${stats.visitas}</span></td>
+      <td>${fmtMoney(stats.ticketMedio)}</td>
+      <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(hace ${stats.recency}d)</span>` : '—'}</td>
+      <td>${loyaltyBadge} <span class="badge badge-amber">${c.points||0} pts</span></td>
       <td class="wrap">${escapeHtml(c.notes||'—')}</td>
       <td class="actions-cell">
-        <button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Registrar visita"><i class="ti ti-plus"></i></button>
+        <button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Sumar puntos"><i class="ti ti-plus"></i></button>
         <button class="btn btn-sm btn-icon" onclick="openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function openClientModal(id){
-  const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',visits:0,points:0};
+  const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',points:0,cp:'',cumpleanos:'',ultimoContacto:''};
   openModal(`
     <div class="modal-header">
       <h3>${id?'Editar':'Nuevo'} Cliente</h3>
@@ -3782,8 +3943,18 @@ function openClientModal(id){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Visitas registradas</label>
-        <input type="number" id="client-visits" value="${c.visits||0}" min="0">
+        <label>Código postal</label>
+        <input type="text" id="client-cp" value="${escapeHtml(c.cp||'')}" placeholder="Ej. 36001">
+      </div>
+      <div class="field">
+        <label>Cumpleaños</label>
+        <input type="date" id="client-cumpleanos" value="${escapeHtml(c.cumpleanos||'')}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Último contacto</label>
+        <input type="date" id="client-ultimo-contacto" value="${escapeHtml(c.ultimoContacto||'')}">
       </div>
       <div class="field">
         <label>Puntos de fidelización</label>
@@ -3810,15 +3981,17 @@ function saveClient(id){
   if(!name){ showToast('El nombre es obligatorio'); return; }
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
-  const visits = parseInt(document.getElementById('client-visits').value) || 0;
+  const cp = document.getElementById('client-cp').value.trim();
+  const cumpleanos = document.getElementById('client-cumpleanos').value;
+  const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
   const points = parseInt(document.getElementById('client-points').value) || 0;
   const allergies = document.getElementById('client-allergies').value.trim();
   const notes = document.getElementById('client-notes').value.trim();
 
   if(id){
-    Object.assign(DB.clients.find(x=>x.id===id), {name, phone, email, visits, points, allergies, notes});
+    Object.assign(DB.clients.find(x=>x.id===id), {name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
   }else{
-    DB.clients.push({id: genId(), name, phone, email, visits, points, allergies, notes});
+    DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
   }
   saveDB();
   closeModal();
@@ -3829,11 +4002,10 @@ function saveClient(id){
 function adjustClientVisit(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
-  c.visits = (c.visits||0) + 1;
   c.points = (c.points||0) + 10;
   saveDB();
   renderClientes();
-  showToast('Visita registrada (+10 puntos)');
+  showToast('+10 puntos de fidelización');
 }
 
 function deleteClient(id){
@@ -3848,50 +4020,163 @@ function deleteClient(id){
    RESERVAS — Reservas vinculadas a mesas del TPV
    ============================================================ */
 const RESERVATION_STATUS = {confirmada:'Confirmada', cancelada:'Cancelada', completada:'Completada'};
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let reservasTab = 'dia';
+let reservasDate = todayStr();
+let reservasWeekOffset = 0;
+let reservasMonthOffset = 0;
+
+function reservationStatusBadge(status){
+  return status==='confirmada' ? '<span class="badge badge-green">Confirmada</span>'
+    : status==='cancelada' ? '<span class="badge badge-red">Cancelada</span>'
+    : '<span class="badge badge-blue">Completada</span>';
+}
+
+function setReservasTab(t){
+  reservasTab = t;
+  renderReservas();
+}
 
 function renderReservas(){
-  const dateInput = document.getElementById('reservas-filter-date');
-  if(!dateInput.value) dateInput.value = todayStr();
-  const date = dateInput.value;
+  document.querySelectorAll('#view-reservas .ge-tab').forEach(b => b.classList.remove('active'));
+  const tabBtn = document.getElementById('reservas-tab-'+reservasTab);
+  if(tabBtn) tabBtn.classList.add('active');
 
+  if(reservasTab === 'semana') renderReservasSemana();
+  else if(reservasTab === 'mes') renderReservasMes();
+  else renderReservasDia();
+}
+
+function goToReservasDia(date){
+  reservasDate = date;
+  reservasTab = 'dia';
+  renderReservas();
+}
+
+function renderReservasDia(){
+  const box = document.getElementById('reservas-tab-content');
+  const date = reservasDate;
   const items = DB.reservations.filter(r => r.date === date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
-  const box = document.getElementById('reservas-list');
 
-  if(!items.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`;
-    return;
+  const tableHtml = !items.length
+    ? `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`
+    : `<div class="table-wrap"><table>
+        <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${items.map(r => {
+            const client = DB.clients.find(c=>c.id===r.clientId);
+            const table = DB.tables.find(t=>t.id===r.tableId);
+            return `
+              <tr>
+                <td><strong>${escapeHtml(r.time)}</strong></td>
+                <td>${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
+                <td>${r.people}</td>
+                <td>${table ? escapeHtml(table.name) : '<span class="badge badge-gray">Sin asignar</span>'}</td>
+                <td class="wrap">${escapeHtml(r.notes||'—')}</td>
+                <td>${reservationStatusBadge(r.status)}</td>
+                <td class="actions-cell">
+                  <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
+                  <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table></div>`;
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <input type="date" id="reservas-filter-date" value="${date}" onchange="reservasDate=this.value;renderReservas()">
+      </div>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+    </div>
+    ${tableHtml}
+  `;
+}
+
+function renderReservasSemana(){
+  const box = document.getElementById('reservas-tab-content');
+  const dates = getWeekDates(reservasWeekOffset);
+
+  const cardsHtml = dates.map((d, i) => {
+    const ds = dateStr(d);
+    const items = DB.reservations.filter(r => r.date === ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const isToday = ds === todayStr();
+    return `
+      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
+        <h3 style="justify-content:space-between;font-size:14px">
+          <span>${WEEK_DAYS[i]} ${d.getDate()}/${d.getMonth()+1}</span>
+          ${items.length ? `<span class="badge badge-blue">${items.length}</span>` : ''}
+        </h3>
+        ${items.length ? items.map(r => {
+          const client = DB.clients.find(c=>c.id===r.clientId);
+          return `<div style="font-size:12px;padding:2px 0">${escapeHtml(r.time)} · ${escapeHtml(client ? client.name : (r.clientName||'—'))} (${r.people}p)</div>`;
+        }).join('') : `<div style="font-size:12px;color:var(--muted)">Sin reservas</div>`}
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm" onclick="reservasWeekOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
+        <button class="btn btn-sm" onclick="reservasWeekOffset=0;renderReservas()">Hoy</button>
+        <button class="btn btn-sm" onclick="reservasWeekOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
+        <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
+      </div>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+    </div>
+    <div class="grid grid-3">${cardsHtml}</div>
+  `;
+}
+
+function renderReservasMes(){
+  const box = document.getElementById('reservas-tab-content');
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth() + reservasMonthOffset, 1);
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const counts = {};
+  DB.reservations.forEach(r => { counts[r.date] = (counts[r.date]||0) + 1; });
+
+  let cells = '';
+  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = dateStr(new Date(year, month, day));
+    const count = counts[ds] || 0;
+    const isToday = ds === todayStr();
+    cells += `
+      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
+        <div style="font-weight:700">${day}</div>
+        ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
+      </div>
+    `;
   }
 
-  box.innerHTML = `<div class="table-wrap"><table>
-    <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
-    <tbody>
-      ${items.map(r => {
-        const client = DB.clients.find(c=>c.id===r.clientId);
-        const table = DB.tables.find(t=>t.id===r.tableId);
-        const statusBadge = r.status==='confirmada' ? '<span class="badge badge-green">Confirmada</span>'
-          : r.status==='cancelada' ? '<span class="badge badge-red">Cancelada</span>'
-          : '<span class="badge badge-blue">Completada</span>';
-        return `
-          <tr>
-            <td><strong>${escapeHtml(r.time)}</strong></td>
-            <td>${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
-            <td>${r.people}</td>
-            <td>${table ? escapeHtml(table.name) : '<span class="badge badge-gray">Sin asignar</span>'}</td>
-            <td class="wrap">${escapeHtml(r.notes||'—')}</td>
-            <td>${statusBadge}</td>
-            <td class="actions-cell">
-              <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
-              <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
-            </td>
-          </tr>
-        `;
-      }).join('')}
-    </tbody>
-  </table></div>`;
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm" onclick="reservasMonthOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
+        <button class="btn btn-sm" onclick="reservasMonthOffset=0;renderReservas()">Hoy</button>
+        <button class="btn btn-sm" onclick="reservasMonthOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
+        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+      </div>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
+      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
 }
 
 function openReservationModal(id){
-  const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: document.getElementById('reservas-filter-date').value || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
+  const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: reservasDate || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
 
   const clientOptions = `<option value="">— Cliente sin ficha —</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
   const tableOptions = `<option value="">Sin asignar</option>` + DB.tables.map(t=>`<option value="${t.id}" ${r.tableId===t.id?'selected':''}>${escapeHtml(t.name)}</option>`).join('');
