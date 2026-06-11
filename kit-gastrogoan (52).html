@@ -1411,7 +1411,7 @@ function openIngredientModal(id){
     `);
     return;
   }
-  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:DB.providers[0].nombre,unit:'g',price:0,packQty:1,packPrice:0,allergens:[]};
+  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:DB.providers[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[]};
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -1451,8 +1451,8 @@ function openIngredientModal(id){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Cantidad por compra</label>
-        <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
+        <label id="ing-pack-qty-label">Cantidad por compra (en ${escapeHtml(ing.unit)}${ing.unit==='g'?', ej. 1000 = 1 kg':''})</label>
+        <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
       </div>
       <div class="field">
         <label>Precio de la compra (€)</label>
@@ -1482,6 +1482,7 @@ function updateIngPackPrice(){
   const unit = document.getElementById('ing-unit').value;
   const price = qty > 0 ? packPrice / qty : 0;
   document.getElementById('ing-unit-price').textContent = `${fmtMoney(price)} / ${unit}`;
+  document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${unit==='g'?', ej. 1000 = 1 kg':''})`;
 }
 
 function saveIngredient(id){
@@ -2514,8 +2515,7 @@ function renderTPV(){
     const order = getOpenOrderForTable(t.id);
     const total = order ? orderTotal(order) : 0;
     let badge = '<span class="badge badge-green">Libre</span>';
-    if(order && order.status==='cuenta') badge = '<span class="badge badge-purple">Cuenta pedida</span>';
-    else if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
+    if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
         <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
@@ -2540,7 +2540,7 @@ function renderTPV(){
       ${toGoOrders.map(o => `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          ${o.status==='cuenta' ? '<span class="badge badge-purple">Cuenta pedida</span>' : '<span class="badge badge-amber">Abierto</span>'}
+          <span class="badge badge-amber">Abierto</span>
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
       `).join('')}
@@ -2566,7 +2566,17 @@ function renderTPV(){
 function addTable(){
   const name = prompt('Número o nombre de la mesa:');
   if(!name) return;
-  DB.tables.push({id: genId(), name: name.trim()});
+  const pax = parseInt(prompt('¿Cuántas personas?', '2')) || 0;
+  const table = {id: genId(), name: name.trim()};
+  DB.tables.push(table);
+  if(pax > 0){
+    const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
+    DB.tpvOrders.push(order);
+    saveDB();
+    renderTPV();
+    renderTableOrderModal(order.id);
+    return;
+  }
   saveDB();
   renderTPV();
 }
@@ -2660,20 +2670,32 @@ function renderTableOrderModal(orderId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
-      ${order.status!=='cuenta' ? `<button class="btn" onclick="requestBill(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-receipt"></i> Pedir cuenta</button>` : ''}
+      <button class="btn" onclick="printBill(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-receipt"></i> Cuenta</button>
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
 }
 
-function requestBill(orderId){
+function printBill(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  order.status = 'cuenta';
-  saveDB();
-  closeModal();
-  renderTPV();
-  showToast('Cuenta pedida');
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  const lines = (order.items||[]).map(l => `${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)).join('\n');
+  const total = orderTotal(order);
+  const win = window.open('', '_blank', 'width=320,height=520');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cuenta</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
+${escapeHtml(DB.business.name||'GastroGoan')}
+${todayStr()}
+${table ? escapeHtml(table.name) + (order.pax?` · ${order.pax} pers.`:'') : (order.tipo==='delivery'?'Delivery':'Take Away')}${order.clienteNombre?' - '+escapeHtml(order.clienteNombre):''}
+------------------------------
+${escapeHtml(lines)}
+------------------------------
+TOTAL: ${fmtMoney(total)}
+
+¡Gracias por su visita!
+</body></html>`);
+  win.document.close();
+  win.print();
 }
 
 function addOrderItem(orderId, secId, platoId){
