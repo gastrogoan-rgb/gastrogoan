@@ -46,6 +46,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   position:sticky;top:0;z-index:50;
   gap:12px;
 }
+.app-header #lock-btn{margin-left:auto}
+.app-logo-icon img{width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff}
 .app-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
 .app-logo-icon{
   width:36px;height:36px;border-radius:10px;
@@ -289,9 +291,10 @@ td.wrap{white-space:normal}
 <!-- Header -->
 <header class="app-header" id="app-header">
   <a class="app-logo" href="#" onclick="goHome();return false">
-    <div class="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
-    <span class="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
+    <div class="app-logo-icon" id="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
+    <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
+  <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
 </header>
 
   <!-- Content -->
@@ -836,7 +839,12 @@ function defaultData(){
     },
     clients: [],
     reservations: [],
-    business: {name:'', address:'', phone:'', email:'', schedule:'', description:''},
+    business: {
+      name:'', address:'', phone:'', email:'', schedule:'', description:'',
+      logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
+      mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
+      pin:'', protectedModules:[]
+    },
     ge: {
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
       variables: [], // {id, mes, año, categoria, proveedor, importe, fecha}
@@ -953,7 +961,25 @@ function openFolder(key){
   currentFolder = key;
   navigate('folder');
 }
+let ownerUnlocked = false;
+
+function isProtectedModule(view){
+  const b = DB.business || {};
+  return !!b.pin && (b.protectedModules||[]).includes(view);
+}
+
+function lockOwnerArea(){
+  ownerUnlocked = false;
+  document.getElementById('lock-btn').style.display = 'none';
+  goHome();
+}
+
 function navigate(view){
+  if(isProtectedModule(view) && !ownerUnlocked){
+    requestOwnerPin(view);
+    return;
+  }
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById('view-' + view);
   if(target) target.classList.add('active');
@@ -962,6 +988,36 @@ function navigate(view){
 
   renderView(view);
   location.hash = view;
+}
+
+function requestOwnerPin(targetView){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> Acceso protegido</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Introduce el PIN de propietario</label>
+      <input type="password" id="owner-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Desbloquear</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('owner-pin-input')?.focus(), 50);
+}
+
+function verifyOwnerPin(targetView){
+  const val = document.getElementById('owner-pin-input').value;
+  if(val === DB.business.pin){
+    ownerUnlocked = true;
+    document.getElementById('lock-btn').style.display = '';
+    closeModal();
+    navigate(targetView);
+  }else{
+    showToast('PIN incorrecto');
+  }
 }
 function renderView(view){
   switch(view){
@@ -4583,14 +4639,75 @@ function deleteReservation(id){
 /* ============================================================
    MI NEGOCIO — Datos del establecimiento
    ============================================================ */
+const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
+const PROTECTABLE_MODULES = [
+  {id:'economia', name:'Gestión Económica'},
+  {id:'dashboard', name:'Panel de Control'},
+  {id:'megalista', name:'Mega Lista'},
+  {id:'proveedores', name:'Proveedores'},
+  {id:'escandallo', name:'Escandallo'},
+  {id:'fichas', name:'Fichas Técnicas'},
+  {id:'carta', name:'Carta'},
+  {id:'pedidos', name:'Pedidos'},
+];
+
 function renderMiNegocio(){
   const b = DB.business || {};
   document.getElementById('minegocio-content').innerHTML = `
-    <div class="card" style="max-width:640px">
+    <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> Acceso propietario</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>PIN de acceso (4 dígitos)</label>
+          <input type="password" id="mn-pin" maxlength="4" inputmode="numeric" placeholder="••••" value="${escapeHtml(b.pin||'')}" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <small style="color:var(--muted)">Vacío = sin PIN. Protege los módulos que marques abajo.</small>
+        </div>
+      </div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 6px;text-transform:uppercase">Módulos protegidos</label>
+      <div class="grid grid-2">
+        ${PROTECTABLE_MODULES.map(m => `
+          <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;background:#fff;padding:8px 10px;border-radius:7px;border:1px solid var(--border)">
+            <input type="checkbox" class="mn-prot" value="${m.id}" ${(b.protectedModules||[]).includes(m.id)?'checked':''} style="width:auto"> ${escapeHtml(m.name)}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-id-badge-2"></i> Identidad</h3>
       <div class="field">
-        <label>Nombre del establecimiento</label>
+        <label>Logo del establecimiento</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="mn-logo-preview" style="width:64px;height:64px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff">
+            ${b.logo ? `<img src="${b.logo}" style="width:100%;height:100%;object-fit:contain">` : `<i class="ti ti-photo" style="color:var(--muted)"></i>`}
+          </div>
+          <div>
+            <input type="file" id="mn-logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+            <button class="btn btn-sm" onclick="document.getElementById('mn-logo-input').click()"><i class="ti ti-upload"></i> Subir logo</button>
+            ${b.logo ? `<button class="btn btn-sm btn-danger" onclick="removeLogo()"><i class="ti ti-trash"></i> Quitar</button>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nombre del establecimiento *</label>
         <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="Ej. Restaurante GastroGoan">
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tipo de negocio</label>
+          <select id="mn-tipo">
+            ${BUSINESS_TIPOS.map(t=>`<option ${b.tipo===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Año de apertura</label>
+          <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-address-book"></i> Contacto</h3>
       <div class="field">
         <label>Dirección</label>
         <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad">
@@ -4605,12 +4722,65 @@ function renderMiNegocio(){
           <input type="email" id="business-email" value="${escapeHtml(b.email||'')}" placeholder="contacto@negocio.com">
         </div>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Web</label>
+          <input type="url" id="mn-web" value="${escapeHtml(b.web||'')}" placeholder="www.milocal.com">
+        </div>
+        <div class="field">
+          <label>CIF/NIF</label>
+          <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-building-store"></i> Operativa</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Propietario</label>
+          <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo">
+        </div>
+        <div class="field">
+          <label>Aforo</label>
+          <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mesas interior</label>
+          <input type="number" id="mn-mesas-int" value="${escapeHtml(b.mesasInt||'')}" placeholder="8">
+        </div>
+        <div class="field">
+          <label>Mesas terraza</label>
+          <input type="number" id="mn-mesas-ext" value="${escapeHtml(b.mesasExt||'')}" placeholder="0">
+        </div>
+      </div>
       <div class="field">
         <label>Horario de apertura</label>
         <input type="text" id="business-schedule" value="${escapeHtml(b.schedule||'')}" placeholder="Ej. Lun-Dom 12:00-00:00">
       </div>
+      <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Sincronizar mesas con TPV</button>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-brand-instagram"></i> Redes sociales</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Instagram</label>
+          <input type="text" id="mn-ig" value="${escapeHtml(b.ig||'')}" placeholder="@milocal">
+        </div>
+        <div class="field">
+          <label>Facebook</label>
+          <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-notes"></i> Descripción</h3>
       <div class="field">
-        <label>Descripción</label>
+        <label>Descripción / Concepto</label>
         <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
       </div>
       <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar</button>
@@ -4618,16 +4788,76 @@ function renderMiNegocio(){
   `;
 }
 
+function handleLogoUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    DB.business.logo = e.target.result;
+    saveDB();
+    renderMiNegocio();
+    renderHeader();
+    showToast('Logo actualizado');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo(){
+  DB.business.logo = '';
+  saveDB();
+  renderMiNegocio();
+  renderHeader();
+}
+
+function renderHeader(){
+  const b = DB.business || {};
+  const icon = document.getElementById('app-logo-icon');
+  icon.innerHTML = b.logo ? `<img src="${b.logo}" alt="Logo">` : `<i class="ti ti-tools-kitchen-2"></i>`;
+  const text = document.getElementById('app-logo-text');
+  if(b.name){
+    text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · Kit de Gestión</span>`;
+  }else{
+    text.innerHTML = `GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span>`;
+  }
+}
+
+function syncMesasConfig(){
+  const mesasInt = parseInt(document.getElementById('mn-mesas-int').value) || 0;
+  const mesasExt = parseInt(document.getElementById('mn-mesas-ext').value) || 0;
+  [['Interior', mesasInt], ['Terraza', mesasExt]].forEach(([zone, count]) => {
+    const existing = DB.tables.filter(t => (t.zone||'Interior') === zone);
+    for(let i = existing.length + 1; i <= count; i++){
+      DB.tables.push({id: genId(), name: `Mesa ${zone==='Terraza'?'T':''}${i}`, zone});
+    }
+  });
+  saveDB();
+  showToast('Mesas sincronizadas con el TPV');
+}
+
 function saveBusiness(){
   DB.business = {
+    ...DB.business,
     name: document.getElementById('business-name').value.trim(),
     address: document.getElementById('business-address').value.trim(),
     phone: document.getElementById('business-phone').value.trim(),
     email: document.getElementById('business-email').value.trim(),
     schedule: document.getElementById('business-schedule').value.trim(),
     description: document.getElementById('business-description').value.trim(),
+    tipo: document.getElementById('mn-tipo').value,
+    anyo: document.getElementById('mn-anyo').value.trim(),
+    web: document.getElementById('mn-web').value.trim(),
+    cif: document.getElementById('mn-cif').value.trim(),
+    prop: document.getElementById('mn-prop').value.trim(),
+    mesasInt: document.getElementById('mn-mesas-int').value.trim(),
+    mesasExt: document.getElementById('mn-mesas-ext').value.trim(),
+    aforo: document.getElementById('mn-aforo').value.trim(),
+    ig: document.getElementById('mn-ig').value.trim(),
+    fb: document.getElementById('mn-fb').value.trim(),
+    pin: document.getElementById('mn-pin').value.trim(),
+    protectedModules: [...document.querySelectorAll('.mn-prot:checked')].map(c=>c.value),
   };
   saveDB();
+  renderHeader();
   showToast('Datos del negocio guardados');
 }
 
@@ -4663,6 +4893,7 @@ function renderManual(){
    INIT
    ============================================================ */
 window.addEventListener('DOMContentLoaded', () => {
+  renderHeader();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
