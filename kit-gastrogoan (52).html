@@ -3278,7 +3278,6 @@ function renderTableOrderModal(orderId){
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
       <button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id})" ${!pendingCount?'disabled':''}><i class="ti ti-chef-hat"></i> Marchar a cocina${pendingCount?` (${pendingCount})`:''}</button>
-      <button class="btn" onclick="printBill(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-receipt"></i> Cuenta</button>
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
@@ -3386,28 +3385,6 @@ function renderComandasCocina(){
       `).join('')}
     </div>
   `).join('')}</div>`;
-}
-
-function printBill(orderId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const lines = (order.items||[]).map(l => `${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)).join('\n');
-  const total = orderTotal(order);
-  const win = window.open('', '_blank', 'width=320,height=520');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cuenta</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
-${escapeHtml(DB.business.name||'GastroGoan')}
-${todayStr()}
-${table ? escapeHtml(table.name) + (order.pax?` · ${order.pax} pers.`:'') : (order.tipo==='delivery'?'Delivery':'Take Away')}${order.clienteNombre?' - '+escapeHtml(order.clienteNombre):''}
-------------------------------
-${escapeHtml(lines)}
-------------------------------
-TOTAL: ${fmtMoney(total)}
-
-¡Gracias por su visita!
-</body></html>`);
-  win.document.close();
-  win.print();
 }
 
 function addOrderItem(orderId, secId, platoId){
