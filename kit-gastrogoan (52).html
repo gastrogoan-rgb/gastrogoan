@@ -663,6 +663,7 @@ td.wrap{white-space:normal}
         <button class="ge-tab" onclick="GE.tab('capex')">🏗 CAPEX</button>
         <button class="ge-tab" onclick="GE.tab('resultado')">📈 Resultado</button>
         <button class="ge-tab" onclick="GE.tab('tesoreria')">🏦 Tesorería</button>
+        <button class="ge-tab" onclick="GE.tab('platos')">🍽 Análisis de Platos</button>
       </nav>
 
       <!-- GASTOS FIJOS -->
@@ -812,6 +813,36 @@ td.wrap{white-space:normal}
         <div class="vis-section">
           <h4>Resultado mensual anual <span class="ge-auto">AUTO</span></h4>
           <div id="te-annual-chart" class="bar-chart"></div>
+        </div>
+      </div>
+
+      <!-- ANÁLISIS DE PLATOS -->
+      <div id="ge-platos" class="ge-tab-panel">
+        <div class="month-sel" id="platos-period-sel"></div>
+        <div class="ge-kpi-grid" id="platos-kpis"></div>
+        <div class="vis-section" style="margin-bottom:14px">
+          <h4>Top 5 platos por ingresos <span class="ge-auto">AUTO</span></h4>
+          <div id="platos-chart" class="bar-chart"></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>🔥 Más vendidos (por unidades)</h4></div>
+          <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>🧊 Menos vendidos</h4></div>
+          <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>💎 Más rentables (margen)</h4></div>
+          <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>⚠️ Menos rentables</h4></div>
+          <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>👻 Sin ventas en el periodo</h4></div>
+          <div id="platos-sin-ventas"></div>
         </div>
       </div>
     </section>
@@ -4709,11 +4740,12 @@ function deleteOrder(id){
    ============================================================ */
 const GE = (function(){
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const TABS = ['fijos','variables','cdr','pe','capex','resultado','tesoreria'];
+  const TABS = ['fijos','variables','cdr','pe','capex','resultado','tesoreria','platos'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
+  let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   const currentYear = new Date().getFullYear();
 
   function ge(){ return DB.ge; }
@@ -4736,6 +4768,7 @@ const GE = (function(){
     if(t==='capex') renderCapex();
     if(t==='resultado') renderResultado();
     if(t==='tesoreria') renderTesoreria();
+    if(t==='platos') renderPlatos();
   }
 
   /* -- Helpers -- */
@@ -5215,7 +5248,138 @@ const GE = (function(){
     }).join('');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria};
+  /* -- ANÁLISIS DE PLATOS -- */
+  function getPlatosRange(){
+    const today = todayStr();
+    if(platosPeriod === 'custom' && platosFrom && platosTo){
+      return platosFrom <= platosTo ? {start: platosFrom, end: platosTo} : {start: platosTo, end: platosFrom};
+    }
+    const d = new Date();
+    if(platosPeriod === 'hoy') return {start: today, end: today};
+    if(platosPeriod === 'semana') return {start: dateStr(new Date(d.getTime() - 6*86400000)), end: today};
+    if(platosPeriod === 'año') return {start: `${d.getFullYear()}-01-01`, end: today};
+    if(platosPeriod === 'todo') return {start: '0000-01-01', end: '9999-12-31'};
+    return {start: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`, end: today}; // mes
+  }
+
+  function platosStats(){
+    const {start, end} = getPlatosRange();
+    const sales = DB.sales.filter(s => s.date >= start && s.date <= end);
+    const map = {};
+    sales.forEach(sale => {
+      (sale.items||[]).forEach(line => {
+        const key = line.recipeId ? ('r'+line.recipeId) : ('m'+(line.name||''));
+        if(!map[key]){
+          const recipe = line.recipeId ? getRecipe(line.recipeId) : null;
+          map[key] = {
+            name: line.name || '(sin nombre)',
+            recipeId: line.recipeId || null,
+            category: recipe ? (recipe.category||'Sin categoría') : 'Sin escandallo',
+            unitCost: recipe ? recipeCost(recipe) : null,
+            units: 0, revenue: 0
+          };
+        }
+        map[key].units += (line.qty||0);
+        map[key].revenue += (line.price||0) * (line.qty||0);
+      });
+    });
+    const items = Object.values(map).map(it => {
+      const cost = it.unitCost!=null ? it.unitCost * it.units : null;
+      const margin = cost!=null ? it.revenue - cost : null;
+      const marginPct = (cost!=null && it.revenue>0) ? (margin/it.revenue*100) : null;
+      return {...it, cost, margin, marginPct};
+    });
+    return {start, end, items};
+  }
+
+  function renderPlatosPeriodSel(){
+    const periods = [{k:'hoy',l:'Hoy'},{k:'semana',l:'Últimos 7 días'},{k:'mes',l:'Este mes'},{k:'año',l:'Este año'},{k:'todo',l:'Todo'}];
+    document.getElementById('platos-period-sel').innerHTML = periods.map(p=>`
+      <div class="month-pill${platosPeriod===p.k?' active':''}" onclick="GE.setPlatosPeriod('${p.k}')">${p.l}</div>
+    `).join('') + `
+      <input type="date" id="platos-from-input" value="${platosFrom}" style="border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px" onchange="GE.setPlatosCustom()">
+      <span style="font-size:12px;color:var(--muted);align-self:center">a</span>
+      <input type="date" id="platos-to-input" value="${platosTo}" style="border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px" onchange="GE.setPlatosCustom()">
+    `;
+  }
+  function setPlatosPeriod(p){ platosPeriod = p; renderPlatos(); }
+  function setPlatosCustom(){
+    platosFrom = document.getElementById('platos-from-input').value;
+    platosTo = document.getElementById('platos-to-input').value;
+    if(platosFrom && platosTo){ platosPeriod = 'custom'; renderPlatos(); }
+  }
+
+  function renderPlatosRankingTable(elId, list, totalIngresos){
+    const tbl = document.getElementById(elId);
+    if(!list.length){ tbl.innerHTML = `<tr><td colspan="5"><div class="empty" style="padding:14px">Sin ventas en este periodo.</div></td></tr>`; return; }
+    tbl.innerHTML = `
+      <thead><tr><th>Plato</th><th style="text-align:left">Categoría</th><th>Uds.</th><th>Ingresos</th><th>% del total</th></tr></thead>
+      <tbody>${list.map(i=>`
+        <tr>
+          <td>${escapeHtml(i.name)}</td>
+          <td style="text-align:left;font-family:inherit;font-weight:400;background:none;border-left:none">${escapeHtml(i.category)}</td>
+          <td>${fmtNum(i.units,0)}</td>
+          <td>${fmtMoney(i.revenue)}</td>
+          <td>${totalIngresos>0?(i.revenue/totalIngresos*100).toFixed(1)+'%':'—'}</td>
+        </tr>`).join('')}</tbody>
+    `;
+  }
+
+  function renderPlatosRentabilidadTable(elId, list){
+    const tbl = document.getElementById(elId);
+    if(!list.length){ tbl.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:14px">Vincula los platos vendidos a recetas del Escandallo para ver su rentabilidad.</div></td></tr>`; return; }
+    tbl.innerHTML = `
+      <thead><tr><th>Plato</th><th>Uds.</th><th>Ingresos</th><th>Coste</th><th>Margen</th><th>% Margen</th></tr></thead>
+      <tbody>${list.map(i=>`
+        <tr>
+          <td>${escapeHtml(i.name)}</td>
+          <td>${fmtNum(i.units,0)}</td>
+          <td>${fmtMoney(i.revenue)}</td>
+          <td>${fmtMoney(i.cost)}</td>
+          <td class="${i.margin>=0?'pos':'neg'}">${fmtMoney(i.margin)}</td>
+          <td class="${i.marginPct>=0?(i.marginPct<25?'':'pos'):'neg'}">${i.marginPct.toFixed(1)}%</td>
+        </tr>`).join('')}</tbody>
+    `;
+  }
+
+  function renderPlatos(){
+    renderPlatosPeriodSel();
+    const {items} = platosStats();
+    const totalUnidades = items.reduce((s,i)=>s+i.units,0);
+    const totalIngresos = items.reduce((s,i)=>s+i.revenue,0);
+    const conReceta = items.filter(i=>i.margin!=null);
+    const totalMargen = conReceta.reduce((s,i)=>s+i.margin,0);
+    const ingresosConReceta = conReceta.reduce((s,i)=>s+i.revenue,0);
+    const margenPct = ingresosConReceta>0 ? (totalMargen/ingresosConReceta*100) : 0;
+    const ticketMedio = totalUnidades>0 ? totalIngresos/totalUnidades : 0;
+
+    document.getElementById('platos-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">Platos vendidos (uds.)</div><div class="val">${fmtNum(totalUnidades,0)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Ingresos totales</div><div class="val">${fmtMoney(totalIngresos)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Margen total</div><div class="val" style="color:${totalMargen>=0?'var(--green)':'var(--red)'}">${conReceta.length?fmtMoney(totalMargen):'—'}</div><div class="sub">${conReceta.length?'Platos con escandallo':'Crea escandallos para ver el margen'}</div></div>
+      <div class="ge-kpi"><div class="lbl">% Margen medio</div><div class="val">${conReceta.length?margenPct.toFixed(1)+'%':'—'}</div></div>
+      <div class="ge-kpi"><div class="lbl">Ticket medio / línea</div><div class="val">${fmtMoney(ticketMedio)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Referencias vendidas</div><div class="val">${items.length}</div></div>
+    `;
+
+    const top5 = [...items].sort((a,b)=>b.revenue-a.revenue).slice(0,5);
+    document.getElementById('platos-chart').innerHTML = top5.length
+      ? barChartHTML(top5.map(i=>({lbl: i.name.length>10 ? i.name.slice(0,9)+'…' : i.name, v:i.revenue})))
+      : `<div class="empty">Sin ventas en este periodo.</div>`;
+
+    renderPlatosRankingTable('platos-mas-vendidos', [...items].sort((a,b)=>b.units-a.units).slice(0,10), totalIngresos);
+    renderPlatosRankingTable('platos-menos-vendidos', [...items].sort((a,b)=>a.units-b.units).slice(0,10), totalIngresos);
+    renderPlatosRentabilidadTable('platos-mas-rentables', conReceta.slice().sort((a,b)=>b.margin-a.margin).slice(0,10));
+    renderPlatosRentabilidadTable('platos-menos-rentables', conReceta.slice().sort((a,b)=>a.margin-b.margin).slice(0,10));
+
+    const soldRecipeIds = new Set(items.filter(i=>i.recipeId).map(i=>i.recipeId));
+    const sinVentas = DB.recipes.filter(r => !soldRecipeIds.has(r.id));
+    document.getElementById('platos-sin-ventas').innerHTML = sinVentas.length
+      ? `<div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">${sinVentas.map(r=>`<span class="badge badge-gray">${escapeHtml(r.name)}</span>`).join('')}</div>`
+      : `<div class="empty" style="padding:12px 16px">Todos los platos del Escandallo se han vendido en este periodo. 🎉</div>`;
+  }
+
+  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom};
 })();
 
 /* ============================================================
