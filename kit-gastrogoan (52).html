@@ -303,6 +303,67 @@ td.wrap{white-space:normal}
   .home-hero{margin:-14px -14px 0}
   .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
 }
+
+@media (max-width: 600px){
+  /* Header */
+  .app-header{padding:0 10px;gap:8px}
+  .app-logo-sub{display:none}
+  .app-logo-text{font-size:14px}
+  .app-logo-icon{width:32px;height:32px;font-size:16px}
+  #cloud-btn span,#sync-badge{font-size:10px}
+  .app-header .btn{padding:6px 10px;font-size:12px}
+  .app-header .btn i{margin:0}
+
+  /* Layout */
+  .content{padding:10px}
+  .home-hero{padding:32px 16px 24px;border-radius:0 0 16px 16px}
+  .home-hero h1{font-size:21px}
+  .home-hero p{font-size:13px}
+  .view-title{font-size:18px}
+  .view-subtitle{font-size:13px;margin-bottom:12px}
+
+  /* Cards / KPIs */
+  .card{padding:12px;margin-bottom:12px}
+  .kpi{padding:12px}
+  .kpi .value{font-size:19px}
+  .grid{gap:10px}
+  .folder-grid{gap:12px;padding:18px 0 4px}
+  .folder-card{padding:18px;min-height:170px}
+  .folder-card h2{font-size:20px}
+  .module-card{padding:16px}
+
+  /* Buttons & toolbars */
+  .btn{padding:8px 12px;font-size:13px}
+  .toolbar{gap:8px}
+  .toolbar .left{gap:8px}
+
+  /* Forms */
+  .field-row{grid-template-columns:1fr;gap:8px}
+  .field input,.field select,.field textarea{font-size:15px;padding:10px}
+
+  /* Tables — allow horizontal scroll, tighten spacing */
+  table{font-size:12px}
+  th,td{padding:8px 8px}
+  .ge-grid th,.ge-grid td{padding:6px 8px;font-size:12px}
+  .ge-grid th:first-child{min-width:120px}
+
+  /* Modal */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{
+    max-width:100%;width:100%;max-height:95vh;border-radius:16px 16px 0 0;
+    padding:14px;
+  }
+  .modal-header h3{font-size:15px}
+  .modal-footer{flex-wrap:wrap}
+  .modal-footer .btn{flex:1;justify-content:center;min-width:120px}
+
+  /* Manual */
+  .manual-detail{padding:14px}
+
+  /* Misc */
+  .badge{font-size:10.5px;padding:3px 7px}
+  .te-row{grid-template-columns:1fr 46px 60px 60px 60px 46px;font-size:11px;gap:4px;padding:9px 10px}
+}
 </style>
 </head>
 <body>
@@ -6605,7 +6666,15 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">6</div><div class="st"><strong>TPV</strong> — Gestiona mesas, comandas, clientes y reservas. Las ventas alimentan la Gestión Económica automáticamente.</div></div>
     <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Gestión Económica</strong> — Registra gastos fijos y compras a proveedores. El P&amp;L y el punto de equilibrio se calculan solos.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Panel de Control</strong> — Consulta aquí cada día para tener todo el negocio a la vista en segundos.</div></div>
-    <div class="manual-tip">💡 Los datos persisten automáticamente. No hay que guardar archivos ni hacer copias — todo se guarda en el navegador (localStorage).</div>`
+    <div class="manual-tip">💡 Los datos persisten automáticamente. No hay que guardar archivos ni hacer copias — todo se guarda en el navegador (localStorage).</div>
+    <h4>Usar el Kit como una app (móvil, tablet y ordenador)</h4>
+    <p>El Kit funciona perfectamente en cualquier dispositivo desde el navegador. Para acceder más rápido, sin escribir la dirección cada vez y con una pantalla más limpia (a pantalla completa, sin barra del navegador), puedes <strong>anclarlo a la pantalla de inicio</strong>:</p>
+    <ul>
+      <li><strong>Móvil/tablet Android (Chrome):</strong> abre el Kit → menú ⋮ (arriba a la derecha) → "Añadir a pantalla de inicio" o "Instalar app"</li>
+      <li><strong>iPhone/iPad (Safari):</strong> abre el Kit → botón compartir <i class="ti ti-share-2"></i> → "Añadir a pantalla de inicio"</li>
+      <li><strong>Ordenador (Chrome/Edge):</strong> abre el Kit → icono de instalar en la barra de direcciones (o menú ⋮ → "Instalar aplicación")</li>
+    </ul>
+    <div class="manual-tip">💡 Así tendrás un icono propio de GastroGoan para abrir el Kit al instante, igual que cualquier otra app, en el TPV de la barra, en la tablet de sala o en tu móvil.</div>`
   },
   {
     title:'📋 Mega Lista',

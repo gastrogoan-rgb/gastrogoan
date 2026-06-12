@@ -43,7 +43,7 @@
   .field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:4px;color:#555;}
   .field input, .field select, .field textarea{
     width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;
-    font-size:14px;font-family:inherit;background:#fff;
+    font-size:16px;font-family:inherit;background:#fff;
   }
   .field textarea{resize:vertical;min-height:60px;}
   .field-row{display:flex;gap:10px;}
@@ -81,6 +81,17 @@
   .success h2{margin-top:10px;}
   .error-box{
     text-align:center;padding:40px 16px;color:var(--red);
+  }
+
+  /* Responsive */
+  @media (max-width: 380px){
+    .wrap{padding:10px;}
+    .card{padding:12px;border-radius:12px;}
+    header{padding:14px 12px;}
+    header h1{font-size:18px;}
+    .field-row{flex-direction:column;gap:0;}
+    .tab-btn{min-width:80px;font-size:12.5px;padding:9px 8px;}
+    .menu-item .name{font-size:13.5px;}
   }
 </style>
 </head>
