@@ -967,21 +967,21 @@ function getConnectionCode(){
   return cloudConfig ? btoa(JSON.stringify(cloudConfig)) : '';
 }
 
-function openTutorial(){
+function openTutorial(mode){
   if(document.getElementById('tutorial-overlay')) return;
   const ov = document.createElement('div');
   ov.id = 'tutorial-overlay';
   ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column';
   ov.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;background:#000;color:#fff;padding:8px 14px;flex-shrink:0">
-      <span style="font-weight:700;font-size:13px">🎬 Tutorial · Conectar la nube</span>
+      <span style="font-weight:700;font-size:13px">🎬 Tutorial · ${mode === 'empleado' ? 'Conectar tu móvil (camareros)' : 'Conectar la nube (dueño)'}</span>
       <button onclick="closeTutorial()" style="background:var(--brand-orange);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">✕ Cerrar tutorial</button>
     </div>
     <iframe id="tutorial-frame" style="flex:1;border:none;width:100%;background:#F6EDD5"></iframe>`;
   document.body.appendChild(ov);
   const doc = document.getElementById('tutorial-frame').contentDocument;
   doc.open();
-  doc.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body>' + document.getElementById('tpl-tutorial').innerHTML + '</body></html>');
+  doc.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body><scr' + 'ipt>window.TUTORIAL_MODE=' + JSON.stringify(mode || 'dueno') + '</scr' + 'ipt>' + document.getElementById('tpl-tutorial').innerHTML + '</body></html>');
   doc.close();
 }
 
@@ -997,9 +997,10 @@ function openCloudWelcome(){
       <h2 style="margin-bottom:6px">¡Bienvenido a GastroGoan!</h2>
       <p style="color:var(--muted);font-size:14px;margin-bottom:4px"><strong style="color:var(--brand-orange)">PASO 1 · OBLIGATORIO ANTES DE EMPEZAR</strong></p>
       <p style="font-size:14px;margin-bottom:16px">Conecta tu restaurante a la nube para que <strong>todos tus dispositivos</strong> (TPV, móviles de camareros, pantalla de cocina) trabajen juntos y sincronizados.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('guia')"><i class="ti ti-rocket"></i> Soy el dueño — Configurar la nube (10 min)</button>
-      <button class="btn" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('codigo')"><i class="ti ti-device-mobile"></i> Soy camarero — Tengo un código de conexión</button>
-      <button class="btn" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial()">🎬 Ver tutorial paso a paso (con imágenes)</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:6px;padding:14px;font-size:15px" onclick="openCloudWizard('guia')"><i class="ti ti-rocket"></i> Soy el dueño — Configurar la nube (10 min)</button>
+      <button class="btn" style="width:100%;margin-bottom:16px;padding:10px;font-size:13.5px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('dueno')">🎬 Tutorial para el dueño (paso a paso con imágenes)</button>
+      <button class="btn" style="width:100%;margin-bottom:6px;padding:14px;font-size:15px" onclick="openCloudWizard('codigo')"><i class="ti ti-device-mobile"></i> Soy empleado — Tengo un código de conexión</button>
+      <button class="btn" style="width:100%;margin-bottom:16px;padding:10px;font-size:13.5px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('empleado')">🎬 Tutorial para empleados (2 minutos)</button>
       <button class="btn" style="width:100%;border:none;color:var(--muted);font-weight:400" onclick="skipCloudSetup()">Más tarde — usar solo en este dispositivo</button>
     </div>
   `);
@@ -1019,7 +1020,7 @@ function openCloudWizard(tab){
   if(tab === 'guia'){
     body = `
       <p style="font-size:13.5px;margin-bottom:10px">Sigue estos pasos <strong>una sola vez</strong> desde un ordenador. Es <strong>gratis</strong> y tus datos quedan en tu propia cuenta de Google.</p>
-      <button class="btn" style="width:100%;margin-bottom:14px;padding:11px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial()">🎬 ¿Te pierdes? Abre el tutorial paso a paso con imágenes</button>
+      <button class="btn" style="width:100%;margin-bottom:14px;padding:11px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('dueno')">🎬 ¿Te pierdes? Abre el tutorial paso a paso con imágenes</button>
       <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>console.firebase.google.com</strong> e inicia sesión con tu cuenta de Google (Gmail).</div></div>
       <div class="manual-step"><div class="sn">2</div><div class="st">Pulsa <strong>"Crear proyecto"</strong> → escribe el nombre de tu restaurante → <strong>desactiva</strong> Google Analytics → Crear proyecto.</div></div>
       <div class="manual-step"><div class="sn">3</div><div class="st">En el menú izquierdo: <strong>Compilación → Realtime Database</strong> → "Crear base de datos" → ubicación <strong>Bélgica (europe-west1)</strong> → empezar en <strong>modo de prueba</strong> → Habilitar.</div></div>
@@ -1034,7 +1035,8 @@ function openCloudWizard(tab){
     `;
   } else if(tab === 'codigo'){
     body = `
-      <p style="font-size:13.5px;margin-bottom:12px">Si el dueño ya configuró la nube, pídele el <strong>código de conexión</strong> (te lo puede enviar por WhatsApp) y pégalo aquí:</p>
+      <p style="font-size:13.5px;margin-bottom:10px">Si el dueño ya configuró la nube, pídele el <strong>código de conexión</strong> (te lo puede enviar por WhatsApp) y pégalo aquí:</p>
+      <button class="btn" style="width:100%;margin-bottom:14px;padding:11px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('empleado')">🎬 ¿Cómo lo hago? Ver tutorial para empleados (2 min)</button>
       <div class="field">
         <textarea id="cloud-code-paste" rows="4" placeholder="Pega aquí el código de conexión..." style="font-family:monospace;font-size:12px"></textarea>
       </div>
@@ -6061,7 +6063,7 @@ const SIDE = (sel) => `
     <div class="item">📊 Analíticas</div>
   </div>`;
 
-const STEPS = [
+const OWNER_STEPS = [
   {
     title:'Entra en la consola de Firebase',
     url:'console.firebase.google.com',
@@ -6242,6 +6244,66 @@ const STEPS = [
   }
 ];
 
+const WAITER_STEPS = [
+  {
+    title:'Pídele el código de conexión al dueño',
+    url:'WhatsApp',
+    caption:'El dueño te enviará un <strong>código de conexión</strong> (un texto largo) por <strong>WhatsApp</strong>. <strong>Mantén pulsado el mensaje → Copiar</strong>. Si no lo tienes, pídeselo: él lo encuentra en su app, en <em>☁ Nube → "Estado y compartir"</em>.',
+    screen:`
+      <div style="background:#ECE5DD;min-height:380px;padding:24px;display:flex;flex-direction:column;gap:10px">
+        <div style="background:#fff;border-radius:10px;padding:10px 14px;max-width:330px;font-size:13px;box-shadow:0 1px 2px rgba(0,0,0,.12)">
+          <div style="font-weight:700;color:#075E54;margin-bottom:4px">Jefe 👨‍🍳</div>
+          Hola! Este es el código para conectar tu móvil a la app del restaurante 👇
+        </div>
+        <div class="hl" style="background:#fff;border-radius:10px;padding:10px 14px;max-width:330px;font-size:10.5px;font-family:monospace;word-break:break-all;box-shadow:0 1px 2px rgba(0,0,0,.12);cursor:pointer" onclick="go(1)">eyJhcGlLZXkiOiJBSXphU3lCLi4uIiwiYXV0aERvbWFpbiI6Im1pLXJlc3RhdXJhbnRlLmZpcmViYXNlYXBwLmNvbSIs...<span class="hand" style="right:-36px;top:10px">👆</span></div>
+        <div style="font-size:12px;color:#666">↑ mantén pulsado → <strong>Copiar</strong></div>
+      </div>`
+  },
+  {
+    title:'Abre GastroGoan y pulsa "Soy camarero"',
+    url:'GastroGoan — tu app',
+    caption:'Abre la app <strong>GastroGoan</strong> en tu móvil. En el mensaje de bienvenida pulsa <strong>"Soy camarero — Tengo un código de conexión"</strong>. Si ya cerraste ese mensaje, pulsa el botón <strong>☁ Nube</strong> (arriba) → pestaña <strong>"Tengo un código"</strong>.',
+    screen:`<div class="gg-screen">
+      <div class="gg-modal" style="text-align:center">
+        <div style="font-size:36px;margin-bottom:6px">☁️</div>
+        <h3 style="margin-bottom:12px">¡Bienvenido a GastroGoan!</h3>
+        <div style="border:1.5px solid var(--border);border-radius:9px;padding:12px;font-weight:700;color:#444;margin-bottom:8px">🚀 Soy el dueño — Configurar la nube</div>
+        <div class="hl" style="background:var(--brand-orange);color:#fff;border-radius:9px;padding:12px;font-weight:700;cursor:pointer" onclick="go(1)">📱 Soy camarero — Tengo un código de conexión<span class="hand" style="right:6px;top:6px">👆</span></div>
+      </div>
+    </div>`
+  },
+  {
+    title:'Pega el código y conecta',
+    url:'GastroGoan — tu app',
+    caption:'<strong>Pega el código</strong> en el cuadro (mantén pulsado dentro del cuadro → Pegar) y pulsa <strong>"Conectar este dispositivo"</strong>. La app se reiniciará ya conectada: verás <strong style="color:#2E7D32">☁ Nube conectada</strong> en verde arriba. A partir de ahí, todas las comandas y mesas se sincronizan solas con el resto de dispositivos.',
+    screen:`<div class="gg-screen">
+      <div class="gg-modal">
+        <h3>☁ Nube — Tengo un código</h3>
+        <div class="gg-textarea hl" style="font-size:10px">eyJhcGlLZXkiOiJBSXphU3lCLi4uIiwiYXV0aERvbWFpbiI6Im1pLXJlc3RhdXJhbnRlLmZpcmViYXNlYXBwLmNvbSIsImRhdGFiYXNlVVJMIjoi...</div>
+        <div class="gg-btn hl" onclick="go(1)" style="cursor:pointer">🔌 Conectar este dispositivo<span class="hand" style="right:8px;top:6px">👆</span></div>
+      </div>
+    </div>`
+  }
+];
+
+const MODE = window.TUTORIAL_MODE === 'empleado' ? 'empleado' : 'dueno';
+const STEPS = MODE === 'empleado' ? WAITER_STEPS : OWNER_STEPS;
+const FINAL_HTML = MODE === 'empleado' ? `
+        <div class="big">🎉</div>
+        <h2>¡Listo! Ya estás conectado</h2>
+        <p>Tu móvil ya trabaja en equipo con el resto: las comandas, mesas y cambios que hagas se ven al instante en todos los dispositivos del restaurante.</p>
+        <p style="font-weight:700;color:var(--brand-orange)">Esto se hace UNA sola vez. No tienes que repetirlo cada día.</p>
+        <p style="font-size:13px;color:#999;margin-top:14px">¿No conecta? Comprueba que copiaste el código ENTERO del WhatsApp (es muy largo, asegúrate de que no se cortó).</p>
+      ` : `
+        <div class="big">🎉</div>
+        <h2>¡Tu restaurante ya está en la nube!</h2>
+        <p>A partir de ahora, todo lo que hagas en cualquier dispositivo (comandas, mesas, escandallos, reservas...) se sincroniza al instante en todos los demás.</p>
+        <p style="font-weight:700;color:var(--brand-orange)">Recuerda: esto se configura UNA sola vez. Los camareros solo necesitan el código de conexión.</p>
+        <p style="font-size:13px;color:#999;margin-top:14px">¿Algo no funcionó? Repasa el paso 7 (las reglas) y el paso 9 (copiar el bloque completo), son los dos despistes más comunes.</p>
+      `;
+const sub = document.querySelector('header h1 span');
+if(sub && MODE === 'empleado') sub.textContent = 'Tutorial para camareros · Conecta tu móvil (2 min)';
+
 let i = 0;
 function render(){
   const total = STEPS.length;
@@ -6257,13 +6319,7 @@ function render(){
     if(!document.getElementById('final')){
       const d = document.createElement('div');
       d.className = 'final'; d.id = 'final';
-      d.innerHTML = `
-        <div class="big">🎉</div>
-        <h2>¡Tu restaurante ya está en la nube!</h2>
-        <p>A partir de ahora, todo lo que hagas en cualquier dispositivo (comandas, mesas, escandallos, reservas...) se sincroniza al instante en todos los demás.</p>
-        <p style="font-weight:700;color:var(--brand-orange)">Recuerda: esto se configura UNA sola vez. Los camareros solo necesitan el código de conexión.</p>
-        <p style="font-size:13px;color:#999;margin-top:14px">¿Algo no funcionó? Repasa el paso 7 (las reglas) y el paso 9 (copiar el bloque completo), son los dos despistes más comunes.</p>
-      `;
+      d.innerHTML = FINAL_HTML;
       main.insertBefore(d, document.querySelector('.nav'));
     }
     return;
