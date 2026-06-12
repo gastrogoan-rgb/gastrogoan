@@ -1147,6 +1147,49 @@ function copyPublicLink(){
   showToast('Enlace copiado');
 }
 
+function renderOnlineCard(){
+  const b = DB.business || {};
+  if(!cloudConfig){
+    return `
+      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">Aquí podrás obtener un enlace y un código QR para que tus clientes reserven mesa o pidan take away/delivery desde su móvil. Antes hay que conectar tu negocio a internet (solo una vez).</p>
+        <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px" onclick="openCloudWizard('guia')"><i class="ti ti-rocket"></i> Conectar mi negocio a internet</button>
+      </div>
+    `;
+  }
+  const link = getPublicClientLink();
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
+  return `
+    <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
+      <p style="font-size:13.5px;margin-bottom:12px">Comparte este código QR o enlace con tus clientes: podrán reservar mesa${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' y pedir take away o delivery' : ''} desde su móvil, sin instalar nada.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <img src="${qrUrl}" alt="Código QR" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
+        <div style="flex:1;min-width:180px">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Descarga el QR e imprímelo para tus mesas, escaparate o redes sociales.</p>
+          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> Descargar QR</a>
+          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> Ver la página</a>
+        </div>
+      </div>
+      <div class="field">
+        <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> Copiar enlace</button>
+        <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Reserva o pide en línea en ' + (b.name || 'nuestro restaurante') + ':\n\n' + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      </div>
+    </div>
+  `;
+}
+
+function copyPublicLinkFrom(elId){
+  const el = document.getElementById(elId);
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
+  showToast('Enlace copiado');
+}
+
 function openTutorial(mode){
   if(document.getElementById('tutorial-overlay')) return;
   const ov = document.createElement('div');
@@ -5962,6 +6005,8 @@ const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecerí
 function renderMiNegocio(){
   const b = DB.business || {};
   document.getElementById('minegocio-content').innerHTML = `
+    ${renderOnlineCard()}
+
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> Acceso propietario</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El acceso a Gestión está protegido por PIN. Cámbialo cuando quieras.</p>
