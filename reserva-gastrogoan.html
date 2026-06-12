@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservas y Pedidos</title>
+<style>
+  :root{
+    --brand-orange:#DF7039;
+    --brand-yellow:#FFFF00;
+    --brand-cream:#F6EDD5;
+    --brand-black:#000000;
+    --muted:#8a8a8a;
+    --border:#e8e0d0;
+    --green:#1f9d55;
+    --green-l:rgba(31,157,85,.12);
+    --red:#e0432f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--brand-cream);color:#222;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{
+    background:var(--brand-black);color:#fff;padding:18px 16px;text-align:center;
+  }
+  header img{max-height:56px;border-radius:8px;margin-bottom:6px;}
+  header h1{margin:0;font-size:20px;}
+  header .sub{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:4px;}
+  .wrap{max-width:560px;margin:0 auto;padding:14px;}
+  .card{
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab-btn{
+    flex:1;min-width:100px;padding:10px 12px;border-radius:10px;border:2px solid var(--border);
+    background:#fff;font-weight:700;font-size:13px;cursor:pointer;text-align:center;color:#222;
+  }
+  .tab-btn.active{border-color:var(--brand-orange);background:var(--brand-orange);color:#fff;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:4px;color:#555;}
+  .field input, .field select, .field textarea{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;
+    font-size:14px;font-family:inherit;background:#fff;
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px 18px;border-radius:10px;border:2px solid var(--brand-orange);
+    background:#fff;color:var(--brand-orange);font-weight:700;font-size:14px;
+    cursor:pointer;width:100%;
+  }
+  .btn-primary{background:var(--brand-orange);color:#fff;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  h2{font-size:16px;margin:0 0 10px;}
+  h3{font-size:13px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 0 8px;}
+  .menu-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--border);
+  }
+  .menu-item:last-child{border-bottom:none;}
+  .menu-item .name{font-weight:600;font-size:14px;}
+  .menu-item .price{font-size:12.5px;color:var(--muted);}
+  .qty-ctl{display:flex;align-items:center;gap:8px;}
+  .qty-ctl button{
+    width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+    background:#fff;font-size:16px;font-weight:700;cursor:pointer;color:var(--brand-orange);
+  }
+  .qty-ctl span{min-width:18px;text-align:center;font-weight:700;}
+  .cart-line{display:flex;justify-content:space-between;font-size:13.5px;padding:4px 0;}
+  .cart-total{display:flex;justify-content:space-between;font-weight:700;font-size:16px;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;}
+  .empty{text-align:center;color:var(--muted);padding:20px;font-size:13.5px;}
+  .success{
+    text-align:center;padding:40px 16px;
+  }
+  .success .icon{font-size:52px;color:var(--green);}
+  .success h2{margin-top:10px;}
+  .error-box{
+    text-align:center;padding:40px 16px;color:var(--red);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="biz-logo"></div>
+  <h1 id="biz-name">Reservas y Pedidos</h1>
+  <div class="sub" id="biz-info"></div>
+</header>
+
+<div class="wrap" id="app">
+  <div class="empty">Cargando…</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<script>
+let cloudConfig = null;
+let db = null;
+let DB = null; // { business, cartas, activeCartaId }
+let currentTab = null; // 'reserva' | 'takeaway' | 'delivery'
+let cart = []; // [{recipeId, sectionId, name, price, qty}]
+
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function fmtMoney(v){
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getCloudConfigFromHash(){
+  try{
+    const h = location.hash.match(/conexion=([^&]+)/);
+    if(h){
+      const cfg = JSON.parse(atob(decodeURIComponent(h[1])));
+      if(cfg && cfg.apiKey) return cfg;
+    }
+  }catch(e){}
+  return null;
+}
+
+function showError(msg){
+  document.getElementById('app').innerHTML = `
+    <div class="error-box">
+      <div class="icon">⚠️</div>
+      <h2>${escapeHtml(msg)}</h2>
+      <p style="font-size:13px;color:#888">Pide al restaurante que te envíe un enlace válido.</p>
+    </div>
+  `;
+}
+
+function init(){
+  cloudConfig = getCloudConfigFromHash();
+  if(!cloudConfig){ showError('Enlace no válido o incompleto'); return; }
+  try{
+    firebase.initializeApp(cloudConfig);
+    db = firebase.database();
+    db.ref('gastrogoan/db').once('value').then(snap => {
+      const val = snap.val();
+      if(!val){ showError('No se ha podido cargar la información del restaurante'); return; }
+      DB = {
+        business: val.business || {},
+        cartas: val.cartas || [],
+        activeCartaId: val.activeCartaId || null
+      };
+      renderHeader();
+      renderApp();
+    }).catch(e => {
+      console.error(e);
+      showError('No se ha podido conectar con el restaurante');
+    });
+  }catch(e){
+    console.error(e);
+    showError('No se ha podido conectar con el restaurante');
+  }
+}
+
+function renderHeader(){
+  const b = DB.business || {};
+  if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${b.logo}" alt="Logo">`;
+  if(b.name) document.getElementById('biz-name').textContent = b.name;
+  const parts = [];
+  if(b.address) parts.push('📍 ' + b.address);
+  if(b.schedule) parts.push('🕐 ' + b.schedule);
+  if(b.phone) parts.push('📞 ' + b.phone);
+  document.getElementById('biz-info').textContent = parts.join('  ·  ');
+}
+
+function getActiveCarta(){
+  return (DB.cartas || []).find(c => c.id === DB.activeCartaId) || null;
+}
+
+function renderApp(){
+  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+  const tabs = [];
+  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label:'🍽️ Reservar mesa'});
+  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label:'🥡 Take Away'});
+  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label:'🛵 Delivery'});
+
+  if(!tabs.length){
+    document.getElementById('app').innerHTML = `<div class="empty">Este negocio no tiene servicios disponibles online en este momento.</div>`;
+    return;
+  }
+
+  if(!currentTab || !tabs.some(t=>t.id===currentTab)) currentTab = tabs[0].id;
+  cart = [];
+
+  document.getElementById('app').innerHTML = `
+    <div class="tabs">
+      ${tabs.map(t => `<button class="tab-btn ${currentTab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join('')}
+    </div>
+    <div id="tab-content"></div>
+  `;
+  renderTabContent();
+}
+
+function setTab(tab){
+  currentTab = tab;
+  cart = [];
+  renderApp();
+}
+
+function renderTabContent(){
+  if(currentTab === 'reserva') renderReservaForm();
+  else renderOrderForm();
+}
+
+/* ============ RESERVA ============ */
+function renderReservaForm(){
+  const box = document.getElementById('tab-content');
+  box.innerHTML = `
+    <div class="card">
+      <h2>Reservar mesa</h2>
+      <div class="field">
+        <label>Nombre *</label>
+        <input type="text" id="r-name" placeholder="Tu nombre">
+      </div>
+      <div class="field">
+        <label>Teléfono *</label>
+        <input type="tel" id="r-phone" placeholder="600 000 000">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Fecha *</label>
+          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}">
+        </div>
+        <div class="field">
+          <label>Hora *</label>
+          <input type="time" id="r-time" value="20:00">
+        </div>
+      </div>
+      <div class="field">
+        <label>Número de personas *</label>
+        <input type="number" id="r-people" value="2" min="1" max="50">
+      </div>
+      <div class="field">
+        <label>Notas (alergias, peticiones especiales...)</label>
+        <textarea id="r-notes" placeholder="Opcional"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitReserva()">Enviar solicitud de reserva</button>
+    </div>
+  `;
+}
+
+function submitReserva(){
+  const clientName = document.getElementById('r-name').value.trim();
+  const clientPhone = document.getElementById('r-phone').value.trim();
+  const date = document.getElementById('r-date').value;
+  const time = document.getElementById('r-time').value;
+  const people = parseInt(document.getElementById('r-people').value) || 1;
+  const notes = document.getElementById('r-notes').value.trim();
+
+  if(!clientName || !clientPhone || !date || !time){
+    alert('Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).');
+    return;
+  }
+
+  const req = {
+    type:'reserva', clientName, clientPhone, date, time, people, notes,
+    createdAt: new Date().toISOString()
+  };
+  sendRequest(req, 'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.');
+}
+
+/* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
+function renderOrderForm(){
+  const box = document.getElementById('tab-content');
+  const carta = getActiveCarta();
+  const secciones = carta ? (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)) : [];
+
+  if(!secciones.length){
+    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.</div></div>`;
+    return;
+  }
+
+  const isDelivery = currentTab === 'delivery';
+
+  const menuHtml = secciones.map(sec => `
+    <h3>${escapeHtml(sec.nombre)}</h3>
+    ${sec.platos.filter(p=>p.disponible!==false).map(p => `
+      <div class="menu-item">
+        <div>
+          <div class="name">${escapeHtml(p.nombre)}</div>
+          <div class="price">${fmtMoney(p.precio)}</div>
+        </div>
+        <div class="qty-ctl">
+          <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)">−</button>
+          <span id="qty-${p.id}">${getCartQty(p.id)}</span>
+          <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${p.precio})">+</button>
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>${isDelivery ? 'Pedido a domicilio' : 'Pedido para recoger'}</h2>
+      ${menuHtml}
+    </div>
+    <div class="card" id="cart-summary"></div>
+    <div class="card">
+      <h2>Tus datos</h2>
+      <div class="field">
+        <label>Nombre *</label>
+        <input type="text" id="o-name" placeholder="Tu nombre">
+      </div>
+      <div class="field">
+        <label>Teléfono *</label>
+        <input type="tel" id="o-phone" placeholder="600 000 000">
+      </div>
+      ${isDelivery ? `
+      <div class="field">
+        <label>Dirección de entrega *</label>
+        <input type="text" id="o-address" placeholder="Calle, número, piso...">
+      </div>` : ''}
+      <div class="field">
+        <label>Notas (alergias, observaciones...)</label>
+        <textarea id="o-notes" placeholder="Opcional"></textarea>
+      </div>
+      <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">Enviar pedido</button>
+    </div>
+  `;
+  renderCartSummary();
+}
+
+function getCartQty(recipeId){
+  const line = cart.find(l => l.recipeId === recipeId);
+  return line ? line.qty : 0;
+}
+
+function changeCartQty(recipeId, sectionId, delta, name, price){
+  let line = cart.find(l => l.recipeId === recipeId);
+  if(!line){
+    if(delta <= 0) return;
+    line = {recipeId, sectionId, name, price, qty:0};
+    cart.push(line);
+  }
+  line.qty += delta;
+  if(line.qty <= 0) cart = cart.filter(l => l !== line);
+
+  const span = document.getElementById('qty-'+recipeId);
+  if(span) span.textContent = getCartQty(recipeId);
+  renderCartSummary();
+}
+
+function renderCartSummary(){
+  const box = document.getElementById('cart-summary');
+  if(!box) return;
+  const submitBtn = document.getElementById('o-submit');
+  if(!cart.length){
+    box.innerHTML = `<div class="empty">Tu carrito está vacío. Añade platos arriba.</div>`;
+    if(submitBtn) submitBtn.disabled = true;
+    return;
+  }
+  if(submitBtn) submitBtn.disabled = false;
+  const total = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  box.innerHTML = `
+    <h2>Tu pedido</h2>
+    ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
+    <div class="cart-total"><span>Total</span><span>${fmtMoney(total)}</span></div>
+  `;
+}
+
+function submitOrder(){
+  if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
+  const clienteNombre = document.getElementById('o-name').value.trim();
+  const clienteTelefono = document.getElementById('o-phone').value.trim();
+  const isDelivery = currentTab === 'delivery';
+  const clienteDireccion = isDelivery ? document.getElementById('o-address').value.trim() : '';
+  const notas = document.getElementById('o-notes').value.trim();
+
+  if(!clienteNombre || !clienteTelefono || (isDelivery && !clienteDireccion)){
+    alert('Por favor completa los campos obligatorios.');
+    return;
+  }
+
+  const req = {
+    type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
+    clienteNombre, clienteTelefono, clienteDireccion, notas,
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
+    createdAt: new Date().toISOString()
+  };
+  sendRequest(req, 'Pedido enviado. El restaurante lo confirmará en breve.');
+}
+
+/* ============ ENVÍO ============ */
+function sendRequest(req, successMsg){
+  db.ref('gastrogoan/public_requests').push(req).then(() => {
+    document.getElementById('app').innerHTML = `
+      <div class="success">
+        <div class="icon">✅</div>
+        <h2>${escapeHtml(successMsg)}</h2>
+        <button class="btn" style="margin-top:16px" onclick="location.reload()">Hacer otra solicitud</button>
+      </div>
+    `;
+  }).catch(e => {
+    console.error(e);
+    alert('No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.');
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
