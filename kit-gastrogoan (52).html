@@ -492,24 +492,18 @@ td.wrap{white-space:normal}
         </div>
         <div class="field-row">
           <div class="field">
-            <label>Tipo de carta</label>
-            <input type="text" id="carta-f-tipo" list="carta-tipos-list" placeholder="Ej. MEDIODÍA, NOCHE...">
-            <datalist id="carta-tipos-list">
-              <option>MEDIODÍA</option><option>NOCHE</option><option>FIN DE SEMANA</option><option>DEGUSTACIÓN</option><option>TEMPORADA</option><option>GENERAL</option>
-            </datalist>
-          </div>
-          <div class="field">
-            <label>Hora inicio</label>
-            <input type="time" id="carta-f-desde">
-          </div>
-          <div class="field">
-            <label>Hora fin</label>
-            <input type="time" id="carta-f-hasta">
+            <label>Turno</label>
+            <select id="carta-f-turno">
+              <option value="todos">Todo el horario de apertura</option>
+              <option value="1">Turno 1</option>
+              <option value="2">Turno 2</option>
+            </select>
           </div>
         </div>
         <div class="field">
           <label>Días activos</label>
           <div id="carta-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          <p style="font-size:13px;color:var(--muted);margin-top:6px">Los horarios de cada día y turno se configuran en <strong>Mi Negocio → Horario semanal</strong>.</p>
         </div>
         <div class="toolbar">
           <div class="left"></div>
@@ -1226,7 +1220,7 @@ function defaultData(){
     recipeCategories: [], // user-defined categories for Escandallo/Carta/Fichas
     fichas: [],
     menuItems: [],
-    cartas: [],          // {id, nombre, tipo, desde, hasta, dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
+    cartas: [],          // {id, nombre, turno:'todos'|'1'|'2', dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
     activeCartaId: null,
     stock: {},          // { ingredientId: { qty, min } }
     elaboraciones: [],   // {id, name, unit, qty, min} — elaboraciones propias (caldos, salsas, etc.)
@@ -2738,7 +2732,7 @@ function printFicha(id){
    CARTA — Sistema multi-carta con secciones y horarios
    ============================================================ */
 const CARTA_TIPOS = ['MEDIODÍA','NOCHE','FIN DE SEMANA','DEGUSTACIÓN','TEMPORADA','GENERAL'];
-let cartaEdit = null; // {id, nombre, tipo, desde, hasta, dias:[], secciones:[]}
+let cartaEdit = null; // {id, nombre, turno:'todos'|'1'|'2', dias:[], secciones:[]}
 
 function migrateCartas(){
   if((!DB.cartas || !DB.cartas.length) && DB.menuItems && DB.menuItems.length){
@@ -2769,9 +2763,25 @@ function fmtCartaDias(dias){
   if(dias.length===7) return 'Todos los días';
   return dias.map(d=>WEEK_DAYS[d].slice(0,3)).join(', ');
 }
+function fmtTurno(turno){
+  return turno==='1' ? 'Turno 1' : turno==='2' ? 'Turno 2' : 'Todo el horario';
+}
 function fmtCartaHorario(c){
-  if(!c.desde && !c.hasta) return '—';
-  return (c.desde||'--:--') + ' – ' + (c.hasta||'--:--');
+  const horario = (DB.business||{}).horario;
+  if(!horario || horario.length!==7 || !c.dias || !c.dias.length) return fmtTurno(c.turno);
+  const ranges = c.dias.map(d => {
+    const day = horario[d];
+    if(!day || day.abierto===false) return null;
+    if(c.turno==='1') return (day.t1i && day.t1f) ? `${day.t1i}-${day.t1f}` : null;
+    if(c.turno==='2') return (day.t2i && day.t2f) ? `${day.t2i}-${day.t2f}` : null;
+    const parts = [];
+    if(day.t1i && day.t1f) parts.push(`${day.t1i}-${day.t1f}`);
+    if(day.t2i && day.t2f) parts.push(`${day.t2i}-${day.t2f}`);
+    return parts.length ? parts.join(' y ') : null;
+  }).filter(Boolean);
+  if(!ranges.length) return fmtTurno(c.turno) + ' (sin horario configurado)';
+  const unique = [...new Set(ranges)];
+  return unique.length===1 ? unique[0] : fmtTurno(c.turno) + ' (según el día)';
 }
 
 function renderCarta(){
@@ -2796,14 +2806,14 @@ function renderCartaList(){
   box.innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Tipo</th><th>Horario</th><th>Días</th><th>Secciones</th><th>Platos</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Turno</th><th>Horario</th><th>Días</th><th>Secciones</th><th>Platos</th><th></th></tr></thead>
         <tbody>
           ${DB.cartas.map(c => {
             const nsec = (c.secciones||[]).length;
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
               <td><strong>${escapeHtml(c.nombre)}</strong>${DB.activeCartaId===c.id?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
-              <td><span class="badge badge-blue">${escapeHtml(c.tipo||'—')}</span></td>
+              <td><span class="badge badge-blue">${escapeHtml(fmtTurno(c.turno))}</span></td>
               <td style="font-size:12px;color:var(--muted)">${fmtCartaHorario(c)}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtCartaDias(c.dias)}</td>
               <td>${nsec}</td>
@@ -2821,7 +2831,7 @@ function renderCartaList(){
 }
 
 function newCarta(){
-  cartaEdit = {id: genId(), nombre:'', tipo:'GENERAL', desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones:[]};
+  cartaEdit = {id: genId(), nombre:'', turno:'todos', dias:[0,1,2,3,4,5,6], secciones:[]};
   renderCarta();
 }
 function openCarta(id){
@@ -2831,6 +2841,7 @@ function openCarta(id){
   // La nube no guarda listas vacías: restaurarlas si faltan
   if(!Array.isArray(cartaEdit.secciones)) cartaEdit.secciones = [];
   if(!Array.isArray(cartaEdit.dias)) cartaEdit.dias = [0,1,2,3,4,5,6];
+  if(!cartaEdit.turno) cartaEdit.turno = 'todos';
   cartaEdit.secciones.forEach(s => { if(!Array.isArray(s.platos)) s.platos = []; });
   renderCarta();
 }
@@ -2850,9 +2861,7 @@ function saveCarta(){
   const nombre = document.getElementById('carta-f-nombre').value.trim();
   if(!nombre){ showToast('Ponle un nombre a la carta'); return; }
   cartaEdit.nombre = nombre.toUpperCase();
-  cartaEdit.tipo = (document.getElementById('carta-f-tipo').value||'').trim().toUpperCase() || 'GENERAL';
-  cartaEdit.desde = document.getElementById('carta-f-desde').value;
-  cartaEdit.hasta = document.getElementById('carta-f-hasta').value;
+  cartaEdit.turno = document.getElementById('carta-f-turno').value;
   const idx = DB.cartas.findIndex(c=>c.id===cartaEdit.id);
   if(idx>=0) DB.cartas[idx] = cartaEdit;
   else DB.cartas.push(cartaEdit);
@@ -2864,9 +2873,7 @@ function saveCarta(){
 
 function renderCartaEditor(){
   document.getElementById('carta-f-nombre').value = cartaEdit.nombre || '';
-  document.getElementById('carta-f-tipo').value = cartaEdit.tipo || '';
-  document.getElementById('carta-f-desde').value = cartaEdit.desde || '';
-  document.getElementById('carta-f-hasta').value = cartaEdit.hasta || '';
+  document.getElementById('carta-f-turno').value = cartaEdit.turno || 'todos';
   renderCartaDias();
   renderCartaSecciones();
 }
@@ -6239,8 +6246,8 @@ const MANUAL_CHAPTERS = [
     <p>Crea y gestiona tus menús. Puedes tener varias cartas activas según horario (mediodía, noche, fin de semana).</p>
     <h4>Crear una carta</h4>
     <ul>
-      <li>Dale un nombre y tipo (Mediodía, Noche, Degustación...)</li>
-      <li>Define el horario: días de la semana y horas</li>
+      <li>Dale un nombre</li>
+      <li>Elige el <strong>Turno</strong> (Turno 1, Turno 2 o todo el horario de apertura) y los <strong>días activos</strong> — las horas concretas se toman del <strong>Horario semanal</strong> configurado en Mi Negocio</li>
       <li>Usa <strong>Importar del Escandallo</strong> para añadir tus platos automáticamente</li>
       <li>Organiza por secciones: Entrantes, Principales, Postres...</li>
       <li>Añade <strong>platos manuales</strong> que no estén en el Escandallo</li>
