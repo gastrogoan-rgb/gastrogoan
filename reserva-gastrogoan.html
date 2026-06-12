@@ -228,22 +228,63 @@ function renderTabContent(){
   else renderOrderForm();
 }
 
-/* ============ RESERVA ============ */
-function getOpeningHours(){
-  const b = DB.business || {};
-  const open = b.horaApertura || '';
-  const close = b.horaCierre || '';
-  if(!open || !close) return null;
-  if(close <= open) return null; // cierra después de medianoche: no aplicamos límite
-  return { open, close };
+/* ============ HORARIOS ============ */
+const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+// Devuelve los turnos (franjas horarias) del día de la semana correspondiente
+// a dateStr, o null si el negocio no ha configurado horario (sin restricción).
+function getTurnosForDate(dateStr){
+  const horario = (DB.business || {}).horario;
+  if(!horario || horario.length !== 7) return null;
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
+  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  if(!d || d.abierto === false) return [];
+  const turnos = [];
+  if(d.t1i && d.t1f && d.t1f > d.t1i) turnos.push({abre:d.t1i, cierra:d.t1f});
+  if(d.t2i && d.t2f && d.t2f > d.t2i) turnos.push({abre:d.t2i, cierra:d.t2f});
+  return turnos;
 }
 
+function isTimeAllowed(dateStr, time){
+  const turnos = getTurnosForDate(dateStr);
+  if(turnos === null) return true;
+  return turnos.some(t => time >= t.abre && time <= t.cierra);
+}
+
+function formatTurnos(turnos){
+  return turnos.map(t => `${t.abre}–${t.cierra}`).join(' y ');
+}
+
+function nombreDia(dateStr){
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay();
+  return DIAS_SEMANA[(jsDay + 6) % 7];
+}
+
+function horarioHintHtml(dateStr){
+  const turnos = getTurnosForDate(dateStr);
+  if(turnos === null) return '';
+  if(!turnos.length) return `<p style="font-size:13px;color:#c0392b;margin-top:-8px">El restaurante está cerrado el ${nombreDia(dateStr).toLowerCase()}. Elige otra fecha.</p>`;
+  return `<p style="font-size:13px;color:#888;margin-top:-8px">Horario el ${nombreDia(dateStr).toLowerCase()}: ${formatTurnos(turnos)}.</p>`;
+}
+
+function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
+  const date = document.getElementById(dateInputId).value;
+  const turnos = getTurnosForDate(date);
+  const timeInput = document.getElementById(timeInputId);
+  const hintBox = document.getElementById(hintBoxId);
+  hintBox.innerHTML = horarioHintHtml(date);
+  if(turnos && turnos.length){
+    timeInput.min = turnos[0].abre;
+    timeInput.max = turnos[turnos.length - 1].cierra;
+  }else{
+    timeInput.removeAttribute('min');
+    timeInput.removeAttribute('max');
+  }
+}
+
+/* ============ RESERVA ============ */
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
-  const hours = getOpeningHours();
-  const hint = hours
-    ? `<p style="font-size:13px;color:#888;margin-top:-8px">Solo se pueden reservar mesas entre las ${hours.open} y las ${hours.close}.</p>`
-    : '';
   box.innerHTML = `
     <div class="card">
       <h2>Reservar mesa</h2>
@@ -258,14 +299,14 @@ function renderReservaForm(){
       <div class="field-row">
         <div class="field">
           <label>Fecha *</label>
-          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}">
+          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint')">
         </div>
         <div class="field">
           <label>Hora *</label>
-          <input type="time" id="r-time" value="20:00" ${hours ? `min="${hours.open}" max="${hours.close}"` : ''}>
+          <input type="time" id="r-time" value="20:00">
         </div>
       </div>
-      ${hint}
+      <div id="r-hour-hint"></div>
       <div class="field">
         <label>Número de personas *</label>
         <input type="number" id="r-people" value="2" min="1" max="50">
@@ -277,6 +318,7 @@ function renderReservaForm(){
       <button class="btn btn-primary" onclick="submitReserva()">Enviar solicitud de reserva</button>
     </div>
   `;
+  updateTimeInputRange('r-date','r-time','r-hour-hint');
 }
 
 function submitReserva(){
@@ -292,9 +334,13 @@ function submitReserva(){
     return;
   }
 
-  const hours = getOpeningHours();
-  if(hours && (time < hours.open || time > hours.close)){
-    alert(`El restaurante solo acepta reservas entre las ${hours.open} y las ${hours.close}. Por favor elige otra hora.`);
+  const turnos = getTurnosForDate(date);
+  if(turnos !== null && !turnos.length){
+    alert(`El restaurante está cerrado el ${nombreDia(date).toLowerCase()}. Por favor elige otra fecha.`);
+    return;
+  }
+  if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
+    alert(`El restaurante solo acepta reservas el ${nombreDia(date).toLowerCase()} en este horario: ${formatTurnos(turnos)}. Por favor elige otra hora.`);
     return;
   }
 
@@ -317,13 +363,9 @@ function renderOrderForm(){
   }
 
   const isDelivery = currentTab === 'delivery';
-  const hours = getOpeningHours();
-  const hint = hours
-    ? `<p style="font-size:13px;color:#888;margin-top:-8px">Solo se pueden programar pedidos entre las ${hours.open} y las ${hours.close}.</p>`
-    : '';
 
   const menuHtml = secciones.map(sec => `
-    <h3>${escapeHtml(sec.nombre)}</h3>
+    ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(sec.nombre)}</h3>` : ''}
     ${sec.platos.filter(p=>p.disponible!==false).map(p => `
       <div class="menu-item">
         <div>
@@ -358,14 +400,14 @@ function renderOrderForm(){
       <div class="field-row">
         <div class="field">
           <label>Fecha *</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}">
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint')">
         </div>
         <div class="field">
           <label>Hora *</label>
-          <input type="time" id="o-time" value="20:00" ${hours ? `min="${hours.open}" max="${hours.close}"` : ''}>
+          <input type="time" id="o-time" value="20:00">
         </div>
       </div>
-      ${hint}
+      <div id="o-hour-hint"></div>
       ${isDelivery ? `
       <div class="field">
         <label>Dirección de entrega *</label>
@@ -379,6 +421,7 @@ function renderOrderForm(){
     </div>
   `;
   renderCartSummary();
+  updateTimeInputRange('o-date','o-time','o-hour-hint');
 }
 
 function getCartQty(recipeId){
@@ -434,9 +477,13 @@ function submitOrder(){
     return;
   }
 
-  const hours = getOpeningHours();
-  if(hours && (time < hours.open || time > hours.close)){
-    alert(`El restaurante solo acepta pedidos entre las ${hours.open} y las ${hours.close}. Por favor elige otra hora.`);
+  const turnos = getTurnosForDate(date);
+  if(turnos !== null && !turnos.length){
+    alert(`El restaurante está cerrado el ${nombreDia(date).toLowerCase()}. Por favor elige otra fecha.`);
+    return;
+  }
+  if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
+    alert(`El restaurante solo acepta pedidos el ${nombreDia(date).toLowerCase()} en este horario: ${formatTurnos(turnos)}. Por favor elige otra hora.`);
     return;
   }
 

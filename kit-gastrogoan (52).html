@@ -1211,6 +1211,13 @@ function openCloudWizard(){
 const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
 const UNITS = ['g','ud'];
+const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+// Horario semanal: un array de 7 días (Lunes..Domingo), cada uno con
+// hasta 2 turnos (para horario partido). abierto:false = cerrado ese día.
+function defaultHorario(){
+  return DIAS_SEMANA.map(() => ({abierto:true, t1i:'', t1f:'', t2i:'', t2f:''}));
+}
 
 function defaultData(){
   return {
@@ -1249,7 +1256,7 @@ function defaultData(){
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
       mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
       pin:'1234', pinSet:false,
-      horaApertura:'', horaCierre:'',
+      horario: defaultHorario(),
       tiposServicio: {mesa:true, takeaway:true, delivery:true}
     },
     ge: {
@@ -5860,6 +5867,57 @@ function deleteReservation(id){
    ============================================================ */
 const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
 
+function renderHorarioRows(horario){
+  horario = horario && horario.length===7 ? horario : defaultHorario();
+  return horario.map((d,i) => `
+    <div class="ge-section" style="margin-bottom:10px">
+      <div class="ge-sec-head">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+          <input type="checkbox" id="mn-hor-${i}-abierto" ${d.abierto!==false?'checked':''} onchange="toggleHorarioDia(${i})">
+          ${DIAS_SEMANA[i]}
+        </label>
+      </div>
+      <div id="mn-hor-${i}-turnos" style="display:${d.abierto!==false?'block':'none'};padding:10px 14px">
+        <div class="field-row">
+          <div class="field">
+            <label>Turno 1 — Apertura</label>
+            <input type="time" id="mn-hor-${i}-t1i" value="${escapeHtml(d.t1i||'')}">
+          </div>
+          <div class="field">
+            <label>Turno 1 — Cierre</label>
+            <input type="time" id="mn-hor-${i}-t1f" value="${escapeHtml(d.t1f||'')}">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Turno 2 (opcional) — Apertura</label>
+            <input type="time" id="mn-hor-${i}-t2i" value="${escapeHtml(d.t2i||'')}">
+          </div>
+          <div class="field">
+            <label>Turno 2 (opcional) — Cierre</label>
+            <input type="time" id="mn-hor-${i}-t2f" value="${escapeHtml(d.t2f||'')}">
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleHorarioDia(i){
+  const open = document.getElementById(`mn-hor-${i}-abierto`).checked;
+  document.getElementById(`mn-hor-${i}-turnos`).style.display = open ? 'block' : 'none';
+}
+
+function readHorarioFromForm(){
+  return DIAS_SEMANA.map((_,i) => ({
+    abierto: document.getElementById(`mn-hor-${i}-abierto`).checked,
+    t1i: document.getElementById(`mn-hor-${i}-t1i`).value,
+    t1f: document.getElementById(`mn-hor-${i}-t1f`).value,
+    t2i: document.getElementById(`mn-hor-${i}-t2i`).value,
+    t2f: document.getElementById(`mn-hor-${i}-t2f`).value,
+  }));
+}
+
 function renderMiNegocio(){
   const b = DB.business || {};
   document.getElementById('minegocio-content').innerHTML = `
@@ -5964,18 +6022,13 @@ function renderMiNegocio(){
         <label>Horario de apertura (texto)</label>
         <input type="text" id="business-schedule" value="${escapeHtml(b.schedule||'')}" placeholder="Ej. Lun-Dom 12:00-00:00">
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Hora de apertura</label>
-          <input type="time" id="business-hora-apertura" value="${escapeHtml(b.horaApertura||'')}">
-        </div>
-        <div class="field">
-          <label>Hora de cierre</label>
-          <input type="time" id="business-hora-cierre" value="${escapeHtml(b.horaCierre||'')}">
-        </div>
-      </div>
-      <p style="font-size:13px;color:var(--muted,#888);margin-top:-8px">Estas horas se usan para limitar las reservas online a tu horario de apertura. Si cierras después de medianoche, déjalas vacías para no aplicar el límite.</p>
       <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Sincronizar mesas con TPV</button>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-calendar-time"></i> Horario semanal (reservas y pedidos online)</h3>
+      <p style="font-size:13px;color:var(--muted,#888)">Marca los días que abres y las horas. Si un día tienes horario partido (ej. abres a mediodía, cierras, y vuelves a abrir por la noche), rellena también el "Turno 2". Estos horarios limitan las horas que tus clientes pueden elegir al reservar mesa o hacer un pedido online.</p>
+      <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -6069,8 +6122,7 @@ function saveBusiness(){
     phone: document.getElementById('business-phone').value.trim(),
     email: document.getElementById('business-email').value.trim(),
     schedule: document.getElementById('business-schedule').value.trim(),
-    horaApertura: document.getElementById('business-hora-apertura').value,
-    horaCierre: document.getElementById('business-hora-cierre').value,
+    horario: readHorarioFromForm(),
     description: document.getElementById('business-description').value.trim(),
     tipo: document.getElementById('mn-tipo').value,
     anyo: document.getElementById('mn-anyo').value.trim(),
@@ -6325,8 +6377,8 @@ const MANUAL_CHAPTERS = [
     <p>Configura el número de mesas y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
     <h4>Acceso propietario (PIN)</h4>
     <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
-    <h4>Horario de apertura</h4>
-    <p>Además del horario en texto (informativo), rellena <strong>Hora de apertura</strong> y <strong>Hora de cierre</strong>. Estas dos horas limitan automáticamente qué horas puede elegir un cliente al reservar mesa desde la web pública.</p>`
+    <h4>Horario semanal</h4>
+    <p>Además del horario en texto (informativo), configura el <strong>Horario semanal</strong>: marca qué días abres y a qué horas, con hasta dos turnos por día (para horario partido). Estos horarios limitan automáticamente las horas que un cliente puede elegir al reservar mesa o hacer un pedido online, día por día.</p>`
   },
   {
     title:'🌐 Reservas y Pedidos Online',
@@ -6341,8 +6393,8 @@ const MANUAL_CHAPTERS = [
       <li>En esa carta, marca cada plato como <strong>Disponible</strong> (en la sección Carta).</li>
       <li>Si no hay carta activa o ningún plato disponible, los clientes verán el aviso "La carta no está disponible para pedidos online".</li>
     </ul>
-    <h4>Horario de reservas</h4>
-    <p>En <strong>Mi Negocio</strong>, rellena <strong>Hora de apertura</strong> y <strong>Hora de cierre</strong>. La web de reservas solo permitirá elegir horas dentro de ese rango. Si tu negocio cierra después de medianoche, deja estos campos vacíos para no limitar el horario.</p>
+    <h4>Horario de reservas y pedidos</h4>
+    <p>En <strong>Mi Negocio</strong>, configura el <strong>Horario semanal</strong> (día por día, con turnos). La web de reservas y pedidos solo permitirá elegir fecha/hora dentro de tu horario de ese día. Si no configuras ningún horario, no se aplica ningún límite.</p>
     <h4>Solicitudes de clientes</h4>
     <p>Las reservas y pedidos que hagan los clientes desde la web pública llegan a tu Kit automáticamente: las reservas aparecen en <strong>Reservas → Solicitudes online pendientes</strong>, y los pedidos en <strong>TPV</strong> como pedidos pendientes online.</p>
     <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`
