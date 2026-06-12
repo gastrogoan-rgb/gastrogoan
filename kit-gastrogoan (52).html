@@ -528,6 +528,14 @@ td.wrap{white-space:normal}
       <div id="tpv-content"></div>
     </section>
 
+    <!-- ========== COMANDAS COCINA ========== -->
+    <section class="view" id="view-comandascocina">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Comandas Cocina</div>
+      <div class="view-subtitle">Pedidos en tiempo real desde sala</div>
+      <div id="comandascocina-content"></div>
+    </section>
+
     <!-- ========== STOCK ========== -->
     <section class="view" id="view-stock">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
@@ -1385,6 +1393,7 @@ const FOLDERS = {
       {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
       {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y alérgenos'},
       {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
+      {id:'comandascocina', name:'Comandas Cocina', icon:'ti-bell-ringing', desc:'Pantalla en tiempo real de pedidos'},
       {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
       {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores'},
       {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
@@ -1536,6 +1545,7 @@ function renderView(view){
     case 'fichas': renderFichas(); break;
     case 'carta': renderCarta(); break;
     case 'tpv': renderTPV(); break;
+    case 'comandascocina': renderComandasCocina(); break;
     case 'stock': renderStock(); break;
     case 'pedidos': renderPedidos(); break;
     case 'economia': GE.init(); break;
@@ -3032,6 +3042,17 @@ function confirmImportEsc(secId){
 /* ============================================================
    TPV — Comandas, mesas y tickets
    ============================================================ */
+const KITCHEN_STATES = {
+  cocina:     {label:'En cola',     icon:'ti-clock',        cls:'badge-amber'},
+  preparando: {label:'Preparando',  icon:'ti-flame',        cls:'badge-blue'},
+  listo:      {label:'Listo',       icon:'ti-check',        cls:'badge-green'},
+  servido:    {label:'Servido',     icon:'ti-circle-check', cls:'badge-gray'}
+};
+function kitchenStatusBadge(line){
+  const st = KITCHEN_STATES[line.estado];
+  if(!st || line.estado === 'servido') return '';
+  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${st.label}</span>`;
+}
 function getActiveCarta(){
   return DB.cartas.find(c=>c.id===DB.activeCartaId) || null;
 }
@@ -3079,11 +3100,16 @@ function renderTPV(){
     </div>
   `;
 
+  const platosListos = DB.tpvOrders
+    .filter(o => o.status !== 'pagada')
+    .reduce((s,o) => s + (o.items||[]).filter(l => l.estado === 'listo').reduce((s2,l)=>s2+l.qty,0), 0);
+
   const kpiHtml = `
-    <div class="grid grid-3" style="margin-bottom:14px">
+    <div class="grid grid-4" style="margin-bottom:14px">
       <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
       <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
       <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi ${platosListos ? 'ok' : ''}"><div class="label">🔔 Platos listos</div><div class="value">${platosListos}</div></div>
     </div>
   `;
 
@@ -3091,12 +3117,13 @@ function renderTPV(){
   const mesaCards = sortedTables.map(t => {
     const order = getOpenOrderForTable(t.id);
     const total = order ? orderTotal(order) : 0;
+    const hayListos = order && (order.items||[]).some(l => l.estado === 'listo');
     let badge = '<span class="badge badge-green">Libre</span>';
     if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
         <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-        ${badge}
+        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''}
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
@@ -3117,7 +3144,7 @@ function renderTPV(){
       ${toGoOrders.map(o => `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          <span class="badge badge-amber">Abierto</span>
+          <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
       `).join('')}
@@ -3212,7 +3239,7 @@ function renderTableOrderModal(orderId){
 
   const linesHtml = (order.items||[]).map((line, idx) => `
     <tr>
-      <td>${escapeHtml(line.name)}</td>
+      <td>${escapeHtml(line.name)}${kitchenStatusBadge(line)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
@@ -3221,7 +3248,9 @@ function renderTableOrderModal(orderId){
         </div>
       </td>
       <td>${fmtMoney(line.price * line.qty)}</td>
-      <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button></td>
+      <td>
+        ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+      </td>
     </tr>
   `).join('');
 
@@ -3282,10 +3311,96 @@ ${escapeHtml(lines)}
   win.document.close();
   win.print();
 
-  (order.items||[]).forEach(l => { l.marchada = l.qty; });
+  const ahora = new Date().toISOString();
+  (order.items||[]).forEach(l => {
+    if(l.qty > (l.marchada||0)){
+      l.estado = 'cocina';
+      l.enviadoAt = ahora;
+    }
+    l.marchada = l.qty;
+  });
   saveDB();
   renderTableOrderModal(order.id);
   showToast('Comanda marchada a cocina');
+}
+
+/* ============================================================
+   COMANDAS COCINA — Pantalla en tiempo real para cocina
+   ============================================================ */
+function setLineEstado(orderId, idx, estado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const line = (order.items||[])[idx];
+  if(!line) return;
+  line.estado = estado;
+  if(estado === 'preparando') line.preparandoAt = new Date().toISOString();
+  if(estado === 'listo') line.listoAt = new Date().toISOString();
+  saveDB();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+}
+
+function comandaOrderTitle(order){
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  if(table) return `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`;
+  return order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+}
+
+function timeAgo(iso){
+  if(!iso) return '';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return mins < 1 ? 'ahora' : `hace ${mins} min`;
+}
+
+function renderComandasCocina(){
+  const box = document.getElementById('comandascocina-content');
+  if(!box) return;
+
+  const tickets = DB.tpvOrders
+    .filter(o => o.status !== 'pagada')
+    .map(order => ({
+      order,
+      lines: (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado && line.estado !== 'servido')
+    }))
+    .filter(t => t.lines.length);
+
+  tickets.sort((a,b) => {
+    const ta = Math.min(...a.lines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : 0));
+    const tb = Math.min(...b.lines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : 0));
+    return ta - tb;
+  });
+
+  if(!tickets.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-bell-ringing"></i>No hay comandas pendientes. Cuando sala marche un pedido aparecerá aquí al instante.</div>`;
+    return;
+  }
+
+  box.innerHTML = `<div class="grid grid-3">${tickets.map(({order, lines}) => `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+        <span style="font-size:11.5px;color:var(--muted)">${timeAgo(lines[0].line.enviadoAt)}</span>
+      </div>
+      ${lines.map(({line, idx}) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--border)">
+          <div>
+            <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+            ${kitchenStatusBadge(line)}
+            ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+          </div>
+          <div>
+            ${line.estado === 'cocina' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'preparando')"><i class="ti ti-flame"></i> Empezar</button>` : ''}
+            ${line.estado === 'preparando' ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="setLineEstado(${order.id}, ${idx}, 'listo')"><i class="ti ti-check"></i> Listo</button>` : ''}
+            ${line.estado === 'listo' ? `<span class="badge badge-green"><i class="ti ti-check"></i> Esperando a sala</span>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('')}</div>`;
 }
 
 function printBill(orderId){
@@ -6206,6 +6321,11 @@ window.addEventListener('DOMContentLoaded', () => {
   } else if(!cloudConfig){
     openCloudWelcome();
   }
+
+  setInterval(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  }, 60000);
 });
 </script>
 
