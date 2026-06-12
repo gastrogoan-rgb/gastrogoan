@@ -6614,7 +6614,81 @@ function renderMiNegocio(){
       </div>
       <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar</button>
     </div>
+
+    ${renderDataMaintenanceCard()}
   `;
+}
+
+/* ============================================================
+   MANTENIMIENTO DE DATOS — copia de seguridad y archivado
+   ============================================================ */
+function getDBSizeKB(){
+  return Math.round(JSON.stringify(DB).length / 1024 * 10) / 10;
+}
+
+function renderDataMaintenanceCard(){
+  const sizeKB = getDBSizeKB();
+  const ventasAntiguas = DB.sales.filter(s => s.date && s.date < dataMaintenanceCutoff()).length;
+  const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
+  const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-database"></i> Mantenimiento de datos</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Tamaño actual de los datos del negocio: <strong>${sizeKB} KB</strong>. Cuanto más pequeño, más rápido va todo (guardado y sincronización entre dispositivos).</p>
+      <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> Descargar copia de seguridad completa</button>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 Archivar datos antiguos</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Mueve a un archivo descargable las ventas, reservas finalizadas y cierres de caja anteriores a la fecha elegida. Se descarga primero una copia de seguridad de esos datos y luego se eliminan de la app (dejarán de contar en los informes de Gestión Económica de esos meses).</p>
+      <div class="field">
+        <label>Archivar todo lo anterior a</label>
+        <input type="date" id="mn-archive-before" value="${dataMaintenanceCutoff()}">
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Con la fecha elegida se archivarían: <strong>${ventasAntiguas}</strong> ventas, <strong>${reservasAntiguas}</strong> reservas finalizadas/canceladas y <strong>${cierresAntiguos}</strong> cierres de caja.</p>
+      <button class="btn btn-sm btn-danger" onclick="archiveOldData()"><i class="ti ti-archive"></i> Archivar y descargar</button>
+    </div>
+  `;
+}
+
+// Por defecto, sugiere archivar todo lo anterior a hace 1 año
+function dataMaintenanceCutoff(){
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().slice(0,10);
+}
+
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadFullBackup(){
+  downloadJSON(DB, `gastrogoan-backup-${todayStr()}.json`);
+  showToast('Copia de seguridad descargada');
+}
+
+function archiveOldData(){
+  const before = document.getElementById('mn-archive-before').value;
+  if(!before){ showToast('Elige una fecha'); return; }
+  const sales = DB.sales.filter(s => s.date && s.date < before);
+  const reservations = DB.reservations.filter(r => r.date && r.date < before && (r.status==='completada'||r.status==='cancelada'));
+  const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
+  const total = sales.length + reservations.length + cashClosures.length;
+  if(total === 0){ showToast('No hay datos para archivar antes de esa fecha'); return; }
+  if(!confirm(`Se descargará un archivo con ${sales.length} ventas, ${reservations.length} reservas y ${cashClosures.length} cierres de caja anteriores a ${before}, y se eliminarán de la app (dejarán de aparecer en los informes de esos meses).\n\nGuarda bien el archivo descargado. ¿Continuar?`)) return;
+  downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+  DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
+  DB.reservations = DB.reservations.filter(r => !(r.date && r.date < before && (r.status==='completada'||r.status==='cancelada')));
+  DB.cashClosures = DB.cashClosures.filter(c => !(c.fecha && c.fecha < before));
+  saveDB();
+  renderMiNegocio();
+  showToast('Datos antiguos archivados');
 }
 
 function handleLogoUpload(input){
