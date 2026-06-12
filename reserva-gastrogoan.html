@@ -100,7 +100,23 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-let cloudConfig = null;
+/* ============================================================
+   NUBE — Configuración de Firebase (plataforma compartida GastroGoan)
+   Misma configuración que el kit de gestión: cada negocio tiene su
+   propio espacio público dentro de esta base de datos compartida,
+   identificado por el código "neg" del enlace/QR.
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+
+let publicId = null;
 let db = null;
 let DB = null; // { business, cartas, activeCartaId }
 let currentTab = null; // 'reserva' | 'takeaway' | 'delivery'
@@ -117,13 +133,11 @@ function todayStr(){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-function getCloudConfigFromHash(){
+function getPublicIdFromUrl(){
   try{
-    const h = location.hash.match(/conexion=([^&]+)/);
-    if(h){
-      const cfg = JSON.parse(atob(decodeURIComponent(h[1])));
-      if(cfg && cfg.apiKey) return cfg;
-    }
+    const p = new URLSearchParams(location.search);
+    const v = p.get('neg');
+    if(v) return v;
   }catch(e){}
   return null;
 }
@@ -139,12 +153,12 @@ function showError(msg){
 }
 
 function init(){
-  cloudConfig = getCloudConfigFromHash();
-  if(!cloudConfig){ showError('Enlace no válido o incompleto'); return; }
+  publicId = getPublicIdFromUrl();
+  if(!publicId){ showError('Enlace no válido o incompleto'); return; }
   try{
-    firebase.initializeApp(cloudConfig);
+    firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
-    db.ref('gastrogoan/db').once('value').then(snap => {
+    db.ref('gastrogoan/public/' + publicId + '/info').once('value').then(snap => {
       const val = snap.val();
       if(!val){ showError('No se ha podido cargar la información del restaurante'); return; }
       DB = {
@@ -394,7 +408,7 @@ function submitOrder(){
 
 /* ============ ENVÍO ============ */
 function sendRequest(req, successMsg){
-  db.ref('gastrogoan/public_requests').push(req).then(() => {
+  db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
