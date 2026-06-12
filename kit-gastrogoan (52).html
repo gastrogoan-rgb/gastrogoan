@@ -3090,7 +3090,7 @@ function findCartaPlato(platoId){
   return null;
 }
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
-const TANDAS = ['Aperitivos','Entrantes','Segundos','Postres','Cafés y licores','Otros'];
+const TANDA_SUGGESTIONS = ['Aperitivos','Entrantes','Primeros','Segundos','Postres','Bebidas','Cafés y licores'];
 
 function getOpenOrderForTable(tableId){
   return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
@@ -3312,11 +3312,26 @@ function renderTableOrderModal(orderId){
     </div>
   `).join('') : `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona una carta activa en TPV con platos disponibles.</p>`;
 
+  const orderTandas = order.tandas || [];
   const tandaSelectHtml = (line, idx) => `
     <select onchange="setLineTanda(${order.id}, ${idx}, this.value)" style="font-size:11px;max-width:120px" ${line.marchada?'disabled title="Ya marchado a cocina"':''}>
-      <option value="">Sin asignar</option>
-      ${TANDAS.map(t=>`<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+      <option value="">Sin categoría</option>
+      ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
     </select>
+  `;
+
+  const tandaActualHtml = `
+    <div class="field" style="margin-bottom:10px">
+      <label>Categoría / pase actual <span style="color:var(--muted);font-weight:400">(los próximos platos que añadas se asignarán aquí)</span></label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="tanda-actual-sel" onchange="setOrderTandaActual(${order.id}, this.value)" style="flex:1;min-width:140px">
+          <option value="">Sin categoría</option>
+          ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${order.tandaActual===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm" onclick="promptNewTanda(${order.id})"><i class="ti ti-plus"></i> Nueva categoría</button>
+      </div>
+      ${!orderTandas.length ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${TANDA_SUGGESTIONS.map(t=>`<button class="btn btn-sm" onclick="addOrderTanda(${order.id}, '${escapeHtml(t)}')">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>
   `;
 
   const groups = groupOrderItemsByTanda(order);
@@ -3342,7 +3357,7 @@ function renderTableOrderModal(orderId){
   `).join('');
 
   const total = orderTotal(order);
-  const pendingGroups = [...TANDAS, ''].map(t => ({
+  const pendingGroups = [...orderTandas, ''].map(t => ({
     tanda: t,
     count: orderPendingKitchenLines(order, t).reduce((s,l)=>s+l.qty, 0)
   })).filter(g => g.count > 0);
@@ -3356,7 +3371,7 @@ function renderTableOrderModal(orderId){
       <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:6px">Asigna cada plato a un tiempo (aperitivos, entrantes, segundos, postres, cafés...) para marcharlos a cocina por separado.</p>
+    ${tandaActualHtml}
     <div class="table-wrap" style="margin-bottom:10px">
       <table>
         <thead><tr><th>Plato</th><th>Cant.</th><th>Subtotal</th><th>Tiempo</th><th></th></tr></thead>
@@ -3385,7 +3400,7 @@ function groupOrderItemsByTanda(order){
     if(!groups[key]) groups[key] = [];
     groups[key].push({line, idx});
   });
-  return [...TANDAS, ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
+  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
 function setLineTanda(orderId, idx, tanda){
@@ -3395,6 +3410,32 @@ function setLineTanda(orderId, idx, tanda){
   line.tanda = tanda;
   saveDB();
   renderTableOrderModal(orderId);
+}
+
+function setOrderTandaActual(orderId, tanda){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.tandaActual = tanda;
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function addOrderTanda(orderId, name){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  name = (name||'').trim();
+  if(!name) return;
+  order.tandas = order.tandas || [];
+  if(!order.tandas.includes(name)) order.tandas.push(name);
+  order.tandaActual = name;
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function promptNewTanda(orderId){
+  const name = prompt('Nombre de la categoría / pase (ej. Primeros, Segundos, Postres, Entrantes...):');
+  if(name === null) return;
+  addOrderTanda(orderId, name);
 }
 
 function orderPendingKitchenLines(order, tanda){
@@ -3509,9 +3550,10 @@ function addOrderItem(orderId, secId, platoId){
   const sec = c ? (c.secciones||[]).find(s=>s.id===secId) : null;
   const p = sec ? (sec.platos||[]).find(x=>x.id===platoId) : null;
   if(!order || !p) return;
-  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada);
+  const tanda = order.tandaActual || '';
+  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && (l.tanda||'') === tanda);
   if(existing) existing.qty += 1;
-  else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda:''});
+  else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda});
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -6622,15 +6664,17 @@ const MANUAL_CHAPTERS = [
       <li>Añade platos de la carta activa, ajusta cantidades</li>
       <li><strong>Cobrar</strong> — abre el desglose de pago con calculadora de cambio, genera el ticket imprimible, registra la venta y libera la mesa</li>
     </ul>
-    <h4>Tiempos de la comanda (aperitivos, entrantes, segundos, postres, cafés...)</h4>
-    <p>En cada plato de la comanda hay un selector <strong>"Tiempo"</strong> donde el camarero elige a qué momento del servicio pertenece: Aperitivos, Entrantes, Segundos, Postres, Cafés y licores u Otros.</p>
+    <h4>Categorías o "pases" de la comanda (entrantes, primeros, segundos, postres...)</h4>
+    <p>Dentro de la comanda verás <strong>"Categoría / pase actual"</strong>: el camarero puede crear las categorías que necesite (Entrantes, Primeros, Segundos, Postres, Cafés... o cualquier nombre, según sea menú o carta) y todos los platos que añada a partir de ahí se asignan automáticamente a esa categoría.</p>
     <ul>
-      <li>La comanda se agrupa visualmente por tiempo</li>
-      <li>Al pulsar <strong>"Marchar..."</strong> aparece un botón por cada tiempo con platos pendientes (ej. "Marchar Entrantes", "Marchar Segundos"), para enviarlos a cocina por separado y en el momento adecuado</li>
-      <li>En la pantalla de <strong>Cocina</strong> cada plato muestra su tiempo correspondiente</li>
-      <li>Los platos sin tiempo asignado se marchan juntos con el botón "Marchar comanda"</li>
+      <li>Pulsa <strong>"Nueva categoría"</strong> (o usa los atajos sugeridos) y escribe el nombre del pase, ej. "Primeros"</li>
+      <li>Añade los platos de ese pase desde la carta — se asignan solos a "Primeros"</li>
+      <li>Crea otra categoría, ej. "Segundos", y añade esos platos — quedan agrupados aparte</li>
+      <li>La comanda se muestra agrupada por categoría, y cada plato tiene un selector para moverlo a otra si te equivocas</li>
+      <li>Al marchar a cocina aparece un botón por cada categoría con platos pendientes (ej. "Marchar Primeros", "Marchar Segundos"), para enviarlos por separado y en el momento adecuado</li>
+      <li>En la pantalla de <strong>Cocina</strong> cada plato muestra su categoría</li>
     </ul>
-    <div class="manual-tip">💡 Así puedes pedir todo de golpe al sentar a la mesa, pero marchar primero los aperitivos/entrantes y, cuando convenga, los segundos y postres.</div>
+    <div class="manual-tip">💡 Así puedes tomar nota de todo de una vez (sea menú o carta) y luego marchar primero entrantes/primeros y, cuando toque, segundos y postres — el camarero decide las categorías según el caso.</div>
     <h4>Para llevar / Delivery</h4>
     <p>También puedes registrar ventas para llevar o a domicilio sin asignarlas a una mesa.</p>
     <h4>Cierre de caja / Arqueo</h4>
