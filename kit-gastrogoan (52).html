@@ -1422,6 +1422,12 @@ function loadDB(){
       else { merged.business.pin = '1234'; merged.business.pinSet = false; }
     }
     delete merged.business.protectedModules;
+    (merged.ingredients||[]).forEach(i => { if(!i.area) i.area = 'cocina'; });
+    (merged.recipes||[]).forEach(r => { if(!r.area) r.area = 'cocina'; });
+    (merged.providers||[]).forEach(p => { if(!p.area) p.area = 'cocina'; });
+    (merged.elaboraciones||[]).forEach(e => { if(!e.area) e.area = 'cocina'; });
+    (merged.fichas||[]).forEach(f => { if(!f.area) f.area = 'cocina'; });
+    (merged.purchaseOrders||[]).forEach(o => { if(!o.area) o.area = 'cocina'; });
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
@@ -1545,7 +1551,16 @@ const FOLDERS = {
       {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
       {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
       {id:'tpv', name:'TPV', icon:'ti-device-desktop', desc:'Comandas, mesas y tickets'},
+      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Bebidas y productos de sala'},
+      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
+      {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de bebidas y cócteles'},
+      {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y servicio'},
+      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Carta de bebidas'},
+      {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
+      {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores de sala'},
       {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
+      {id:'distribucion', name:'Distribución del Trabajo', icon:'ti-clipboard-list', desc:'Tareas por empleado y turno'},
+      {id:'limpieza', name:'Plan de Limpieza', icon:'ti-spray', desc:'Limpieza e higiene de sala'},
     ]
   },
   gestion: {
@@ -1561,9 +1576,16 @@ const FOLDERS = {
   }
 };
 const MODULE_FOLDER = {};
-Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => MODULE_FOLDER[m.id] = key));
+Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => { if(MODULE_FOLDER[m.id] === undefined) MODULE_FOLDER[m.id] = key; }));
 
 let currentFolder = null;
+
+/* Devuelve el área (Cocina/Sala) según la carpeta de trabajo actual.
+   Los módulos compartidos (Mega Lista, Escandallo, Stock, etc.) se
+   filtran por esta área para mantener cocina y sala separados. */
+function currentArea(){
+  return currentFolder === 'sala' ? 'sala' : 'cocina';
+}
 
 /* ============== Navigation ============== */
 function goHome(){
@@ -1946,9 +1968,10 @@ function renderMegalista(){
   const cat = document.getElementById('megalista-filter-cat').value;
 
   let items = DB.ingredients.filter(i => {
+    const matchArea = (i.area||'cocina') === currentArea();
     const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
     const matchCat = !cat || i.category === cat;
-    return matchSearch && matchCat;
+    return matchArea && matchSearch && matchCat;
   });
 
   const tbody = document.getElementById('megalista-tbody');
@@ -1975,7 +1998,8 @@ function renderMegalista(){
 }
 
 function openIngredientModal(id){
-  if(!DB.providers.length){
+  const areaProviders = DB.providers.filter(p => (p.area||'cocina') === currentArea());
+  if(!areaProviders.length){
     openModal(`
       <div class="modal-header">
         <h3>Necesitas un proveedor</h3>
@@ -1989,7 +2013,7 @@ function openIngredientModal(id){
     `);
     return;
   }
-  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:DB.providers[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[]};
+  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:areaProviders[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()};
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -2023,7 +2047,7 @@ function openIngredientModal(id){
       <div class="field">
         <label>Proveedor</label>
         <select id="ing-supplier">
-          ${DB.providers.map(p=>`<option value="${escapeHtml(p.nombre)}" ${ing.supplier===p.nombre?'selected':''}>${escapeHtml(p.nombre)}</option>`).join('')}
+          ${areaProviders.map(p=>`<option value="${escapeHtml(p.nombre)}" ${ing.supplier===p.nombre?'selected':''}>${escapeHtml(p.nombre)}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -2079,7 +2103,7 @@ function saveIngredient(id){
     Object.assign(ing, {name, category, unit, supplier, price, packQty, packPrice, allergens});
   }else{
     const newId = genId();
-    DB.ingredients.push({id:newId, name, category, unit, supplier, price, packQty, packPrice, allergens});
+    DB.ingredients.push({id:newId, name, category, unit, supplier, price, packQty, packPrice, allergens, area: currentArea()});
     getStockEntry(newId);
   }
   saveDB();
@@ -2117,15 +2141,17 @@ function renderStock(){
 
   let items = DB.ingredients.filter(ing => {
     const s = getStockEntry(ing.id);
+    const matchArea = (ing.area||'cocina') === currentArea();
     const matchSearch = !search || ing.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || s.qty <= s.min;
-    return matchSearch && matchAlert;
+    return matchArea && matchSearch && matchAlert;
   }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || 'Otros', ...getStockEntry(ing.id)}));
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
+    const matchArea = (e.area||'cocina') === currentArea();
     const matchSearch = !search || e.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
-    return matchSearch && matchAlert;
+    return matchArea && matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
   const renderRow = row => {
@@ -2283,7 +2309,7 @@ function saveElaboracion(id){
     Object.assign(getElaboracion(id), {name, unit, qty, min});
   } else {
     if(!DB.elaboraciones) DB.elaboraciones = [];
-    DB.elaboraciones.push({id: genId(), name, unit, qty, min});
+    DB.elaboraciones.push({id: genId(), name, unit, qty, min, area: currentArea()});
   }
   saveDB();
   closeModal();
@@ -2396,14 +2422,15 @@ function renderEscandallo(){
   populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
   const cat = document.getElementById('escandallo-filter-cat').value;
-  const recipes = DB.recipes.filter(r => {
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const recipes = areaRecipes.filter(r => {
     const matchSearch = !search || r.name.toLowerCase().includes(search);
     const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
     return matchSearch && matchCat;
   });
   const box = document.getElementById('escandallo-list');
 
-  if(!DB.recipes.length){
+  if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay platos. Crea el primer escandallo.</div>`;
     return;
   }
@@ -2468,15 +2495,16 @@ function renderEscandalloCard(r){
 let recipeModalLines = [];
 
 function openRecipeModal(id){
-  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[]};
+  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea()};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
   renderRecipeModal(id, r);
 }
 
 function renderRecipeModal(id, r){
   const breakdown = recipeCostBreakdown({...r, ingredients: recipeModalLines});
+  const area = r.area || currentArea();
 
-  const ingredientOptions = DB.ingredients.map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
+  const ingredientOptions = DB.ingredients.filter(i => (i.area||'cocina') === area).map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
 
   const linesHtml = recipeModalLines.map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
@@ -2534,7 +2562,7 @@ function renderRecipeModal(id, r){
           <tbody>${linesHtml || '<tr><td colspan="6"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
         </table>
       </div>
-      ${DB.ingredients.length ? `
+      ${ingredientOptions ? `
       <div class="field-row">
         <div class="field" style="margin-bottom:0">
           <select id="recipe-add-ingredient">${ingredientOptions}</select>
@@ -2639,6 +2667,7 @@ function currentRecipeFormState(id){
     comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
     consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
     category: categoryEl ? categoryEl.value : (r.category||''),
+    area: r.area || currentArea(),
   };
 }
 
@@ -2663,7 +2692,7 @@ function saveRecipe(id){
     const r = getRecipe(id);
     Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet]});
   }else{
-    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet]});
+    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea()});
   }
   saveDB();
   closeModal();
@@ -2697,13 +2726,14 @@ function getFicha(id){ return DB.fichas.find(f => f.id === id); }
 function renderFichas(){
   populateRecipeCategoryFilter('fichas-filter-cat');
   const cat = document.getElementById('fichas-filter-cat').value;
-  const recipes = DB.recipes.filter(r => {
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const recipes = areaRecipes.filter(r => {
     return !cat || (cat==='__none__' ? !r.category : r.category===cat);
   });
   const box = document.getElementById('fichas-list');
   let html = '';
 
-  if(!DB.recipes.length){
+  if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos. Crea primero un escandallo.</div>`;
     return;
   }
@@ -2717,7 +2747,7 @@ function renderFichas(){
     `).join('');
   }
 
-  const orphanFichas = DB.fichas.filter(f => !f.recipeId || !getRecipe(f.recipeId));
+  const orphanFichas = DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea());
   if(orphanFichas.length){
     html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="grid grid-2">` + orphanFichas.map(f => `
       <div class="card" style="cursor:pointer" onclick="openFichaModal(${f.id})">
@@ -2786,7 +2816,7 @@ function openFichaModal(id, recipeId){
 function renderFichaModal(){
   const f = fichaModalState;
 
-  const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.map(r =>
+  const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
     `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
   ).join('');
 
@@ -2929,7 +2959,7 @@ function saveFicha(){
   if(f.id){
     Object.assign(getFicha(f.id), data);
   } else {
-    DB.fichas.push({id: genId(), ...data});
+    DB.fichas.push({id: genId(), ...data, area: currentArea()});
   }
   saveDB();
   closeModal();
@@ -3287,7 +3317,8 @@ function confirmAddCartaPlato(secId){
 }
 
 function importFromEscandallo(secId){
-  if(!DB.recipes.length){ showToast('No hay platos en el Escandallo'); return; }
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  if(!areaRecipes.length){ showToast('No hay platos en el Escandallo'); return; }
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
     <div class="modal-header">
@@ -3300,7 +3331,7 @@ function importFromEscandallo(secId){
       </label>
     </div>
     <div id="import-esc-list" style="max-height:320px;overflow:auto">
-      ${DB.recipes.map(r => {
+      ${areaRecipes.map(r => {
         const done = existingIds.has(r.id);
         return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
           <input type="checkbox" value="${r.id}" ${done?'disabled checked':''} style="width:auto">
@@ -4279,11 +4310,12 @@ function openCashClosureHistory(){
    ============================================================ */
 function renderProveedores(){
   const box = document.getElementById('proveedores-list');
-  if(!DB.providers.length){
+  const providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
+  if(!providers.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>No hay proveedores. Añade el primero.</div>`;
     return;
   }
-  box.innerHTML = DB.providers.map(p => `
+  box.innerHTML = providers.map(p => `
     <div class="card">
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</span>
@@ -4349,7 +4381,7 @@ function saveProvider(id){
   if(id){
     Object.assign(DB.providers.find(p=>p.id===id), data);
   }else{
-    DB.providers.push({id: genId(), ...data});
+    DB.providers.push({id: genId(), ...data, area: currentArea()});
   }
   saveDB();
   closeModal();
@@ -4378,13 +4410,14 @@ let pedidoDetailId = null;
 function getPurchaseOrder(id){ return DB.purchaseOrders.find(o => o.id === id); }
 
 function pedidoSuppliers(){
-  const fromProviders = DB.providers.map(p => p.nombre);
-  const fromIngredients = DB.ingredients.map(i => i.supplier).filter(Boolean);
+  const fromProviders = DB.providers.filter(p => (p.area||'cocina') === currentArea()).map(p => p.nombre);
+  const fromIngredients = DB.ingredients.filter(i => (i.area||'cocina') === currentArea()).map(i => i.supplier).filter(Boolean);
   return [...new Set([...fromProviders, ...fromIngredients])].sort();
 }
 
 function renderPedidos(){
-  if(pedidoDetailId && getPurchaseOrder(pedidoDetailId)){
+  const o = pedidoDetailId && getPurchaseOrder(pedidoDetailId);
+  if(o && (o.area||'cocina') === currentArea()){
     renderPedidoDetail();
   }else{
     pedidoDetailId = null;
@@ -4394,7 +4427,7 @@ function renderPedidos(){
 
 function renderPedidoList(){
   const box = document.getElementById('pedidos-list');
-  const orders = DB.purchaseOrders;
+  const orders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
   const counts = {BORRADOR:0, ENVIADO:0, RECIBIDO:0};
   orders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
 
@@ -4621,7 +4654,7 @@ let orderModalSupplier = '';
 let orderModalLines = [];
 
 function openOrderModal(){
-  if(!DB.ingredients.length){ showToast('Añade ingredientes en Mega Lista primero'); return; }
+  if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast('Añade ingredientes en Mega Lista primero'); return; }
   orderModalSupplier = '';
   orderModalLines = [];
   renderOrderModal();
@@ -4637,7 +4670,7 @@ function renderOrderModal(){
 
   let itemsHtml = '';
   if(orderModalSupplier){
-    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier);
+    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier && (i.area||'cocina') === currentArea());
     if(!ings.length){
       itemsHtml = `<div class="empty" style="padding:10px">Este proveedor no tiene ingredientes asociados en Mega Lista</div>`;
     }else{
@@ -4696,7 +4729,7 @@ function renderOrderModal(){
 
 function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
-  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
+  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea()).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
   renderOrderModal();
 }
 
@@ -4719,7 +4752,7 @@ function savePurchaseOrder(){
   const date = document.getElementById('order-date').value || todayStr();
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
   if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return; }
-  DB.purchaseOrders.push({id: genId(), supplier: orderModalSupplier, date, estado:'BORRADOR', items, notas:'', recepcion:null});
+  DB.purchaseOrders.push({id: genId(), supplier: orderModalSupplier, date, estado:'BORRADOR', items, notas:'', recepcion:null, area: currentArea()});
   saveDB();
   closeModal();
   renderPedidos();
