@@ -934,7 +934,12 @@ const FIREBASE_CONFIG = {
 
 let cloudRef = null;
 let cloudConfig = null;
-let lastSyncedJson = '';
+// Última versión confirmada en la nube, por cada bloque de primer nivel de DB
+// (ingredients, recipes, tpvOrders, sales...). Permite subir/aplicar solo los
+// bloques que han cambiado en vez de todo el negocio entero en cada guardado.
+let lastSyncedSnapshot = null;
+let cloudSyncTimer = null;
+const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un solo envío a la nube
 
 /* ============================================================
    LICENCIA — Clave de activación
@@ -1133,19 +1138,27 @@ function initCloud(){
     cloudRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/db');
     cloudRef.on('value', snap => {
       const val = snap.val();
+      updateSyncBadge('online');
       if(val === null){
         // Nube vacía: subir los datos locales como punto de partida
-        lastSyncedJson = JSON.stringify(DB);
-        cloudRef.set(JSON.parse(lastSyncedJson));
+        lastSyncedSnapshot = {};
+        pushAllToCloud();
         syncPublicMirror();
-        updateSyncBadge('online');
         return;
       }
-      const json = JSON.stringify(val);
-      updateSyncBadge('online');
-      if(json === lastSyncedJson) return; // cambio propio, ya aplicado
-      lastSyncedJson = json;
-      DB = withDefaults(defaultData(), val);
+      const merged = withDefaults(defaultData(), val);
+      let changedLocally = false;
+      const newSnapshot = {};
+      Object.keys(merged).forEach(key => {
+        const remoteJson = JSON.stringify(merged[key]);
+        newSnapshot[key] = remoteJson;
+        if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
+          DB[key] = merged[key];
+          changedLocally = true;
+        }
+      });
+      lastSyncedSnapshot = newSnapshot;
+      if(!changedLocally) return; // cambios propios ya aplicados, nada nuevo del resto
       localStorage.setItem(DB_KEY, JSON.stringify(DB));
       // Licencia compartida por la nube: los empleados se activan solos
       if(DB.license && validateLicenseKey(DB.license.key)){
@@ -1365,16 +1378,56 @@ function loadDB(){
 }
 
 function saveDB(){
-  const json = JSON.stringify(DB);
-  localStorage.setItem(DB_KEY, json);
-  if(cloudRef){
-    lastSyncedJson = json;
-    cloudRef.set(JSON.parse(json)).catch(e => {
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  scheduleCloudSync();
+}
+
+/* Sube a la nube solo los bloques de DB (ingredients, tpvOrders, sales...)
+   que han cambiado desde el último envío, agrupando varios cambios rápidos
+   en uno solo. Así dos dispositivos que tocan partes distintas del negocio
+   (p.ej. una comanda y un cierre de caja) no se pisan entre sí, y no se
+   reenvía todo el histórico del negocio en cada pequeño cambio. */
+function pushAllToCloud(){
+  if(!cloudRef) return;
+  const updates = {};
+  Object.keys(DB).forEach(key => {
+    updates[key] = DB[key];
+    lastSyncedSnapshot[key] = JSON.stringify(DB[key]);
+  });
+  cloudRef.set(updates).catch(e => {
+    console.error('Error guardando en la nube', e);
+    updateSyncBadge('error');
+  });
+}
+
+function scheduleCloudSync(){
+  if(!cloudRef) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(flushCloudSync, CLOUD_SYNC_DELAY);
+}
+
+function flushCloudSync(){
+  cloudSyncTimer = null;
+  if(!cloudRef || !lastSyncedSnapshot) return;
+  const updates = {};
+  Object.keys(DB).forEach(key => {
+    const json = JSON.stringify(DB[key]);
+    if(lastSyncedSnapshot[key] !== json){
+      updates[key] = DB[key];
+      lastSyncedSnapshot[key] = json;
+    }
+  });
+  if(Object.keys(updates).length === 0) return;
+  try{
+    cloudRef.update(updates).catch(e => {
       console.error('Error guardando en la nube', e);
       updateSyncBadge('error');
     });
-    syncPublicMirror();
+  }catch(e){
+    console.error('Error guardando en la nube', e);
+    updateSyncBadge('error');
   }
+  syncPublicMirror();
 }
 
 function genId(){
@@ -6962,6 +7015,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   updateAutoActiveCarta();
   setInterval(updateAutoActiveCarta, 60000);
+
+  // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario
+  // cierra la pestaña o cambia de app, los enviamos ya mismo para no perderlos.
+  const flushPendingSync = () => { if(cloudSyncTimer) flushCloudSync(); };
+  window.addEventListener('beforeunload', flushPendingSync);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden') flushPendingSync();
+  });
 });
 </script>
 
