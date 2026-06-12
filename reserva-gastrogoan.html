@@ -108,6 +108,7 @@
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
@@ -169,18 +170,10 @@ function init(){
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
-    db.ref('gastrogoan/public/' + publicId + '/info').once('value').then(snap => {
-      const val = snap.val();
-      if(!val){ showError('No se ha podido cargar la información del restaurante'); return; }
-      DB = {
-        business: val.business || {},
-        cartas: val.cartas || [],
-        activeCartaId: val.activeCartaId || null,
-        reservasResumen: val.reservasResumen || {}
-      };
-      renderHeader();
-      renderApp();
-    }).catch(e => {
+    // Autenticación anónima: las reglas de la nube exigen auth != null
+    // para poder leer/escribir, así evitamos el acceso directo sin pasar
+    // por el SDK de Firebase.
+    firebase.auth().signInAnonymously().then(() => loadBusinessInfo()).catch(e => {
       console.error(e);
       showError('No se ha podido conectar con el restaurante');
     });
@@ -188,6 +181,24 @@ function init(){
     console.error(e);
     showError('No se ha podido conectar con el restaurante');
   }
+}
+
+function loadBusinessInfo(){
+  db.ref('gastrogoan/public/' + publicId + '/info').once('value').then(snap => {
+    const val = snap.val();
+    if(!val){ showError('No se ha podido cargar la información del restaurante'); return; }
+    DB = {
+      business: val.business || {},
+      cartas: val.cartas || [],
+      activeCartaId: val.activeCartaId || null,
+      reservasResumen: val.reservasResumen || {}
+    };
+    renderHeader();
+    renderApp();
+  }).catch(e => {
+    console.error(e);
+    showError('No se ha podido conectar con el restaurante');
+  });
 }
 
 function renderHeader(){

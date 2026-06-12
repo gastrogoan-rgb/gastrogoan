@@ -905,6 +905,7 @@ td.wrap{white-space:normal}
 
 <!-- Firebase: sincronización en la nube entre dispositivos -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
@@ -1135,6 +1136,26 @@ function initCloud(){
   if(cloudRef) return; // ya conectado
   try{
     if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(cloudConfig);
+    // Autenticación anónima: las reglas de la nube exigen auth != null
+    // para poder leer/escribir, así evitamos el acceso directo sin pasar
+    // por el SDK de Firebase.
+    if(firebase.auth().currentUser){
+      startCloudSync(tenantId);
+    } else {
+      firebase.auth().signInAnonymously().then(() => startCloudSync(tenantId)).catch(err => {
+        console.error('Error de autenticación con la nube', err);
+        updateSyncBadge('error');
+      });
+    }
+  }catch(e){
+    console.error('Error iniciando la nube', e);
+    updateSyncBadge('error');
+  }
+}
+
+function startCloudSync(tenantId){
+  if(cloudRef) return; // ya conectado
+  try{
     cloudRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/db');
     cloudRef.on('value', snap => {
       const val = snap.val();
