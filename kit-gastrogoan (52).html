@@ -859,7 +859,6 @@ const DB_KEY = 'gastrogoan_data_v1';
 const FIREBASE_CONFIG = null;
 
 const CLOUD_KEY = 'gastrogoan_cloud_v1';
-const CLOUD_SKIP_KEY = 'gastrogoan_cloud_skip_v1';
 
 let cloudRef = null;
 let cloudConfig = null;
@@ -966,7 +965,7 @@ function activateLicenseFromGate(){
   saveDB();
   hideActivationGate();
   showToast('Licencia activada: ' + name);
-  if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)) openCloudWelcome();
+  if(!cloudConfig) openCloudWelcome();
 }
 
 function activateFromConnGate(){
@@ -1123,15 +1122,9 @@ function openCloudWelcome(){
       <button class="btn" style="width:100%;margin-bottom:16px;padding:10px;font-size:13.5px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('dueno')">🎬 Tutorial para el dueño (paso a paso con imágenes)</button>
       <button class="btn" style="width:100%;margin-bottom:6px;padding:14px;font-size:15px" onclick="openCloudWizard('codigo')"><i class="ti ti-device-mobile"></i> Soy empleado — Tengo un código de conexión</button>
       <button class="btn" style="width:100%;margin-bottom:16px;padding:10px;font-size:13.5px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('empleado')">🎬 Tutorial para empleados (2 minutos)</button>
-      <button class="btn" style="width:100%;border:none;color:var(--muted);font-weight:400" onclick="skipCloudSetup()">Más tarde — usar solo en este dispositivo</button>
+      <p style="font-size:12px;color:var(--muted)">⚠️ Conectar la nube es <strong>obligatorio</strong>: es lo que permite que todos los dispositivos del restaurante trabajen sincronizados.</p>
     </div>
   `);
-}
-
-function skipCloudSetup(){
-  localStorage.setItem(CLOUD_SKIP_KEY, '1');
-  closeModal();
-  showToast('Puedes conectar la nube cuando quieras desde el botón ☁ Nube');
 }
 
 function openCloudWizard(tab){
@@ -1157,7 +1150,7 @@ function openCloudWizard(tab){
     `;
   } else if(tab === 'codigo'){
     body = `
-      <p style="font-size:13.5px;margin-bottom:10px">Si el dueño ya configuró la nube, pídele el <strong>código de conexión</strong> (te lo puede enviar por WhatsApp) y pégalo aquí:</p>
+      <p style="font-size:13.5px;margin-bottom:10px">Si el dueño ya configuró la nube, pídele el <strong>código de conexión</strong> (te lo puede enviar por WhatsApp o email) y pégalo aquí:</p>
       <button class="btn" style="width:100%;margin-bottom:14px;padding:11px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial('empleado')">🎬 ¿Cómo lo hago? Ver tutorial para empleados (2 min)</button>
       <div class="field">
         <textarea id="cloud-code-paste" rows="4" placeholder="Pega aquí el código de conexión..." style="font-family:monospace;font-size:12px"></textarea>
@@ -1169,14 +1162,15 @@ function openCloudWizard(tab){
     const code = getConnectionCode();
     body = cloudConfig ? `
       <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> Este dispositivo está conectado a la nube</div>
-      <p style="font-size:13.5px;margin-bottom:8px"><strong>Para conectar más dispositivos</strong> (móviles de camareros, tablet de cocina): envíales este código por WhatsApp y que lo peguen en <em>"Soy camarero — Tengo un código de conexión"</em>:</p>
+      <p style="font-size:13.5px;margin-bottom:8px"><strong>Para conectar más dispositivos</strong> (móviles de camareros, tablet de cocina): envíales este código por WhatsApp o email y que lo peguen en <em>"Soy empleado — Tengo un código de conexión"</em>:</p>
       <div class="field">
         <textarea id="cloud-share-code" rows="4" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${code}</textarea>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <button class="btn" style="flex:1" onclick="copyConnectionCode()"><i class="ti ti-copy"></i> Copiar código</button>
-        <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Código de conexión GastroGoan:\n\n' + code)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</a>
+        <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Código de conexión GastroGoan:\n\n' + code)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
+      <a class="btn" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:14px" href="mailto:?subject=${encodeURIComponent('Código de conexión GastroGoan')}&body=${encodeURIComponent('Código de conexión GastroGoan:\n\n' + code)}"><i class="ti ti-mail"></i> Enviar por email</a>
       <button class="btn btn-danger" style="width:100%" onclick="disconnectCloud()"><i class="ti ti-plug-connected-x"></i> Desconectar la nube de este dispositivo</button>
     ` : `
       <div class="empty"><i class="ti ti-cloud-off"></i>Este dispositivo aún no está conectado a la nube.</div>
@@ -1206,7 +1200,6 @@ function showCloudError(elId, msg){
 
 function applyCloudConfig(cfg){
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
-  localStorage.removeItem(CLOUD_SKIP_KEY);
   showToast('Nube configurada. Conectando...');
   setTimeout(() => location.reload(), 800);
 }
@@ -6050,7 +6043,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // 1º: activación de licencia · 2º: asistente de nube
   if(!getLicense()){
     showActivationGate();
-  } else if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)){
+  } else if(!cloudConfig){
     openCloudWelcome();
   }
 });
@@ -6354,7 +6347,7 @@ const OWNER_STEPS = [
   {
     title:'Conecta los móviles de tus camareros',
     url:'GastroGoan — tu app',
-    caption:'Último paso: pulsa <strong>☁ Nube → "Estado y compartir"</strong> y <strong>envía el código de conexión por WhatsApp</strong> a cada camarero. Ellos abren la app en su móvil → <em>"Soy camarero — Tengo un código"</em> → pegan el código → listo. Todos los dispositivos quedan sincronizados al instante.',
+    caption:'Último paso: pulsa <strong>☁ Nube → "Estado y compartir"</strong> y <strong>envía el código de conexión por WhatsApp o email</strong> a cada empleado. Ellos abren la app en su móvil → <em>"Soy empleado — Tengo un código"</em> → pegan el código → listo. Todos los dispositivos quedan sincronizados al instante.',
     screen:`<div class="gg-screen">
       <div class="gg-modal">
         <h3>☁ Nube — Estado y compartir</h3>
@@ -6362,7 +6355,8 @@ const OWNER_STEPS = [
         <div class="gg-textarea" style="font-size:10px">eyJhcGlLZXkiOiJBSXphU3lCLi4uIiwiYXV0aERvbWFpbiI6Im1pLXJlc3RhdXJhbnRlLmZpcmViYXNlYXBwLmNvbSIsImRhdGFiYXNlVVJMIjoi...</div>
         <div style="display:flex;gap:8px;margin-top:12px">
           <div style="flex:1;text-align:center;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-weight:700;color:#444">📋 Copiar código</div>
-          <div class="hl" style="flex:1;text-align:center;background:#25D366;color:#fff;border-radius:9px;padding:11px;font-weight:700;cursor:pointer" onclick="go(1)">📱 Enviar por WhatsApp</div>
+          <div class="hl" style="flex:1;text-align:center;background:#25D366;color:#fff;border-radius:9px;padding:11px;font-weight:700;cursor:pointer" onclick="go(1)">📱 WhatsApp</div>
+          <div style="flex:1;text-align:center;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-weight:700;color:#444">✉️ Email</div>
         </div>
       </div>
     </div>`
@@ -6373,7 +6367,7 @@ const WAITER_STEPS = [
   {
     title:'Pídele el código de conexión al dueño',
     url:'WhatsApp',
-    caption:'El dueño te enviará un <strong>código de conexión</strong> (un texto largo) por <strong>WhatsApp</strong>. <strong>Mantén pulsado el mensaje → Copiar</strong>. Si no lo tienes, pídeselo: él lo encuentra en su app, en <em>☁ Nube → "Estado y compartir"</em>.',
+    caption:'El dueño te enviará un <strong>código de conexión</strong> (un texto largo) por <strong>WhatsApp o email</strong>. <strong>Mantén pulsado el mensaje → Copiar</strong>. Si no lo tienes, pídeselo: él lo encuentra en su app, en <em>☁ Nube → "Estado y compartir"</em>.',
     screen:`
       <div style="background:#ECE5DD;min-height:380px;padding:24px;display:flex;flex-direction:column;gap:10px">
         <div style="background:#fff;border-radius:10px;padding:10px 14px;max-width:330px;font-size:13px;box-shadow:0 1px 2px rgba(0,0,0,.12)">
@@ -6385,15 +6379,15 @@ const WAITER_STEPS = [
       </div>`
   },
   {
-    title:'Abre GastroGoan y pulsa "Soy camarero"',
+    title:'Abre GastroGoan y pulsa "Soy empleado"',
     url:'GastroGoan — tu app',
-    caption:'Abre la app <strong>GastroGoan</strong> en tu móvil. En el mensaje de bienvenida pulsa <strong>"Soy camarero — Tengo un código de conexión"</strong>. Si ya cerraste ese mensaje, pulsa el botón <strong>☁ Nube</strong> (arriba) → pestaña <strong>"Tengo un código"</strong>.',
+    caption:'Abre la app <strong>GastroGoan</strong> en tu móvil. En la pantalla de activación pega el código en el cuadro <strong>"¿Eres empleado?"</strong>. Si ya pasaste esa pantalla, pulsa el botón <strong>☁ Nube</strong> (arriba) → pestaña <strong>"Tengo un código"</strong>.',
     screen:`<div class="gg-screen">
       <div class="gg-modal" style="text-align:center">
         <div style="font-size:36px;margin-bottom:6px">☁️</div>
         <h3 style="margin-bottom:12px">¡Bienvenido a GastroGoan!</h3>
         <div style="border:1.5px solid var(--border);border-radius:9px;padding:12px;font-weight:700;color:#444;margin-bottom:8px">🚀 Soy el dueño — Configurar la nube</div>
-        <div class="hl" style="background:var(--brand-orange);color:#fff;border-radius:9px;padding:12px;font-weight:700;cursor:pointer" onclick="go(1)">📱 Soy camarero — Tengo un código de conexión<span class="hand" style="right:6px;top:6px">👆</span></div>
+        <div class="hl" style="background:var(--brand-orange);color:#fff;border-radius:9px;padding:12px;font-weight:700;cursor:pointer" onclick="go(1)">📱 Soy empleado — Tengo un código de conexión<span class="hand" style="right:6px;top:6px">👆</span></div>
       </div>
     </div>`
   },
