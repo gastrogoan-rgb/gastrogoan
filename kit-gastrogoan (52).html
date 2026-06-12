@@ -1229,6 +1229,7 @@ function defaultData(){
     tables: [],
     tpvOrders: [],
     sales: [],
+    cashClosures: [], // {id, fecha, desde, hasta, totales:{Efectivo,Tarjeta,Otro}, total, ticketCount, fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, createdAt}
     employees: [],       // {id, name, rol, color}
     shifts: {},          // { employeeId: ['','','','','','',''] }
     turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
@@ -3213,6 +3214,8 @@ function renderTPV(){
     ${kpiHtml}
     <div class="toolbar">
       <div class="left"></div>
+      <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
+      <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
       ${tiposServicio.mesa ? `<button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
     </div>
     ${pendingOnlineHtml}
@@ -3547,7 +3550,7 @@ function finalizeCharge(orderId){
     });
   });
 
-  const sale = {id: genId(), date: todayStr(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
   DB.sales.push(sale);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -3575,6 +3578,177 @@ Pago: ${escapeHtml(sale.metodoPago||'')}
 </body></html>`);
   win.document.close();
   win.print();
+}
+
+/* ============================================================
+   ARQUEO DE CAJA — Cierre de turno/día
+   ============================================================ */
+function fmtDateTime(d){
+  return d.toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function getCashClosurePeriod(){
+  const today = todayStr();
+  const todaysClosures = DB.cashClosures.filter(c => c.fecha === today).sort((a,b)=> new Date(a.hasta) - new Date(b.hasta));
+  const last = todaysClosures[todaysClosures.length-1] || null;
+  const desde = last ? new Date(last.hasta) : new Date(today+'T00:00:00');
+  const hasta = new Date();
+  return {desde, hasta, lastClosure: last};
+}
+
+function getSalesForClosure(){
+  const {desde, hasta, lastClosure} = getCashClosurePeriod();
+  const today = todayStr();
+  return DB.sales.filter(s => {
+    if(s.date !== today) return false;
+    if(!s.createdAt) return !lastClosure;
+    const t = new Date(s.createdAt);
+    return t > desde && t <= hasta;
+  });
+}
+
+function computeClosureTotals(sales){
+  const totales = {};
+  PAYMENT_METHODS.forEach(m => totales[m] = 0);
+  let total = 0;
+  sales.forEach(s => {
+    const m = totales.hasOwnProperty(s.metodoPago) ? s.metodoPago : 'Otro';
+    totales[m] += s.total;
+    total += s.total;
+  });
+  return {totales, total, ticketCount: sales.length};
+}
+
+function openCashClosureModal(){
+  const {desde, hasta} = getCashClosurePeriod();
+  const sales = getSalesForClosure();
+  const {totales, total, ticketCount} = computeClosureTotals(sales);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash-register"></i> Cierre de caja / Arqueo</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Periodo: ${fmtDateTime(desde)} — ${fmtDateTime(hasta)}<br>${ticketCount} ticket${ticketCount!==1?'s':''}</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método de pago</th><th>Total ventas</th></tr></thead>
+        <tbody>
+          ${PAYMENT_METHODS.map(m => `<tr><td>${escapeHtml(m)}</td><td>${fmtMoney(totales[m]||0)}</td></tr>`).join('')}
+          <tr style="font-weight:700"><td>Total</td><td>${fmtMoney(total)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Fondo de caja inicial (opcional)</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
+      <div class="field"><label>Efectivo contado en caja</label><input type="number" id="closure-contado" step="0.01" placeholder="0.00" oninput="updateClosureDiffPreview()"></div>
+    </div>
+    <div id="closure-diff-preview" style="font-size:13px;font-weight:600;margin:6px 0"></div>
+    <div class="field"><label>Notas (opcional)</label><textarea id="closure-notas" rows="2" placeholder="Observaciones del cierre..."></textarea></div>
+    <input type="hidden" id="closure-desde" value="${desde.toISOString()}">
+    <input type="hidden" id="closure-hasta" value="${hasta.toISOString()}">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="performCashClosure()"><i class="ti ti-check"></i> Confirmar cierre</button>
+    </div>
+  `);
+  updateClosureDiffPreview();
+}
+
+function updateClosureDiffPreview(){
+  const sales = getSalesForClosure();
+  const {totales} = computeClosureTotals(sales);
+  const efectivo = totales['Efectivo']||0;
+  const fondo = parseFloat(document.getElementById('closure-fondo').value) || 0;
+  const contadoEl = document.getElementById('closure-contado');
+  const contadoRaw = contadoEl.value;
+  const esperado = fondo + efectivo;
+  const box = document.getElementById('closure-diff-preview');
+  if(contadoRaw === ''){
+    box.textContent = `Efectivo esperado: ${fmtMoney(esperado)}`;
+    box.style.color = '';
+    return;
+  }
+  const contado = parseFloat(contadoRaw) || 0;
+  const diff = contado - esperado;
+  box.textContent = `Efectivo esperado: ${fmtMoney(esperado)} · Diferencia: ${diff>0?'+':''}${fmtMoney(diff)}${diff===0?' (caja exacta)':diff>0?' (sobra)':' (falta)'}`;
+  box.style.color = diff===0 ? 'var(--ok, #2e7d32)' : (diff>0 ? 'var(--warn, #b8860b)' : 'var(--danger, #c0392b)');
+}
+
+function performCashClosure(){
+  const sales = getSalesForClosure();
+  const {totales, total, ticketCount} = computeClosureTotals(sales);
+  const fondoInicial = parseFloat(document.getElementById('closure-fondo').value) || 0;
+  const contadoRaw = document.getElementById('closure-contado').value;
+  const efectivoContado = contadoRaw === '' ? null : (parseFloat(contadoRaw) || 0);
+  const efectivoEsperado = fondoInicial + (totales['Efectivo']||0);
+  const diferencia = efectivoContado === null ? null : (efectivoContado - efectivoEsperado);
+  const notas = document.getElementById('closure-notas').value.trim();
+  const desde = document.getElementById('closure-desde').value;
+  const hasta = document.getElementById('closure-hasta').value;
+
+  const closure = {
+    id: genId(), fecha: todayStr(), desde, hasta,
+    totales, total, ticketCount,
+    fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas,
+    createdAt: new Date().toISOString()
+  };
+  DB.cashClosures.push(closure);
+  saveDB();
+  closeModal();
+  renderTPV();
+  printCashClosure(closure);
+  showToast('Cierre de caja registrado');
+}
+
+function printCashClosure(closure){
+  const win = window.open('', '_blank', 'width=320,height=520');
+  const diffLine = closure.efectivoContado === null ? '' :
+    `Efectivo contado: ${fmtMoney(closure.efectivoContado)}\nDiferencia: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?' (caja exacta)':closure.diferencia>0?' (sobra)':' (falta)'}\n`;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Arqueo de caja</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
+${escapeHtml(DB.business.name||'GastroGoan')}
+ARQUEO DE CAJA / CIERRE
+Desde: ${fmtDateTime(new Date(closure.desde))}
+Hasta: ${fmtDateTime(new Date(closure.hasta))}
+------------------------------
+${PAYMENT_METHODS.map(m => `${m.padEnd(12)}${fmtMoney(closure.totales[m]||0)}`).join('\n')}
+------------------------------
+TOTAL VENTAS: ${fmtMoney(closure.total)}
+Tickets: ${closure.ticketCount}
+------------------------------
+Fondo inicial: ${fmtMoney(closure.fondoInicial)}
+Efectivo esperado: ${fmtMoney(closure.efectivoEsperado)}
+${diffLine}${closure.notas ? '\nNotas: '+escapeHtml(closure.notas)+'\n' : ''}
+</body></html>`);
+  win.document.close();
+  win.print();
+}
+
+function openCashClosureHistory(){
+  const closures = [...DB.cashClosures].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-history"></i> Historial de arqueos</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${closures.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Hora cierre</th><th>Total ventas</th><th>Diferencia</th><th></th></tr></thead>
+        <tbody>
+          ${closures.map(c => `
+            <tr>
+              <td>${escapeHtml(c.fecha)}</td>
+              <td>${fmtDateTime(new Date(c.hasta))}</td>
+              <td>${fmtMoney(c.total)}</td>
+              <td>${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
+              <td><button class="btn btn-sm btn-icon" onclick="printCashClosure(DB.cashClosures.find(x=>x.id===${c.id}))"><i class="ti ti-printer"></i></button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    ` : `<div class="empty"><i class="ti ti-cash-register"></i>Todavía no se ha realizado ningún cierre de caja.</div>`}
+  `);
 }
 
 /* ============================================================
@@ -6408,6 +6582,15 @@ const MANUAL_CHAPTERS = [
     </ul>
     <h4>Para llevar / Delivery</h4>
     <p>También puedes registrar ventas para llevar o a domicilio sin asignarlas a una mesa.</p>
+    <h4>Cierre de caja / Arqueo</h4>
+    <p>Al finalizar un turno o el día, pulsa <strong>Cerrar caja</strong>:</p>
+    <ul>
+      <li>El sistema calcula automáticamente el total de ventas por <strong>método de pago</strong> (Efectivo, Tarjeta, Otro) desde el último cierre del día (o desde el inicio del día si es el primero)</li>
+      <li>Indica el <strong>fondo de caja inicial</strong> (si lo hay) y el <strong>efectivo contado</strong> físicamente en caja</li>
+      <li>La app calcula el <strong>efectivo esperado</strong> y la <strong>diferencia</strong> (sobra/falta)</li>
+      <li>Puedes añadir notas y se genera un <strong>ticket imprimible</strong> con el resumen del cierre</li>
+    </ul>
+    <p>Puedes hacer varios cierres al día (por turnos) o uno solo al final del día. Consulta cierres anteriores en <strong>Historial de arqueos</strong>.</p>
     <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`
   },
   {
