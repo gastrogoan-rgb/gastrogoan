@@ -541,41 +541,34 @@ td.wrap{white-space:normal}
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> Solo alertas
           </label>
         </div>
-        <button class="btn btn-primary" onclick="openElaboracionModal()"><i class="ti ti-plus"></i> Nueva elaboración</button>
+        <button class="btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> Nueva elaboración</button>
       </div>
 
-      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>Ingredientes</strong></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ingrediente</th>
-              <th>Stock actual</th>
-              <th>Mínimo</th>
-              <th>Unidad</th>
-              <th>Estado</th>
-              <th>Ajustar</th>
-            </tr>
-          </thead>
-          <tbody id="stock-tbody-ing"></tbody>
-        </table>
+      <nav class="ge-tab-row">
+        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')">🥕 Ingredientes</button>
+        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')">🍲 Elaboraciones</button>
+      </nav>
+
+      <div id="stock-tab-ing" class="ge-tab-panel active">
+        <div id="stock-ing-groups"></div>
       </div>
 
-      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>Elaboraciones</strong></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Elaboración</th>
-              <th>Stock actual</th>
-              <th>Mínimo</th>
-              <th>Unidad</th>
-              <th>Estado</th>
-              <th>Ajustar</th>
-            </tr>
-          </thead>
-          <tbody id="stock-tbody-elab"></tbody>
-        </table>
+      <div id="stock-tab-elab" class="ge-tab-panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Elaboración</th>
+                <th>Stock actual</th>
+                <th>Mínimo</th>
+                <th>Unidad</th>
+                <th>Estado</th>
+                <th>Ajustar</th>
+              </tr>
+            </thead>
+            <tbody id="stock-tbody-elab"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -1962,6 +1955,14 @@ function deleteIngredient(id){
 /* ============================================================
    STOCK
    ============================================================ */
+function stockTab(tab){
+  document.getElementById('stock-tab-btn-ing').classList.toggle('active', tab === 'ing');
+  document.getElementById('stock-tab-btn-elab').classList.toggle('active', tab === 'elab');
+  document.getElementById('stock-tab-ing').classList.toggle('active', tab === 'ing');
+  document.getElementById('stock-tab-elab').classList.toggle('active', tab === 'elab');
+  document.getElementById('stock-new-elab-btn').style.display = tab === 'elab' ? '' : 'none';
+}
+
 function renderStock(){
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
@@ -1971,16 +1972,13 @@ function renderStock(){
     const matchSearch = !search || ing.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || s.qty <= s.min;
     return matchSearch && matchAlert;
-  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, ...getStockEntry(ing.id)}));
+  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || 'Otros', ...getStockEntry(ing.id)}));
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchSearch = !search || e.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
     return matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
-
-  const tbodyIng = document.getElementById('stock-tbody-ing');
-  const tbodyElab = document.getElementById('stock-tbody-elab');
 
   const renderRow = row => {
     const low = row.qty <= row.min;
@@ -2006,10 +2004,42 @@ function renderStock(){
     `;
   };
 
-  tbodyIng.innerHTML = items.length
-    ? items.map(renderRow).join('')
-    : `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay ingredientes en stock.</div></td></tr>`;
+  /* Ingredientes agrupados por familia */
+  const groupsWrap = document.getElementById('stock-ing-groups');
+  if(!items.length){
+    groupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>No hay ingredientes en stock.</div>`;
+  } else {
+    const byCat = {};
+    items.forEach(it => { (byCat[it.category] = byCat[it.category] || []).push(it); });
+    const cats = Object.keys(byCat).sort((a,b) => {
+      const ia = CATEGORIES.indexOf(a), ib = CATEGORIES.indexOf(b);
+      if(ia === -1 && ib === -1) return a.localeCompare(b);
+      if(ia === -1) return 1;
+      if(ib === -1) return -1;
+      return ia - ib;
+    });
+    groupsWrap.innerHTML = cats.map(cat => `
+      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th>Stock actual</th>
+              <th>Mínimo</th>
+              <th>Unidad</th>
+              <th>Estado</th>
+              <th>Ajustar</th>
+            </tr>
+          </thead>
+          <tbody>${byCat[cat].map(renderRow).join('')}</tbody>
+        </table>
+      </div>
+    `).join('');
+  }
 
+  /* Elaboraciones */
+  const tbodyElab = document.getElementById('stock-tbody-elab');
   tbodyElab.innerHTML = elabs.length
     ? elabs.map(renderRow).join('')
     : `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay elaboraciones en stock.</div></td></tr>`;
