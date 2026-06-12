@@ -3295,21 +3295,6 @@ function marcharComanda(orderId){
   if(!order) return;
   const pending = orderPendingKitchenLines(order);
   if(!pending.length){ showToast('No hay platos nuevos que marchar'); return; }
-  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const hora = new Date().toTimeString().slice(0,5);
-  const lines = pending.map(l => `${fmtNum(l.qty)} x ${l.name}`).join('\n');
-
-  const win = window.open('', '_blank', 'width=320,height=520');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Comanda Cocina</title></head><body style="font-family:monospace;padding:16px;font-size:14px;white-space:pre-wrap;font-weight:bold">
-*** COCINA ***
-${table ? escapeHtml(table.name) + (order.pax?` · ${order.pax} pers.`:'') : (order.tipo==='delivery'?'DELIVERY':'TAKE AWAY')}${order.clienteNombre?' - '+escapeHtml(order.clienteNombre):''}
-Hora: ${hora}
-------------------------------
-${escapeHtml(lines)}
-------------------------------
-</body></html>`);
-  win.document.close();
-  win.print();
 
   const ahora = new Date().toISOString();
   (order.items||[]).forEach(l => {
