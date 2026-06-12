@@ -1106,6 +1106,7 @@ function initCloud(){
           id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
           clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
+          date: req.date || '', time: req.time || '',
           status: 'pendiente-online', items: req.items || [], createdAt: new Date().toISOString()
         });
       }
@@ -2975,8 +2976,8 @@ function confirmImportEsc(secId){
   if(secId != null){
     sec = cartaEdit.secciones.find(s=>s.id===secId);
   }else{
-    sec = cartaEdit.secciones.find(s=>s.nombre==='IMPORTADOS');
-    if(!sec){ sec = {id: genId(), nombre:'IMPORTADOS', platos:[]}; cartaEdit.secciones.push(sec); }
+    sec = cartaEdit.secciones.find(s=>s.nombre==='OTROS PLATOS');
+    if(!sec){ sec = {id: genId(), nombre:'OTROS PLATOS', platos:[]}; cartaEdit.secciones.push(sec); }
   }
   checked.forEach(rid => {
     const r = getRecipe(rid);
@@ -3118,6 +3119,7 @@ function renderTPV(){
             <span class="badge badge-amber">Nuevo</span>
           </h3>
           ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
+          ${(o.date || o.time) ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${escapeHtml(o.date||'')}${o.date && o.time ? ' · ' : ''}${escapeHtml(o.time||'')}</div>` : ''}
           ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : ''}
           <div style="margin:8px 0;font-size:13px">
             ${(o.items||[]).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}

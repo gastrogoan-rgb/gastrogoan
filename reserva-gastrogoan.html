@@ -317,6 +317,10 @@ function renderOrderForm(){
   }
 
   const isDelivery = currentTab === 'delivery';
+  const hours = getOpeningHours();
+  const hint = hours
+    ? `<p style="font-size:13px;color:#888;margin-top:-8px">Solo se pueden programar pedidos entre las ${hours.open} y las ${hours.close}.</p>`
+    : '';
 
   const menuHtml = secciones.map(sec => `
     <h3>${escapeHtml(sec.nombre)}</h3>
@@ -351,6 +355,17 @@ function renderOrderForm(){
         <label>Teléfono *</label>
         <input type="tel" id="o-phone" placeholder="600 000 000">
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Fecha *</label>
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}">
+        </div>
+        <div class="field">
+          <label>Hora *</label>
+          <input type="time" id="o-time" value="20:00" ${hours ? `min="${hours.open}" max="${hours.close}"` : ''}>
+        </div>
+      </div>
+      ${hint}
       ${isDelivery ? `
       <div class="field">
         <label>Dirección de entrega *</label>
@@ -408,18 +423,26 @@ function submitOrder(){
   if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
+  const date = document.getElementById('o-date').value;
+  const time = document.getElementById('o-time').value;
   const isDelivery = currentTab === 'delivery';
   const clienteDireccion = isDelivery ? document.getElementById('o-address').value.trim() : '';
   const notas = document.getElementById('o-notes').value.trim();
 
-  if(!clienteNombre || !clienteTelefono || (isDelivery && !clienteDireccion)){
+  if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion)){
     alert('Por favor completa los campos obligatorios.');
+    return;
+  }
+
+  const hours = getOpeningHours();
+  if(hours && (time < hours.open || time > hours.close)){
+    alert(`El restaurante solo acepta pedidos entre las ${hours.open} y las ${hours.close}. Por favor elige otra hora.`);
     return;
   }
 
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
-    clienteNombre, clienteTelefono, clienteDireccion, notas,
+    clienteNombre, clienteTelefono, clienteDireccion, notas, date, time,
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
