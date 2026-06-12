@@ -3754,11 +3754,15 @@ function confirmNewToGoOrder(tipo){
   renderTableOrderModal(order.id);
 }
 
-function renderOrderMenuHtml(order){
-  const activeCartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
-  if(!activeCartas.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
-  return activeCartas.map(c => `
-    ${activeCartas.length > 1 ? `<p style="font-size:12px;font-weight:800;margin:10px 0 4px"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</p>` : ''}
+// Las cartas cuyo nombre contiene "bebida" se consideran la carta de bebidas
+// (p.ej. "Bebidas", "Carta de Bebidas"). El resto se consideran de comida.
+function isBebidaCarta(c){
+  return /bebida/i.test(c.nombre||'');
+}
+
+function renderCartasMenuHtml(order, cartas){
+  return cartas.map(c => `
+    ${cartas.length > 1 ? `<p style="font-size:12px;font-weight:800;margin:10px 0 4px"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</p>` : ''}
     ${(c.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
       <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -3766,6 +3770,43 @@ function renderOrderMenuHtml(order){
       </div>
     `).join('')}
   `).join('');
+}
+
+function setOrderMenuStep(orderId, step){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.menuStep = step;
+  renderTableOrderModal(orderId);
+}
+
+function renderOrderMenuHtml(order){
+  const activeCartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
+  if(!activeCartas.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+
+  const bebidaCartas = activeCartas.filter(isBebidaCarta);
+  const comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+
+  // El paso obligatorio "bebida primero" solo aplica a comandas de mesa
+  if(order.tipo === 'mesa' && bebidaCartas.length && comidaCartas.length){
+    const step = order.menuStep || 'bebida';
+    if(step === 'bebida'){
+      return `
+        <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-glass"></i> Primero, ¿qué bebida toma?</p>
+        ${renderCartasMenuHtml(order, bebidaCartas)}
+        <div style="margin-top:10px">
+          <button class="btn btn-primary btn-sm" onclick="setOrderMenuStep(${order.id}, 'comida')">Continuar con la comida <i class="ti ti-arrow-right"></i></button>
+        </div>
+      `;
+    }
+    return `
+      ${renderCartasMenuHtml(order, comidaCartas)}
+      <div style="margin-top:10px">
+        <button class="btn btn-sm" onclick="setOrderMenuStep(${order.id}, 'bebida')"><i class="ti ti-arrow-left"></i> Volver a bebidas</button>
+      </div>
+    `;
+  }
+
+  return renderCartasMenuHtml(order, activeCartas);
 }
 
 function renderOrderTandaSelector(order){
