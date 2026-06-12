@@ -544,11 +544,12 @@ td.wrap{white-space:normal}
         <button class="btn btn-primary" onclick="openElaboracionModal()"><i class="ti ti-plus"></i> Nueva elaboración</button>
       </div>
 
+      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>Ingredientes</strong></div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Ingrediente / Elaboración</th>
+              <th>Ingrediente</th>
               <th>Stock actual</th>
               <th>Mínimo</th>
               <th>Unidad</th>
@@ -556,7 +557,24 @@ td.wrap{white-space:normal}
               <th>Ajustar</th>
             </tr>
           </thead>
-          <tbody id="stock-tbody"></tbody>
+          <tbody id="stock-tbody-ing"></tbody>
+        </table>
+      </div>
+
+      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>Elaboraciones</strong></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Elaboración</th>
+              <th>Stock actual</th>
+              <th>Mínimo</th>
+              <th>Unidad</th>
+              <th>Estado</th>
+              <th>Ajustar</th>
+            </tr>
+          </thead>
+          <tbody id="stock-tbody-elab"></tbody>
         </table>
       </div>
     </section>
@@ -1961,20 +1979,15 @@ function renderStock(){
     return matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
-  const rows = [...items, ...elabs];
+  const tbodyIng = document.getElementById('stock-tbody-ing');
+  const tbodyElab = document.getElementById('stock-tbody-elab');
 
-  const tbody = document.getElementById('stock-tbody');
-  if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay artículos en stock.</div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = rows.map(row => {
+  const renderRow = row => {
     const low = row.qty <= row.min;
     const isElab = row.type === 'elab';
     return `
       <tr>
-        <td><strong>${escapeHtml(row.name)}</strong>${isElab ? ' <span class="badge" style="background:var(--brand-cream);color:var(--brand-orange)">Elaboración</span>' : ''}</td>
+        <td><strong>${escapeHtml(row.name)}</strong></td>
         <td>${fmtNum(row.qty)}</td>
         <td>
           <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"
@@ -1991,7 +2004,15 @@ function renderStock(){
         </td>
       </tr>
     `;
-  }).join('');
+  };
+
+  tbodyIng.innerHTML = items.length
+    ? items.map(renderRow).join('')
+    : `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay ingredientes en stock.</div></td></tr>`;
+
+  tbodyElab.innerHTML = elabs.length
+    ? elabs.map(renderRow).join('')
+    : `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay elaboraciones en stock.</div></td></tr>`;
 }
 
 function updateStockMin(ingredientId, value){
