@@ -865,6 +865,123 @@ let cloudRef = null;
 let cloudConfig = null;
 let lastSyncedJson = '';
 
+/* ============================================================
+   LICENCIA — Clave de activación
+   Cada copia vendida se activa con una clave generada por el
+   vendedor (generador-licencias.html, archivo privado).
+   ============================================================ */
+const LICENSE_LS = 'gastrogoan_license_v1';
+
+function ggLicHash(str){
+  let h = 0x811c9dc5 >>> 0;
+  for(let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function ggLicSig(name){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const secret = 'gg·goan·2026·k7';
+  let h = ggLicHash(name + secret);
+  const out = [];
+  for(let g = 0; g < 3; g++){
+    h = ggLicHash(name + secret + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += A[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('-');
+}
+
+function validateLicenseKey(key){
+  if(!key) return null;
+  const parts = String(key).trim().toUpperCase().split('-').map(p => p.trim()).filter(Boolean);
+  if(parts.length < 4) return null;
+  const sig = parts.slice(-3).join('-');
+  const name = parts.slice(0, -3).join('').replace(/[^A-Z0-9]/g, '');
+  if(!name) return null;
+  return sig === ggLicSig(name) ? name : null;
+}
+
+function getLicense(){
+  try{
+    const l = JSON.parse(localStorage.getItem(LICENSE_LS));
+    if(l && validateLicenseKey(l.key)) return l;
+  }catch(e){}
+  const dl = (typeof DB !== 'undefined' && DB) ? DB.license : null;
+  if(dl && validateLicenseKey(dl.key)){
+    localStorage.setItem(LICENSE_LS, JSON.stringify(dl));
+    return dl;
+  }
+  return null;
+}
+
+function showActivationGate(){
+  if(document.getElementById('license-gate')) return;
+  const g = document.createElement('div');
+  g.id = 'license-gate';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
+  g.innerHTML = `
+    <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
+      <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
+      <h2 style="margin-bottom:4px">GastroGoan</h2>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Activa tu copia para empezar</p>
+      <div style="text-align:left">
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor al comprar la app)</span></label>
+        <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
+        <div id="license-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
+        <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--muted);font-size:12px"><span style="flex:1;height:1px;background:var(--border)"></span>o<span style="flex:1;height:1px;background:var(--border)"></span></div>
+      <div style="text-align:left">
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">📱 ¿Eres empleado? Pega el código de conexión que te envió el dueño:</label>
+        <textarea id="license-conn-input" rows="3" placeholder="Pega aquí el código de conexión..." style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-family:monospace;font-size:11px;resize:vertical"></textarea>
+        <div id="license-conn-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
+        <button onclick="activateFromConnGate()" style="width:100%;background:#fff;color:var(--brand-orange);border:1.5px solid var(--brand-orange);border-radius:9px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:10px">Conectar este dispositivo</button>
+        ${cloudConfig ? '<p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">☁ Conectando con la nube del restaurante... si el dueño ya activó la licencia, esta pantalla se cerrará sola en unos segundos.</p>' : ''}
+      </div>
+    </div>`;
+  document.body.appendChild(g);
+}
+
+function hideActivationGate(){
+  const g = document.getElementById('license-gate');
+  if(g) g.remove();
+}
+
+function activateLicenseFromGate(){
+  const key = (document.getElementById('license-key-input').value || '').trim().toUpperCase();
+  const name = validateLicenseKey(key);
+  const err = document.getElementById('license-error');
+  if(!name){
+    err.textContent = 'Clave no válida. Comprueba que la copiaste entera, con los guiones, tal y como te la envió tu vendedor.';
+    err.style.display = 'block';
+    return;
+  }
+  const lic = { name, key };
+  localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
+  DB.license = lic;
+  saveDB();
+  hideActivationGate();
+  showToast('Licencia activada: ' + name);
+  if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)) openCloudWelcome();
+}
+
+function activateFromConnGate(){
+  const raw = (document.getElementById('license-conn-input').value || '').trim();
+  let cfg = null;
+  try{ cfg = JSON.parse(atob(raw)); }catch(e){}
+  if(!cfg || !cfg.apiKey || !cfg.databaseURL){
+    const err = document.getElementById('license-conn-error');
+    err.textContent = 'El código no es válido. Pídele al dueño que lo copie desde ☁ Nube → "Estado y compartir" y te lo envíe completo.';
+    err.style.display = 'block';
+    return;
+  }
+  applyCloudConfig(cfg);
+}
+
 function getCloudConfig(){
   // 1) Código de conexión en el enlace (#conexion=...)
   try{
@@ -939,6 +1056,11 @@ function initCloud(){
       lastSyncedJson = json;
       DB = withDefaults(defaultData(), val);
       localStorage.setItem(DB_KEY, JSON.stringify(DB));
+      // Licencia compartida por la nube: los empleados se activan solos
+      if(DB.license && validateLicenseKey(DB.license.key)){
+        localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+        hideActivationGate();
+      }
       refreshAfterRemoteChange();
     }, err => {
       console.error('Error de sincronización', err);
@@ -1066,6 +1188,7 @@ function openCloudWizard(tab){
       <h3><i class="ti ti-cloud"></i> Nube — Sincronización entre dispositivos</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    ${(() => { const l = getLicense(); return l ? `<p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${l.name}</strong></p>` : ''; })()}
     <nav class="ge-tab-row" style="margin-bottom:14px">
       ${tabBtn('guia','Configurar (dueño)')}
       ${tabBtn('codigo','Tengo un código')}
@@ -5924,8 +6047,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
-  // Primera vez: el asistente de nube es lo primero que ve el empresario
-  if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)){
+  // 1º: activación de licencia · 2º: asistente de nube
+  if(!getLicense()){
+    showActivationGate();
+  } else if(!cloudConfig && !localStorage.getItem(CLOUD_SKIP_KEY)){
     openCloudWelcome();
   }
 });

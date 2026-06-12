@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan · Generador de licencias (PRIVADO)</title>
+<style>
+:root{ --brand-orange:#DF7039; --brand-cream:#F6EDD5; --border:#E2DBC8; --muted:#777; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--brand-cream);min-height:100vh;padding:24px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{background:#000;color:#fff;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:12px}
+header .logo{width:40px;height:40px;border-radius:10px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:20px}
+header h1{font-size:17px}
+header h1 span{display:block;font-size:11.5px;font-weight:400;color:#FFD60A;margin-top:2px}
+.card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.card h2{font-size:15px;margin-bottom:12px}
+label{font-size:12.5px;font-weight:700;display:block;margin-bottom:6px}
+input{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-size:14px;font-family:inherit}
+.key-out{background:var(--brand-cream);border:2px dashed var(--brand-orange);border-radius:10px;padding:16px;font-family:monospace;font-size:17px;font-weight:700;text-align:center;letter-spacing:1px;word-break:break-all;margin-top:14px}
+.btns{display:flex;gap:8px;margin-top:12px}
+button,.wa{flex:1;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none}
+.gen{width:100%;background:var(--brand-orange);color:#fff;margin-top:14px;font-size:15px}
+.copy{background:#fff;color:#444;border:1.5px solid var(--border)}
+.wa{background:#25D366;color:#fff;display:block}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:11px;text-transform:uppercase}
+td.key{font-family:monospace;font-size:11px}
+.muted{color:var(--muted);font-size:12px;line-height:1.5}
+.warn{background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5}
+.del{background:none;border:none;color:#C0392B;cursor:pointer;font-size:12px;padding:2px 6px;flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🔑</div>
+    <h1>Generador de licencias GastroGoan<span>ARCHIVO PRIVADO — no lo envíes NUNCA a ningún cliente</span></h1>
+  </header>
+
+  <div class="card">
+    <h2>1 · Genera la clave de un cliente nuevo</h2>
+    <label>Nombre del restaurante (tal y como quieres que aparezca en su app)</label>
+    <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
+    <button class="gen" onclick="gen()">Generar clave de licencia</button>
+    <div id="out" style="display:none">
+      <div class="key-out" id="key"></div>
+      <div class="btns">
+        <button class="copy" onclick="copyKey()">📋 Copiar clave</button>
+        <a class="wa" id="wa" target="_blank" rel="noopener">📱 Enviar por WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Registro de ventas <span class="muted" id="count"></span></h2>
+    <p class="muted" style="margin-bottom:10px">Cada clave generada se apunta aquí automáticamente (se guarda en este navegador).</p>
+    <table id="log-table" style="display:none">
+      <thead><tr><th>Fecha</th><th>Restaurante</th><th>Clave</th><th></th></tr></thead>
+      <tbody id="log"></tbody>
+    </table>
+    <p class="muted" id="empty">Aún no has generado ninguna clave.</p>
+    <div class="btns" id="export-row" style="display:none">
+      <button class="copy" onclick="exportCSV()">⬇ Descargar registro (CSV)</button>
+    </div>
+  </div>
+
+  <div class="warn">
+    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar claves válidas. El registro de ventas vive en este navegador: si cambias de ordenador, descarga el CSV antes.
+  </div>
+</div>
+
+<script>
+/* Debe ser IDÉNTICO al de la app */
+function ggLicHash(str){
+  let h = 0x811c9dc5 >>> 0;
+  for(let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+function ggLicSig(name){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const secret = 'gg·goan·2026·k7';
+  let h = ggLicHash(name + secret);
+  const out = [];
+  for(let g = 0; g < 3; g++){
+    h = ggLicHash(name + secret + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += A[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('-');
+}
+
+const LOG_KEY = 'gg_lic_sales_v1';
+let sales = [];
+try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
+
+function gen(){
+  const raw = document.getElementById('name').value.trim();
+  const name = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(!name){ alert('Escribe el nombre del restaurante'); return; }
+  const key = name + '-' + ggLicSig(name);
+  document.getElementById('key').textContent = key;
+  document.getElementById('out').style.display = 'block';
+  const msg = 'Tu clave de licencia de GastroGoan 🍽\n\n' + key + '\n\nPégala en la pantalla de activación al abrir la app por primera vez.';
+  document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  if(!sales.some(s => s.key === key)){
+    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw, key });
+    localStorage.setItem(LOG_KEY, JSON.stringify(sales));
+  }
+  renderLog();
+}
+
+function copyKey(){
+  navigator.clipboard.writeText(document.getElementById('key').textContent).then(() => alert('Clave copiada'));
+}
+
+function delSale(i){
+  if(!confirm('¿Borrar esta entrada del registro?')) return;
+  sales.splice(i, 1);
+  localStorage.setItem(LOG_KEY, JSON.stringify(sales));
+  renderLog();
+}
+
+function renderLog(){
+  const has = sales.length > 0;
+  document.getElementById('log-table').style.display = has ? 'table' : 'none';
+  document.getElementById('empty').style.display = has ? 'none' : 'block';
+  document.getElementById('export-row').style.display = has ? 'flex' : 'none';
+  document.getElementById('count').textContent = has ? '· ' + sales.length + ' venta' + (sales.length === 1 ? '' : 's') : '';
+  document.getElementById('log').innerHTML = sales.map((s, i) =>
+    `<tr><td>${s.date}</td><td>${s.name}</td><td class="key">${s.key}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
+  ).join('');
+}
+
+function exportCSV(){
+  const csv = 'Fecha;Restaurante;Clave\n' + sales.map(s => `${s.date};${s.name};${s.key}`).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'ventas-gastrogoan.csv';
+  a.click();
+}
+
+renderLog();
+</script>
+</body>
+</html>
