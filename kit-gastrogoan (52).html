@@ -1932,7 +1932,7 @@ function deleteIngredient(id){
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
-    r.ingredients = r.ingredients.filter(line => line.ingredientId !== id);
+    r.ingredients = (r.ingredients||[]).filter(line => line.ingredientId !== id);
   });
   saveDB();
   renderMegalista();
@@ -2398,6 +2398,10 @@ function openFichaModal(id, recipeId){
   if(id){
     const f = getFicha(id);
     fichaModalState = JSON.parse(JSON.stringify(f));
+    // La nube no guarda listas vacías: restaurarlas si faltan
+    if(!Array.isArray(fichaModalState.ingredients) || !fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
+    if(!Array.isArray(fichaModalState.pasos) || !fichaModalState.pasos.length) fichaModalState.pasos = [''];
+    if(!Array.isArray(fichaModalState.allergens)) fichaModalState.allergens = [];
   } else if(recipeId){
     const r = getRecipe(recipeId);
     fichaModalState = {
@@ -2705,6 +2709,10 @@ function openCarta(id){
   const c = DB.cartas.find(x=>x.id===id);
   if(!c) return;
   cartaEdit = JSON.parse(JSON.stringify(c));
+  // La nube no guarda listas vacías: restaurarlas si faltan
+  if(!Array.isArray(cartaEdit.secciones)) cartaEdit.secciones = [];
+  if(!Array.isArray(cartaEdit.dias)) cartaEdit.dias = [0,1,2,3,4,5,6];
+  cartaEdit.secciones.forEach(s => { if(!Array.isArray(s.platos)) s.platos = []; });
   renderCarta();
 }
 function backToCartaList(){
