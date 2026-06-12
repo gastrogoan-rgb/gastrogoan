@@ -1400,6 +1400,7 @@ const FOLDERS = {
       {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
       {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
       {id:'tpv', name:'TPV', icon:'ti-device-desktop', desc:'Comandas, mesas y tickets'},
+      {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
     ]
   },
   gestion: {
@@ -1452,7 +1453,8 @@ function navigate(view){
   const target = document.getElementById('view-' + view);
   if(target) target.classList.add('active');
 
-  if(MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
+  const inCurrentFolder = currentFolder && FOLDERS[currentFolder] && FOLDERS[currentFolder].modules.some(m => m.id === view);
+  if(!inCurrentFolder && MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
 
   renderView(view);
   location.hash = view;
