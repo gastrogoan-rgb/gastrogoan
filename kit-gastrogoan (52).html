@@ -2037,7 +2037,7 @@ function openElaboracionModal(id){
       <div class="field">
         <label>Unidad</label>
         <select id="elab-unit">
-          ${['L','kg','ud'].map(u => `<option value="${u}"${u===e.unit?' selected':''}>${u}</option>`).join('')}
+          ${['L','ml','kg','g','ud'].map(u => `<option value="${u}"${u===e.unit?' selected':''}>${u}</option>`).join('')}
         </select>
       </div>
       <div class="field">
