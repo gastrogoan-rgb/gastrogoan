@@ -164,7 +164,8 @@ function init(){
       DB = {
         business: val.business || {},
         cartas: val.cartas || [],
-        activeCartaId: val.activeCartaId || null
+        activeCartaId: val.activeCartaId || null,
+        reservasResumen: val.reservasResumen || {}
       };
       renderHeader();
       renderApp();
@@ -249,6 +250,20 @@ function isTimeAllowed(dateStr, time){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return true;
   return turnos.some(t => time >= t.abre && time <= t.cierra);
+}
+
+// Devuelve las plazas disponibles para el turno al que pertenece `time` en `dateStr`,
+// o null si no hay aforo configurado o la hora no encaja en ningún turno.
+function getAforoDisponible(dateStr, time){
+  const aforo = parseInt((DB.business||{}).aforo) || 0;
+  if(!aforo) return null;
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos || !turnos.length) return null;
+  const turnoIdx = turnos.findIndex(t => time >= t.abre && time <= t.cierra);
+  if(turnoIdx === -1) return null;
+  const resumen = (DB.reservasResumen||{})[dateStr] || {};
+  const reservados = resumen[turnoIdx] || 0;
+  return Math.max(0, aforo - reservados);
 }
 
 function formatTurnos(turnos){
@@ -341,6 +356,16 @@ function submitReserva(){
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
     alert(`El restaurante solo acepta reservas el ${nombreDia(date).toLowerCase()} en este horario: ${formatTurnos(turnos)}. Por favor elige otra hora.`);
+    return;
+  }
+
+  const disponible = getAforoDisponible(date, time);
+  if(disponible !== null && people > disponible){
+    if(disponible <= 0){
+      alert('Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad.');
+    }else{
+      alert(`Lo sentimos, para ese turno solo quedan ${disponible} plaza${disponible===1?'':'s'} disponible${disponible===1?'':'s'}. Por favor reduce el número de personas, elige otro horario o llama al restaurante.`);
+    }
     return;
   }
 

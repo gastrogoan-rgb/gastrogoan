@@ -1030,6 +1030,22 @@ function refreshAfterRemoteChange(){
 /* Sube al espacio público (de solo lectura para los clientes) la
    información necesaria para la página de reservas/pedidos online:
    datos del negocio y las cartas. No incluye nada privado. */
+// Resumen de plazas reservadas por fecha y turno (sin datos personales) para
+// que la web pública pueda comprobar el aforo disponible.
+function getReservasResumenForSync(){
+  const resumen = {};
+  const today = todayStr();
+  DB.reservations.forEach(r => {
+    if(r.status !== 'pendiente' && r.status !== 'confirmada') return;
+    if(!r.date || r.date < today) return;
+    const turnoIdx = getTurnoIndexForTime(r.date, r.time);
+    if(turnoIdx === null) return;
+    if(!resumen[r.date]) resumen[r.date] = {};
+    resumen[r.date][turnoIdx] = (resumen[r.date][turnoIdx]||0) + (r.people||0);
+  });
+  return resumen;
+}
+
 function syncPublicMirror(){
   if(!cloudConfig || typeof firebase === 'undefined') return;
   const publicId = getPublicId();
@@ -1038,7 +1054,8 @@ function syncPublicMirror(){
     firebase.database().ref('gastrogoan/public/' + publicId + '/info').set({
       business: DB.business,
       cartas: DB.cartas,
-      activeCartaId: DB.activeCartaId
+      activeCartaId: DB.activeCartaId,
+      reservasResumen: getReservasResumenForSync()
     }).catch(()=>{});
   }catch(e){}
 }
@@ -2767,6 +2784,53 @@ function fmtCartaDias(dias){
 }
 function fmtTurno(turno){
   return turno==='1' ? 'Turno 1' : turno==='2' ? 'Turno 2' : 'Todo el horario';
+}
+
+/* ============================================================
+   AFORO POR TURNO — Disponibilidad para reservas
+   ============================================================ */
+// Devuelve los turnos (franjas horarias) configurados para el día de la semana
+// de dateStr, o null si no hay horario configurado (sin restricción de turnos).
+function getTurnosForDate(dateStr){
+  const horario = (DB.business || {}).horario;
+  if(!horario || horario.length !== 7) return null;
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
+  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  if(!d || d.abierto === false) return [];
+  const turnos = [];
+  if(d.t1i && d.t1f && d.t1f > d.t1i) turnos.push({abre:d.t1i, cierra:d.t1f});
+  if(d.t2i && d.t2f && d.t2f > d.t2i) turnos.push({abre:d.t2i, cierra:d.t2f});
+  return turnos;
+}
+
+// Índice del turno (0,1,...) al que pertenece una hora dada, o null si no
+// hay horario configurado o la hora no encaja en ningún turno.
+function getTurnoIndexForTime(dateStr, time){
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos || !turnos.length) return null;
+  const idx = turnos.findIndex(t => time >= t.abre && time <= t.cierra);
+  return idx === -1 ? null : idx;
+}
+
+// Suma de personas reservadas (pendientes + confirmadas) para un turno concreto de un día.
+function getReservedPeopleForTurno(dateStr, turnoIdx, excludeId){
+  return DB.reservations
+    .filter(r => r.date === dateStr && r.id !== excludeId && (r.status === 'pendiente' || r.status === 'confirmada'))
+    .filter(r => getTurnoIndexForTime(dateStr, r.time) === turnoIdx)
+    .reduce((sum, r) => sum + (r.people||0), 0);
+}
+
+// Devuelve {turnos:[{abre,cierra,reservados,aforo,disponible}]} para un día, o null si no hay horario configurado.
+function getAforoInfoForDate(dateStr){
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos) return null;
+  const aforo = parseInt(DB.business.aforo) || 0;
+  return turnos.map((t, idx) => ({
+    abre: t.abre, cierra: t.cierra,
+    reservados: getReservedPeopleForTurno(dateStr, idx),
+    aforo,
+    disponible: aforo ? Math.max(0, aforo - getReservedPeopleForTurno(dateStr, idx)) : null
+  }));
 }
 function fmtCartaHorario(c){
   const horario = (DB.business||{}).horario;
@@ -5964,6 +6028,21 @@ function renderReservasPendingOnline(){
 function setReservationStatus(id, status){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
+
+  if(status === 'confirmada'){
+    const turnoIdx = getTurnoIndexForTime(r.date, r.time);
+    const aforo = parseInt(DB.business.aforo) || 0;
+    if(turnoIdx !== null && aforo){
+      const yaReservado = getReservedPeopleForTurno(r.date, turnoIdx, id);
+      const turnos = getTurnosForDate(r.date);
+      const t = turnos[turnoIdx];
+      if(yaReservado + r.people > aforo){
+        const ok = confirm(`Atención: el turno de ${t.abre}-${t.cierra} del ${r.date} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + r.people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        if(!ok) return;
+      }
+    }
+  }
+
   r.status = status;
   saveDB();
   renderReservas();
@@ -6007,6 +6086,18 @@ function renderReservasDia(){
         </tbody>
       </table></div>`;
 
+  const aforoInfo = getAforoInfoForDate(date);
+  const aforoHtml = (aforoInfo && aforoInfo.length) ? `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${aforoInfo.map((t,i) => {
+        const lleno = t.aforo>0 && t.reservados >= t.aforo;
+        const cerca = t.aforo>0 && t.reservados >= t.aforo*0.8 && !lleno;
+        const cls = lleno ? 'badge-red' : cerca ? 'badge-amber' : 'badge-green';
+        return `<span class="badge ${cls}"><i class="ti ti-users"></i> Turno ${i+1} (${t.abre}-${t.cierra}): ${t.reservados}${t.aforo?'/'+t.aforo:''} personas${lleno?' · AFORO COMPLETO':''}</span>`;
+      }).join('')}
+    </div>
+  ` : '';
+
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
@@ -6014,6 +6105,7 @@ function renderReservasDia(){
       </div>
       <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
     </div>
+    ${aforoHtml}
     ${tableHtml}
   `;
 }
@@ -6167,6 +6259,20 @@ function saveReservation(id){
   const notes = document.getElementById('reservation-notes').value.trim();
 
   if(!clientId && !clientName){ showToast('Indica un cliente o un nombre'); return; }
+
+  if(status === 'confirmada' || status === 'pendiente'){
+    const turnoIdx = getTurnoIndexForTime(date, time);
+    const aforo = parseInt(DB.business.aforo) || 0;
+    if(turnoIdx !== null && aforo){
+      const yaReservado = getReservedPeopleForTurno(date, turnoIdx, id);
+      const turnos = getTurnosForDate(date);
+      const t = turnos[turnoIdx];
+      if(yaReservado + people > aforo){
+        const ok = confirm(`Atención: el turno de ${t.abre}-${t.cierra} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        if(!ok) return;
+      }
+    }
+  }
 
   if(id){
     Object.assign(DB.reservations.find(x=>x.id===id), {clientId, clientName, date, time, people, tableId, notes, status});
@@ -6332,8 +6438,9 @@ function renderMiNegocio(){
           <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo">
         </div>
         <div class="field">
-          <label>Aforo</label>
+          <label>Aforo (plazas por turno)</label>
           <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40">
+          <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
         </div>
       </div>
       <div class="field-row">
@@ -6742,7 +6849,14 @@ const MANUAL_CHAPTERS = [
     <p>En <strong>Mi Negocio</strong>, configura el <strong>Horario semanal</strong> (día por día, con turnos). La web de reservas y pedidos solo permitirá elegir fecha/hora dentro de tu horario de ese día. Si no configuras ningún horario, no se aplica ningún límite.</p>
     <h4>Solicitudes de clientes</h4>
     <p>Las reservas y pedidos que hagan los clientes desde la web pública llegan a tu Kit automáticamente: las reservas aparecen en <strong>Reservas → Solicitudes online pendientes</strong>, y los pedidos en <strong>TPV</strong> como pedidos pendientes online.</p>
-    <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`
+    <h4>Aforo por turno</h4>
+    <p>En <strong>Mi Negocio</strong> indica tu <strong>Aforo (plazas por turno)</strong>: el número máximo de comensales que puedes atender en cada turno de comida/cena (según tu Horario semanal).</p>
+    <ul>
+      <li>En <strong>Reservas → vista del día</strong> verás, para cada turno, cuántas personas hay reservadas frente al aforo (verde = hay sitio, ámbar = cerca del límite, rojo = aforo completo)</li>
+      <li>Si al crear o confirmar una reserva se supera el aforo del turno, la app te avisa con los números exactos y te pregunta si quieres confirmarla igualmente (por ejemplo, si puedes habilitar mesas extra)</li>
+      <li>En la <strong>web pública de reservas</strong>, si un turno ya está completo, el cliente recibe un aviso para elegir otro horario, reducir comensales o llamar al restaurante — así evitas sobre-reservas automáticas</li>
+    </ul>
+    <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios, aforo o reservas), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`
   },
 ];
 
