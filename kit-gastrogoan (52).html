@@ -3274,18 +3274,10 @@ function getOpenOrderForTable(tableId){
   return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
 }
 
-function renderTPV(){
-  migrateCartas();
-  const box = document.getElementById('tpv-content');
-
-  const todaySalesArr = DB.sales.filter(s => s.date === todayStr());
-  const todayTotal = todaySalesArr.reduce((sum,s)=>sum+s.total,0);
-  const ticketCount = todaySalesArr.length;
-  const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
-
+function renderTpvCartaSelector(){
   const activeCarta = getActiveCarta();
   const cartaAuto = DB.business.cartaAuto !== false;
-  const cartaSelHtml = `
+  return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-book-2"></i>
       <span style="font-weight:600;font-size:14px">Carta activa:</span>
@@ -3302,12 +3294,19 @@ function renderTPV(){
       </span>
     </div>
   `;
+}
+
+function renderTpvKpis(){
+  const todaySalesArr = DB.sales.filter(s => s.date === todayStr());
+  const todayTotal = todaySalesArr.reduce((sum,s)=>sum+s.total,0);
+  const ticketCount = todaySalesArr.length;
+  const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
 
   const platosListos = DB.tpvOrders
     .filter(o => o.status !== 'pagada')
     .reduce((s,o) => s + (o.items||[]).filter(l => l.estado === 'listo').reduce((s2,l)=>s2+l.qty,0), 0);
 
-  const kpiHtml = `
+  return `
     <div class="grid grid-4" style="margin-bottom:14px">
       <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
       <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
@@ -3315,9 +3314,10 @@ function renderTPV(){
       <div class="kpi ${platosListos ? 'ok' : ''}"><div class="label">🔔 Platos listos</div><div class="value">${platosListos}</div></div>
     </div>
   `;
+}
 
-  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
-
+function renderTpvMesas(tiposServicio){
+  if(!tiposServicio.mesa) return '';
   const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
   const mesaCards = sortedTables.map(t => {
     const order = getOpenOrderForTable(t.id);
@@ -3337,17 +3337,20 @@ function renderTPV(){
       </div>
     `;
   }).join('');
-  const zonesHtml = tiposServicio.mesa ? `
+  return `
     <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
     <div class="grid grid-4">${mesaCards || '<div class="empty">No hay mesas. Crea las mesas con el orden y numeración de tu restaurante.</div>'}</div>
-  ` : '';
+  `;
+}
 
+function renderTpvToGo(tiposServicio){
   const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery'));
+  if(!(tiposServicio.takeaway || tiposServicio.delivery || toGoOrders.length)) return '';
   const toGoButtonsHtml = `
     ${tiposServicio.takeaway ? `<button class="btn btn-sm" onclick="newToGoOrder('takeaway')"><i class="ti ti-shopping-bag"></i> Nuevo Take Away</button>` : ''}
     ${tiposServicio.delivery ? `<button class="btn btn-sm" onclick="newToGoOrder('delivery')"><i class="ti ti-moped"></i> Nuevo Delivery</button>` : ''}
   `;
-  const toGoHtml = (tiposServicio.takeaway || tiposServicio.delivery || toGoOrders.length) ? `
+  return `
     <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
     <div class="grid grid-4">
       ${toGoOrders.map(o => `
@@ -3359,10 +3362,13 @@ function renderTPV(){
       `).join('')}
       ${toGoButtonsHtml ? `<div class="card" style="text-align:center;display:flex;flex-direction:column;gap:8px;justify-content:center">${toGoButtonsHtml}</div>` : ''}
     </div>
-  ` : '';
+  `;
+}
 
+function renderTpvPendingOnline(){
   const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online');
-  const pendingOnlineHtml = pendingOnline.length ? `
+  if(!pendingOnline.length) return '';
+  return `
     <h3 style="margin-top:16px"><i class="ti ti-bell-ringing"></i> Pedidos online pendientes</h3>
     <div class="grid grid-4">
       ${pendingOnline.map(o => `
@@ -3386,20 +3392,26 @@ function renderTPV(){
         </div>
       `).join('')}
     </div>
-  ` : '';
+  `;
+}
+
+function renderTPV(){
+  migrateCartas();
+  const box = document.getElementById('tpv-content');
+  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
 
   box.innerHTML = `
-    ${cartaSelHtml}
-    ${kpiHtml}
+    ${renderTpvCartaSelector()}
+    ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
       ${tiposServicio.mesa ? `<button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
     </div>
-    ${pendingOnlineHtml}
-    ${zonesHtml}
-    ${toGoHtml}
+    ${renderTpvPendingOnline()}
+    ${renderTpvMesas(tiposServicio)}
+    ${renderTpvToGo(tiposServicio)}
   `;
 }
 
@@ -3421,10 +3433,32 @@ function rejectOnlineOrder(orderId){
 }
 
 function addTable(){
-  const name = prompt('Número o nombre de la mesa:');
-  if(!name) return;
-  const pax = parseInt(prompt('¿Cuántas personas?', '2')) || 0;
-  const table = {id: genId(), name: name.trim()};
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-tools-kitchen-2"></i> Nueva mesa</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Número o nombre de la mesa</label>
+      <input type="text" id="new-table-name" placeholder="Ej. Mesa 5, Terraza 2...">
+    </div>
+    <div class="field">
+      <label>Personas (opcional — si lo rellenas, se abre la comanda al momento)</label>
+      <input type="number" id="new-table-pax" min="0" value="2">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddTable()">Crear mesa</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-table-name')?.focus(), 50);
+}
+
+function confirmAddTable(){
+  const name = (document.getElementById('new-table-name').value||'').trim();
+  if(!name){ showToast('Escribe un nombre para la mesa'); return; }
+  const pax = parseInt(document.getElementById('new-table-pax').value) || 0;
+  const table = {id: genId(), name};
   DB.tables.push(table);
   if(pax > 0){
     const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
@@ -3436,6 +3470,8 @@ function addTable(){
   }
   saveDB();
   renderTPV();
+  closeModal();
+  showToast('Mesa creada');
 }
 function deleteTable(id){
   if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
@@ -3450,55 +3486,86 @@ function orderTotal(order){
 }
 
 function openTableOrder(tableId, orderId){
-  let order;
   if(orderId){
-    order = DB.tpvOrders.find(o => o.id === orderId);
-  }else{
-    order = getOpenOrderForTable(tableId);
-    if(!order){
-      const pax = parseInt(prompt('¿Cuántas personas?', '2')) || 0;
-      if(pax <= 0) return;
-      order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
-      DB.tpvOrders.push(order);
-      saveDB();
-    }
+    renderTableOrderModal(orderId);
+    return;
   }
-  renderTableOrderModal(order.id);
+  const order = getOpenOrderForTable(tableId);
+  if(order){ renderTableOrderModal(order.id); return; }
+  openNewOrderPaxModal(tableId);
 }
 
-function newToGoOrder(tipo){
-  const clienteNombre = prompt(tipo==='delivery' ? 'Nombre del cliente (delivery):' : 'Nombre para el pedido (take away):') || '';
-  const order = {id: genId(), tableId:null, tipo, clienteNombre: clienteNombre.trim(), status:'abierta', items:[], createdAt: new Date().toISOString()};
+function openNewOrderPaxModal(tableId){
+  const table = DB.tables.find(t=>t.id===tableId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-users"></i> Abrir mesa${table?` — ${escapeHtml(table.name)}`:''}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>¿Cuántas personas?</label>
+      <input type="number" id="new-order-pax" min="1" value="2">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">Abrir mesa</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-order-pax')?.focus(), 50);
+}
+
+function confirmOpenTableOrder(tableId){
+  const pax = parseInt(document.getElementById('new-order-pax').value) || 0;
+  if(pax <= 0){ showToast('Indica el número de personas'); return; }
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
 }
 
-function renderTableOrderModal(orderId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`
-    : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
-    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+function newToGoOrder(tipo){
+  const tipoLabel = tipo==='delivery' ? 'delivery' : 'take away';
+  const icon = tipo==='delivery' ? 'ti-moped' : 'ti-shopping-bag';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ${icon}"></i> Nuevo ${tipoLabel}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del cliente (opcional)</label>
+      <input type="text" id="new-togo-name" placeholder="Nombre del cliente">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewToGoOrder('${tipo}')">Crear pedido</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-togo-name')?.focus(), 50);
+}
+
+function confirmNewToGoOrder(tipo){
+  const clienteNombre = (document.getElementById('new-togo-name').value||'').trim();
+  const order = {id: genId(), tableId:null, tipo, clienteNombre, status:'abierta', items:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+function renderOrderMenuHtml(order){
   const activeCarta = getActiveCarta();
   const secciones = activeCarta ? (activeCarta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)) : [];
-
-  const menuHtml = secciones.length ? secciones.map(sec => `
+  if(!secciones.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona una carta activa en TPV con platos disponibles.</p>`;
+  return secciones.map(sec => `
     <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${sec.platos.filter(p=>p.disponible!==false).map(p => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</button>`).join('')}
     </div>
-  `).join('') : `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona una carta activa en TPV con platos disponibles.</p>`;
+  `).join('');
+}
 
+function renderOrderTandaSelector(order){
   const orderTandas = order.tandas || [];
-  const tandaSelectHtml = (line, idx) => `
-    <select onchange="setLineTanda(${order.id}, ${idx}, this.value)" style="font-size:11px;max-width:120px" ${line.marchada?'disabled title="Ya marchado a cocina"':''}>
-      <option value="">Sin categoría</option>
-      ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-    </select>
-  `;
-
-  const tandaActualHtml = `
+  return `
     <div class="field" style="margin-bottom:10px">
       <label>Categoría / pase actual <span style="color:var(--muted);font-weight:400">(los próximos platos que añadas se asignarán aquí)</span></label>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -3506,14 +3573,23 @@ function renderTableOrderModal(orderId){
           <option value="">Sin categoría</option>
           ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${order.tandaActual===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
         </select>
-        <button class="btn btn-sm" onclick="promptNewTanda(${order.id})"><i class="ti ti-plus"></i> Nueva categoría</button>
+        <button class="btn btn-sm" onclick="openNewTandaModal(${order.id})"><i class="ti ti-plus"></i> Nueva categoría</button>
       </div>
       ${!orderTandas.length ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${TANDA_SUGGESTIONS.map(t=>`<button class="btn btn-sm" onclick="addOrderTanda(${order.id}, '${escapeHtml(t)}')">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
     </div>
   `;
+}
 
+function renderOrderLinesHtml(order){
+  const orderTandas = order.tandas || [];
+  const tandaSelectHtml = (line, idx) => `
+    <select onchange="setLineTanda(${order.id}, ${idx}, this.value)" style="font-size:11px;max-width:120px" ${line.marchada?'disabled title="Ya marchado a cocina"':''}>
+      <option value="">Sin categoría</option>
+      ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+    </select>
+  `;
   const groups = groupOrderItemsByTanda(order);
-  const linesHtml = groups.map(g => `
+  return groups.map(g => `
     <tr><td colspan="5" style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;padding-top:10px;border-top:1px solid var(--border)">${g.tanda ? escapeHtml(g.tanda) : 'Sin asignar'}</td></tr>
     ${g.items.map(({line, idx}) => `
     <tr>
@@ -3533,23 +3609,36 @@ function renderTableOrderModal(orderId){
     </tr>
   `).join('')}
   `).join('');
+}
 
-  const total = orderTotal(order);
+function renderOrderMarcharButtons(order){
+  const orderTandas = order.tandas || [];
   const pendingGroups = [...orderTandas, ''].map(t => ({
     tanda: t,
     count: orderPendingKitchenLines(order, t).reduce((s,l)=>s+l.qty, 0)
   })).filter(g => g.count > 0);
 
-  const marcharButtonsHtml = pendingGroups.length
+  return pendingGroups.length
     ? pendingGroups.map(g => `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeHtml(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar ${g.tanda ? escapeHtml(g.tanda) : 'comanda'} (${g.count})</button>`).join('')
     : `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" disabled><i class="ti ti-chef-hat"></i> Marchar a cocina</button>`;
+}
+
+function renderTableOrderModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`
+    : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+
+  const linesHtml = renderOrderLinesHtml(order);
+  const total = orderTotal(order);
 
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
-    ${tandaActualHtml}
+    ${renderOrderTandaSelector(order)}
     <div class="table-wrap" style="margin-bottom:10px">
       <table>
         <thead><tr><th>Plato</th><th>Cant.</th><th>Subtotal</th><th>Tiempo</th><th></th></tr></thead>
@@ -3561,11 +3650,11 @@ function renderTableOrderModal(orderId){
       <div class="value">${fmtMoney(total)}</div>
     </div>
     <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
-      ${menuHtml}
+      ${renderOrderMenuHtml(order)}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
-      ${marcharButtonsHtml}
+      ${renderOrderMarcharButtons(order)}
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
@@ -3610,9 +3699,27 @@ function addOrderTanda(orderId, name){
   renderTableOrderModal(orderId);
 }
 
-function promptNewTanda(orderId){
-  const name = prompt('Nombre de la categoría / pase (ej. Primeros, Segundos, Postres, Entrantes...):');
-  if(name === null) return;
+function openNewTandaModal(orderId){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-tag"></i> Nueva categoría / pase</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre de la categoría</label>
+      <input type="text" id="new-tanda-name" placeholder="Ej. Primeros, Segundos, Postres, Entrantes...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewTanda(${orderId})">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-tanda-name')?.focus(), 50);
+}
+
+function confirmNewTanda(orderId){
+  const name = (document.getElementById('new-tanda-name').value||'').trim();
+  if(!name){ showToast('Escribe un nombre para la categoría'); return; }
   addOrderTanda(orderId, name);
 }
 
