@@ -2157,12 +2157,30 @@ function adjustStock(ingredientId, delta){
 
 function setStockQty(ingredientId){
   const s = getStockEntry(ingredientId);
-  const val = prompt('Nueva cantidad en stock:', s.qty);
-  if(val === null) return;
+  openModal(`
+    <div class="modal-header">
+      <h3>Ajustar stock</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nueva cantidad en stock</label>
+      <input type="number" id="stock-qty-value" value="${s.qty}" step="0.01" min="0">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSetStockQty(${ingredientId})">Guardar</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('stock-qty-value')?.focus(), 50);
+}
+function confirmSetStockQty(ingredientId){
+  const s = getStockEntry(ingredientId);
+  const val = document.getElementById('stock-qty-value').value;
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
   s.qty = num;
   saveDB();
+  closeModal();
   renderStock();
 }
 
@@ -2244,12 +2262,30 @@ function adjustElaboracion(id, delta){
 
 function setElaboracionQty(id){
   const e = getElaboracion(id);
-  const val = prompt('Nueva cantidad en stock:', e.qty||0);
-  if(val === null) return;
+  openModal(`
+    <div class="modal-header">
+      <h3>Ajustar stock</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nueva cantidad en stock</label>
+      <input type="number" id="elaboracion-qty-value" value="${e.qty||0}" step="0.01" min="0">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSetElaboracionQty(${id})">Guardar</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('elaboracion-qty-value')?.focus(), 50);
+}
+function confirmSetElaboracionQty(id){
+  const e = getElaboracion(id);
+  const val = document.getElementById('elaboracion-qty-value').value;
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
   e.qty = num;
   saveDB();
+  closeModal();
   renderStock();
 }
 
@@ -2497,20 +2533,46 @@ function removeRecipeLine(idx, id){
   recipeModalLines.splice(idx,1);
   renderRecipeModal(id, currentRecipeFormState(id));
 }
+let recipeFormStateBeforeCategory = null;
 function onRecipeCategoryChange(id){
   const sel = document.getElementById('recipe-category');
   if(sel.value === '__new__'){
-    const name = prompt('Nombre de la nueva categoría');
-    const state = currentRecipeFormState(id);
-    if(name && name.trim()){
-      const cat = name.trim();
-      if(!DB.recipeCategories.includes(cat)) DB.recipeCategories.push(cat);
-      state.category = cat;
-    } else {
-      state.category = '';
-    }
-    renderRecipeModal(id, state);
+    recipeFormStateBeforeCategory = currentRecipeFormState(id);
+    openModal(`
+      <div class="modal-header">
+        <h3>Nueva categoría</h3>
+        <button class="modal-close" onclick="cancelNewRecipeCategory(${id||'null'})">&times;</button>
+      </div>
+      <div class="field">
+        <label>Nombre de la categoría</label>
+        <input type="text" id="new-recipe-category-name" placeholder="Ej. Carnes, Pescados, Postres...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelNewRecipeCategory(${id||'null'})">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmNewRecipeCategory(${id||'null'})">Añadir</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('new-recipe-category-name')?.focus(), 50);
   }
+}
+function cancelNewRecipeCategory(id){
+  const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
+  state.category = '';
+  recipeFormStateBeforeCategory = null;
+  renderRecipeModal(id, state);
+}
+function confirmNewRecipeCategory(id){
+  const name = document.getElementById('new-recipe-category-name').value;
+  const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
+  if(name && name.trim()){
+    const cat = name.trim();
+    if(!DB.recipeCategories.includes(cat)) DB.recipeCategories.push(cat);
+    state.category = cat;
+  } else {
+    state.category = '';
+  }
+  recipeFormStateBeforeCategory = null;
+  renderRecipeModal(id, state);
 }
 function currentRecipeFormState(id){
   const nameEl = document.getElementById('recipe-name');
@@ -3100,9 +3162,27 @@ function renderCartaSecciones(){
 }
 
 function newCartaSection(){
-  const nombre = prompt('Nombre de la sección (ej. ENTRANTES)');
-  if(!nombre || !nombre.trim()) return;
+  openModal(`
+    <div class="modal-header">
+      <h3>Nueva sección</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre de la sección</label>
+      <input type="text" id="new-carta-section-name" placeholder="Ej. ENTRANTES">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewCartaSection()">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-carta-section-name')?.focus(), 50);
+}
+function confirmNewCartaSection(){
+  const nombre = document.getElementById('new-carta-section-name').value;
+  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para la sección'); return; }
   cartaEdit.secciones.push({id: genId(), nombre: nombre.trim().toUpperCase(), platos:[]});
+  closeModal();
   renderCartaSecciones();
 }
 function removeCartaSection(secId){
@@ -3122,13 +3202,35 @@ function removeCartaPlato(secId, platoId){
   renderCartaSecciones();
 }
 function addCartaPlato(secId){
-  const nombre = prompt('Nombre del plato');
-  if(!nombre || !nombre.trim()) return;
-  const precioStr = prompt('Precio (€)');
+  openModal(`
+    <div class="modal-header">
+      <h3>Nuevo plato manual</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del plato</label>
+      <input type="text" id="new-carta-plato-nombre" placeholder="Ej. Ensalada de la casa">
+    </div>
+    <div class="field">
+      <label>Precio (€)</label>
+      <input type="number" id="new-carta-plato-precio" step="0.01" min="0">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId})">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-carta-plato-nombre')?.focus(), 50);
+}
+function confirmAddCartaPlato(secId){
+  const nombre = document.getElementById('new-carta-plato-nombre').value;
+  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el plato'); return; }
+  const precioStr = document.getElementById('new-carta-plato-precio').value;
   const precio = parseFloat((precioStr||'').replace(',','.'));
   if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true});
+  closeModal();
   renderCartaSecciones();
 }
 
@@ -5651,11 +5753,33 @@ function renderLimpiezaSemana(){
   `;
 }
 function addLimpiezaTarea(){
-  const area = prompt('Área o tarea de limpieza (ej. Campana extractora, Suelo cocina...):');
-  if(!area) return;
-  const producto = prompt('Producto limpiador (opcional):') || '';
+  openModal(`
+    <div class="modal-header">
+      <h3>Nueva área de limpieza</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Área o tarea de limpieza</label>
+      <input type="text" id="new-limpieza-area" placeholder="Ej. Campana extractora, Suelo cocina...">
+    </div>
+    <div class="field">
+      <label>Producto limpiador (opcional)</label>
+      <input type="text" id="new-limpieza-producto" placeholder="Ej. Desengrasante">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddLimpiezaTarea()">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
+}
+function confirmAddLimpiezaTarea(){
+  const area = document.getElementById('new-limpieza-area').value;
+  if(!area || !area.trim()){ showToast('Escribe un área o tarea'); return; }
+  const producto = document.getElementById('new-limpieza-producto').value || '';
   DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim()});
   saveDB();
+  closeModal();
   renderLimpiezaSemana();
 }
 function deleteLimpiezaTarea(id){
@@ -5762,10 +5886,28 @@ function renderLimpiezaMantenimiento(){
   `;
 }
 function addMantenimientoEquipo(){
-  const nombre = prompt('Nombre del equipo (ej. Cámara frigorífica, Horno, Freidora...):');
-  if(!nombre) return;
+  openModal(`
+    <div class="modal-header">
+      <h3>Nuevo equipo</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del equipo</label>
+      <input type="text" id="new-mantenimiento-equipo" placeholder="Ej. Cámara frigorífica, Horno, Freidora...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddMantenimientoEquipo()">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-mantenimiento-equipo')?.focus(), 50);
+}
+function confirmAddMantenimientoEquipo(){
+  const nombre = document.getElementById('new-mantenimiento-equipo').value;
+  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el equipo'); return; }
   DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:''});
   saveDB();
+  closeModal();
   renderLimpiezaMantenimiento();
 }
 function updateMantenimientoEquipo(id, field, val){
