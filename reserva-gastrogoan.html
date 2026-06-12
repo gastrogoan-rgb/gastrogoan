@@ -190,7 +190,7 @@ function loadBusinessInfo(){
     DB = {
       business: val.business || {},
       cartas: val.cartas || [],
-      activeCartaId: val.activeCartaId || null,
+      activeCartaIds: val.activeCartaIds || (val.activeCartaId ? [val.activeCartaId] : []),
       reservasResumen: val.reservasResumen || {}
     };
     renderHeader();
@@ -212,8 +212,9 @@ function renderHeader(){
   document.getElementById('biz-info').textContent = parts.join('  ·  ');
 }
 
-function getActiveCarta(){
-  return (DB.cartas || []).find(c => c.id === DB.activeCartaId) || null;
+function getActiveCartas(){
+  const ids = DB.activeCartaIds || [];
+  return (DB.cartas || []).filter(c => ids.includes(c.id));
 }
 
 function renderApp(){
@@ -401,30 +402,32 @@ function submitReserva(){
 /* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
 function renderOrderForm(){
   const box = document.getElementById('tab-content');
-  const carta = getActiveCarta();
-  const secciones = carta ? (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)) : [];
+  const cartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
 
-  if(!secciones.length){
+  if(!cartas.length){
     box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.</div></div>`;
     return;
   }
 
   const isDelivery = currentTab === 'delivery';
 
-  const menuHtml = secciones.map(sec => `
-    ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(sec.nombre)}</h3>` : ''}
-    ${sec.platos.filter(p=>p.disponible!==false).map(p => `
-      <div class="menu-item">
-        <div>
-          <div class="name">${escapeHtml(p.nombre)}</div>
-          <div class="price">${fmtMoney(p.precio)}</div>
+  const menuHtml = cartas.map(carta => `
+    ${cartas.length > 1 ? `<h2>${escapeHtml(carta.nombre)}</h2>` : ''}
+    ${(carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
+      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(sec.nombre)}</h3>` : ''}
+      ${sec.platos.filter(p=>p.disponible!==false).map(p => `
+        <div class="menu-item">
+          <div>
+            <div class="name">${escapeHtml(p.nombre)}</div>
+            <div class="price">${fmtMoney(p.precio)}</div>
+          </div>
+          <div class="qty-ctl">
+            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)">−</button>
+            <span id="qty-${p.id}">${getCartQty(p.id)}</span>
+            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${p.precio})">+</button>
+          </div>
         </div>
-        <div class="qty-ctl">
-          <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)">−</button>
-          <span id="qty-${p.id}">${getCartQty(p.id)}</span>
-          <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${p.precio})">+</button>
-        </div>
-      </div>
+      `).join('')}
     `).join('')}
   `).join('');
 

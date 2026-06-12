@@ -1152,7 +1152,7 @@ function syncPublicMirror(){
     firebase.database().ref('gastrogoan/public/' + publicId + '/info').set({
       business: DB.business,
       cartas: DB.cartas,
-      activeCartaId: DB.activeCartaId,
+      activeCartaIds: DB.activeCartaIds,
       reservasResumen: getReservasResumenForSync()
     }).catch(()=>{});
   }catch(e){}
@@ -1364,7 +1364,7 @@ function defaultData(){
     fichas: [],
     menuItems: [],
     cartas: [],          // {id, nombre, turno:'todos'|'1'|'2', dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
-    activeCartaId: null,
+    activeCartaIds: [],  // cartas activas en TPV a la vez (p.ej. comida + bebidas)
     stock: {},          // { ingredientId: { qty, min } }
     elaboraciones: [],   // {id, name, unit, qty, min} — elaboraciones propias (caldos, salsas, etc.)
     purchaseOrders: [],
@@ -1428,6 +1428,10 @@ function loadDB(){
     (merged.elaboraciones||[]).forEach(e => { if(!e.area) e.area = 'cocina'; });
     (merged.fichas||[]).forEach(f => { if(!f.area) f.area = 'cocina'; });
     (merged.purchaseOrders||[]).forEach(o => { if(!o.area) o.area = 'cocina'; });
+    if(!Array.isArray(merged.activeCartaIds)){
+      merged.activeCartaIds = merged.activeCartaId ? [merged.activeCartaId] : [];
+    }
+    delete merged.activeCartaId;
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
@@ -3136,7 +3140,7 @@ function renderCartaList(){
             const nsec = (c.secciones||[]).length;
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
-              <td><strong>${escapeHtml(c.nombre)}</strong>${DB.activeCartaId===c.id?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
+              <td><strong>${escapeHtml(c.nombre)}</strong>${(DB.activeCartaIds||[]).includes(c.id)?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
               <td><span class="badge badge-blue">${escapeHtml(fmtTurno(c.turno))}</span></td>
               <td style="font-size:12px;color:var(--muted)">${fmtCartaHorario(c)}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtCartaDias(c.dias)}</td>
@@ -3176,7 +3180,7 @@ function backToCartaList(){
 function deleteCarta(id){
   if(!confirm('¿Eliminar esta carta?')) return;
   DB.cartas = DB.cartas.filter(c=>c.id!==id);
-  if(DB.activeCartaId===id) DB.activeCartaId = null;
+  DB.activeCartaIds = (DB.activeCartaIds||[]).filter(cid=>cid!==id);
   saveDB();
   renderCarta();
   showToast('Carta eliminada');
@@ -3383,11 +3387,18 @@ function kitchenStatusBadge(line){
   if(!st || line.estado === 'servido') return '';
   return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${st.label}</span>`;
 }
-function getActiveCarta(){
-  return DB.cartas.find(c=>c.id===DB.activeCartaId) || null;
+function getActiveCartas(){
+  const ids = DB.activeCartaIds||[];
+  return DB.cartas.filter(c=>ids.includes(c.id));
 }
-function setActiveCarta(id){
-  DB.activeCartaId = id ? parseInt(id) : null;
+function toggleActiveCarta(id, checked){
+  id = parseInt(id);
+  if(!Array.isArray(DB.activeCartaIds)) DB.activeCartaIds = [];
+  if(checked){
+    if(!DB.activeCartaIds.includes(id)) DB.activeCartaIds.push(id);
+  }else{
+    DB.activeCartaIds = DB.activeCartaIds.filter(cid=>cid!==id);
+  }
   saveDB();
   renderTPV();
 }
@@ -3422,33 +3433,34 @@ function cartaIsActiveNow(c, now){
   return turnos.some(([i,f]) => time >= i && time <= f);
 }
 
-function computeAutoActiveCarta(){
-  if(!DB.cartas || !DB.cartas.length) return null;
+// Todas las cartas que deberían estar activas ahora mismo (puede haber varias
+// a la vez, p.ej. la carta de comida y la de bebidas).
+function computeAutoActiveCartaIds(){
+  if(!DB.cartas || !DB.cartas.length) return [];
   const now = new Date();
-  const candidates = DB.cartas.filter(c => cartaIsActiveNow(c, now));
-  if(!candidates.length) return null;
-  const specific = candidates.find(c => c.turno === '1' || c.turno === '2');
-  return (specific || candidates[0]).id;
+  return DB.cartas.filter(c => cartaIsActiveNow(c, now)).map(c=>c.id);
 }
 
-// Si el cambio automático está activado, ajusta la carta activa del TPV
-// según lo programado. force=true vuelve a calcular aunque ya hubiera una activa.
+// Si el cambio automático está activado, ajusta las cartas activas del TPV
+// según lo programado. force=true vuelve a calcular aunque ya hubiera activas.
 function updateAutoActiveCarta(force){
   if(!DB.business || DB.business.cartaAuto === false) return;
-  const autoId = computeAutoActiveCarta();
-  if(autoId == null) return;
-  if(autoId !== DB.activeCartaId || force){
-    DB.activeCartaId = autoId;
+  const autoIds = computeAutoActiveCartaIds();
+  if(!autoIds.length) return;
+  const current = DB.activeCartaIds||[];
+  const changed = force || autoIds.length !== current.length || autoIds.some(id=>!current.includes(id));
+  if(changed){
+    DB.activeCartaIds = autoIds;
     saveDB();
     if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
   }
 }
 function findCartaPlato(platoId){
-  const c = getActiveCarta();
-  if(!c) return null;
-  for(const sec of (c.secciones||[])){
-    const p = (sec.platos||[]).find(x=>x.id===platoId);
-    if(p) return p;
+  for(const c of getActiveCartas()){
+    for(const sec of (c.secciones||[])){
+      const p = (sec.platos||[]).find(x=>x.id===platoId);
+      if(p) return p;
+    }
   }
   return null;
 }
@@ -3460,22 +3472,28 @@ function getOpenOrderForTable(tableId){
 }
 
 function renderTpvCartaSelector(){
-  const activeCarta = getActiveCarta();
+  const activeCartas = getActiveCartas();
+  const activeIds = DB.activeCartaIds||[];
   const cartaAuto = DB.business.cartaAuto !== false;
+  const totalPlatos = activeCartas.reduce((s,c)=>s+(c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
   return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-book-2"></i>
-      <span style="font-weight:600;font-size:14px">Carta activa:</span>
-      <select id="tpv-carta-sel" onchange="setActiveCarta(this.value)" style="flex:1;max-width:280px" ${cartaAuto?'disabled':''}>
-        <option value="">— Sin carta seleccionada —</option>
-        ${DB.cartas.map(c=>`<option value="${c.id}" ${DB.activeCartaId===c.id?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('')}
-      </select>
+      <span style="font-weight:600;font-size:14px">Cartas activas:</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
+        ${DB.cartas.length ? DB.cartas.map(c=>`
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
+            ${escapeHtml(c.nombre)}
+          </label>
+        `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
+      </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
         <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
         Cambio automático según horario
       </label>
       <span style="font-size:12px;color:var(--muted)">
-        ${activeCarta ? (activeCarta.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0) + ' platos disponibles' : 'Selecciona una carta para tomar comandas'}
+        ${activeCartas.length ? totalPlatos + ' platos disponibles' : 'Selecciona al menos una carta para tomar comandas'}
       </span>
     </div>
   `;
@@ -3737,14 +3755,16 @@ function confirmNewToGoOrder(tipo){
 }
 
 function renderOrderMenuHtml(order){
-  const activeCarta = getActiveCarta();
-  const secciones = activeCarta ? (activeCarta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)) : [];
-  if(!secciones.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona una carta activa en TPV con platos disponibles.</p>`;
-  return secciones.map(sec => `
-    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${sec.platos.filter(p=>p.disponible!==false).map(p => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</button>`).join('')}
-    </div>
+  const activeCartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
+  if(!activeCartas.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+  return activeCartas.map(c => `
+    ${activeCartas.length > 1 ? `<p style="font-size:12px;font-weight:800;margin:10px 0 4px"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</p>` : ''}
+    ${(c.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
+      <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${sec.platos.filter(p=>p.disponible!==false).map(p => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</button>`).join('')}
+      </div>
+    `).join('')}
   `).join('');
 }
 
@@ -4016,9 +4036,11 @@ function renderComandasCocina(){
 
 function addOrderItem(orderId, secId, platoId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  const c = getActiveCarta();
-  const sec = c ? (c.secciones||[]).find(s=>s.id===secId) : null;
-  const p = sec ? (sec.platos||[]).find(x=>x.id===platoId) : null;
+  let p = null;
+  for(const c of getActiveCartas()){
+    const sec = (c.secciones||[]).find(s=>s.id===secId);
+    if(sec){ p = (sec.platos||[]).find(x=>x.id===platoId) || null; if(p) break; }
+  }
   if(!order || !p) return;
   const tanda = order.tandaActual || '';
   const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && (l.tanda||'') === tanda);
