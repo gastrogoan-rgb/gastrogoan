@@ -229,8 +229,21 @@ function renderTabContent(){
 }
 
 /* ============ RESERVA ============ */
+function getOpeningHours(){
+  const b = DB.business || {};
+  const open = b.horaApertura || '';
+  const close = b.horaCierre || '';
+  if(!open || !close) return null;
+  if(close <= open) return null; // cierra después de medianoche: no aplicamos límite
+  return { open, close };
+}
+
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
+  const hours = getOpeningHours();
+  const hint = hours
+    ? `<p style="font-size:13px;color:#888;margin-top:-8px">Solo se pueden reservar mesas entre las ${hours.open} y las ${hours.close}.</p>`
+    : '';
   box.innerHTML = `
     <div class="card">
       <h2>Reservar mesa</h2>
@@ -249,9 +262,10 @@ function renderReservaForm(){
         </div>
         <div class="field">
           <label>Hora *</label>
-          <input type="time" id="r-time" value="20:00">
+          <input type="time" id="r-time" value="20:00" ${hours ? `min="${hours.open}" max="${hours.close}"` : ''}>
         </div>
       </div>
+      ${hint}
       <div class="field">
         <label>Número de personas *</label>
         <input type="number" id="r-people" value="2" min="1" max="50">
@@ -275,6 +289,12 @@ function submitReserva(){
 
   if(!clientName || !clientPhone || !date || !time){
     alert('Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).');
+    return;
+  }
+
+  const hours = getOpeningHours();
+  if(hours && (time < hours.open || time > hours.close)){
+    alert(`El restaurante solo acepta reservas entre las ${hours.open} y las ${hours.close}. Por favor elige otra hora.`);
     return;
   }
 

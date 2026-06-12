@@ -1248,6 +1248,7 @@ function defaultData(){
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
       mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
       pin:'1234', pinSet:false,
+      horaApertura:'', horaCierre:'',
       tiposServicio: {mesa:true, takeaway:true, delivery:true}
     },
     ge: {
@@ -5958,9 +5959,20 @@ function renderMiNegocio(){
         </div>
       </div>
       <div class="field">
-        <label>Horario de apertura</label>
+        <label>Horario de apertura (texto)</label>
         <input type="text" id="business-schedule" value="${escapeHtml(b.schedule||'')}" placeholder="Ej. Lun-Dom 12:00-00:00">
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Hora de apertura</label>
+          <input type="time" id="business-hora-apertura" value="${escapeHtml(b.horaApertura||'')}">
+        </div>
+        <div class="field">
+          <label>Hora de cierre</label>
+          <input type="time" id="business-hora-cierre" value="${escapeHtml(b.horaCierre||'')}">
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted,#888);margin-top:-8px">Estas horas se usan para limitar las reservas online a tu horario de apertura. Si cierras después de medianoche, déjalas vacías para no aplicar el límite.</p>
       <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Sincronizar mesas con TPV</button>
     </div>
 
@@ -6055,6 +6067,8 @@ function saveBusiness(){
     phone: document.getElementById('business-phone').value.trim(),
     email: document.getElementById('business-email').value.trim(),
     schedule: document.getElementById('business-schedule').value.trim(),
+    horaApertura: document.getElementById('business-hora-apertura').value,
+    horaCierre: document.getElementById('business-hora-cierre').value,
     description: document.getElementById('business-description').value.trim(),
     tipo: document.getElementById('mn-tipo').value,
     anyo: document.getElementById('mn-anyo').value.trim(),
