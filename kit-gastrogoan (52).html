@@ -1251,6 +1251,7 @@ function defaultData(){
       mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
       pin:'1234', pinSet:false,
       horario: defaultHorario(),
+      cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true}
     },
     ge: {
@@ -2867,6 +2868,7 @@ function saveCarta(){
   else DB.cartas.push(cartaEdit);
   saveDB();
   cartaEdit = null;
+  updateAutoActiveCarta(true);
   renderCarta();
   showToast('Carta guardada');
 }
@@ -3025,6 +3027,58 @@ function setActiveCarta(id){
   saveDB();
   renderTPV();
 }
+
+function setCartaAuto(checked){
+  DB.business.cartaAuto = checked;
+  saveDB();
+  if(checked) updateAutoActiveCarta(true);
+  else renderTPV();
+}
+
+// Comprueba si una carta debería estar activa ahora mismo, según sus
+// días/turno y el horario semanal configurado en Mi Negocio.
+function cartaIsActiveNow(c, now){
+  if(!c.dias || !c.dias.length) return false;
+  const jsDay = now.getDay();
+  const dayIdx = (jsDay + 6) % 7; // 0=lunes..6=domingo
+  if(!c.dias.includes(dayIdx)) return false;
+  const horario = (DB.business||{}).horario;
+  if(!horario || horario.length !== 7) return true; // sin horario configurado
+  const day = horario[dayIdx];
+  if(!day || day.abierto === false) return false;
+  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const turnos = [];
+  if(c.turno === '1'){ if(day.t1i && day.t1f) turnos.push([day.t1i, day.t1f]); }
+  else if(c.turno === '2'){ if(day.t2i && day.t2f) turnos.push([day.t2i, day.t2f]); }
+  else {
+    if(day.t1i && day.t1f) turnos.push([day.t1i, day.t1f]);
+    if(day.t2i && day.t2f) turnos.push([day.t2i, day.t2f]);
+  }
+  if(!turnos.length) return true; // turno sin horas concretas: activa todo el día
+  return turnos.some(([i,f]) => time >= i && time <= f);
+}
+
+function computeAutoActiveCarta(){
+  if(!DB.cartas || !DB.cartas.length) return null;
+  const now = new Date();
+  const candidates = DB.cartas.filter(c => cartaIsActiveNow(c, now));
+  if(!candidates.length) return null;
+  const specific = candidates.find(c => c.turno === '1' || c.turno === '2');
+  return (specific || candidates[0]).id;
+}
+
+// Si el cambio automático está activado, ajusta la carta activa del TPV
+// según lo programado. force=true vuelve a calcular aunque ya hubiera una activa.
+function updateAutoActiveCarta(force){
+  if(!DB.business || DB.business.cartaAuto === false) return;
+  const autoId = computeAutoActiveCarta();
+  if(autoId == null) return;
+  if(autoId !== DB.activeCartaId || force){
+    DB.activeCartaId = autoId;
+    saveDB();
+    if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
+  }
+}
 function findCartaPlato(platoId){
   const c = getActiveCarta();
   if(!c) return null;
@@ -3050,14 +3104,19 @@ function renderTPV(){
   const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
 
   const activeCarta = getActiveCarta();
+  const cartaAuto = DB.business.cartaAuto !== false;
   const cartaSelHtml = `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-book-2"></i>
       <span style="font-weight:600;font-size:14px">Carta activa:</span>
-      <select id="tpv-carta-sel" onchange="setActiveCarta(this.value)" style="flex:1;max-width:280px">
+      <select id="tpv-carta-sel" onchange="setActiveCarta(this.value)" style="flex:1;max-width:280px" ${cartaAuto?'disabled':''}>
         <option value="">— Sin carta seleccionada —</option>
         ${DB.cartas.map(c=>`<option value="${c.id}" ${DB.activeCartaId===c.id?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('')}
       </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
+        Cambio automático según horario
+      </label>
       <span style="font-size:12px;color:var(--muted)">
         ${activeCarta ? (activeCarta.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0) + ' platos disponibles' : 'Selecciona una carta para tomar comandas'}
       </span>
@@ -6148,6 +6207,7 @@ function saveBusiness(){
   };
   saveDB();
   renderHeader();
+  updateAutoActiveCarta(true);
   showToast('Datos del negocio guardados');
 }
 
@@ -6255,8 +6315,8 @@ const MANUAL_CHAPTERS = [
     <h4>Disponibilidad de platos</h4>
     <p>Cada plato tiene un interruptor <strong>Disponible / No disponible</strong>. Los platos no disponibles no aparecen en el TPV ni en la web de pedidos online.</p>
     <h4>Vinculación con el TPV</h4>
-    <p>En el TPV selecciona qué carta está activa. Las comandas solo muestran los platos de esa carta.</p>
-    <div class="manual-tip">💡 La carta activa en el TPV es también la que se muestra en la página de pedidos online (Take Away / Delivery). Si tus clientes ven "La carta no está disponible", revisa que haya una carta activa con platos marcados como Disponible.</div>`
+    <p>Con <strong>Cambio automático según horario</strong> activado (por defecto), el TPV cambia solo de carta activa según el turno y día que hayas configurado en cada carta. Las comandas solo muestran los platos de la carta activa en ese momento. Si lo desactivas, puedes elegir manualmente la carta activa desde el desplegable del TPV.</p>
+    <div class="manual-tip">💡 La carta activa en el TPV es también la que se muestra en la página de pedidos online (Take Away / Delivery). Si tus clientes ven "La carta no está disponible", revisa que haya una carta programada para ese día/hora con platos marcados como Disponible.</div>`
   },
   {
     title:'📦 Stock',
@@ -6438,6 +6498,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-comandascocina') renderComandasCocina();
   }, 60000);
+
+  updateAutoActiveCarta();
+  setInterval(updateAutoActiveCarta, 60000);
 });
 </script>
 
