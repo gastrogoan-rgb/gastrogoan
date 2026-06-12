@@ -967,6 +967,29 @@ function getConnectionCode(){
   return cloudConfig ? btoa(JSON.stringify(cloudConfig)) : '';
 }
 
+function openTutorial(){
+  if(document.getElementById('tutorial-overlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'tutorial-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column';
+  ov.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#000;color:#fff;padding:8px 14px;flex-shrink:0">
+      <span style="font-weight:700;font-size:13px">🎬 Tutorial · Conectar la nube</span>
+      <button onclick="closeTutorial()" style="background:var(--brand-orange);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">✕ Cerrar tutorial</button>
+    </div>
+    <iframe id="tutorial-frame" style="flex:1;border:none;width:100%;background:#F6EDD5"></iframe>`;
+  document.body.appendChild(ov);
+  const doc = document.getElementById('tutorial-frame').contentDocument;
+  doc.open();
+  doc.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body>' + document.getElementById('tpl-tutorial').innerHTML + '</body></html>');
+  doc.close();
+}
+
+function closeTutorial(){
+  const ov = document.getElementById('tutorial-overlay');
+  if(ov) ov.remove();
+}
+
 function openCloudWelcome(){
   openModal(`
     <div style="text-align:center;padding:8px 4px">
@@ -976,6 +999,7 @@ function openCloudWelcome(){
       <p style="font-size:14px;margin-bottom:16px">Conecta tu restaurante a la nube para que <strong>todos tus dispositivos</strong> (TPV, móviles de camareros, pantalla de cocina) trabajen juntos y sincronizados.</p>
       <button class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('guia')"><i class="ti ti-rocket"></i> Soy el dueño — Configurar la nube (10 min)</button>
       <button class="btn" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px" onclick="openCloudWizard('codigo')"><i class="ti ti-device-mobile"></i> Soy camarero — Tengo un código de conexión</button>
+      <button class="btn" style="width:100%;margin-bottom:8px;padding:14px;font-size:15px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial()">🎬 Ver tutorial paso a paso (con imágenes)</button>
       <button class="btn" style="width:100%;border:none;color:var(--muted);font-weight:400" onclick="skipCloudSetup()">Más tarde — usar solo en este dispositivo</button>
     </div>
   `);
@@ -994,7 +1018,8 @@ function openCloudWizard(tab){
   let body = '';
   if(tab === 'guia'){
     body = `
-      <p style="font-size:13.5px;margin-bottom:12px">Sigue estos pasos <strong>una sola vez</strong> desde un ordenador. Es <strong>gratis</strong> y tus datos quedan en tu propia cuenta de Google.</p>
+      <p style="font-size:13.5px;margin-bottom:10px">Sigue estos pasos <strong>una sola vez</strong> desde un ordenador. Es <strong>gratis</strong> y tus datos quedan en tu propia cuenta de Google.</p>
+      <button class="btn" style="width:100%;margin-bottom:14px;padding:11px;border-color:var(--brand-orange);color:var(--brand-orange);font-weight:700" onclick="openTutorial()">🎬 ¿Te pierdes? Abre el tutorial paso a paso con imágenes</button>
       <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>console.firebase.google.com</strong> e inicia sesión con tu cuenta de Google (Gmail).</div></div>
       <div class="manual-step"><div class="sn">2</div><div class="st">Pulsa <strong>"Crear proyecto"</strong> → escribe el nombre de tu restaurante → <strong>desactiva</strong> Google Analytics → Crear proyecto.</div></div>
       <div class="manual-step"><div class="sn">3</div><div class="st">En el menú izquierdo: <strong>Compilación → Realtime Database</strong> → "Crear base de datos" → ubicación <strong>Bélgica (europe-west1)</strong> → empezar en <strong>modo de prueba</strong> → Habilitar.</div></div>
@@ -5904,5 +5929,366 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+<template id="tpl-tutorial">
+<style>
+:root{
+  --brand-orange:#DF7039; --brand-yellow:#FFFF00; --brand-cream:#F6EDD5; --brand-black:#000000;
+  --fb-dark:#1F2125; --fb-side:#2B2D33; --fb-blue:#1A73E8; --fb-amber:#FFA000;
+  --muted:#777; --border:#E2DBC8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--brand-cream);min-height:100vh;display:flex;flex-direction:column}
+
+header{background:var(--brand-black);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:10px}
+header .logo{width:34px;height:34px;border-radius:9px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:18px}
+header h1{font-size:17px}
+header h1 span{color:rgba(255,255,0,.85);font-weight:400;font-size:13px;margin-left:8px}
+
+.progress{display:flex;gap:6px;padding:14px 22px 0;max-width:980px;margin:0 auto;width:100%}
+.progress .seg{flex:1;height:6px;border-radius:3px;background:#E5DCC3}
+.progress .seg.done{background:var(--brand-orange)}
+
+main{flex:1;max-width:980px;margin:0 auto;width:100%;padding:14px 22px 28px;display:flex;flex-direction:column;gap:14px}
+
+.step-title{display:flex;align-items:center;gap:12px}
+.step-title .n{min-width:38px;height:38px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center}
+.step-title h2{font-size:19px;color:#222}
+
+.caption{background:#fff;border:1px solid var(--border);border-left:5px solid var(--brand-orange);border-radius:10px;padding:13px 16px;font-size:14.5px;line-height:1.55;color:#333}
+.caption strong{color:var(--brand-orange)}
+.caption code{background:var(--brand-cream);padding:2px 7px;border-radius:5px;font-size:13px}
+
+/* Mock browser */
+.browser{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 34px rgba(0,0,0,.16);border:1px solid #ddd}
+.browser-bar{background:#ECECEC;padding:9px 14px;display:flex;align-items:center;gap:8px}
+.browser-bar .dot{width:11px;height:11px;border-radius:50%}
+.browser-bar .url{flex:1;background:#fff;border-radius:7px;padding:5px 13px;font-size:12.5px;color:#444;border:1px solid #ddd}
+.screen{min-height:380px;position:relative;font-size:13.5px}
+
+/* Highlight pulse */
+.hl{position:relative;cursor:pointer}
+.hl::after{content:'';position:absolute;inset:-7px;border:3px solid var(--brand-orange);border-radius:10px;animation:pulse 1.2s infinite;pointer-events:none}
+@keyframes pulse{0%{opacity:1;transform:scale(1)}70%{opacity:.25;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+.hand{position:absolute;font-size:30px;animation:bob 1.2s infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3));z-index:5}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* Firebase mock pieces */
+.fb-top{background:var(--fb-dark);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:14px}
+.fb-top .flame{color:var(--fb-amber);font-size:17px}
+.fb-top .gear{margin-left:auto;font-size:16px;opacity:.85}
+.fb-body{display:flex;min-height:330px}
+.fb-side{width:215px;background:var(--fb-side);color:#C9CBD1;padding:13px 0;font-size:13px;flex-shrink:0}
+.fb-side .item{padding:8px 18px;display:flex;align-items:center;gap:9px}
+.fb-side .item.sub{padding-left:34px;font-size:12.5px}
+.fb-side .item.sel{background:rgba(26,115,232,.25);color:#fff;border-left:3px solid var(--fb-blue)}
+.fb-main{flex:1;padding:26px;background:#FAFAFA;position:relative}
+.fb-btn{display:inline-block;background:var(--fb-blue);color:#fff;border-radius:6px;padding:10px 22px;font-weight:600;font-size:13.5px}
+.fb-btn.lite{background:#fff;color:var(--fb-blue);border:1px solid #ccc}
+.fb-card{background:#fff;border:1px solid #E0E0E0;border-radius:10px;padding:18px;margin-bottom:13px}
+.fb-input{background:#fff;border:1px solid #bbb;border-radius:6px;padding:10px 13px;font-size:14px;color:#222;width:100%;max-width:380px}
+.fb-h{font-size:19px;color:#222;margin-bottom:14px;font-weight:500}
+.fb-code{background:#263238;color:#ECEFF1;border-radius:8px;padding:14px 16px;font-family:'Courier New',monospace;font-size:12px;line-height:1.55;white-space:pre;overflow-x:auto}
+.fb-code .k{color:#82B1FF}.fb-code .s{color:#C3E88D}
+.fb-toggle{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:#333}
+.fb-toggle .sw{width:36px;height:19px;border-radius:10px;background:#bbb;position:relative}
+.fb-toggle .sw::after{content:'';position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+.fb-tabs{display:flex;gap:2px;border-bottom:1px solid #ddd;margin-bottom:16px}
+.fb-tab{padding:9px 18px;font-size:13.5px;color:#555}
+.fb-tab.on{color:var(--fb-blue);border-bottom:3px solid var(--fb-blue);font-weight:600}
+.fb-radio{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13.5px;color:#333}
+.fb-radio .o{width:16px;height:16px;border-radius:50%;border:2px solid #999}
+.fb-radio.on .o{border-color:var(--fb-blue);background:radial-gradient(var(--fb-blue) 45%,#fff 50%)}
+
+/* GastroGoan mock */
+.gg-modal{max-width:560px;margin:24px auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.gg-modal h3{font-size:16px;margin-bottom:12px;color:#222}
+.gg-textarea{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-family:monospace;font-size:11.5px;color:#333;background:#FFFDF6;line-height:1.5}
+.gg-btn{display:block;width:100%;text-align:center;background:var(--brand-orange);color:#fff;border-radius:9px;padding:13px;font-weight:700;font-size:14.5px;margin-top:12px}
+.gg-screen{background:var(--brand-cream);min-height:380px;padding:4px}
+
+.nav{display:flex;gap:10px;align-items:center}
+.nav button{border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;border-radius:10px;padding:13px 26px}
+.nav .back{background:#fff;color:#555;border:1.5px solid var(--border)}
+.nav .next{background:var(--brand-orange);color:#fff;flex:1;max-width:320px;margin-left:auto}
+.nav .next:disabled{opacity:.4;cursor:default}
+.nav .count{color:var(--muted);font-size:13px;font-weight:600}
+
+.final{background:#fff;border-radius:14px;padding:36px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.final .big{font-size:54px;margin-bottom:8px}
+.final h2{margin-bottom:10px;color:#222}
+.final p{color:#555;font-size:14.5px;line-height:1.6;max-width:560px;margin:0 auto 8px}
+
+@media (max-width:720px){
+  .fb-side{display:none}
+  .nav .next{max-width:none}
+}
+</style>
+
+
+<header>
+  <div class="logo">🍽</div>
+  <h1>GastroGoan <span>Tutorial · Conecta tu restaurante a la nube (gratis, 10 min)</span></h1>
+</header>
+
+<div class="progress" id="progress"></div>
+
+<main>
+  <div class="step-title" id="step-title"></div>
+  <div class="caption" id="caption"></div>
+  <div class="browser" id="browser">
+    <div class="browser-bar">
+      <span class="dot" style="background:#FF5F57"></span><span class="dot" style="background:#FEBC2E"></span><span class="dot" style="background:#28C840"></span>
+      <span class="url" id="url"></span>
+    </div>
+    <div class="screen" id="screen"></div>
+  </div>
+  <div class="nav">
+    <button class="back" id="btn-back" onclick="go(-1)">← Anterior</button>
+    <span class="count" id="count"></span>
+    <button class="next" id="btn-next" onclick="go(1)">Siguiente →</button>
+  </div>
+</main>
+
+
+<script>
+const FB_TOP = `<div class="fb-top"><span class="flame">🔥</span> Firebase <span class="gear" id="mock-gear">⚙</span></div>`;
+const SIDE = (sel) => `
+  <div class="fb-side">
+    <div class="item">🏠 Descripción general</div>
+    <div class="item ${sel==='build'?'sel':''}">🔧 Compilación</div>
+    ${sel==='build'||sel==='rtdb' ? `<div class="item sub">Authentication</div><div class="item sub ${sel==='rtdb'?'sel':''}" id="mock-rtdb">Realtime Database</div><div class="item sub">Firestore</div><div class="item sub">Storage</div>` : ''}
+    <div class="item">📊 Analíticas</div>
+  </div>`;
+
+const STEPS = [
+  {
+    title:'Entra en la consola de Firebase',
+    url:'console.firebase.google.com',
+    caption:'Abre <strong>console.firebase.google.com</strong> en el navegador de tu ordenador e inicia sesión con tu cuenta de Google (la misma del Gmail). Es un servicio <strong>gratuito</strong> de Google y tus datos quedarán en tu propia cuenta.',
+    screen:`
+      <div style="background:#fff;min-height:380px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:30px">
+        <div style="font-size:46px">🔥</div>
+        <div style="font-size:22px;color:#222">Inicia sesión con Google</div>
+        <div class="hl" style="border:1px solid #ccc;border-radius:8px;padding:11px 26px;display:flex;align-items:center;gap:10px;font-size:14.5px;color:#333" onclick="go(1)">
+          <span style="font-weight:800;color:#4285F4">G</span> Continuar con tu cuenta de Google
+          <span class="hand" style="right:-38px;top:8px">👆</span>
+        </div>
+      </div>`
+  },
+  {
+    title:'Crea un proyecto nuevo',
+    url:'console.firebase.google.com',
+    caption:'En la pantalla principal de Firebase, pulsa el botón <strong>"Crear proyecto"</strong>.',
+    screen:`${FB_TOP}
+      <div class="fb-main" style="min-height:330px">
+        <div class="fb-h">Te damos la bienvenida a Firebase</div>
+        <div class="fb-card" style="max-width:430px;text-align:center;padding:30px">
+          <div style="font-size:30px;margin-bottom:10px">📁</div>
+          <div style="margin-bottom:16px;color:#444">Crea un proyecto para empezar</div>
+          <span class="fb-btn hl" onclick="go(1)">Crear proyecto<span class="hand" style="right:-36px;top:6px">👆</span></span>
+        </div>
+      </div>`
+  },
+  {
+    title:'Ponle el nombre de tu restaurante',
+    url:'console.firebase.google.com',
+    caption:'Escribe el <strong>nombre de tu restaurante</strong> (sin espacios raros, por ejemplo: <code>casa-paco</code>) y pulsa <strong>Continuar</strong>.',
+    screen:`${FB_TOP}
+      <div class="fb-main" style="min-height:330px">
+        <div class="fb-h">Crear un proyecto <span style="color:#999;font-size:13px">(Paso 1 de 3)</span></div>
+        <div class="fb-card" style="max-width:480px">
+          <div style="font-size:12.5px;color:#777;margin-bottom:7px">Nombre del proyecto</div>
+          <div class="fb-input hl" style="color:#222">mi-restaurante<span style="border-left:1.5px solid #333;margin-left:1px;animation:pulse 1s infinite"></span></div>
+          <div style="margin-top:20px;text-align:right"><span class="fb-btn" onclick="go(1)" style="cursor:pointer">Continuar</span></div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Desactiva Google Analytics',
+    url:'console.firebase.google.com',
+    caption:'<strong>Desactiva</strong> el interruptor de Google Analytics (no lo necesitas) y pulsa <strong>"Crear proyecto"</strong>. Espera unos segundos a que termine.',
+    screen:`${FB_TOP}
+      <div class="fb-main" style="min-height:330px">
+        <div class="fb-h">Google Analytics <span style="color:#999;font-size:13px">(Paso 3 de 3)</span></div>
+        <div class="fb-card" style="max-width:480px">
+          <div class="fb-toggle hl" style="padding:4px"><span class="sw"></span> Habilitar Google Analytics en este proyecto <span class="hand" style="right:-36px;top:0">👆</span></div>
+          <div style="font-size:12px;color:#999;margin-top:8px">← déjalo gris (desactivado)</div>
+          <div style="margin-top:20px;text-align:right"><span class="fb-btn" onclick="go(1)" style="cursor:pointer">Crear proyecto</span></div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Abre Realtime Database',
+    url:'console.firebase.google.com/project/mi-restaurante',
+    caption:'Ya dentro de tu proyecto: en el menú de la izquierda abre <strong>Compilación</strong> y pulsa en <strong>"Realtime Database"</strong>.',
+    screen:`${FB_TOP}
+      <div class="fb-body">
+        ${SIDE('rtdb').replace('id="mock-rtdb"','id="mock-rtdb" class="item sub sel hl" onclick="go(1)"')}
+        <div class="fb-main">
+          <div class="fb-h">mi-restaurante</div>
+          <div style="color:#777">Panel del proyecto</div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Crea la base de datos',
+    url:'console.firebase.google.com/project/mi-restaurante/database',
+    caption:'Pulsa <strong>"Crear base de datos"</strong>. En ubicación elige <strong>Bélgica (europe-west1)</strong> y en las reglas de seguridad elige <strong>"Empezar en modo de prueba"</strong>. Luego pulsa <strong>Habilitar</strong>.',
+    screen:`${FB_TOP}
+      <div class="fb-body">
+        ${SIDE('rtdb')}
+        <div class="fb-main">
+          <div class="fb-h">Realtime Database</div>
+          <div class="fb-card" style="max-width:470px">
+            <div style="font-size:12.5px;color:#777;margin-bottom:7px">Ubicación de la base de datos</div>
+            <div class="fb-input" style="max-width:300px">Bélgica (europe-west1) ▾</div>
+            <div style="margin:16px 0 4px;font-size:12.5px;color:#777">Reglas de seguridad</div>
+            <div class="fb-radio"><span class="o"></span> Empezar en modo bloqueado</div>
+            <div class="fb-radio on hl" style="max-width:300px"><span class="o"></span> Empezar en modo de prueba</div>
+            <div style="margin-top:18px;text-align:right"><span class="fb-btn" onclick="go(1)" style="cursor:pointer">Habilitar</span></div>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    title:'MUY IMPORTANTE: publica las reglas definitivas',
+    url:'console.firebase.google.com/project/mi-restaurante/database/rules',
+    caption:'Ve a la pestaña <strong>"Reglas"</strong>, <strong>borra todo</strong> lo que hay y escribe exactamente esto. Después pulsa <strong>Publicar</strong>. ⚠️ <strong>Si te saltas este paso, la nube se apaga sola a los 30 días.</strong>',
+    screen:`${FB_TOP}
+      <div class="fb-body">
+        ${SIDE('rtdb')}
+        <div class="fb-main">
+          <div class="fb-tabs"><span class="fb-tab">Datos</span><span class="fb-tab on hl">Reglas</span><span class="fb-tab">Copias</span></div>
+          <div class="fb-code hl" style="max-width:420px">{
+  <span class="s">"rules"</span>: {
+    <span class="s">".read"</span>: <span class="k">true</span>,
+    <span class="s">".write"</span>: <span class="k">true</span>
+  }
+}</div>
+          <div style="margin-top:16px"><span class="fb-btn" onclick="go(1)" style="cursor:pointer">Publicar</span></div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Registra la app web',
+    url:'console.firebase.google.com/project/mi-restaurante/settings',
+    caption:'Pulsa la <strong>rueda dentada ⚙</strong> (arriba a la izquierda) → <strong>"Configuración del proyecto"</strong> → baja hasta <strong>"Tus apps"</strong> → pulsa el icono <strong>&lt;/&gt;</strong> (app web) → ponle un nombre cualquiera → <strong>"Registrar app"</strong> (NO marques Hosting).',
+    screen:`${FB_TOP.replace('id="mock-gear"','id="mock-gear" class="gear hl"')}
+      <div class="fb-main" style="min-height:330px">
+        <div class="fb-h">Configuración del proyecto → Tus apps</div>
+        <div class="fb-card" style="max-width:470px;text-align:center">
+          <div style="color:#777;margin-bottom:14px">No hay apps en el proyecto. Selecciona una plataforma:</div>
+          <div style="display:flex;gap:14px;justify-content:center;font-size:21px">
+            <span style="border:1px solid #ddd;border-radius:9px;padding:12px 18px">🍎</span>
+            <span style="border:1px solid #ddd;border-radius:9px;padding:12px 18px">🤖</span>
+            <span class="hl" style="border:1px solid #ddd;border-radius:9px;padding:12px 18px;font-family:monospace;font-weight:800;color:var(--fb-blue)" onclick="go(1)">&lt;/&gt;<span class="hand" style="right:-34px;top:8px">👆</span></span>
+          </div>
+        </div>
+      </div>`
+  },
+  {
+    title:'Copia el bloque firebaseConfig',
+    url:'console.firebase.google.com/project/mi-restaurante/settings',
+    caption:'Firebase te muestra un código. <strong>Selecciona y copia el bloque completo</strong> que empieza por <code>const firebaseConfig = {</code> y termina en <code>};</code> (desde "const" hasta el punto y coma). Puedes volver a verlo siempre en ⚙ Configuración del proyecto → Tus apps.',
+    screen:`${FB_TOP}
+      <div class="fb-main" style="min-height:330px">
+        <div class="fb-h">Añadir Firebase a tu app web</div>
+        <div class="fb-code hl" style="max-width:560px" onclick="go(1)"><span style="color:#888">// Pega esta configuración en tu app</span>
+<span class="k">const</span> firebaseConfig = {
+  apiKey: <span class="s">"AIzaSyB...tu-clave..."</span>,
+  authDomain: <span class="s">"mi-restaurante.firebaseapp.com"</span>,
+  databaseURL: <span class="s">"https://mi-restaurante-default-rtdb.europe-west1.firebasedatabase.app"</span>,
+  projectId: <span class="s">"mi-restaurante"</span>,
+  storageBucket: <span class="s">"mi-restaurante.appspot.com"</span>,
+  messagingSenderId: <span class="s">"123456789"</span>,
+  appId: <span class="s">"1:123456789:web:abc123"</span>
+};</div>
+        <div style="font-size:12px;color:#999;margin-top:10px">↑ copia TODO este bloque (Ctrl+C / mantener pulsado → Copiar)</div>
+      </div>`
+  },
+  {
+    title:'Pégalo en GastroGoan y conecta',
+    url:'GastroGoan — tu app',
+    caption:'Vuelve a <strong>GastroGoan</strong> → botón <strong>☁ Nube</strong> (arriba) → pestaña <strong>"Configurar (dueño)"</strong> → pega el bloque en el cuadro y pulsa <strong>"Conectar mi restaurante a la nube"</strong>. La app se reiniciará ya conectada: verás <strong style="color:#2E7D32">☁ Nube conectada</strong> en verde.',
+    screen:`<div class="gg-screen">
+      <div class="gg-modal">
+        <h3>☁ Nube — Sincronización entre dispositivos</h3>
+        <div class="gg-textarea hl">const firebaseConfig = {
+  apiKey: "AIzaSyB...tu-clave...",
+  authDomain: "mi-restaurante.firebaseapp.com",
+  databaseURL: "https://mi-restaurante-default-rtdb...",
+  projectId: "mi-restaurante", ...
+};</div>
+        <div class="gg-btn hl" onclick="go(1)" style="cursor:pointer">🔌 Conectar mi restaurante a la nube<span class="hand" style="right:8px;top:6px">👆</span></div>
+      </div>
+    </div>`
+  },
+  {
+    title:'Conecta los móviles de tus camareros',
+    url:'GastroGoan — tu app',
+    caption:'Último paso: pulsa <strong>☁ Nube → "Estado y compartir"</strong> y <strong>envía el código de conexión por WhatsApp</strong> a cada camarero. Ellos abren la app en su móvil → <em>"Soy camarero — Tengo un código"</em> → pegan el código → listo. Todos los dispositivos quedan sincronizados al instante.',
+    screen:`<div class="gg-screen">
+      <div class="gg-modal">
+        <h3>☁ Nube — Estado y compartir</h3>
+        <div style="background:#E8F5E9;color:#2E7D32;padding:11px 14px;border-radius:9px;font-weight:700;margin-bottom:12px">✅ Este dispositivo está conectado a la nube</div>
+        <div class="gg-textarea" style="font-size:10px">eyJhcGlLZXkiOiJBSXphU3lCLi4uIiwiYXV0aERvbWFpbiI6Im1pLXJlc3RhdXJhbnRlLmZpcmViYXNlYXBwLmNvbSIsImRhdGFiYXNlVVJMIjoi...</div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <div style="flex:1;text-align:center;border:1.5px solid var(--border);border-radius:9px;padding:11px;font-weight:700;color:#444">📋 Copiar código</div>
+          <div class="hl" style="flex:1;text-align:center;background:#25D366;color:#fff;border-radius:9px;padding:11px;font-weight:700;cursor:pointer" onclick="go(1)">📱 Enviar por WhatsApp</div>
+        </div>
+      </div>
+    </div>`
+  }
+];
+
+let i = 0;
+function render(){
+  const total = STEPS.length;
+  document.getElementById('progress').innerHTML = STEPS.map((_,k)=>`<div class="seg ${k<=i?'done':''}"></div>`).join('') + `<div class="seg ${i>=total?'done':''}"></div>`;
+
+  if(i >= total){
+    document.getElementById('step-title').innerHTML = '';
+    document.getElementById('caption').style.display = 'none';
+    document.getElementById('browser').style.display = 'none';
+    document.querySelector('.nav .next').style.display = 'none';
+    document.getElementById('count').textContent = '';
+    const main = document.querySelector('main');
+    if(!document.getElementById('final')){
+      const d = document.createElement('div');
+      d.className = 'final'; d.id = 'final';
+      d.innerHTML = `
+        <div class="big">🎉</div>
+        <h2>¡Tu restaurante ya está en la nube!</h2>
+        <p>A partir de ahora, todo lo que hagas en cualquier dispositivo (comandas, mesas, escandallos, reservas...) se sincroniza al instante en todos los demás.</p>
+        <p style="font-weight:700;color:var(--brand-orange)">Recuerda: esto se configura UNA sola vez. Los camareros solo necesitan el código de conexión.</p>
+        <p style="font-size:13px;color:#999;margin-top:14px">¿Algo no funcionó? Repasa el paso 7 (las reglas) y el paso 9 (copiar el bloque completo), son los dos despistes más comunes.</p>
+      `;
+      main.insertBefore(d, document.querySelector('.nav'));
+    }
+    return;
+  }
+  const f = document.getElementById('final'); if(f) f.remove();
+  document.getElementById('caption').style.display = '';
+  document.getElementById('browser').style.display = '';
+  document.querySelector('.nav .next').style.display = '';
+
+  const s = STEPS[i];
+  document.getElementById('step-title').innerHTML = `<div class="n">${i+1}</div><h2>${s.title}</h2>`;
+  document.getElementById('caption').innerHTML = s.caption;
+  document.getElementById('url').textContent = s.url;
+  document.getElementById('screen').innerHTML = s.screen;
+  document.getElementById('count').textContent = `Paso ${i+1} de ${total}`;
+  document.getElementById('btn-back').style.visibility = i===0 ? 'hidden' : 'visible';
+  document.getElementById('btn-next').textContent = i===total-1 ? 'Terminar ✓' : 'Siguiente →';
+}
+function go(d){
+  i = Math.max(0, Math.min(STEPS.length, i + d));
+  render();
+  window.scrollTo({top:0});
+}
+render();
+</script>
+</template>
 </body>
 </html>
