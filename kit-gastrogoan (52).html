@@ -6192,9 +6192,10 @@ const MANUAL_CHAPTERS = [
       <li>Añade <strong>platos manuales</strong> que no estén en el Escandallo</li>
     </ul>
     <h4>Disponibilidad de platos</h4>
-    <p>Cada plato tiene un interruptor <strong>Disponible / No disponible</strong>. Los platos no disponibles no aparecen en el TPV.</p>
+    <p>Cada plato tiene un interruptor <strong>Disponible / No disponible</strong>. Los platos no disponibles no aparecen en el TPV ni en la web de pedidos online.</p>
     <h4>Vinculación con el TPV</h4>
-    <p>En el TPV selecciona qué carta está activa. Las comandas solo muestran los platos de esa carta.</p>`
+    <p>En el TPV selecciona qué carta está activa. Las comandas solo muestran los platos de esa carta.</p>
+    <div class="manual-tip">💡 La carta activa en el TPV es también la que se muestra en la página de pedidos online (Take Away / Delivery). Si tus clientes ven "La carta no está disponible", revisa que haya una carta activa con platos marcados como Disponible.</div>`
   },
   {
     title:'📦 Stock',
@@ -6321,7 +6322,28 @@ const MANUAL_CHAPTERS = [
     <h4>Operativa</h4>
     <p>Configura el número de mesas y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
     <h4>Acceso propietario (PIN)</h4>
-    <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>`
+    <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
+    <h4>Horario de apertura</h4>
+    <p>Además del horario en texto (informativo), rellena <strong>Hora de apertura</strong> y <strong>Hora de cierre</strong>. Estas dos horas limitan automáticamente qué horas puede elegir un cliente al reservar mesa desde la web pública.</p>`
+  },
+  {
+    title:'🌐 Reservas y Pedidos Online',
+    content:`<h3>Tu web pública para clientes</h3>
+    <p>GastroGoan genera automáticamente una página web (y un código QR) donde tus clientes pueden reservar mesa o hacer pedidos para recoger/delivery, sin que tengas que programar nada.</p>
+    <h4>Activar la nube</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan (te conecta a la nube compartida).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Una vez activada, en <strong>Mi Negocio</strong> aparece tu <strong>enlace público</strong> y un <strong>código QR</strong>. Compártelos con tus clientes (en mesas, carta, redes sociales...).</div></div>
+    <h4>Para que aparezca la carta en pedidos online</h4>
+    <ul>
+      <li>En <strong>TPV</strong>, selecciona la carta que quieres usar como <strong>carta activa</strong>.</li>
+      <li>En esa carta, marca cada plato como <strong>Disponible</strong> (en la sección Carta).</li>
+      <li>Si no hay carta activa o ningún plato disponible, los clientes verán el aviso "La carta no está disponible para pedidos online".</li>
+    </ul>
+    <h4>Horario de reservas</h4>
+    <p>En <strong>Mi Negocio</strong>, rellena <strong>Hora de apertura</strong> y <strong>Hora de cierre</strong>. La web de reservas solo permitirá elegir horas dentro de ese rango. Si tu negocio cierra después de medianoche, deja estos campos vacíos para no limitar el horario.</p>
+    <h4>Solicitudes de clientes</h4>
+    <p>Las reservas y pedidos que hagan los clientes desde la web pública llegan a tu Kit automáticamente: las reservas aparecen en <strong>Reservas → Solicitudes online pendientes</strong>, y los pedidos en <strong>TPV</strong> como pedidos pendientes online.</p>
+    <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`
   },
 ];
 
