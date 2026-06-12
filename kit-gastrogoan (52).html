@@ -541,13 +541,14 @@ td.wrap{white-space:normal}
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> Solo alertas
           </label>
         </div>
+        <button class="btn btn-primary" onclick="openElaboracionModal()"><i class="ti ti-plus"></i> Nueva elaboración</button>
       </div>
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Ingrediente</th>
+              <th>Ingrediente / Elaboración</th>
               <th>Stock actual</th>
               <th>Mínimo</th>
               <th>Unidad</th>
@@ -1255,6 +1256,7 @@ function defaultData(){
     cartas: [],          // {id, nombre, tipo, desde, hasta, dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
     activeCartaId: null,
     stock: {},          // { ingredientId: { qty, min } }
+    elaboraciones: [],   // {id, name, unit, qty, min} — elaboraciones propias (caldos, salsas, etc.)
     purchaseOrders: [],
     providers: [],        // {id, nombre, tel, email, contacto, pago, dir, iban, notas}
     tables: [],
@@ -1951,31 +1953,41 @@ function renderStock(){
     const matchSearch = !search || ing.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || s.qty <= s.min;
     return matchSearch && matchAlert;
-  });
+  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, ...getStockEntry(ing.id)}));
+
+  let elabs = (DB.elaboraciones||[]).filter(e => {
+    const matchSearch = !search || e.name.toLowerCase().includes(search);
+    const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
+    return matchSearch && matchAlert;
+  }).map(e => ({type:'elab', id: e.id, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
+
+  const rows = [...items, ...elabs];
 
   const tbody = document.getElementById('stock-tbody');
-  if(!items.length){
+  if(!rows.length){
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay artículos en stock.</div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = items.map(ing => {
-    const s = getStockEntry(ing.id);
-    const low = s.qty <= s.min;
+  tbody.innerHTML = rows.map(row => {
+    const low = row.qty <= row.min;
+    const isElab = row.type === 'elab';
     return `
       <tr>
-        <td><strong>${escapeHtml(ing.name)}</strong></td>
-        <td>${fmtNum(s.qty)}</td>
+        <td><strong>${escapeHtml(row.name)}</strong>${isElab ? ' <span class="badge" style="background:var(--brand-cream);color:var(--brand-orange)">Elaboración</span>' : ''}</td>
+        <td>${fmtNum(row.qty)}</td>
         <td>
-          <input type="number" value="${s.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"
-            onchange="updateStockMin(${ing.id}, this.value)">
+          <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"
+            onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
         </td>
-        <td>${escapeHtml(ing.unit)}</td>
+        <td>${escapeHtml(row.unit)}</td>
         <td>${low ? '<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> Bajo mínimo</span>' : '<span class="badge badge-green">OK</span>'}</td>
         <td class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="adjustStock(${ing.id}, 1)"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon" onclick="adjustStock(${ing.id}, -1)"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm" onclick="setStockQty(${ing.id})">Ajustar</button>
+          <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i></button>
+          <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}">Ajustar</button>
+          ${isElab ? `<button class="btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
         </td>
       </tr>
     `;
@@ -2003,6 +2015,93 @@ function setStockQty(ingredientId){
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
   s.qty = num;
+  saveDB();
+  renderStock();
+}
+
+/* ============== Elaboraciones propias (caldos, salsas, etc.) ============== */
+function getElaboracion(id){ return (DB.elaboraciones||[]).find(e => e.id === id); }
+
+function openElaboracionModal(id){
+  const e = id ? getElaboracion(id) : {id:null, name:'', unit:'L', qty:0, min:0};
+  openModal(`
+    <div class="modal-header">
+      <h3>${id ? 'Editar' : 'Nueva'} Elaboración</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="elab-name" value="${escapeHtml(e.name)}" placeholder="Ej. Caldo de pollo">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Unidad</label>
+        <select id="elab-unit">
+          ${['L','kg','ud'].map(u => `<option value="${u}"${u===e.unit?' selected':''}>${u}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Stock actual</label>
+        <input type="number" id="elab-qty" value="${e.qty||0}" step="0.01" min="0">
+      </div>
+      <div class="field">
+        <label>Mínimo</label>
+        <input type="number" id="elab-min" value="${e.min||0}" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveElaboracion(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function saveElaboracion(id){
+  const name = document.getElementById('elab-name').value.trim();
+  if(!name){ showToast('El nombre es obligatorio'); return; }
+  const unit = document.getElementById('elab-unit').value;
+  const qty = parseFloat(document.getElementById('elab-qty').value) || 0;
+  const min = parseFloat(document.getElementById('elab-min').value) || 0;
+  if(id){
+    Object.assign(getElaboracion(id), {name, unit, qty, min});
+  } else {
+    if(!DB.elaboraciones) DB.elaboraciones = [];
+    DB.elaboraciones.push({id: genId(), name, unit, qty, min});
+  }
+  saveDB();
+  closeModal();
+  renderStock();
+  showToast('Elaboración guardada');
+}
+
+function deleteElaboracion(id){
+  if(!confirm('¿Eliminar esta elaboración del stock?')) return;
+  DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.id !== id);
+  saveDB();
+  renderStock();
+  showToast('Elaboración eliminada');
+}
+
+function updateElaboracionMin(id, value){
+  getElaboracion(id).min = parseFloat(value) || 0;
+  saveDB();
+  renderStock();
+}
+
+function adjustElaboracion(id, delta){
+  const e = getElaboracion(id);
+  e.qty = Math.max(0, (e.qty||0) + delta);
+  saveDB();
+  renderStock();
+}
+
+function setElaboracionQty(id){
+  const e = getElaboracion(id);
+  const val = prompt('Nueva cantidad en stock:', e.qty||0);
+  if(val === null) return;
+  const num = parseFloat(val);
+  if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
+  e.qty = num;
   saveDB();
   renderStock();
 }
