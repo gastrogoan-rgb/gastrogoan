@@ -1201,7 +1201,7 @@ let cloudConfig = null;
 let platformAuthPromise = null;
 // Proyecto Firebase compartido de la plataforma GastroGoan, usado SOLO para
 // publicar el espejo público (gastrogoan/public/{publicId}/info) que lee
-// reserva-gastrogoan.html. Es independiente del Firebase propio de cada
+// reservagastrogoan.html. Es independiente del Firebase propio de cada
 // negocio (cloudConfig), que solo guarda sus datos privados.
 const PLATFORM_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
@@ -1811,7 +1811,7 @@ function startCloudSync(tenantId){
 function getPublicClientLink(){
   const publicId = getPublicId();
   if(!publicId) return '';
-  const base = location.href.replace(/[^/]*$/, '') + 'reserva-gastrogoan.html';
+  const base = location.href.replace(/[^/]*$/, '') + 'reservagastrogoan.html';
   return base + '?neg=' + publicId;
 }
 
