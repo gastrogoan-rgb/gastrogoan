@@ -526,52 +526,110 @@ td.wrap{white-space:normal}
       <div id="fichas-list"></div>
     </section>
 
-    <!-- ========== CARTA ========== -->
+    <!-- ========== OFERTA GASTRONÓMICA ========== -->
     <section class="view" id="view-carta">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
-      <div class="view-title">Carta</div>
-      <div class="view-subtitle">Gestiona tus menús y cartas · Vincula con Escandallo</div>
+      <div class="view-title">Oferta Gastronómica</div>
+      <div class="view-subtitle">Gestiona tus cartas y menús · Vincula con Escandallo</div>
 
-      <!-- LIST VIEW -->
-      <div id="carta-list-view">
-        <div class="toolbar">
-          <div class="left"></div>
-          <button class="btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
+      <div class="toolbar" style="margin-bottom:10px">
+        <div class="left">
+          <button class="btn btn-sm" id="oferta-tab-carta" onclick="setOfertaTab('carta')"><i class="ti ti-tools-kitchen-2"></i> Carta</button>
+          <button class="btn btn-sm" id="oferta-tab-menus" onclick="setOfertaTab('menus')"><i class="ti ti-list-details"></i> Menús</button>
         </div>
-        <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
-        <div id="carta-list"></div>
       </div>
 
-      <!-- EDITOR VIEW -->
-      <div id="carta-editor-view" style="display:none">
-        <div class="toolbar">
-          <div class="left">
-            <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> Cartas</button>
-            <input type="text" id="carta-f-nombre" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
+      <!-- ===== CARTA TAB ===== -->
+      <div id="oferta-carta-tab">
+        <!-- LIST VIEW -->
+        <div id="carta-list-view">
+          <div class="toolbar">
+            <div class="left"></div>
+            <button class="btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
           </div>
-          <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> Guardar</button>
+          <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
+          <div id="carta-list"></div>
         </div>
-        <div class="field-row">
+
+        <!-- EDITOR VIEW -->
+        <div id="carta-editor-view" style="display:none">
+          <div class="toolbar">
+            <div class="left">
+              <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> Cartas</button>
+              <input type="text" id="carta-f-nombre" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
+            </div>
+            <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> Guardar</button>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Turno</label>
+              <select id="carta-f-turno">
+                <option value="todos">Todo el horario de apertura</option>
+                <option value="1">Turno 1</option>
+                <option value="2">Turno 2</option>
+              </select>
+            </div>
+          </div>
           <div class="field">
-            <label>Turno</label>
-            <select id="carta-f-turno">
-              <option value="todos">Todo el horario de apertura</option>
-              <option value="1">Turno 1</option>
-              <option value="2">Turno 2</option>
-            </select>
+            <label>Días activos</label>
+            <div id="carta-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+            <p style="font-size:13px;color:var(--muted);margin-top:6px">Los horarios de cada día y turno se configuran en <strong>Mi Negocio → Horario semanal</strong>.</p>
           </div>
+          <div class="toolbar">
+            <div class="left"></div>
+            <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> Importar del Escandallo</button>
+            <button class="btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
+          </div>
+          <div id="carta-secciones"></div>
         </div>
-        <div class="field">
-          <label>Días activos</label>
-          <div id="carta-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-          <p style="font-size:13px;color:var(--muted);margin-top:6px">Los horarios de cada día y turno se configuran en <strong>Mi Negocio → Horario semanal</strong>.</p>
+      </div>
+
+      <!-- ===== MENÚS TAB ===== -->
+      <div id="oferta-menus-tab" style="display:none">
+        <!-- LIST VIEW -->
+        <div id="menu-list-view">
+          <div class="toolbar">
+            <div class="left"></div>
+            <button class="btn btn-primary" onclick="newMenu()"><i class="ti ti-plus"></i> Nuevo Menú</button>
+          </div>
+          <div class="grid grid-2" id="menu-stats" style="margin-bottom:14px"></div>
+          <div id="menu-list"></div>
         </div>
-        <div class="toolbar">
-          <div class="left"></div>
-          <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> Importar del Escandallo</button>
-          <button class="btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
+
+        <!-- EDITOR VIEW -->
+        <div id="menu-editor-view" style="display:none">
+          <div class="toolbar">
+            <div class="left">
+              <button class="btn btn-sm" onclick="backToMenuList()"><i class="ti ti-arrow-left"></i> Menús</button>
+              <input type="text" id="menu-f-nombre" placeholder="Nombre del menú... Ej. Menú del día" style="font-size:15px;font-weight:700;min-width:220px">
+            </div>
+            <button class="btn btn-primary" onclick="saveMenu()"><i class="ti ti-device-floppy"></i> Guardar</button>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Precio base (€)</label>
+              <input type="number" id="menu-f-precio" step="0.01" min="0">
+            </div>
+            <div class="field">
+              <label>Turno</label>
+              <select id="menu-f-turno">
+                <option value="todos">Todo el horario de apertura</option>
+                <option value="1">Turno 1</option>
+                <option value="2">Turno 2</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Días activos</label>
+            <div id="menu-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+            <p style="font-size:13px;color:var(--muted);margin-top:6px">Los horarios de cada día y turno se configuran en <strong>Mi Negocio → Horario semanal</strong>.</p>
+          </div>
+          <div class="toolbar">
+            <div class="left"></div>
+            <button class="btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> Nuevo Grupo</button>
+          </div>
+          <div id="menu-grupos"></div>
         </div>
-        <div id="carta-secciones"></div>
       </div>
     </section>
 
@@ -1365,6 +1423,8 @@ function defaultData(){
     menuItems: [],
     cartas: [],          // {id, nombre, turno:'todos'|'1'|'2', dias:[0..6], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
     activeCartaIds: [],  // cartas activas en TPV a la vez (p.ej. comida + bebidas)
+    menus: [],           // {id, nombre, precio, turno:'todos'|'1'|'2', dias:[0..6], grupos:[{id, nombre, opciones:[{id, recipeId, nombre, suplemento}]}]}
+    activeMenuIds: [],   // menús activos en TPV a la vez
     stock: {},          // { ingredientId: { qty, min } }
     elaboraciones: [],   // {id, name, unit, qty, min} — elaboraciones propias (caldos, salsas, etc.)
     purchaseOrders: [],
@@ -1432,6 +1492,8 @@ function loadDB(){
       merged.activeCartaIds = merged.activeCartaId ? [merged.activeCartaId] : [];
     }
     delete merged.activeCartaId;
+    if(!Array.isArray(merged.menus)) merged.menus = [];
+    if(!Array.isArray(merged.activeMenuIds)) merged.activeMenuIds = [];
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
@@ -1705,7 +1767,7 @@ function renderView(view){
     case 'proveedores': renderProveedores(); break;
     case 'escandallo': renderEscandallo(); break;
     case 'fichas': renderFichas(); break;
-    case 'carta': renderCarta(); break;
+    case 'carta': renderOferta(); break;
     case 'tpv': renderTPV(); break;
     case 'comandascocina': renderComandasCocina(); break;
     case 'stock': renderStock(); break;
@@ -3112,6 +3174,21 @@ function fmtCartaHorario(c){
   return unique.length===1 ? unique[0] : fmtTurno(c.turno) + ' (según el día)';
 }
 
+let ofertaTab = 'carta'; // 'carta' | 'menus'
+
+function renderOferta(){
+  document.getElementById('oferta-carta-tab').style.display = ofertaTab==='carta' ? '' : 'none';
+  document.getElementById('oferta-menus-tab').style.display = ofertaTab==='menus' ? '' : 'none';
+  document.getElementById('oferta-tab-carta').classList.toggle('btn-primary', ofertaTab==='carta');
+  document.getElementById('oferta-tab-menus').classList.toggle('btn-primary', ofertaTab==='menus');
+  if(ofertaTab==='carta') renderCarta();
+  else renderMenu();
+}
+function setOfertaTab(tab){
+  ofertaTab = tab;
+  renderOferta();
+}
+
 function renderCarta(){
   migrateCartas();
   document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
@@ -3374,6 +3451,254 @@ function confirmImportEsc(secId){
 }
 
 /* ============================================================
+   MENÚS — Combos de precio cerrado con grupos de opciones
+   ============================================================ */
+let menuEdit = null; // {id, nombre, precio, turno, dias, grupos:[{id, nombre, opciones:[{id, recipeId, nombre, suplemento}]}]}
+
+function getActiveMenus(){
+  const ids = DB.activeMenuIds||[];
+  return DB.menus.filter(m=>ids.includes(m.id));
+}
+function toggleActiveMenu(id, checked){
+  id = parseInt(id);
+  if(!Array.isArray(DB.activeMenuIds)) DB.activeMenuIds = [];
+  if(checked){
+    if(!DB.activeMenuIds.includes(id)) DB.activeMenuIds.push(id);
+  }else{
+    DB.activeMenuIds = DB.activeMenuIds.filter(mid=>mid!==id);
+  }
+  saveDB();
+  renderTPV();
+}
+function computeAutoActiveMenuIds(){
+  if(!DB.menus || !DB.menus.length) return [];
+  const now = new Date();
+  return DB.menus.filter(m => cartaIsActiveNow(m, now)).map(m=>m.id);
+}
+function updateAutoActiveMenu(force){
+  if(!DB.business || DB.business.cartaAuto === false) return;
+  const autoIds = computeAutoActiveMenuIds();
+  if(!autoIds.length) return;
+  const current = DB.activeMenuIds||[];
+  const changed = force || autoIds.length !== current.length || autoIds.some(id=>!current.includes(id));
+  if(changed){
+    DB.activeMenuIds = autoIds;
+    saveDB();
+    if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
+  }
+}
+
+function renderMenu(){
+  document.getElementById('menu-list-view').style.display = menuEdit ? 'none' : '';
+  document.getElementById('menu-editor-view').style.display = menuEdit ? '' : 'none';
+  if(menuEdit) renderMenuEditor();
+  else renderMenuList();
+}
+
+function renderMenuList(){
+  const totalGrupos = DB.menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
+  document.getElementById('menu-stats').innerHTML = `
+    <div class="kpi"><div class="label">Menús</div><div class="value">${DB.menus.length}</div></div>
+    <div class="kpi"><div class="label">Total grupos</div><div class="value">${totalGrupos}</div></div>
+  `;
+  const box = document.getElementById('menu-list');
+  if(!DB.menus.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>Sin menús aún. Crea un menú con precio cerrado y grupos de platos a elegir.</div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Precio</th><th>Turno</th><th>Horario</th><th>Días</th><th>Grupos</th><th></th></tr></thead>
+        <tbody>
+          ${DB.menus.map(m => {
+            const ngrupos = (m.grupos||[]).length;
+            return `<tr>
+              <td><strong>${escapeHtml(m.nombre)}</strong>${(DB.activeMenuIds||[]).includes(m.id)?' <span class="badge badge-green">Activo en TPV</span>':''}</td>
+              <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
+              <td><span class="badge badge-blue">${escapeHtml(fmtTurno(m.turno))}</span></td>
+              <td style="font-size:12px;color:var(--muted)">${fmtCartaHorario(m)}</td>
+              <td style="font-size:12px;color:var(--muted)">${fmtCartaDias(m.dias)}</td>
+              <td>${ngrupos}</td>
+              <td class="actions-cell">
+                <button class="btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
+                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function newMenu(){
+  menuEdit = {id: genId(), nombre:'', precio:0, turno:'todos', dias:[0,1,2,3,4,5,6], grupos:[]};
+  renderMenu();
+}
+function openMenu(id){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  menuEdit = JSON.parse(JSON.stringify(m));
+  if(!Array.isArray(menuEdit.grupos)) menuEdit.grupos = [];
+  if(!Array.isArray(menuEdit.dias)) menuEdit.dias = [0,1,2,3,4,5,6];
+  if(!menuEdit.turno) menuEdit.turno = 'todos';
+  menuEdit.grupos.forEach(g => { if(!Array.isArray(g.opciones)) g.opciones = []; });
+  renderMenu();
+}
+function backToMenuList(){
+  menuEdit = null;
+  renderMenu();
+}
+function deleteMenu(id){
+  if(!confirm('¿Eliminar este menú?')) return;
+  DB.menus = DB.menus.filter(m=>m.id!==id);
+  DB.activeMenuIds = (DB.activeMenuIds||[]).filter(mid=>mid!==id);
+  saveDB();
+  renderMenu();
+  showToast('Menú eliminado');
+}
+function saveMenu(){
+  const nombre = document.getElementById('menu-f-nombre').value.trim();
+  if(!nombre){ showToast('Ponle un nombre al menú'); return; }
+  const precioStr = document.getElementById('menu-f-precio').value;
+  const precio = parseFloat((precioStr||'').replace(',','.'));
+  if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
+  if(!menuEdit.grupos.length){ showToast('Añade al menos un grupo (Primero, Segundo...)'); return; }
+  for(const g of menuEdit.grupos){
+    if(!g.opciones.length){ showToast(`El grupo "${g.nombre}" necesita al menos una opción`); return; }
+  }
+  menuEdit.nombre = nombre;
+  menuEdit.precio = precio;
+  menuEdit.turno = document.getElementById('menu-f-turno').value;
+  const idx = DB.menus.findIndex(m=>m.id===menuEdit.id);
+  if(idx>=0) DB.menus[idx] = menuEdit;
+  else DB.menus.push(menuEdit);
+  saveDB();
+  menuEdit = null;
+  updateAutoActiveMenu(true);
+  renderMenu();
+  showToast('Menú guardado');
+}
+
+function renderMenuEditor(){
+  document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
+  document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
+  document.getElementById('menu-f-turno').value = menuEdit.turno || 'todos';
+  renderMenuDias();
+  renderMenuGrupos();
+}
+function renderMenuDias(){
+  document.getElementById('menu-dias').innerHTML = WEEK_DAYS.map((d,i)=>`
+    <span class="dia-pill ${menuEdit.dias.includes(i)?'active':''}" onclick="toggleMenuDia(${i})">${d.slice(0,3)}</span>
+  `).join('');
+}
+function toggleMenuDia(i){
+  const idx = menuEdit.dias.indexOf(i);
+  if(idx>=0) menuEdit.dias.splice(idx,1);
+  else menuEdit.dias.push(i);
+  menuEdit.dias.sort();
+  renderMenuDias();
+}
+
+function renderMenuGrupos(){
+  const box = document.getElementById('menu-grupos');
+  if(!menuEdit.grupos.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin grupos. Crea grupos como "Primero", "Segundo", "Postre", "Bebida"...</div>`;
+    return;
+  }
+  box.innerHTML = menuEdit.grupos.map(g => `
+    <div class="ge-section">
+      <div class="ge-sec-head">
+        <h4>${escapeHtml(g.nombre)}</h4>
+        <div class="actions-cell">
+          <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> Opción</button>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      ${(g.opciones||[]).length ? g.opciones.map(o => `
+        <div class="ge-item">
+          <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
+          ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
+        </div>
+      `).join('') : `<div class="empty" style="padding:14px">Sin opciones en este grupo.</div>`}
+    </div>
+  `).join('');
+}
+
+function newMenuGrupo(){
+  openModal(`
+    <div class="modal-header">
+      <h3>Nuevo grupo</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del grupo</label>
+      <input type="text" id="new-menu-grupo-name" placeholder="Ej. Primero, Segundo, Postre, Bebida...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewMenuGrupo()">Añadir</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-menu-grupo-name')?.focus(), 50);
+}
+function confirmNewMenuGrupo(){
+  const nombre = document.getElementById('new-menu-grupo-name').value;
+  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el grupo'); return; }
+  menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[]});
+  closeModal();
+  renderMenuGrupos();
+}
+function removeMenuGrupo(grupoId){
+  if(!confirm('¿Eliminar este grupo y todas sus opciones?')) return;
+  menuEdit.grupos = menuEdit.grupos.filter(g=>g.id!==grupoId);
+  renderMenuGrupos();
+}
+
+function addMenuOpcion(grupoId){
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  if(!areaRecipes.length){ showToast('No hay platos en el Escandallo'); return; }
+  openModal(`
+    <div class="modal-header">
+      <h3>Nueva opción</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Plato (Escandallo)</label>
+      <select id="new-menu-opcion-recipe">
+        ${areaRecipes.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field">
+      <label>Suplemento (€) <span style="color:var(--muted);font-weight:400">opcional, extra sobre el precio del menú</span></label>
+      <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">Añadir</button>
+    </div>
+  `);
+}
+function confirmAddMenuOpcion(grupoId){
+  const recipeId = parseInt(document.getElementById('new-menu-opcion-recipe').value);
+  const r = getRecipe(recipeId);
+  if(!r){ showToast('Selecciona un plato'); return; }
+  const supStr = document.getElementById('new-menu-opcion-suplemento').value;
+  const suplemento = parseFloat((supStr||'0').replace(',','.')) || 0;
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  g.opciones.push({id: genId(), recipeId: r.id, nombre: r.name, suplemento});
+  closeModal();
+  renderMenuGrupos();
+}
+function removeMenuOpcion(grupoId, opcionId){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  g.opciones = g.opciones.filter(o=>o.id!==opcionId);
+  renderMenuGrupos();
+}
+
+/* ============================================================
    TPV — Comandas, mesas y tickets
    ============================================================ */
 const KITCHEN_STATES = {
@@ -3406,7 +3731,7 @@ function toggleActiveCarta(id, checked){
 function setCartaAuto(checked){
   DB.business.cartaAuto = checked;
   saveDB();
-  if(checked) updateAutoActiveCarta(true);
+  if(checked){ updateAutoActiveCarta(true); updateAutoActiveMenu(true); }
   else renderTPV();
 }
 
@@ -3495,6 +3820,26 @@ function renderTpvCartaSelector(){
       <span style="font-size:12px;color:var(--muted)">
         ${activeCartas.length ? totalPlatos + ' platos disponibles' : 'Selecciona al menos una carta para tomar comandas'}
       </span>
+    </div>
+  `;
+}
+
+function renderTpvMenuSelector(){
+  if(!DB.menus.length) return '';
+  const activeIds = DB.activeMenuIds||[];
+  const cartaAuto = DB.business.cartaAuto !== false;
+  return `
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <i class="ti ti-list-details"></i>
+      <span style="font-weight:600;font-size:14px">Menús activos:</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
+        ${DB.menus.map(m=>`
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
+            ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}
+          </label>
+        `).join('')}
+      </div>
     </div>
   `;
 }
@@ -3605,6 +3950,7 @@ function renderTPV(){
 
   box.innerHTML = `
     ${renderTpvCartaSelector()}
+    ${renderTpvMenuSelector()}
     ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
@@ -3779,9 +4125,21 @@ function setOrderMenuStep(orderId, step){
   renderTableOrderModal(orderId);
 }
 
+function renderMenusComboHtml(order){
+  const activeMenus = getActiveMenus();
+  if(!activeMenus.length) return '';
+  return `
+    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:0 0 6px"><i class="ti ti-list-details"></i> Menús</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${activeMenus.map(m => `<button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${m.id})">${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}</button>`).join('')}
+    </div>
+  `;
+}
+
 function renderOrderMenuHtml(order){
+  const menusHtml = renderMenusComboHtml(order);
   const activeCartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
-  if(!activeCartas.length) return `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+  if(!activeCartas.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
 
   const bebidaCartas = activeCartas.filter(isBebidaCarta);
   const comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
@@ -3790,7 +4148,7 @@ function renderOrderMenuHtml(order){
   if(order.tipo === 'mesa' && bebidaCartas.length && comidaCartas.length){
     const step = order.menuStep || 'bebida';
     if(step === 'bebida'){
-      return `
+      return menusHtml + `
         <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-glass"></i> Primero, ¿qué bebida toma?</p>
         ${renderCartasMenuHtml(order, bebidaCartas)}
         <div style="margin-top:10px">
@@ -3798,7 +4156,7 @@ function renderOrderMenuHtml(order){
         </div>
       `;
     }
-    return `
+    return menusHtml + `
       ${renderCartasMenuHtml(order, comidaCartas)}
       <div style="margin-top:10px">
         <button class="btn btn-sm" onclick="setOrderMenuStep(${order.id}, 'bebida')"><i class="ti ti-arrow-left"></i> Volver a bebidas</button>
@@ -3806,7 +4164,54 @@ function renderOrderMenuHtml(order){
     `;
   }
 
-  return renderCartasMenuHtml(order, activeCartas);
+  return menusHtml + renderCartasMenuHtml(order, activeCartas);
+}
+
+function openMenuConfigModal(orderId, menuId){
+  const m = DB.menus.find(x=>x.id===menuId);
+  if(!m) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-list-details"></i> ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${(m.grupos||[]).map(g => `
+      <div class="field">
+        <label>${escapeHtml(g.nombre)}</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(g.opciones||[]).map((o,i) => `
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto">
+              ${escapeHtml(o.nombre)}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+    </div>
+  `);
+}
+
+function confirmAddMenuToOrder(orderId, menuId){
+  const order = DB.tpvOrders.find(o=>o.id===orderId);
+  const m = DB.menus.find(x=>x.id===menuId);
+  if(!order || !m) return;
+  let suplementoTotal = 0;
+  const selections = (m.grupos||[]).map(g => {
+    const selectedId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
+    const o = (g.opciones||[]).find(x=>x.id===selectedId) || g.opciones[0];
+    suplementoTotal += o.suplemento||0;
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0};
+  });
+  const price = m.precio + suplementoTotal;
+  const notas = selections.map(s=>`${s.grupoNombre}: ${s.opcionNombre}${s.suplemento?` (+${fmtMoney(s.suplemento)})`:''}`).join(' · ');
+  const tanda = order.tandaActual || '';
+  order.items.push({menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda, notas, menuSelections: selections});
+  saveDB();
+  renderTableOrderModal(orderId);
 }
 
 function renderOrderTandaSelector(order){
@@ -7291,6 +7696,7 @@ function saveBusiness(){
   saveDB();
   renderHeader();
   updateAutoActiveCarta(true);
+  updateAutoActiveMenu(true);
   showToast('Datos del negocio guardados');
 }
 
@@ -7618,7 +8024,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 60000);
 
   updateAutoActiveCarta();
-  setInterval(updateAutoActiveCarta, 60000);
+  updateAutoActiveMenu();
+  setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); }, 60000);
 
   // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario
   // cierra la pestaña o cambia de app, los enviamos ya mismo para no perderlos.
