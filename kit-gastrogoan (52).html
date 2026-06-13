@@ -1070,16 +1070,6 @@ const DB_KEY = 'gastrogoan_data_v1';
    datos ("tenant"), identificado a partir de su clave de licencia,
    así que no hace falta crear un proyecto de Firebase por cliente.
    ============================================================ */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
-  authDomain: "plataforma-gastrogoan.firebaseapp.com",
-  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "plataforma-gastrogoan",
-  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
-  messagingSenderId: "894218847556",
-  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
-};
-
 let cloudRef = null;
 let cloudConfig = null;
 // Última versión confirmada en la nube, por cada bloque de primer nivel de DB
@@ -1216,14 +1206,14 @@ function activateLicenseFromGate(){
   initCloud();
 }
 
+/* Cada negocio usa su PROPIO proyecto Firebase (gratuito, de Google),
+   configurado desde Nube → "Configurar la nube". No existe una nube
+   compartida: así el consumo y el coste de cada negocio son siempre suyos,
+   sin límites compartidos ni sorpresas al crecer el número de clientes. */
 function getCloudConfig(){
-  // Si el negocio ha configurado su propio proyecto Firebase (gratuito),
-  // se usa ese en vez de la plataforma compartida de GastroGoan. Así su
-  // consumo de datos no afecta (ni cuesta) al resto de negocios.
   const own = DB.business && DB.business.ownFirebase;
   if(own && own.apiKey && own.databaseURL) return own;
-  // Por defecto, toda la app usa la plataforma compartida de GastroGoan.
-  return FIREBASE_CONFIG;
+  return null;
 }
 
 /* Guarda (o quita) la configuración de Firebase propio del negocio,
@@ -1482,6 +1472,14 @@ function renderOnlineCard(){
       </div>
     `;
   }
+  if(!getCloudConfig()){
+    return `
+      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">Configura la nube de este negocio (botón ☁️ Nube de la cabecera) para obtener un enlace y un código QR con los que tus clientes podrán reservar mesa o pedir take away/delivery desde su móvil.</p>
+      </div>
+    `;
+  }
   const link = getPublicClientLink();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
   return `
@@ -1514,6 +1512,24 @@ function copyPublicLinkFrom(elId){
   showToast('Enlace copiado');
 }
 
+/* Formulario para introducir los datos del proyecto Firebase propio del
+   negocio. Es el mismo formulario tanto si aún no está configurado
+   (paso obligatorio para activar la nube) como si se quiere cambiar/quitar
+   uno ya configurado. */
+function renderOwnFirebaseForm(){
+  return `
+    <div class="field" style="margin-bottom:8px">
+      <label style="font-size:12px">Clave de API (apiKey)</label>
+      <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label style="font-size:12px">URL de la base de datos (databaseURL)</label>
+      <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
+    </div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> Guardar y conectar</button>
+  `;
+}
+
 function openCloudWizard(){
   const lic = getLicense();
   if(!lic){
@@ -1526,6 +1542,28 @@ function openCloudWizard(){
     `);
     return;
   }
+  if(!getCloudConfig()){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-cloud"></i> Configurar la nube</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${lic.name}</strong></p>
+      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
+        Para sincronizar varios dispositivos (camareros, cocina...) y activar las reservas/pedidos online por QR, este negocio necesita su <strong>propio proyecto Firebase</strong> (gratuito, de Google — cada negocio tiene el suyo, así nunca hay límites compartidos ni costes para nadie).
+      </div>
+      <p style="font-size:13px;margin-bottom:10px">Tardarás unos 10 minutos, una sola vez. Sigue la guía paso a paso y luego pega aquí los dos datos que te pida al final:</p>
+      <ol style="font-size:12.5px;line-height:1.7;margin:0 0 14px 18px;color:#444">
+        <li>Crea un proyecto gratis en <code>console.firebase.google.com</code></li>
+        <li>Activa <strong>Realtime Database</strong></li>
+        <li>Activa el inicio de sesión <strong>Anónimo</strong> en Authentication</li>
+        <li>Pega las reglas de seguridad que te indica la guía</li>
+        <li>Copia tu <code>apiKey</code> y <code>databaseURL</code> y pégalos abajo</li>
+      </ol>
+      ${renderOwnFirebaseForm()}
+    `);
+    return;
+  }
   const link = getPublicClientLink();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(link);
   const otrosServicios = (DB.business?.tiposServicio?.takeaway !== false || DB.business?.tiposServicio?.delivery !== false) ? ' y/o hacer pedidos para llevar / delivery' : '';
@@ -1535,7 +1573,7 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${lic.name}</strong></p>
-    <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> Este negocio está conectado a la nube de GastroGoan</div>
+    <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> Este negocio está conectado a su nube Firebase</div>
     <p style="font-size:13.5px;margin-bottom:14px"><strong>Para conectar más dispositivos</strong> (móviles de camareros, tablet de cocina): instala GastroGoan en ese dispositivo y activa la <strong>misma clave de licencia</strong> (<code>${lic.key}</code>). Se sincronizará solo, automáticamente, sin pasos adicionales.</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <p style="font-size:13.5px;margin-bottom:8px"><strong>📱 Página de reservas y pedidos online</strong></p>
@@ -1552,18 +1590,10 @@ function openCloudWizard(){
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <details>
-      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">⚙️ Configuración avanzada de la nube (opcional)</summary>
+      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">⚙️ Cambiar la configuración de Firebase</summary>
       <div style="margin-top:10px">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Por defecto este negocio usa la nube compartida de GastroGoan. Si prefieres usar tu propio proyecto Firebase (gratuito, de Google), pega aquí sus datos. Déjalos vacíos y guarda para volver a la nube compartida.</p>
-        <div class="field" style="margin-bottom:8px">
-          <label style="font-size:12px">Clave de API (apiKey)</label>
-          <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
-        </div>
-        <div class="field" style="margin-bottom:10px">
-          <label style="font-size:12px">URL de la base de datos (databaseURL)</label>
-          <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
-        </div>
-        <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> Guardar y reconectar</button>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Deja ambos campos vacíos y guarda para desconectar la nube de este negocio.</p>
+        ${renderOwnFirebaseForm()}
       </div>
     </details>
   `);
