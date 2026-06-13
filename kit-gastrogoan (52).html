@@ -3972,6 +3972,7 @@ function renderCartaSecciones(){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(p.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
+          <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> Extras${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
@@ -4048,9 +4049,66 @@ function confirmAddCartaPlato(secId){
   const precio = parseFloat((precioStr||'').replace(',','.'));
   if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true});
+  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true, modificadores:[]});
   closeModal();
   renderCartaSecciones();
+}
+
+/* ============== Modificadores / extras de plato ============== */
+function openPlatoModsModal(secId, platoId){
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+  setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function renderPlatoModsModalHtml(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  const mods = p.modificadores || [];
+  return `
+    <div class="modal-header">
+      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(p.nombre)}"</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para este plato (ej. "Extra queso" +1€). Se podrán añadir al tomar la comanda.</p>
+    <div style="margin-bottom:12px">
+      ${mods.length ? mods.map(m => `
+        <div class="ge-item">
+          <span style="flex:1">${escapeHtml(m.nombre)}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : 'Gratis'}</span>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
+        </div>
+      `).join('') : `<div class="empty" style="padding:10px">Sin extras configurados.</div>`}
+    </div>
+    <div class="field">
+      <label>Nombre del extra</label>
+      <input type="text" id="new-mod-nombre" placeholder="Ej. Extra queso">
+    </div>
+    <div class="field">
+      <label>Precio adicional (€) — déjalo en 0 si no tiene coste</label>
+      <input type="number" id="new-mod-precio" step="0.01" min="0" value="0">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cerrar</button>
+      <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> Añadir extra</button>
+    </div>
+  `;
+}
+function addPlatoMod(secId, platoId){
+  const nombre = (document.getElementById('new-mod-nombre').value||'').trim();
+  if(!nombre){ showToast('Escribe un nombre para el extra'); return; }
+  const precioStr = document.getElementById('new-mod-precio').value;
+  const precio = parseFloat((precioStr||'0').replace(',','.')) || 0;
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  if(!p.modificadores) p.modificadores = [];
+  p.modificadores.push({id: genId(), nombre, precio});
+  openModal(renderPlatoModsModalHtml(secId, platoId));
+  setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
+}
+function removePlatoMod(secId, platoId, modId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec.platos.find(x=>x.id===platoId);
+  p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
+  openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 
 function importFromEscandallo(secId){
@@ -4915,7 +4973,10 @@ function renderOrderLinesHtml(order){
     <tr><td colspan="5" style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;padding-top:10px;border-top:1px solid var(--border)">${g.tanda ? escapeHtml(g.tanda) : 'Sin asignar'}</td></tr>
     ${g.items.map(({line, idx}) => `
     <tr>
-      <td>${escapeHtml(line.name)}${kitchenStatusBadge(line)}</td>
+      <td>
+        ${escapeHtml(line.name)}${kitchenStatusBadge(line)}
+        ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      </td>
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
@@ -4926,7 +4987,10 @@ function renderOrderLinesHtml(order){
       <td>${fmtMoney(line.price * line.qty)}</td>
       <td>${tandaSelectHtml(line, idx)}</td>
       <td>
-        ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
+          ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+        </div>
       </td>
     </tr>
   `).join('')}
@@ -5151,18 +5215,79 @@ function renderComandasCocina(){
   `).join('')}</div>`;
 }
 
-function addOrderItem(orderId, secId, platoId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  let p = null;
+function findCartaPlato(secId, platoId){
   for(const c of getActiveCartas()){
     const sec = (c.secciones||[]).find(s=>s.id===secId);
-    if(sec){ p = (sec.platos||[]).find(x=>x.id===platoId) || null; if(p) break; }
+    if(sec){ const p = (sec.platos||[]).find(x=>x.id===platoId); if(p) return p; }
   }
+  return null;
+}
+function addOrderItem(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const p = findCartaPlato(secId, platoId);
   if(!order || !p) return;
+  if((p.modificadores||[]).length){
+    openAddItemModal(orderId, secId, platoId);
+    return;
+  }
   const tanda = order.tandaActual || '';
-  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && (l.tanda||'') === tanda);
+  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && !(l.notas) && (l.tanda||'') === tanda);
   if(existing) existing.qty += 1;
-  else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda});
+  else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''});
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+/* ============== Extras y notas al añadir un plato a la comanda ============== */
+function openAddItemModal(orderId, secId, platoId){
+  const p = findCartaPlato(secId, platoId);
+  if(!p) return;
+  const mods = p.modificadores || [];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${mods.length ? `
+      <div class="field">
+        <label>Extras</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${mods.map(m => `
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" class="add-item-mod" value="${m.id}" style="width:auto">
+              ${escapeHtml(m.nombre)}${m.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+    <div class="field">
+      <label>Notas / comentarios (opcional)</label>
+      <textarea id="add-item-notas" rows="2" placeholder="Ej. sin cebolla, poco hecho..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddOrderItem(${orderId}, ${secId}, ${platoId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('add-item-notas')?.focus(), 50);
+}
+function confirmAddOrderItem(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const p = findCartaPlato(secId, platoId);
+  if(!order || !p) return;
+  const mods = p.modificadores || [];
+  const selectedMods = [...document.querySelectorAll('.add-item-mod:checked')]
+    .map(el => mods.find(m => m.id === parseInt(el.value)))
+    .filter(Boolean);
+  const notas = (document.getElementById('add-item-notas')?.value || '').trim();
+  const extra = selectedMods.reduce((s,m)=>s+(m.precio||0), 0);
+  const name = selectedMods.length ? `${p.nombre} (${selectedMods.map(m=>m.nombre).join(', ')})` : p.nombre;
+  const tanda = order.tandaActual || '';
+  order.items.push({
+    platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
+    notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
+  });
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -5177,6 +5302,35 @@ function changeOrderItemQty(orderId, idx, delta){
 function removeOrderItem(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   order.items.splice(idx,1);
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function openLineNotesModal(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-note"></i> Notas — ${escapeHtml(line.name)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <div class="field">
+      <label>Notas / comentarios para cocina</label>
+      <textarea id="line-notas-input" rows="3" placeholder="Ej. sin cebolla, poco hecho...">${escapeHtml(line.notas||'')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmLineNotes(${orderId}, ${idx})"><i class="ti ti-check"></i> Guardar</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('line-notas-input')?.focus(), 50);
+}
+function confirmLineNotes(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  line.notas = (document.getElementById('line-notas-input').value||'').trim();
   saveDB();
   renderTableOrderModal(orderId);
 }
