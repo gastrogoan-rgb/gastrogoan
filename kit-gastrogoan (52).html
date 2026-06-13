@@ -1217,6 +1217,7 @@ const PLATFORM_FIREBASE_CONFIG = {
 // bloques que han cambiado en vez de todo el negocio entero en cada guardado.
 let lastSyncedSnapshot = null;
 let cloudSyncTimer = null;
+let publicMirrorSyncTimer = null;
 const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un solo envío a la nube
 
 /* ============================================================
@@ -1650,7 +1651,8 @@ function getPlatformFirebaseApp(){
 }
 
 function syncPublicMirror(){
-  if(!cloudConfig || typeof firebase === 'undefined') return;
+  if(typeof firebase === 'undefined') return;
+  if(!getLicense()) return;
   const publicId = getPublicId();
   if(!publicId) return;
   try{
@@ -2088,9 +2090,18 @@ function pushAllToCloud(){
 }
 
 function scheduleCloudSync(){
+  schedulePublicMirrorSync();
   if(!cloudRef) return;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(flushCloudSync, CLOUD_SYNC_DELAY);
+}
+
+/* El espejo público (para la página de pedidos/reservas por QR) se sube
+   a la plataforma compartida de GastroGoan SIEMPRE, tenga o no el negocio
+   configurado su propio Firebase privado: son cosas independientes. */
+function schedulePublicMirrorSync(){
+  clearTimeout(publicMirrorSyncTimer);
+  publicMirrorSyncTimer = setTimeout(syncPublicMirror, CLOUD_SYNC_DELAY);
 }
 
 function flushCloudSync(){
@@ -2114,7 +2125,6 @@ function flushCloudSync(){
     console.error('Error guardando en la nube', e);
     updateSyncBadge('error');
   }
-  syncPublicMirror();
 }
 
 function genId(){
@@ -10177,6 +10187,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await dbReadyPromise;
   renderHeader();
   initCloud();
+  syncPublicMirror();
   applyHelpI18n();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
@@ -10206,7 +10217,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario
   // cierra la pestaña o cambia de app, los enviamos ya mismo para no perderlos.
-  const flushPendingSync = () => { if(cloudSyncTimer) flushCloudSync(); };
+  const flushPendingSync = () => {
+    if(cloudSyncTimer) flushCloudSync();
+    if(publicMirrorSyncTimer){ clearTimeout(publicMirrorSyncTimer); syncPublicMirror(); }
+  };
   window.addEventListener('beforeunload', flushPendingSync);
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'hidden') flushPendingSync();
