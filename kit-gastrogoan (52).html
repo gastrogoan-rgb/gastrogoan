@@ -1188,6 +1188,40 @@ function hideActivationGate(){
   if(g) g.remove();
 }
 
+/* Paso obligatorio justo después de activar la licencia: cada negocio
+   necesita su propio proyecto Firebase (gratuito) para sincronizar
+   dispositivos y activar las reservas/pedidos online. Bloquea el acceso
+   a la app hasta que se configure (o, en dispositivos de empleados, hasta
+   que se peguen los mismos datos que configuró el dueño/a). */
+function showFirebaseSetupGate(){
+  if(document.getElementById('firebase-gate')) return;
+  const g = document.createElement('div');
+  g.id = 'firebase-gate';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
+  g.innerHTML = `
+    <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px">
+      <div style="text-align:center">
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
+        <h2 style="margin-bottom:4px">Configura tu nube</h2>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan</p>
+      </div>
+      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px;text-align:left">
+        Cada negocio necesita su <strong>propio proyecto Firebase</strong> (gratuito, de Google) para sincronizar dispositivos y activar las reservas/pedidos online por QR. Se configura <strong>una sola vez</strong>.
+      </div>
+      <div style="text-align:left">
+        <p style="font-size:13px;margin-bottom:8px"><strong>¿Eres el/la propietario/a?</strong> Sigue la guía (≈10 min): crea un proyecto gratis en <code>console.firebase.google.com</code>, activa Realtime Database + inicio de sesión Anónimo, pega las reglas de seguridad y copia tu <code>apiKey</code> y <code>databaseURL</code> aquí abajo.</p>
+        <p style="font-size:13px;margin-bottom:14px"><strong>📱 ¿Eres empleado/a?</strong> No crees un proyecto nuevo: pide a tu jefe/a el <code>apiKey</code> y el <code>databaseURL</code> que configuró él/ella (los ve en Nube → Cambiar la configuración de Firebase) y pégalos aquí.</p>
+        ${renderOwnFirebaseForm()}
+      </div>
+    </div>`;
+  document.body.appendChild(g);
+}
+
+function hideFirebaseSetupGate(){
+  const g = document.getElementById('firebase-gate');
+  if(g) g.remove();
+}
+
 function activateLicenseFromGate(){
   const key = (document.getElementById('license-key-input').value || '').trim().toUpperCase();
   const parsed = validateLicenseKey(key);
@@ -1203,6 +1237,7 @@ function activateLicenseFromGate(){
   saveDB();
   hideActivationGate();
   showToast('Licencia activada: ' + parsed.name);
+  if(!getCloudConfig()) showFirebaseSetupGate();
   initCloud();
 }
 
@@ -8715,6 +8750,8 @@ window.addEventListener('DOMContentLoaded', () => {
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   if(!getLicense()){
     showActivationGate();
+  }else if(!getCloudConfig()){
+    showFirebaseSetupGate();
   }
 
   setInterval(() => {
