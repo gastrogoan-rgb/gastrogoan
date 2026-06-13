@@ -215,6 +215,49 @@ td.wrap{white-space:normal}
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ===== Ayuda / Asistente ===== */
+.help-fab{
+  position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;
+  background:var(--teal);color:#fff;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:240;transition:.15s;
+}
+.help-fab:hover{transform:scale(1.06)}
+.help-panel{
+  display:none;position:fixed;bottom:88px;right:20px;width:340px;max-width:calc(100vw - 32px);
+  height:480px;max-height:calc(100vh - 120px);background:var(--surface);border-radius:var(--radius);
+  box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden;
+  border:1px solid var(--border);
+}
+.help-panel.active{display:flex}
+.help-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--dark);color:#fff}
+.help-panel-header h4{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.help-panel-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.help-tabs{display:flex;border-bottom:1px solid var(--border)}
+.help-tab{flex:1;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.help-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.help-tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.help-tab-panel.active{display:flex}
+.help-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.help-msg{max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4}
+.help-msg.bot{align-self:flex-start;background:var(--teal-l);color:var(--teal-d);border-bottom-left-radius:2px}
+.help-msg.user{align-self:flex-end;background:var(--dark2);color:#fff;border-bottom-right-radius:2px}
+.help-msg ul{margin:6px 0 0 16px}
+.help-suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.help-suggestion{font-size:11.5px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit}
+.help-suggestion:hover{border-color:var(--teal);color:var(--teal-d)}
+.help-chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
+.help-chat-input-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:999px;font-size:13px;font-family:inherit}
+.help-chat-input-row button{width:38px;height:38px;border-radius:50%;border:none;background:var(--teal);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.help-contact{padding:18px;display:flex;flex-direction:column;gap:10px;text-align:center;align-items:center;justify-content:center;height:100%}
+.help-contact i{font-size:36px;color:var(--teal)}
+.help-contact h4{font-size:15px}
+.help-contact p{font-size:13px;color:var(--muted)}
+@media (max-width:480px){
+  .help-panel{right:10px;bottom:80px;width:calc(100vw - 20px)}
+  .help-fab{right:14px;bottom:14px}
+}
+
 /* ===== Gestión Económica ===== */
 .ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
 .ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0}
@@ -1055,6 +1098,35 @@ td.wrap{white-space:normal}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ========== AYUDA / ASISTENTE ========== -->
+<button class="help-fab" id="help-fab" onclick="toggleHelpPanel()" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
+<div class="help-panel" id="help-panel">
+  <div class="help-panel-header">
+    <h4><i class="ti ti-lifebuoy"></i> <span data-i18n="help.title"></span></h4>
+    <button class="help-panel-close" onclick="toggleHelpPanel()">&times;</button>
+  </div>
+  <div class="help-tabs">
+    <button class="help-tab active" id="help-tab-btn-asistente" onclick="switchHelpTab('asistente')"><i class="ti ti-message-chatbot"></i> <span data-i18n="help.tab.assistant"></span></button>
+    <button class="help-tab" id="help-tab-btn-contacto" onclick="switchHelpTab('contacto')"><i class="ti ti-mail"></i> <span data-i18n="help.tab.contact"></span></button>
+  </div>
+  <div class="help-tab-panel active" id="help-tab-asistente">
+    <div class="help-chat-messages" id="help-chat-messages"></div>
+    <div class="help-suggestions" id="help-suggestions"></div>
+    <div class="help-chat-input-row">
+      <input type="text" id="help-chat-input" data-i18n-placeholder="help.assistant.placeholder" onkeydown="if(event.key==='Enter') sendHelpMessage()">
+      <button onclick="sendHelpMessage()"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+  <div class="help-tab-panel" id="help-tab-contacto">
+    <div class="help-contact">
+      <i class="ti ti-mail"></i>
+      <h4 data-i18n="help.contact.title"></h4>
+      <p data-i18n="help.contact.desc"></p>
+      <button class="btn btn-primary btn-sm" onclick="openHelpContactEmail()"><i class="ti ti-mail"></i> <span data-i18n="help.contact.button"></span></button>
+    </div>
+  </div>
+</div>
 
 <!-- Firebase: sincronización en la nube entre dispositivos -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2129,6 +2201,19 @@ const I18N = {
     'tour.s26.desc': 'Configura el nombre, dirección y datos fiscales de tu negocio, así como el PIN de acceso para tu equipo. Es importante mantener estos datos actualizados, ya que aparecen en tickets y documentos.',
     'tour.s27.title': 'Mi Negocio: nube, idioma y este tour',
     'tour.s27.desc': 'Aquí gestionas la conexión a tu nube (copia de seguridad automática), el idioma de la app y el archivado de datos antiguos. Y recuerda: siempre puedes volver a ver este tour guiado pulsando "Ver tour de la app".',
+    'help.title': 'Centro de ayuda',
+    'help.tab.assistant': 'Asistente',
+    'help.tab.contact': 'Contacto',
+    'help.assistant.placeholder': 'Escribe tu duda...',
+    'help.assistant.welcome': '¡Hola! 👋 Soy el asistente de GastroGoan. Escribe tu duda (por ejemplo "cómo abro una mesa" o "cómo añado un extra") y te ayudo al momento. Si no encuentro la respuesta, podrás escribir a soporte desde la pestaña Contacto.',
+    'help.assistant.fallback': 'No he encontrado una respuesta exacta para eso. Prueba a escribirlo de otra forma (por ejemplo "cómo cobro una mesa" o "cómo creo una reserva"), o pulsa la pestaña <strong>Contacto</strong> para escribir directamente a soporte.',
+    'help.suggestion.1': '¿Cómo abro una mesa?',
+    'help.suggestion.2': '¿Cómo añado un extra a un plato?',
+    'help.suggestion.3': '¿Cómo hago el cierre de caja?',
+    'help.suggestion.4': '¿Cómo creo una reserva?',
+    'help.contact.title': '¿Dudas más importantes?',
+    'help.contact.desc': 'Si el asistente no ha resuelto tu duda, escríbenos directamente y te responderemos lo antes posible.',
+    'help.contact.button': 'Escribir a soporte',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -2232,6 +2317,19 @@ const I18N = {
     'tour.s26.desc': 'Configura el nom, l\'adreça i les dades fiscals del teu negoci, així com el PIN d\'accés per al teu equip. És important mantenir aquestes dades actualitzades, ja que apareixen en tiquets i documents.',
     'tour.s27.title': 'El Meu Negoci: núvol, idioma i aquest tour',
     'tour.s27.desc': 'Aquí gestiones la connexió al teu núvol (còpia de seguretat automàtica), l\'idioma de l\'app i l\'arxivat de dades antigues. I recorda: sempre pots tornar a veure aquest tour guiat prement "Veure tour de l\'app".',
+    'help.title': 'Centre d\'ajuda',
+    'help.tab.assistant': 'Assistent',
+    'help.tab.contact': 'Contacte',
+    'help.assistant.placeholder': 'Escriu el teu dubte...',
+    'help.assistant.welcome': 'Hola! 👋 Sóc l\'assistent de GastroGoan. Escriu el teu dubte (per exemple "com obro una taula" o "com afegeixo un extra") i t\'ajudo a l\'instant. Si no trobo la resposta, podràs escriure a suport des de la pestanya Contacte.',
+    'help.assistant.fallback': 'No he trobat una resposta exacta per a això. Prova a escriure-ho d\'una altra manera (per exemple "com cobro una taula" o "com creo una reserva"), o prem la pestanya <strong>Contacte</strong> per escriure directament a suport.',
+    'help.suggestion.1': 'Com obro una taula?',
+    'help.suggestion.2': 'Com afegeixo un extra a un plat?',
+    'help.suggestion.3': 'Com faig el tancament de caixa?',
+    'help.suggestion.4': 'Com creo una reserva?',
+    'help.contact.title': 'Dubtes més importants?',
+    'help.contact.desc': 'Si l\'assistent no ha resolt el teu dubte, escriu-nos directament i et respondrem com més aviat millor.',
+    'help.contact.button': 'Escriure a suport',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -2335,6 +2433,19 @@ const I18N = {
     'tour.s26.desc': 'Configure your business name, address and tax details, as well as the access PIN for your team. Keeping this data up to date is important since it appears on receipts and documents.',
     'tour.s27.title': 'My Business: cloud, language and this tour',
     'tour.s27.desc': 'Here you manage your cloud connection (automatic backup), the app\'s language and the archiving of old data. And remember: you can always replay this guided tour by pressing "View app tour".',
+    'help.title': 'Help center',
+    'help.tab.assistant': 'Assistant',
+    'help.tab.contact': 'Contact',
+    'help.assistant.placeholder': 'Type your question...',
+    'help.assistant.welcome': 'Hi! 👋 I\'m the GastroGoan assistant. Type your question (e.g. "how do I open a table" or "how do I add an extra") and I\'ll help right away. Note: answers are currently provided in Spanish. If I can\'t find an answer, you can write to support from the Contact tab.',
+    'help.assistant.fallback': 'I couldn\'t find an exact answer for that. Try rephrasing it in Spanish (e.g. "cómo cobro una mesa" or "cómo creo una reserva"), or tap the <strong>Contact</strong> tab to write to support directly.',
+    'help.suggestion.1': '¿Cómo abro una mesa?',
+    'help.suggestion.2': '¿Cómo añado un extra a un plato?',
+    'help.suggestion.3': '¿Cómo hago el cierre de caja?',
+    'help.suggestion.4': '¿Cómo creo una reserva?',
+    'help.contact.title': 'Bigger questions?',
+    'help.contact.desc': 'If the assistant didn\'t solve your issue, write to us directly and we\'ll get back to you as soon as possible.',
+    'help.contact.button': 'Email support',
   }
 };
 function getLang(){
@@ -2430,6 +2541,166 @@ function finishTour(){
   DB.business.tourSeen = true;
   saveDB();
   closeModal();
+}
+
+/* ============== Centro de ayuda / Asistente ============== */
+const HELP_FAQS = [
+  { keywords:['abrir mesa','abrir una mesa','mesa nueva','nueva mesa','tipo de cliente','cliente de paso'],
+    answer:'Para abrir una mesa, pulsa sobre ella en el <strong>TPV</strong>. Te preguntará si el cliente es <strong>"de paso"</strong> (indicas el número de comensales) o <strong>"tiene reserva"</strong> (eliges una reserva de hoy y se rellena todo automáticamente). Luego pulsa "Aceptar" para crear la comanda.' },
+  { keywords:['tiene reserva','asignar reserva al abrir','vincular reserva con mesa','reserva a la mesa'],
+    answer:'Si al abrir una mesa eliges <strong>"Tiene reserva"</strong>, selecciona la reserva de la lista (solo aparecen las reservas de hoy aún no llegadas). Se rellenan automáticamente el cliente y el número de personas, la reserva se marca como "Llegó" y, si no tenía mesa asignada, se le asigna esta.' },
+  { keywords:['añadir plato','agregar plato','añadir un plato','poner un plato','pedir un plato'],
+    answer:'Dentro de la comanda, toca un plato de la carta (organizada por secciones) para añadirlo. Si lo tocas varias veces se suma la cantidad. Usa los botones <strong>+</strong> y <strong>−</strong> para ajustar unidades, y la papelera para eliminar una línea.' },
+  { keywords:['extra','extra queso','modificador','modificadores','añadir extra','extra al plato'],
+    answer:'Si un plato tiene extras configurados (ej. "Extra queso"), al añadirlo se abre una ventana donde marcas los extras que quieras y se suman a su precio. Para configurar extras nuevos en un plato, entra en <strong>Carta</strong>, abre el plato y pulsa el botón <strong>"Extras"</strong>.' },
+  { keywords:['nota','notas','sin cebolla','comentario del plato','comentarios'],
+    answer:'Al añadir un plato con extras se abre una ventana donde puedes escribir una nota libre (ej. "sin cebolla"). Esa nota aparece debajo del plato en la comanda y también se ve en la pantalla de cocina.' },
+  { keywords:['editar nota','cambiar nota','modificar nota','corregir nota'],
+    answer:'En la comanda, cada línea de plato tiene un icono de nota <i class="ti ti-note"></i>. Pulsa ese icono para abrir, editar o borrar la nota de ese plato en cualquier momento.' },
+  { keywords:['tanda','tandas','marchar','marchar a cocina','enviar a cocina','primeros y segundos'],
+    answer:'Puedes agrupar los platos en <strong>tandas</strong> (primeros, segundos, postres...) para controlar el ritmo del servicio. Cuando una tanda esté lista para prepararse, pulsa <strong>"Marchar a cocina"</strong> y aparecerá al instante en Comandas Cocina.' },
+  { keywords:['comandas cocina','pantalla cocina','en preparacion','listo para servir','ver comandas'],
+    answer:'En <strong>Comandas Cocina</strong> se ven en tiempo real todos los platos marchados desde sala, agrupados por mesa y tanda. Cocina puede marcar cada plato como <strong>"En preparación"</strong> y <strong>"Listo"</strong>, y sala lo verá al instante para servirlo.' },
+  { keywords:['cobrar','cobro','dividir cuenta','metodo de pago','cerrar comanda','cerrar mesa','pagar'],
+    answer:'Cuando el cliente termina, abre la comanda y pulsa <strong>"Cobrar"</strong>. Puedes dividir la cuenta, aplicar descuentos y elegir el método de pago (efectivo, tarjeta...). Al cerrar, la venta se registra automáticamente en Gestión Económica y el Panel de Control.' },
+  { keywords:['take away','para llevar','recogida','recoger pedido'],
+    answer:'En el TPV pulsa el botón <strong>"Take Away"</strong> para crear un pedido para recoger en el local. Funciona igual que una mesa: añades platos, extras y notas, y cobras al finalizar.' },
+  { keywords:['delivery','a domicilio','reparto','envio a domicilio'],
+    answer:'En el TPV pulsa el botón <strong>"Delivery"</strong> para crear un pedido a domicilio. Añade platos, extras y notas igual que en una mesa, y cóbralo cuando corresponda.' },
+  { keywords:['pedido online','pedidos online','aceptar pedido','rechazar pedido','pedidos pendientes'],
+    answer:'Si tienes pedidos online activados, los nuevos pedidos llegan a una bandeja de <strong>pendientes</strong> dentro del TPV. Desde ahí puedes <strong>aceptarlos</strong> (se convierten en Take Away/Delivery) o <strong>rechazarlos</strong> si no puedes atenderlos.' },
+  { keywords:['cierre de caja','arqueo','cuadre de caja','cerrar caja','efectivo esperado'],
+    answer:'Al terminar el turno, abre el <strong>Cierre de caja</strong> (dentro de TPV). La app calcula el efectivo esperado según las ventas en efectivo del día; introduces el efectivo contado y guarda el resultado. Todo el histórico queda guardado.' },
+  { keywords:['carta','crear carta','seccion de la carta','añadir plato a la carta','varias cartas'],
+    answer:'En <strong>Carta</strong> puedes crear varias cartas (comida, bebida, brunch...) organizadas en secciones. Dentro de cada sección añade platos con su nombre y precio. La carta activa es la que se usa en el TPV y en pedidos online.' },
+  { keywords:['agotado','no disponible','marcar plato','plato sin stock'],
+    answer:'En <strong>Carta</strong>, abre el plato y marca el interruptor de <strong>"Disponible"</strong>. Si lo desmarcas (agotado), ese plato no podrá pedirse desde el TPV ni desde los pedidos online hasta que vuelvas a activarlo.' },
+  { keywords:['configurar extra','extras en carta','precio extra','añadir extra al plato','doble carne'],
+    answer:'Para configurar extras de un plato, ve a <strong>Carta</strong>, abre ese plato y pulsa el botón <strong>"Extras"</strong>. Ahí puedes añadir opciones con nombre y precio (ej. "Extra queso" +1€, "Doble carne" +2€).' },
+  { keywords:['importar plato','importar del escandallo','escandallo a carta','traer plato del escandallo'],
+    answer:'Para no escribir los platos dos veces, en <strong>Carta</strong> puedes importarlos directamente desde el <strong>Escandallo</strong> (ya con su coste calculado). Solo tienes que indicar el precio de venta.' },
+  { keywords:['menu','menus','menu del dia','combo','grupo de opciones','menu de precio fijo'],
+    answer:'En <strong>Menús</strong> puedes crear menús de precio fijo (ej. "Menú del día") agrupando platos en grupos de opciones (ej. "Primero a elegir entre 3"). El cliente elige una opción de cada grupo y se cobra el precio único del menú.' },
+  { keywords:['crear reserva','nueva reserva','hacer una reserva','reservar mesa','añadir reserva'],
+    answer:'En <strong>Reservas</strong>, pulsa "Nueva reserva" e indica fecha, hora, número de personas y elige un cliente de tu base de datos (o crea uno nuevo ahí mismo). Puedes añadir notas como alergias o peticiones especiales.' },
+  { keywords:['asignar mesa a reserva','mesa a la reserva','elegir mesa para reserva'],
+    answer:'Desde la vista de día en <strong>Reservas</strong>, abre la reserva y asigna una mesa con antelación. Si no la asignas, se asignará automáticamente al abrir la mesa correspondiente en el TPV.' },
+  { keywords:['llegada','ha llegado','marcar llegada','llego el cliente','cliente llego'],
+    answer:'En la vista de día de <strong>Reservas</strong> hay una columna "Llegada" con un botón para marcar manualmente si el cliente ha llegado. Normalmente esto se marca solo, automáticamente, al abrir su mesa en el TPV con esa reserva.' },
+  { keywords:['añadir cliente','nuevo cliente','crear cliente','ficha de cliente','dar de alta cliente'],
+    answer:'En <strong>Clientes</strong>, pulsa "Nuevo cliente" y rellena su nombre, teléfono, email, alergias y notas. También puedes crear un cliente nuevo directamente desde la pantalla de Reservas.' },
+  { keywords:['puntos','fidelizacion','puntos de fidelidad','programa de puntos'],
+    answer:'Cada cliente tiene una ficha con sus <strong>puntos de fidelización</strong>. Puedes consultarlos y editarlos desde su ficha en <strong>Clientes</strong>.' },
+  { keywords:['mega lista','ingrediente','proveedor','añadir ingrediente','lista de ingredientes'],
+    answer:'La <strong>Mega Lista</strong> centraliza todos tus ingredientes con su unidad y precio de compra, vinculados a tus proveedores. Es la base que usa el Escandallo para calcular el coste real de cada plato.' },
+  { keywords:['ficha tecnica','escandallo','coste del plato','margen','calcular coste'],
+    answer:'En <strong>Escandallo</strong> creas la ficha técnica de cada plato indicando los ingredientes y cantidades de la Mega Lista. La app calcula automáticamente el coste por ración y el margen.' },
+  { keywords:['stock','inventario','pedido a proveedor','stock minimo','existencias'],
+    answer:'En <strong>Stock</strong> controlas el inventario de tu almacén y defines niveles mínimos. En <strong>Pedidos</strong> generas pedidos a proveedores cuando un ingrediente esté por debajo de ese mínimo.' },
+  { keywords:['horario del personal','turnos','distribucion del trabajo','tareas del equipo','horario de trabajo'],
+    answer:'En <strong>Horario del Personal</strong> organizas los turnos de tu equipo, y en <strong>Distribución de la Tarea</strong> repartes las tareas diarias entre los empleados de cada turno.' },
+  { keywords:['limpieza','plan de limpieza','appcc','protocolo de higiene'],
+    answer:'En <strong>Plan de Limpieza</strong> gestionas los checklists de limpieza e higiene (APPCC) para asegurar que todo queda en orden tras cada turno.' },
+  { keywords:['promocion','marketing','redes sociales','promociones'],
+    answer:'En <strong>Promoción</strong> puedes preparar contenido y campañas para promocionar tu negocio: ofertas, novedades de carta o eventos especiales para compartir en tus redes.' },
+  { keywords:['panel de control','dashboard','kpi','resumen del negocio','indicadores'],
+    answer:'El <strong>Panel de Control</strong> muestra de un vistazo cómo va tu negocio: ventas del día, comparativas, resultado del mes, punto de equilibrio y alertas automáticas.' },
+  { keywords:['gasto','ingreso','gestion economica','punto de equilibrio','resultado del mes','gastos e ingresos'],
+    answer:'En <strong>Gestión Económica</strong> registras gastos e ingresos. La app calcula automáticamente tu cuenta de resultados y tu punto de equilibrio (cuánto necesitas vender para cubrir costes).' },
+  { keywords:['pin','contraseña','bloquear','clave de acceso','cambiar pin'],
+    answer:'La sección de Gestión está protegida por <strong>PIN</strong> (por defecto 1234, se cambia la primera vez que entras). Puedes cambiarlo desde <strong>Mi Negocio</strong>, y usar el botón "Bloquear" de la cabecera para cerrar el acceso.' },
+  { keywords:['nube','firebase','sincronizar','copia de seguridad','conectar la nube','base de datos propia'],
+    answer:'En <strong>Mi Negocio</strong> conectas tu propia nube (Firebase) para sincronizar y respaldar automáticamente todos tus datos entre dispositivos. Es obligatorio configurarla la primera vez que usas la app.' },
+  { keywords:['idioma','cambiar idioma','language','catalan','ingles','castellano'],
+    answer:'Puedes cambiar el idioma de la app desde el selector de idioma en la cabecera, o desde <strong>Mi Negocio</strong>. Está disponible en castellano, català y English.' },
+  { keywords:['licencia','codigo de activacion','activar licencia','clave de licencia'],
+    answer:'La primera vez que abres la app debes introducir tu <strong>código de activación</strong> (licencia). Una vez activada, no necesitas volver a introducirla en ese dispositivo.' },
+  { keywords:['tour','ver tour','repetir tour','tutorial','volver a ver el tour'],
+    answer:'Puedes repetir el tour guiado en cualquier momento desde <strong>Mi Negocio</strong>, pulsando el botón <strong>"Ver tour de la app"</strong>.' },
+  { keywords:['enlace publico','codigo qr','qr','web de reservas','pagina web','web publica'],
+    answer:'Con la licencia activada, en <strong>Mi Negocio</strong> tienes tu <strong>enlace público</strong> y un <strong>código QR</strong> para que tus clientes reserven mesa o hagan pedidos online sin que tengas que programar nada.' },
+  { keywords:['aforo','plazas por turno','capacidad','limite de mesas'],
+    answer:'En <strong>Mi Negocio</strong> indicas tu <strong>aforo</strong> (plazas por turno). En Reservas verás cuántas personas hay reservadas frente al aforo de cada turno, y la app avisa si se supera.' },
+];
+let helpChatStarted = false;
+function applyHelpI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
+}
+function toggleHelpPanel(){
+  const panel = document.getElementById('help-panel');
+  const opening = !panel.classList.contains('active');
+  panel.classList.toggle('active');
+  if(opening && !helpChatStarted){
+    helpChatStarted = true;
+    appendHelpMessage(t('help.assistant.welcome'), 'bot');
+    renderHelpSuggestions();
+  }
+}
+function switchHelpTab(tab){
+  document.getElementById('help-tab-btn-asistente').classList.toggle('active', tab==='asistente');
+  document.getElementById('help-tab-btn-contacto').classList.toggle('active', tab==='contacto');
+  document.getElementById('help-tab-asistente').classList.toggle('active', tab==='asistente');
+  document.getElementById('help-tab-contacto').classList.toggle('active', tab==='contacto');
+}
+function renderHelpSuggestions(){
+  const box = document.getElementById('help-suggestions');
+  const sugs = [t('help.suggestion.1'), t('help.suggestion.2'), t('help.suggestion.3'), t('help.suggestion.4')];
+  box.innerHTML = sugs.map(s => `<button class="help-suggestion" onclick="askHelpSuggestion(this)">${escapeHtml(s)}</button>`).join('');
+}
+function askHelpSuggestion(btn){
+  const text = btn.textContent;
+  document.getElementById('help-suggestions').innerHTML = '';
+  appendHelpMessage(escapeHtml(text), 'user');
+  respondHelp(text);
+}
+function sendHelpMessage(){
+  const input = document.getElementById('help-chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  document.getElementById('help-suggestions').innerHTML = '';
+  appendHelpMessage(escapeHtml(text), 'user');
+  input.value = '';
+  respondHelp(text);
+}
+function respondHelp(text){
+  const answer = findFaqAnswer(text);
+  appendHelpMessage(answer || t('help.assistant.fallback'), 'bot');
+}
+function normalizeHelpText(s){
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[¿?¡!.,]/g,'').trim();
+}
+function helpStems(s){
+  return normalizeHelpText(s).split(/\s+/).filter(w=>w.length>=3).map(w=>w.length>=4?w.slice(0,3):w);
+}
+function findFaqAnswer(text){
+  const norm = normalizeHelpText(text);
+  const inputStems = new Set(helpStems(text));
+  let best = null, bestScore = 0;
+  HELP_FAQS.forEach(faq => {
+    let score = 0;
+    const faqStems = new Set();
+    faq.keywords.forEach(k => {
+      const kn = normalizeHelpText(k);
+      if(norm.includes(kn)) score += kn.split(' ').length * 3;
+      helpStems(k).forEach(st => faqStems.add(st));
+    });
+    faqStems.forEach(st => { if(inputStems.has(st)) score += 1; });
+    if(score > bestScore){ bestScore = score; best = faq; }
+  });
+  return bestScore > 1 ? best.answer : null;
+}
+function appendHelpMessage(html, who){
+  const box = document.getElementById('help-chat-messages');
+  const div = document.createElement('div');
+  div.className = 'help-msg ' + who;
+  div.innerHTML = html;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function openHelpContactEmail(){
+  const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.nombre) ? ' - ' + DB.business.nombre : ''));
+  window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject;
 }
 
 /* ============== Áreas de trabajo ============== */
@@ -9596,6 +9867,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await dbReadyPromise;
   renderHeader();
   initCloud();
+  applyHelpI18n();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
