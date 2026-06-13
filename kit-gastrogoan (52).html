@@ -624,6 +624,12 @@ td.wrap{white-space:normal}
             <div id="menu-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
             <p style="font-size:13px;color:var(--muted);margin-top:6px">Los horarios de cada día y turno se configuran en <strong>Mi Negocio → Horario semanal</strong>.</p>
           </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+              <input type="checkbox" id="menu-f-desglosar" style="width:auto">
+              Desglosar cada pase en cocina <span style="color:var(--muted)">(ideal para menús degustación: cada grupo se envía como un plato independiente con su propio estado)</span>
+            </label>
+          </div>
           <div class="toolbar">
             <div class="left"></div>
             <button class="btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> Nuevo Grupo</button>
@@ -3533,7 +3539,7 @@ function renderMenuList(){
 }
 
 function newMenu(){
-  menuEdit = {id: genId(), nombre:'', precio:0, turno:'todos', dias:[0,1,2,3,4,5,6], grupos:[]};
+  menuEdit = {id: genId(), nombre:'', precio:0, turno:'todos', dias:[0,1,2,3,4,5,6], grupos:[], desglosarPases:false};
   renderMenu();
 }
 function openMenu(id){
@@ -3571,6 +3577,7 @@ function saveMenu(){
   menuEdit.nombre = nombre;
   menuEdit.precio = precio;
   menuEdit.turno = document.getElementById('menu-f-turno').value;
+  menuEdit.desglosarPases = document.getElementById('menu-f-desglosar').checked;
   const idx = DB.menus.findIndex(m=>m.id===menuEdit.id);
   if(idx>=0) DB.menus[idx] = menuEdit;
   else DB.menus.push(menuEdit);
@@ -3585,6 +3592,7 @@ function renderMenuEditor(){
   document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
   document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
   document.getElementById('menu-f-turno').value = menuEdit.turno || 'todos';
+  document.getElementById('menu-f-desglosar').checked = !!menuEdit.desglosarPases;
   renderMenuDias();
   renderMenuGrupos();
 }
@@ -4208,8 +4216,21 @@ function confirmAddMenuToOrder(orderId, menuId){
   });
   const price = m.precio + suplementoTotal;
   const notas = selections.map(s=>`${s.grupoNombre}: ${s.opcionNombre}${s.suplemento?` (+${fmtMoney(s.suplemento)})`:''}`).join(' · ');
-  const tanda = order.tandaActual || '';
-  order.items.push({menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda, notas, menuSelections: selections});
+
+  if(m.desglosarPases){
+    order.tandas = order.tandas || [];
+    selections.forEach((s, i) => {
+      if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
+      order.items.push({
+        menuId: m.id, recipeId: s.recipeId, platoId: null,
+        name: s.opcionNombre, price: (i===0 ? m.precio : 0) + s.suplemento,
+        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`
+      });
+    });
+  }else{
+    const tanda = order.tandaActual || '';
+    order.items.push({menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda, notas, menuSelections: selections});
+  }
   saveDB();
   renderTableOrderModal(orderId);
 }
