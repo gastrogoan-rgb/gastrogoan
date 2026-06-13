@@ -1874,7 +1874,8 @@ function defaultData(){
       horario: defaultHorario(),
       cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
-      ownFirebase: null // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
+      ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
+      lastArchiveReminder: null // fecha (YYYY-MM-DD) del último aviso de archivado de datos antiguos
     },
     ge: {
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
@@ -8518,6 +8519,57 @@ function dataMaintenanceCutoff(){
   return d.toISOString().slice(0,10);
 }
 
+/* ============================================================
+   AVISO ANUAL DE ARCHIVADO
+   Una vez al año, si hay bastantes ventas/reservas/cierres de más de
+   un año de antigüedad, sugiere (sin obligar ni borrar nada por su
+   cuenta) usar "Archivar datos antiguos" arriba. Solo afecta a datos
+   históricos del TPV; recetas, cartas, empleados, etc. nunca se tocan.
+   ============================================================ */
+function checkArchiveReminder(){
+  const b = DB.business;
+  const today = todayStr();
+  if(b.lastArchiveReminder){
+    const days = Math.round((new Date(today) - new Date(b.lastArchiveReminder)) / 86400000);
+    if(days < 365) return;
+  }
+  const cutoff = dataMaintenanceCutoff();
+  const oldCount = DB.sales.filter(s => s.date && s.date < cutoff).length
+    + DB.reservations.filter(r => r.date && r.date < cutoff && (r.status==='completada'||r.status==='cancelada')).length
+    + DB.cashClosures.filter(c => c.fecha && c.fecha < cutoff).length;
+  if(oldCount < 50) return;
+  showArchiveReminderBanner(oldCount);
+}
+
+function showArchiveReminderBanner(count){
+  if(document.getElementById('archive-reminder')) return;
+  const el = document.createElement('div');
+  el.id = 'archive-reminder';
+  el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#222;color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;font-size:13px;text-align:center';
+  el.innerHTML = `
+    <span><i class="ti ti-database"></i> Tienes ${count} registros (ventas, reservas, cierres de caja) de hace más de un año. Puedes archivarlos para que la app vaya más ligera, sin perderlos (se descargan antes de borrarse).</span>
+    <button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border:none" onclick="goToArchiveFromReminder()">Ir a archivar</button>
+    <button class="btn btn-sm" style="background:transparent;color:#fff;border:1px solid #555" onclick="dismissArchiveReminder()">Recordar en 1 año</button>
+  `;
+  document.body.appendChild(el);
+}
+
+function dismissArchiveReminder(){
+  DB.business.lastArchiveReminder = todayStr();
+  saveDB();
+  const el = document.getElementById('archive-reminder');
+  if(el) el.remove();
+}
+
+function goToArchiveFromReminder(){
+  dismissArchiveReminder();
+  navigate('minegocio');
+  setTimeout(() => {
+    const el = document.getElementById('mn-archive-before');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 200);
+}
+
 function downloadJSON(obj, filename){
   const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -8948,6 +9000,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     showFirebaseSetupGate();
   }
   if(getLicense()) checkLicenseRevocation();
+  if(getLicense() && getCloudConfig()) checkArchiveReminder();
 
   setInterval(() => {
     const active = document.querySelector('.view.active');
