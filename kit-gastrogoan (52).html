@@ -1323,11 +1323,46 @@ function initCloud(){
   }
 }
 
+/* Aplica al estado local un cambio llegado de la nube en un bloque
+   concreto de la DB (p.ej. "tpvOrders" o "clients") y refresca la
+   pantalla. Se usa tanto en la primera carga como en cada actualización
+   incremental posterior. */
+function applyRemoteBlock(key, remoteValue){
+  const def = defaultData();
+  const merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
+  const json = JSON.stringify(merged);
+  if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return; // eco de un cambio propio
+  lastSyncedSnapshot[key] = json;
+  DB[key] = merged;
+  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  // Licencia compartida por la nube: los empleados se activan solos
+  if(DB.license && validateLicenseKey(DB.license.key)){
+    localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+    hideActivationGate();
+  }
+  refreshAfterRemoteChange();
+}
+
+/* Tras la conexión inicial, en vez de re-descargar TODA la base de datos
+   del negocio cada vez que algo cambia (lo que multiplicaba el consumo de
+   datos por cada dispositivo conectado), escuchamos solo los bloques
+   ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
+function attachCloudChildListeners(){
+  const onErr = err => { console.error('Error de sincronización', err); updateSyncBadge('error'); };
+  cloudRef.on('child_added', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
+  cloudRef.on('child_changed', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
+  cloudRef.on('child_removed', snap => {
+    const def = defaultData();
+    if(!def.hasOwnProperty(snap.key)) return;
+    applyRemoteBlock(snap.key, def[snap.key]);
+  }, onErr);
+}
+
 function startCloudSync(tenantId){
   if(cloudRef) return; // ya conectado
   try{
     cloudRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/db');
-    cloudRef.on('value', snap => {
+    cloudRef.once('value').then(snap => {
       const val = snap.val();
       updateSyncBadge('online');
       if(val === null){
@@ -1335,28 +1370,29 @@ function startCloudSync(tenantId){
         lastSyncedSnapshot = {};
         pushAllToCloud();
         syncPublicMirror();
-        return;
-      }
-      const merged = withDefaults(defaultData(), val);
-      let changedLocally = false;
-      const newSnapshot = {};
-      Object.keys(merged).forEach(key => {
-        const remoteJson = JSON.stringify(merged[key]);
-        newSnapshot[key] = remoteJson;
-        if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
-          DB[key] = merged[key];
-          changedLocally = true;
+      }else{
+        const merged = withDefaults(defaultData(), val);
+        let changedLocally = false;
+        const newSnapshot = {};
+        Object.keys(merged).forEach(key => {
+          const remoteJson = JSON.stringify(merged[key]);
+          newSnapshot[key] = remoteJson;
+          if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
+            DB[key] = merged[key];
+            changedLocally = true;
+          }
+        });
+        lastSyncedSnapshot = newSnapshot;
+        if(changedLocally){
+          localStorage.setItem(DB_KEY, JSON.stringify(DB));
+          if(DB.license && validateLicenseKey(DB.license.key)){
+            localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+            hideActivationGate();
+          }
+          refreshAfterRemoteChange();
         }
-      });
-      lastSyncedSnapshot = newSnapshot;
-      if(!changedLocally) return; // cambios propios ya aplicados, nada nuevo del resto
-      localStorage.setItem(DB_KEY, JSON.stringify(DB));
-      // Licencia compartida por la nube: los empleados se activan solos
-      if(DB.license && validateLicenseKey(DB.license.key)){
-        localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
-        hideActivationGate();
       }
-      refreshAfterRemoteChange();
+      attachCloudChildListeners();
     }, err => {
       console.error('Error de sincronización', err);
       updateSyncBadge('error');
