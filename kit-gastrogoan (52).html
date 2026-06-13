@@ -297,6 +297,9 @@ td.wrap{white-space:normal}
 .kpi-mini .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .te-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px}
 
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.spin{animation:spin .6s linear}
+
 /* Responsive */
 @media (max-width: 880px){
   .content{padding:14px}
@@ -375,6 +378,7 @@ td.wrap{white-space:normal}
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
+  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:8px"><i class="ti ti-refresh" id="refresh-icon"></i> Actualizar</button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
 </header>
@@ -1187,6 +1191,19 @@ function refreshAfterRemoteChange(){
   if(overlay && overlay.classList.contains('active')) return; // no interrumpir al usuario mientras edita
   const active = document.querySelector('.view.active');
   if(active) renderView(active.id.replace('view-',''));
+}
+
+// Botón "Actualizar" de la cabecera: vuelve a leer los datos guardados
+// (por si otro dispositivo los cambió) y refresca la pantalla actual.
+function manualRefresh(){
+  DB = loadDB();
+  refreshAfterRemoteChange();
+  const icon = document.getElementById('refresh-icon');
+  if(icon){
+    icon.classList.remove('spin');
+    requestAnimationFrame(() => icon.classList.add('spin'));
+  }
+  showToast('Datos actualizados');
 }
 
 /* Sube al espacio público (de solo lectura para los clientes) la
