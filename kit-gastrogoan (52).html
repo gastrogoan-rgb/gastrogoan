@@ -510,6 +510,11 @@ td.wrap{white-space:normal}
       </div>
 
       <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-chart-pie"></i> Análisis de ventas (últimos 30 días)</h3>
+        <div id="dashboard-sales-analysis"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
         <h3><i class="ti ti-scale"></i> Punto de equilibrio</h3>
         <div id="dashboard-breakeven"></div>
       </div>
@@ -3298,6 +3303,57 @@ function renderDashboard(){
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
         </div>
       `).join('')}
+    </div>
+  `;
+
+  // Sales analysis (last 30 days): avg ticket, top products, sales by hour
+  const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
+  const salesLast30 = DB.sales.filter(s=>s.date>=last30Start && s.date<=todayDate);
+  const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
+  const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
+
+  const productTotals = {};
+  salesLast30.forEach(s=>{
+    (s.items||[]).forEach(it=>{
+      const key = it.name || '—';
+      productTotals[key] = (productTotals[key]||0) + (it.price||0) * (it.qty||1);
+    });
+  });
+  const topProducts = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const hourTotals = new Array(24).fill(0);
+  salesLast30.forEach(s=>{
+    if(s.createdAt){
+      const h = new Date(s.createdAt).getHours();
+      hourTotals[h] += s.total;
+    }
+  });
+  const maxHour = Math.max(...hourTotals, 1);
+
+  document.getElementById('dashboard-sales-analysis').innerHTML = `
+    <div class="grid grid-3" style="margin-bottom:14px">
+      <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> Nº ventas</div><div class="value">${salesLast30.length}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> Total periodo</div><div class="value">${fmtMoney(totalLast30)}</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Platos más vendidos</h4>
+        ${topProducts.length ? `<div class="table-wrap"><table><tbody>
+          ${topProducts.map(([name,total]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
+        </tbody></table></div>` : `<div class="empty">Sin ventas registradas</div>`}
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Ventas por hora del día</h4>
+        <div style="display:flex;align-items:flex-end;gap:2px;height:120px">
+          ${hourTotals.map((v,h) => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
+              <div style="width:100%;background:var(--brand-orange);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
+              ${h%3===0?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${h}h</div>`:''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
     </div>
   `;
 
@@ -7917,6 +7973,9 @@ function fichajeHoras(f){
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
 }
+function employeePropinasInRange(employeeId, dates){
+  return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + (f.propinas||0), 0);
+}
 
 function renderHorariosFichar(){
   const box = document.getElementById('horarios-tab-content');
@@ -7930,6 +7989,7 @@ function renderHorariosFichar(){
   const cards = DB.employees.map(e => {
     const open = getOpenFichaje(e.id);
     const horasSemana = employeeHoursInRange(e.id, weekDates);
+    const propinasSemana = employeePropinasInRange(e.id, weekDates);
     return `
       <div class="card" style="text-align:center">
         <h3 style="justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -7939,6 +7999,7 @@ function renderHorariosFichar(){
           <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
         </div>
         <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
+        <div style="font-size:12px;color:var(--muted)">Propinas esta semana: <strong>${fmtMoney(propinasSemana)}</strong></div>
       </div>
     `;
   }).join('');
@@ -7951,7 +8012,7 @@ function renderHorariosFichar(){
     ${historico.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Empleado</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead>
+          <thead><tr><th>Empleado</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Propinas</th></tr></thead>
           <tbody>
             ${historico.map(f => {
               const emp = DB.employees.find(e=>e.id===f.employeeId);
@@ -7961,6 +8022,7 @@ function renderHorariosFichar(){
                 <td>${fmtHora(f.entrada)}</td>
                 <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
                 <td>${f.salida ? fmtDuracion(fichajeHoras(f)) : '—'}</td>
+                <td>${f.propinas ? fmtMoney(f.propinas) : '—'}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -7982,6 +8044,11 @@ function openFichajeModal(employeeId, action){
       <label>Introduce tu PIN</label>
       <input type="password" id="fichaje-pin" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
+    ${action==='salida' ? `
+    <div class="field">
+      <label>Propinas recibidas en este turno (€)</label>
+      <input type="number" id="fichaje-propinas" min="0" step="0.01" placeholder="0.00">
+    </div>` : ''}
     <div class="modal-footer">
       <button class="btn" onclick="renderHorariosTab();closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</button>
@@ -8048,6 +8115,7 @@ function doFichaje(employeeId, action){
     const open = getOpenFichaje(employeeId);
     if(!open){ showToast('No hay ninguna entrada abierta'); closeModal(); renderHorariosTab(); return; }
     open.salida = now;
+    open.propinas = parseFloat(document.getElementById('fichaje-propinas')?.value || '0') || 0;
   }
   saveDB();
   closeModal();
