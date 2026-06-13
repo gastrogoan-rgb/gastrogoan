@@ -956,7 +956,7 @@ td.wrap{white-space:normal}
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Contacto</th><th>Visitas</th><th>Ticket medio</th><th>Última visita</th><th>Fidelización</th><th>Notas</th><th></th></tr>
+            <tr><th>Nombre</th><th>Contacto</th><th>Visitas</th><th>Ticket medio</th><th>Última visita</th><th>Puntos de fidelidad <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th>Notas</th><th></th></tr>
           </thead>
           <tbody id="clientes-tbody"></tbody>
         </table>
@@ -975,6 +975,19 @@ td.wrap{white-space:normal}
       </nav>
       <div id="reservas-pending-online"></div>
       <div id="reservas-tab-content"></div>
+    </section>
+
+    <!-- ========== PROMOCIÓN ========== -->
+    <section class="view" id="view-promocion">
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <div class="view-title">Promoción</div>
+      <div class="view-subtitle">Calendario de marketing y promoción del negocio</div>
+      <nav class="ge-tab-row">
+        <button class="ge-tab" id="promo-tab-dia" onclick="setPromoTab('dia')">Día</button>
+        <button class="ge-tab" id="promo-tab-semana" onclick="setPromoTab('semana')">Semana</button>
+        <button class="ge-tab" id="promo-tab-mes" onclick="setPromoTab('mes')">Mes</button>
+      </nav>
+      <div id="promo-tab-content"></div>
     </section>
 
     <!-- ========== MI NEGOCIO ========== -->
@@ -1464,6 +1477,7 @@ function defaultData(){
     turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
     workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
     fichajes: [],        // {id, employeeId, fecha, entrada, salida} — control horario real (entrada/salida)
+    promos: [],          // {id, fecha (YYYY-MM-DD), titulo, descripcion} — calendario de promoción/marketing
     cleaningTasks: [],
     limpieza: {
       manosPasos: ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'],
@@ -1522,6 +1536,7 @@ function loadDB(){
     if(!Array.isArray(merged.menus)) merged.menus = [];
     if(!Array.isArray(merged.activeMenuIds)) merged.activeMenuIds = [];
     if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
+    if(!Array.isArray(merged.promos)) merged.promos = [];
     (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
     return merged;
   }catch(e){
@@ -1625,12 +1640,12 @@ const FOLDERS = {
     desc:'Gestiona ingredientes, costes de recetas, fichas técnicas y carta.',
     chips:['Mega Lista','Escandallo','Ficha Técnica','Carta'],
     modules:[
-      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
-      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
+      {id:'comandascocina', name:'Comandas Cocina', icon:'ti-bell-ringing', desc:'Pantalla en tiempo real de pedidos'},
+      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
       {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
       {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y alérgenos'},
-      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
-      {id:'comandascocina', name:'Comandas Cocina', icon:'ti-bell-ringing', desc:'Pantalla en tiempo real de pedidos'},
+      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
+      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
       {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
       {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores'},
       {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
@@ -1643,14 +1658,15 @@ const FOLDERS = {
     desc:'Gestiona el servicio. Clientes, reservas y punto de venta.',
     chips:['Clientes','Reservas','TPV'],
     modules:[
-      {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
-      {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
       {id:'tpv', name:'TPV', icon:'ti-device-desktop', desc:'Comandas, mesas y tickets'},
-      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Bebidas y productos de sala'},
-      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
+      {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
+      {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
+      {id:'promocion', name:'Promoción', icon:'ti-speakerphone', desc:'Calendario de marketing del negocio'},
+      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Carta de bebidas'},
       {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de bebidas y cócteles'},
       {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y servicio'},
-      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Carta de bebidas'},
+      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Bebidas y productos de sala'},
+      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
       {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
       {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores de sala'},
       {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
@@ -1663,8 +1679,8 @@ const FOLDERS = {
     desc:'Control económico completo. Gastos, P&L, tesorería y KPIs.',
     chips:['Gestión Económica','Panel de Control','Mi Negocio','Manual'],
     modules:[
-      {id:'economia', name:'Gestión Económica', icon:'ti-coin', desc:'Gastos, P&L y punto de equilibrio'},
       {id:'dashboard', name:'Panel de Control', icon:'ti-layout-dashboard', desc:'KPIs centralizados'},
+      {id:'economia', name:'Gestión Económica', icon:'ti-coin', desc:'Gastos, P&L y punto de equilibrio'},
       {id:'minegocio', name:'Mi Negocio', icon:'ti-building-store', desc:'Datos del establecimiento'},
       {id:'manual', name:'Manual de Uso', icon:'ti-book', desc:'Guía rápida de la app'},
     ]
@@ -1859,6 +1875,7 @@ function renderView(view){
     case 'limpieza': renderLimpieza(); break;
     case 'clientes': renderClientes(); break;
     case 'reservas': renderReservas(); break;
+    case 'promocion': renderPromocion(); break;
     case 'distribucion': renderDistribucion(); break;
     case 'minegocio': renderMiNegocio(); break;
     case 'manual': renderManual(); break;
@@ -7183,11 +7200,15 @@ function renderClientes(){
 
   tbody.innerHTML = items.map(c => {
     const stats = clientSalesStats(c);
-    const score = stats.visitas + Math.floor((c.points||0)/10);
-    let loyaltyBadge;
-    if(score >= 10) loyaltyBadge = '<span class="badge badge-green">Fiel</span>';
-    else if(score >= 3) loyaltyBadge = '<span class="badge badge-amber">Habitual</span>';
-    else loyaltyBadge = '<span class="badge badge-gray">Nuevo</span>';
+    const points = c.points||0;
+    let loyaltyCls, loyaltyBtn;
+    if(points >= 10){
+      loyaltyCls = 'badge-green';
+      loyaltyBtn = `<button class="btn btn-sm" onclick="claimClientReward(${c.id})" title="Dar premio y reiniciar"><i class="ti ti-gift"></i> Dar premio</button>`;
+    } else {
+      loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
+      loyaltyBtn = `<button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Sumar punto de visita"><i class="ti ti-plus"></i></button>`;
+    }
     return `
     <tr>
       <td><strong>${escapeHtml(c.name)}</strong>${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
@@ -7199,16 +7220,32 @@ function renderClientes(){
       <td><span class="badge badge-blue">${stats.visitas}</span></td>
       <td>${fmtMoney(stats.ticketMedio)}</td>
       <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(hace ${stats.recency}d)</span>` : '—'}</td>
-      <td>${loyaltyBadge} <span class="badge badge-amber">${c.points||0} pts</span></td>
+      <td><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap">${escapeHtml(c.notes||'—')}</td>
       <td class="actions-cell">
-        <button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Sumar puntos"><i class="ti ti-plus"></i></button>
         <button class="btn btn-sm btn-icon" onclick="openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
       </td>
     </tr>
   `;
   }).join('');
+}
+
+function showLoyaltyInfo(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-info-circle"></i> Puntos de fidelidad</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px;line-height:1.6">
+      Cada vez que un cliente viene al establecimiento, pulsa el botón <strong>+</strong> para sumarle 1 punto.
+    </p>
+    <p style="font-size:13.5px;line-height:1.6">
+      <span class="badge badge-gray">0-6/10</span> el cliente va sumando visitas con normalidad.<br>
+      <span class="badge badge-amber">7-9/10</span> le faltan pocas visitas para el premio: ¡está cerca!<br>
+      <span class="badge badge-green">10/10</span> ¡ha llegado al premio! Pulsa "Dar premio" para entregárselo — esto reinicia su contador a 0 y empieza una nueva ronda.
+    </p>
+  `);
 }
 
 function openClientModal(id){
@@ -7248,8 +7285,8 @@ function openClientModal(id){
         <input type="date" id="client-ultimo-contacto" value="${escapeHtml(c.ultimoContacto||'')}">
       </div>
       <div class="field">
-        <label>Puntos de fidelización</label>
-        <input type="number" id="client-points" value="${c.points||0}" min="0">
+        <label>Puntos de fidelidad (0-10)</label>
+        <input type="number" id="client-points" value="${c.points||0}" min="0" max="10">
       </div>
     </div>
     <div class="field">
@@ -7275,7 +7312,7 @@ function saveClient(id){
   const cp = document.getElementById('client-cp').value.trim();
   const cumpleanos = document.getElementById('client-cumpleanos').value;
   const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
-  const points = parseInt(document.getElementById('client-points').value) || 0;
+  const points = Math.max(0, Math.min(10, parseInt(document.getElementById('client-points').value) || 0));
   const allergies = document.getElementById('client-allergies').value.trim();
   const notes = document.getElementById('client-notes').value.trim();
 
@@ -7293,10 +7330,21 @@ function saveClient(id){
 function adjustClientVisit(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
-  c.points = (c.points||0) + 10;
+  c.points = Math.min((c.points||0) + 1, 10);
   saveDB();
   renderClientes();
-  showToast('+10 puntos de fidelización');
+  if(c.points >= 10) showToast('¡' + c.name + ' ha llegado a 10 puntos! Dale su premio de fidelidad');
+  else showToast('+1 punto de fidelidad');
+}
+
+function claimClientReward(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  if(!confirm('¿Confirmas que se ha entregado el premio de fidelidad a ' + c.name + '? Se reiniciará su contador a 0.')) return;
+  c.points = 0;
+  saveDB();
+  renderClientes();
+  showToast('Premio entregado. Contador reiniciado');
 }
 
 function deleteClient(id){
@@ -7632,6 +7680,197 @@ function deleteReservation(id){
   DB.reservations = DB.reservations.filter(r=>r.id!==id);
   saveDB();
   renderReservas();
+}
+
+/* ============================================================
+   PROMOCIÓN — Calendario de marketing del negocio
+   ============================================================ */
+let promoTab = 'dia';
+let promoDate = todayStr();
+let promoWeekOffset = 0;
+let promoMonthOffset = 0;
+
+function setPromoTab(t){
+  promoTab = t;
+  renderPromocion();
+}
+
+function renderPromocion(){
+  document.querySelectorAll('#view-promocion .ge-tab').forEach(b => b.classList.remove('active'));
+  const tabBtn = document.getElementById('promo-tab-'+promoTab);
+  if(tabBtn) tabBtn.classList.add('active');
+
+  if(promoTab === 'semana') renderPromoSemana();
+  else if(promoTab === 'mes') renderPromoMes();
+  else renderPromoDia();
+}
+
+function goToPromoDia(date){
+  promoDate = date;
+  promoTab = 'dia';
+  renderPromocion();
+}
+
+function renderPromoDia(){
+  const box = document.getElementById('promo-tab-content');
+  const date = promoDate;
+  const items = DB.promos.filter(p => p.fecha === date);
+
+  const listHtml = !items.length
+    ? `<div class="empty"><i class="ti ti-speakerphone"></i>No hay acciones de promoción para este día.</div>`
+    : `<div class="grid grid-3">
+        ${items.map(p => `
+          <div class="card">
+            <h3 style="justify-content:space-between;font-size:14px">
+              <span>${escapeHtml(p.titulo)}</span>
+            </h3>
+            ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
+            <div class="actions-cell" style="margin-top:10px">
+              <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
+              <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
+      </div>
+      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+    </div>
+    ${listHtml}
+  `;
+}
+
+function renderPromoSemana(){
+  const box = document.getElementById('promo-tab-content');
+  const dates = getWeekDates(promoWeekOffset);
+
+  const cardsHtml = dates.map((d, i) => {
+    const ds = dateStr(d);
+    const items = DB.promos.filter(p => p.fecha === ds);
+    const isToday = ds === todayStr();
+    return `
+      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToPromoDia('${ds}')">
+        <h3 style="justify-content:space-between;font-size:14px">
+          <span>${WEEK_DAYS[i]} ${d.getDate()}/${d.getMonth()+1}</span>
+          ${items.length ? `<span class="badge badge-blue">${items.length}</span>` : ''}
+        </h3>
+        ${items.length ? items.map(p => `<div style="font-size:12px;padding:2px 0">${escapeHtml(p.titulo)}</div>`).join('') : `<div style="font-size:12px;color:var(--muted)">Sin acciones</div>`}
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm" onclick="promoWeekOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
+        <button class="btn btn-sm" onclick="promoWeekOffset=0;renderPromocion()">Hoy</button>
+        <button class="btn btn-sm" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
+        <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
+      </div>
+      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+    </div>
+    <div class="grid grid-3">${cardsHtml}</div>
+  `;
+}
+
+function renderPromoMes(){
+  const box = document.getElementById('promo-tab-content');
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth() + promoMonthOffset, 1);
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const counts = {};
+  DB.promos.forEach(p => { counts[p.fecha] = (counts[p.fecha]||0) + 1; });
+
+  let cells = '';
+  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = dateStr(new Date(year, month, day));
+    const count = counts[ds] || 0;
+    const isToday = ds === todayStr();
+    cells += `
+      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToPromoDia('${ds}')">
+        <div style="font-weight:700">${day}</div>
+        ${count ? `<span class="badge badge-blue">${count}</span>` : ''}
+      </div>
+    `;
+  }
+
+  box.innerHTML = `
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn btn-sm" onclick="promoMonthOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
+        <button class="btn btn-sm" onclick="promoMonthOffset=0;renderPromocion()">Hoy</button>
+        <button class="btn btn-sm" onclick="promoMonthOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
+        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+      </div>
+      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
+      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
+}
+
+function openPromoModal(id){
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: promoDate || todayStr(), titulo:'', descripcion:''};
+
+  openModal(`
+    <div class="modal-header">
+      <h3>${id?'Editar':'Nueva'} Acción de Promoción</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="promo-date" value="${p.fecha}">
+    </div>
+    <div class="field">
+      <label>Título</label>
+      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="Ej: Responder reseñas, vídeo de un plato...">
+    </div>
+    <div class="field">
+      <label>Descripción</label>
+      <textarea id="promo-descripcion" placeholder="Detalles de la acción...">${escapeHtml(p.descripcion||'')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePromo(${id||'null'})">Guardar</button>
+    </div>
+  `);
+}
+
+function savePromo(id){
+  const fecha = document.getElementById('promo-date').value || todayStr();
+  const titulo = document.getElementById('promo-titulo').value.trim();
+  const descripcion = document.getElementById('promo-descripcion').value.trim();
+
+  if(!titulo){ showToast('Indica un título'); return; }
+
+  if(id){
+    Object.assign(DB.promos.find(x=>x.id===id), {fecha, titulo, descripcion});
+  }else{
+    DB.promos.push({id: genId(), fecha, titulo, descripcion});
+  }
+  saveDB();
+  closeModal();
+  renderPromocion();
+  showToast('Acción guardada');
+}
+
+function deletePromo(id){
+  if(!confirm('¿Eliminar esta acción de promoción?')) return;
+  DB.promos = DB.promos.filter(p=>p.id!==id);
+  saveDB();
+  renderPromocion();
 }
 
 /* ============================================================
