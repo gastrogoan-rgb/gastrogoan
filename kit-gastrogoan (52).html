@@ -4760,14 +4760,38 @@ function openTableOrder(tableId, orderId){
   openNewOrderPaxModal(tableId);
 }
 
+function getTodayPendingReservations(){
+  const today = todayStr();
+  return DB.reservations.filter(r => r.date === today && r.status === 'confirmada' && !r.llegada)
+    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+}
+
 function openNewOrderPaxModal(tableId){
   const table = DB.tables.find(t=>t.id===tableId);
+  const pendingReservas = getTodayPendingReservations();
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-users"></i> Abrir mesa${table?` — ${escapeHtml(table.name)}`:''}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
+      <label>Tipo de cliente</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> Cliente de paso</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
+      </div>
+    </div>
+    <div class="field" id="new-order-reserva-field" style="display:none">
+      <label>Selecciona la reserva</label>
+      <select id="new-order-reserva-sel">
+        ${pendingReservas.map(r=>{
+          const client = DB.clients.find(c=>c.id===r.clientId);
+          const name = client ? client.name : (r.clientName||'—');
+          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} pers.</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div class="field" id="new-order-pax-field">
       <label>¿Cuántas personas?</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
@@ -4776,13 +4800,33 @@ function openNewOrderPaxModal(tableId){
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">Abrir mesa</button>
     </div>
   `);
-  setTimeout(()=>document.getElementById('new-order-pax')?.focus(), 50);
+}
+
+function toggleNewOrderReservaField(){
+  const isReserva = document.querySelector('input[name="new-order-tipo-cliente"]:checked').value === 'reserva';
+  document.getElementById('new-order-reserva-field').style.display = isReserva ? '' : 'none';
+  document.getElementById('new-order-pax-field').style.display = isReserva ? 'none' : '';
 }
 
 function confirmOpenTableOrder(tableId){
-  const pax = parseInt(document.getElementById('new-order-pax').value) || 0;
-  if(pax <= 0){ showToast('Indica el número de personas'); return; }
-  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
+  const tipo = document.querySelector('input[name="new-order-tipo-cliente"]:checked')?.value || 'paso';
+  let pax, clienteNombre = '', clientId = null, reservationId = null;
+  if(tipo === 'reserva'){
+    const resId = parseInt(document.getElementById('new-order-reserva-sel').value);
+    const r = DB.reservations.find(x=>x.id===resId);
+    if(!r){ showToast('Selecciona una reserva'); return; }
+    pax = r.people;
+    clientId = r.clientId;
+    const client = DB.clients.find(c=>c.id===r.clientId);
+    clienteNombre = client ? client.name : (r.clientName||'');
+    reservationId = r.id;
+    r.llegada = true;
+    if(!r.tableId) r.tableId = tableId;
+  }else{
+    pax = parseInt(document.getElementById('new-order-pax').value) || 0;
+    if(pax <= 0){ showToast('Indica el número de personas'); return; }
+  }
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -5012,16 +5056,17 @@ function renderOrderMarcharButtons(order){
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`
+  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+  const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
 
   const linesHtml = renderOrderLinesHtml(order);
   const total = orderTotal(order);
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderTandaSelector(order)}
@@ -8149,7 +8194,7 @@ function renderReservasDia(){
   const tableHtml = !items.length
     ? `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`
     : `<div class="table-wrap"><table>
-        <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th>Llegada</th><th></th></tr></thead>
         <tbody>
           ${items.map(r => {
             const client = DB.clients.find(c=>c.id===r.clientId);
@@ -8162,6 +8207,9 @@ function renderReservasDia(){
                 <td>${table ? escapeHtml(table.name) : '<span class="badge badge-gray">Sin asignar</span>'}</td>
                 <td class="wrap">${escapeHtml(r.notes||'—')}</td>
                 <td>${reservationStatusBadge(r.status)}</td>
+                <td>
+                  ${r.status==='confirmada' ? `<button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?'<i class="ti ti-check"></i> Llegó':'Aún no'}</button>` : '—'}
+                </td>
                 <td class="actions-cell">
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
                   <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
@@ -8369,6 +8417,14 @@ function saveReservation(id){
   closeModal();
   renderReservas();
   showToast('Reserva guardada');
+}
+
+function toggleReservaLlegada(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  r.llegada = !r.llegada;
+  saveDB();
+  renderReservas();
 }
 
 function deleteReservation(id){
