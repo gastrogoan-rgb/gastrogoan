@@ -1629,34 +1629,43 @@ function getReservasResumenForSync(){
    está disponible. */
 function getPlatformFirebaseApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
-  let app;
   try{
-    app = firebase.app('platform');
+    let app;
+    try{
+      app = firebase.app('platform');
+    }catch(e){
+      app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform');
+    }
+    if(!app) return Promise.resolve(null);
+    if(!platformAuthPromise){
+      platformAuthPromise = app.auth().currentUser
+        ? Promise.resolve(app)
+        : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
+    }
+    return platformAuthPromise;
   }catch(e){
-    app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform');
+    console.error('Error iniciando la plataforma', e);
+    return Promise.resolve(null);
   }
-  if(!app) return Promise.resolve(null);
-  if(!platformAuthPromise){
-    platformAuthPromise = app.auth().currentUser
-      ? Promise.resolve(app)
-      : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
-  }
-  return platformAuthPromise;
 }
 
 function syncPublicMirror(){
   if(!cloudConfig || typeof firebase === 'undefined') return;
   const publicId = getPublicId();
   if(!publicId) return;
-  getPlatformFirebaseApp().then(app => {
-    if(!app) return;
-    app.database().ref('gastrogoan/public/' + publicId + '/info').set({
-      business: DB.business,
-      cartas: DB.cartas,
-      activeCartaIds: DB.activeCartaIds,
-      reservasResumen: getReservasResumenForSync()
-    }).catch(()=>{});
-  });
+  try{
+    getPlatformFirebaseApp().then(app => {
+      if(!app) return;
+      app.database().ref('gastrogoan/public/' + publicId + '/info').set({
+        business: DB.business,
+        cartas: DB.cartas,
+        activeCartaIds: DB.activeCartaIds,
+        reservasResumen: getReservasResumenForSync()
+      }).catch(()=>{});
+    }).catch(e => console.error('Error publicando el espejo público', e));
+  }catch(e){
+    console.error('Error publicando el espejo público', e);
+  }
 }
 
 function initCloud(){
