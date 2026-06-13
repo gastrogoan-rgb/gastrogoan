@@ -1095,9 +1095,14 @@ function ggLicHash(str){
   return h >>> 0;
 }
 
+function _ggLicSecret(){
+  const c = [117,117,197,117,125,111,124,197,64,62,64,68,197,121,69];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+
 function ggLicSig(name){
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const secret = 'gg·goan·2026·k7';
+  const secret = _ggLicSecret();
   let h = ggLicHash(name + secret);
   const out = [];
   for(let g = 0; g < 3; g++){
@@ -1160,6 +1165,50 @@ function getPublicId(){
   // como máximo 7), para cumplir el mínimo de 4 que exigen las reglas
   // de Firebase ($publicId.length >= 4) sin importar el valor del hash.
   return ggLicHash(tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
+}
+
+/* Lista de revocación: un JSON público y gratuito (alojado en GitHub) con
+   los tenantId de licencias desactivadas (p.ej. impagos o claves filtradas).
+   La comprobación es "best effort": si no hay internet o falla la carga,
+   no se bloquea a nadie (fail-open), y se usa la última lista conocida
+   guardada en este dispositivo. */
+const REVOKED_LIST_URL = 'https://raw.githubusercontent.com/gastrogoan-rgb/gastrogoan/main/revoked-licenses.json';
+const REVOKED_CACHE_KEY = 'gastrogoan_revoked_v1';
+
+async function checkLicenseRevocation(){
+  const tenantId = getTenantId();
+  if(!tenantId) return;
+  let list = null;
+  try{
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(REVOKED_LIST_URL, { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(timer);
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data.revoked)){
+        list = data.revoked;
+        localStorage.setItem(REVOKED_CACHE_KEY, JSON.stringify(list));
+      }
+    }
+  }catch(e){
+    try{ list = JSON.parse(localStorage.getItem(REVOKED_CACHE_KEY)); }catch(e2){}
+  }
+  if(Array.isArray(list) && list.includes(tenantId)) showRevokedGate();
+}
+
+function showRevokedGate(){
+  if(document.getElementById('revoked-gate')) return;
+  const g = document.createElement('div');
+  g.id = 'revoked-gate';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100001;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
+  g.innerHTML = `
+    <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
+      <div style="width:54px;height:54px;border-radius:14px;background:#C0392B;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🔒</div>
+      <h2 style="margin-bottom:4px">Licencia desactivada</h2>
+      <p style="color:#444;font-size:13.5px;line-height:1.6">Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.</p>
+    </div>`;
+  document.body.appendChild(g);
 }
 
 function showActivationGate(){
@@ -1330,6 +1379,7 @@ function activateLicenseFromGate(){
   showToast('Licencia activada: ' + parsed.name);
   if(!getCloudConfig()) showFirebaseSetupGate();
   initCloud();
+  checkLicenseRevocation();
 }
 
 /* Cada negocio usa su PROPIO proyecto Firebase (gratuito, de Google),
@@ -8844,6 +8894,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }else if(!getCloudConfig()){
     showFirebaseSetupGate();
   }
+  if(getLicense()) checkLicenseRevocation();
 
   setInterval(() => {
     const active = document.querySelector('.view.active');
