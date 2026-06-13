@@ -1166,7 +1166,10 @@ function getTenantId(){
 function getPublicId(){
   const tenantId = getTenantId();
   if(!tenantId) return null;
-  return ggLicHash(tenantId + '·gastrogoan·public·v1').toString(36);
+  // padStart asegura siempre 7 caracteres (un uint32 en base36 ocupa
+  // como máximo 7), para cumplir el mínimo de 4 que exigen las reglas
+  // de Firebase ($publicId.length >= 4) sin importar el valor del hash.
+  return ggLicHash(tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
 }
 
 function showActivationGate(){
