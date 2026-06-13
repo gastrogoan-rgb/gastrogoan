@@ -1188,6 +1188,42 @@ function hideActivationGate(){
   if(g) g.remove();
 }
 
+/* Reglas de seguridad de Firebase que el propietario debe pegar en
+   Realtime Database → Reglas. Cada negocio tiene su propio proyecto, así
+   que estas reglas solo aplican a los datos de ese negocio. */
+const FIREBASE_RULES_JSON = `{
+  "rules": {
+    "gastrogoan": {
+      ".read": false,
+      ".write": false,
+      "tenants": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60"
+        }
+      },
+      "public": {
+        "$publicId": {
+          "info": {
+            ".read": "auth != null",
+            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+          },
+          "requests": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+          }
+        }
+      }
+    }
+  }
+}`;
+
+function copyFirebaseRules(){
+  navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast('Reglas copiadas')).catch(() => {
+    alert('No se pudo copiar automáticamente. Selecciona el texto manualmente y cópialo (Ctrl+C / Cmd+C).');
+  });
+}
+
 /* Paso obligatorio justo después de activar la licencia: cada negocio
    necesita su propio proyecto Firebase (gratuito) para sincronizar
    dispositivos y activar las reservas/pedidos online. Bloquea el acceso
@@ -1197,20 +1233,75 @@ function showFirebaseSetupGate(){
   if(document.getElementById('firebase-gate')) return;
   const g = document.createElement('div');
   g.id = 'firebase-gate';
-  g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px';
+  const step = (n, title, body) => `
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
+      <div style="flex:1;min-width:0">
+        <p style="font-weight:700;font-size:13.5px;margin-bottom:4px">${title}</p>
+        <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
+      </div>
+    </div>`;
   g.innerHTML = `
-    <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px">
+    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
         <h2 style="margin-bottom:4px">Configura tu nube</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan</p>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan (≈10 minutos, una sola vez)</p>
       </div>
-      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px;text-align:left">
-        Cada negocio necesita su <strong>propio proyecto Firebase</strong> (gratuito, de Google) para sincronizar dispositivos y activar las reservas/pedidos online por QR. Se configura <strong>una sola vez</strong>.
+
+      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+        Cada negocio tiene su <strong>propio espacio en la nube</strong> (gratuito, de Google), separado del resto. Sirve para sincronizar tus dispositivos (camareros, cocina, TPV) y activar las reservas/pedidos online por QR.
       </div>
-      <div style="text-align:left">
-        <p style="font-size:13px;margin-bottom:8px"><strong>¿Eres el/la propietario/a?</strong> Sigue la guía (≈10 min): crea un proyecto gratis en <code>console.firebase.google.com</code>, activa Realtime Database + inicio de sesión Anónimo, pega las reglas de seguridad y copia tu <code>apiKey</code> y <code>databaseURL</code> aquí abajo.</p>
-        <p style="font-size:13px;margin-bottom:14px"><strong>📱 ¿Eres empleado/a?</strong> No crees un proyecto nuevo: pide a tu jefe/a el <code>apiKey</code> y el <code>databaseURL</code> que configuró él/ella (los ve en Nube → Cambiar la configuración de Firebase) y pégalos aquí.</p>
+
+      <div style="background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
+        📱 <strong>¿Eres empleado/a, no el/la propietario/a?</strong> No hace falta que sigas los pasos: pide a tu jefe/a que te diga la <strong>Clave de API</strong> y la <strong>URL de la base de datos</strong> que él/ella configuró (las puede ver en Nube → "Cambiar la configuración de Firebase"), pégalas en el formulario de abajo y pulsa "Guardar y conectar". Listo.
+      </div>
+
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Si eres el/la propietario/a, sigue estos pasos:</h3>
+
+      ${step(1, 'Crea un proyecto gratis en Firebase', `
+        Abre <code>console.firebase.google.com</code> en otra pestaña (puedes volver a esta después) e inicia sesión con una cuenta de Google (la que quieras, puede ser una nueva solo para esto).<br><br>
+        Pulsa <strong>"Crear un proyecto"</strong> (o "Agregar proyecto"), escribe un nombre (por ejemplo, el nombre de tu restaurante) y pulsa "Continuar". Cuando te pregunte por Google Analytics, puedes <strong>desactivarlo</strong> y pulsar "Crear proyecto". Espera unos segundos hasta que termine.
+      `)}
+
+      ${step(2, 'Activa "Realtime Database"', `
+        En el menú de la izquierda, busca el apartado <strong>"Compilación"</strong> y dentro pulsa <strong>"Realtime Database"</strong>.<br><br>
+        Pulsa el botón <strong>"Crear base de datos"</strong>. Elige la ubicación que te proponga (cualquiera de Europa está bien) y pulsa "Siguiente".<br><br>
+        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (En el paso 4 pegaremos las reglas correctas).
+      `)}
+
+      ${step(3, 'Activa el inicio de sesión "Anónimo"', `
+        En el menú de la izquierda, dentro de <strong>"Compilación"</strong>, pulsa <strong>"Authentication"</strong>.<br><br>
+        Pulsa <strong>"Comenzar"</strong> (si es la primera vez) y luego abre la pestaña <strong>"Sign-in method"</strong> (Método de inicio de sesión).<br><br>
+        En la lista de proveedores, busca <strong>"Anónimo"</strong>, pulsa sobre él, activa el interruptor y pulsa <strong>"Guardar"</strong>.<br><br>
+        <span style="color:var(--muted)">Esto permite que la app se conecte sola, sin pedir usuario ni contraseña a nadie.</span>
+      `)}
+
+      ${step(4, 'Pega las reglas de seguridad', `
+        Vuelve a <strong>Realtime Database</strong> (menú "Compilación") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
+        Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
+        Por último, pulsa el botón <strong>"Publicar"</strong> (Publish) arriba a la derecha.
+      `)}
+
+      ${step(5, 'Crea una "app web" y copia tus datos', `
+        Pulsa el icono de engranaje ⚙️ junto a "Descripción general del proyecto" (arriba a la izquierda) y elige <strong>"Configuración del proyecto"</strong>.<br><br>
+        Baja hasta la sección <strong>"Tus apps"</strong>. Si está vacía, pulsa el icono <strong>"&lt;/&gt;"</strong> (Web), ponle un nombre cualquiera (p.ej. "GastroGoan") y pulsa "Registrar app" (no necesitas configurar Hosting).<br><br>
+        Te aparecerá un bloque de código con varios datos. Busca y copia estos dos:
+        <ul style="margin:6px 0 0 18px">
+          <li><code>apiKey</code> → algo como <code>AIzaSy...</code></li>
+          <li><code>databaseURL</code> → algo como <code>https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app</code></li>
+        </ul>
+      `)}
+
+      ${step(6, 'Pégalos aquí abajo y guarda', `
+        Pega esos dos valores en los campos siguientes y pulsa "Guardar y conectar". La app se recargará y quedará lista.<br><br>
+        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de arriba.</span>
+      `)}
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
         ${renderOwnFirebaseForm()}
       </div>
     </div>`;
