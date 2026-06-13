@@ -3907,13 +3907,13 @@ function renderTpvCartaSelector(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.cartas.length ? DB.cartas.map(c=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${(cartaAuto||!editUnlocked)?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
+            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
             ${escapeHtml(c.nombre)}
           </label>
         `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} ${editUnlocked?'':'disabled'} onchange="setCartaAuto(this.checked)">
+        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
         Cambio automático según horario
       </label>
       <span style="font-size:12px;color:var(--muted)">
@@ -3934,7 +3934,7 @@ function renderTpvMenuSelector(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.menus.map(m=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${(cartaAuto||!editUnlocked)?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
+            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
             ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}
           </label>
         `).join('')}
@@ -3979,7 +3979,7 @@ function renderTpvMesas(tiposServicio){
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
         </div>
       </div>
     `;
@@ -4055,7 +4055,7 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
-      ${tiposServicio.mesa ? `<button class="owner-only btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
+      ${tiposServicio.mesa ? `<button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvMesas(tiposServicio)}
