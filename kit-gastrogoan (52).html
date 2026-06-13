@@ -7748,18 +7748,22 @@ function renderPromoSemana(){
   const box = document.getElementById('promo-tab-content');
   const dates = getWeekDates(promoWeekOffset);
 
-  const cardsHtml = dates.map((d, i) => {
+  const headerCells = dates.map((d,i) => {
+    const ds = dateStr(d);
+    const isToday = ds === todayStr();
+    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${WEEK_DAYS[i].slice(0,3)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+  }).join('');
+
+  const bodyCells = dates.map(d => {
     const ds = dateStr(d);
     const items = DB.promos.filter(p => p.fecha === ds);
-    const isToday = ds === todayStr();
     return `
-      <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToPromoDia('${ds}')">
-        <h3 style="justify-content:space-between;font-size:14px">
-          <span>${WEEK_DAYS[i]} ${d.getDate()}/${d.getMonth()+1}</span>
-          ${items.length ? `<span class="badge badge-blue">${items.length}</span>` : ''}
-        </h3>
-        ${items.length ? items.map(p => `<div style="font-size:12px;padding:2px 0">${escapeHtml(p.titulo)}</div>`).join('') : `<div style="font-size:12px;color:var(--muted)">Sin acciones</div>`}
-      </div>
+      <td style="vertical-align:top;min-width:140px">
+        ${items.map(p => `
+          <div style="display:block;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--brand-orange);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</div>
+        `).join('')}
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
+      </td>
     `;
   }).join('');
 
@@ -7773,7 +7777,12 @@ function renderPromoSemana(){
       </div>
       <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
-    <div class="grid grid-3">${cardsHtml}</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody><tr>${bodyCells}</tr></tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -7821,8 +7830,8 @@ function renderPromoMes(){
   `;
 }
 
-function openPromoModal(id){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: promoDate || todayStr(), titulo:'', descripcion:''};
+function openPromoModal(id, fecha){
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:'', descripcion:''};
 
   openModal(`
     <div class="modal-header">
