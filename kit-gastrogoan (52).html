@@ -47,6 +47,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   gap:12px;
 }
 .app-header #lock-btn{margin-left:auto}
+body:not(.edit-unlocked) .owner-only{display:none !important}
+.folder-edit-toggle{margin-left:auto}
 .app-logo-icon img{width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff}
 .app-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
 .app-logo-icon{
@@ -401,6 +403,7 @@ td.wrap{white-space:normal}
       <div class="folder-top">
         <button class="btn btn-sm btn-back" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> Inicio</button>
         <div class="folder-top-title" id="folder-title"></div>
+        <button class="btn btn-sm folder-edit-toggle" id="folder-edit-toggle" onclick="toggleEditMode()" style="display:none"></button>
       </div>
       <div class="view-subtitle" id="folder-subtitle"></div>
       <div class="grid grid-3" id="folder-modules"></div>
@@ -460,7 +463,7 @@ td.wrap{white-space:normal}
             <option value="">Todas las categorías</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
+        <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
       </div>
 
       <div class="table-wrap">
@@ -490,7 +493,7 @@ td.wrap{white-space:normal}
 
       <div class="toolbar">
         <div class="left"></div>
-        <button class="btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> Nuevo Proveedor</button>
+        <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> Nuevo Proveedor</button>
       </div>
 
       <div class="grid grid-2" id="proveedores-list"></div>
@@ -509,7 +512,7 @@ td.wrap{white-space:normal}
             <option value="">Todas las categorías</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+        <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
       </div>
 
       <div id="escandallo-list"></div>
@@ -549,7 +552,7 @@ td.wrap{white-space:normal}
         <div id="carta-list-view">
           <div class="toolbar">
             <div class="left"></div>
-            <button class="btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
+            <button class="owner-only btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
           </div>
           <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
           <div id="carta-list"></div>
@@ -582,7 +585,7 @@ td.wrap{white-space:normal}
           <div class="toolbar">
             <div class="left"></div>
             <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> Importar del Escandallo</button>
-            <button class="btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
+            <button class="owner-only btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
           </div>
           <div id="carta-secciones"></div>
         </div>
@@ -594,7 +597,7 @@ td.wrap{white-space:normal}
         <div id="menu-list-view">
           <div class="toolbar">
             <div class="left"></div>
-            <button class="btn btn-primary" onclick="newMenu()"><i class="ti ti-plus"></i> Nuevo Menú</button>
+            <button class="owner-only btn btn-primary" onclick="newMenu()"><i class="ti ti-plus"></i> Nuevo Menú</button>
           </div>
           <div class="grid grid-2" id="menu-stats" style="margin-bottom:14px"></div>
           <div id="menu-list"></div>
@@ -636,7 +639,7 @@ td.wrap{white-space:normal}
           </div>
           <div class="toolbar">
             <div class="left"></div>
-            <button class="btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> Nuevo Grupo</button>
+            <button class="owner-only btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> Nuevo Grupo</button>
           </div>
           <div id="menu-grupos"></div>
         </div>
@@ -672,7 +675,7 @@ td.wrap{white-space:normal}
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> Solo alertas
           </label>
         </div>
-        <button class="btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> Nueva elaboración</button>
+        <button class="owner-only btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> Nueva elaboración</button>
       </div>
 
       <nav class="ge-tab-row">
@@ -711,7 +714,7 @@ td.wrap{white-space:normal}
 
       <div class="toolbar">
         <div class="left"></div>
-        <button class="btn btn-primary" onclick="openOrderModal()"><i class="ti ti-plus"></i> Nuevo Pedido</button>
+        <button class="owner-only btn btn-primary" onclick="openOrderModal()"><i class="ti ti-plus"></i> Nuevo Pedido</button>
       </div>
 
       <div id="pedidos-list"></div>
@@ -1681,13 +1684,66 @@ function currentArea(){
 
 /* ============== Navigation ============== */
 function goHome(){
+  lockEditMode();
+  if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   navigate('home');
 }
 function openFolder(key){
+  lockEditMode();
+  if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   currentFolder = key;
   navigate('folder');
 }
 let ownerUnlocked = false;
+let editUnlocked = false;
+
+function lockEditMode(){
+  editUnlocked = false;
+  document.body.classList.remove('edit-unlocked');
+}
+
+function requestEditPin(){
+  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> Modo edición</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Introduce el PIN de acceso para activar la edición en esta sección.</p>
+    <div class="field">
+      <label>PIN de acceso</label>
+      <input type="password" id="edit-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyEditPin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="verifyEditPin()">Desbloquear</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('edit-pin-input')?.focus(), 50);
+}
+
+function verifyEditPin(){
+  const val = document.getElementById('edit-pin-input').value;
+  if(val !== DB.business.pin){
+    showToast('PIN incorrecto');
+    return;
+  }
+  editUnlocked = true;
+  document.body.classList.add('edit-unlocked');
+  closeModal();
+  showToast('Modo edición activado');
+  renderFolder();
+}
+
+function toggleEditMode(){
+  if(editUnlocked){
+    lockEditMode();
+    showToast('Modo edición bloqueado');
+    renderFolder();
+  } else {
+    requestEditPin();
+  }
+}
 
 function isGestionLocked(view){
   if(ownerUnlocked) return false;
@@ -1828,6 +1884,19 @@ function renderFolder(){
   if(!f){ navigate('home'); return; }
   document.getElementById('folder-title').innerHTML = `${f.emoji} ${escapeHtml(f.title)}`;
   document.getElementById('folder-subtitle').textContent = f.subtitle;
+  const editToggle = document.getElementById('folder-edit-toggle');
+  if(currentFolder === 'cocina' || currentFolder === 'sala'){
+    editToggle.style.display = '';
+    if(editUnlocked){
+      editToggle.innerHTML = `<i class="ti ti-lock-open"></i> Bloquear edición`;
+      editToggle.classList.add('btn-primary');
+    } else {
+      editToggle.innerHTML = `<i class="ti ti-lock"></i> Editar`;
+      editToggle.classList.remove('btn-primary');
+    }
+  } else {
+    editToggle.style.display = 'none';
+  }
   document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
     <div class="module-card" onclick="navigate('${m.id}')">
       <i class="ti ${m.icon} module-icon"></i>
@@ -2082,8 +2151,8 @@ function renderMegalista(){
       <td>${fmtMoney(ing.price)}</td>
       <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
       <td class="actions-cell">
-        <button class="btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
+        <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
       </td>
     </tr>
   `).join('');
@@ -2263,8 +2332,8 @@ function renderStock(){
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i></button>
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}">Ajustar</button>
-          ${isElab ? `<button class="btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
+          ${isElab ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
         </td>
       </tr>
     `;
@@ -2577,8 +2646,8 @@ function renderEscandalloCard(r){
           <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:18px">${fmtMoney(margin)}</div></div>
         </div>
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
       </div>
     `;
@@ -2607,7 +2676,7 @@ function renderRecipeModal(id, r){
         <td>${ing ? escapeHtml(ing.unit) : ''}</td>
         <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>
         <td>${ing ? fmtMoney(recipeIngredientCost(line)) : '—'}</td>
-        <td><button class="btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
+        <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
       </tr>
     `;
   }).join('');
@@ -2915,7 +2984,7 @@ function renderFichaModal(){
   const ingredientsHtml = f.ingredients.map((ing, idx) => `
     <div class="field-row" style="margin-bottom:6px">
       <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" oninput="updateFichaIngredient(${idx}, this.value)">
-      <button class="btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredient(${idx})" ${f.ingredients.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+      <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredient(${idx})" ${f.ingredients.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
     </div>
   `).join('');
 
@@ -2923,7 +2992,7 @@ function renderFichaModal(){
     <div class="step-row">
       <div class="step-num">${idx+1}</div>
       <textarea placeholder="Describe el paso de elaboración..." style="flex:1" oninput="updateFichaStep(${idx}, this.value)">${escapeHtml(p)}</textarea>
-      <button class="btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+      <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
     </div>
   `).join('');
 
@@ -3250,8 +3319,8 @@ function renderCartaList(){
               <td>${nsec}</td>
               <td>${nplat}</td>
               <td class="actions-cell">
-                <button class="btn btn-sm btn-icon" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i></button>
-                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteCarta(${c.id})"><i class="ti ti-trash"></i></button>
+                <button class="owner-only btn btn-sm btn-icon" onclick="openCarta(${c.id})"><i class="ti ti-edit"></i></button>
+                <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteCarta(${c.id})"><i class="ti ti-trash"></i></button>
               </td>
             </tr>`;
           }).join('')}
@@ -3335,7 +3404,7 @@ function renderCartaSecciones(){
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> Plato manual</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> Escandallo</button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       ${(sec.platos||[]).length ? sec.platos.map(p => `
@@ -3343,7 +3412,7 @@ function renderCartaSecciones(){
           <span style="flex:1;font-weight:600">${escapeHtml(p.nombre)}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:14px">Sin platos en esta sección.</div>`}
     </div>
@@ -3547,8 +3616,8 @@ function renderMenuList(){
               <td style="font-size:12px;color:var(--muted)">${fmtCartaDias(m.dias)}</td>
               <td>${ngrupos}</td>
               <td class="actions-cell">
-                <button class="btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
-                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
+                <button class="owner-only btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
+                <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
               </td>
             </tr>`;
           }).join('')}
@@ -3641,14 +3710,14 @@ function renderMenuGrupos(){
         <h4>${escapeHtml(g.nombre)}</h4>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> Opción</button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
       ${(g.opciones||[]).length ? g.opciones.map(o => `
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:14px">Sin opciones en este grupo.</div>`}
     </div>
@@ -4829,8 +4898,8 @@ function renderProveedores(){
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</span>
         <span class="actions-cell">
-          <button class="btn btn-sm btn-icon" onclick="openProviderModal(${p.id})"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="deleteProvider(${p.id})"><i class="ti ti-trash"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" onclick="openProviderModal(${p.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteProvider(${p.id})"><i class="ti ti-trash"></i></button>
         </span>
       </h3>
       ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
@@ -5068,7 +5137,7 @@ function renderPedidoDetail(){
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
-        <button class="btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
+        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
       </div>
     </div>
   `;
@@ -6020,8 +6089,8 @@ function renderHorariosDia(){
           <td>${hh>0?hh.toFixed(1)+'h':'—'}</td>
           <td class="wrap">${escapeHtml(t.notas||'—')}</td>
           <td class="actions-cell">
-            <button class="btn btn-sm btn-icon" onclick="openTurnoModal(${t.id})"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${t.id})"><i class="ti ti-trash"></i></button>
+            <button class="owner-only btn btn-sm btn-icon" onclick="openTurnoModal(${t.id})"><i class="ti ti-edit"></i></button>
+            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${t.id})"><i class="ti ti-trash"></i></button>
           </td>
         </tr>
       `;
@@ -6036,7 +6105,7 @@ function renderHorariosDia(){
         </td>
         <td colspan="4"><span style="color:var(--muted)">Sin turno asignado</span></td>
         <td class="actions-cell">
-          <button class="btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> Asignar</button>
+          <button class="owner-only btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> Asignar</button>
         </td>
       </tr>
     `;
@@ -6047,7 +6116,7 @@ function renderHorariosDia(){
       <div class="left">
         <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
       </div>
-      <button class="btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> Nuevo Turno</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
@@ -6098,7 +6167,7 @@ function renderHorariosMes(){
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
       </div>
-      <button class="btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
@@ -6129,9 +6198,9 @@ function renderHorariosSemana(){
         const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
         const hh = hoursBetween(t.entrada, t.salida);
         if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(t.entrada)}-${escapeHtml(t.salida)}</span>`:''}</span></td>`;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(t.entrada)}-${escapeHtml(t.salida)}</span>`:''}</span></td>`;
       }
-      return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
+      return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="if(editUnlocked) openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
     }).join('');
     return `<tr>
       <td>
@@ -6153,7 +6222,7 @@ function renderHorariosSemana(){
         <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
         <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">Hoy</button>
       </div>
-      <button class="btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
@@ -6208,7 +6277,7 @@ function openTurnoModal(id, employeeId, fecha){
       <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="Notas del turno...">
     </div>
     <div class="modal-footer">
-      ${state.id ? `<button class="btn btn-danger" onclick="deleteTurno(${state.id})">Eliminar</button>` : ''}
+      ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">Eliminar</button>` : ''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">Guardar</button>
     </div>
@@ -6255,8 +6324,8 @@ function renderHorariosPersonal(){
         <div><strong>${escapeHtml(e.name)}</strong><div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div></div>
       </div>
       <div class="actions-cell">
-        <button class="btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+        <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
       </div>
     </div>
   `).join('');
@@ -6264,7 +6333,7 @@ function renderHorariosPersonal(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
+      <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
     </div>
     ${DB.employees.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añade el primero.</div>`}
   `;
@@ -6298,7 +6367,7 @@ function openEmployeeModal(id){
       <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> Restablecer PIN a 1234</button>
     </div>` : ''}
     <div class="modal-footer">
-      ${id ? `<button class="btn btn-danger" onclick="deleteEmployee(${id})">Eliminar</button>` : ''}
+      ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">Eliminar</button>` : ''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">Guardar</button>
     </div>
@@ -6588,7 +6657,7 @@ function renderLimpiezaManos(){
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
             <div class="step-num">${i+1}</div>
             <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)">
-            <button class="btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
         `).join('')}
         <button class="btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
@@ -6653,7 +6722,7 @@ function renderLimpiezaSemana(){
           <tr>
             <td><strong>${escapeHtml(t.area)}</strong>${t.producto?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(t.producto)}</span>`:''}</td>
             ${WEEK_DAY_KEYS.map(dk => `<td style="text-align:center"><input type="checkbox" style="width:18px;height:18px" ${(checks[t.id]&&checks[t.id][dk])?'checked':''} onchange="toggleLimpiezaCheck(${t.id},'${dk}',this.checked)"></td>`).join('')}
-            <td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaTarea(${t.id})"><i class="ti ti-trash"></i></button></td>
+            <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaTarea(${t.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `).join('') : `<tr><td colspan="9"><div class="empty" style="padding:14px">No hay áreas de limpieza definidas.</div></td></tr>`}</tbody>
       </table>
@@ -6731,7 +6800,7 @@ function renderLimpiezaLog(key){
   const rows = entries.length ? [...entries].slice().reverse().map(e => `
     <tr>${cfg.fields.map(f => f==='estado'
       ? `<td style="font-weight:700;color:${e[f]==='OK'?'var(--green)':'var(--red)'}">${e[f]==='OK'?'✅ OK':'❌ No OK'}</td>`
-      : `<td>${escapeHtml(String(e[f]||'—'))}</td>`).join('')}<td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
+      : `<td>${escapeHtml(String(e[f]||'—'))}</td>`).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">Sin registros todavía.</div></td></tr>`;
 
   box.innerHTML = `
@@ -6786,7 +6855,7 @@ function renderLimpiezaMantenimiento(){
               ${['OK','Pendiente','Urgente'].map(opt=>`<option value="${opt}"${e.estado===opt?' selected':''}>${opt}</option>`).join('')}
             </select></td>
             <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)"></td>
-            <td><button class="btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
+            <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">Sin equipos registrados.</div></td></tr>`}</tbody>
       </table>
@@ -6938,7 +7007,7 @@ function renderDistDetail(){
     ? d.platos.map((pl,i)=>`
         <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
           <span>${escapeHtml(pl)}</span>
-          <button class="btn btn-sm btn-icon btn-danger" onclick="removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistPlato(${i})"><i class="ti ti-x"></i></button>
         </div>
       `).join('')
     : '<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>Sin platos asignados</div>';
@@ -6951,7 +7020,7 @@ function renderDistDetail(){
     const tareasHtml = tareas.map((t,i)=>`
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="text" value="${escapeHtml(t)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updateDistTarea(${idx},${i},this.value)">
-        <button class="btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
       </div>
     `).join('');
     return `
