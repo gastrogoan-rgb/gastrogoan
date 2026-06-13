@@ -414,6 +414,7 @@ td.wrap{white-space:normal}
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
   <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:8px"><i class="ti ti-refresh" id="refresh-icon"></i> Actualizar</button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
+  <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:8px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i> Archivar datos</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
 </header>
 
@@ -1874,8 +1875,7 @@ function defaultData(){
       horario: defaultHorario(),
       cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
-      ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
-      lastArchiveReminder: null // fecha (YYYY-MM-DD) del último aviso de archivado de datos antiguos
+      ownFirebase: null // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
     },
     ge: {
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
@@ -8520,49 +8520,25 @@ function dataMaintenanceCutoff(){
 }
 
 /* ============================================================
-   AVISO ANUAL DE ARCHIVADO
-   Una vez al año, si hay bastantes ventas/reservas/cierres de más de
-   un año de antigüedad, sugiere (sin obligar ni borrar nada por su
-   cuenta) usar "Archivar datos antiguos" arriba. Solo afecta a datos
-   históricos del TPV; recetas, cartas, empleados, etc. nunca se tocan.
+   AVISO DE ARCHIVADO
+   Si hay bastantes ventas/reservas/cierres de más de un año de
+   antigüedad, muestra un botón rojo fijo en la cabecera para que no
+   pase desapercibido (sin esto, los datos seguirían creciendo hasta
+   poder colapsar el TPV de negocios muy activos). El botón desaparece
+   solo cuando se archivan esos datos (Mi Negocio > Mantenimiento de
+   datos). Solo afecta a histórico del TPV; recetas, cartas, empleados,
+   etc. nunca se tocan.
    ============================================================ */
 function checkArchiveReminder(){
-  const b = DB.business;
-  const today = todayStr();
-  if(b.lastArchiveReminder){
-    const days = Math.round((new Date(today) - new Date(b.lastArchiveReminder)) / 86400000);
-    if(days < 365) return;
-  }
   const cutoff = dataMaintenanceCutoff();
   const oldCount = DB.sales.filter(s => s.date && s.date < cutoff).length
     + DB.reservations.filter(r => r.date && r.date < cutoff && (r.status==='completada'||r.status==='cancelada')).length
     + DB.cashClosures.filter(c => c.fecha && c.fecha < cutoff).length;
-  if(oldCount < 50) return;
-  showArchiveReminderBanner(oldCount);
-}
-
-function showArchiveReminderBanner(count){
-  if(document.getElementById('archive-reminder')) return;
-  const el = document.createElement('div');
-  el.id = 'archive-reminder';
-  el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#222;color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;font-size:13px;text-align:center';
-  el.innerHTML = `
-    <span><i class="ti ti-database"></i> Tienes ${count} registros (ventas, reservas, cierres de caja) de hace más de un año. Puedes archivarlos para que la app vaya más ligera, sin perderlos (se descargan antes de borrarse).</span>
-    <button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border:none" onclick="goToArchiveFromReminder()">Ir a archivar</button>
-    <button class="btn btn-sm" style="background:transparent;color:#fff;border:1px solid #555" onclick="dismissArchiveReminder()">Recordar en 1 año</button>
-  `;
-  document.body.appendChild(el);
-}
-
-function dismissArchiveReminder(){
-  DB.business.lastArchiveReminder = todayStr();
-  saveDB();
-  const el = document.getElementById('archive-reminder');
-  if(el) el.remove();
+  const btn = document.getElementById('archive-reminder-btn');
+  if(btn) btn.style.display = oldCount >= 50 ? '' : 'none';
 }
 
 function goToArchiveFromReminder(){
-  dismissArchiveReminder();
   navigate('minegocio');
   setTimeout(() => {
     const el = document.getElementById('mn-archive-before');
@@ -8601,6 +8577,7 @@ function archiveOldData(){
   DB.reservations = DB.reservations.filter(r => !(r.date && r.date < before && (r.status==='completada'||r.status==='cancelada')));
   DB.cashClosures = DB.cashClosures.filter(c => !(c.fecha && c.fecha < before));
   saveDB();
+  checkArchiveReminder();
   renderMiNegocio();
   showToast('Datos antiguos archivados');
 }
@@ -8636,6 +8613,7 @@ function renderHeader(){
   }else{
     text.innerHTML = `GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span>`;
   }
+  checkArchiveReminder();
 }
 
 function syncMesasConfig(){
@@ -9000,7 +8978,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     showFirebaseSetupGate();
   }
   if(getLicense()) checkLicenseRevocation();
-  if(getLicense() && getCloudConfig()) checkArchiveReminder();
 
   setInterval(() => {
     const active = document.querySelector('.view.active');
