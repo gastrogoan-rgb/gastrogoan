@@ -1439,10 +1439,11 @@ function defaultData(){
     tpvOrders: [],
     sales: [],
     cashClosures: [], // {id, fecha, desde, hasta, totales:{Efectivo,Tarjeta,Otro}, total, ticketCount, fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, createdAt}
-    employees: [],       // {id, name, rol, color}
+    employees: [],       // {id, name, rol, color, pin, pinChanged}
     shifts: {},          // { employeeId: ['','','','','','',''] }
     turnos: [],          // {id, employeeId, fecha, tipo:'M'|'T'|'P'|'D'|'C', entrada, salida, notas}
     workDistribution: {}, // { employeeId: { platos:[name,...], produccion:{0:[task,...],...,6:[...]} } }
+    fichajes: [],        // {id, employeeId, fecha, entrada, salida} — control horario real (entrada/salida)
     cleaningTasks: [],
     limpieza: {
       manosPasos: ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'],
@@ -1500,6 +1501,8 @@ function loadDB(){
     delete merged.activeCartaId;
     if(!Array.isArray(merged.menus)) merged.menus = [];
     if(!Array.isArray(merged.activeMenuIds)) merged.activeMenuIds = [];
+    if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
+    (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
@@ -5949,6 +5952,7 @@ function renderHorarios(){
       <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> Semana</button>
       <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> Mes</button>
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> Personal</button>
+      <button class="ge-tab ${horariosTab==='fichar'?'active':''}" onclick="setHorariosTab('fichar')"><i class="ti ti-clock-play"></i> Fichar</button>
     </nav>
     <div id="horarios-tab-content"></div>
   `;
@@ -5957,6 +5961,7 @@ function renderHorarios(){
 function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
+  else if(horariosTab === 'fichar') renderHorariosFichar();
   else if(horariosTab === 'dia') renderHorariosDia();
   else if(horariosTab === 'mes') renderHorariosMes();
   else renderHorariosSemana();
@@ -6269,12 +6274,29 @@ function openEmployeeModal(id){
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
       </div>
     </div>
+    ${id ? `
+    <div class="field">
+      <label>PIN de fichaje</label>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${e.pinChanged ? 'El empleado ya configuró su PIN personal.' : 'PIN por defecto (1234) — el empleado deberá cambiarlo al fichar por primera vez.'}</p>
+      <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> Restablecer PIN a 1234</button>
+    </div>` : ''}
     <div class="modal-footer">
       ${id ? `<button class="btn btn-danger" onclick="deleteEmployee(${id})">Eliminar</button>` : ''}
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">Guardar</button>
     </div>
   `);
+}
+
+function resetEmployeePin(id){
+  const e = DB.employees.find(x=>x.id===id);
+  if(!e) return;
+  if(!confirm('¿Restablecer el PIN de ' + e.name + ' a 1234? Deberá crear uno nuevo al fichar.')) return;
+  e.pin = '1234';
+  e.pinChanged = false;
+  saveDB();
+  showToast('PIN restablecido a 1234');
+  openEmployeeModal(id);
 }
 
 function saveEmployee(id){
@@ -6285,7 +6307,7 @@ function saveEmployee(id){
   if(id){
     Object.assign(DB.employees.find(e => e.id===id), {name, rol, color});
   } else {
-    DB.employees.push({id: genId(), name, rol, color});
+    DB.employees.push({id: genId(), name, rol, color, pin:'1234', pinChanged:false});
   }
   saveDB();
   closeModal();
@@ -6299,6 +6321,7 @@ function deleteEmployee(id){
   if(!confirm('¿Eliminar este empleado?')) return;
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
+  DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];
   saveDB();
@@ -6306,6 +6329,167 @@ function deleteEmployee(id){
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-horarios') renderHorarios();
   else if(active && active.id === 'view-distribucion') renderDistribucion();
+}
+
+/* ============================================================
+   FICHAR — Control de horario de entrada/salida del personal
+   ============================================================ */
+function fmtHora(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function fmtDuracion(hours){
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${String(m).padStart(2,'0')}m`;
+}
+function getOpenFichaje(employeeId){
+  return (DB.fichajes||[]).find(f => f.employeeId===employeeId && !f.salida);
+}
+function fichajeHoras(f){
+  if(!f.entrada || !f.salida) return 0;
+  return (new Date(f.salida) - new Date(f.entrada)) / 3600000;
+}
+function employeeHoursInRange(employeeId, dates){
+  return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
+}
+
+function renderHorariosFichar(){
+  const box = document.getElementById('horarios-tab-content');
+  if(!box) return;
+  if(!DB.employees.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
+    return;
+  }
+  const weekDates = getWeekDates(0).map(d=>dateStr(d));
+
+  const cards = DB.employees.map(e => {
+    const open = getOpenFichaje(e.id);
+    const horasSemana = employeeHoursInRange(e.id, weekDates);
+    return `
+      <div class="card" style="text-align:center">
+        <h3 style="justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
+        ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> Fichado desde las ${fmtHora(open.entrada)}</span>` : `<span class="badge badge-gray">Fuera de servicio</span>`}
+        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+          <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> Entrada</button>
+          <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
+      </div>
+    `;
+  }).join('');
+
+  const historico = [...(DB.fichajes||[])].sort((a,b) => (b.entrada||'').localeCompare(a.entrada||'')).slice(0, 30);
+
+  box.innerHTML = `
+    <div class="grid grid-3">${cards}</div>
+    <h3 style="margin-top:16px"><i class="ti ti-history"></i> Histórico de fichajes</h3>
+    ${historico.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Empleado</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead>
+          <tbody>
+            ${historico.map(f => {
+              const emp = DB.employees.find(e=>e.id===f.employeeId);
+              return `<tr>
+                <td>${escapeHtml(emp ? emp.name : '—')}</td>
+                <td>${escapeHtml(f.fecha)}</td>
+                <td>${fmtHora(f.entrada)}</td>
+                <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
+                <td>${f.salida ? fmtDuracion(fichajeHoras(f)) : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `<div class="empty"><i class="ti ti-clock-play"></i>Sin fichajes registrados todavía.</div>`}
+  `;
+}
+
+function openFichajeModal(employeeId, action){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-key"></i> ${escapeHtml(e.name)} — ${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</h3>
+      <button class="modal-close" onclick="renderHorariosTab();closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Introduce tu PIN</label>
+      <input type="password" id="fichaje-pin" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderHorariosTab();closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('fichaje-pin')?.focus(), 50);
+}
+
+function confirmFichaje(employeeId, action){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const pin = document.getElementById('fichaje-pin').value.trim();
+  if(pin !== (e.pin || '1234')){ showToast('PIN incorrecto'); return; }
+  if(!e.pinChanged){
+    openNewPinModal(employeeId, action);
+    return;
+  }
+  doFichaje(employeeId, action);
+}
+
+function openNewPinModal(employeeId, action){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-key"></i> Crea tu PIN personal</h3>
+      <button class="modal-close" onclick="renderHorariosTab();closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Es tu primer fichaje, ${escapeHtml(e.name)}. Por seguridad, crea un PIN personal de 4 dígitos antes de continuar.</p>
+    <div class="field">
+      <label>Nuevo PIN (4 dígitos)</label>
+      <input type="password" id="new-pin-1" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
+    </div>
+    <div class="field">
+      <label>Repite el PIN</label>
+      <input type="password" id="new-pin-2" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderHorariosTab();closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewPin(${employeeId}, '${action}')">Guardar y fichar</button>
+    </div>
+  `);
+}
+
+function confirmNewPin(employeeId, action){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const p1 = document.getElementById('new-pin-1').value.trim();
+  const p2 = document.getElementById('new-pin-2').value.trim();
+  if(!/^\d{4}$/.test(p1)){ showToast('El PIN debe tener 4 dígitos'); return; }
+  if(p1 !== p2){ showToast('Los PIN no coinciden'); return; }
+  if(p1 === '1234'){ showToast('Elige un PIN distinto al de por defecto (1234)'); return; }
+  e.pin = p1;
+  e.pinChanged = true;
+  saveDB();
+  doFichaje(employeeId, action);
+}
+
+function doFichaje(employeeId, action){
+  const now = new Date().toISOString();
+  if(action === 'entrada'){
+    if(getOpenFichaje(employeeId)){ showToast('Ya tienes una entrada sin cerrar'); closeModal(); renderHorariosTab(); return; }
+    DB.fichajes.push({id: genId(), employeeId, fecha: todayStr(), entrada: now, salida: null});
+  }else{
+    const open = getOpenFichaje(employeeId);
+    if(!open){ showToast('No hay ninguna entrada abierta'); closeModal(); renderHorariosTab(); return; }
+    open.salida = now;
+  }
+  saveDB();
+  closeModal();
+  renderHorariosTab();
+  showToast(action === 'entrada' ? 'Entrada registrada' : 'Salida registrada');
 }
 
 /* ============================================================
