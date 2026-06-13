@@ -1198,6 +1198,20 @@ async function idbSet(key, value){
    ============================================================ */
 let cloudRef = null;
 let cloudConfig = null;
+let platformAuthPromise = null;
+// Proyecto Firebase compartido de la plataforma GastroGoan, usado SOLO para
+// publicar el espejo público (gastrogoan/public/{publicId}/info) que lee
+// reserva-gastrogoan.html. Es independiente del Firebase propio de cada
+// negocio (cloudConfig), que solo guarda sus datos privados.
+const PLATFORM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
 // Última versión confirmada en la nube, por cada bloque de primer nivel de DB
 // (ingredients, recipes, tpvOrders, sales...). Permite subir/aplicar solo los
 // bloques que han cambiado en vez de todo el negocio entero en cada guardado.
@@ -1608,18 +1622,41 @@ function getReservasResumenForSync(){
   return resumen;
 }
 
+/* Inicializa (una sola vez) una segunda instancia de Firebase apuntando
+   al proyecto compartido de la plataforma, y se autentica de forma anónima
+   en ella (sus reglas también exigen auth != null). Devuelve una promesa
+   que resuelve con esa instancia ya autenticada, o null si Firebase no
+   está disponible. */
+function getPlatformFirebaseApp(){
+  if(typeof firebase === 'undefined') return Promise.resolve(null);
+  let app;
+  try{
+    app = firebase.app('platform');
+  }catch(e){
+    app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform');
+  }
+  if(!app) return Promise.resolve(null);
+  if(!platformAuthPromise){
+    platformAuthPromise = app.auth().currentUser
+      ? Promise.resolve(app)
+      : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
+  }
+  return platformAuthPromise;
+}
+
 function syncPublicMirror(){
   if(!cloudConfig || typeof firebase === 'undefined') return;
   const publicId = getPublicId();
   if(!publicId) return;
-  try{
-    firebase.database().ref('gastrogoan/public/' + publicId + '/info').set({
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/public/' + publicId + '/info').set({
       business: DB.business,
       cartas: DB.cartas,
       activeCartaIds: DB.activeCartaIds,
       reservasResumen: getReservasResumenForSync()
     }).catch(()=>{});
-  }catch(e){}
+  });
 }
 
 function initCloud(){
