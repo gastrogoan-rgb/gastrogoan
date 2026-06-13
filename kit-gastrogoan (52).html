@@ -1119,14 +1119,20 @@ function ggLicSig(name){
   return out.join('-');
 }
 
+/* La clave de licencia incluye, además del nombre y la firma, un token de
+   tenant de 20 caracteres con alta entropía generado al azar por el
+   generador de licencias. Este token (y no el nombre) es el identificador
+   real del negocio en la nube compartida: no se puede deducir a partir del
+   nombre del restaurante. */
 function validateLicenseKey(key){
   if(!key) return null;
   const parts = String(key).trim().toUpperCase().split('-').map(p => p.trim()).filter(Boolean);
-  if(parts.length < 4) return null;
-  const sig = parts.slice(-3).join('-');
-  const name = parts.slice(0, -3).join('').replace(/[^A-Z0-9]/g, '');
-  if(!name) return null;
-  return sig === ggLicSig(name) ? name : null;
+  if(parts.length < 9) return null;
+  const tenantId = parts.slice(-5).join('');
+  const sig = parts.slice(-8, -5).join('-');
+  const name = parts.slice(0, -8).join('').replace(/[^A-Z0-9]/g, '');
+  if(!name || !/^[A-Z0-9]{20}$/.test(tenantId)) return null;
+  return sig === ggLicSig(name) ? { name, tenantId } : null;
 }
 
 function getLicense(){
@@ -1143,13 +1149,14 @@ function getLicense(){
 }
 
 /* Identificador privado del negocio dentro de la nube compartida.
-   Se deriva de la clave de licencia: todos los dispositivos que se
-   activen con la misma clave (dueño y empleados) caen en el mismo
-   "tenant" y se sincronizan automáticamente entre sí. */
+   Es el token de alta entropía incrustado en la clave de licencia: todos
+   los dispositivos que se activen con la misma clave (dueño y empleados)
+   caen en el mismo "tenant" y se sincronizan automáticamente entre sí. */
 function getTenantId(){
   const lic = getLicense();
   if(!lic || !lic.key) return null;
-  return String(lic.key).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  const parsed = validateLicenseKey(lic.key);
+  return parsed ? parsed.tenantId : null;
 }
 
 /* Identificador público (de menor privilegio) que se incrusta en el
@@ -1174,7 +1181,7 @@ function showActivationGate(){
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Activa tu copia para empezar</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor al comprar la app)</span></label>
-        <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
+        <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
         <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 ¿Eres empleado? Usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
@@ -1190,19 +1197,19 @@ function hideActivationGate(){
 
 function activateLicenseFromGate(){
   const key = (document.getElementById('license-key-input').value || '').trim().toUpperCase();
-  const name = validateLicenseKey(key);
+  const parsed = validateLicenseKey(key);
   const err = document.getElementById('license-error');
-  if(!name){
+  if(!parsed){
     err.textContent = 'Clave no válida. Comprueba que la copiaste entera, con los guiones, tal y como te la envió tu vendedor.';
     err.style.display = 'block';
     return;
   }
-  const lic = { name, key };
+  const lic = { name: parsed.name, key };
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   saveDB();
   hideActivationGate();
-  showToast('Licencia activada: ' + name);
+  showToast('Licencia activada: ' + parsed.name);
   initCloud();
 }
 
