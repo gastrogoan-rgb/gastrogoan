@@ -1064,11 +1064,54 @@ td.wrap{white-space:normal}
 const DB_KEY = 'gastrogoan_data_v1';
 
 /* ============================================================
-   NUBE — Configuración de Firebase (plataforma compartida GastroGoan)
-   Todas las copias de la app usan esta misma configuración. Cada
-   restaurante tiene su propio espacio privado dentro de la base de
-   datos ("tenant"), identificado a partir de su clave de licencia,
-   así que no hace falta crear un proyecto de Firebase por cliente.
+   ALMACENAMIENTO LOCAL — IndexedDB
+   localStorage limita a ~5MB por negocio, lo que un restaurante con
+   bastante actividad puede superar en 1-2 años (histórico de ventas,
+   clientes, reservas...). IndexedDB no tiene ese límite práctico, así
+   que es donde vive ahora la base de datos completa. La primera vez,
+   se migran automáticamente los datos que hubiera en localStorage.
+   ============================================================ */
+const IDB_NAME = 'gastrogoan_db';
+const IDB_STORE = 'kv';
+let _idbPromise = null;
+
+function idbOpen(){
+  if(_idbPromise) return _idbPromise;
+  _idbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return _idbPromise;
+}
+
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ============================================================
+   NUBE — Configuración de Firebase (proyecto propio de cada negocio)
+   Cada negocio configura su propio proyecto Firebase gratuito
+   (ver showFirebaseSetupGate / getCloudConfig). Dentro de ese proyecto,
+   sus datos viven en "gastrogoan/tenants/{tenantId}/db", identificado
+   a partir de su clave de licencia.
    ============================================================ */
 let cloudRef = null;
 let cloudConfig = null;
@@ -1533,7 +1576,7 @@ function applyRemoteBlock(key, remoteValue){
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return; // eco de un cambio propio
   lastSyncedSnapshot[key] = json;
   DB[key] = merged;
-  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
   if(DB.license && validateLicenseKey(DB.license.key)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
@@ -1583,7 +1626,7 @@ function startCloudSync(tenantId){
         });
         lastSyncedSnapshot = newSnapshot;
         if(changedLocally){
-          localStorage.setItem(DB_KEY, JSON.stringify(DB));
+          idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
           if(DB.license && validateLicenseKey(DB.license.key)){
             localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
             hideActivationGate();
@@ -1843,13 +1886,22 @@ function defaultData(){
   };
 }
 
-let DB = loadDB();
+let DB = defaultData();
+const dbReadyPromise = loadDB().then(d => { DB = d; });
 
-function loadDB(){
+async function loadDB(){
   try{
-    const raw = localStorage.getItem(DB_KEY);
-    if(!raw) return defaultData();
-    const data = JSON.parse(raw);
+    let data = await idbGet(DB_KEY);
+    if(data === undefined){
+      // Migración única: si había datos en localStorage (versión anterior), pásalos a IndexedDB.
+      const legacy = localStorage.getItem(DB_KEY);
+      if(legacy){
+        data = JSON.parse(legacy);
+        await idbSet(DB_KEY, data);
+        localStorage.removeItem(DB_KEY);
+      }
+    }
+    if(!data) return defaultData();
     const merged = Object.assign(defaultData(), data);
     merged.business = {...defaultData().business, ...(data.business||{})};
     if(merged.business.pinSet === undefined){
@@ -1880,7 +1932,7 @@ function loadDB(){
 }
 
 function saveDB(){
-  localStorage.setItem(DB_KEY, JSON.stringify(DB));
+  idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
   scheduleCloudSync();
 }
 
@@ -8883,7 +8935,8 @@ function goManualChapter(i){
 /* ============================================================
    INIT
    ============================================================ */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  await dbReadyPromise;
   renderHeader();
   initCloud();
   const initial = (location.hash || '#home').replace('#','');
