@@ -413,6 +413,11 @@ td.wrap{white-space:normal}
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
   <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:8px"><i class="ti ti-refresh" id="refresh-icon"></i> Actualizar</button>
+  <select id="lang-select" onchange="setLang(this.value)" style="margin-right:8px;border-radius:8px;border:1px solid var(--border);padding:6px 8px;font-size:13px;background:#fff">
+    <option value="es">🇪🇸 Castellano</option>
+    <option value="ca">🏴 Català</option>
+    <option value="en">🇬🇧 English</option>
+  </select>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
   <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:8px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i> Archivar datos</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
@@ -2020,56 +2025,203 @@ function getStockEntry(ingredientId){
   return DB.stock[ingredientId];
 }
 
+/* ============== Idiomas (i18n) ============== */
+const I18N = {
+  es: {
+    'home.heroBadge': 'Kit profesional de gestión hostelera',
+    'home.title': '¿Con qué área vamos a trabajar?',
+    'home.subtitle': 'Selecciona un área para acceder a sus herramientas',
+    'common.enter': 'Entrar', 'common.open': 'Abrir', 'common.edit': 'Editar',
+    'common.lockEdit': 'Bloquear edición', 'common.home': 'Inicio',
+    'folder.cocina.title': 'Cocina', 'folder.cocina.subtitle': 'Producción, recetas e inventario',
+    'folder.cocina.desc': 'Gestiona ingredientes, costes de recetas, fichas técnicas y carta.',
+    'folder.cocina.chips': ['Mega Lista','Escandallo','Ficha Técnica','Carta'],
+    'folder.sala.title': 'Sala', 'folder.sala.subtitle': 'Clientes, reservas y servicio',
+    'folder.sala.desc': 'Gestiona el servicio. Clientes, reservas y punto de venta.',
+    'folder.sala.chips': ['Clientes','Reservas','TPV'],
+    'folder.gestion.title': 'Gestión', 'folder.gestion.subtitle': 'Administración del negocio',
+    'folder.gestion.desc': 'Control económico completo. Gastos, P&L, tesorería y KPIs.',
+    'folder.gestion.chips': ['Gestión Económica','Panel de Control','Mi Negocio','Manual'],
+    'module.cocina.comandascocina.name': 'Comandas Cocina', 'module.cocina.comandascocina.desc': 'Pantalla en tiempo real de pedidos',
+    'module.cocina.carta.name': 'Carta', 'module.cocina.carta.desc': 'Menú por horarios',
+    'module.cocina.escandallo.name': 'Escandallo', 'module.cocina.escandallo.desc': 'Coste de los platos',
+    'module.cocina.fichas.name': 'Fichas Técnicas', 'module.cocina.fichas.desc': 'Elaboración y alérgenos',
+    'module.cocina.megalista.name': 'Mega Lista', 'module.cocina.megalista.desc': 'Ingredientes y proveedores',
+    'module.cocina.proveedores.name': 'Proveedores', 'module.cocina.proveedores.desc': 'Contactos y condiciones',
+    'module.cocina.stock.name': 'Stock', 'module.cocina.stock.desc': 'Inventario y alertas de mínimos',
+    'module.cocina.pedidos.name': 'Pedidos', 'module.cocina.pedidos.desc': 'Compras a proveedores',
+    'module.cocina.horarios.name': 'Horario del Personal', 'module.cocina.horarios.desc': 'Turnos del equipo',
+    'module.cocina.distribucion.name': 'Distribución del Trabajo', 'module.cocina.distribucion.desc': 'Tareas por empleado y turno',
+    'module.cocina.limpieza.name': 'Plan de Limpieza', 'module.cocina.limpieza.desc': 'APPCC e higiene alimentaria',
+    'module.sala.tpv.name': 'TPV', 'module.sala.tpv.desc': 'Comandas, mesas y tickets',
+    'module.sala.reservas.name': 'Reservas', 'module.sala.reservas.desc': 'Reservas vinculadas a mesas',
+    'module.sala.clientes.name': 'Clientes', 'module.sala.clientes.desc': 'Fichas y fidelización',
+    'module.sala.promocion.name': 'Promoción', 'module.sala.promocion.desc': 'Calendario de marketing del negocio',
+    'module.sala.carta.name': 'Carta', 'module.sala.carta.desc': 'Carta de bebidas',
+    'module.sala.escandallo.name': 'Escandallo', 'module.sala.escandallo.desc': 'Coste de bebidas y cócteles',
+    'module.sala.fichas.name': 'Fichas Técnicas', 'module.sala.fichas.desc': 'Elaboración y servicio',
+    'module.sala.megalista.name': 'Mega Lista', 'module.sala.megalista.desc': 'Bebidas y productos de sala',
+    'module.sala.proveedores.name': 'Proveedores', 'module.sala.proveedores.desc': 'Contactos y condiciones',
+    'module.sala.stock.name': 'Stock', 'module.sala.stock.desc': 'Inventario y alertas de mínimos',
+    'module.sala.pedidos.name': 'Pedidos', 'module.sala.pedidos.desc': 'Compras a proveedores de sala',
+    'module.sala.horarios.name': 'Horario del Personal', 'module.sala.horarios.desc': 'Turnos del equipo',
+    'module.sala.distribucion.name': 'Distribución del Trabajo', 'module.sala.distribucion.desc': 'Tareas por empleado y turno',
+    'module.sala.limpieza.name': 'Plan de Limpieza', 'module.sala.limpieza.desc': 'Limpieza e higiene de sala',
+    'module.gestion.dashboard.name': 'Panel de Control', 'module.gestion.dashboard.desc': 'KPIs centralizados',
+    'module.gestion.economia.name': 'Gestión Económica', 'module.gestion.economia.desc': 'Gastos, P&L y punto de equilibrio',
+    'module.gestion.minegocio.name': 'Mi Negocio', 'module.gestion.minegocio.desc': 'Datos del establecimiento',
+    'module.gestion.manual.name': 'Manual de Uso', 'module.gestion.manual.desc': 'Guía rápida de la app',
+  },
+  ca: {
+    'home.heroBadge': 'Kit professional de gestió hostalera',
+    'home.title': 'Amb quina àrea treballarem?',
+    'home.subtitle': 'Selecciona una àrea per accedir a les seves eines',
+    'common.enter': 'Entrar', 'common.open': 'Obrir', 'common.edit': 'Editar',
+    'common.lockEdit': 'Bloquejar edició', 'common.home': 'Inici',
+    'folder.cocina.title': 'Cuina', 'folder.cocina.subtitle': 'Producció, receptes i inventari',
+    'folder.cocina.desc': 'Gestiona ingredients, costos de receptes, fitxes tècniques i carta.',
+    'folder.cocina.chips': ['Mega Llista','Escandall','Fitxa Tècnica','Carta'],
+    'folder.sala.title': 'Sala', 'folder.sala.subtitle': 'Clients, reserves i servei',
+    'folder.sala.desc': 'Gestiona el servei. Clients, reserves i punt de venda.',
+    'folder.sala.chips': ['Clients','Reserves','TPV'],
+    'folder.gestion.title': 'Gestió', 'folder.gestion.subtitle': 'Administració del negoci',
+    'folder.gestion.desc': 'Control econòmic complet. Despeses, P&L, tresoreria i KPIs.',
+    'folder.gestion.chips': ['Gestió Econòmica','Tauler de Control','El Meu Negoci','Manual'],
+    'module.cocina.comandascocina.name': 'Comandes Cuina', 'module.cocina.comandascocina.desc': 'Pantalla en temps real de comandes',
+    'module.cocina.carta.name': 'Carta', 'module.cocina.carta.desc': 'Menú per horaris',
+    'module.cocina.escandallo.name': 'Escandall', 'module.cocina.escandallo.desc': 'Cost dels plats',
+    'module.cocina.fichas.name': 'Fitxes Tècniques', 'module.cocina.fichas.desc': 'Elaboració i al·lèrgens',
+    'module.cocina.megalista.name': 'Mega Llista', 'module.cocina.megalista.desc': 'Ingredients i proveïdors',
+    'module.cocina.proveedores.name': 'Proveïdors', 'module.cocina.proveedores.desc': 'Contactes i condicions',
+    'module.cocina.stock.name': 'Estoc', 'module.cocina.stock.desc': 'Inventari i alertes de mínims',
+    'module.cocina.pedidos.name': 'Comandes', 'module.cocina.pedidos.desc': 'Compres a proveïdors',
+    'module.cocina.horarios.name': 'Horari del Personal', 'module.cocina.horarios.desc': 'Torns de l\'equip',
+    'module.cocina.distribucion.name': 'Distribució de la Feina', 'module.cocina.distribucion.desc': 'Tasques per empleat i torn',
+    'module.cocina.limpieza.name': 'Pla de Neteja', 'module.cocina.limpieza.desc': 'APPCC i higiene alimentària',
+    'module.sala.tpv.name': 'TPV', 'module.sala.tpv.desc': 'Comandes, taules i tiquets',
+    'module.sala.reservas.name': 'Reserves', 'module.sala.reservas.desc': 'Reserves vinculades a taules',
+    'module.sala.clientes.name': 'Clients', 'module.sala.clientes.desc': 'Fitxes i fidelització',
+    'module.sala.promocion.name': 'Promoció', 'module.sala.promocion.desc': 'Calendari de màrqueting del negoci',
+    'module.sala.carta.name': 'Carta', 'module.sala.carta.desc': 'Carta de begudes',
+    'module.sala.escandallo.name': 'Escandall', 'module.sala.escandallo.desc': 'Cost de begudes i còctels',
+    'module.sala.fichas.name': 'Fitxes Tècniques', 'module.sala.fichas.desc': 'Elaboració i servei',
+    'module.sala.megalista.name': 'Mega Llista', 'module.sala.megalista.desc': 'Begudes i productes de sala',
+    'module.sala.proveedores.name': 'Proveïdors', 'module.sala.proveedores.desc': 'Contactes i condicions',
+    'module.sala.stock.name': 'Estoc', 'module.sala.stock.desc': 'Inventari i alertes de mínims',
+    'module.sala.pedidos.name': 'Comandes', 'module.sala.pedidos.desc': 'Compres a proveïdors de sala',
+    'module.sala.horarios.name': 'Horari del Personal', 'module.sala.horarios.desc': 'Torns de l\'equip',
+    'module.sala.distribucion.name': 'Distribució de la Feina', 'module.sala.distribucion.desc': 'Tasques per empleat i torn',
+    'module.sala.limpieza.name': 'Pla de Neteja', 'module.sala.limpieza.desc': 'Neteja i higiene de sala',
+    'module.gestion.dashboard.name': 'Tauler de Control', 'module.gestion.dashboard.desc': 'KPIs centralitzats',
+    'module.gestion.economia.name': 'Gestió Econòmica', 'module.gestion.economia.desc': 'Despeses, P&L i punt d\'equilibri',
+    'module.gestion.minegocio.name': 'El Meu Negoci', 'module.gestion.minegocio.desc': 'Dades de l\'establiment',
+    'module.gestion.manual.name': 'Manual d\'Ús', 'module.gestion.manual.desc': 'Guia ràpida de l\'app',
+  },
+  en: {
+    'home.heroBadge': 'Professional hospitality management kit',
+    'home.title': 'Which area shall we work on?',
+    'home.subtitle': 'Select an area to access its tools',
+    'common.enter': 'Enter', 'common.open': 'Open', 'common.edit': 'Edit',
+    'common.lockEdit': 'Lock editing', 'common.home': 'Home',
+    'folder.cocina.title': 'Kitchen', 'folder.cocina.subtitle': 'Production, recipes and inventory',
+    'folder.cocina.desc': 'Manage ingredients, recipe costs, technical sheets and menu.',
+    'folder.cocina.chips': ['Master List','Costing','Tech Sheet','Menu'],
+    'folder.sala.title': 'Dining Room', 'folder.sala.subtitle': 'Customers, reservations and service',
+    'folder.sala.desc': 'Manage service. Customers, reservations and point of sale.',
+    'folder.sala.chips': ['Customers','Reservations','POS'],
+    'folder.gestion.title': 'Management', 'folder.gestion.subtitle': 'Business administration',
+    'folder.gestion.desc': 'Complete financial control. Expenses, P&L, treasury and KPIs.',
+    'folder.gestion.chips': ['Financial Management','Dashboard','My Business','Manual'],
+    'module.cocina.comandascocina.name': 'Kitchen Orders', 'module.cocina.comandascocina.desc': 'Real-time order display',
+    'module.cocina.carta.name': 'Menu', 'module.cocina.carta.desc': 'Menu by schedule',
+    'module.cocina.escandallo.name': 'Costing', 'module.cocina.escandallo.desc': 'Cost of dishes',
+    'module.cocina.fichas.name': 'Technical Sheets', 'module.cocina.fichas.desc': 'Preparation and allergens',
+    'module.cocina.megalista.name': 'Master List', 'module.cocina.megalista.desc': 'Ingredients and suppliers',
+    'module.cocina.proveedores.name': 'Suppliers', 'module.cocina.proveedores.desc': 'Contacts and terms',
+    'module.cocina.stock.name': 'Stock', 'module.cocina.stock.desc': 'Inventory and low-stock alerts',
+    'module.cocina.pedidos.name': 'Orders', 'module.cocina.pedidos.desc': 'Purchases from suppliers',
+    'module.cocina.horarios.name': 'Staff Schedule', 'module.cocina.horarios.desc': 'Team shifts',
+    'module.cocina.distribucion.name': 'Work Distribution', 'module.cocina.distribucion.desc': 'Tasks by employee and shift',
+    'module.cocina.limpieza.name': 'Cleaning Plan', 'module.cocina.limpieza.desc': 'HACCP and food hygiene',
+    'module.sala.tpv.name': 'POS', 'module.sala.tpv.desc': 'Orders, tables and tickets',
+    'module.sala.reservas.name': 'Reservations', 'module.sala.reservas.desc': 'Reservations linked to tables',
+    'module.sala.clientes.name': 'Customers', 'module.sala.clientes.desc': 'Profiles and loyalty',
+    'module.sala.promocion.name': 'Promotion', 'module.sala.promocion.desc': 'Business marketing calendar',
+    'module.sala.carta.name': 'Menu', 'module.sala.carta.desc': 'Drinks menu',
+    'module.sala.escandallo.name': 'Costing', 'module.sala.escandallo.desc': 'Cost of drinks and cocktails',
+    'module.sala.fichas.name': 'Technical Sheets', 'module.sala.fichas.desc': 'Preparation and service',
+    'module.sala.megalista.name': 'Master List', 'module.sala.megalista.desc': 'Drinks and dining room products',
+    'module.sala.proveedores.name': 'Suppliers', 'module.sala.proveedores.desc': 'Contacts and terms',
+    'module.sala.stock.name': 'Stock', 'module.sala.stock.desc': 'Inventory and low-stock alerts',
+    'module.sala.pedidos.name': 'Orders', 'module.sala.pedidos.desc': 'Purchases from dining room suppliers',
+    'module.sala.horarios.name': 'Staff Schedule', 'module.sala.horarios.desc': 'Team shifts',
+    'module.sala.distribucion.name': 'Work Distribution', 'module.sala.distribucion.desc': 'Tasks by employee and shift',
+    'module.sala.limpieza.name': 'Cleaning Plan', 'module.sala.limpieza.desc': 'Dining room cleaning and hygiene',
+    'module.gestion.dashboard.name': 'Dashboard', 'module.gestion.dashboard.desc': 'Centralized KPIs',
+    'module.gestion.economia.name': 'Financial Management', 'module.gestion.economia.desc': 'Expenses, P&L and break-even point',
+    'module.gestion.minegocio.name': 'My Business', 'module.gestion.minegocio.desc': 'Establishment details',
+    'module.gestion.manual.name': 'User Manual', 'module.gestion.manual.desc': 'Quick app guide',
+  }
+};
+function getLang(){
+  return (DB.business && DB.business.lang) || 'es';
+}
+function setLang(lang){
+  DB.business.lang = lang;
+  saveDB();
+  location.reload();
+}
+function t(key){
+  const lang = getLang();
+  const dict = I18N[lang] || I18N.es;
+  if(dict[key] !== undefined) return dict[key];
+  return I18N.es[key] !== undefined ? I18N.es[key] : key;
+}
+
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
-    title:'Cocina', subtitle:'Producción, recetas e inventario', icon:'ti-tools-kitchen-2', color:'var(--teal)', emoji:'👨‍🍳',
-    desc:'Gestiona ingredientes, costes de recetas, fichas técnicas y carta.',
-    chips:['Mega Lista','Escandallo','Ficha Técnica','Carta'],
+    icon:'ti-tools-kitchen-2', color:'var(--teal)', emoji:'👨‍🍳',
     modules:[
-      {id:'comandascocina', name:'Comandas Cocina', icon:'ti-bell-ringing', desc:'Pantalla en tiempo real de pedidos'},
-      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Menú por horarios'},
-      {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de los platos'},
-      {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y alérgenos'},
-      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Ingredientes y proveedores'},
-      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
-      {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
-      {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores'},
-      {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
-      {id:'distribucion', name:'Distribución del Trabajo', icon:'ti-clipboard-list', desc:'Tareas por empleado y turno'},
-      {id:'limpieza', name:'Plan de Limpieza', icon:'ti-spray', desc:'APPCC e higiene alimentaria'},
+      {id:'comandascocina', icon:'ti-bell-ringing'},
+      {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'escandallo', icon:'ti-calculator'},
+      {id:'fichas', icon:'ti-file-description'},
+      {id:'megalista', icon:'ti-list-details'},
+      {id:'proveedores', icon:'ti-building-factory-2'},
+      {id:'stock', icon:'ti-package'},
+      {id:'pedidos', icon:'ti-shopping-cart'},
+      {id:'horarios', icon:'ti-calendar-time'},
+      {id:'distribucion', icon:'ti-clipboard-list'},
+      {id:'limpieza', icon:'ti-spray'},
     ]
   },
   sala: {
-    title:'Sala', subtitle:'Clientes, reservas y servicio', icon:'ti-users', color:'var(--brand-yellow)', emoji:'🍽️',
-    desc:'Gestiona el servicio. Clientes, reservas y punto de venta.',
-    chips:['Clientes','Reservas','TPV'],
+    icon:'ti-users', color:'var(--brand-yellow)', emoji:'🍽️',
     modules:[
-      {id:'tpv', name:'TPV', icon:'ti-device-desktop', desc:'Comandas, mesas y tickets'},
-      {id:'reservas', name:'Reservas', icon:'ti-calendar-event', desc:'Reservas vinculadas a mesas'},
-      {id:'clientes', name:'Clientes', icon:'ti-address-book', desc:'Fichas y fidelización'},
-      {id:'promocion', name:'Promoción', icon:'ti-speakerphone', desc:'Calendario de marketing del negocio'},
-      {id:'carta', name:'Carta', icon:'ti-tools-kitchen-2', desc:'Carta de bebidas'},
-      {id:'escandallo', name:'Escandallo', icon:'ti-calculator', desc:'Coste de bebidas y cócteles'},
-      {id:'fichas', name:'Fichas Técnicas', icon:'ti-file-description', desc:'Elaboración y servicio'},
-      {id:'megalista', name:'Mega Lista', icon:'ti-list-details', desc:'Bebidas y productos de sala'},
-      {id:'proveedores', name:'Proveedores', icon:'ti-building-factory-2', desc:'Contactos y condiciones'},
-      {id:'stock', name:'Stock', icon:'ti-package', desc:'Inventario y alertas de mínimos'},
-      {id:'pedidos', name:'Pedidos', icon:'ti-shopping-cart', desc:'Compras a proveedores de sala'},
-      {id:'horarios', name:'Horario del Personal', icon:'ti-calendar-time', desc:'Turnos del equipo'},
-      {id:'distribucion', name:'Distribución del Trabajo', icon:'ti-clipboard-list', desc:'Tareas por empleado y turno'},
-      {id:'limpieza', name:'Plan de Limpieza', icon:'ti-spray', desc:'Limpieza e higiene de sala'},
+      {id:'tpv', icon:'ti-device-desktop'},
+      {id:'reservas', icon:'ti-calendar-event'},
+      {id:'clientes', icon:'ti-address-book'},
+      {id:'promocion', icon:'ti-speakerphone'},
+      {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'escandallo', icon:'ti-calculator'},
+      {id:'fichas', icon:'ti-file-description'},
+      {id:'megalista', icon:'ti-list-details'},
+      {id:'proveedores', icon:'ti-building-factory-2'},
+      {id:'stock', icon:'ti-package'},
+      {id:'pedidos', icon:'ti-shopping-cart'},
+      {id:'horarios', icon:'ti-calendar-time'},
+      {id:'distribucion', icon:'ti-clipboard-list'},
+      {id:'limpieza', icon:'ti-spray'},
     ]
   },
   gestion: {
-    title:'Gestión', subtitle:'Administración del negocio', icon:'ti-coin', color:'var(--teal)', emoji:'📊',
-    desc:'Control económico completo. Gastos, P&L, tesorería y KPIs.',
-    chips:['Gestión Económica','Panel de Control','Mi Negocio','Manual'],
+    icon:'ti-coin', color:'var(--teal)', emoji:'📊',
     modules:[
-      {id:'dashboard', name:'Panel de Control', icon:'ti-layout-dashboard', desc:'KPIs centralizados'},
-      {id:'economia', name:'Gestión Económica', icon:'ti-coin', desc:'Gastos, P&L y punto de equilibrio'},
-      {id:'minegocio', name:'Mi Negocio', icon:'ti-building-store', desc:'Datos del establecimiento'},
-      {id:'manual', name:'Manual de Uso', icon:'ti-book', desc:'Guía rápida de la app'},
+      {id:'dashboard', icon:'ti-layout-dashboard'},
+      {id:'economia', icon:'ti-coin'},
+      {id:'minegocio', icon:'ti-building-store'},
+      {id:'manual', icon:'ti-book'},
     ]
   }
 };
@@ -2270,15 +2422,18 @@ function renderView(view){
 }
 
 function renderHome(){
+  document.querySelector('#view-home .hero-badge').innerHTML = `<i class="ti ti-star"></i> ${escapeHtml(t('home.heroBadge'))}`;
+  document.querySelector('#view-home .home-hero h1').textContent = t('home.title');
+  document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
   document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
     <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
       <div>
         <span class="folder-icon">${f.emoji}</span>
-        <h2>${f.title}</h2>
-        <p>${f.desc}</p>
-        <div class="folder-chips">${f.chips.map(c=>`<span class="folder-chip">${escapeHtml(c)}</span>`).join('')}</div>
+        <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
+        <p>${escapeHtml(t(`folder.${key}.desc`))}</p>
+        <div class="folder-chips">${t(`folder.${key}.chips`).map(c=>`<span class="folder-chip">${escapeHtml(c)}</span>`).join('')}</div>
       </div>
-      <div class="folder-btn"><i class="ti ti-arrow-right"></i> Entrar</div>
+      <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
     </div>
   `).join('');
 }
@@ -2286,16 +2441,16 @@ function renderHome(){
 function renderFolder(){
   const f = FOLDERS[currentFolder];
   if(!f){ navigate('home'); return; }
-  document.getElementById('folder-title').innerHTML = `${f.emoji} ${escapeHtml(f.title)}`;
-  document.getElementById('folder-subtitle').textContent = f.subtitle;
+  document.getElementById('folder-title').innerHTML = `${f.emoji} ${escapeHtml(t(`folder.${currentFolder}.title`))}`;
+  document.getElementById('folder-subtitle').textContent = t(`folder.${currentFolder}.subtitle`);
   const editToggle = document.getElementById('folder-edit-toggle');
   if(currentFolder === 'cocina' || currentFolder === 'sala'){
     editToggle.style.display = '';
     if(editUnlocked){
-      editToggle.innerHTML = `<i class="ti ti-lock-open"></i> Bloquear edición`;
+      editToggle.innerHTML = `<i class="ti ti-lock-open"></i> ${escapeHtml(t('common.lockEdit'))}`;
       editToggle.classList.add('btn-primary');
     } else {
-      editToggle.innerHTML = `<i class="ti ti-lock"></i> Editar`;
+      editToggle.innerHTML = `<i class="ti ti-lock"></i> ${escapeHtml(t('common.edit'))}`;
       editToggle.classList.remove('btn-primary');
     }
   } else {
@@ -2304,9 +2459,9 @@ function renderFolder(){
   document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
     <div class="module-card" onclick="navigate('${m.id}')">
       <i class="ti ${m.icon} module-icon"></i>
-      <h3>${escapeHtml(m.name)}</h3>
-      <p>${escapeHtml(m.desc)}</p>
-      <div class="module-open"><i class="ti ti-arrow-right"></i> Abrir</div>
+      <h3>${escapeHtml(t(`module.${currentFolder}.${m.id}.name`))}</h3>
+      <p>${escapeHtml(t(`module.${currentFolder}.${m.id}.desc`))}</p>
+      <div class="module-open"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.open'))}</div>
     </div>
   `).join('');
 }
@@ -8613,6 +8768,8 @@ function renderHeader(){
   }else{
     text.innerHTML = `GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span>`;
   }
+  const langSelect = document.getElementById('lang-select');
+  if(langSelect) langSelect.value = getLang();
   checkArchiveReminder();
 }
 
