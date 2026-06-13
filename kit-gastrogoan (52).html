@@ -2323,7 +2323,7 @@ function renderStock(){
         <td><strong>${escapeHtml(row.name)}</strong></td>
         <td>${fmtNum(row.qty)}</td>
         <td>
-          <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"
+          <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" ${editUnlocked?'':'disabled'}
             onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
         </td>
         <td>${escapeHtml(row.unit)}</td>
@@ -2915,7 +2915,7 @@ function renderFichas(){
         <h3 style="justify-content:space-between"><span><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
       </div>
     `).join('') + `</div>`;
@@ -2938,7 +2938,7 @@ function renderFichaCard(r){
       ${ficha ? `
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> Eliminar ficha</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> Eliminar ficha</button>
         </div>
       ` : ''}
     </div>
@@ -2976,6 +2976,8 @@ function openFichaModal(id, recipeId){
 
 function renderFichaModal(){
   const f = fichaModalState;
+  const ro = !editUnlocked;
+  const roAttr = ro ? 'disabled' : '';
 
   const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
     `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
@@ -2983,7 +2985,7 @@ function renderFichaModal(){
 
   const ingredientsHtml = f.ingredients.map((ing, idx) => `
     <div class="field-row" style="margin-bottom:6px">
-      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" oninput="updateFichaIngredient(${idx}, this.value)">
+      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" oninput="updateFichaIngredient(${idx}, this.value)" ${roAttr}>
       <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredient(${idx})" ${f.ingredients.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
     </div>
   `).join('');
@@ -2991,60 +2993,60 @@ function renderFichaModal(){
   const stepsHtml = f.pasos.map((p, idx) => `
     <div class="step-row">
       <div class="step-num">${idx+1}</div>
-      <textarea placeholder="Describe el paso de elaboración..." style="flex:1" oninput="updateFichaStep(${idx}, this.value)">${escapeHtml(p)}</textarea>
+      <textarea placeholder="Describe el paso de elaboración..." style="flex:1" oninput="updateFichaStep(${idx}, this.value)" ${roAttr}>${escapeHtml(p)}</textarea>
       <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
     </div>
   `).join('');
 
   const allergenHtml = ALLERGEN_LIST.map(a => `
-    <div class="alg-pill${(f.allergens||[]).includes(a)?' on':''}" onclick="toggleFichaAllergen('${escapeHtml(a)}')">${a}</div>
+    <div class="alg-pill${(f.allergens||[]).includes(a)?' on':''}" ${ro?'':`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`} style="${ro?'cursor:default':''}">${a}</div>
   `).join('');
 
   openModal(`
     <div class="modal-header">
-      <h3>${f.id ? 'Editar' : 'Nueva'} Ficha Técnica</h3>
+      <h3>${f.id ? (ro?'Ver':'Editar') : 'Nueva'} Ficha Técnica</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
       <div class="field">
         <label>Nombre del plato</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky">
+        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky" ${roAttr}>
       </div>
       <div class="field">
         <label>Vincular a Escandallo</label>
-        <select id="ficha-recipe">${recipeOptions}</select>
+        <select id="ficha-recipe" ${roAttr}>${recipeOptions}</select>
       </div>
     </div>
     <div class="field-row">
       <div class="field">
         <label>Comensales</label>
-        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1">
+        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${roAttr}>
       </div>
       <div class="field">
         <label>Tiempo de elaboración (min)</label>
-        <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0">
+        <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>
       </div>
       <div class="field">
         <label>Temperatura de servicio</label>
-        <select id="ficha-temp">${FICHA_TEMPS.map(t=>`<option value="${t}"${t===f.temp?' selected':''}>${t}</option>`).join('')}</select>
+        <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(t=>`<option value="${t}"${t===f.temp?' selected':''}>${t}</option>`).join('')}</select>
       </div>
     </div>
 
     <div class="field">
       <label>Ingredientes</label>
       <div id="ficha-ingredients">${ingredientsHtml}</div>
-      <button class="btn btn-sm" onclick="addFichaIngredient()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
+      <button class="owner-only btn btn-sm" onclick="addFichaIngredient()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
     </div>
 
     <div class="field">
       <label>Modo de elaboración (pasos)</label>
       <div id="ficha-steps">${stepsHtml}</div>
-      <button class="btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> Añadir paso</button>
+      <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> Añadir paso</button>
     </div>
 
     <div class="field">
       <label>Presentación / emplatado</label>
-      <textarea id="ficha-presentation" placeholder="Notas de presentación...">${escapeHtml(f.presentation||'')}</textarea>
+      <textarea id="ficha-presentation" placeholder="Notas de presentación..." ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
     </div>
 
     <div class="field">
@@ -3053,8 +3055,8 @@ function renderFichaModal(){
     </div>
 
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveFicha()">Guardar</button>
+      <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
+      <button class="owner-only btn btn-primary" onclick="saveFicha()">Guardar</button>
     </div>
   `);
 }
@@ -3905,13 +3907,13 @@ function renderTpvCartaSelector(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.cartas.length ? DB.cartas.map(c=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
+            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${(cartaAuto||!editUnlocked)?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
             ${escapeHtml(c.nombre)}
           </label>
         `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
+        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} ${editUnlocked?'':'disabled'} onchange="setCartaAuto(this.checked)">
         Cambio automático según horario
       </label>
       <span style="font-size:12px;color:var(--muted)">
@@ -3932,7 +3934,7 @@ function renderTpvMenuSelector(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.menus.map(m=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
+            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${(cartaAuto||!editUnlocked)?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
             ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}
           </label>
         `).join('')}
@@ -3977,7 +3979,7 @@ function renderTpvMesas(tiposServicio){
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
         </div>
       </div>
     `;
@@ -4053,7 +4055,7 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
-      ${tiposServicio.mesa ? `<button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
+      ${tiposServicio.mesa ? `<button class="owner-only btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvMesas(tiposServicio)}
@@ -6656,11 +6658,11 @@ function renderLimpiezaManos(){
         ${pasos.map((p,i) => `
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
             <div class="step-num">${i+1}</div>
-            <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)">
+            <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
             <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
         `).join('')}
-        <button class="btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
+        <button class="owner-only btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
       </div>
       <div>
         <div class="card">
@@ -6711,7 +6713,7 @@ function renderLimpiezaSemana(){
     <div class="toolbar">
       <div class="left" style="font-size:13px;color:var(--muted)">Semana del ${semana}</div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-sm" onclick="addLimpiezaTarea()"><i class="ti ti-plus"></i> Añadir tarea</button>
+        <button class="owner-only btn btn-sm" onclick="addLimpiezaTarea()"><i class="ti ti-plus"></i> Añadir tarea</button>
         <button class="btn btn-sm" onclick="printLimpiezaSemana()"><i class="ti ti-printer"></i> Imprimir</button>
       </div>
     </div>
@@ -6840,7 +6842,7 @@ function renderLimpiezaMantenimiento(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
+      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -6945,7 +6947,7 @@ function renderDistribucion(){
 
   if(!DB.employees.length){
     box.innerHTML = `
-      <div class="toolbar"><div class="left"></div><button class="btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
+      <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
       <div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos para asignarles tareas.</div>
     `;
     return;
@@ -7019,7 +7021,7 @@ function renderDistDetail(){
     const tareas = d.produccion[idx] || [];
     const tareasHtml = tareas.map((t,i)=>`
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updateDistTarea(${idx},${i},this.value)">
+        <input type="text" value="${escapeHtml(t)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updateDistTarea(${idx},${i},this.value)" ${editUnlocked?'':'disabled'}>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
       </div>
     `).join('');
@@ -7027,7 +7029,7 @@ function renderDistDetail(){
       <div style="padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label}</div>
         ${tareasHtml}
-        <div style="display:flex;gap:6px;margin-top:4px">
+        <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
           <input type="text" id="dist-tarea-${idx}" placeholder="Nueva tarea..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
         </div>
@@ -7056,14 +7058,14 @@ function renderDistDetail(){
     <div class="card">
       <h3><i class="ti ti-tools-kitchen-2"></i> Platos a su cargo</h3>
       ${platosHtml}
-      <div class="field-row" style="margin-top:8px">
+      <div class="owner-only field-row" style="margin-top:8px">
         <select id="dist-plato-sel" style="flex:1">
           <option value="">— Selecciona plato —</option>
           ${platosOptions}
         </select>
         <button class="btn btn-default" onclick="addDistPlato()">Asignar</button>
       </div>
-      <div class="field-row" style="margin-top:6px">
+      <div class="owner-only field-row" style="margin-top:6px">
         <input type="text" id="dist-plato-manual" placeholder="O escribe un plato manualmente..." style="flex:1" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
         <button class="btn btn-default" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> Añadir</button>
       </div>
