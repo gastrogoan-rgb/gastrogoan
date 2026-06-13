@@ -1701,6 +1701,9 @@ function initCloud(){
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
   const merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
+  if(key === 'tpvOrders'){
+    (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
+  }
   const json = JSON.stringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return; // eco de un cambio propio
   lastSyncedSnapshot[key] = json;
@@ -1790,7 +1793,7 @@ function startCloudSync(tenantId){
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
           clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
           date: req.date || '', time: req.time || '',
-          status: 'pendiente-online', items: req.items || [], createdAt: new Date().toISOString()
+          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString()
         });
       }
       saveDB();
@@ -2053,6 +2056,7 @@ async function loadDB(){
     if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
     if(!Array.isArray(merged.promos)) merged.promos = [];
     (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
+    (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
@@ -5545,7 +5549,7 @@ function confirmAddTable(){
   const table = {id: genId(), name};
   DB.tables.push(table);
   if(pax > 0){
-    const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], createdAt: new Date().toISOString()};
+    const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
     DB.tpvOrders.push(order);
     saveDB();
     renderTPV();
@@ -5645,7 +5649,7 @@ function confirmOpenTableOrder(tableId){
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast('Indica el número de personas'); return; }
   }
-  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -5673,7 +5677,7 @@ function newToGoOrder(tipo){
 
 function confirmNewToGoOrder(tipo){
   const clienteNombre = (document.getElementById('new-togo-name').value||'').trim();
-  const order = {id: genId(), tableId:null, tipo, clienteNombre, status:'abierta', items:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId:null, tipo, clienteNombre, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
