@@ -134,6 +134,11 @@ let db = null;
 let DB = null; // { business, cartas, activeCartaId }
 let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
 let cart = []; // [{recipeId, sectionId, name, price, qty}]
+let redsysConfigured = false;
+
+// Worker (Cloudflare) que firma los pagos del TPV virtual (Redsys) sin
+// exponer la clave secreta del restaurante en este navegador.
+const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
 
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -178,6 +183,29 @@ function init(){
   publicId = getPublicIdFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
   if(!publicId){ showError('Enlace no válido o incompleto'); return; }
+
+  // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
+  const pago = new URLSearchParams(location.search).get('pago');
+  if(pago === 'ok'){
+    document.getElementById('app').innerHTML = `
+      <div class="success">
+        <div class="icon">✅</div>
+        <h2>¡Pago realizado! Tu pedido se está preparando.</h2>
+      </div>
+    `;
+    return;
+  }
+  if(pago === 'ko'){
+    document.getElementById('app').innerHTML = `
+      <div class="error-box">
+        <div class="icon">⚠️</div>
+        <h2>El pago no se ha completado</h2>
+        <p style="font-size:13px;color:#888">Tu pedido no se ha enviado. Vuelve atrás e inténtalo de nuevo.</p>
+      </div>
+    `;
+    return;
+  }
+
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.database();
@@ -207,10 +235,24 @@ function loadBusinessInfo(){
     };
     renderHeader();
     renderApp();
+    checkRedsysConfigured();
   }).catch(e => {
     console.error(e);
     showError('No se ha podido conectar con el restaurante');
   });
+}
+
+// Comprueba si el restaurante acepta pago con tarjeta online (TPV virtual).
+// Si la comprobación llega después del primer render, se vuelve a pintar el
+// formulario de pedido para mostrar la opción de pago.
+function checkRedsysConfigured(){
+  fetch(`${REDSYS_WORKER_URL}/config?publicId=${encodeURIComponent(publicId)}`)
+    .then(r => r.json())
+    .then(data => {
+      redsysConfigured = !!(data && data.configured);
+      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery')) renderTabContent();
+    })
+    .catch(() => {});
 }
 
 function renderHeader(){
@@ -492,6 +534,12 @@ function renderOrderForm(){
         <label>Notas (alergias, observaciones...)</label>
         <textarea id="o-notes" placeholder="Opcional"></textarea>
       </div>
+      ${redsysConfigured ? `
+      <div class="field">
+        <label>Forma de pago</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> Pagar al ${isDelivery?'recibir':'recoger'}</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" style="width:auto"> Pagar ahora con tarjeta</label>
+      </div>` : ''}
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">Enviar pedido</button>
     </div>
   `;
@@ -568,7 +616,56 @@ function submitOrder(){
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
+
+  const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
+  if(pagoTarjeta){
+    const total = cart.reduce((s,l)=>s+l.price*l.qty,0);
+    payWithCard(req, total, isDelivery ? 'Pedido a domicilio' : 'Pedido para recoger');
+    return;
+  }
+
   sendRequest(req, 'Pedido enviado. El restaurante lo confirmará en breve.');
+}
+
+/* ============ PAGO CON TARJETA (TPV virtual / Redsys) ============
+   1) Enviamos el pedido como siempre (con una referencia propia).
+   2) Pedimos al Worker que firme el pago con esa referencia.
+   3) Redirigimos al cliente al TPV de Redsys. Cuando el banco confirme el
+      pago, el Worker avisará automáticamente al restaurante. */
+function payWithCard(req, amount, description){
+  const clientRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  req.clientRef = clientRef;
+
+  db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+    const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+    return fetch(`${REDSYS_WORKER_URL}/sign`, {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({
+        publicId, orderRef: clientRef, amount, description,
+        urlOk: base + '&pago=ok',
+        urlKo: base + '&pago=ko'
+      })
+    });
+  }).then(r => r.json()).then(data => {
+    if(!data || !data.url || data.error){
+      alert('No se ha podido iniciar el pago con tarjeta. ' + (data && data.error ? data.error : ''));
+      return;
+    }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = data.url;
+    Object.entries(data.fields).forEach(([k,v]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = k; input.value = v;
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  }).catch(e => {
+    console.error(e);
+    alert('No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.');
+  });
 }
 
 /* ============ PEDIDO EN MESA (auto-pedido) ============ */

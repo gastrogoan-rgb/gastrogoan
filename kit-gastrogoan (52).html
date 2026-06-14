@@ -1319,6 +1319,12 @@ function getPublicId(){
 const REVOKED_LIST_URL = 'https://raw.githubusercontent.com/gastrogoan-rgb/gastrogoan/main/revoked-licenses.json';
 const REVOKED_CACHE_KEY = 'gastrogoan_revoked_v1';
 
+/* Worker (Cloudflare) que actúa de puente para el TPV virtual (Redsys):
+   firma las peticiones de pago con la clave secreta (que nunca llega al
+   navegador) y recibe la confirmación de pago de Redsys para avisar
+   automáticamente a este negocio. */
+const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
+
 async function checkLicenseRevocation(){
   const tenantId = getTenantId();
   if(!tenantId) return;
@@ -1692,7 +1698,8 @@ function initPublicRequestsListener(){
         }else{
           DB.tpvOrders.push({
             id: genId(), tableId: req.tableId || null, tipo:'mesa', pax: req.pax || 1,
-            clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString()
+            clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
+            clientRef: req.clientRef || null
           });
         }
       }else if(req.type === 'pedido'){
@@ -1701,8 +1708,18 @@ function initPublicRequestsListener(){
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
           clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
           date: req.date || '', time: req.time || '',
-          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString()
+          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString(),
+          clientRef: req.clientRef || null
         });
+      }else if(req.type === 'pago_confirmado'){
+        // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
+        // automáticamente a través del Worker. Marca el pedido como pagado.
+        const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
+        if(order){
+          order.pagado = true;
+          order.pagoImporte = req.amount;
+          order.pagoFecha = req.createdAt;
+        }
       }
       saveDB();
       refreshAfterRemoteChange();
@@ -1917,6 +1934,86 @@ function renderTableQrCard(link){
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   TPV VIRTUAL (Redsys) - cobro online con tarjeta
+   El dinero va directo a la cuenta bancaria del negocio (TPV virtual
+   de su propio banco). La clave secreta de Redsys nunca se guarda en
+   este dispositivo ni en el navegador del cliente: se envía una sola
+   vez al Worker, que la guarda en una ruta privada de Firebase y la
+   usa para firmar los pagos y validar la confirmación de Redsys.
+   ============================================================ */
+function renderRedsysCard(){
+  if(!getTenantId()) return '';
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-credit-card"></i> 💳 Pago online con tarjeta (TPV virtual)</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Permite que tus clientes paguen con tarjeta al hacer un pedido online (take away/delivery). El cobro se realiza a través del TPV virtual de tu propio banco (Redsys): el dinero llega directamente a tu cuenta, sin intermediarios.</p>
+      <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">Comprobando configuración...</div>
+      <div class="field">
+        <label>Código de comercio (FUC)</label>
+        <input type="text" id="rs-fuc" placeholder="999008881" style="font-family:monospace">
+      </div>
+      <div class="field">
+        <label>Terminal</label>
+        <input type="text" id="rs-terminal" placeholder="1" style="font-family:monospace;max-width:120px">
+      </div>
+      <div class="field">
+        <label>Clave secreta (Firma)</label>
+        <input type="password" id="rs-clave" placeholder="Pégala aquí (no se mostrará de nuevo)" style="font-family:monospace">
+        <small style="color:var(--muted)">La obtienes en el módulo de administración de tu TPV virtual, dentro de la web de tu banco.</small>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="rs-real" style="width:18px;height:18px"> Entorno real (cobros reales). Desmarcado = modo pruebas.
+        </label>
+      </div>
+      <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  `;
+}
+
+async function loadRedsysCardStatus(){
+  const el = document.getElementById('redsys-status');
+  if(!el || !getTenantId()) return;
+  try{
+    const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(getTenantId())}`);
+    const data = await res.json();
+    if(data && data.configured){
+      el.innerHTML = `<span style="color:var(--brand-orange);font-weight:600"><i class="ti ti-check"></i> Configurado</span> · FUC ${escapeHtml(data.fuc)} · Terminal ${escapeHtml(data.terminal)} · Entorno ${data.ambiente === 'real' ? 'real' : 'pruebas'}`;
+      document.getElementById('rs-fuc').value = data.fuc || '';
+      document.getElementById('rs-terminal').value = data.terminal || '';
+      document.getElementById('rs-real').checked = data.ambiente === 'real';
+    }else{
+      el.innerHTML = 'Aún no has configurado el pago con tarjeta.';
+    }
+  }catch(e){
+    el.innerHTML = 'No se pudo comprobar la configuración (revisa tu conexión).';
+  }
+}
+
+async function saveRedsysConfig(){
+  const fuc = document.getElementById('rs-fuc').value.trim();
+  const terminal = document.getElementById('rs-terminal').value.trim();
+  const claveSecreta = document.getElementById('rs-clave').value.trim();
+  const ambiente = document.getElementById('rs-real').checked ? 'real' : 'test';
+  if(!fuc || !terminal){ showToast('Indica el código de comercio (FUC) y el terminal'); return; }
+  if(!claveSecreta){ showToast('Indica la clave secreta'); return; }
+  try{
+    const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({ tenantId: getTenantId(), fuc, terminal, claveSecreta, ambiente })
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){ showToast(data.error || 'Error al guardar'); return; }
+    document.getElementById('rs-clave').value = '';
+    showToast('Configuración de pago guardada');
+    loadRedsysCardStatus();
+  }catch(e){
+    showToast('No se pudo guardar (revisa tu conexión)');
+  }
 }
 
 function copyPublicLinkFrom(elId){
@@ -5498,7 +5595,7 @@ function renderTpvMesas(tiposServicio){
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
         <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''}
+        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
@@ -5528,7 +5625,7 @@ function renderTpvToGo(tiposServicio){
         return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''}
+          <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
@@ -5550,6 +5647,7 @@ function renderTpvPendingOnline(){
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</span>
             <span class="badge badge-amber">Nuevo</span>
           </h3>
+          ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
           ${(o.date || o.time) ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${escapeHtml(o.date||'')}${o.date && o.time ? ' · ' : ''}${escapeHtml(o.time||'')}</div>` : ''}
           ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : ''}
@@ -5981,6 +6079,7 @@ function renderTableOrderModal(orderId){
     : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
+  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
 
   const linesHtml = renderOrderLinesHtml(order);
   const total = orderTotal(order);
@@ -5991,7 +6090,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderTandaSelector(order)}
@@ -10002,6 +10101,7 @@ function renderMiNegocio(){
   const b = DB.business || {};
   document.getElementById('minegocio-content').innerHTML = `
     ${renderOnlineCard()}
+    ${renderRedsysCard()}
 
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-map-2"></i> Tour de la app</h3>
@@ -10163,6 +10263,7 @@ function renderMiNegocio(){
 
     ${renderDataMaintenanceCard()}
   `;
+  loadRedsysCardStatus();
 }
 
 /* ============================================================
