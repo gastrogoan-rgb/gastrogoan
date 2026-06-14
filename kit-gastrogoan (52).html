@@ -1227,41 +1227,8 @@ function updateActiveSlotName(name){
   }
 }
 
-/* Selector de negocios: permite cambiar entre las licencias activadas en
-   este mismo PC, o añadir una nueva. Cada negocio guarda sus datos por
-   completo aparte (su propia base IndexedDB y su propia licencia), así que
-   cambiar de negocio simplemente recarga la app apuntando a otro slot. */
-function openBusinessSwitcher(){
-  openModal(renderBusinessSwitcherHtml());
-}
-
-function renderBusinessSwitcherHtml(){
-  const slots = getBusinessSlots();
-  return `
-    <div class="modal-header">
-      <h3><i class="ti ti-building-store"></i> Tus negocios</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:13px;color:var(--muted)">Puedes tener varias licencias activadas en este mismo navegador. Cada negocio guarda sus datos por separado.</p>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-      ${slots.map(s => `
-        <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;${s.id===ACTIVE_SLOT?'border:2px solid var(--brand-orange)':''}">
-          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
-            <i class="ti ti-tools-kitchen-2"></i>
-            <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.name || 'Negocio')}</span>
-            ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Activo</span>' : ''}
-          </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
-            ${s.id!==ACTIVE_SLOT ? `<button class="btn btn-sm btn-primary" onclick="switchToBusiness('${escapeHtml(s.id)}')">Entrar</button>` : ''}
-            <button class="btn btn-sm btn-danger" onclick="removeBusinessSlot('${escapeHtml(s.id)}')" title="Eliminar de esta lista"><i class="ti ti-trash"></i></button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-    <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Añadir otro negocio</button>
-  `;
-}
-
+// Cambia de negocio activo (recarga la app apuntando a otro slot, con su
+// propia base IndexedDB y su propia licencia, totalmente independientes).
 function switchToBusiness(slotId){
   if(slotId === ACTIVE_SLOT) return;
   localStorage.setItem(ACTIVE_SLOT_LS, slotId);
@@ -1292,8 +1259,7 @@ function removeBusinessSlot(slotId){
     localStorage.setItem(ACTIVE_SLOT_LS, fallback);
     location.reload();
   }else{
-    closeModal();
-    openBusinessSwitcher();
+    showBusinessSelectScreen();
   }
 }
 
