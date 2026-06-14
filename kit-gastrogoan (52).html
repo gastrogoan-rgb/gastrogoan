@@ -6263,45 +6263,80 @@ function rejectOnlineOrder(orderId){
 }
 
 function addTable(){
+  const pendingReservas = getTodayPendingReservations();
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-tools-kitchen-2"></i> Nueva mesa</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
+      <label>Tipo de cliente</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-table-tipo-cliente" value="paso" checked onchange="toggleNewTableReservaField()" style="width:auto"> Cliente de paso</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-table-tipo-cliente" value="reserva" onchange="toggleNewTableReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
+      </div>
+    </div>
+    <div class="field" id="new-table-reserva-field" style="display:none">
+      <label>Selecciona la reserva</label>
+      <select id="new-table-reserva-sel">
+        ${pendingReservas.map(r=>{
+          const client = DB.clients.find(c=>c.id===r.clientId);
+          const name = client ? client.name : (r.clientName||'—');
+          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} pers.</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div class="field">
       <label>Número o nombre de la mesa</label>
       <input type="text" id="new-table-name" placeholder="Ej. Mesa 5, Terraza 2...">
     </div>
-    <div class="field">
-      <label>Personas (opcional — si lo rellenas, se abre la comanda al momento)</label>
-      <input type="number" id="new-table-pax" min="0" value="2">
+    <div class="field" id="new-table-pax-field">
+      <label>¿Cuántas personas?</label>
+      <input type="number" id="new-table-pax" min="1" value="2">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmAddTable()">Crear mesa</button>
+      <button class="btn btn-primary" onclick="confirmAddTable()">Crear mesa y abrir comanda</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-table-name')?.focus(), 50);
 }
 
+function toggleNewTableReservaField(){
+  const isReserva = document.querySelector('input[name="new-table-tipo-cliente"]:checked').value === 'reserva';
+  document.getElementById('new-table-reserva-field').style.display = isReserva ? '' : 'none';
+  document.getElementById('new-table-pax-field').style.display = isReserva ? 'none' : '';
+}
+
 function confirmAddTable(){
   const name = (document.getElementById('new-table-name').value||'').trim();
-  if(!name){ showToast('Escribe un nombre para la mesa'); return; }
-  const pax = parseInt(document.getElementById('new-table-pax').value) || 0;
+  if(!name){ showToast('Escribe un número o nombre para la mesa'); return; }
+  const tipo = document.querySelector('input[name="new-table-tipo-cliente"]:checked')?.value || 'paso';
+
+  let pax, clienteNombre = '', clientId = null, reservationId = null, r = null;
+  if(tipo === 'reserva'){
+    const resId = parseInt(document.getElementById('new-table-reserva-sel').value);
+    r = DB.reservations.find(x=>x.id===resId);
+    if(!r){ showToast('Selecciona una reserva'); return; }
+    pax = r.people;
+    clientId = r.clientId;
+    const client = DB.clients.find(c=>c.id===r.clientId);
+    clienteNombre = client ? client.name : (r.clientName||'');
+    reservationId = r.id;
+  }else{
+    pax = parseInt(document.getElementById('new-table-pax').value) || 0;
+    if(pax <= 0){ showToast('Indica el número de personas'); return; }
+  }
+
   const table = {id: genId(), name};
   DB.tables.push(table);
-  if(pax > 0){
-    const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre:'', status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
-    DB.tpvOrders.push(order);
-    saveDB();
-    renderTPV();
-    renderTableOrderModal(order.id);
-    return;
-  }
+  if(r){ r.llegada = true; r.tableId = table.id; }
+
+  const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
   saveDB();
   renderTPV();
-  closeModal();
-  showToast('Mesa creada');
+  renderTableOrderModal(order.id);
 }
 function deleteTable(id){
   if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
@@ -6501,7 +6536,7 @@ function renderOrderMenuHtml(order){
     `;
   }
 
-  return menusHtml + renderCartasMenuHtml(order, activeCartas);
+  return menusHtml + renderCartasMenuHtml(order, [...bebidaCartas, ...comidaCartas]);
 }
 
 function openMenuConfigModal(orderId, menuId){
