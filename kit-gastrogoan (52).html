@@ -1333,6 +1333,7 @@ function hideBusinessSelectScreen(){
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
     hideBusinessSelectScreen();
+    if(!getLicense()) showActivationGate();
     return;
   }
   switchToBusiness(slotId);
@@ -1559,8 +1560,10 @@ function showActivationGate(){
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   const cardStyle = (active) => `flex:1;border:2px solid ${active?'var(--brand-orange)':'var(--border)'};background:${active?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
-    <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
+    <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
+      ${showBackBtn ? `<button onclick="backToBusinessSelectorFromGate()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Activa tu copia para empezar</p>
@@ -1611,6 +1614,13 @@ function selectOnboardingRole(role){
 function hideActivationGate(){
   const g = document.getElementById('license-gate');
   if(g) g.remove();
+}
+
+// Desde la pantalla de activación de un negocio sin licencia, vuelve al
+// selector de negocios para poder elegir otro o quitar este de la lista.
+function backToBusinessSelectorFromGate(){
+  hideActivationGate();
+  showBusinessSelectScreen();
 }
 
 /* Reglas de seguridad de Firebase que el propietario debe pegar en
