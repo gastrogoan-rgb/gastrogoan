@@ -2576,6 +2576,52 @@ function fmtNum(v, dec=2){
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+
+/* ============== Traducción automática de la carta (MyMemory, gratis) ============== */
+const CARTA_LANGS = ['en','ca'];
+const MY_MEMORY_URL = 'https://api.mymemory.translated.net/get';
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+async function translateText(text, targetLang){
+  if(!text || !text.trim()) return '';
+  try{
+    const url = `${MY_MEMORY_URL}?q=${encodeURIComponent(text)}&langpair=es|${targetLang}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const translated = data && data.responseData && data.responseData.translatedText;
+    return (translated && !/^MYMEMORY WARNING/i.test(translated)) ? translated : '';
+  }catch(e){
+    return '';
+  }
+}
+
+// Traduce automáticamente al inglés y catalán los nombres de secciones y platos
+// de una carta que aún no tengan traducción guardada. Se ejecuta en segundo
+// plano tras guardar la carta, sin bloquear la interfaz.
+async function autoTranslateCarta(carta){
+  let changed = false;
+  for(const sec of (carta.secciones||[])){
+    if(!sec.i18n) sec.i18n = {};
+    for(const lang of CARTA_LANGS){
+      if(sec.nombre && !sec.i18n[lang]){
+        const t = await translateText(sec.nombre, lang);
+        if(t){ sec.i18n[lang] = t; changed = true; await sleep(300); }
+      }
+    }
+    for(const p of (sec.platos||[])){
+      if(!p.i18n) p.i18n = {};
+      for(const lang of CARTA_LANGS){
+        if(!p.i18n[lang]) p.i18n[lang] = {};
+        if(p.nombre && !p.i18n[lang].nombre){
+          const t = await translateText(p.nombre, lang);
+          if(t){ p.i18n[lang].nombre = t; changed = true; await sleep(300); }
+        }
+      }
+    }
+  }
+  if(changed) saveDB();
+}
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -5192,6 +5238,7 @@ function saveCarta(){
   if(idx>=0) DB.cartas[idx] = cartaEdit;
   else DB.cartas.push(cartaEdit);
   saveDB();
+  autoTranslateCarta(cartaEdit).catch(()=>{});
   cartaEdit = null;
   updateAutoActiveCarta(true);
   renderCarta();
