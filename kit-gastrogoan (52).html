@@ -444,7 +444,7 @@ td.wrap{white-space:normal}
   padding:16px;
 }
 #business-select-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
-.bs-box{width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;animation:splash-pop .4s ease}
+.bs-box{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;animation:splash-pop .4s ease}
 .bs-title{font-size:20px;font-weight:800;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
 .bs-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto}
 .bs-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s}
@@ -484,7 +484,7 @@ td.wrap{white-space:normal}
     <option value="ca">🏴 Català</option>
     <option value="en">🇬🇧 English</option>
   </select>
-  <button class="btn btn-sm" id="business-switch-btn" onclick="openBusinessSwitcher()" style="margin-right:8px" title="Cambiar de negocio"><i class="ti ti-building-store"></i> Negocios</button>
+  <button class="btn btn-sm" id="business-switch-btn" onclick="showBusinessSelectScreen()" style="margin-right:8px" title="Cambiar de negocio"><i class="ti ti-building-store"></i> Negocios</button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
   <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:8px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i> Archivar datos</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
@@ -1310,6 +1310,7 @@ function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
   return `
     <div class="bs-box">
+      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="Cerrar">&times;</button>
       <div class="bs-title">
         <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff"><i class="ti ti-tools-kitchen-2"></i></div>
         Selecciona tu negocio
@@ -1321,7 +1322,10 @@ function renderBusinessSelectScreenHtml(){
               <i class="ti ti-building-store"></i>
               <span class="bs-item-name">${escapeHtml(s.name || 'Negocio')}</span>
             </div>
-            ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
+              ${slots.length>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+            </div>
           </div>
         `).join('')}
       </div>
@@ -1330,9 +1334,13 @@ function renderBusinessSelectScreenHtml(){
   `;
 }
 
+function hideBusinessSelectScreen(){
+  document.getElementById('business-select-screen').classList.add('hide');
+}
+
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
-    document.getElementById('business-select-screen').classList.add('hide');
+    hideBusinessSelectScreen();
     return;
   }
   switchToBusiness(slotId);
