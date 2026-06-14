@@ -125,6 +125,18 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+
+.card-compact{padding:10px 12px;margin-bottom:0}
+.card-compact h3{font-size:13.5px;margin-bottom:6px}
+.card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
+
+.view-toggle{display:flex;gap:4px}
+.view-toggle .btn.active{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
+
+.list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface)}
+.list-row .list-row-name{flex:1;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;min-width:0}
+.list-row .list-row-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
@@ -605,7 +617,6 @@ td.wrap{white-space:normal}
               <th>Proveedor</th>
               <th>Unidad</th>
               <th>Compra</th>
-              <th>Precio/ud</th>
               <th>Alérgenos</th>
               <th></th>
             </tr>
@@ -641,6 +652,10 @@ td.wrap{white-space:normal}
           <select id="escandallo-filter-cat" onchange="renderEscandallo()">
             <option value="">Todas las categorías</option>
           </select>
+          <div class="view-toggle">
+            <button class="btn btn-sm" id="escandallo-view-grid" onclick="setEscandalloView('grid')"><i class="ti ti-layout-grid"></i></button>
+            <button class="btn btn-sm" id="escandallo-view-list" onclick="setEscandalloView('list')"><i class="ti ti-list"></i></button>
+          </div>
         </div>
         <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
       </div>
@@ -655,9 +670,14 @@ td.wrap{white-space:normal}
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
       <div class="toolbar">
         <div class="left">
+          <input type="text" class="search-input" id="fichas-search" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
           <select id="fichas-filter-cat" onchange="renderFichas()">
             <option value="">Todas las categorías</option>
           </select>
+          <div class="view-toggle">
+            <button class="btn btn-sm" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
+            <button class="btn btn-sm" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
+          </div>
         </div>
       </div>
       <div id="fichas-list"></div>
@@ -2472,7 +2492,7 @@ function defaultData(){
     stock: {},          // { ingredientId: { qty, min } }
     elaboraciones: [],   // {id, name, unit, qty, min} — elaboraciones propias (caldos, salsas, etc.)
     purchaseOrders: [],
-    providers: [],        // {id, nombre, tel, email, contacto, pago, dir, iban, notas}
+    providers: [],        // {id, nombre, tel, email, contacto, pago, dir, iban, diaEntrega, horaEntrega, notas}
     tables: [],
     tpvOrders: [],
     sales: [],
@@ -3584,12 +3604,12 @@ const FOLDERS = {
     modules:[
       {id:'comandascocina', icon:'ti-bell-ringing'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'proveedores', icon:'ti-building-factory-2'},
+      {id:'megalista', icon:'ti-list-details'},
       {id:'escandallo', icon:'ti-calculator'},
       {id:'fichas', icon:'ti-file-description'},
-      {id:'megalista', icon:'ti-list-details'},
-      {id:'proveedores', icon:'ti-building-factory-2'},
-      {id:'stock', icon:'ti-package'},
       {id:'pedidos', icon:'ti-shopping-cart'},
+      {id:'stock', icon:'ti-package'},
       {id:'horarios', icon:'ti-calendar-time'},
       {id:'distribucion', icon:'ti-clipboard-list'},
       {id:'limpieza', icon:'ti-spray'},
@@ -3603,12 +3623,12 @@ const FOLDERS = {
       {id:'clientes', icon:'ti-address-book'},
       {id:'promocion', icon:'ti-speakerphone'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'proveedores', icon:'ti-building-factory-2'},
+      {id:'megalista', icon:'ti-list-details'},
       {id:'escandallo', icon:'ti-calculator'},
       {id:'fichas', icon:'ti-file-description'},
-      {id:'megalista', icon:'ti-list-details'},
-      {id:'proveedores', icon:'ti-building-factory-2'},
-      {id:'stock', icon:'ti-package'},
       {id:'pedidos', icon:'ti-shopping-cart'},
+      {id:'stock', icon:'ti-package'},
       {id:'horarios', icon:'ti-calendar-time'},
       {id:'distribucion', icon:'ti-clipboard-list'},
       {id:'limpieza', icon:'ti-spray'},
@@ -4146,7 +4166,7 @@ function renderMegalista(){
 
   const tbody = document.getElementById('megalista-tbody');
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
     return;
   }
 
@@ -4157,7 +4177,6 @@ function renderMegalista(){
       <td>${escapeHtml(ing.supplier||'—')}</td>
       <td>${escapeHtml(ing.unit)}</td>
       <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
-      <td>${fmtMoney(ing.price)}</td>
       <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
       <td class="actions-cell">
         <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
@@ -4231,10 +4250,6 @@ function openIngredientModal(id){
         <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
       </div>
     </div>
-    <div class="field" style="background:var(--brand-cream);border-radius:8px;padding:8px 12px">
-      <label>Precio por unidad (calculado)</label>
-      <div id="ing-unit-price" style="font-weight:700;font-size:16px">${fmtMoney(ing.price)} / ${escapeHtml(ing.unit)}</div>
-    </div>
     <div class="field">
       <label>Alérgenos</label>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px">
@@ -4249,11 +4264,7 @@ function openIngredientModal(id){
 }
 
 function updateIngPackPrice(){
-  const qty = parseFloat(document.getElementById('ing-pack-qty').value) || 0;
-  const packPrice = parseFloat(document.getElementById('ing-pack-price').value) || 0;
   const unit = document.getElementById('ing-unit').value;
-  const price = qty > 0 ? packPrice / qty : 0;
-  document.getElementById('ing-unit-price').textContent = `${fmtMoney(price)} / ${unit}`;
   document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${unit==='g'?', ej. 1000 = 1 kg':''})`;
 }
 
@@ -4588,6 +4599,12 @@ function groupRecipesByCategory(recipes){
   return ordered;
 }
 
+let escandalloView = 'grid'; // 'grid' | 'list'
+function setEscandalloView(mode){
+  escandalloView = mode;
+  renderEscandallo();
+}
+
 function renderEscandallo(){
   populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
@@ -4600,6 +4617,9 @@ function renderEscandallo(){
   });
   const box = document.getElementById('escandallo-list');
 
+  document.getElementById('escandallo-view-grid').classList.toggle('active', escandalloView==='grid');
+  document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
+
   if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay platos. Crea el primer escandallo.</div>`;
     return;
@@ -4609,10 +4629,33 @@ function renderEscandallo(){
     return;
   }
 
+  const gridClass = escandalloView==='list' ? '' : 'grid grid-compact';
   box.innerHTML = groupRecipesByCategory(recipes).map(([catName, group]) => `
     <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-    <div class="grid grid-2">${group.map(r => renderEscandalloCard(r)).join('')}</div>
+    <div class="${gridClass}">${group.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>
   `).join('');
+}
+
+function renderEscandalloRow(r){
+    const breakdown = recipeCostBreakdown(r);
+    const cost = breakdown.total;
+    const pct = recipeFoodCostPct(r);
+    const margin = (r.price||0) - cost;
+    const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
+      : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
+      : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
+      : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
+    return `
+      <div class="list-row">
+        <div class="list-row-name"><i class="ti ti-chef-hat"></i> <span>${escapeHtml(r.name)}</span></div>
+        <span style="font-size:12px;color:var(--muted)">Coste ${fmtMoney(cost)} · PVP ${fmtMoney(r.price||0)} · Margen ${fmtMoney(margin)}</span>
+        ${pctBadge}
+        <div class="actions-cell">
+          <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    `;
 }
 
 function renderEscandalloCard(r){
@@ -4634,26 +4677,29 @@ function renderEscandalloCard(r){
     }).join('');
 
     return `
-      <div class="card">
+      <div class="card card-compact">
         <h3 style="justify-content:space-between">
-          <span><i class="ti ti-chef-hat"></i> ${escapeHtml(r.name)}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-chef-hat"></i> ${escapeHtml(r.name)}</span>
           ${pctBadge}
         </h3>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-          ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
-          ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+        <div class="grid grid-3" style="margin-bottom:6px">
+          <div class="kpi"><div class="label">Coste</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:14px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:14px">${fmtMoney(margin)}</div></div>
         </div>
-        <div class="table-wrap" style="margin-bottom:10px">
-          <table>
-            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th></tr></thead>
-            <tbody>${lines || '<tr><td colspan="4"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
-          </table>
-        </div>
-        <div class="grid grid-3" style="margin-bottom:10px">
-          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
-          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
-          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:18px">${fmtMoney(margin)}</div></div>
-        </div>
+        <details>
+          <summary>Ver detalle de ingredientes</summary>
+          <div style="font-size:12px;color:var(--muted);margin:6px 0">
+            ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
+            ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+          </div>
+          <div class="table-wrap" style="margin-bottom:6px">
+            <table>
+              <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th></tr></thead>
+              <tbody>${lines || '<tr><td colspan="4"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+            </table>
+          </div>
+        </details>
         <div class="actions-cell">
           <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
           <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
@@ -4893,35 +4939,58 @@ let fichaModalState = null;
 
 function getFicha(id){ return DB.fichas.find(f => f.id === id); }
 
+let fichasView = 'grid'; // 'grid' | 'list'
+function setFichasView(mode){
+  fichasView = mode;
+  renderFichas();
+}
+
 function renderFichas(){
   populateRecipeCategoryFilter('fichas-filter-cat');
+  const search = document.getElementById('fichas-search').value.toLowerCase();
   const cat = document.getElementById('fichas-filter-cat').value;
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
   const recipes = areaRecipes.filter(r => {
-    return !cat || (cat==='__none__' ? !r.category : r.category===cat);
+    const matchSearch = !search || r.name.toLowerCase().includes(search);
+    const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
+    return matchSearch && matchCat;
   });
   const box = document.getElementById('fichas-list');
   let html = '';
+
+  document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
+  document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
   if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos. Crea primero un escandallo.</div>`;
     return;
   }
 
+  const gridClass = fichasView==='list' ? '' : 'grid grid-compact';
+  const renderCard = r => fichasView==='list' ? renderFichaRow(r) : renderFichaCard(r);
+
   if(!recipes.length){
     html += `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
   } else {
     html += groupRecipesByCategory(recipes).map(([catName, group]) => `
       <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-      <div class="grid grid-2">${group.map(r => renderFichaCard(r)).join('')}</div>
+      <div class="${gridClass}">${group.map(renderCard).join('')}</div>
     `).join('');
   }
 
-  const orphanFichas = DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea());
+  const orphanFichas = DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
   if(orphanFichas.length){
-    html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="grid grid-2">` + orphanFichas.map(f => `
-      <div class="card" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <h3 style="justify-content:space-between"><span><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
+    html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
+      <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
+        <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(f.name)}</span></div>
+        <div class="actions-cell">
+          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    ` : `
+      <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
+        <h3 style="justify-content:space-between"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
           <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
@@ -4933,23 +5002,36 @@ function renderFichas(){
   box.innerHTML = html;
 }
 
+function renderFichaRow(r){
+  const ficha = DB.fichas.find(f => f.recipeId === r.id);
+  return `
+    <div class="list-row" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
+      <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(r.name)}</span></div>
+      ${ficha ? '<span class="badge badge-green">Vinculada</span>' : '<span class="badge badge-amber">Sin ficha</span>'}
+      ${ficha ? `
+        <div class="actions-cell">
+          <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
 function renderFichaCard(r){
   const ficha = DB.fichas.find(f => f.recipeId === r.id);
   return `
-    <div class="card" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
+    <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
       <h3 style="justify-content:space-between">
-        <span><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
         ${ficha ? '<span class="badge badge-green">Vinculada</span>' : '<span class="badge badge-amber">Sin ficha</span>'}
       </h3>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-        ${ficha ? 'Haz clic para ver o editar la ficha técnica.' : 'Haz clic para crear la ficha técnica de este plato.'}
-      </div>
       ${ficha ? `
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> Imprimir</button>
           <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> Eliminar ficha</button>
         </div>
-      ` : ''}
+      ` : `<div style="font-size:12px;color:var(--muted)">Crear ficha técnica</div>`}
     </div>
   `;
 }
@@ -7526,6 +7608,7 @@ function renderProveedores(){
       ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
       ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
       ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
+      ${p.diaEntrega ? `<div><i class="ti ti-truck-delivery"></i> Entrega: ${escapeHtml(p.diaEntrega)}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}h aprox.`:''}</div>` : ''}
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(p.pago)}</span>` : ''}
@@ -7535,7 +7618,7 @@ function renderProveedores(){
 }
 
 function openProviderModal(id){
-  const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:''};
+  const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:'',diaEntrega:'',horaEntrega:''};
   openModal(`
     <div class="modal-header">
       <h3>${id?'Editar':'Nuevo'} Proveedor</h3>
@@ -7553,6 +7636,16 @@ function openProviderModal(id){
     <div class="field-row">
       <div class="field"><label>Teléfono</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
       <div class="field"><label>Email</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Día de entrega habitual</label>
+        <select id="prov-dia-entrega">
+          <option value="">— Sin especificar —</option>
+          ${WEEK_DAYS.map(d=>`<option ${p.diaEntrega===d?'selected':''}>${d}</option>`).join('')}
+          <option ${p.diaEntrega==='Varios días'?'selected':''}>Varios días</option>
+        </select>
+      </div>
+      <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     </div>
     <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
@@ -7575,6 +7668,8 @@ function saveProvider(id){
     email: document.getElementById('prov-email').value.trim(),
     dir: document.getElementById('prov-dir').value.trim(),
     iban: document.getElementById('prov-iban').value.trim(),
+    diaEntrega: document.getElementById('prov-dia-entrega').value,
+    horaEntrega: document.getElementById('prov-hora-entrega').value,
     notas: document.getElementById('prov-notas').value.trim()
   };
   if(id){
@@ -7604,6 +7699,11 @@ function getProviderByName(name){
    ============================================================ */
 const PEDIDO_ESTADOS = ['BORRADOR','ENVIADO','RECIBIDO'];
 const PEDIDO_BADGE = {BORRADOR:'badge-gray', ENVIADO:'badge-amber', RECIBIDO:'badge-green'};
+const PEDIDO_COMPROBACION = {
+  ok:    {label:'✅ Todo correcto', cls:'badge-green'},
+  falta: {label:'⚠️ Ha faltado algo', cls:'badge-amber'},
+  mal:   {label:'❌ Algo en mal estado', cls:'badge-red'},
+};
 let pedidoDetailId = null;
 
 function getPurchaseOrder(id){ return DB.purchaseOrders.find(o => o.id === id); }
@@ -7648,6 +7748,7 @@ function renderPedidoList(){
   box.innerHTML = kpiHtml + sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
+    const comp = PEDIDO_COMPROBACION[o.comprobacion];
     return `
       <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between">
@@ -7655,6 +7756,7 @@ function renderPedidoList(){
           <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} producto${itemCount!==1?'s':''} · ${withQty} con cantidad</div>
+        ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
       </div>
     `;
   }).join('');
@@ -7711,6 +7813,15 @@ function renderPedidoDetail(){
       </div>
 
       ${showRecepcion ? `
+      <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
+        <h3><i class="ti ti-clipboard-check"></i> Comprobación del pedido</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Cuando llegue el pedido, marca si todo está correcto o si hay algo que reclamar al proveedor.</p>
+        <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
+          ${Object.entries(PEDIDO_COMPROBACION).map(([key, c]) => `
+            <button class="btn btn-sm ${o.comprobacion===key?'btn-primary':''}" onclick="setPedidoComprobacion('${key}')">${c.label}</button>
+          `).join('')}
+        </div>
+      </div>
       <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
         <h3><i class="ti ti-clipboard-check"></i> Recepción / APPCC</h3>
         <div class="field-row">
@@ -7795,6 +7906,14 @@ function savePedidoRecepcion(){
   showToast('Recepción guardada');
 }
 
+function setPedidoComprobacion(value){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  o.comprobacion = o.comprobacion === value ? '' : value;
+  saveDB();
+  renderPedidoDetail();
+}
+
 function changePedidoEstado(estado){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
@@ -7820,8 +7939,8 @@ function pedidoTexto(o){
   return `🛒 PEDIDO A ${o.supplier}\nFecha: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
 }
 
-function sendPedidoWhatsapp(){
-  const o = getPurchaseOrder(pedidoDetailId);
+function sendPedidoWhatsapp(order){
+  const o = order || getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   const prov = getProviderByName(o.supplier);
   const tel = prov && prov.tel ? prov.tel.replace(/\D/g,'') : '';
@@ -7829,8 +7948,8 @@ function sendPedidoWhatsapp(){
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
 }
 
-function sendPedidoEmail(){
-  const o = getPurchaseOrder(pedidoDetailId);
+function sendPedidoEmail(order){
+  const o = order || getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   const prov = getProviderByName(o.supplier);
   const to = prov && prov.email ? prov.email : '';
@@ -7851,11 +7970,13 @@ function printPedido(){
 
 let orderModalSupplier = '';
 let orderModalLines = [];
+let orderModalSearch = '';
 
 function openOrderModal(){
   if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast('Añade ingredientes en Mega Lista primero'); return; }
   orderModalSupplier = '';
   orderModalLines = [];
+  orderModalSearch = '';
   renderOrderModal();
 }
 
@@ -7866,6 +7987,9 @@ function renderOrderModal(){
 
   const dateField = document.getElementById('order-date');
   const dateVal = dateField ? dateField.value : todayStr();
+  const searchField = document.getElementById('order-item-search');
+  const searchVal = searchField ? searchField.value : orderModalSearch;
+  orderModalSearch = searchVal || '';
 
   let itemsHtml = '';
   if(orderModalSupplier){
@@ -7873,25 +7997,27 @@ function renderOrderModal(){
     if(!ings.length){
       itemsHtml = `<div class="empty" style="padding:10px">Este proveedor no tiene ingredientes asociados en Mega Lista</div>`;
     }else{
-      const rows = orderModalLines.map(line => {
+      const search = orderModalSearch.toLowerCase();
+      const rows = orderModalLines.filter(line => {
+        if(!search) return true;
+        const ing = getIngredient(line.ingredientId);
+        return ing && ing.name.toLowerCase().includes(search);
+      }).map(line => {
         const ing = getIngredient(line.ingredientId);
         const s = getStockEntry(ing.id);
         return `
-          <tr>
-            <td>${escapeHtml(ing.name)}</td>
-            <td>${escapeHtml(ing.unit)}</td>
-            <td>${fmtNum(s.qty)}</td>
-            <td>${fmtNum(s.min)}</td>
-            <td><input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)"></td>
-          </tr>
+          <div class="list-row">
+            <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
+            <span style="font-size:12px;color:var(--muted)">Stock: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · Mín: ${fmtNum(s.min)}</span>
+            <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="Cantidad" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
+            <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
+          </div>
         `;
       }).join('');
       itemsHtml = `
-        <div class="table-wrap" style="margin-bottom:8px">
-          <table>
-            <thead><tr><th>Ingrediente</th><th>Ud</th><th>Stock actual</th><th>Mínimo</th><th>Cantidad a pedir</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
+        <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="renderOrderModal()" style="margin-bottom:8px;width:100%">
+        <div style="max-height:340px;overflow:auto;margin-bottom:8px">
+          ${rows || '<div class="empty" style="padding:10px">Sin resultados</div>'}
         </div>
         <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> Sugerir por déficit de stock</button>
       `;
@@ -7909,7 +8035,7 @@ function renderOrderModal(){
         <select id="order-supplier" onchange="selectOrderSupplier(this.value)">${supplierOptions}</select>
       </div>
       <div class="field">
-        <label>Fecha</label>
+        <label>Fecha de entrega</label>
         <input type="date" id="order-date" value="${dateVal || todayStr()}">
       </div>
     </div>
@@ -7917,17 +8043,22 @@ function renderOrderModal(){
       <label>Artículos del proveedor</label>
       ${itemsHtml || '<div class="empty" style="padding:10px">Selecciona un proveedor para cargar sus artículos</div>'}
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="savePurchaseOrder()">Guardar Pedido</button>
+      <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> Imprimir</button>
+      <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
+      <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> Enviar por Email</button>
     </div>
   `);
   const dEl = document.getElementById('order-date');
   if(dEl) dEl.value = dateVal || todayStr();
+  const sEl = document.getElementById('order-item-search');
+  if(sEl) sEl.value = orderModalSearch;
 }
 
 function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
+  orderModalSearch = '';
   orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea()).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
   renderOrderModal();
 }
@@ -7946,16 +8077,39 @@ function updateOrderLineQty(ingredientId, value){
   if(line) line.cantidad = parseFloat(value) || 0;
 }
 
-function savePurchaseOrder(){
-  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return; }
+// Crea (o reutiliza) el pedido a partir del formulario del modal "Nuevo Pedido".
+// Devuelve el pedido creado, o null si los datos no son válidos.
+function buildNewPedido(){
+  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return null; }
   const date = document.getElementById('order-date').value || todayStr();
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
-  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return; }
-  DB.purchaseOrders.push({id: genId(), supplier: orderModalSupplier, date, estado:'BORRADOR', items, notas:'', recepcion:null, area: currentArea()});
+  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return null; }
+  const order = {id: genId(), supplier: orderModalSupplier, date, estado:'ENVIADO', items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
+  DB.purchaseOrders.push(order);
   saveDB();
+  return order;
+}
+
+function printPedidoBorrador(){
+  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return; }
+  const items = orderModalLines.filter(l => l.cantidad > 0);
+  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return; }
+  const date = document.getElementById('order-date').value || todayStr();
+  const txt = pedidoTexto({supplier: orderModalSupplier, date, items, notas:''});
+  const win = window.open('', '_blank', 'width=400,height=500');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
+  win.document.close();
+  win.print();
+}
+
+function sendNewPedido(method){
+  const order = buildNewPedido();
+  if(!order) return;
   closeModal();
   renderPedidos();
-  showToast('Pedido creado');
+  if(method === 'whatsapp') sendPedidoWhatsapp(order);
+  else sendPedidoEmail(order);
+  showToast('Pedido enviado');
 }
 
 function deleteOrder(id){
