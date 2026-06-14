@@ -2195,27 +2195,30 @@ function renderOnlineCard(){
         <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Reserva o pide en línea en ' + (b.name || 'nuestro restaurante') + ':\n\n' + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
     </div>
-    ${renderTableQrCard(link)}
   `;
 }
 
-// Genera un QR por mesa (mismo enlace + &mesa=ID) para que el cliente pida
-// directamente desde su mesa sin esperar al camarero ("auto-pedido").
-function renderTableQrCard(link){
-  if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length || !link) return '';
+// Genera un QR de auto-pedido por mesa (mismo enlace público + &mesa=ID) para
+// que el cliente pida directamente desde su mesa sin esperar al camarero.
+// Solo se muestra el nombre/etiqueta de cada mesa con un botón de descarga;
+// el QR no se muestra en pantalla (se genera al vuelo solo para la descarga).
+function renderTableQrCard(){
+  if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
+  if(!getTenantId() || !getCloudConfig()) return '';
+  const link = getPublicClientLink();
+  if(!link) return '';
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-qrcode"></i> QR de auto-pedido por mesa</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Imprime un QR para cada mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
+      <h3><i class="ti ti-qrcode"></i> QR auto pedido</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Descarga un QR para cada mesa e imprímelo: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${DB.tables.map(t => {
           const tLink = `${link}&mesa=${t.id}`;
           const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(tLink);
           return `
           <div class="ge-item" style="align-items:center;gap:12px">
-            <img src="${tQr}" alt="QR ${escapeHtml(t.name)}" style="width:60px;height:60px;border-radius:6px;border:1px solid var(--border);background:#fff;padding:3px">
-            <span style="flex:1;font-weight:600">${escapeHtml(t.name)}</span>
-            <a class="btn btn-sm" style="text-decoration:none" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar</a>
+            <span style="flex:1;font-weight:600"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</span>
+            <a class="btn btn-sm" style="text-decoration:none" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
           </div>`;
         }).join('')}
       </div>
@@ -2494,10 +2497,39 @@ const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja'
 const UNITS = ['g','ud'];
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 
-// Horario semanal: un array de 7 días (Lunes..Domingo), cada uno con
-// hasta 2 turnos (para horario partido). abierto:false = cerrado ese día.
+// Horario semanal: un array de 7 días (Lunes..Domingo). Cada día puede ser
+// "seguido" (un único tramo horario) o "turnos" (hasta 2 tramos, para horario
+// partido). Cada tramo (seguido o turno) puede tener asignada una carta de
+// comida y una carta de bebidas, que se activarán automáticamente en la web
+// de pedidos online durante ese tramo. abierto:false = cerrado ese día.
 function defaultHorario(){
-  return DIAS_SEMANA.map(() => ({abierto:true, t1i:'', t1f:'', t2i:'', t2f:''}));
+  return DIAS_SEMANA.map(() => ({
+    modo: 'turnos', abierto: true,
+    seguido: {ini:'', fin:'', cartaId:null, bebidasId:null},
+    turnos: [
+      {ini:'', fin:'', cartaId:null, bebidasId:null},
+      {ini:'', fin:'', cartaId:null, bebidasId:null}
+    ]
+  }));
+}
+
+// Convierte un día de horario al nuevo formato {modo,abierto,seguido,turnos}.
+// Soporta el formato antiguo {abierto,t1i,t1f,t2i,t2f}.
+function migrateHorarioDia(d){
+  if(!d) return defaultHorario()[0];
+  if(d.modo && d.seguido && d.turnos) return d;
+  // formato antiguo: detecta por presencia de t1i y ausencia de modo
+  if('t1i' in d){
+    return {
+      modo: 'turnos', abierto: d.abierto!==false,
+      seguido: {ini:'', fin:'', cartaId:null, bebidasId:null},
+      turnos: [
+        {ini: d.t1i||'', fin: d.t1f||'', cartaId:null, bebidasId:null},
+        {ini: d.t2i||'', fin: d.t2f||'', cartaId:null, bebidasId:null}
+      ]
+    };
+  }
+  return defaultHorario()[0];
 }
 
 function defaultData(){
@@ -2541,7 +2573,7 @@ function defaultData(){
     business: {
       name:'', address:'', phone:'', email:'', schedule:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
-      mesasInt:'', mesasExt:'', aforo:'', ig:'', fb:'',
+      mesasInterior:'', mesasTerraza:'', aforo:'', ig:'', fb:'',
       pin:'1234', pinSet:false,
       horario: defaultHorario(),
       cartaAuto: true,
@@ -5436,11 +5468,17 @@ function getTurnosForDate(dateStr){
   const horario = (DB.business || {}).horario;
   if(!horario || horario.length !== 7) return null;
   const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
-  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  const d = migrateHorarioDia(horario[(jsDay + 6) % 7]); // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
-  if(d.t1i && d.t1f && d.t1f > d.t1i) turnos.push({abre:d.t1i, cierra:d.t1f});
-  if(d.t2i && d.t2f && d.t2f > d.t2i) turnos.push({abre:d.t2i, cierra:d.t2f});
+  if(d.modo === 'seguido'){
+    const s = d.seguido;
+    if(s && s.ini && s.fin && s.fin > s.ini) turnos.push({abre:s.ini, cierra:s.fin});
+  }else{
+    (d.turnos||[]).forEach(t => {
+      if(t && t.ini && t.fin && t.fin > t.ini) turnos.push({abre:t.ini, cierra:t.fin});
+    });
+  }
   return turnos;
 }
 
@@ -6163,11 +6201,45 @@ function cartaIsActiveNow(c, now){
   return time >= day.desde && time <= day.hasta;
 }
 
+// Busca, en el Horario semanal de Mi Negocio, el tramo (seguido o turno) en el
+// que cae el momento actual para el día de hoy, y devuelve las cartas (comida
+// y bebidas) asignadas a ese tramo, si las hay. Devuelve {cartaId, bebidasId}
+// con valores null si no hay tramo o no hay carta asignada.
+function getHorarioAssignedCartas(now){
+  now = now || new Date();
+  const horario = DB.business?.horario;
+  if(!Array.isArray(horario) || horario.length!==7) return {cartaId:null, bebidasId:null};
+  const jsDay = now.getDay();
+  const dayIdx = (jsDay + 6) % 7; // 0=lunes..6=domingo
+  const d = migrateHorarioDia(horario[dayIdx]);
+  if(!d || d.abierto===false) return {cartaId:null, bebidasId:null};
+  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const tramos = d.modo==='seguido' ? [d.seguido] : (d.turnos||[]);
+  for(const t of tramos){
+    if(!t || (!t.ini && !t.fin)) continue;
+    // Tramo que cruza medianoche (ej. 20:00-02:00)
+    const enRango = t.fin && t.fin < t.ini
+      ? (time >= t.ini || time <= t.fin)
+      : (t.ini && t.fin ? (time >= t.ini && time <= t.fin) : false);
+    if(enRango && (t.cartaId || t.bebidasId)) return {cartaId: t.cartaId||null, bebidasId: t.bebidasId||null};
+  }
+  return {cartaId:null, bebidasId:null};
+}
+
 // Todas las cartas que deberían estar activas ahora mismo (puede haber varias
 // a la vez, p.ej. la carta de comida y la de bebidas).
 function computeAutoActiveCartaIds(){
   if(!DB.cartas || !DB.cartas.length) return [];
   const now = new Date();
+  // Si el horario semanal tiene asignada una carta (y/o carta de bebidas) para
+  // el tramo actual, esas tienen prioridad sobre el horario propio de la carta.
+  const assigned = getHorarioAssignedCartas(now);
+  if(assigned.cartaId || assigned.bebidasId){
+    const ids = [];
+    if(assigned.cartaId && DB.cartas.some(c=>String(c.id)===String(assigned.cartaId))) ids.push(assigned.cartaId);
+    if(assigned.bebidasId && DB.cartas.some(c=>String(c.id)===String(assigned.bebidasId))) ids.push(assigned.bebidasId);
+    if(ids.length) return ids;
+  }
   return DB.cartas.filter(c => cartaIsActiveNow(c, now)).map(c=>c.id);
 }
 
@@ -11428,9 +11500,49 @@ function deletePromo(id){
    ============================================================ */
 const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
 
+// Genera las opciones de un <select> de cartas (comida o bebidas) para un tramo horario.
+function renderCartaOptions(selectedId, soloBebidas){
+  let cartas = DB.cartas || [];
+  if(soloBebidas){
+    const bebidas = cartas.filter(c => /bebida/i.test(c.nombre||''));
+    if(bebidas.length) cartas = bebidas;
+  }
+  const opts = cartas.map(c => `<option value="${c.id}" ${String(selectedId)===String(c.id)?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('');
+  return `<option value="">— Automático —</option>${opts}`;
+}
+
+// Renderiza los campos de un tramo (seguido o turno): horas + cartas asignadas.
+function renderTramoFields(prefix, tramo, label){
+  tramo = tramo || {};
+  return `
+    <div class="field-row">
+      <div class="field">
+        <label>${label} — Apertura</label>
+        <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}">
+      </div>
+      <div class="field">
+        <label>${label} — Cierre</label>
+        <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Carta / menú</label>
+        <select id="${prefix}-carta">${renderCartaOptions(tramo.cartaId, false)}</select>
+      </div>
+      <div class="field">
+        <label>Carta de bebidas</label>
+        <select id="${prefix}-bebidas">${renderCartaOptions(tramo.bebidasId, true)}</select>
+      </div>
+    </div>
+  `;
+}
+
 function renderHorarioRows(horario){
-  horario = horario && horario.length===7 ? horario : defaultHorario();
-  return horario.map((d,i) => `
+  horario = horario && horario.length===7 ? horario.map(migrateHorarioDia) : defaultHorario();
+  return horario.map((d,i) => {
+    const modoSeguido = d.modo === 'seguido';
+    return `
     <div class="ge-section" style="margin-bottom:10px">
       <div class="ge-sec-head">
         <label style="display:flex;align-items:center;gap:8px;font-weight:700">
@@ -11439,29 +11551,26 @@ function renderHorarioRows(horario){
         </label>
       </div>
       <div id="mn-hor-${i}-turnos" style="display:${d.abierto!==false?'block':'none'};padding:10px 14px">
-        <div class="field-row">
-          <div class="field">
-            <label>Turno 1 — Apertura</label>
-            <input type="time" id="mn-hor-${i}-t1i" value="${escapeHtml(d.t1i||'')}">
-          </div>
-          <div class="field">
-            <label>Turno 1 — Cierre</label>
-            <input type="time" id="mn-hor-${i}-t1f" value="${escapeHtml(d.t1f||'')}">
-          </div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Modo de horario</label>
+          <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})">
+            <option value="turnos" ${!modoSeguido?'selected':''}>Por turnos (hasta 2 tramos, ej. comidas y cenas)</option>
+            <option value="seguido" ${modoSeguido?'selected':''}>Horario seguido (un único tramo)</option>
+          </select>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Turno 2 (opcional) — Apertura</label>
-            <input type="time" id="mn-hor-${i}-t2i" value="${escapeHtml(d.t2i||'')}">
-          </div>
-          <div class="field">
-            <label>Turno 2 (opcional) — Cierre</label>
-            <input type="time" id="mn-hor-${i}-t2f" value="${escapeHtml(d.t2f||'')}">
-          </div>
+        <div id="mn-hor-${i}-seguido-box" style="display:${modoSeguido?'block':'none'}">
+          ${renderTramoFields(`mn-hor-${i}-seguido`, d.seguido, 'Horario')}
+        </div>
+        <div id="mn-hor-${i}-turnos-box" style="display:${modoSeguido?'none':'block'}">
+          <div style="font-weight:600;font-size:13px;margin-bottom:4px">Turno 1</div>
+          ${renderTramoFields(`mn-hor-${i}-t1`, d.turnos && d.turnos[0], 'Turno 1')}
+          <div style="font-weight:600;font-size:13px;margin:8px 0 4px">Turno 2 (opcional)</div>
+          ${renderTramoFields(`mn-hor-${i}-t2`, d.turnos && d.turnos[1], 'Turno 2')}
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function toggleHorarioDia(i){
@@ -11469,22 +11578,50 @@ function toggleHorarioDia(i){
   document.getElementById(`mn-hor-${i}-turnos`).style.display = open ? 'block' : 'none';
 }
 
+function toggleHorarioModo(i){
+  const seguido = document.getElementById(`mn-hor-${i}-modo`).value === 'seguido';
+  document.getElementById(`mn-hor-${i}-seguido-box`).style.display = seguido ? 'block' : 'none';
+  document.getElementById(`mn-hor-${i}-turnos-box`).style.display = seguido ? 'none' : 'block';
+}
+
+function readTramoFromForm(prefix){
+  return {
+    ini: document.getElementById(`${prefix}-ini`).value,
+    fin: document.getElementById(`${prefix}-fin`).value,
+    cartaId: document.getElementById(`${prefix}-carta`).value || null,
+    bebidasId: document.getElementById(`${prefix}-bebidas`).value || null,
+  };
+}
+
 function readHorarioFromForm(){
   return DIAS_SEMANA.map((_,i) => ({
+    modo: document.getElementById(`mn-hor-${i}-modo`).value,
     abierto: document.getElementById(`mn-hor-${i}-abierto`).checked,
-    t1i: document.getElementById(`mn-hor-${i}-t1i`).value,
-    t1f: document.getElementById(`mn-hor-${i}-t1f`).value,
-    t2i: document.getElementById(`mn-hor-${i}-t2i`).value,
-    t2f: document.getElementById(`mn-hor-${i}-t2f`).value,
+    seguido: readTramoFromForm(`mn-hor-${i}-seguido`),
+    turnos: [
+      readTramoFromForm(`mn-hor-${i}-t1`),
+      readTramoFromForm(`mn-hor-${i}-t2`),
+    ],
   }));
 }
 
 function renderMiNegocio(){
   const b = DB.business || {};
+  // Si el formulario ya estaba pintado y el usuario había cambiado los
+  // checkboxes de "Tipos de servicio" sin pulsar aún "Guardar", conservamos
+  // esos valores al re-renderizar (p.ej. tras guardar el logo, una plataforma
+  // de delivery o el PIN), para que no se reviertan los cambios sin guardar.
+  const prevServ = {
+    mesa: document.getElementById('mn-serv-mesa')?.checked,
+    takeaway: document.getElementById('mn-serv-takeaway')?.checked,
+    delivery: document.getElementById('mn-serv-delivery')?.checked,
+  };
+  const tiposServicio = {
+    mesa: prevServ.mesa !== undefined ? prevServ.mesa : (b.tiposServicio?.mesa !== false),
+    takeaway: prevServ.takeaway !== undefined ? prevServ.takeaway : (b.tiposServicio?.takeaway !== false),
+    delivery: prevServ.delivery !== undefined ? prevServ.delivery : (b.tiposServicio?.delivery !== false),
+  };
   document.getElementById('minegocio-content').innerHTML = `
-    ${renderOnlineCard()}
-    ${renderRedsysCard()}
-
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-map-2"></i> Tour de la app</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Repasa en cualquier momento el tour guiado que explica cómo funciona cada parte de GastroGoan.</p>
@@ -11541,6 +11678,15 @@ function renderMiNegocio(){
     </div>
 
     <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-notes"></i> Descripción</h3>
+      <div class="field">
+        <label>Descripción / Concepto</label>
+        <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar todo</button>
+    </div>
+
+    <div class="card" style="max-width:720px">
       <h3><i class="ti ti-address-book"></i> Contacto</h3>
       <div class="field">
         <label>Dirección</label>
@@ -11569,6 +11715,20 @@ function renderMiNegocio(){
     </div>
 
     <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-brand-instagram"></i> Redes sociales</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Instagram</label>
+          <input type="text" id="mn-ig" value="${escapeHtml(b.ig||'')}" placeholder="@milocal">
+        </div>
+        <div class="field">
+          <label>Facebook</label>
+          <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal">
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
       <h3><i class="ti ti-building-store"></i> Operativa</h3>
       <div class="field-row">
         <div class="field">
@@ -11583,8 +11743,12 @@ function renderMiNegocio(){
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Número de mesas</label>
-          <input type="number" id="mn-mesas-int" value="${escapeHtml(b.mesasInt||'')}" placeholder="8">
+          <label>Mesas de interior</label>
+          <input type="number" id="mn-mesas-interior" value="${escapeHtml(b.mesasInterior!=null?b.mesasInterior:(b.mesasInt||''))}" placeholder="8">
+        </div>
+        <div class="field">
+          <label>Mesas de terraza</label>
+          <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4">
         </div>
       </div>
       <div class="field">
@@ -11605,45 +11769,28 @@ function renderMiNegocio(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Activa los servicios que ofrece tu negocio. Esto controla qué opciones aparecen en el TPV y en la página de reservas online para tus clientes.</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-mesa" ${b.tiposServicio?.mesa!==false?'checked':''} style="width:18px;height:18px"> 🍽️ Mesa / Sala (reservas y comandas en el local)
+          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} style="width:18px;height:18px"> 🍽️ Mesa / Sala (reservas y comandas en el local)
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-takeaway" ${b.tiposServicio?.takeaway!==false?'checked':''} style="width:18px;height:18px"> 🥡 Take Away (recogida en el local)
+          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} style="width:18px;height:18px"> 🥡 Take Away (recogida en el local)
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-delivery" ${b.tiposServicio?.delivery!==false?'checked':''} style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
+          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
         </label>
       </div>
     </div>
+
+    ${renderTicketConfigCard()}
+
+    ${renderRedsysCard()}
 
     ${renderPedidosConfigCard()}
 
     ${renderDeliveryPlatformsCard()}
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-brand-instagram"></i> Redes sociales</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Instagram</label>
-          <input type="text" id="mn-ig" value="${escapeHtml(b.ig||'')}" placeholder="@milocal">
-        </div>
-        <div class="field">
-          <label>Facebook</label>
-          <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal">
-        </div>
-      </div>
-    </div>
+    ${renderOnlineCard()}
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-notes"></i> Descripción</h3>
-      <div class="field">
-        <label>Descripción / Concepto</label>
-        <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar</button>
-    </div>
-
-    ${renderTicketConfigCard()}
+    ${renderTableQrCard()}
 
     ${renderDataMaintenanceCard()}
   `;
@@ -11808,9 +11955,15 @@ function renderHeader(){
 }
 
 function syncMesasConfig(){
-  const count = parseInt(document.getElementById('mn-mesas-int').value) || 0;
-  for(let i = DB.tables.length + 1; i <= count; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${i}`});
+  const interior = parseInt(document.getElementById('mn-mesas-interior').value) || 0;
+  const terraza = parseInt(document.getElementById('mn-mesas-terraza').value) || 0;
+  const interiorActuales = DB.tables.filter(t=>t.zona!=='terraza').length;
+  const terrazaActuales = DB.tables.filter(t=>t.zona==='terraza').length;
+  for(let i = interiorActuales + 1; i <= interior; i++){
+    DB.tables.push({id: genId(), name: `Mesa ${i} (Interior)`, zona:'interior'});
+  }
+  for(let i = terrazaActuales + 1; i <= terraza; i++){
+    DB.tables.push({id: genId(), name: `Mesa ${i} (Terraza)`, zona:'terraza'});
   }
   saveDB();
   showToast('Mesas sincronizadas con el TPV');
@@ -11831,7 +11984,8 @@ function saveBusiness(){
     web: document.getElementById('mn-web').value.trim(),
     cif: document.getElementById('mn-cif').value.trim(),
     prop: document.getElementById('mn-prop').value.trim(),
-    mesasInt: document.getElementById('mn-mesas-int').value.trim(),
+    mesasInterior: document.getElementById('mn-mesas-interior').value.trim(),
+    mesasTerraza: document.getElementById('mn-mesas-terraza').value.trim(),
     aforo: document.getElementById('mn-aforo').value.trim(),
     ig: document.getElementById('mn-ig').value.trim(),
     fb: document.getElementById('mn-fb').value.trim(),
@@ -12241,14 +12395,50 @@ const MANUAL_CHAPTERS = [
   {
     title:'🏪 Mi Negocio',
     content:`<h3>Datos del establecimiento</h3>
-    <h4>Identidad y contacto</h4>
-    <p>Logo, nombre, tipo de negocio, dirección, teléfono, redes sociales — aparecen en la cabecera y en los tickets.</p>
-    <h4>Operativa</h4>
-    <p>Configura el número de mesas y usa <strong>Sincronizar mesas con TPV</strong> para crearlas automáticamente.</p>
-    <h4>Acceso propietario (PIN)</h4>
+    <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">🗺️ <strong>Tour de la app</strong> — repite en cualquier momento el tour guiado de bienvenida.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🆔 <strong>Identidad</strong> — logo, nombre, tipo de negocio y año de apertura.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">📝 <strong>Descripción</strong> — concepto del local. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📇 <strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">📷 <strong>Redes sociales</strong> — Instagram y Facebook.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🏬 <strong>Operativa</strong> — propietario, aforo, mesas y horario en texto.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">📅 <strong>Horario semanal</strong> — horario de cada día, con asignación de carta y carta de bebidas por turno.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st">🔳 <strong>QR auto pedido</strong> — un QR descargable por cada mesa.</div></div>
+    <div class="manual-step"><div class="sn">16</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
+
+    <h4>🔒 Acceso propietario (PIN)</h4>
     <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
-    <h4>Horario semanal</h4>
-    <p>Además del horario en texto (informativo), configura el <strong>Horario semanal</strong>: marca qué días abres y a qué horas, con hasta dos turnos por día (para horario partido). Estos horarios limitan automáticamente las horas que un cliente puede elegir al reservar mesa o hacer un pedido online, día por día.</p>`
+
+    <h4>🏬 Operativa: mesas de interior y terraza</h4>
+    <p>Indica por separado cuántas <strong>mesas de interior</strong> y cuántas <strong>mesas de terraza</strong> tienes. Al pulsar <strong>Sincronizar mesas con TPV</strong>, GastroGoan crea automáticamente las mesas que falten en el TPV, nombrándolas "Mesa N (Interior)" o "Mesa N (Terraza)" para que se distingan a simple vista en el plano de sala.</p>
+
+    <h4>🔁 Tipos de servicio</h4>
+    <p>Activa o desactiva con las casillas los servicios que ofreces: <strong>Mesa/Sala</strong>, <strong>Take Away</strong> y <strong>Delivery</strong>. Esto controla qué botones y opciones aparecen en el TPV y en la página de pedidos online (por ejemplo, si desactivas Delivery, tus clientes ya no podrán elegir esa opción al pedir desde el móvil). Recuerda pulsar <strong>Guardar todo</strong> para que el cambio se aplique.</p>
+
+    <h4>📅 Horario semanal: turnos con carta y bebidas</h4>
+    <p>Para cada día de la semana (<strong>Lunes a Domingo</strong>), primero decides si ese día abres (casilla) y luego eliges el <strong>modo de horario</strong>:</p>
+    <ul>
+      <li><strong>Horario seguido</strong> — un único tramo (apertura y cierre), por ejemplo si tu local abre sin descanso de 12:00 a 00:00.</li>
+      <li><strong>Por turnos</strong> — hasta dos tramos (ej. comidas de 12:00 a 16:00 y cenas de 20:00 a 23:30), típico del horario partido.</li>
+    </ul>
+    <p>En <strong>cada tramo</strong> (sea el horario seguido o cada turno) puedes asignar opcionalmente:</p>
+    <ul>
+      <li>🍽️ <strong>Carta / menú</strong> — la carta de comida que se activará automáticamente durante ese tramo.</li>
+      <li>🥤 <strong>Carta de bebidas</strong> — la carta de bebidas que se activará durante ese tramo.</li>
+    </ul>
+    <p>Si dejas un desplegable en <strong>"— Automático —"</strong>, GastroGoan sigue decidiendo la carta activa con su lógica habitual (según el horario propio configurado en cada carta de la sección Carta). Pero si asignas una carta y/o una carta de bebidas a un tramo, esa asignación tiene prioridad: en cuanto entres en ese tramo (según el día y la hora actuales), esa carta y esa carta de bebidas pasarán a estar activas tanto en el <strong>TPV</strong> como en la <strong>página de pedidos online</strong> para tus clientes.</p>
+    <div class="manual-tip">💡 Estos horarios también limitan automáticamente las horas que un cliente puede elegir al reservar mesa o hacer un pedido online, día por día.</div>
+
+    <h4>📱 Reserva y pedidos online / 🔳 QR auto pedido</h4>
+    <p>La tarjeta <strong>Reserva y pedidos online</strong> te da el enlace y el QR general de tu negocio para que los clientes reserven mesa o pidan take away/delivery desde el móvil.</p>
+    <p>La tarjeta <strong>QR auto pedido</strong> (justo debajo) genera, para cada mesa configurada, un botón <strong>Descargar QR</strong> con el nombre de la mesa (ej. "Mesa 1 (Terraza)"). El QR no se muestra en pantalla para no saturar la página: descárgalo e imprímelo para colocarlo en cada mesa. Cuando un cliente lo escanea desde su mesa, el pedido que haga llegará directamente asignado a esa mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`
   },
   {
     title:'🌐 Reservas y Pedidos Online',
