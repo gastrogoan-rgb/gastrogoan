@@ -35,7 +35,7 @@
   --radius:12px;
   --header-h:60px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5}
 
 /* ===== Header ===== */
 .app-header{
@@ -135,25 +135,25 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 
 /* ===== Buttons ===== */
 .btn{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:9px 16px;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface);color:var(--text);font-size:14px;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 20px;min-height:46px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:15px;font-weight:700;
   cursor:pointer;text-decoration:none;
 }
 .btn:hover{filter:brightness(.97)}
 .btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
 .btn-danger{background:var(--red);border-color:var(--red);color:#fff}
-.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
-.btn-icon{padding:7px 9px}
+.btn-sm{padding:7px 12px;min-height:36px;font-size:13px;border-radius:8px}
+.btn-icon{padding:7px 9px;min-height:auto}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
 .toolbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1}
 
 /* ===== Forms ===== */
-.field{margin-bottom:12px}
-.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)}
 .field input,.field select,.field textarea{
-  width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
-  font-size:14px;font-family:inherit;background:#fff;color:var(--text);
+  width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-size:16px;font-family:inherit;background:#fff;color:var(--text);min-height:46px;
 }
 .field textarea{resize:vertical;min-height:70px}
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
@@ -161,8 +161,8 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 
 /* ===== Table ===== */
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
 th{background:var(--teal-l);color:var(--teal-d);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
 tr:last-child td{border-bottom:none}
 td.wrap{white-space:normal}
@@ -195,8 +195,8 @@ td.wrap{white-space:normal}
   max-height:90vh;overflow-y:auto;padding:20px;
 }
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.modal-header h3{font-size:17px}
-.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+.modal-header h3{font-size:19px}
+.modal-close{background:none;border:none;font-size:26px;cursor:pointer;color:var(--muted);min-height:44px;min-width:44px}
 .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
 
 .cat-heading{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal-d);background:var(--teal-l);padding:8px 14px;border-radius:8px;margin:18px 0 10px}
