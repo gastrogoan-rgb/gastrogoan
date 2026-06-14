@@ -6054,18 +6054,23 @@ function updateAutoActiveCarta(force){
     if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
   }
 }
-function findCartaPlato(platoId){
-  for(const c of getActiveCartas()){
-    for(const sec of (c.secciones||[])){
-      const p = (sec.platos||[]).find(x=>x.id===platoId);
-      if(p) return p;
-    }
-  }
-  return null;
-}
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
-const TANDA_SUGGESTIONS = ['Aperitivos','Entrantes','Primeros','Segundos','Postres','Bebidas','Cafés y licores'];
+let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
+let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
+
+// Emoji por defecto para una sección de carta sin icono propio asignado
+function guessSeccionEmoji(nombre){
+  const n = (nombre||'').toLowerCase();
+  if(/bebida|refresco|cerveza|vino|cava|cocktail|copa|cafe|café|infusi|licor/.test(n)) return '🥤';
+  if(/entrante|aperitivo|tapa|ensalada/.test(n)) return '🥗';
+  if(/primero|sopa|crema|arroz|pasta/.test(n)) return '🥣';
+  if(/segundo|carne|pescado|principal/.test(n)) return '🍖';
+  if(/postre|dulce/.test(n)) return '🍰';
+  if(/pizza/.test(n)) return '🍕';
+  if(/pan|bocadillo|sandwich/.test(n)) return '🥖';
+  return '🍽️';
+}
 
 function getOpenOrderForTable(tableId){
   return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
@@ -6478,25 +6483,6 @@ function isBebidaCarta(c){
   return /bebida/i.test(c.nombre||'');
 }
 
-function renderCartasMenuHtml(order, cartas){
-  return cartas.map(c => `
-    ${cartas.length > 1 ? `<p style="font-size:12px;font-weight:800;margin:10px 0 4px"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</p>` : ''}
-    ${(c.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
-      <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:10px 0 6px">${escapeHtml(sec.nombre)}</p>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${sec.platos.filter(p=>p.disponible!==false).map(p => `<button class="btn btn-sm" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</button>`).join('')}
-      </div>
-    `).join('')}
-  `).join('');
-}
-
-function setOrderMenuStep(orderId, step){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  order.menuStep = step;
-  renderTableOrderModal(orderId);
-}
-
 function renderMenusComboHtml(order){
   const activeMenus = getActiveMenus();
   if(!activeMenus.length) return '';
@@ -6508,35 +6494,65 @@ function renderMenusComboHtml(order){
   `;
 }
 
-function renderOrderMenuHtml(order){
-  const menusHtml = renderMenusComboHtml(order);
-  const activeCartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
-  if(!activeCartas.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
-
+// Devuelve las "carpetas" del menú para una comanda: una por cada sección de
+// carta con platos disponibles, ordenadas con las cartas de bebida primero.
+function getOrderMenuFolders(order){
+  const activeCartas = getActiveCartas();
   const bebidaCartas = activeCartas.filter(isBebidaCarta);
   const comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  const folders = [];
+  [...bebidaCartas, ...comidaCartas].forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
+      if(platos.length) folders.push({cartaId: c.id, secId: sec.id, nombre: sec.nombre, icono: sec.icono || guessSeccionEmoji(sec.nombre), platos});
+    });
+  });
+  return folders;
+}
 
-  // El paso obligatorio "bebida primero" solo aplica a comandas de mesa
-  if(order.tipo === 'mesa' && bebidaCartas.length && comidaCartas.length){
-    const step = order.menuStep || 'bebida';
-    if(step === 'bebida'){
-      return menusHtml + `
-        <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-glass"></i> Primero, ¿qué bebida toma?</p>
-        ${renderCartasMenuHtml(order, bebidaCartas)}
-        <div style="margin-top:10px">
-          <button class="btn btn-primary btn-sm" onclick="setOrderMenuStep(${order.id}, 'comida')">Continuar con la comida <i class="ti ti-arrow-right"></i></button>
-        </div>
-      `;
-    }
+function findCartaSeccion(secId){
+  for(const c of getActiveCartas()){
+    const sec = (c.secciones||[]).find(s=>s.id===secId);
+    if(sec) return sec;
+  }
+  return null;
+}
+
+function openTpvMenuFolder(orderId, cartaId, secId){
+  tpvMenuOrderId = orderId;
+  tpvMenuFolder = {cartaId, secId};
+  renderTableOrderModal(orderId);
+}
+
+function closeTpvMenuFolder(orderId){
+  tpvMenuFolder = null;
+  renderTableOrderModal(orderId);
+}
+
+function renderOrderMenuHtml(order){
+  const menusHtml = renderMenusComboHtml(order);
+  const folders = getOrderMenuFolders(order);
+  if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+
+  if(tpvMenuOrderId !== order.id){ tpvMenuOrderId = order.id; tpvMenuFolder = null; }
+
+  const folder = tpvMenuFolder ? folders.find(f => f.cartaId===tpvMenuFolder.cartaId && f.secId===tpvMenuFolder.secId) : null;
+  if(folder){
     return menusHtml + `
-      ${renderCartasMenuHtml(order, comidaCartas)}
-      <div style="margin-top:10px">
-        <button class="btn btn-sm" onclick="setOrderMenuStep(${order.id}, 'bebida')"><i class="ti ti-arrow-left"></i> Volver a bebidas</button>
+      <div style="margin-bottom:8px">
+        <button class="btn btn-sm" onclick="closeTpvMenuFolder(${order.id})"><i class="ti ti-arrow-left"></i> ${folder.icono} ${escapeHtml(folder.nombre)}</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${folder.platos.map(p => `<button class="btn" onclick="addOrderItem(${order.id}, ${folder.secId}, ${p.id})">${escapeHtml(p.nombre)} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
       </div>
     `;
   }
 
-  return menusHtml + renderCartasMenuHtml(order, [...bebidaCartas, ...comidaCartas]);
+  return menusHtml + `
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${folders.map(f => `<button class="btn" style="min-width:88px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px" onclick="openTpvMenuFolder(${order.id}, ${f.cartaId}, ${f.secId})"><span style="font-size:26px">${f.icono}</span><span style="font-size:12px;font-weight:700">${escapeHtml(f.nombre)}</span></button>`).join('')}
+    </div>
+  `;
 }
 
 function openMenuConfigModal(orderId, menuId){
@@ -6592,76 +6608,57 @@ function confirmAddMenuToOrder(orderId, menuId){
       });
     });
   }else{
-    const tanda = order.tandaActual || '';
-    order.items.push({menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda, notas, menuSelections: selections});
+    order.items.push({menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda:'', notas, menuSelections: selections});
   }
   saveDB();
   renderTableOrderModal(orderId);
 }
 
-function renderOrderTandaSelector(order){
-  const orderTandas = order.tandas || [];
-  return `
-    <div class="field" style="margin-bottom:10px">
-      <label>Categoría / pase actual <span style="color:var(--muted);font-weight:400">(los próximos platos que añadas se asignarán aquí)</span></label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <select id="tanda-actual-sel" onchange="setOrderTandaActual(${order.id}, this.value)" style="flex:1;min-width:140px">
-          <option value="">Sin categoría</option>
-          ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${order.tandaActual===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-        </select>
-        <button class="btn btn-sm" onclick="openNewTandaModal(${order.id})"><i class="ti ti-plus"></i> Nueva categoría</button>
-      </div>
-      ${!orderTandas.length ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${TANDA_SUGGESTIONS.map(t=>`<button class="btn btn-sm" onclick="addOrderTanda(${order.id}, '${escapeHtml(t)}')">${escapeHtml(t)}</button>`).join('')}</div>` : ''}
-    </div>
-  `;
+function groupOrderItemsByTanda(order){
+  const groups = {};
+  (order.items||[]).forEach((line, idx) => {
+    const key = line.tanda || '';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push({line, idx});
+  });
+  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
 function renderOrderLinesHtml(order){
-  const orderTandas = order.tandas || [];
-  const tandaSelectHtml = (line, idx) => `
-    <select onchange="setLineTanda(${order.id}, ${idx}, this.value)" style="font-size:11px;max-width:120px" ${line.marchada?'disabled title="Ya marchado a cocina"':''}>
-      <option value="">Sin categoría</option>
-      ${orderTandas.map(t=>`<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-    </select>
-  `;
   const groups = groupOrderItemsByTanda(order);
-  return groups.map(g => `
-    <tr><td colspan="5" style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;padding-top:10px;border-top:1px solid var(--border)">${g.tanda ? escapeHtml(g.tanda) : 'Sin asignar'}</td></tr>
-    ${g.items.map(({line, idx}) => `
-    <tr>
-      <td>
-        ${escapeHtml(line.name)}${kitchenStatusBadge(line)}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
-        ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
-      </td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px">
-          <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
-          ${line.qty}
-          <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+  if(!groups.length) return `<div class="empty" style="padding:10px">Comanda vacía</div>`;
+  return groups.map(g => {
+    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
+    return `
+    <div class="card card-compact" style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
+        ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeHtml(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button>` : ''}
+      </div>
+      ${g.items.map(({line, idx}) => `
+        <div class="list-row">
+          <div class="list-row-name">
+            <span>${line.qty} × ${escapeHtml(line.name)}</span>${kitchenStatusBadge(line)}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
+            ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+            <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
+            <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
+            ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+          </div>
         </div>
-      </td>
-      <td>${fmtMoney(line.price * line.qty)}</td>
-      <td>${tandaSelectHtml(line, idx)}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:4px">
-          <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
-          ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
-        </div>
-      </td>
-    </tr>
-  `).join('')}
-  `).join('');
+      `).join('')}
+    </div>
+  `;
+  }).join('');
 }
 
 function renderOrderMarcharButtons(order){
-  const orderTandas = order.tandas || [];
-  const pendingGroups = [...orderTandas, ''].map(t => ({
-    tanda: t,
-    count: orderPendingKitchenLines(order, t).reduce((s,l)=>s+l.qty, 0)
-  })).filter(g => g.count > 0);
-
-  return pendingGroups.length
-    ? pendingGroups.map(g => `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeHtml(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar ${g.tanda ? escapeHtml(g.tanda) : 'comanda'} (${g.count})</button>`).join('')
+  const count = orderPendingKitchenLines(order).reduce((s,l)=>s+l.qty, 0);
+  return count
+    ? `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id})"><i class="ti ti-chef-hat"></i> Marchar a cocina (${count})</button>`
     : `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" disabled><i class="ti ti-chef-hat"></i> Marchar a cocina</button>`;
 }
 
@@ -6686,12 +6683,8 @@ function renderTableOrderModal(orderId){
       <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
-    ${renderOrderTandaSelector(order)}
-    <div class="table-wrap" style="margin-bottom:10px">
-      <table>
-        <thead><tr><th>Plato</th><th>Cant.</th><th>Subtotal</th><th>Tiempo</th><th></th></tr></thead>
-        <tbody>${linesHtml || '<tr><td colspan="5"><div class="empty" style="padding:10px">Comanda vacía</div></td></tr>'}</tbody>
-      </table>
+    <div style="margin-bottom:10px">
+      ${linesHtml}
     </div>
     <div class="kpi" style="margin-bottom:12px">
       <div class="label">Total</div>
@@ -6701,74 +6694,10 @@ function renderTableOrderModal(orderId){
       ${renderOrderMenuHtml(order)}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Guardar y cerrar</button>
       ${renderOrderMarcharButtons(order)}
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `);
-}
-
-function groupOrderItemsByTanda(order){
-  const groups = {};
-  (order.items||[]).forEach((line, idx) => {
-    const key = line.tanda || '';
-    if(!groups[key]) groups[key] = [];
-    groups[key].push({line, idx});
-  });
-  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
-}
-
-function setLineTanda(orderId, idx, tanda){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  const line = order && order.items[idx];
-  if(!line || line.marchada) return;
-  line.tanda = tanda;
-  saveDB();
-  renderTableOrderModal(orderId);
-}
-
-function setOrderTandaActual(orderId, tanda){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  order.tandaActual = tanda;
-  saveDB();
-  renderTableOrderModal(orderId);
-}
-
-function addOrderTanda(orderId, name){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  name = (name||'').trim();
-  if(!name) return;
-  order.tandas = order.tandas || [];
-  if(!order.tandas.includes(name)) order.tandas.push(name);
-  order.tandaActual = name;
-  saveDB();
-  renderTableOrderModal(orderId);
-}
-
-function openNewTandaModal(orderId){
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-tag"></i> Nueva categoría / pase</h3>
-      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
-    </div>
-    <div class="field">
-      <label>Nombre de la categoría</label>
-      <input type="text" id="new-tanda-name" placeholder="Ej. Primeros, Segundos, Postres, Entrantes...">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmNewTanda(${orderId})">Añadir</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('new-tanda-name')?.focus(), 50);
-}
-
-function confirmNewTanda(orderId){
-  const name = (document.getElementById('new-tanda-name').value||'').trim();
-  if(!name){ showToast('Escribe un nombre para la categoría'); return; }
-  addOrderTanda(orderId, name);
 }
 
 function orderPendingKitchenLines(order, tanda){
@@ -6786,7 +6715,7 @@ function marcharComanda(orderId, tanda){
 
   const ahora = new Date().toISOString();
   (order.items||[]).forEach(l => {
-    if((l.tanda||'') === (tanda||'') && l.qty > (l.marchada||0)){
+    if((tanda === undefined || (l.tanda||'') === (tanda||'')) && l.qty > (l.marchada||0)){
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
@@ -6892,7 +6821,10 @@ function addOrderItem(orderId, secId, platoId){
     openAddItemModal(orderId, secId, platoId);
     return;
   }
-  const tanda = order.tandaActual || '';
+  const sec = findCartaSeccion(secId);
+  const tanda = sec ? sec.nombre : '';
+  order.tandas = order.tandas || [];
+  if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
   const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && !(l.notas) && (l.tanda||'') === tanda);
   if(existing) existing.qty += 1;
   else order.items.push({platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''});
@@ -6945,7 +6877,10 @@ function confirmAddOrderItem(orderId, secId, platoId){
   const notas = (document.getElementById('add-item-notas')?.value || '').trim();
   const extra = selectedMods.reduce((s,m)=>s+(m.precio||0), 0);
   const name = selectedMods.length ? `${p.nombre} (${selectedMods.map(m=>m.nombre).join(', ')})` : p.nombre;
-  const tanda = order.tandaActual || '';
+  const sec = findCartaSeccion(secId);
+  const tanda = sec ? sec.nombre : '';
+  order.tandas = order.tandas || [];
+  if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
   order.items.push({
     platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
     notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
