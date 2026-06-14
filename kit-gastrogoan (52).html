@@ -435,6 +435,23 @@ td.wrap{white-space:normal}
 @keyframes splash-pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 @keyframes splash-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 
+/* Pantalla de selección de negocio (tras el splash) */
+#business-select-screen{
+  position:fixed;inset:0;z-index:9998;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg, #f6f7fb);
+  transition:opacity .35s ease, visibility .35s ease;
+  padding:16px;
+}
+#business-select-screen.hide{opacity:0;visibility:hidden;pointer-events:none}
+.bs-box{width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;animation:splash-pop .4s ease}
+.bs-title{font-size:20px;font-weight:800;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.bs-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto}
+.bs-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s}
+.bs-item:hover{border-color:var(--brand-orange)}
+.bs-item.active{border:2px solid var(--brand-orange)}
+.bs-item-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 /* Transición de entrada del contenido */
 .content .view.active{animation:view-fade-in .35s ease}
 @keyframes view-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -450,6 +467,9 @@ td.wrap{white-space:normal}
     <div class="splash-sub">Cargando tu Kit de Gestión...</div>
   </div>
 </div>
+
+<!-- Selección de negocio (tras el splash) -->
+<div id="business-select-screen" class="hide"></div>
 
 <!-- Header -->
 <header class="app-header" id="app-header">
@@ -1275,6 +1295,47 @@ function removeBusinessSlot(slotId){
     closeModal();
     openBusinessSwitcher();
   }
+}
+
+/* Pantalla a pantalla completa, mostrada justo después del splash, donde se
+   elige con qué negocio se quiere trabajar antes de entrar a la app. */
+function showBusinessSelectScreen(){
+  const screen = document.getElementById('business-select-screen');
+  if(!screen) return;
+  screen.innerHTML = renderBusinessSelectScreenHtml();
+  screen.classList.remove('hide');
+}
+
+function renderBusinessSelectScreenHtml(){
+  const slots = getBusinessSlots();
+  return `
+    <div class="bs-box">
+      <div class="bs-title">
+        <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff"><i class="ti ti-tools-kitchen-2"></i></div>
+        Selecciona tu negocio
+      </div>
+      <div class="bs-list">
+        ${slots.map(s => `
+          <div class="bs-item ${s.id===ACTIVE_SLOT?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+            <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+              <i class="ti ti-building-store"></i>
+              <span class="bs-item-name">${escapeHtml(s.name || 'Negocio')}</span>
+            </div>
+            ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Añadir otro negocio</button>
+    </div>
+  `;
+}
+
+function enterBusiness(slotId){
+  if(slotId === ACTIVE_SLOT){
+    document.getElementById('business-select-screen').classList.add('hide');
+    return;
+  }
+  switchToBusiness(slotId);
 }
 
 /* ============================================================
@@ -11144,7 +11205,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
     if(splash) splash.classList.add('hide');
-  }, 600);
+    showBusinessSelectScreen();
+  }, 1800);
 
   // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario
   // cierra la pestaña o cambia de app, los enviamos ya mismo para no perderlos.
