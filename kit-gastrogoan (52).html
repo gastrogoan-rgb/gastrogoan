@@ -587,6 +587,36 @@ td.wrap{white-space:normal}
       </div>
 
       <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-toolsKitchen"></i> Análisis de Platos</h3>
+        <div class="month-sel" id="platos-period-sel"></div>
+        <div class="ge-kpi-grid" id="platos-kpis"></div>
+        <div class="vis-section" style="margin-bottom:14px">
+          <h4>Top 5 platos por ingresos <span class="ge-auto">AUTO</span></h4>
+          <div id="platos-chart" class="bar-chart"></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>🔥 Más vendidos (por unidades)</h4></div>
+          <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>🧊 Menos vendidos</h4></div>
+          <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>💎 Más rentables (margen)</h4></div>
+          <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>⚠️ Menos rentables</h4></div>
+          <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>👻 Sin ventas en el periodo</h4></div>
+          <div id="platos-sin-ventas"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
         <h3><i class="ti ti-calendar-event"></i> Próximas Reservas</h3>
         <div id="dashboard-reservas"></div>
       </div>
@@ -871,11 +901,10 @@ td.wrap{white-space:normal}
         <button class="ge-tab active" onclick="GE.tab('fijos')">💰 Gastos Fijos</button>
         <button class="ge-tab" onclick="GE.tab('variables')">🛒 Gastos Variables</button>
         <button class="ge-tab" onclick="GE.tab('cdr')">📊 Cuenta de Resultados</button>
-        <button class="ge-tab" onclick="GE.tab('pe')">⚖️ Punto de Equilibrio</button>
-        <button class="ge-tab" onclick="GE.tab('capex')">🏗 CAPEX</button>
         <button class="ge-tab" onclick="GE.tab('resultado')">📈 Resultado</button>
         <button class="ge-tab" onclick="GE.tab('tesoreria')">🏦 Tesorería</button>
-        <button class="ge-tab" onclick="GE.tab('platos')">🍽 Análisis de Platos</button>
+        <button class="ge-tab" onclick="GE.tab('pe')">⚖️ Punto de Equilibrio</button>
+        <button class="ge-tab" onclick="GE.tab('capex')">🏗 CAPEX</button>
       </nav>
 
       <!-- GASTOS FIJOS -->
@@ -913,6 +942,11 @@ td.wrap{white-space:normal}
 
       <!-- CUENTA DE RESULTADOS -->
       <div id="ge-cdr" class="ge-tab-panel">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px">
+          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:16px;font-weight:700" id="cdr-year"></span>
+          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
         <div class="vis-section" style="margin-bottom:14px">
           <h4>Resultado mensual <span class="ge-auto">AUTO</span></h4>
           <div id="cdr-chart" class="bar-chart"></div>
@@ -921,6 +955,43 @@ td.wrap{white-space:normal}
           <span class="ge-link-note"><i class="ti ti-plug"></i> Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span>
         </div>
         <div class="ge-grid"><table id="cdr-table"></table></div>
+      </div>
+
+      <!-- RESULTADO -->
+      <div id="ge-resultado" class="ge-tab-panel">
+        <div style="margin-bottom:14px">
+          <span class="ge-link-note"><i class="ti ti-plug"></i> Calculado automáticamente de Cuenta de Resultados + CAPEX</span>
+        </div>
+        <div class="dist-config" style="margin-bottom:14px">
+          <div class="dist-field">Impuesto sobre beneficios (IRPF/IS) <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
+        </div>
+        <div class="ge-grid"><table id="res-table"></table></div>
+      </div>
+
+      <!-- TESORERÍA -->
+      <div id="ge-tesoreria" class="ge-tab-panel">
+        <div class="month-sel" id="te-months"></div>
+        <div class="te-kpis" id="te-kpis"></div>
+        <div class="dist-config">
+          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo:</span>
+          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">Gastos Variables <input type="number" id="te-pct-mp" value="35" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <div class="dist-field">IVA tipo <input type="number" id="te-iva-tipo" value="10" min="0" max="21" oninput="GE.renderTesoreria()">%</div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4>Distribución de tesorería <span class="ge-auto">AUTO</span></h4></div>
+          <div class="te-row" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;background:var(--bg)">
+            <span>Concepto</span><span style="text-align:right">%</span><span style="text-align:right">Objetivo</span>
+            <span style="text-align:right">Real</span><span style="text-align:right">Dif.</span><span style="text-align:center">Estado</span>
+          </div>
+          <div id="te-rows"></div>
+        </div>
+        <div class="vis-section">
+          <h4>Resultado mensual anual <span class="ge-auto">AUTO</span></h4>
+          <div id="te-annual-chart" class="bar-chart"></div>
+        </div>
       </div>
 
       <!-- PUNTO DE EQUILIBRIO -->
@@ -941,7 +1012,7 @@ td.wrap{white-space:normal}
                 <input type="number" id="pe-ticket" min="0" step="0.5" oninput="GE.calcPE()">
               </div>
               <div class="ge-input-row">
-                <label>Cubiertos actuales/mes</label>
+                <label>Cubiertos al mes</label>
                 <input type="number" id="pe-cubiertos" min="0" step="1" oninput="GE.calcPE()">
               </div>
               <div class="ge-input-row">
@@ -984,78 +1055,14 @@ td.wrap{white-space:normal}
         <div class="ge-grid"><table id="capex-table">
           <thead><tr>
             <th style="text-align:left">Descripción</th>
-            <th>Fecha</th><th>Importe</th><th>IVA</th><th>Total</th><th>Estado</th><th style="width:60px"></th>
+            <th>Fecha</th><th>Importe</th><th>IVA</th><th>Total</th><th>Estado</th><th>Financiación</th><th style="width:60px"></th>
           </tr></thead>
           <tbody id="capex-tbody"></tbody>
           <tfoot><tr class="total">
-            <td>TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td>
+            <td>TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td><td></td>
           </tr></tfoot>
         </table></div>
         <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p>Sin inversiones registradas</p></div>
-      </div>
-
-      <!-- RESULTADO -->
-      <div id="ge-resultado" class="ge-tab-panel">
-        <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> Calculado automáticamente de Cuenta de Resultados + CAPEX</span>
-        </div>
-        <div class="ge-grid"><table id="res-table"></table></div>
-      </div>
-
-      <!-- TESORERÍA -->
-      <div id="ge-tesoreria" class="ge-tab-panel">
-        <div class="month-sel" id="te-months"></div>
-        <div class="te-kpis" id="te-kpis"></div>
-        <div class="dist-config">
-          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo:</span>
-          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">M.Prima <input type="number" id="te-pct-mp" value="35" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">IVA tipo <input type="number" id="te-iva-tipo" value="10" min="0" max="21" oninput="GE.renderTesoreria()">%</div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>Distribución de tesorería <span class="ge-auto">AUTO</span></h4></div>
-          <div class="te-row" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;background:var(--bg)">
-            <span>Concepto</span><span style="text-align:right">%</span><span style="text-align:right">Objetivo</span>
-            <span style="text-align:right">Real</span><span style="text-align:right">Dif.</span><span style="text-align:center">Estado</span>
-          </div>
-          <div id="te-rows"></div>
-        </div>
-        <div class="vis-section">
-          <h4>Resultado mensual anual <span class="ge-auto">AUTO</span></h4>
-          <div id="te-annual-chart" class="bar-chart"></div>
-        </div>
-      </div>
-
-      <!-- ANÁLISIS DE PLATOS -->
-      <div id="ge-platos" class="ge-tab-panel">
-        <div class="month-sel" id="platos-period-sel"></div>
-        <div class="ge-kpi-grid" id="platos-kpis"></div>
-        <div class="vis-section" style="margin-bottom:14px">
-          <h4>Top 5 platos por ingresos <span class="ge-auto">AUTO</span></h4>
-          <div id="platos-chart" class="bar-chart"></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>🔥 Más vendidos (por unidades)</h4></div>
-          <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>🧊 Menos vendidos</h4></div>
-          <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>💎 Más rentables (margen)</h4></div>
-          <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>⚠️ Menos rentables</h4></div>
-          <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>👻 Sin ventas en el periodo</h4></div>
-          <div id="platos-sin-ventas"></div>
-        </div>
       </div>
     </section>
 
@@ -4236,6 +4243,8 @@ function renderDashboard(){
     {view:'reservas', icon:'ti-calendar-event', label:'Reservas'},
     {view:'economia', icon:'ti-coin', label:'Gestión Económica'},
   ];
+  GE.renderPlatos();
+
   document.getElementById('dashboard-shortcuts').innerHTML = shortcuts.map(s => `
     <div class="card" style="text-align:center;cursor:pointer" onclick="navigate('${s.view}')">
       <i class="ti ${s.icon}" style="font-size:24px;color:var(--brand-orange)"></i>
@@ -8248,11 +8257,12 @@ function deleteOrder(id){
    ============================================================ */
 const GE = (function(){
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const TABS = ['fijos','variables','cdr','pe','capex','resultado','tesoreria','platos'];
+  const TABS = ['fijos','variables','cdr','resultado','tesoreria','pe','capex'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
+  let cdrYear = new Date().getFullYear();
   let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   const currentYear = new Date().getFullYear();
 
@@ -8276,7 +8286,6 @@ const GE = (function(){
     if(t==='capex') renderCapex();
     if(t==='resultado') renderResultado();
     if(t==='tesoreria') renderTesoreria();
-    if(t==='platos') renderPlatos();
   }
 
   /* -- Helpers -- */
@@ -8285,18 +8294,27 @@ const GE = (function(){
   function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+parseFloat(g.importe||0),0); }
   function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function totalVariablesMes(mes, año=currentYear){ return variablesMes(mes,año).reduce((s,v)=>s+parseFloat(v.importe||0),0); }
-  function facturacionMes(mes){
-    const mesStr = `${currentYear}-${String(mes+1).padStart(2,'0')}`;
+  function facturacionMes(mes, año=currentYear){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
   // sobre las ventas del mes que llegaron por esas plataformas.
-  function comisionesMes(mes){
-    const mesStr = `${currentYear}-${String(mes+1).padStart(2,'0')}`;
+  function comisionesMes(mes, año=currentYear){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.comisionPlataforma||0),0);
   }
-  function resultadoMes(mes){
-    return facturacionMes(mes) - totalVariablesMes(mes) - totalFijos() - comisionesMes(mes);
+  // Cuota mensual de inversiones CAPEX financiadas a plazos, mientras dure el pago.
+  function capexCuotaMes(mes, año=currentYear){
+    return capex().filter(c=>c.financiado && c.cuotaMensual && c.fecha).reduce((s,c)=>{
+      const [fy,fm] = c.fecha.split('-').map(Number);
+      const elapsed = (año*12+mes) - (fy*12+(fm-1));
+      const cuotas = parseInt(c.cuotas)||0;
+      return s + (elapsed>=0 && elapsed<cuotas ? parseFloat(c.cuotaMensual||0) : 0);
+    }, 0);
+  }
+  function resultadoMes(mes, año=currentYear){
+    return facturacionMes(mes,año) - totalVariablesMes(mes,año) - totalFijos() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
   }
 
   /* -- GASTOS FIJOS -- */
@@ -8305,9 +8323,9 @@ const GE = (function(){
     const generales = fijos().filter(g=>g.categoria==='FIJOS');
     const tp = totalPersonal(), tg = totalGF(), tot = tp+tg;
     document.getElementById('gf-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Personal mensual</div><div class="val">${fmtMoney(tp)}</div><div class="sub">Objetivo: 30% ventas</div></div>
-      <div class="ge-kpi"><div class="lbl">Gastos fijos generales</div><div class="val">${fmtMoney(tg)}</div><div class="sub">Objetivo: 20% ventas</div></div>
-      <div class="ge-kpi"><div class="lbl">Total mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(tot)}</div><div class="sub">Ventas mínimas: ${fmtMoney(tot/0.5)}</div></div>`;
+      <div class="ge-kpi"><div class="lbl">Personal mensual</div><div class="val">${fmtMoney(tp)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Gastos fijos generales</div><div class="val">${fmtMoney(tg)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Total mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(tot)}</div></div>`;
     renderGFList('gf-personal', personal);
     renderGFList('gf-fijos', generales);
     document.getElementById('gf-total-val').textContent = fmtMoney(tot);
@@ -8408,7 +8426,7 @@ const GE = (function(){
     document.getElementById('gv-kpis').innerHTML = `
       <div class="ge-kpi"><div class="lbl">Total compras mes</div><div class="val">${fmtMoney(tvMes)}</div></div>
       <div class="ge-kpi"><div class="lbl">Facturación mes <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(fac)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>35?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${fac>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: 35%</div></div>`;
+      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${fac>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: ${config().foodCostObj||35}%</div></div>`;
     const items = variablesMes(mes);
     const list = document.getElementById('gv-list');
     const empty = document.getElementById('gv-empty');
@@ -8477,14 +8495,18 @@ const GE = (function(){
   }
 
   /* -- CUENTA DE RESULTADOS -- */
+  function setCDRYear(delta){ cdrYear += delta; renderCDR(); }
   function renderCDR(){
+    const yearSel = document.getElementById('cdr-year');
+    if(yearSel) yearSel.textContent = cdrYear;
     const tf = totalFijos();
     const rows = [
-      {lbl:'Facturación (TPV)', vals:MESES.map((_,i)=>facturacionMes(i)), auto:true, bold:true},
-      {lbl:'Gastos Variables', vals:MESES.map((_,i)=>-totalVariablesMes(i)), auto:true},
+      {lbl:'Facturación (TPV)', vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
+      {lbl:'Gastos Variables', vals:MESES.map((_,i)=>-totalVariablesMes(i,cdrYear)), auto:true},
       {lbl:'Gastos Fijos', vals:MESES.map(()=>-tf), auto:true},
-      {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i)), auto:true},
-      {lbl:'Resultado Mensual', vals:MESES.map((_,i)=>resultadoMes(i)), auto:true, highlight:true, isResult:true},
+      {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
+      {lbl:'Cuotas inversión financiada', vals:MESES.map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
+      {lbl:'Resultado Mensual', vals:MESES.map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
     let html = `<thead><tr><th>Concepto</th>${MESES.map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">AÑO</th></tr></thead><tbody>`;
@@ -8502,7 +8524,7 @@ const GE = (function(){
     });
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
-    document.getElementById('cdr-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i)})));
+    document.getElementById('cdr-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i,cdrYear)})));
   }
 
   /* -- PUNTO DE EQUILIBRIO -- */
@@ -8584,6 +8606,16 @@ const GE = (function(){
       const cs = c.estadoPago==='PAGADO' ? {bg:'var(--green-l)',tx:'var(--green)'}
         : c.estadoPago==='PARCIAL' ? {bg:'var(--amber-l)',tx:'var(--amber-dark)'}
         : {bg:'var(--red-l)',tx:'var(--red)'};
+      let financInfo = '—';
+      if(c.financiado && c.fecha){
+        const [fy,fm] = c.fecha.split('-').map(Number);
+        const now = new Date();
+        const elapsed = (now.getFullYear()*12+now.getMonth()) - (fy*12+(fm-1));
+        const cuotas = parseInt(c.cuotas)||0;
+        const pagadas = Math.min(Math.max(elapsed,0), cuotas);
+        const restantes = Math.max(cuotas-pagadas, 0);
+        financInfo = `${fmtMoney(c.cuotaMensual||0)}/mes · ${restantes>0?restantes+' cuotas restantes':'pagado'}`;
+      }
       return `<tr>
         <td style="text-align:left;font-weight:600">${escapeHtml(c.descripcion)}</td>
         <td>${escapeHtml(c.fecha||'—')}</td>
@@ -8591,6 +8623,7 @@ const GE = (function(){
         <td>${fmtMoney(ivaAmt)}</td>
         <td>${fmtMoney(tot)}</td>
         <td><span class="badge" style="background:${cs.bg};color:${cs.tx}">${c.estadoPago}</span></td>
+        <td style="font-size:12px">${financInfo}</td>
         <td style="text-align:left">
           <button class="btn btn-sm btn-icon" onclick="GE.editCapex(${c.id})"><i class="ti ti-edit"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteCapex(${c.id})"><i class="ti ti-trash"></i></button>
@@ -8603,12 +8636,16 @@ const GE = (function(){
   }
   function newCapex(){
     editingCX = null;
-    openCapexModal('Nueva inversión', {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE'});
+    openCapexModal('Nueva inversión', {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
   }
   function editCapex(id){
     const c = capex().find(x=>x.id===id); if(!c) return;
     editingCX = id;
     openCapexModal('Editar inversión', c);
+  }
+  function toggleCapexFinanciado(){
+    const checked = document.getElementById('cx-f-financiado').checked;
+    document.getElementById('cx-f-cuotas-row').style.display = checked ? 'flex' : 'none';
   }
   function openCapexModal(title, c){
     openModal(`
@@ -8626,6 +8663,14 @@ const GE = (function(){
           </select>
         </div>
       </div>
+      <div class="field" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="cx-f-financiado" style="width:auto" ${c.financiado?'checked':''} onchange="GE.toggleCapexFinanciado()">
+        <label style="margin:0">Inversión pagada a plazos (financiada)</label>
+      </div>
+      <div class="field-row" id="cx-f-cuotas-row" style="display:${c.financiado?'flex':'none'}">
+        <div class="field"><label>Cuota mensual (€)</label><input type="number" id="cx-f-cuota" min="0" step="0.01" value="${c.cuotaMensual||''}"></div>
+        <div class="field"><label>Nº de cuotas</label><input type="number" id="cx-f-numcuotas" min="1" step="1" value="${c.cuotas||''}"></div>
+      </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="GE.saveCapex()">Guardar</button>
@@ -8637,11 +8682,15 @@ const GE = (function(){
     const imp = parseFloat(document.getElementById('cx-f-imp').value);
     if(!desc){ showToast('La descripción es obligatoria'); return; }
     if(isNaN(imp) || imp<=0){ showToast('Introduce el importe'); return; }
+    const financiado = document.getElementById('cx-f-financiado').checked;
     const data = {
       descripcion: desc.toUpperCase(), importe: imp,
       iva: parseFloat(document.getElementById('cx-f-iva').value)||0,
       fecha: document.getElementById('cx-f-fecha').value,
-      estadoPago: document.getElementById('cx-f-estado').value
+      estadoPago: document.getElementById('cx-f-estado').value,
+      financiado,
+      cuotaMensual: financiado ? (parseFloat(document.getElementById('cx-f-cuota').value)||0) : 0,
+      cuotas: financiado ? (parseInt(document.getElementById('cx-f-numcuotas').value)||0) : 0
     };
     if(editingCX){
       Object.assign(capex().find(x=>x.id===editingCX), data);
@@ -8662,11 +8711,16 @@ const GE = (function(){
 
   /* -- RESULTADO TRIMESTRAL/ANUAL -- */
   function renderResultado(){
+    const pctImpEl = document.getElementById('res-pct-impuesto');
+    if(pctImpEl) pctImpEl.value = config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25;
+    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+
     const tf = totalFijos();
     const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
     const amort = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12*3; // amortización 5 años, por trimestre
+    const resAntesImp = m => facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3-capexCuotaMes(m);
 
     const conceptos = [
       {lbl:'Ventas Netas', fn:m=>facturacionMes(m), bold:true},
@@ -8674,10 +8728,12 @@ const GE = (function(){
       {lbl:'Margen Bruto', fn:m=>facturacionMes(m)-totalVariablesMes(m), highlight:true, bold:true},
       {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
       {lbl:'Gastos Explotación', fn:()=>tf*3},
+      {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
       {lbl:'EBITDA Operativo', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
       {lbl:'Amortizaciones CAPEX', fn:()=>amort, auto:true},
-      {lbl:'Resultado Antes Impuestos', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3, bold:true},
-      {lbl:'Resultado Neto', fn:m=>{ const r=facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3; return r>0?r*0.75:r; }, isResult:true, bold:true},
+      {lbl:'Resultado Antes Impuestos', fn:resAntesImp, bold:true},
+      {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
+      {lbl:'Resultado Neto', fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
     ];
     let html = `<thead><tr><th style="text-align:left">Concepto</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
     conceptos.forEach(c=>{
@@ -8709,22 +8765,33 @@ const GE = (function(){
     const ivaReserva = facBruta*(ivaTipo/(1+ivaTipo));
     const facNeta = facBruta - ivaReserva;
 
+    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+    const realPerKpi = totalPersonal();
+    const realGFKpi = totalGF();
+    const realMPKpi = totalVariablesMes(activeMonth);
+    const cuotasCapexKpi = capexCuotaMes(activeMonth);
+    const realBenKpi = facNeta - realPerKpi - realGFKpi - realMPKpi - cuotasCapexKpi;
+    const taxReserve = realBenKpi>0 ? realBenKpi*pctImp : 0;
+    const netoDisponible = realBenKpi - taxReserve;
+
     document.getElementById('te-kpis').innerHTML = `
       <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Desde TPV</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">IVA a reservar (${(ivaTipo*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaReserva)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda</div></div>
-      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base distribución</div></div>`;
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">IVA a reservar (${(ivaTipo*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaReserva)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda (IVA)</div></div>
+      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base distribución</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">Reserva Impuestos (IRPF/IS, ${(pctImp*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(taxReserve)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda (sobre beneficio)</div></div>
+      <div class="kpi-mini" style="border-color:var(--green)"><div class="l">Beneficio neto disponible</div><div class="v" style="color:${netoDisponible>=0?'var(--green)':'var(--red)'}">${fmtMoney(netoDisponible)}</div><div style="font-size:11px;color:var(--muted)">Tras reservar IVA e impuestos</div></div>`;
 
     const realPer = totalPersonal();
     const realGF = totalGF();
     const realMP = totalVariablesMes(activeMonth);
-    const realOG = 0;
-    const realBen = facNeta - realPer - realGF - realMP;
+    const realOG = capexCuotaMes(activeMonth);
+    const realBen = facNeta - realPer - realGF - realMP - realOG;
 
     const rows = [
       {lbl:'Personal (nóminas + SS)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
       {lbl:'Gastos Fijos Generales', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
-      {lbl:'Materia Prima / Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
-      {lbl:'Otros Gastos', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
+      {lbl:'Gastos Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
+      {lbl:'Otros Gastos (cuotas financiación)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:'Beneficio estimado', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
     ];
 
@@ -8750,6 +8817,11 @@ const GE = (function(){
     document.getElementById('te-annual-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i)})));
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
+  function setPctImpuesto(){
+    config().pctImpuestoBeneficio = parseFloat(document.getElementById('res-pct-impuesto').value) || 0;
+    saveDB();
+    renderResultado();
+  }
 
   function barChartHTML(data){
     const vals = data.map(d=>d.v);
@@ -9058,7 +9130,7 @@ const GE = (function(){
     showToast('CSV descargado, adjúntalo en el correo abierto');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
+  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
 })();
 
 /* ============================================================
@@ -12141,12 +12213,13 @@ const MANUAL_CHAPTERS = [
     title:'📊 Gestión Económica',
     content:`<h3>Control financiero completo</h3>
     <h4>Gastos Fijos</h4><p>Registra todos los gastos mensuales que no varían: nóminas, alquiler, seguros, suministros. Se usan automáticamente en el Punto de Equilibrio y la Cuenta de Resultados.</p>
-    <h4>Gastos Variables</h4><p>Registra cada compra a proveedor mes a mes. El food cost se calcula automáticamente comparando con la facturación del TPV.</p>
-    <h4>Cuenta de Resultados</h4><p>Vista mensual con facturación (del TPV), gastos (de las otras pestañas) y resultado, todo calculado automáticamente.</p>
-    <h4>Punto de Equilibrio</h4><p>Introduce ticket medio, cubiertos actuales y días de apertura. El sistema te dice cuántos cubiertos necesitas para no perder dinero.</p>
-    <h4>CAPEX</h4><p>Registro de inversiones y equipamientos con seguimiento de pagos.</p>
-    <h4>Resultado</h4><p>P&amp;L trimestral y anual automático: Ventas → Margen Bruto → EBITDA → Resultado Neto.</p>
-    <h4>Tesorería</h4><p>Muestra cómo distribuir la facturación entre Personal, Gastos Fijos, Materia Prima, Otros y Beneficio. Configura los porcentajes objetivo y comprueba si estás en línea.</p>`
+    <h4>Gastos Variables</h4><p>Registra cada compra a proveedor mes a mes. El food cost real se compara con tu food cost objetivo (configurable en Punto de Equilibrio).</p>
+    <h4>Cuenta de Resultados</h4><p>Vista mensual con facturación (del TPV), gastos (de las otras pestañas) y resultado del mes, todo calculado automáticamente. Usa las flechas para navegar entre años y ver el histórico mes a mes.</p>
+    <h4>Resultado</h4><p>P&amp;L trimestral y anual automático: Ventas → Margen Bruto → EBITDA → Resultado Antes de Impuestos → Resultado Neto. Configura el % de impuesto sobre beneficios (IRPF/IS) según tu forma de tributación.</p>
+    <h4>Tesorería</h4><p>Muestra cómo distribuir la facturación entre Personal, Gastos Fijos, Gastos Variables, Otros y Beneficio, e indica cuánto reservar para IVA y para impuestos sobre el beneficio (IRPF/IS), mostrando el beneficio neto realmente disponible. Configura los porcentajes objetivo y comprueba si estás en línea.</p>
+    <h4>Punto de Equilibrio</h4><p>Introduce ticket medio, cubiertos al mes, días de apertura y food cost objetivo. El sistema te dice cuántos cubiertos necesitas para no perder dinero.</p>
+    <h4>CAPEX</h4><p>Registro de inversiones y equipamientos. Puedes marcar una inversión como financiada a plazos indicando la cuota mensual y el número de cuotas: esa cuota computa como gasto mientras dure la financiación.</p>
+    <div class="manual-tip">💡 El Análisis de Platos (más/menos vendidos y más/menos rentables) se encuentra ahora en el Panel de Control.</div>`
   },
   {
     title:'📈 Panel de Control',
@@ -12157,6 +12230,9 @@ const MANUAL_CHAPTERS = [
       <li><strong>Resultado:</strong> facturación, gastos y resultado del mes</li>
       <li><strong>Tendencia:</strong> gráfico de ventas mensuales del año</li>
       <li><strong>Punto de equilibrio:</strong> situación frente al objetivo</li>
+      <li><strong>Comparativa con el periodo anterior:</strong> variación de ventas y resultado respecto a la semana/mes anterior</li>
+      <li><strong>Análisis de ventas:</strong> ticket medio, platos más vendidos y de mayor margen en los últimos 30 días</li>
+      <li><strong>Análisis de Platos:</strong> ranking de más/menos vendidos y más/menos rentables por periodo</li>
       <li><strong>Alertas:</strong> avisos automáticos si algo va mal (food cost alto, resultado negativo, fichas pendientes, stock bajo)</li>
       <li><strong>Próximas reservas</strong> y accesos directos a los módulos más usados</li>
     </ul>
