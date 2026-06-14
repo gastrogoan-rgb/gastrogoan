@@ -206,6 +206,26 @@ td.wrap{white-space:normal}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty i{font-size:32px;display:block;margin-bottom:10px;color:var(--border)}
 
+/* ===== Tour guiado: resalta la zona de la pantalla de la que se habla ===== */
+@keyframes tourPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(223,112,57,.55)}
+  50%{box-shadow:0 0 0 9px rgba(223,112,57,0)}
+}
+.tour-highlight{
+  outline:3px solid var(--brand-orange)!important;
+  outline-offset:3px;border-radius:14px;
+  animation:tourPulse 1.6s ease-in-out infinite;
+  position:relative;z-index:5;
+}
+.tour-bubble{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+  width:calc(100% - 32px);max-width:480px;
+  background:#fff;border:2px solid var(--brand-orange);border-radius:16px;
+  box-shadow:0 -8px 30px rgba(0,0,0,.22);padding:16px 18px;z-index:9000;
+}
+.tour-bubble h3{font-size:16px;display:flex;align-items:center;gap:8px;margin:0}
+.tour-bubble p{font-size:13.5px;line-height:1.6;margin:8px 0 10px}
+
 /* Toast */
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -3091,35 +3111,45 @@ function t(key){
   return I18N.es[key] !== undefined ? I18N.es[key] : key;
 }
 
-/* ============== Tour virtual de bienvenida ============== */
+/* ============== Tour virtual de bienvenida ==============
+   Cada paso, además del texto, indica a qué pantalla ir (folder/view) y
+   qué elemento resaltar (target), para que el tour navegue de verdad por
+   la app y muestre en vivo lo que está explicando. Orden: introducción,
+   Cocina, Sala y Gestión. */
 const TOUR_STEPS = [
   {icon:'ti-confetti', titleKey:'tour.s1.title', descKey:'tour.s1.desc'},
-  {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc'},
-  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc'},
-  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc'},
-  {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc'},
-  {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc'},
-  {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc'},
-  {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc'},
-  {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc'},
-  {icon:'ti-download', titleKey:'tour.s14.title', descKey:'tour.s14.desc'},
-  {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc'},
-  {icon:'ti-calendar-plus', titleKey:'tour.s16.title', descKey:'tour.s16.desc'},
-  {icon:'ti-users', titleKey:'tour.s17.title', descKey:'tour.s17.desc'},
-  {icon:'ti-address-book', titleKey:'tour.s18.title', descKey:'tour.s18.desc'},
-  {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc'},
-  {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc'},
-  {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc'},
-  {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc'},
-  {icon:'ti-speakerphone', titleKey:'tour.s23.title', descKey:'tour.s23.desc'},
-  {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc'},
-  {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc'},
-  {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc'},
-  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc'},
+  {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc', target:'.folder-grid'},
+
+  // ---- Cocina ----
+  {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc', folder:'cocina', view:'carta'},
+  {icon:'ti-download', titleKey:'tour.s14.title', descKey:'tour.s14.desc', folder:'cocina', view:'carta'},
+  {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc', folder:'cocina', view:'carta'},
+  {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc', folder:'cocina', view:'megalista'},
+  {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo'},
+  {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock'},
+  {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios'},
+  {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina'},
+
+  // ---- Sala ----
+  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv'},
+  {icon:'ti-calendar-plus', titleKey:'tour.s16.title', descKey:'tour.s16.desc', folder:'sala', view:'reservas'},
+  {icon:'ti-users', titleKey:'tour.s17.title', descKey:'tour.s17.desc', folder:'sala', view:'reservas'},
+  {icon:'ti-address-book', titleKey:'tour.s18.title', descKey:'tour.s18.desc', folder:'sala', view:'clientes'},
+  {icon:'ti-speakerphone', titleKey:'tour.s23.title', descKey:'tour.s23.desc', folder:'sala', view:'promocion'},
+
+  // ---- Gestión ----
+  {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true},
+  {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true},
+  {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true},
+  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true},
 ];
 let tourStepIndex = 0;
 
@@ -3141,34 +3171,76 @@ function dismissTour(){
   closeModal();
 }
 function startAppTour(){
+  closeModal();
   tourStepIndex = 0;
   renderTourStep();
 }
+
+/* Limpia el resalte (borde animado) de cualquier elemento del paso anterior. */
+function tourClearHighlight(){
+  document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+}
+
+/* Lleva la app a la pantalla del paso actual y resalta el elemento que
+   corresponde, igual que si el usuario hubiera navegado a mano. */
+function tourGoToStep(step){
+  tourClearHighlight();
+  if(step.gestion){
+    ownerUnlocked = true;
+    const lockBtn = document.getElementById('lock-btn');
+    if(lockBtn) lockBtn.style.display = '';
+  }
+  if(step.folder) currentFolder = step.folder;
+  if(step.view) navigate(step.view);
+  else if(step.folder) navigate('folder');
+  else navigate('home');
+
+  const sel = step.target || (step.view ? '#view-' + step.view : (step.folder ? '.folder-card.folder-' + step.folder : null));
+  if(!sel) return;
+  const els = document.querySelectorAll(sel);
+  els.forEach(el => el.classList.add('tour-highlight'));
+  if(els[0]) els[0].scrollIntoView({behavior:'smooth', block:'center'});
+}
+
 function renderTourStep(){
   const step = TOUR_STEPS[tourStepIndex];
   const isLast = tourStepIndex === TOUR_STEPS.length - 1;
+  tourGoToStep(step);
   const dots = TOUR_STEPS.map((_,i)=>`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:${i===tourStepIndex?'var(--brand-orange)':'var(--border)'}"></span>`).join('');
-  openModal(`
-    <div class="modal-header">
+  let b = document.getElementById('tour-bubble');
+  if(!b){
+    b = document.createElement('div');
+    b.id = 'tour-bubble';
+    b.className = 'tour-bubble';
+    document.body.appendChild(b);
+  }
+  b.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <h3><i class="ti ${step.icon}"></i> ${escapeHtml(t(step.titleKey))}</h3>
       <button class="modal-close" onclick="finishTour()">&times;</button>
     </div>
-    <p style="min-height:70px">${escapeHtml(t(step.descKey))}</p>
-    <div style="text-align:center;margin:10px 0">${dots}</div>
-    <div class="modal-footer">
-      ${tourStepIndex > 0 ? `<button class="btn" onclick="tourPrev()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.prev'))}</button>` : `<button class="btn" onclick="finishTour()">${escapeHtml(t('common.skip'))}</button>`}
+    <p>${escapeHtml(t(step.descKey))}</p>
+    <div style="text-align:center;margin-bottom:10px">${dots}</div>
+    <div class="modal-footer" style="margin-top:0">
+      ${tourStepIndex > 0 ? `<button class="btn btn-sm" onclick="tourPrev()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.prev'))}</button>` : `<button class="btn btn-sm" onclick="finishTour()">${escapeHtml(t('common.skip'))}</button>`}
       ${isLast
-        ? `<button class="btn btn-primary" onclick="finishTour()"><i class="ti ti-check"></i> ${escapeHtml(t('common.finish'))}</button>`
-        : `<button class="btn btn-primary" onclick="tourNext()">${escapeHtml(t('common.next'))} <i class="ti ti-arrow-right"></i></button>`}
+        ? `<button class="btn btn-primary btn-sm" onclick="finishTour()"><i class="ti ti-check"></i> ${escapeHtml(t('common.finish'))}</button>`
+        : `<button class="btn btn-primary btn-sm" onclick="tourNext()">${escapeHtml(t('common.next'))} <i class="ti ti-arrow-right"></i></button>`}
     </div>
-  `);
+  `;
 }
 function tourNext(){ tourStepIndex = Math.min(tourStepIndex+1, TOUR_STEPS.length-1); renderTourStep(); }
 function tourPrev(){ tourStepIndex = Math.max(tourStepIndex-1, 0); renderTourStep(); }
 function finishTour(){
   DB.business.tourSeen = true;
   saveDB();
-  closeModal();
+  tourClearHighlight();
+  const b = document.getElementById('tour-bubble');
+  if(b) b.remove();
+  ownerUnlocked = false;
+  const lockBtn = document.getElementById('lock-btn');
+  if(lockBtn) lockBtn.style.display = 'none';
+  goHome();
 }
 
 /* ============== Centro de ayuda / Asistente ============== */
