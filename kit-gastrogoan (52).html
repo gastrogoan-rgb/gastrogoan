@@ -1528,25 +1528,42 @@ function showRevokedGate(){
   document.body.appendChild(g);
 }
 
+const ONBOARDING_ROLE_LS = 'gastrogoan_onboarding_role';
+
 function showActivationGate(){
   if(document.getElementById('license-gate')) return;
   const g = document.createElement('div');
   g.id = 'license-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
+  const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
+  const cardStyle = (active) => `flex:1;border:2px solid ${active?'var(--brand-orange)':'var(--border)'};background:${active?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Activa tu copia para empezar</p>
       <div style="text-align:left">
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor al comprar la app)</span></label>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">¿Quién eres?</label>
+        <div style="display:flex;gap:10px;margin-bottom:18px">
+          <div id="role-owner-card" style="${cardStyle(role==='owner')}" onclick="selectOnboardingRole('owner')">👤<br>Soy el/la<br>dueño/a</div>
+          <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>Soy<br>empleado/a</div>
+        </div>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor/jefe/a)</span></label>
         <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
-        <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 ¿Eres empleado? Usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 Si eres empleado/a, usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
       </div>
     </div>`;
   document.body.appendChild(g);
+}
+
+function selectOnboardingRole(role){
+  localStorage.setItem(ONBOARDING_ROLE_LS, role);
+  const ownerCard = document.getElementById('role-owner-card');
+  const employeeCard = document.getElementById('role-employee-card');
+  if(ownerCard) ownerCard.style.cssText = `flex:1;border:2px solid ${role==='owner'?'var(--brand-orange)':'var(--border)'};background:${role==='owner'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  if(employeeCard) employeeCard.style.cssText = `flex:1;border:2px solid ${role==='employee'?'var(--brand-orange)':'var(--border)'};background:${role==='employee'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
 }
 
 function hideActivationGate(){
@@ -1608,24 +1625,8 @@ function showFirebaseSetupGate(){
         <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
       </div>
     </div>`;
-  g.innerHTML = `
-    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
-      <div style="text-align:center">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
-        <h2 style="margin-bottom:4px">Configura tu nube</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan (≈10 minutos, una sola vez)</p>
-      </div>
 
-      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        Cada negocio tiene su <strong>propio espacio en la nube</strong> (gratuito, de Google), separado del resto. Sirve para sincronizar tus dispositivos (camareros, cocina, TPV) y activar las reservas/pedidos online por QR.
-      </div>
-
-      <div style="background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
-        📱 <strong>¿Eres empleado/a, no el/la propietario/a?</strong> No hace falta que sigas los pasos: pide a tu jefe/a que te diga la <strong>Clave de API</strong> y la <strong>URL de la base de datos</strong> que él/ella configuró (las puede ver en Nube → "Cambiar la configuración de Firebase"), pégalas en el formulario de abajo y pulsa "Guardar y conectar". Listo.
-      </div>
-
-      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Si eres el/la propietario/a, sigue estos pasos:</h3>
-
+  const stepsHtml = `
       ${step(1, 'Crea un proyecto gratis en Firebase', `
         Abre <code>console.firebase.google.com</code> en otra pestaña (puedes volver a esta después) e inicia sesión con una cuenta de Google (la que quieras, puede ser una nueva solo para esto).<br><br>
         Pulsa <strong>"Crear un proyecto"</strong> (o "Agregar proyecto"), escribe un nombre (por ejemplo, el nombre de tu restaurante) y pulsa "Continuar". Cuando te pregunte por Google Analytics, puedes <strong>desactivarlo</strong> y pulsar "Crear proyecto". Espera unos segundos hasta que termine.
@@ -1664,12 +1665,54 @@ function showFirebaseSetupGate(){
 
       ${step(6, 'Pégalos aquí abajo y guarda', `
         Pega esos dos valores en los campos siguientes y pulsa "Guardar y conectar". La app se recargará y quedará lista.<br><br>
-        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de arriba.</span>
-      `)}
+        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de abajo.</span>
+      `)}`;
 
+  const employeeBoxHtml = `
+      <div style="background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
+        📱 <strong>¿Eres empleado/a, no el/la propietario/a?</strong> No hace falta que sigas los pasos: pide a tu jefe/a que te diga la <strong>Clave de API</strong> y la <strong>URL de la base de datos</strong> que él/ella configuró (las puede ver en Nube → "Cambiar la configuración de Firebase"), pégalas en el formulario de abajo y pulsa "Guardar y conectar". Listo.
+      </div>`;
+
+  const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
+  const intro = `
+      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+        Cada negocio tiene su <strong>propio espacio en la nube</strong> (gratuito, de Google), separado del resto. Sirve para sincronizar tus dispositivos (camareros, cocina, TPV) y activar las reservas/pedidos online por QR.
+      </div>`;
+
+  let bodyHtml;
+  if(role === 'employee'){
+    bodyHtml = `
+      ${intro}
+      ${employeeBoxHtml}
+      <details style="margin-bottom:6px">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">¿No tienes esos datos? Ver guía completa (para el propietario)</summary>
+        <div style="margin-top:14px">${stepsHtml}</div>
+      </details>
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
         ${renderOwnFirebaseForm()}
+      </div>`;
+  }else{
+    bodyHtml = `
+      ${intro}
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Sigue estos pasos:</h3>
+      ${stepsHtml}
+      <details style="margin:14px 0 6px">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">📱 ¿Vas a compartir esto con empleados? Lee esto</summary>
+        <div style="margin-top:10px">${employeeBoxHtml}</div>
+      </details>
+      <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
+        ${renderOwnFirebaseForm()}
+      </div>`;
+  }
+
+  g.innerHTML = `
+    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
+      <div style="text-align:center">
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
+        <h2 style="margin-bottom:4px">Configura tu nube</h2>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan (≈10 minutos, una sola vez)</p>
       </div>
+      ${bodyHtml}
     </div>`;
   document.body.appendChild(g);
 }
