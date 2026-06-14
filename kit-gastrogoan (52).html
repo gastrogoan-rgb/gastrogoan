@@ -1523,6 +1523,7 @@ function activateLicenseFromGate(){
   showToast('Licencia activada: ' + parsed.name);
   if(!getCloudConfig()) showFirebaseSetupGate();
   initCloud();
+  initPublicRequestsListener();
   checkLicenseRevocation();
 }
 
@@ -1653,6 +1654,63 @@ function getPlatformFirebaseApp(){
   }
 }
 
+/* Escucha las reservas/pedidos que el cliente envía desde la página pública
+   (reservagastrogoan.html). Esa página siempre escribe en el proyecto
+   COMPARTIDO de la plataforma (no en el Firebase propio del negocio), así
+   que esta escucha se conecta ahí independientemente de si el negocio tiene
+   configurada su propia nube. */
+let publicRequestsListenerAttached = false;
+function initPublicRequestsListener(){
+  if(publicRequestsListenerAttached) return;
+  if(typeof firebase === 'undefined') return;
+  if(!getLicense()) return;
+  const publicId = getPublicId();
+  if(!publicId) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app || publicRequestsListenerAttached) return;
+    publicRequestsListenerAttached = true;
+    app.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', snap => {
+      const req = snap.val();
+      const reqRef = snap.ref;
+      if(!req || !req.type){ reqRef.remove(); return; }
+      if(req.type === 'reserva'){
+        DB.reservations.push({
+          id: genId(), clientId: null,
+          clientName: req.clientName || '', clientPhone: req.clientPhone || '',
+          date: req.date, time: req.time, people: req.people || 1,
+          tableId: null, notes: req.notes || '', status: 'pendiente'
+        });
+      }else if(req.type === 'pedido' && req.tipo === 'mesa'){
+        // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
+        // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
+        // la bandeja de "pedidos pendientes".
+        const items = (req.items || []).map(l => ({platoId: null, recipeId: null, name: l.name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true}));
+        const table = DB.tables.find(t => t.id === req.tableId);
+        let order = table ? DB.tpvOrders.find(o => o.tableId === table.id && o.status === 'abierta') : null;
+        if(order){
+          items.forEach(it => order.items.push(it));
+        }else{
+          DB.tpvOrders.push({
+            id: genId(), tableId: req.tableId || null, tipo:'mesa', pax: req.pax || 1,
+            clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString()
+          });
+        }
+      }else if(req.type === 'pedido'){
+        DB.tpvOrders.push({
+          id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
+          clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
+          clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
+          date: req.date || '', time: req.time || '',
+          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString()
+        });
+      }
+      saveDB();
+      refreshAfterRemoteChange();
+      reqRef.remove();
+    }, err => console.error('Error escuchando pedidos públicos', err));
+  }).catch(e => console.error('Error escuchando pedidos públicos', e));
+}
+
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -1665,7 +1723,8 @@ function syncPublicMirror(){
         business: DB.business,
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
-        reservasResumen: getReservasResumenForSync()
+        reservasResumen: getReservasResumenForSync(),
+        tables: DB.tables.map(t => ({id: t.id, name: t.name}))
       }).catch(()=>{});
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
@@ -1779,32 +1838,6 @@ function startCloudSync(tenantId){
     firebase.database().ref('.info/connected').on('value', s => {
       updateSyncBadge(s.val() ? 'online' : 'offline');
     });
-    // Solicitudes enviadas desde la página pública de reservas/pedidos
-    const publicId = getPublicId();
-    firebase.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', snap => {
-      const req = snap.val();
-      const reqRef = snap.ref;
-      if(!req || !req.type){ reqRef.remove(); return; }
-      if(req.type === 'reserva'){
-        DB.reservations.push({
-          id: genId(), clientId: null,
-          clientName: req.clientName || '', clientPhone: req.clientPhone || '',
-          date: req.date, time: req.time, people: req.people || 1,
-          tableId: null, notes: req.notes || '', status: 'pendiente'
-        });
-      }else if(req.type === 'pedido'){
-        DB.tpvOrders.push({
-          id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
-          clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
-          clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
-          date: req.date || '', time: req.time || '',
-          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString()
-        });
-      }
-      saveDB();
-      refreshAfterRemoteChange();
-      reqRef.remove();
-    });
   }catch(e){
     console.error('Error iniciando la nube', e);
     updateSyncBadge('error');
@@ -1856,6 +1889,31 @@ function renderOnlineCard(){
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> Copiar enlace</button>
         <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Reserva o pide en línea en ' + (b.name || 'nuestro restaurante') + ':\n\n' + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      </div>
+    </div>
+    ${renderTableQrCard(link)}
+  `;
+}
+
+// Genera un QR por mesa (mismo enlace + &mesa=ID) para que el cliente pida
+// directamente desde su mesa sin esperar al camarero ("auto-pedido").
+function renderTableQrCard(link){
+  if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length || !link) return '';
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-qrcode"></i> QR de auto-pedido por mesa</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Imprime un QR para cada mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${DB.tables.map(t => {
+          const tLink = `${link}&mesa=${t.id}`;
+          const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(tLink);
+          return `
+          <div class="ge-item" style="align-items:center;gap:12px">
+            <img src="${tQr}" alt="QR ${escapeHtml(t.name)}" style="width:60px;height:60px;border-radius:6px;border:1px solid var(--border);background:#fff;padding:3px">
+            <span style="flex:1;font-weight:600">${escapeHtml(t.name)}</span>
+            <a class="btn btn-sm" style="text-decoration:none" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar</a>
+          </div>`;
+        }).join('')}
       </div>
     </div>
   `;
@@ -5434,12 +5492,13 @@ function renderTpvMesas(tiposServicio){
     const order = getOpenOrderForTable(t.id);
     const total = order ? orderTotal(order) : 0;
     const hayListos = order && (order.items||[]).some(l => l.estado === 'listo');
+    const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
     let badge = '<span class="badge badge-green">Libre</span>';
     if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
         <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''}
+        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''}
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
@@ -5880,7 +5939,7 @@ function renderOrderLinesHtml(order){
     ${g.items.map(({line, idx}) => `
     <tr>
       <td>
-        ${escapeHtml(line.name)}${kitchenStatusBadge(line)}
+        ${escapeHtml(line.name)}${kitchenStatusBadge(line)}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
         ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
       </td>
       <td>
@@ -5925,6 +5984,10 @@ function renderTableOrderModal(orderId){
 
   const linesHtml = renderOrderLinesHtml(order);
   const total = orderTotal(order);
+  if(order.items.some(l => l.nuevo)){
+    order.items.forEach(l => delete l.nuevo);
+    saveDB();
+  }
 
   openModal(`
     <div class="modal-header">
@@ -10726,6 +10789,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderHeader();
   initCloud();
   syncPublicMirror();
+  initPublicRequestsListener();
   applyHelpI18n();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];

@@ -129,9 +129,10 @@ const FIREBASE_CONFIG = {
 };
 
 let publicId = null;
+let tableIdFromUrl = null;
 let db = null;
 let DB = null; // { business, cartas, activeCartaId }
-let currentTab = null; // 'reserva' | 'takeaway' | 'delivery'
+let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
 let cart = []; // [{recipeId, sectionId, name, price, qty}]
 
 function escapeHtml(str){
@@ -154,6 +155,15 @@ function getPublicIdFromUrl(){
   return null;
 }
 
+function getTableIdFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('mesa');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
 function showError(msg){
   document.getElementById('app').innerHTML = `
     <div class="error-box">
@@ -166,6 +176,7 @@ function showError(msg){
 
 function init(){
   publicId = getPublicIdFromUrl();
+  tableIdFromUrl = getTableIdFromUrl();
   if(!publicId){ showError('Enlace no válido o incompleto'); return; }
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -191,7 +202,8 @@ function loadBusinessInfo(){
       business: val.business || {},
       cartas: val.cartas || [],
       activeCartaIds: val.activeCartaIds || (val.activeCartaId ? [val.activeCartaId] : []),
-      reservasResumen: val.reservasResumen || {}
+      reservasResumen: val.reservasResumen || {},
+      tables: val.tables || []
     };
     renderHeader();
     renderApp();
@@ -220,6 +232,7 @@ function getActiveCartas(){
 function renderApp(){
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const tabs = [];
+  if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? '📱 Tu pedido' : '📱 Pedir en mesa'});
   if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label:'🍽️ Reservar mesa'});
   if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label:'🥡 Take Away'});
   if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label:'🛵 Delivery'});
@@ -229,7 +242,9 @@ function renderApp(){
     return;
   }
 
-  if(!currentTab || !tabs.some(t=>t.id===currentTab)) currentTab = tabs[0].id;
+  if(!currentTab || !tabs.some(t=>t.id===currentTab)){
+    currentTab = (tableIdFromUrl && tabs.some(t=>t.id==='mesa')) ? 'mesa' : tabs[0].id;
+  }
   cart = [];
 
   document.getElementById('app').innerHTML = `
@@ -249,6 +264,7 @@ function setTab(tab){
 
 function renderTabContent(){
   if(currentTab === 'reserva') renderReservaForm();
+  else if(currentTab === 'mesa') renderMesaOrderForm();
   else renderOrderForm();
 }
 
@@ -399,19 +415,13 @@ function submitReserva(){
   sendRequest(req, 'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.');
 }
 
-/* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
-function renderOrderForm(){
-  const box = document.getElementById('tab-content');
-  const cartas = getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
+/* ============ MENÚ (carrito compartido) ============ */
+function getActiveCartasConPlatos(){
+  return getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
+}
 
-  if(!cartas.length){
-    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.</div></div>`;
-    return;
-  }
-
-  const isDelivery = currentTab === 'delivery';
-
-  const menuHtml = cartas.map(carta => `
+function buildMenuHtml(cartas){
+  return cartas.map(carta => `
     ${cartas.length > 1 ? `<h2>${escapeHtml(carta.nombre)}</h2>` : ''}
     ${(carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
       ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(sec.nombre)}</h3>` : ''}
@@ -430,6 +440,21 @@ function renderOrderForm(){
       `).join('')}
     `).join('')}
   `).join('');
+}
+
+/* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
+function renderOrderForm(){
+  const box = document.getElementById('tab-content');
+  const cartas = getActiveCartasConPlatos();
+
+  if(!cartas.length){
+    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.</div></div>`;
+    return;
+  }
+
+  const isDelivery = currentTab === 'delivery';
+
+  const menuHtml = buildMenuHtml(cartas);
 
   box.innerHTML = `
     <div class="card">
@@ -544,6 +569,86 @@ function submitOrder(){
     createdAt: new Date().toISOString()
   };
   sendRequest(req, 'Pedido enviado. El restaurante lo confirmará en breve.');
+}
+
+/* ============ PEDIDO EN MESA (auto-pedido) ============ */
+function renderMesaOrderForm(){
+  const box = document.getElementById('tab-content');
+  const cartas = getActiveCartasConPlatos();
+
+  if(!cartas.length){
+    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.</div></div>`;
+    return;
+  }
+
+  const tables = DB.tables || [];
+  const currentTable = tableIdFromUrl ? tables.find(t => String(t.id) === String(tableIdFromUrl)) : null;
+
+  const menuHtml = buildMenuHtml(cartas);
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>Pedir desde tu mesa</h2>
+      ${currentTable
+        ? `<p style="font-size:13px;color:#888;margin-top:-6px">Tu mesa: <strong>${escapeHtml(currentTable.name)}</strong>. Tu pedido se enviará directamente a cocina.</p>`
+        : tableIdFromUrl
+          ? `<p style="font-size:13px;color:var(--red);margin-top:-6px">No se ha reconocido tu mesa. Indica el número a continuación.</p>
+             <div class="field"><label>¿En qué mesa estás? *</label><input type="text" id="m-table-manual" placeholder="Número de mesa"></div>`
+          : `<div class="field">
+               <label>¿En qué mesa estás? *</label>
+               <select id="m-table">
+                 <option value="">Selecciona tu mesa…</option>
+                 ${tables.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+               </select>
+             </div>`}
+      ${menuHtml}
+    </div>
+    <div class="card" id="cart-summary"></div>
+    <div class="card">
+      <div class="field">
+        <label>Nombre (opcional)</label>
+        <input type="text" id="m-name" placeholder="Tu nombre">
+      </div>
+      <div class="field">
+        <label>Notas (alergias, observaciones...)</label>
+        <textarea id="m-notes" placeholder="Opcional"></textarea>
+      </div>
+      <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">Enviar pedido a cocina</button>
+    </div>
+  `;
+  renderCartSummary();
+}
+
+function submitMesaOrder(){
+  if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
+
+  const tables = DB.tables || [];
+  let tableId = null;
+  if(tableIdFromUrl){
+    const currentTable = tables.find(t => String(t.id) === String(tableIdFromUrl));
+    if(currentTable){
+      tableId = currentTable.id;
+    }else{
+      const manual = document.getElementById('m-table-manual');
+      if(!manual || !manual.value.trim()){ alert('Indica el número de tu mesa.'); return; }
+      tableId = manual.value.trim();
+    }
+  }else{
+    const sel = document.getElementById('m-table');
+    if(!sel || !sel.value){ alert('Selecciona tu mesa.'); return; }
+    tableId = tables.find(t => String(t.id) === sel.value).id;
+  }
+
+  const clienteNombre = document.getElementById('m-name').value.trim();
+  const notas = document.getElementById('m-notes').value.trim();
+
+  const req = {
+    type:'pedido', tipo:'mesa', tableId,
+    clienteNombre, notas,
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
+    createdAt: new Date().toISOString()
+  };
+  sendRequest(req, 'Pedido enviado a cocina. ¡Gracias!');
 }
 
 /* ============ ENVÍO ============ */
