@@ -1645,7 +1645,7 @@ function showFirebaseSetupGate(){
       `)}
 
       ${step(4, 'Pega las reglas de seguridad', `
-        Vuelve a <strong>Realtime Database</strong> (menú "Compilación") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
+        Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
         Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
         <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
         <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
