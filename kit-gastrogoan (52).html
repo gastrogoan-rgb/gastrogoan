@@ -6174,26 +6174,22 @@ function renderTpvMesas(tiposServicio){
 
 function renderTpvToGo(tiposServicio){
   const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && (!o.date || o.date <= todayStr()));
-  if(!(tiposServicio.takeaway || tiposServicio.delivery || toGoOrders.length)) return '';
-  const toGoButtonsHtml = `
-    ${tiposServicio.takeaway ? `<button class="btn btn-sm" onclick="newToGoOrder('takeaway')"><i class="ti ti-shopping-bag"></i> Nuevo Take Away</button>` : ''}
-    ${tiposServicio.delivery ? `<button class="btn btn-sm" onclick="newToGoOrder('delivery')"><i class="ti ti-moped"></i> Nuevo Delivery</button>` : ''}
-  `;
+  if(!toGoOrders.length) return '';
   return `
     <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">Estos pedidos llegan automáticamente desde la web de Pedidos y Reservas.</p>
     <div class="grid grid-4">
       ${toGoOrders.map(o => {
         const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
         return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':'Para recoger'}</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
       `}).join('')}
-      ${toGoButtonsHtml ? `<div class="card" style="text-align:center;display:flex;flex-direction:column;gap:8px;justify-content:center">${toGoButtonsHtml}</div>` : ''}
     </div>
   `;
 }
@@ -6432,46 +6428,6 @@ function confirmOpenTableOrder(tableId){
     if(pax <= 0){ showToast('Indica el número de personas'); return; }
   }
   const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
-  DB.tpvOrders.push(order);
-  saveDB();
-  renderTableOrderModal(order.id);
-}
-
-function newToGoOrder(tipo){
-  const tipoLabel = tipo==='delivery' ? 'delivery' : 'take away';
-  const icon = tipo==='delivery' ? 'ti-moped' : 'ti-shopping-bag';
-  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
-  const platformField = (tipo==='delivery' && platforms.length) ? `
-    <div class="field">
-      <label>Plataforma</label>
-      <select id="new-togo-plataforma">
-        <option value="">Reparto propio (sin comisión)</option>
-        ${platforms.map(p=>`<option value="${p.id}">${escapeHtml(p.nombre)} (comisión ${fmtNum(p.comisionPct)}%)</option>`).join('')}
-      </select>
-    </div>` : '';
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ${icon}"></i> Nuevo ${tipoLabel}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Nombre del cliente (opcional)</label>
-      <input type="text" id="new-togo-name" placeholder="Nombre del cliente">
-    </div>
-    ${platformField}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmNewToGoOrder('${tipo}')">Crear pedido</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('new-togo-name')?.focus(), 50);
-}
-
-function confirmNewToGoOrder(tipo){
-  const clienteNombre = (document.getElementById('new-togo-name').value||'').trim();
-  const platformSel = document.getElementById('new-togo-plataforma');
-  const plataformaId = platformSel && platformSel.value ? parseInt(platformSel.value) : null;
-  const order = {id: genId(), tableId:null, tipo, clienteNombre, plataformaId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
