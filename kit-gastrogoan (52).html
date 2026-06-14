@@ -3658,6 +3658,12 @@ function currentArea(){
   return currentFolder === 'sala' ? 'sala' : 'cocina';
 }
 
+/* Nombre del ítem de carta según el área: "bebida" en sala, "plato" en cocina. */
+function itemNoun(cap){
+  const word = currentArea()==='sala' ? 'bebida' : 'plato';
+  return cap ? word.charAt(0).toUpperCase()+word.slice(1) : word;
+}
+
 /* ============== Navigation ============== */
 function goHome(){
   lockEditMode();
@@ -3725,6 +3731,7 @@ function isGestionLocked(view){
   if(ownerUnlocked) return false;
   if(MODULE_FOLDER[view] === 'gestion') return true;
   if(view === 'folder' && currentFolder === 'gestion') return true;
+  if(view === 'promocion') return true;
   return false;
 }
 
@@ -4618,12 +4625,18 @@ function renderEscandallo(){
     return matchSearch && matchCat;
   });
   const box = document.getElementById('escandallo-list');
+  const noun = itemNoun();
+
+  document.querySelector('#view-escandallo .view-subtitle').textContent = `Cálculo automático de costes de ${noun}s`;
+  document.getElementById('escandallo-search').placeholder = `Buscar ${noun}...`;
+  const newRecipeBtn = document.querySelector('#view-escandallo button[onclick="openRecipeModal()"]');
+  if(newRecipeBtn) newRecipeBtn.innerHTML = noun==='bebida' ? `<i class="ti ti-plus"></i> Nueva Bebida` : `<i class="ti ti-plus"></i> Nuevo Plato`;
 
   document.getElementById('escandallo-view-grid').classList.toggle('active', escandalloView==='grid');
   document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay platos. Crea el primer escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay ${noun}s. Crea el primer escandallo.</div>`;
     return;
   }
   if(!recipes.length){
@@ -5371,6 +5384,15 @@ function setOfertaTab(tab){
 
 function renderCarta(){
   migrateCartas();
+  const isBebidas = currentArea()==='sala';
+  const titleEl = document.querySelector('#view-carta .view-title');
+  const subtitleEl = document.querySelector('#view-carta .view-subtitle');
+  if(titleEl) titleEl.textContent = isBebidas ? 'Carta de Bebidas' : 'Oferta Gastronómica';
+  if(subtitleEl) subtitleEl.textContent = isBebidas ? 'Gestiona tu carta de bebidas · Vincula con Escandallo' : 'Gestiona tus cartas y menús · Vincula con Escandallo';
+  const newCartaBtn = document.querySelector('#carta-list-view .toolbar button[onclick="newCarta()"]');
+  if(newCartaBtn) newCartaBtn.innerHTML = isBebidas ? `<i class="ti ti-plus"></i> Nueva Carta de Bebidas` : `<i class="ti ti-plus"></i> Nueva Carta`;
+  const newSecBtn = document.querySelector('#carta-editor-view button[onclick="newCartaSection()"]');
+  if(newSecBtn) newSecBtn.innerHTML = `<i class="ti ti-plus"></i> Nueva Sección`;
   document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
   document.getElementById('carta-editor-view').style.display = cartaEdit ? '' : 'none';
   if(cartaEdit) renderCartaEditor();
@@ -5381,7 +5403,7 @@ function renderCartaList(){
   const totalPlatos = DB.cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
   document.getElementById('carta-stats').innerHTML = `
     <div class="kpi"><div class="label">Cartas / Menús</div><div class="value">${DB.cartas.length}</div></div>
-    <div class="kpi"><div class="label">Total platos</div><div class="value">${totalPlatos}</div></div>
+    <div class="kpi"><div class="label">Total ${itemNoun()}s</div><div class="value">${totalPlatos}</div></div>
   `;
   const box = document.getElementById('carta-list');
   if(!DB.cartas.length){
@@ -5512,8 +5534,9 @@ function renderCartaEditor(){
 
 function renderCartaSecciones(){
   const box = document.getElementById('carta-secciones');
+  const noun = itemNoun();
   if(!cartaEdit.secciones.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin secciones. Crea una sección o importa platos del Escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin secciones. Crea una sección o importa ${noun}s del Escandallo.</div>`;
     return;
   }
   box.innerHTML = cartaEdit.secciones.map(sec => `
@@ -5521,7 +5544,7 @@ function renderCartaSecciones(){
       <div class="ge-sec-head">
         <h4>${escapeHtml(sec.nombre)}</h4>
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> Plato manual</button>
+          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${itemNoun(true)} manual</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> Escandallo</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -5534,7 +5557,7 @@ function renderCartaSecciones(){
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:14px">Sin platos en esta sección.</div>`}
+      `).join('') : `<div class="empty" style="padding:14px">Sin ${noun}s en esta sección.</div>`}
     </div>
   `).join('');
 }
@@ -5580,14 +5603,15 @@ function removeCartaPlato(secId, platoId){
   renderCartaSecciones();
 }
 function addCartaPlato(secId){
+  const noun = itemNoun();
   openModal(`
     <div class="modal-header">
-      <h3>Nuevo plato manual</h3>
+      <h3>Nueva ${noun} manual</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del plato</label>
-      <input type="text" id="new-carta-plato-nombre" placeholder="Ej. Ensalada de la casa">
+      <label>Nombre de la ${noun}</label>
+      <input type="text" id="new-carta-plato-nombre" placeholder="${noun==='bebida'?'Ej. Agua mineral':'Ej. Ensalada de la casa'}">
     </div>
     <div class="field">
       <label>Precio (€)</label>
@@ -5602,7 +5626,7 @@ function addCartaPlato(secId){
 }
 function confirmAddCartaPlato(secId){
   const nombre = document.getElementById('new-carta-plato-nombre').value;
-  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el plato'); return; }
+  if(!nombre || !nombre.trim()){ showToast(`Escribe un nombre para la ${itemNoun()}`); return; }
   const precioStr = document.getElementById('new-carta-plato-precio').value;
   const precio = parseFloat((precioStr||'').replace(',','.'));
   if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
@@ -5621,12 +5645,13 @@ function renderPlatoModsModalHtml(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   const mods = p.modificadores || [];
+  const noun = itemNoun();
   return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(p.nombre)}"</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para este plato (ej. "Extra queso" +1€). Se podrán añadir al tomar la comanda.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para esta ${noun} (ej. "${noun==='bebida'?'Con hielo' : 'Extra queso'}" +1€). Se podrán añadir al tomar la comanda.</p>
     <div style="margin-bottom:12px">
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
@@ -5671,7 +5696,7 @@ function removePlatoMod(secId, platoId, modId){
 
 function importFromEscandallo(secId){
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
-  if(!areaRecipes.length){ showToast('No hay platos en el Escandallo'); return; }
+  if(!areaRecipes.length){ showToast(`No hay ${itemNoun()}s en el Escandallo`); return; }
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
     <div class="modal-header">
@@ -5704,7 +5729,7 @@ function toggleImportEscAll(checked){
 }
 function confirmImportEsc(secId){
   const checked = [...document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)')].map(c=>parseInt(c.value));
-  if(!checked.length){ showToast('Selecciona al menos un plato'); return; }
+  if(!checked.length){ showToast(`Selecciona al menos una ${itemNoun()}`); return; }
   let sec;
   if(secId != null){
     sec = cartaEdit.secciones.find(s=>s.id===secId);
@@ -10082,6 +10107,11 @@ function getDistEmpData(empId){
   return d;
 }
 
+function getPromosForEmployeeDay(empId, dayIdx){
+  return DB.promos.filter(p => p.responsableId === empId && (new Date(p.fecha+'T00:00:00').getDay()+6)%7 === dayIdx)
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+
 function getAllDishNames(){
   const names = new Set();
   DB.recipes.forEach(r => { if(r.name) names.add(r.name); });
@@ -10177,9 +10207,17 @@ function renderDistDetail(){
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
       </div>
     `).join('');
+    const promos = getPromosForEmployeeDay(emp.id, idx);
+    const promosHtml = promos.map(p=>`
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;cursor:pointer" onclick="openPromoModal(${p.id})">
+        <span class="badge badge-amber"><i class="ti ti-speakerphone"></i> Promo</span>
+        <span style="flex:1;font-size:13px">${escapeHtml(p.titulo)} <span style="color:var(--muted)">(${p.fecha.split('-').reverse().slice(0,2).join('/')})</span></span>
+      </div>
+    `).join('');
     return `
       <div style="padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label}</div>
+        ${promosHtml}
         ${tareasHtml}
         <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
           <input type="text" id="dist-tarea-${idx}" placeholder="Nueva tarea..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
@@ -11046,6 +11084,7 @@ function renderPromoDia(){
               <span>${escapeHtml(p.titulo)}</span>
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
+            ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             <div class="actions-cell" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -11152,7 +11191,7 @@ function renderPromoMes(){
 }
 
 function openPromoModal(id, fecha){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:'', descripcion:''};
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:'', descripcion:'', responsableId:null};
 
   openModal(`
     <div class="modal-header">
@@ -11171,6 +11210,13 @@ function openPromoModal(id, fecha){
       <label>Descripción</label>
       <textarea id="promo-descripcion" placeholder="Detalles de la acción...">${escapeHtml(p.descripcion||'')}</textarea>
     </div>
+    <div class="field">
+      <label>Responsable</label>
+      <select id="promo-responsable">
+        <option value="">— Sin asignar —</option>
+        ${DB.employees.map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="savePromo(${id||'null'})">Guardar</button>
@@ -11182,13 +11228,15 @@ function savePromo(id){
   const fecha = document.getElementById('promo-date').value || todayStr();
   const titulo = document.getElementById('promo-titulo').value.trim();
   const descripcion = document.getElementById('promo-descripcion').value.trim();
+  const responsableIdRaw = document.getElementById('promo-responsable').value;
+  const responsableId = responsableIdRaw ? parseInt(responsableIdRaw) : null;
 
   if(!titulo){ showToast('Indica un título'); return; }
 
   if(id){
-    Object.assign(DB.promos.find(x=>x.id===id), {fecha, titulo, descripcion});
+    Object.assign(DB.promos.find(x=>x.id===id), {fecha, titulo, descripcion, responsableId});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId});
   }
   saveDB();
   closeModal();
