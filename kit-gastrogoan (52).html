@@ -2107,6 +2107,14 @@ function renderOnlineCard(){
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
       <p style="font-size:13.5px;margin-bottom:12px">Comparte este código QR o enlace con tus clientes: podrán reservar mesa${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' y pedir take away o delivery' : ''} desde su móvil, sin instalar nada.</p>
+      <details style="margin-bottom:12px">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)">⚠️ Importante: ¿dónde tienes que tener guardada esta app para que esto funcione?</summary>
+        <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
+          Este enlace y QR solo funcionan si los dos archivos de GastroGoan — la app de gestión (este archivo) y <strong>reservagastrogoan.html</strong> (la página que ven tus clientes) — están <strong>subidos juntos, dentro de la misma carpeta, en un hosting con dirección (URL) pública en internet</strong>.<br><br>
+          Es decir: no basta con tenerlos guardados en el ordenador o el móvil y abrirlos haciendo doble clic. "Hosting con URL pública" significa un servicio que aloja tus archivos en internet y les da una dirección web (algo como <code>https://tu-restaurante.netlify.app/</code>) a la que cualquier cliente puede acceder desde su móvil. Hay opciones gratuitas y sencillas (por ejemplo Netlify: se arrastran los dos archivos a su web y ya tienen dirección pública).<br><br>
+          Si abres la app directamente desde tu ordenador (sin subirla a ningún sitio), el QR y el enlace no llevarán a ninguna página real.
+        </div>
+      </details>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
         <img src="${qrUrl}" alt="Código QR" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">
