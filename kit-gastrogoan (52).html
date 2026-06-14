@@ -464,6 +464,7 @@ td.wrap{white-space:normal}
     <option value="ca">🏴 Català</option>
     <option value="en">🇬🇧 English</option>
   </select>
+  <button class="btn btn-sm" id="business-switch-btn" onclick="openBusinessSwitcher()" style="margin-right:8px" title="Cambiar de negocio"><i class="ti ti-building-store"></i> Negocios</button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
   <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:8px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i> Archivar datos</button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
@@ -1150,6 +1151,133 @@ td.wrap{white-space:normal}
 const DB_KEY = 'gastrogoan_data_v1';
 
 /* ============================================================
+   MULTI-NEGOCIO — varias licencias desde el mismo PC/navegador
+   Cada negocio vive en su propio "slot": su propia base IndexedDB y
+   su propia licencia guardada, totalmente independientes entre sí.
+   El slot 'default' es el negocio original (las instalaciones ya
+   existentes siguen funcionando igual, sin migración).
+   ============================================================ */
+const ACTIVE_SLOT_LS = 'gastrogoan_active_slot';
+const SLOTS_LS = 'gastrogoan_business_slots';
+
+function getActiveSlot(){
+  return localStorage.getItem(ACTIVE_SLOT_LS) || 'default';
+}
+
+function getBusinessSlots(){
+  try{
+    const list = JSON.parse(localStorage.getItem(SLOTS_LS));
+    if(Array.isArray(list) && list.length) return list;
+  }catch(e){}
+  // Primera vez: si ya había una licencia (instalación anterior), registra
+  // el negocio 'default' para que aparezca en el selector.
+  const slots = [{ id:'default', name:'Mi negocio' }];
+  try{
+    const lic = JSON.parse(localStorage.getItem('gastrogoan_license_v1'));
+    if(lic && lic.name) slots[0].name = lic.name;
+  }catch(e){}
+  localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
+  return slots;
+}
+
+function saveBusinessSlots(slots){
+  localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
+}
+
+function slotIdbName(slotId){
+  return slotId === 'default' ? 'gastrogoan_db' : 'gastrogoan_db_' + slotId;
+}
+
+function slotLicenseKey(slotId){
+  return slotId === 'default' ? 'gastrogoan_license_v1' : 'gastrogoan_license_v1_' + slotId;
+}
+
+const ACTIVE_SLOT = getActiveSlot();
+getBusinessSlots(); // asegura que el registro exista desde el arranque
+
+// Actualiza el nombre mostrado del negocio activo en el selector (p.ej.
+// al activar una licencia o recibirla sincronizada desde la nube).
+function updateActiveSlotName(name){
+  if(!name) return;
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === ACTIVE_SLOT);
+  if(slot && slot.name !== name){
+    slot.name = name;
+    saveBusinessSlots(slots);
+  }
+}
+
+/* Selector de negocios: permite cambiar entre las licencias activadas en
+   este mismo PC, o añadir una nueva. Cada negocio guarda sus datos por
+   completo aparte (su propia base IndexedDB y su propia licencia), así que
+   cambiar de negocio simplemente recarga la app apuntando a otro slot. */
+function openBusinessSwitcher(){
+  openModal(renderBusinessSwitcherHtml());
+}
+
+function renderBusinessSwitcherHtml(){
+  const slots = getBusinessSlots();
+  return `
+    <div class="modal-header">
+      <h3><i class="ti ti-building-store"></i> Tus negocios</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Puedes tener varias licencias activadas en este mismo navegador. Cada negocio guarda sus datos por separado.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      ${slots.map(s => `
+        <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;${s.id===ACTIVE_SLOT?'border:2px solid var(--brand-orange)':''}">
+          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+            <i class="ti ti-tools-kitchen-2"></i>
+            <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.name || 'Negocio')}</span>
+            ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Activo</span>' : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            ${s.id!==ACTIVE_SLOT ? `<button class="btn btn-sm btn-primary" onclick="switchToBusiness('${escapeHtml(s.id)}')">Entrar</button>` : ''}
+            <button class="btn btn-sm btn-danger" onclick="removeBusinessSlot('${escapeHtml(s.id)}')" title="Eliminar de esta lista"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Añadir otro negocio</button>
+  `;
+}
+
+function switchToBusiness(slotId){
+  if(slotId === ACTIVE_SLOT) return;
+  localStorage.setItem(ACTIVE_SLOT_LS, slotId);
+  location.reload();
+}
+
+function addNewBusiness(){
+  const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const slots = getBusinessSlots();
+  slots.push({ id, name: 'Nuevo negocio' });
+  saveBusinessSlots(slots);
+  switchToBusiness(id);
+}
+
+function removeBusinessSlot(slotId){
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === slotId);
+  if(!slot) return;
+  if(!confirm(`¿Quitar "${slot.name}" de la lista de negocios de este dispositivo? Esto borrará sus datos guardados en este navegador (no afecta a la licencia ni a la nube; podrás volver a activarla cuando quieras).`)) return;
+
+  indexedDB.deleteDatabase(slotIdbName(slotId));
+  localStorage.removeItem(slotLicenseKey(slotId));
+  const remaining = slots.filter(s => s.id !== slotId);
+  saveBusinessSlots(remaining.length ? remaining : [{id:'default', name:'Mi negocio'}]);
+
+  if(slotId === ACTIVE_SLOT){
+    const fallback = remaining.length ? remaining[0].id : 'default';
+    localStorage.setItem(ACTIVE_SLOT_LS, fallback);
+    location.reload();
+  }else{
+    closeModal();
+    openBusinessSwitcher();
+  }
+}
+
+/* ============================================================
    ALMACENAMIENTO LOCAL — IndexedDB
    localStorage limita a ~5MB por negocio, lo que un restaurante con
    bastante actividad puede superar en 1-2 años (histórico de ventas,
@@ -1157,7 +1285,7 @@ const DB_KEY = 'gastrogoan_data_v1';
    que es donde vive ahora la base de datos completa. La primera vez,
    se migran automáticamente los datos que hubiera en localStorage.
    ============================================================ */
-const IDB_NAME = 'gastrogoan_db';
+const IDB_NAME = slotIdbName(ACTIVE_SLOT);
 const IDB_STORE = 'kv';
 let _idbPromise = null;
 
@@ -1228,7 +1356,7 @@ const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un sol
    Cada copia vendida se activa con una clave generada por el
    vendedor (generador-licencias.html, archivo privado).
    ============================================================ */
-const LICENSE_LS = 'gastrogoan_license_v1';
+const LICENSE_LS = slotLicenseKey(ACTIVE_SLOT);
 
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
@@ -1525,6 +1653,7 @@ function activateLicenseFromGate(){
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   saveDB();
+  updateActiveSlotName(parsed.name);
   hideActivationGate();
   showToast('Licencia activada: ' + parsed.name);
   if(!getCloudConfig()) showFirebaseSetupGate();
@@ -1795,6 +1924,7 @@ function applyRemoteBlock(key, remoteValue){
   // Licencia compartida por la nube: los empleados se activan solos
   if(DB.license && validateLicenseKey(DB.license.key)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+    updateActiveSlotName(DB.license.name);
     hideActivationGate();
   }
   refreshAfterRemoteChange();
@@ -1844,6 +1974,7 @@ function startCloudSync(tenantId){
           idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
           if(DB.license && validateLicenseKey(DB.license.key)){
             localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+            updateActiveSlotName(DB.license.name);
             hideActivationGate();
           }
           refreshAfterRemoteChange();
