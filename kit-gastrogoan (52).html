@@ -553,6 +553,17 @@ td.wrap{white-space:normal}
       <div class="view-subtitle">Resumen general de tu negocio</div>
 
       <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <h3><i class="ti ti-alert-triangle"></i> Requiere tu atención</h3>
+        <div id="dashboard-alerts"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <h3><i class="ti ti-arrows-diff"></i> Comparativa con el periodo anterior</h3>
+        <div id="dashboard-comparison"></div>
+      </div>
+
       <div class="grid grid-4" id="dashboard-kpis"></div>
 
       <div class="card" style="margin-top:16px">
@@ -575,15 +586,9 @@ td.wrap{white-space:normal}
         <div id="dashboard-breakeven"></div>
       </div>
 
-      <div class="grid grid-2" style="margin-top:16px">
-        <div class="card">
-          <h3><i class="ti ti-alert-triangle"></i> Alertas</h3>
-          <div id="dashboard-alerts"></div>
-        </div>
-        <div class="card">
-          <h3><i class="ti ti-calendar-event"></i> Próximas Reservas</h3>
-          <div id="dashboard-reservas"></div>
-        </div>
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-calendar-event"></i> Próximas Reservas</h3>
+        <div id="dashboard-reservas"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
@@ -3973,6 +3978,59 @@ function renderDashboard(){
     <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Ventas mes en curso</div><div class="value">${fmtMoney(monthSales)}</div></div>
   `;
 
+  // Resultado del mes (P&L) - calculado aquí para usarlo también en la comparativa
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const facturacion = salesTotalForMonth(year, month);
+  const variables = geTotalVariablesMes(year, month);
+  const fijos = geTotalFijos();
+  const resultado = facturacion - variables - fijos;
+
+  // Comparativa con el periodo anterior
+  const prevWeekEnd = dateStr(new Date(today.getTime() - 7*86400000));
+  const prevWeekStart = dateStr(new Date(today.getTime() - 13*86400000));
+  const prevWeekSales = salesTotalForRange(prevWeekStart, prevWeekEnd);
+
+  const dayOfMonth = today.getDate();
+  const prevMonthDate = new Date(year, month - 1, 1);
+  const prevMonthLastDay = new Date(year, month, 0).getDate();
+  const prevMonthSameDay = Math.min(dayOfMonth, prevMonthLastDay);
+  const prevMonthStart = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth()+1).padStart(2,'0')}-01`;
+  const prevMonthEnd = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth()+1).padStart(2,'0')}-${String(prevMonthSameDay).padStart(2,'0')}`;
+  const prevMonthSalesSamePeriod = salesTotalForRange(prevMonthStart, prevMonthEnd);
+
+  const prevMonthFacturacion = salesTotalForMonth(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
+  const prevMonthVariables = geTotalVariablesMes(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
+  const prevMonthFijos = geTotalFijos();
+  const prevMonthResultado = prevMonthFacturacion - prevMonthVariables - prevMonthFijos;
+
+  function pctChangeBlock(label, curr, prev, periodNote){
+    let pctHtml;
+    if(prev === 0){
+      pctHtml = curr > 0 ? `<span style="color:var(--green)"><i class="ti ti-arrow-up-right"></i> nuevo</span>` : `<span style="color:var(--muted)">—</span>`;
+    }else{
+      const pct = ((curr - prev) / Math.abs(prev)) * 100;
+      const up = pct >= 0;
+      pctHtml = `<span style="color:${up?'var(--green)':'var(--red)'}"><i class="ti ti-arrow-${up?'up':'down'}-right"></i> ${up?'+':''}${pct.toFixed(1)}%</span>`;
+    }
+    return `
+      <div class="kpi">
+        <div class="label">${label}</div>
+        <div class="value">${fmtMoney(curr)}</div>
+        <div style="font-size:13px;font-weight:700;margin-top:2px">${pctHtml}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">vs ${fmtMoney(prev)} ${periodNote}</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('dashboard-comparison').innerHTML = `
+    <div class="grid grid-3">
+      ${pctChangeBlock('Ventas últimos 7 días', weekSales, prevWeekSales, '(7 días previos)')}
+      ${pctChangeBlock('Ventas mes en curso', monthSales, prevMonthSalesSamePeriod, '(mismo periodo, mes anterior)')}
+      ${pctChangeBlock('Resultado del mes', resultado, prevMonthResultado, '(mes anterior completo)')}
+    </div>
+  `;
+
   const kpis = [
     {label:'Ingredientes', value: totalIngredients, icon:'ti-list-details', cls:''},
     {label:'Platos / Recetas', value: totalRecipes, icon:'ti-chef-hat', cls:''},
@@ -3991,12 +4049,6 @@ function renderDashboard(){
   `).join('');
 
   // Resultado del mes (P&L)
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const facturacion = salesTotalForMonth(year, month);
-  const variables = geTotalVariablesMes(year, month);
-  const fijos = geTotalFijos();
-  const resultado = facturacion - variables - fijos;
   const fcPct = facturacion > 0 ? (avgFoodCost) : 0;
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
@@ -4042,6 +4094,28 @@ function renderDashboard(){
   });
   const topProducts = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
+  // Margen bruto real por plato (últimos 30 días)
+  const marginTotals = {};
+  salesLast30.forEach(s=>{
+    (s.items||[]).forEach(it=>{
+      const key = it.name || '—';
+      const qty = it.qty || 1;
+      let unitCost = 0;
+      if(it.recipeId){
+        const recipe = DB.recipes.find(r=>r.id===it.recipeId);
+        if(recipe) unitCost = recipeCostBreakdown(recipe).total || 0;
+      }
+      const margin = ((it.price||0) - unitCost) * qty;
+      if(!marginTotals[key]) marginTotals[key] = {margin:0, hasCost: !!it.recipeId};
+      marginTotals[key].margin += margin;
+      if(it.recipeId) marginTotals[key].hasCost = true;
+    });
+  });
+  const topMargins = Object.entries(marginTotals)
+    .filter(([,v])=>v.hasCost)
+    .sort((a,b)=>b[1].margin-a[1].margin)
+    .slice(0,5);
+
   const hourTotals = new Array(24).fill(0);
   salesLast30.forEach(s=>{
     if(s.createdAt){
@@ -4057,12 +4131,18 @@ function renderDashboard(){
       <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> Nº ventas</div><div class="value">${salesLast30.length}</div></div>
       <div class="kpi"><div class="label"><i class="ti ti-cash"></i> Total periodo</div><div class="value">${fmtMoney(totalLast30)}</div></div>
     </div>
-    <div class="grid grid-2">
+    <div class="grid grid-3">
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Platos más vendidos</h4>
         ${topProducts.length ? `<div class="table-wrap"><table><tbody>
           ${topProducts.map(([name,total]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">Sin ventas registradas</div>`}
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Mayor margen bruto</h4>
+        ${topMargins.length ? `<div class="table-wrap"><table><tbody>
+          ${topMargins.map(([name,v]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
+        </tbody></table></div>` : `<div class="empty">Sin datos de coste suficientes</div>`}
       </div>
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Ventas por hora del día</h4>
@@ -4133,6 +4213,8 @@ function renderDashboard(){
   if(avgFoodCost > (cfg.foodCostObj||35)) alerts.push({icon:'ti-percentage', cls:'warn', text:`Food cost medio (${avgFoodCost.toFixed(1)}%) por encima del objetivo (${cfg.foodCostObj||35}%)`});
   const todayReservas = DB.reservations.filter(r=>r.date===todayDate && r.status==='confirmada');
   if(todayReservas.length) alerts.push({icon:'ti-calendar-event', cls:'ok', text:`${todayReservas.length} reserva(s) para hoy`});
+  const pendingCleaning = cleaningTasksToday();
+  if(pendingCleaning.length) alerts.push({icon:'ti-spray', cls:'warn', text:`${pendingCleaning.length} tarea(s) de limpieza pendientes hoy`});
 
   const alertsBox = document.getElementById('dashboard-alerts');
   if(!alerts.length){
