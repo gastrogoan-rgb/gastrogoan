@@ -3731,7 +3731,6 @@ function isGestionLocked(view){
   if(ownerUnlocked) return false;
   if(MODULE_FOLDER[view] === 'gestion') return true;
   if(view === 'folder' && currentFolder === 'gestion') return true;
-  if(view === 'promocion') return true;
   return false;
 }
 
@@ -11085,7 +11084,7 @@ function renderPromoDia(){
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            <div class="actions-cell" style="margin-top:10px">
+            <div class="actions-cell owner-only" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
             </div>
@@ -11098,7 +11097,7 @@ function renderPromoDia(){
       <div class="left">
         <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
       </div>
-      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
     ${listHtml}
   `;
@@ -11122,7 +11121,7 @@ function renderPromoSemana(){
         ${items.map(p => `
           <div style="display:block;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--brand-orange);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</div>
         `).join('')}
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
+        <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
       </td>
     `;
   }).join('');
@@ -11135,7 +11134,7 @@ function renderPromoSemana(){
         <button class="btn btn-sm" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
       </div>
-      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -11181,7 +11180,7 @@ function renderPromoMes(){
         <button class="btn btn-sm" onclick="promoMonthOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
       </div>
-      <button class="btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
@@ -11192,6 +11191,8 @@ function renderPromoMes(){
 
 function openPromoModal(id, fecha){
   const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:'', descripcion:'', responsableId:null};
+  const ro = !editUnlocked;
+  const dis = ro ? 'disabled' : '';
 
   openModal(`
     <div class="modal-header">
@@ -11200,26 +11201,26 @@ function openPromoModal(id, fecha){
     </div>
     <div class="field">
       <label>Fecha</label>
-      <input type="date" id="promo-date" value="${p.fecha}">
+      <input type="date" id="promo-date" value="${p.fecha}" ${dis}>
     </div>
     <div class="field">
       <label>Título</label>
-      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="Ej: Responder reseñas, vídeo de un plato...">
+      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="Ej: Responder reseñas, vídeo de un plato..." ${dis}>
     </div>
     <div class="field">
       <label>Descripción</label>
-      <textarea id="promo-descripcion" placeholder="Detalles de la acción...">${escapeHtml(p.descripcion||'')}</textarea>
+      <textarea id="promo-descripcion" placeholder="Detalles de la acción..." ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
     </div>
     <div class="field">
       <label>Responsable</label>
-      <select id="promo-responsable">
+      <select id="promo-responsable" ${dis}>
         <option value="">— Sin asignar —</option>
         ${DB.employees.map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="savePromo(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
+      ${ro ? '' : `<button class="btn btn-primary" onclick="savePromo(${id||'null'})">Guardar</button>`}
     </div>
   `);
 }
