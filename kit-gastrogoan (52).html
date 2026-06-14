@@ -233,6 +233,9 @@ td.wrap{white-space:normal}
 .help-panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--dark);color:#fff}
 .help-panel-header h4{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
 .help-panel-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.tabs .tab{padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;background:none;display:flex;align-items:center;gap:6px}
+.tabs .tab.active{color:var(--teal);border-color:var(--teal);background:rgba(0,200,180,.08)}
 .help-tabs{display:flex;border-bottom:1px solid var(--border)}
 .help-tab{flex:1;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
 .help-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
@@ -5339,6 +5342,7 @@ function findCartaPlato(platoId){
   return null;
 }
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
 const TANDA_SUGGESTIONS = ['Aperitivos','Entrantes','Primeros','Segundos','Postres','Bebidas','Cafés y licores'];
 
 function getOpenOrderForTable(tableId){
@@ -6216,16 +6220,54 @@ function confirmLineNotes(orderId, idx){
 function openPaymentModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length) return;
+  paymentTab = order.splitMode || 'full';
+  renderPaymentModal(orderId);
+}
+
+function setPaymentTab(orderId, tab){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(order && order.splitPayments && order.splitPayments.some(p=>p.paid) && order.splitMode !== tab){
+    showToast('Termina o cancela la división de cuenta en curso antes de cambiar de pestaña');
+    return;
+  }
+  paymentTab = tab;
+  renderPaymentModal(orderId);
+}
+
+function renderPaymentModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
   const total = orderTotal(order);
+  const tabs = [
+    {id:'full', label:'Cuenta completa', icon:'ti-receipt'},
+    {id:'equal', label:'Dividir a partes iguales', icon:'ti-users-group'},
+    {id:'items', label:'Por comensal (platos)', icon:'ti-friends'}
+  ];
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-cash"></i> Cobrar</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">Total a cobrar</div>
+      <div class="label">Total de la cuenta</div>
       <div class="value">${fmtMoney(total)}</div>
     </div>
+    <div class="tabs" style="margin-bottom:12px">
+      ${tabs.map(t => `<div class="tab${paymentTab===t.id?' active':''}" onclick="setPaymentTab(${order.id}, '${t.id}')"><i class="ti ${t.icon}"></i> ${t.label}</div>`).join('')}
+    </div>
+    <div id="payment-tab-body">
+      ${paymentTab === 'equal' ? renderEqualSplitTab(order) : paymentTab === 'items' ? renderItemsSplitTab(order) : renderFullPaymentTab(order, total)}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
+      ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> Confirmar cobro</button>` : ''}
+    </div>
+  `);
+}
+
+/* ------------------ Pestaña: cuenta completa ------------------ */
+function renderFullPaymentTab(order, total){
+  return `
     <div class="field">
       <label>Método de pago</label>
       <select id="payment-method" onchange="togglePaymentCash()">
@@ -6240,11 +6282,7 @@ function openPaymentModal(orderId){
       <div class="label">Cambio</div>
       <div class="value" id="payment-change">${fmtMoney(0)}</div>
     </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
-      <button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> Confirmar cobro</button>
-    </div>
-  `);
+  `;
 }
 
 function togglePaymentCash(){
@@ -6264,17 +6302,7 @@ function finalizeCharge(orderId){
   if(!order || !order.items.length) return;
   const total = orderTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
-
-  // Descontar stock según ingredientes de la receta
-  order.items.forEach(line => {
-    const r = line.recipeId ? getRecipe(line.recipeId) : null;
-    if(!r) return;
-    (r.ingredients||[]).forEach(ri => {
-      const s = getStockEntry(ri.ingredientId);
-      s.qty = Math.max(0, s.qty - ri.qty * line.qty);
-    });
-  });
-
+  discountStockForOrder(order);
   const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
   DB.sales.push(sale);
   order.status = 'pagada';
@@ -6286,8 +6314,259 @@ function finalizeCharge(orderId){
   showToast('Cobro registrado');
 }
 
+/* ------------------ Pestaña: dividir a partes iguales ------------------ */
+function renderEqualSplitTab(order){
+  if(!order.splitPayments || order.splitMode !== 'equal'){
+    return `
+      <div class="field">
+        <label>¿Entre cuántas personas se divide la cuenta?</label>
+        <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
+      </div>
+      <div class="modal-footer" style="padding:0;border:none">
+        <button class="btn btn-primary" onclick="generateEqualSplit(${order.id})"><i class="ti ti-divide"></i> Dividir cuenta</button>
+      </div>
+    `;
+  }
+  return renderSplitPartsList(order);
+}
+
+function generateEqualSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-equal-n').value) || 2));
+  const total = orderTotal(order);
+  order.splitMode = 'equal';
+  order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
+    id: i+1, label: 'Persona ' + (i+1), amount, paid:false, metodoPago:null
+  }));
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+// Reparte el total en `n` partes en céntimos, sin perder ni un céntimo por redondeo
+function makeEqualParts(total, n){
+  const totalCents = Math.round(total * 100);
+  const base = Math.floor(totalCents / n);
+  const remainder = totalCents - base * n;
+  return Array.from({length:n}, (_,i) => (base + (i < remainder ? 1 : 0)) / 100);
+}
+
+/* ------------------ Pestaña: por comensal (platos) ------------------ */
+function renderItemsSplitTab(order){
+  if(!order.splitPayments || order.splitMode !== 'items'){
+    const n = order.splitItemsN || 2;
+    const assignments = order.itemAssignments && order.itemAssignments.length === order.items.length
+      ? order.itemAssignments : order.items.map(()=>1);
+    return `
+      <div class="field">
+        <label>Nº de comensales</label>
+        <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" oninput="updateItemsSplitDiners(${order.id})">
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Asigna cada plato al comensal que lo pidió:</p>
+      <div class="table-wrap" style="margin-bottom:10px">
+        <table>
+          <thead><tr><th>Plato</th><th>Subtotal</th><th>Comensal</th></tr></thead>
+          <tbody id="split-items-body">
+            ${order.items.map((line,idx) => `
+              <tr>
+                <td>${fmtNum(line.qty)} x ${escapeHtml(line.name)}</td>
+                <td>${fmtMoney(line.price*line.qty)}</td>
+                <td>
+                  <select id="split-item-assign-${idx}" data-idx="${idx}">
+                    ${Array.from({length:n}, (_,i)=>i+1).map(p => `<option value="${p}"${assignments[idx]===p?' selected':''}>Comensal ${p}</option>`).join('')}
+                  </select>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer" style="padding:0;border:none">
+        <button class="btn btn-primary" onclick="generateItemsSplit(${order.id})"><i class="ti ti-divide"></i> Calcular división</button>
+      </div>
+    `;
+  }
+  return renderSplitPartsList(order);
+}
+
+// Cuando cambia el nº de comensales, regenera las opciones de los desplegables
+// conservando la asignación de cada plato siempre que siga siendo válida.
+function updateItemsSplitDiners(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-items-n').value) || 2));
+  order.itemAssignments = order.items.map((line,idx) => {
+    const sel = document.getElementById('split-item-assign-'+idx);
+    const current = sel ? parseInt(sel.value) : 1;
+    return Math.min(current || 1, n);
+  });
+  order.splitItemsN = n;
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+function generateItemsSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-items-n').value) || 2));
+  const assignments = order.items.map((line,idx) => {
+    const sel = document.getElementById('split-item-assign-'+idx);
+    return Math.min(Math.max(1, sel ? parseInt(sel.value) : 1), n);
+  });
+  order.itemAssignments = assignments;
+  order.splitItemsN = n;
+  order.splitMode = 'items';
+  order.splitPayments = Array.from({length:n}, (_,i) => {
+    const personIdx = i+1;
+    const itemIdxs = assignments.map((p,idx)=>p===personIdx?idx:-1).filter(idx=>idx>=0);
+    const amount = itemIdxs.reduce((s,idx)=> s + order.items[idx].price * order.items[idx].qty, 0);
+    return {
+      id: personIdx, label: 'Comensal ' + personIdx, amount,
+      itemNames: itemIdxs.map(idx=>order.items[idx].name),
+      paid:false, metodoPago:null
+    };
+  });
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+/* ------------------ Lista de partes y cobro individual ------------------ */
+function renderSplitPartsList(order){
+  const allPaid = order.splitPayments.every(p=>p.paid);
+  return `
+    <div class="table-wrap" style="margin-bottom:10px">
+      <table>
+        <thead><tr><th>Quién paga</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${order.splitPayments.map(p => `
+            <tr>
+              <td>${escapeHtml(p.label)}${p.itemNames && p.itemNames.length ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(p.itemNames.join(', '))}</div>` : ''}</td>
+              <td>${fmtMoney(p.amount)}</td>
+              <td>${p.paid ? `<span class="badge badge-green"><i class="ti ti-check"></i> Pagado${p.metodoPago ? ' · '+escapeHtml(p.metodoPago) : ''}</span>` : `<span class="badge">Pendiente</span>`}</td>
+              <td>${p.paid ? '' : `<button class="btn btn-primary" onclick="openSplitPartPayment(${order.id}, ${p.id})"><i class="ti ti-cash"></i> Cobrar</button>`}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="padding:0;border:none">
+      <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> Cancelar división</button>
+      ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> Finalizar cobro</button>` : ''}
+    </div>
+  `;
+}
+
+function cancelSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(order.splitPayments && order.splitPayments.some(p=>p.paid)){
+    if(!confirm('Ya se ha cobrado alguna parte. ¿Seguro que quieres cancelar la división? Se perderá ese registro.')) return;
+  }
+  delete order.splitMode;
+  delete order.splitPayments;
+  delete order.itemAssignments;
+  delete order.splitItemsN;
+  saveDB();
+  paymentTab = 'full';
+  renderPaymentModal(orderId);
+}
+
+function openSplitPartPayment(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order.splitPayments.find(p=>p.id===partId);
+  if(!part) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash"></i> Cobrar — ${escapeHtml(part.label)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">Importe</div>
+      <div class="value">${fmtMoney(part.amount)}</div>
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" id="split-part-cash-field">
+      <label>Importe entregado (€)</label>
+      <input type="number" id="split-part-cash" step="0.01" min="0" value="${part.amount.toFixed(2)}" oninput="updateSplitPartChange(${part.amount})">
+    </div>
+    <div class="kpi" id="split-part-change-kpi" style="margin-bottom:12px">
+      <div class="label">Cambio</div>
+      <div class="value" id="split-part-change">${fmtMoney(0)}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderPaymentModal(${order.id})">Volver</button>
+      <button class="btn btn-primary" onclick="confirmSplitPartPayment(${order.id}, ${part.id})"><i class="ti ti-check"></i> Confirmar cobro</button>
+    </div>
+  `);
+}
+
+function toggleSplitPartCash(amount){
+  const method = document.getElementById('split-part-method').value;
+  const isCash = method === 'Efectivo';
+  document.getElementById('split-part-cash-field').style.display = isCash ? '' : 'none';
+  document.getElementById('split-part-change-kpi').style.display = isCash ? '' : 'none';
+}
+
+function updateSplitPartChange(amount){
+  const cash = parseFloat(document.getElementById('split-part-cash').value) || 0;
+  document.getElementById('split-part-change').textContent = fmtMoney(Math.max(0, cash - amount));
+}
+
+function confirmSplitPartPayment(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order.splitPayments.find(p=>p.id===partId);
+  if(!part) return;
+  part.paid = true;
+  part.metodoPago = document.getElementById('split-part-method').value;
+  saveDB();
+  showToast(escapeHtml(part.label) + ': cobro registrado');
+  renderPaymentModal(orderId);
+}
+
+function finalizeSplitOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length || !order.splitPayments || !order.splitPayments.every(p=>p.paid)) return;
+  const total = orderTotal(order);
+  discountStockForOrder(order);
+  const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
+  const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
+  const sale = {
+    id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
+    tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa',
+    clienteNombre: order.clienteNombre||'', metodoPago: metodos.length===1?metodos[0]:'Dividido',
+    pagos, items: order.items.map(l=>({...l}))
+  };
+  DB.sales.push(sale);
+  order.status = 'pagada';
+  order.closedAt = new Date().toISOString();
+  delete order.splitMode;
+  delete order.splitPayments;
+  delete order.itemAssignments;
+  delete order.splitItemsN;
+  saveDB();
+  closeModal();
+  renderTPV();
+  printTicket(sale);
+  showToast('Cobro registrado');
+}
+
+function discountStockForOrder(order){
+  order.items.forEach(line => {
+    const r = line.recipeId ? getRecipe(line.recipeId) : null;
+    if(!r) return;
+    (r.ingredients||[]).forEach(ri => {
+      const s = getStockEntry(ri.ingredientId);
+      s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+    });
+  });
+}
+
 function printTicket(sale){
   const lines = sale.items.map(l => `${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)).join('\n');
+  const pagoLines = sale.pagos && sale.pagos.length > 1
+    ? sale.pagos.map(p => `${p.label}: ${fmtMoney(p.amount)} (${p.metodoPago||''})`).join('\n')
+    : `Pago: ${escapeHtml(sale.metodoPago||'')}`;
   const win = window.open('', '_blank', 'width=320,height=520');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
 ${escapeHtml(DB.business.name||'GastroGoan')}
@@ -6297,7 +6576,7 @@ ${sale.tipo==='delivery'?'Delivery':sale.tipo==='takeaway'?'Take Away':'Mesa'}${
 ${escapeHtml(lines)}
 ------------------------------
 TOTAL: ${fmtMoney(sale.total)}
-Pago: ${escapeHtml(sale.metodoPago||'')}
+${escapeHtml(pagoLines)}
 
 ¡Gracias por su visita!
 </body></html>`);
@@ -6337,8 +6616,15 @@ function computeClosureTotals(sales){
   PAYMENT_METHODS.forEach(m => totales[m] = 0);
   let total = 0;
   sales.forEach(s => {
-    const m = totales.hasOwnProperty(s.metodoPago) ? s.metodoPago : 'Otro';
-    totales[m] += s.total;
+    if(s.pagos && s.pagos.length){
+      s.pagos.forEach(p => {
+        const m = totales.hasOwnProperty(p.metodoPago) ? p.metodoPago : 'Otro';
+        totales[m] += p.amount;
+      });
+    }else{
+      const m = totales.hasOwnProperty(s.metodoPago) ? s.metodoPago : 'Otro';
+      totales[m] += s.total;
+    }
     total += s.total;
   });
   return {totales, total, ticketCount: sales.length};
