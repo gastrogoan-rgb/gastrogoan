@@ -1548,14 +1548,33 @@ function showActivationGate(){
           <div id="role-owner-card" style="${cardStyle(role==='owner')}" onclick="selectOnboardingRole('owner')">👤<br>Soy el/la<br>dueño/a</div>
           <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>Soy<br>empleado/a</div>
         </div>
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor/jefe/a)</span></label>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px" id="license-label">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor/jefe/a)</span></label>
+        <div id="license-help-box" style="display:none;background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:8px;text-align:left"></div>
         <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
-        <p style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 Si eres empleado/a, usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
+        <p id="license-owner-note" style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 Si eres empleado/a, usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
       </div>
     </div>`;
   document.body.appendChild(g);
+  updateLicenseFieldForRole(role);
+}
+
+function updateLicenseFieldForRole(role){
+  const label = document.getElementById('license-label');
+  const helpBox = document.getElementById('license-help-box');
+  const ownerNote = document.getElementById('license-owner-note');
+  if(!label || !helpBox || !ownerNote) return;
+  if(role === 'employee'){
+    label.innerHTML = '🔑 Clave de licencia del restaurante';
+    helpBox.style.display = 'block';
+    helpBox.innerHTML = 'Pide esta clave a tu jefe/a: es la <strong>misma clave</strong> que él/ella usa (no es una clave distinta para ti). Cópiala tal cual, con todos los guiones, y pégala aquí abajo.';
+    ownerNote.style.display = 'none';
+  }else{
+    label.innerHTML = '🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio quien te vendió GastroGoan)</span>';
+    helpBox.style.display = 'none';
+    ownerNote.style.display = 'block';
+  }
 }
 
 function selectOnboardingRole(role){
@@ -1564,6 +1583,7 @@ function selectOnboardingRole(role){
   const employeeCard = document.getElementById('role-employee-card');
   if(ownerCard) ownerCard.style.cssText = `flex:1;border:2px solid ${role==='owner'?'var(--brand-orange)':'var(--border)'};background:${role==='owner'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
   if(employeeCard) employeeCard.style.cssText = `flex:1;border:2px solid ${role==='employee'?'var(--brand-orange)':'var(--border)'};background:${role==='employee'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  updateLicenseFieldForRole(role);
 }
 
 function hideActivationGate(){
