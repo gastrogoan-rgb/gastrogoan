@@ -2672,6 +2672,12 @@ function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
+// Para insertar texto dentro de un literal JS '...' embebido en un atributo onclick="...".
+// Escapa primero las barras invertidas y comillas simples para el JS, y luego escapa para HTML.
+function escapeJsAttr(str){
+  return escapeHtml(String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+}
+
 /* ============== Traducción automática de la carta (gratis, con autodetección) ============== */
 const CARTA_LANGS = ['es','en','ca'];
 
@@ -6627,8 +6633,8 @@ function renderOrderLinesHtml(order){
         <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
         ${elapsedBadge}
       </div>
-      ${avisoRecoger ? `<div style="margin-bottom:6px"><span class="badge badge-green" style="cursor:pointer" onclick="dismissAviso(${order.id}, '${escapeHtml(g.tanda)}')" title="Toca para descartar el aviso"><i class="ti ti-bell-ringing"></i> Cocina avisa: recoger este plato</span></div>` : ''}
-      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeHtml(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button></div>` : ''}
+      ${avisoRecoger ? `<div style="margin-bottom:6px"><span class="badge badge-green" style="cursor:pointer" onclick="dismissAviso(${order.id}, '${escapeJsAttr(g.tanda)}')" title="Toca para descartar el aviso"><i class="ti ti-bell-ringing"></i> Cocina avisa: recoger este plato</span></div>` : ''}
+      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button></div>` : ''}
       ${g.items.map(({line, idx}) => `
         <div class="list-row">
           <div class="list-row-name">
@@ -6713,6 +6719,7 @@ function marcharComanda(orderId, tanda){
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
+      if(order.avisos) delete order.avisos[l.tanda||''];
     }
   });
   saveDB();
@@ -6832,7 +6839,7 @@ function renderComandasCocina(){
         <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
         ${urgencyBadge(mins)}
       </div>
-      ${readyTandas.map(t => `<button class="btn btn-sm" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:6px" onclick="avisarRecogida(${order.id}, '${escapeHtml(t)}')"><i class="ti ti-bell-ringing"></i> Recoger${t ? ': '+escapeHtml(t) : ''}</button>`).join('')}
+      ${readyTandas.map(t => `<button class="btn btn-sm" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:6px" onclick="avisarRecogida(${order.id}, '${escapeJsAttr(t)}')"><i class="ti ti-bell-ringing"></i> Recoger${t ? ': '+escapeHtml(t) : ''}</button>`).join('')}
       ${groups.map(g => `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
           ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px">${escapeHtml(g.tanda)}</div>` : ''}
