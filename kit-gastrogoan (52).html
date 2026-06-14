@@ -2514,6 +2514,7 @@ function defaultData(){
       mantenimiento: []    // {id, nombre, ultimo, proximo, responsable, estado, notas}
     },
     clients: [],
+    loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     business: {
       name:'', address:'', phone:'', email:'', schedule:'', description:'',
@@ -2582,6 +2583,7 @@ async function loadDB(){
     if(!Array.isArray(merged.activeMenuIds)) merged.activeMenuIds = [];
     if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
     if(!Array.isArray(merged.promos)) merged.promos = [];
+    if(!Array.isArray(merged.loyaltyRewards)) merged.loyaltyRewards = ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'];
     (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
     (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;
@@ -10340,7 +10342,7 @@ function renderClientes(){
     let loyaltyCls, loyaltyBtn;
     if(points >= 10){
       loyaltyCls = 'badge-green';
-      loyaltyBtn = `<button class="btn btn-sm" onclick="claimClientReward(${c.id})" title="Dar premio y reiniciar"><i class="ti ti-gift"></i> Dar premio</button>`;
+      loyaltyBtn = `<button class="btn btn-sm" onclick="openRewardModal(${c.id})" title="Dar premio y reiniciar"><i class="ti ti-gift"></i> Dar premio</button>`;
     } else {
       loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
       loyaltyBtn = `<button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Sumar punto de visita"><i class="ti ti-plus"></i></button>`;
@@ -10379,9 +10381,44 @@ function showLoyaltyInfo(){
     <p style="font-size:13.5px;line-height:1.6">
       <span class="badge badge-gray">0-6/10</span> el cliente va sumando visitas con normalidad.<br>
       <span class="badge badge-amber">7-9/10</span> le faltan pocas visitas para el premio: ¡está cerca!<br>
-      <span class="badge badge-green">10/10</span> ¡ha llegado al premio! Pulsa "Dar premio" para entregárselo — esto reinicia su contador a 0 y empieza una nueva ronda.
+      <span class="badge badge-green">10/10</span> ¡ha llegado al premio! Pulsa "Dar premio": la app te sugerirá una recompensa (basada en su producto favorito y en tu catálogo de premios) y reiniciará su contador a 0.
     </p>
+    <div class="owner-only" style="margin-top:14px">
+      <h3 style="font-size:14px">Catálogo de premios sugeridos</h3>
+      <p style="font-size:12px;color:var(--muted);margin-top:-4px">Estos premios se ofrecerán como opción cada vez que un cliente llegue a 10 puntos.</p>
+      <div id="loyalty-rewards-list">${renderLoyaltyRewardsList()}</div>
+      <div class="field-row" style="margin-top:8px">
+        <input type="text" id="new-loyalty-reward" placeholder="Ej. Postre gratis" style="flex:1">
+        <button class="btn btn-sm" onclick="addLoyaltyReward()"><i class="ti ti-plus"></i> Añadir</button>
+      </div>
+    </div>
   `);
+}
+
+function renderLoyaltyRewardsList(){
+  const rewards = DB.loyaltyRewards||[];
+  if(!rewards.length) return `<p style="font-size:12px;color:var(--muted)">No hay premios definidos.</p>`;
+  return rewards.map((r,i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${escapeHtml(r)}</span>
+      <button class="btn btn-sm btn-icon btn-danger" onclick="removeLoyaltyReward(${i})"><i class="ti ti-trash"></i></button>
+    </div>
+  `).join('');
+}
+function addLoyaltyReward(){
+  const input = document.getElementById('new-loyalty-reward');
+  const val = input.value.trim();
+  if(!val) return;
+  if(!Array.isArray(DB.loyaltyRewards)) DB.loyaltyRewards = [];
+  DB.loyaltyRewards.push(val);
+  saveDB();
+  input.value = '';
+  document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
+}
+function removeLoyaltyReward(i){
+  DB.loyaltyRewards.splice(i,1);
+  saveDB();
+  document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
 }
 
 function openClientModal(id){
@@ -10433,6 +10470,13 @@ function openClientModal(id){
       <label>Notas</label>
       <textarea id="client-notes" placeholder="Notas adicionales...">${escapeHtml(c.notes||'')}</textarea>
     </div>
+    ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
+    <div class="field">
+      <label>Historial de premios entregados</label>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">
+        ${[...c.rewardsHistory].reverse().map(r=>`${escapeHtml(r.fecha)} — ${escapeHtml(r.premio)}`).join('<br>')}
+      </div>
+    </div>` : ''}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveClient(${id||'null'})">Guardar</button>
@@ -10473,14 +10517,65 @@ function adjustClientVisit(id){
   else showToast('+1 punto de fidelidad');
 }
 
-function claimClientReward(id){
+function clientFavoriteItem(c){
+  const matches = DB.sales.filter(s => s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase());
+  const counts = {};
+  matches.forEach(s => (s.items||[]).forEach(it => { counts[it.name] = (counts[it.name]||0) + (it.qty||1); }));
+  let best = null, bestQty = 0;
+  Object.entries(counts).forEach(([name,qty]) => { if(qty > bestQty){ best = name; bestQty = qty; } });
+  return best;
+}
+
+function openRewardModal(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
-  if(!confirm('¿Confirmas que se ha entregado el premio de fidelidad a ' + c.name + '? Se reiniciará su contador a 0.')) return;
+  const fav = clientFavoriteItem(c);
+  const suggestion = fav ? `${fav} gratis` : null;
+  const catalog = (DB.loyaltyRewards||[]).filter(r => r !== suggestion);
+  const options = [...(suggestion?[suggestion]:[]), ...catalog];
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-gift"></i> Premio de fidelidad</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px;line-height:1.6">¡<strong>${escapeHtml(c.name)}</strong> ha llegado a 10 puntos! Elige el premio que le vas a entregar.</p>
+    ${suggestion ? `
+    <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--brand-orange);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
+      <i class="ti ti-sparkles"></i> Sugerencia de la app: su producto favorito es <strong>${escapeHtml(fav)}</strong> (el que más ha pedido), así que podrías ofrecerle <strong>"${escapeHtml(suggestion)}"</strong>.
+    </div>` : ''}
+    <div class="field">
+      <label>Premio a entregar</label>
+      <select id="reward-select" onchange="document.getElementById('reward-custom-wrap').style.display = this.value==='__custom__' ? '' : 'none'">
+        ${options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
+        <option value="__custom__">Otro (escribir)...</option>
+      </select>
+    </div>
+    <div class="field" id="reward-custom-wrap" style="display:none">
+      <label>Premio personalizado</label>
+      <input type="text" id="reward-custom" placeholder="Ej. Postre + café gratis">
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Al confirmar, el contador de ${escapeHtml(c.name)} se reiniciará a 0 y empezará una nueva ronda hacia su próximo premio.</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmClientReward(${id})"><i class="ti ti-gift"></i> Entregar premio y reiniciar</button>
+    </div>
+  `);
+}
+
+function confirmClientReward(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  const sel = document.getElementById('reward-select').value;
+  const reward = sel === '__custom__' ? document.getElementById('reward-custom').value.trim() : sel;
+  if(!reward){ showToast('Indica qué premio se va a entregar'); return; }
   c.points = 0;
+  if(!Array.isArray(c.rewardsHistory)) c.rewardsHistory = [];
+  c.rewardsHistory.push({fecha: todayStr(), premio: reward});
   saveDB();
+  closeModal();
   renderClientes();
-  showToast('Premio entregado. Contador reiniciado');
+  showToast('Premio entregado: ' + reward);
 }
 
 function deleteClient(id){
