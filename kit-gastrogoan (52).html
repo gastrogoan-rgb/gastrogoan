@@ -1706,8 +1706,10 @@ function initPublicRequestsListener(){
         DB.tpvOrders.push({
           id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
-          clienteDireccion: req.clienteDireccion || '', notas: req.notas || '',
+          clienteDireccion: req.clienteDireccion || '', clienteCodigoPostal: req.codigoPostal || '',
+          notas: req.notas || '',
           date: req.date || '', time: req.time || '',
+          costeEnvio: req.costeEnvio || 0,
           status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString(),
           clientRef: req.clientRef || null
         });
@@ -1934,6 +1936,85 @@ function renderTableQrCard(link){
       </div>
     </div>
   `;
+}
+
+/* ============================================================
+   CONFIGURACIÓN DE PEDIDOS PARA LLEVAR / DOMICILIO
+   - Tiempo mínimo de antelación para recoger/recibir el pedido.
+   - Coste de envío y zona de reparto (códigos postales y/o radio en
+     km calculado a partir de la dirección del negocio mediante el
+     servicio gratuito de geocodificación de OpenStreetMap/Nominatim).
+   ============================================================ */
+function renderPedidosConfigCard(){
+  const b = DB.business || {};
+  if(b.tiposServicio?.takeaway === false && b.tiposServicio?.delivery === false) return '';
+  const p = b.pedidos || {};
+  const deliveryEnabled = b.tiposServicio?.delivery !== false;
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-clock-hour-4"></i> Pedidos para llevar / domicilio</h3>
+      <div class="field">
+        <label>Tiempo mínimo de antelación (minutos)</label>
+        <input type="number" id="mn-leadtime" min="0" step="5" value="${escapeHtml(p.leadTimeMin||0)}" placeholder="30">
+        <small style="color:var(--muted)">Tus clientes no podrán elegir una hora de recogida/entrega antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
+      </div>
+      ${deliveryEnabled ? `
+      <div class="field">
+        <label>Coste de envío a domicilio (€)</label>
+        <input type="number" id="mn-deliveryfee" min="0" step="0.5" value="${escapeHtml(p.deliveryFee||0)}" placeholder="3.00">
+      </div>
+      <div class="field">
+        <label>Códigos postales donde repartes</label>
+        <textarea id="mn-cplist" placeholder="28001, 28002, 28003">${escapeHtml((p.cpList||[]).join(', '))}</textarea>
+        <small style="color:var(--muted)">Separados por comas. Déjalo en blanco si no quieres restringir por código postal.</small>
+      </div>
+      <div class="field">
+        <label>Radio de reparto (km desde tu dirección)</label>
+        <input type="number" id="mn-radiuskm" min="0" step="0.5" value="${escapeHtml(p.radiusKm||0)}" placeholder="5">
+        <small style="color:var(--muted)">0 = sin límite por distancia. Necesita que la "Dirección" de tu negocio (sección Contacto) esté rellena.</small>
+      </div>
+      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> Ubicación calculada: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</p>` : ''}
+      <p style="font-size:12px;color:var(--muted)">Un pedido a domicilio se acepta si el código postal del cliente está en tu lista, o si su dirección está dentro del radio configurado (basta con que cumpla una de las dos condiciones).</p>
+      ` : ''}
+      <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  `;
+}
+
+async function savePedidosConfig(){
+  const b = DB.business;
+  const p = b.pedidos || {};
+  p.leadTimeMin = Math.max(0, parseInt(document.getElementById('mn-leadtime').value) || 0);
+
+  const deliveryFeeEl = document.getElementById('mn-deliveryfee');
+  if(deliveryFeeEl){
+    p.deliveryFee = Math.max(0, parseFloat(document.getElementById('mn-deliveryfee').value) || 0);
+    p.cpList = document.getElementById('mn-cplist').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
+    p.radiusKm = radiusKm;
+    if(radiusKm > 0 && b.address){
+      showToast('Calculando ubicación de tu negocio...');
+      try{
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(b.address));
+        const data = await res.json();
+        if(data && data[0]){
+          p.lat = parseFloat(data[0].lat);
+          p.lng = parseFloat(data[0].lon);
+        }else{
+          showToast('No se ha podido localizar tu dirección. Revisa que sea correcta y vuelve a guardar.');
+        }
+      }catch(e){
+        showToast('No se pudo calcular la ubicación (revisa tu conexión)');
+      }
+    }else if(radiusKm === 0){
+      p.lat = null; p.lng = null;
+    }
+  }
+
+  b.pedidos = p;
+  saveDB();
+  renderMiNegocio();
+  showToast('Configuración de pedidos guardada');
 }
 
 /* ============================================================
@@ -5611,7 +5692,7 @@ function renderTpvMesas(tiposServicio){
 }
 
 function renderTpvToGo(tiposServicio){
-  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery'));
+  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && (!o.date || o.date <= todayStr()));
   if(!(tiposServicio.takeaway || tiposServicio.delivery || toGoOrders.length)) return '';
   const toGoButtonsHtml = `
     ${tiposServicio.takeaway ? `<button class="btn btn-sm" onclick="newToGoOrder('takeaway')"><i class="ti ti-shopping-bag"></i> Nuevo Take Away</button>` : ''}
@@ -5626,6 +5707,7 @@ function renderTpvToGo(tiposServicio){
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
           <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
@@ -5636,7 +5718,7 @@ function renderTpvToGo(tiposServicio){
 }
 
 function renderTpvPendingOnline(){
-  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online');
+  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (!o.date || o.date <= todayStr()));
   if(!pendingOnline.length) return '';
   return `
     <h3 style="margin-top:16px"><i class="ti ti-bell-ringing"></i> Pedidos online pendientes</h3>
@@ -5649,8 +5731,8 @@ function renderTpvPendingOnline(){
           </h3>
           ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
-          ${(o.date || o.time) ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${escapeHtml(o.date||'')}${o.date && o.time ? ' · ' : ''}${escapeHtml(o.time||'')}</div>` : ''}
-          ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : ''}
+          ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> Programado para las ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
+          ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>` : ''}
           <div style="margin:8px 0;font-size:13px">
             ${(o.items||[]).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}
           </div>
@@ -5754,7 +5836,7 @@ function deleteTable(id){
 }
 
 function orderTotal(order){
-  return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0);
+  return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
 }
 
 function openTableOrder(tableId, orderId){
@@ -10233,6 +10315,8 @@ function renderMiNegocio(){
         </label>
       </div>
     </div>
+
+    ${renderPedidosConfigCard()}
 
     ${renderDeliveryPlatformsCard()}
 

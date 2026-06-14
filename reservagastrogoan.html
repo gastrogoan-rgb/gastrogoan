@@ -378,6 +378,61 @@ function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
   }
 }
 
+/* ============ TIEMPO DE ANTELACIÓN / ZONA DE REPARTO ============ */
+// Si el pedido es para hoy, no se puede elegir una hora anterior a
+// "ahora + tiempo de antelación configurado por el restaurante".
+function applyLeadTime(dateInputId, timeInputId, hintBoxId){
+  const p = (DB.business||{}).pedidos || {};
+  const leadTimeMin = parseInt(p.leadTimeMin) || 0;
+  const date = document.getElementById(dateInputId).value;
+  const timeInput = document.getElementById(timeInputId);
+  const hintBox = document.getElementById(hintBoxId);
+  if(!leadTimeMin || date !== todayStr()) return;
+
+  const now = new Date(Date.now() + leadTimeMin * 60000);
+  const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
+  if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+
+  const hint = `<p style="font-size:13px;color:#888;margin-top:-8px">Para hoy, lo antes que puedes elegir es a las ${minTime} (antelación mínima de ${leadTimeMin} min).</p>`;
+  hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
+}
+
+// Distancia en km entre dos puntos (fórmula de Haversine).
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Comprueba si una dirección/código postal de entrega está dentro de la
+// zona de reparto configurada (código postal aceptado o dentro del radio).
+async function checkDeliveryZone(p, codigoPostal, direccion){
+  const cpList = p.cpList || [];
+  if(cpList.length && cpList.includes(codigoPostal)) return true;
+
+  if(p.radiusKm > 0 && p.lat != null && p.lng != null){
+    try{
+      const q = encodeURIComponent(direccion + ', ' + codigoPostal);
+      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
+      const data = await res.json();
+      if(data && data[0]){
+        const dist = haversineKm(p.lat, p.lng, parseFloat(data[0].lat), parseFloat(data[0].lon));
+        if(dist <= p.radiusKm) return true;
+      }
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  // Si no hay ninguna zona configurada, no se restringe.
+  if(!cpList.length && !(p.radiusKm > 0)) return true;
+  return false;
+}
+
 /* ============ RESERVA ============ */
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
@@ -495,6 +550,8 @@ function renderOrderForm(){
   }
 
   const isDelivery = currentTab === 'delivery';
+  const p = (DB.business||{}).pedidos || {};
+  const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
 
   const menuHtml = buildMenuHtml(cartas);
 
@@ -517,7 +574,7 @@ function renderOrderForm(){
       <div class="field-row">
         <div class="field">
           <label>Fecha *</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint')">
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint')">
         </div>
         <div class="field">
           <label>Hora *</label>
@@ -529,6 +586,11 @@ function renderOrderForm(){
       <div class="field">
         <label>Dirección de entrega *</label>
         <input type="text" id="o-address" placeholder="Calle, número, piso...">
+      </div>` : ''}
+      ${zoneRestricted ? `
+      <div class="field">
+        <label>Código postal *</label>
+        <input type="text" id="o-cp" placeholder="28001">
       </div>` : ''}
       <div class="field">
         <label>Notas (alergias, observaciones...)</label>
@@ -545,6 +607,7 @@ function renderOrderForm(){
   `;
   renderCartSummary();
   updateTimeInputRange('o-date','o-time','o-hour-hint');
+  applyLeadTime('o-date','o-time','o-hour-hint');
 }
 
 function getCartQty(recipeId){
@@ -577,15 +640,19 @@ function renderCartSummary(){
     return;
   }
   if(submitBtn) submitBtn.disabled = false;
-  const total = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const p = (DB.business||{}).pedidos || {};
+  const deliveryFee = currentTab === 'delivery' ? (p.deliveryFee || 0) : 0;
+  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const total = subtotal + deliveryFee;
   box.innerHTML = `
     <h2>Tu pedido</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
+    ${deliveryFee > 0 ? `<div class="cart-line"><span>Coste de envío</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
     <div class="cart-total"><span>Total</span><span>${fmtMoney(total)}</span></div>
   `;
 }
 
-function submitOrder(){
+async function submitOrder(){
   if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
@@ -594,8 +661,11 @@ function submitOrder(){
   const isDelivery = currentTab === 'delivery';
   const clienteDireccion = isDelivery ? document.getElementById('o-address').value.trim() : '';
   const notas = document.getElementById('o-notes').value.trim();
+  const p = (DB.business||{}).pedidos || {};
+  const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
+  const codigoPostal = zoneRestricted ? document.getElementById('o-cp').value.trim() : '';
 
-  if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion)){
+  if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
     alert('Por favor completa los campos obligatorios.');
     return;
   }
@@ -610,16 +680,37 @@ function submitOrder(){
     return;
   }
 
+  const leadTimeMin = parseInt(p.leadTimeMin) || 0;
+  if(leadTimeMin && date === todayStr()){
+    const now = new Date(Date.now() + leadTimeMin * 60000);
+    const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if(time < minTime){
+      alert(`Con la antelación mínima de ${leadTimeMin} minutos, lo antes que puedes elegir hoy es a las ${minTime}.`);
+      return;
+    }
+  }
+
+  if(zoneRestricted){
+    const enZona = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
+    if(!enZona){
+      alert('Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.');
+      return;
+    }
+  }
+
+  const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
+  const total = cart.reduce((s,l)=>s+l.price*l.qty,0) + deliveryFee;
+
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
-    clienteNombre, clienteTelefono, clienteDireccion, notas, date, time,
+    clienteNombre, clienteTelefono, clienteDireccion, codigoPostal, notas, date, time,
+    costeEnvio: deliveryFee,
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
 
   const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
   if(pagoTarjeta){
-    const total = cart.reduce((s,l)=>s+l.price*l.qty,0);
     payWithCard(req, total, isDelivery ? 'Pedido a domicilio' : 'Pedido para recoger');
     return;
   }
