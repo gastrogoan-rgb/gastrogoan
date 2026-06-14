@@ -836,6 +836,10 @@ td.wrap{white-space:normal}
       <div class="view-title">Gestión Económica</div>
       <div class="view-subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
+      <div style="margin-bottom:12px">
+        <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> Exportar contabilidad mensual</button>
+      </div>
+
       <nav class="ge-tab-row">
         <button class="ge-tab active" onclick="GE.tab('fijos')">💰 Gastos Fijos</button>
         <button class="ge-tab" onclick="GE.tab('variables')">🛒 Gastos Variables</button>
@@ -8406,7 +8410,122 @@ const GE = (function(){
       : `<div class="empty" style="padding:12px 16px">Todos los platos del Escandallo se han vendido en este periodo. 🎉</div>`;
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom};
+  /* -- EXPORTAR CONTABILIDAD PARA EL GESTOR -- */
+  function openExportModal(){
+    const now = new Date();
+    openModal(`
+      <div class="modal-header"><h3><i class="ti ti-file-export"></i> Exportar contabilidad mensual</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="font-size:13px;color:var(--muted)">Genera un archivo CSV (compatible con Excel) con el libro de ventas, los gastos y el resultado del mes, listo para enviar a tu gestor o asesoría.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Mes</label>
+          <select id="exp-mes">${MESES.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}</select>
+        </div>
+        <div class="field">
+          <label>Año</label>
+          <input type="number" id="exp-anyo" value="${now.getFullYear()}" min="2000" max="2100">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> Descargar CSV</button>
+      </div>
+    `);
+  }
+
+  function exportMonth(){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const b = DB.business || {};
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    const ivaVentas = (b.ticket && b.ticket.ivaPct != null) ? b.ticket.ivaPct : 10;
+
+    const ventas = DB.sales.filter(v => (v.date||'').startsWith(mesStr)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+    const rows = [];
+    rows.push(['INFORME CONTABLE MENSUAL - GASTROGOAN']);
+    rows.push(['Negocio', b.name || '']);
+    if(b.cif) rows.push(['CIF/NIF', b.cif]);
+    rows.push(['Periodo', `${MESES[mes]} ${año}`]);
+    rows.push(['Generado el', new Date().toLocaleString('es-ES')]);
+    rows.push([]);
+
+    rows.push(['LIBRO DE VENTAS']);
+    rows.push(['Fecha','Nº Factura','Tipo','Cliente','Forma de pago','Base imponible (€)','IVA %','Cuota IVA (€)','Total (€)']);
+    let sumBase=0, sumIva=0, sumTotal=0;
+    ventas.forEach(v => {
+      const total = parseFloat(v.total||0);
+      const base = total / (1 + ivaVentas/100);
+      const iva = total - base;
+      sumBase += base; sumIva += iva; sumTotal += total;
+      rows.push([v.date||'', v.facturaNum||'', v.tipo||'', v.clienteNombre||'', v.metodoPago||'', base, ivaVentas, iva, total]);
+    });
+    if(!ventas.length) rows.push(['Sin ventas registradas este mes.']);
+    rows.push(['','','','','TOTAL', sumBase, '', sumIva, sumTotal]);
+    rows.push([]);
+
+    rows.push(['GASTOS FIJOS MENSUALES (recurrentes)']);
+    rows.push(['Concepto','Categoría','Día de pago','Importe mensual (€)']);
+    let sumFijos = 0;
+    fijos().forEach(g => {
+      const imp = parseFloat(g.importe||0);
+      sumFijos += imp;
+      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', imp]);
+    });
+    if(!fijos().length) rows.push(['Sin gastos fijos registrados.']);
+    rows.push(['','','TOTAL', sumFijos]);
+    rows.push([]);
+
+    rows.push(['GASTOS VARIABLES DEL MES']);
+    rows.push(['Fecha','Categoría','Proveedor','Importe (€)']);
+    let sumVar = 0;
+    const variablesDelMes = variablesMes(mes, año).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    variablesDelMes.forEach(v => {
+      const imp = parseFloat(v.importe||0);
+      sumVar += imp;
+      rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', imp]);
+    });
+    if(!variablesDelMes.length) rows.push(['Sin gastos variables registrados este mes.']);
+    rows.push(['','','TOTAL', sumVar]);
+    rows.push([]);
+
+    const capexMes = capex().filter(c => (c.fecha||'').startsWith(mesStr));
+    rows.push(['INVERSIONES (CAPEX) DEL MES']);
+    rows.push(['Descripción','Fecha','Base (€)','IVA %','Cuota IVA (€)','Total (€)','Estado de pago']);
+    let sumCapexBase=0, sumCapexIva=0, sumCapexTotal=0;
+    capexMes.forEach(c => {
+      const imp = parseFloat(c.importe||0);
+      const ivaPct = parseFloat(c.iva||0);
+      const ivaAmt = imp * ivaPct/100;
+      const total = imp + ivaAmt;
+      sumCapexBase += imp; sumCapexIva += ivaAmt; sumCapexTotal += total;
+      rows.push([c.descripcion||'', c.fecha||'', imp, ivaPct, ivaAmt, total, c.estadoPago||'']);
+    });
+    if(!capexMes.length) rows.push(['Sin inversiones registradas este mes.']);
+    rows.push(['','','TOTAL', sumCapexBase, '', sumCapexIva, sumCapexTotal, '']);
+    rows.push([]);
+
+    const comisiones = comisionesMes(mes);
+    const resultado = sumTotal - sumVar - sumFijos - comisiones;
+    rows.push(['RESUMEN DEL MES']);
+    rows.push(['Concepto','Importe (€)']);
+    rows.push(['Total facturación (con IVA)', sumTotal]);
+    rows.push(['Base imponible ventas', sumBase]);
+    rows.push(['IVA repercutido (ventas)', sumIva]);
+    rows.push(['Comisiones plataformas de delivery', comisiones]);
+    rows.push(['Total gastos variables', sumVar]);
+    rows.push(['Total gastos fijos', sumFijos]);
+    rows.push(['Total inversiones - CAPEX (base)', sumCapexBase]);
+    rows.push(['IVA soportado (CAPEX)', sumCapexIva]);
+    rows.push(['Resultado del mes (antes de impuestos)', resultado]);
+
+    const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    downloadCSV(rows, `contabilidad-${nombreNegocio}-${mesStr}.csv`);
+    closeModal();
+    showToast('Informe contable descargado');
+  }
+
+  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth};
 })();
 
 /* ============================================================
@@ -10591,6 +10710,27 @@ function goToArchiveFromReminder(){
     const el = document.getElementById('mn-archive-before');
     if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
   }, 200);
+}
+
+// Genera y descarga un CSV en formato español (separador ";", decimales con
+// coma) a partir de una matriz de filas, para que un gestor pueda abrirlo
+// directamente en Excel/Google Sheets.
+function downloadCSV(rows, filename){
+  const csvCell = v => {
+    if(typeof v === 'number') return (Math.round(v*100)/100).toFixed(2).replace('.', ',');
+    const s = String(v ?? '');
+    return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const csv = rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function downloadJSON(obj, filename){
