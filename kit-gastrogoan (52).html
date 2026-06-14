@@ -1958,6 +1958,17 @@ function renderPedidosConfigCard(){
         <input type="number" id="mn-leadtime" min="0" step="5" value="${escapeHtml(p.leadTimeMin||0)}" placeholder="30">
         <small style="color:var(--muted)">Tus clientes no podrán elegir una hora de recogida/entrega antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
       </div>
+      <div class="field">
+        <label>Pedido mínimo (€)</label>
+        <input type="number" id="mn-pedidominimo" min="0" step="0.5" value="${escapeHtml(p.pedidoMinimo||0)}" placeholder="10">
+        <small style="color:var(--muted)">Importe mínimo del pedido (sin contar el envío) para poder realizarlo online. Pon 0 para no exigir mínimo.</small>
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="mn-pagolocal" ${p.permitirPagoLocal!==false?'checked':''} style="width:18px;height:18px"> Permitir "pagar al recoger / al recibir"
+        </label>
+        <small style="color:var(--muted)">Si lo desmarcas, tus clientes solo podrán pagar online con tarjeta (necesita tener configurado el pago con tarjeta).</small>
+      </div>
       ${deliveryEnabled ? `
       <div class="field">
         <label>Coste de envío a domicilio (€)</label>
@@ -1985,6 +1996,8 @@ async function savePedidosConfig(){
   const b = DB.business;
   const p = b.pedidos || {};
   p.leadTimeMin = Math.max(0, parseInt(document.getElementById('mn-leadtime').value) || 0);
+  p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
+  p.permitirPagoLocal = document.getElementById('mn-pagolocal').checked;
 
   const deliveryFeeEl = document.getElementById('mn-deliveryfee');
   if(deliveryFeeEl){

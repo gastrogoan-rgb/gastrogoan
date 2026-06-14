@@ -599,8 +599,8 @@ function renderOrderForm(){
       ${redsysConfigured ? `
       <div class="field">
         <label>Forma de pago</label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> Pagar al ${isDelivery?'recibir':'recoger'}</label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" style="width:auto"> Pagar ahora con tarjeta</label>
+        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> Pagar al ${isDelivery?'recibir':'recoger'}</label>` : ''}
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:auto"> Pagar ahora con tarjeta</label>
       </div>` : ''}
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">Enviar pedido</button>
     </div>
@@ -639,16 +639,19 @@ function renderCartSummary(){
     if(submitBtn) submitBtn.disabled = true;
     return;
   }
-  if(submitBtn) submitBtn.disabled = false;
   const p = (DB.business||{}).pedidos || {};
   const deliveryFee = currentTab === 'delivery' ? (p.deliveryFee || 0) : 0;
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const total = subtotal + deliveryFee;
+  const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
+  const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
+  if(submitBtn) submitBtn.disabled = bajoMinimo;
   box.innerHTML = `
     <h2>Tu pedido</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
     ${deliveryFee > 0 ? `<div class="cart-line"><span>Coste de envío</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
     <div class="cart-total"><span>Total</span><span>${fmtMoney(total)}</span></div>
+    ${bajoMinimo ? `<p style="font-size:13px;color:#c0392b;margin-top:8px">Pedido mínimo: ${fmtMoney(pedidoMinimo)}. Añade ${fmtMoney(pedidoMinimo - subtotal)} más para poder continuar.</p>` : ''}
   `;
 }
 
@@ -667,6 +670,13 @@ async function submitOrder(){
 
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
     alert('Por favor completa los campos obligatorios.');
+    return;
+  }
+
+  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const pedidoMinimo = p.pedidoMinimo || 0;
+  if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
+    alert(`El pedido mínimo es de ${fmtMoney(pedidoMinimo)}. Añade más platos para continuar.`);
     return;
   }
 
@@ -699,7 +709,7 @@ async function submitOrder(){
   }
 
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
-  const total = cart.reduce((s,l)=>s+l.price*l.qty,0) + deliveryFee;
+  const total = subtotal + deliveryFee;
 
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
