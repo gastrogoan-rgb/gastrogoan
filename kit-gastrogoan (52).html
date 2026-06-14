@@ -8426,16 +8426,20 @@ const GE = (function(){
           <input type="number" id="exp-anyo" value="${now.getFullYear()}" min="2000" max="2100">
         </div>
       </div>
+      <div class="field">
+        <label>Email del gestor / asesoría</label>
+        <input type="email" id="exp-email" value="${escapeHtml((DB.business||{}).gestorEmail||'')}" placeholder="gestoria@ejemplo.com">
+        <small style="color:var(--muted)">Se recordará para próximas exportaciones. Al pulsar "Enviar al gestor" se abrirá tu programa de correo con un mensaje preparado: descarga primero el CSV y adjúntalo antes de enviarlo.</small>
+      </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> Descargar CSV</button>
+        <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> Enviar al gestor</button>
       </div>
     `);
   }
 
-  function exportMonth(){
-    const mes = parseInt(document.getElementById('exp-mes').value);
-    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+  function buildMonthReport(mes, año){
     const b = DB.business || {};
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     const ivaVentas = (b.ticket && b.ticket.ivaPct != null) ? b.ticket.ivaPct : 10;
@@ -8520,12 +8524,56 @@ const GE = (function(){
     rows.push(['Resultado del mes (antes de impuestos)', resultado]);
 
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    downloadCSV(rows, `contabilidad-${nombreNegocio}-${mesStr}.csv`);
+    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos, sumVar, comisiones, resultado};
+  }
+
+  function exportMonth(){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const report = buildMonthReport(mes, año);
+    downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
     closeModal();
     showToast('Informe contable descargado');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth};
+  function emailMonth(){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const email = document.getElementById('exp-email').value.trim();
+    if(!email){ showToast('Indica el email del gestor'); return; }
+
+    const b = DB.business || {};
+    b.gestorEmail = email;
+    saveDB();
+
+    const report = buildMonthReport(mes, año);
+    const fmt = n => (Math.round(n*100)/100).toFixed(2).replace('.', ',') + ' €';
+    const subject = `Contabilidad ${MESES[mes]} ${año} - ${b.name||'GastroGoan'}`;
+    const body = [
+      `Hola,`,
+      ``,
+      `Adjunto el informe contable de ${MESES[mes]} ${año} de ${b.name||'el negocio'}.`,
+      ``,
+      `Resumen del mes:`,
+      `- Total facturación (con IVA): ${fmt(report.sumTotal)}`,
+      `- Base imponible ventas: ${fmt(report.sumBase)}`,
+      `- IVA repercutido: ${fmt(report.sumIva)}`,
+      `- Gastos fijos: ${fmt(report.sumFijos)}`,
+      `- Gastos variables: ${fmt(report.sumVar)}`,
+      `- Resultado del mes: ${fmt(report.resultado)}`,
+      ``,
+      `Recuerda adjuntar el archivo CSV descargado (contabilidad-${report.nombreNegocio}-${report.mesStr}.csv) antes de enviar este correo.`,
+      ``,
+      `Un saludo.`
+    ].join('\n');
+
+    downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    closeModal();
+    showToast('CSV descargado, adjúntalo en el correo abierto');
+  }
+
+  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, setMonthTe, renderTesoreria, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
 })();
 
 /* ============================================================
