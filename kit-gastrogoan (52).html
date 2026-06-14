@@ -2577,47 +2577,61 @@ function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-/* ============== Traducción automática de la carta (MyMemory, gratis) ============== */
-const CARTA_LANGS = ['en','ca'];
-const MY_MEMORY_URL = 'https://api.mymemory.translated.net/get';
+/* ============== Traducción automática de la carta (gratis, con autodetección) ============== */
+const CARTA_LANGS = ['es','en','ca'];
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-async function translateText(text, targetLang){
-  if(!text || !text.trim()) return '';
+// Traduce un texto al idioma `targetLang` detectando automáticamente el
+// idioma de origen (servicio gratuito de Google Translate). Devuelve
+// {translated, detected} o null si falla la petición.
+async function translateAuto(text, targetLang){
+  if(!text || !text.trim()) return null;
   try{
-    const url = `${MY_MEMORY_URL}?q=${encodeURIComponent(text)}&langpair=es|${targetLang}`;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
     const res = await fetch(url);
     const data = await res.json();
-    const translated = data && data.responseData && data.responseData.translatedText;
-    return (translated && !/^MYMEMORY WARNING/i.test(translated)) ? translated : '';
+    const translated = (data[0]||[]).map(seg => seg[0]).join('');
+    const detected = data[2];
+    return {translated, detected};
   }catch(e){
-    return '';
+    return null;
   }
 }
 
-// Traduce automáticamente al inglés y catalán los nombres de secciones y platos
-// de una carta que aún no tengan traducción guardada. Se ejecuta en segundo
-// plano tras guardar la carta, sin bloquear la interfaz.
+// Traduce automáticamente los nombres de secciones y platos de una carta a los
+// idiomas que falten (entre castellano, inglés y catalán), detectando el
+// idioma en el que se escribió cada texto. Se ejecuta en segundo plano tras
+// guardar la carta, sin bloquear la interfaz.
+async function translateField(item){
+  if(!item.nombre || !item.nombre.trim()) return false;
+  if(!item.i18n) item.i18n = {};
+  let detected = item.nombreLang || null;
+  let changed = false;
+  for(const target of CARTA_LANGS){
+    if(detected && target === detected) continue;
+    if(item.i18n[target]) continue;
+    const r = await translateAuto(item.nombre, target);
+    if(!r) continue;
+    if(!detected){
+      detected = CARTA_LANGS.includes(r.detected) ? r.detected : 'es';
+      item.nombreLang = detected;
+      changed = true;
+      if(target === detected) continue;
+    }
+    item.i18n[target] = r.translated;
+    changed = true;
+    await sleep(300);
+  }
+  return changed;
+}
+
 async function autoTranslateCarta(carta){
   let changed = false;
   for(const sec of (carta.secciones||[])){
-    if(!sec.i18n) sec.i18n = {};
-    for(const lang of CARTA_LANGS){
-      if(sec.nombre && !sec.i18n[lang]){
-        const t = await translateText(sec.nombre, lang);
-        if(t){ sec.i18n[lang] = t; changed = true; await sleep(300); }
-      }
-    }
+    if(await translateField(sec)) changed = true;
     for(const p of (sec.platos||[])){
-      if(!p.i18n) p.i18n = {};
-      for(const lang of CARTA_LANGS){
-        if(!p.i18n[lang]) p.i18n[lang] = {};
-        if(p.nombre && !p.i18n[lang].nombre){
-          const t = await translateText(p.nombre, lang);
-          if(t){ p.i18n[lang].nombre = t; changed = true; await sleep(300); }
-        }
-      }
+      if(await translateField(p)) changed = true;
     }
   }
   if(changed) saveDB();

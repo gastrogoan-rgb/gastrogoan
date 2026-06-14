@@ -170,17 +170,16 @@ function renderLangSwitcher(){
   ).join('');
 }
 
-// Devuelve el nombre de una sección de la carta traducido al idioma elegido
-// por el cliente, o el original en español si no hay traducción.
-function trSection(sec){
-  if(currentLang==='es') return sec.nombre;
-  return (sec.i18n && sec.i18n[currentLang]) || sec.nombre;
+// Devuelve el nombre de una sección/plato de la carta traducido al idioma
+// elegido por el cliente, o el original (en el idioma en que se escribió) si
+// no hay traducción disponible para ese idioma.
+function trItem(item){
+  const srcLang = item.nombreLang || 'es';
+  if(currentLang === srcLang) return item.nombre;
+  return (item.i18n && item.i18n[currentLang]) || item.nombre;
 }
-// Devuelve el nombre de un plato traducido, o el original si no hay traducción.
-function trPlato(p){
-  if(currentLang==='es') return p.nombre;
-  return (p.i18n && p.i18n[currentLang] && p.i18n[currentLang].nombre) || p.nombre;
-}
+function trSection(sec){ return trItem(sec); }
+function trPlato(p){ return trItem(p); }
 function fmtMoney(v){
   return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
 }
