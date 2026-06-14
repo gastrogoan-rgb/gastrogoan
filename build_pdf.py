@@ -195,12 +195,12 @@ sub_step(pdf, "3", "Pulsa el botón \"Sign up\" (Registrarse) y crea una cuenta 
     "Puedes registrarte con tu cuenta de Google o de email; es gratis y no pide tarjeta de crédito.")
 
 sub_step(pdf, "4", "Una vez dentro de tu panel de Netlify, busca un botón que diga "
-    "\"Add new site\" (Añadir nuevo sitio) y elige la opción \"Deploy manually\" "
-    "(Desplegar manualmente).")
+    "\"Add new project\" (Añadir nuevo proyecto) y púlsalo. Te llevará a una página "
+    "nueva: bájala hasta el final, ahí encontrarás una zona para cargar/arrastrar archivos.")
 
-sub_step(pdf, "5", "Te aparecerá un recuadro grande donde puedes arrastrar archivos. "
-    "Arrastra ahí dentro la carpeta \"GastroGoan\" que has creado en el paso 1 "
-    "(con los dos archivos dentro), o selecciona y arrastra los dos archivos a la vez.")
+sub_step(pdf, "5", "En esa zona del final de la página, arrastra la carpeta \"GastroGoan\" "
+    "que has creado en el paso 1 (con los dos archivos dentro), o selecciona y arrastra "
+    "los dos archivos a la vez.")
 
 sub_step(pdf, "6", "Espera unos segundos. Netlify subirá los archivos y te mostrará una "
     "dirección web (URL) parecida a esta: https://nombre-aleatorio-12345.netlify.app")
@@ -230,8 +230,7 @@ pdf.set_x(20)
 pdf.set_font("DejaVu", "", 10.5)
 pdf.multi_cell(0, 6,
     "Cada copia de GastroGoan tiene una clave de licencia única, asociada a tu negocio. "
-    "Esta clave te la habrá proporcionado la persona que te ha vendido la app "
-    "(normalmente por WhatsApp o email).")
+    "Esta clave se te ha proporcionado por email (o WhatsApp) junto con esta guía.")
 pdf.ln(2)
 
 sub_step(pdf, "1", "Abre la dirección web de Netlify que has guardado en el Paso 1 "
