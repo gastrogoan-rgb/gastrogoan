@@ -2020,7 +2020,8 @@ function defaultData(){
         mostrarWeb: false,
         ivaPct: 10
       },
-      facturaCounter: 0
+      facturaCounter: 0,
+      deliveryPlatforms: [] // {id, nombre, comisionPct, ivaPct} - apps de delivery (Glovo, Uber Eats...) y su comisión
     },
     ge: {
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
@@ -5463,13 +5464,16 @@ function renderTpvToGo(tiposServicio){
   return `
     <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
     <div class="grid grid-4">
-      ${toGoOrders.map(o => `
+      ${toGoOrders.map(o => {
+        const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
+        return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
           <span class="badge badge-amber">Abierto</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''}
+          ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
-      `).join('')}
+      `}).join('')}
       ${toGoButtonsHtml ? `<div class="card" style="text-align:center;display:flex;flex-direction:column;gap:8px;justify-content:center">${toGoButtonsHtml}</div>` : ''}
     </div>
   `;
@@ -5681,6 +5685,15 @@ function confirmOpenTableOrder(tableId){
 function newToGoOrder(tipo){
   const tipoLabel = tipo==='delivery' ? 'delivery' : 'take away';
   const icon = tipo==='delivery' ? 'ti-moped' : 'ti-shopping-bag';
+  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
+  const platformField = (tipo==='delivery' && platforms.length) ? `
+    <div class="field">
+      <label>Plataforma</label>
+      <select id="new-togo-plataforma">
+        <option value="">Reparto propio (sin comisión)</option>
+        ${platforms.map(p=>`<option value="${p.id}">${escapeHtml(p.nombre)} (comisión ${fmtNum(p.comisionPct)}%)</option>`).join('')}
+      </select>
+    </div>` : '';
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ${icon}"></i> Nuevo ${tipoLabel}</h3>
@@ -5690,6 +5703,7 @@ function newToGoOrder(tipo){
       <label>Nombre del cliente (opcional)</label>
       <input type="text" id="new-togo-name" placeholder="Nombre del cliente">
     </div>
+    ${platformField}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmNewToGoOrder('${tipo}')">Crear pedido</button>
@@ -5700,7 +5714,9 @@ function newToGoOrder(tipo){
 
 function confirmNewToGoOrder(tipo){
   const clienteNombre = (document.getElementById('new-togo-name').value||'').trim();
-  const order = {id: genId(), tableId:null, tipo, clienteNombre, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const platformSel = document.getElementById('new-togo-plataforma');
+  const plataformaId = platformSel && platformSel.value ? parseInt(platformSel.value) : null;
+  const order = {id: genId(), tableId:null, tipo, clienteNombre, plataformaId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -6313,6 +6329,7 @@ function finalizeCharge(orderId){
   const metodoPago = document.getElementById('payment-method').value;
   discountStockForOrder(order);
   const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -6544,6 +6561,7 @@ function finalizeSplitOrder(orderId){
     clienteNombre: order.clienteNombre||'', metodoPago: metodos.length===1?metodos[0]:'Dividido',
     pagos, items: order.items.map(l=>({...l}))
   };
+  applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -6565,6 +6583,20 @@ function discountStockForOrder(order){
       s.qty = Math.max(0, s.qty - ri.qty * line.qty);
     });
   });
+}
+
+// Si el pedido es de delivery y ha llegado a través de una app (Glovo, Uber Eats...)
+// calcula y guarda en la venta la comisión que esa app cobra (comisión% + IVA sobre la
+// comisión), para que se descuente automáticamente como gasto en Gestión Económica.
+function applyDeliveryCommission(order, sale){
+  if(order.tipo !== 'delivery' || !order.plataformaId) return;
+  const plat = (DB.business.deliveryPlatforms||[]).find(p => p.id === order.plataformaId);
+  if(!plat) return;
+  const comisionPct = parseFloat(plat.comisionPct) || 0;
+  const ivaPct = parseFloat(plat.ivaPct) || 0;
+  const comision = sale.total * (comisionPct/100) * (1 + ivaPct/100);
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct};
+  sale.comisionPlataforma = Math.round(comision * 100) / 100;
 }
 
 /* ------------------ Ticket: contenido, impresión, email y factura ------------------ */
@@ -7345,8 +7377,14 @@ const GE = (function(){
     const mesStr = `${currentYear}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
+  // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
+  // sobre las ventas del mes que llegaron por esas plataformas.
+  function comisionesMes(mes){
+    const mesStr = `${currentYear}-${String(mes+1).padStart(2,'0')}`;
+    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.comisionPlataforma||0),0);
+  }
   function resultadoMes(mes){
-    return facturacionMes(mes) - totalVariablesMes(mes) - totalFijos();
+    return facturacionMes(mes) - totalVariablesMes(mes) - totalFijos() - comisionesMes(mes);
   }
 
   /* -- GASTOS FIJOS -- */
@@ -7533,6 +7571,7 @@ const GE = (function(){
       {lbl:'Facturación (TPV)', vals:MESES.map((_,i)=>facturacionMes(i)), auto:true, bold:true},
       {lbl:'Gastos Variables', vals:MESES.map((_,i)=>-totalVariablesMes(i)), auto:true},
       {lbl:'Gastos Fijos', vals:MESES.map(()=>-tf), auto:true},
+      {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i)), auto:true},
       {lbl:'Resultado Mensual', vals:MESES.map((_,i)=>resultadoMes(i)), auto:true, highlight:true, isResult:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
@@ -7721,11 +7760,12 @@ const GE = (function(){
       {lbl:'Ventas Netas', fn:m=>facturacionMes(m), bold:true},
       {lbl:'Coste de Ventas (MP)', fn:m=>totalVariablesMes(m)},
       {lbl:'Margen Bruto', fn:m=>facturacionMes(m)-totalVariablesMes(m), highlight:true, bold:true},
+      {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
       {lbl:'Gastos Explotación', fn:()=>tf*3},
-      {lbl:'EBITDA Operativo', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf, highlight:true, bold:true},
+      {lbl:'EBITDA Operativo', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
       {lbl:'Amortizaciones CAPEX', fn:()=>amort, auto:true},
-      {lbl:'Resultado Antes Impuestos', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-amort/3, bold:true},
-      {lbl:'Resultado Neto', fn:m=>{ const r=facturacionMes(m)-totalVariablesMes(m)-tf-amort/3; return r>0?r*0.75:r; }, isResult:true, bold:true},
+      {lbl:'Resultado Antes Impuestos', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3, bold:true},
+      {lbl:'Resultado Neto', fn:m=>{ const r=facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3; return r>0?r*0.75:r; }, isResult:true, bold:true},
     ];
     let html = `<thead><tr><th style="text-align:left">Concepto</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
     conceptos.forEach(c=>{
@@ -10031,6 +10071,8 @@ function renderMiNegocio(){
       </div>
     </div>
 
+    ${renderDeliveryPlatformsCard()}
+
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-brand-instagram"></i> Redes sociales</h3>
       <div class="field-row">
@@ -10235,6 +10277,90 @@ function saveBusiness(){
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
   showToast('Datos del negocio guardados');
+}
+
+/* ============================================================
+   PLATAFORMAS DE DELIVERY (Glovo, Uber Eats, Just Eat...)
+   Cada plataforma cobra una comisión (% + IVA) sobre las ventas que
+   llegan por ella. Esa comisión se descuenta automáticamente como
+   gasto en Gestión Económica.
+   ============================================================ */
+const DELIVERY_PLATFORM_SUGGESTIONS = ['Glovo','Uber Eats','Just Eat','Deliveroo'];
+
+function renderDeliveryPlatformsCard(){
+  const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-moped"></i> Plataformas de delivery</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Si trabajas con apps como Glovo, Uber Eats o Just Eat, añádelas aquí con la comisión que te cobran. Así, cuando registres una venta de delivery a través de esa plataforma, esa comisión se restará automáticamente como gasto en Gestión Económica.</p>
+      <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        ${platforms.length ? platforms.map(p=>`
+          <div class="ge-item">
+            <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(p.nombre)}</span>
+            <span style="font-size:12px;color:var(--muted);margin-right:8px">Comisión ${fmtNum(p.comisionPct)}% + IVA ${fmtNum(p.ivaPct)}%</span>
+            <button class="btn btn-sm btn-icon" onclick="editDeliveryPlatform(${p.id})"><i class="ti ti-edit"></i></button>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteDeliveryPlatform(${p.id})"><i class="ti ti-trash"></i></button>
+          </div>`).join('')
+        : `<div class="empty" style="padding:12px 16px">Sin plataformas configuradas. Si recibes pedidos solo por tu cuenta (reparto propio), no necesitas añadir nada.</div>`}
+      </div>
+      <button class="btn btn-sm" onclick="newDeliveryPlatform()"><i class="ti ti-plus"></i> Añadir plataforma</button>
+    </div>
+  `;
+}
+
+function newDeliveryPlatform(){
+  openDeliveryPlatformModal('Añadir plataforma de delivery', {id:null, nombre:'', comisionPct:30, ivaPct:21});
+}
+function editDeliveryPlatform(id){
+  const p = (DB.business.deliveryPlatforms||[]).find(x=>x.id===id); if(!p) return;
+  openDeliveryPlatformModal('Editar plataforma', p);
+}
+function openDeliveryPlatformModal(title, p){
+  const sugerencias = DELIVERY_PLATFORM_SUGGESTIONS.map(s=>`<option value="${s}">`).join('');
+  openModal(`
+    <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field">
+      <label>Nombre de la plataforma</label>
+      <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="Ej. Glovo">
+      <datalist id="dp-sugerencias">${sugerencias}</datalist>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Comisión (%)</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}"></div>
+      <div class="field"><label>IVA sobre la comisión (%)</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}"></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Por cada venta a través de esta plataforma, GastroGoan calculará automáticamente: comisión = total venta × ${'comisión%'} × (1 + IVA%), y lo registrará como gasto.</p>
+    <input type="hidden" id="dp-f-id" value="${p.id||''}">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDeliveryPlatform()">Guardar</button>
+    </div>
+  `);
+}
+function saveDeliveryPlatform(){
+  const nombre = document.getElementById('dp-f-nombre').value.trim();
+  const comisionPct = parseFloat(document.getElementById('dp-f-comision').value);
+  const ivaPct = parseFloat(document.getElementById('dp-f-iva').value);
+  if(!nombre){ showToast('El nombre es obligatorio'); return; }
+  if(isNaN(comisionPct) || comisionPct<0){ showToast('Introduce la comisión'); return; }
+  if(!DB.business.deliveryPlatforms) DB.business.deliveryPlatforms = [];
+  const idVal = document.getElementById('dp-f-id').value;
+  const data = {nombre, comisionPct, ivaPct: isNaN(ivaPct)?0:ivaPct};
+  if(idVal){
+    const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
+    if(p) Object.assign(p, data);
+  }else{
+    DB.business.deliveryPlatforms.push({id: genId(), ...data});
+  }
+  saveDB();
+  closeModal();
+  renderMiNegocio();
+  showToast('Plataforma guardada');
+}
+function deleteDeliveryPlatform(id){
+  if(!confirm('¿Eliminar esta plataforma?')) return;
+  DB.business.deliveryPlatforms = (DB.business.deliveryPlatforms||[]).filter(p=>p.id!==id);
+  saveDB();
+  renderMiNegocio();
 }
 
 /* ============================================================
