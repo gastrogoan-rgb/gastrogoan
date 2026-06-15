@@ -9329,14 +9329,28 @@ const GE = (function(){
       empty.style.display='none';
       const bycat = {};
       items.forEach(v=>{ (bycat[v.categoria] = bycat[v.categoria]||[]).push(v); });
-      list.innerHTML = Object.entries(bycat).map(([cat,its])=>`
-        <div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>
-        ${its.map(v=>`<div class="ge-item">
-          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}${v.auto?' <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedido recibido</span>':''}</span>
+      list.innerHTML = Object.entries(bycat).map(([cat,its])=>{
+        const autoItems = its.filter(v=>v.auto);
+        const manualItems = its.filter(v=>!v.auto);
+        const byProv = {};
+        autoItems.forEach(v=>{ (byProv[v.proveedor||'—'] = byProv[v.proveedor||'—']||[]).push(v); });
+        const autoHtml = Object.entries(byProv).map(([prov,vs])=>{
+          const total = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
+          const ids = vs.map(v=>v.id).join(',');
+          return `<div class="ge-item">
+            <span style="flex:1;font-size:14px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedidos recibidos</span></span>
+            <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGVGroup('${ids}')"><i class="ti ti-trash"></i></button>
+          </div>`;
+        }).join('');
+        const manualHtml = manualItems.map(v=>`<div class="ge-item">
+          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:8px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(v.importe||0))}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
-        </div>`).join('')}`).join('');
+        </div>`).join('');
+        return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>${autoHtml}${manualHtml}`;
+      }).join('');
     }
     document.getElementById('gv-total-lbl').textContent = `TOTAL VARIABLES ${MESES[mes].toUpperCase()}`;
     document.getElementById('gv-total-val').textContent = fmtMoney(tvMes);
@@ -9384,6 +9398,13 @@ const GE = (function(){
   function deleteGV(id){
     if(!confirm('¿Eliminar?')) return;
     ge().variables = variables().filter(v=>v.id!==id);
+    saveDB();
+    renderVariables();
+  }
+  function deleteGVGroup(idsStr){
+    if(!confirm('¿Eliminar estas compras de pedidos recibidos?')) return;
+    const ids = idsStr.split(',').map(s=>parseInt(s));
+    ge().variables = variables().filter(v=>!ids.includes(v.id));
     saveDB();
     renderVariables();
   }
@@ -10025,7 +10046,7 @@ const GE = (function(){
     showToast('CSV descargado, adjúntalo en el correo abierto');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
+  return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, deleteGVGroup, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
 })();
 
 /* ============================================================
