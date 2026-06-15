@@ -8591,7 +8591,7 @@ function renderOrderModal(){
         return `
           <div class="list-row">
             <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
-            <span style="font-size:12px;color:var(--muted)">Stock: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · Mín: ${fmtNum(s.min)}</span>
+            <span style="font-size:14px;font-weight:600;color:var(--muted)">Stock: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · Mín: ${fmtNum(s.min)}</span>
             <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="Cantidad" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
             <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
           </div>
@@ -8599,7 +8599,7 @@ function renderOrderModal(){
       }).join('');
       itemsHtml = `
         <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="renderOrderModal()" style="margin-bottom:8px;width:100%">
-        <div style="max-height:340px;overflow:auto;margin-bottom:8px">
+        <div style="max-height:480px;overflow:auto;margin-bottom:8px">
           ${rows || '<div class="empty" style="padding:10px">Sin resultados</div>'}
         </div>
         <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> Sugerir por déficit de stock</button>
@@ -8619,12 +8619,19 @@ function renderOrderModal(){
       </div>
       <div class="field">
         <label>Fecha de entrega</label>
-        <input type="date" id="order-date" value="${dateVal || todayStr()}">
+        <input type="date" id="order-date" value="${dateVal || todayStr()}" onchange="validateOrderDate(this)">
+        <div id="order-date-hint" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
       </div>
     </div>
-    <div class="field" id="order-items-field">
-      <label>Artículos del proveedor</label>
-      ${itemsHtml || '<div class="empty" style="padding:10px">Selecciona un proveedor para cargar sus artículos</div>'}
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div class="field" id="order-items-field" style="flex:2;min-width:280px">
+        <label>Artículos del proveedor</label>
+        ${itemsHtml || '<div class="empty" style="padding:10px">Selecciona un proveedor para cargar sus artículos</div>'}
+      </div>
+      <div class="field" style="flex:1;min-width:220px">
+        <label>Resumen del pedido</label>
+        <div id="order-summary" style="max-height:480px;overflow:auto">${orderSummaryHtml()}</div>
+      </div>
     </div>
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -8632,11 +8639,54 @@ function renderOrderModal(){
       <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
       <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> Enviar por Email</button>
     </div>
-  `);
+  `, {xl:true});
   const dEl = document.getElementById('order-date');
   if(dEl) dEl.value = dateVal || todayStr();
+  if(dEl) validateOrderDate(dEl, true);
   const sEl = document.getElementById('order-item-search');
   if(sEl) sEl.value = orderModalSearch;
+}
+
+// Resumen en vivo de los artículos con cantidad > 0 mientras se compone el pedido.
+function orderSummaryHtml(){
+  const items = orderModalLines.filter(l => l.cantidad > 0);
+  if(!items.length) return `<div class="empty" style="padding:10px">Sin artículos todavía</div>`;
+  return items.map(l => {
+    const ing = getIngredient(l.ingredientId);
+    return `<div class="list-row"><div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div><strong>${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}</strong></div>`;
+  }).join('');
+}
+function renderOrderSummary(){
+  const box = document.getElementById('order-summary');
+  if(box) box.innerHTML = orderSummaryHtml();
+}
+
+// Comprueba que la fecha de entrega coincide con un día de entrega del proveedor.
+// Si no, avisa y ajusta a la próxima fecha válida.
+function validateOrderDate(input, silent){
+  const hint = document.getElementById('order-date-hint');
+  if(!orderModalSupplier){ if(hint) hint.textContent = ''; return; }
+  const provider = DB.providers.find(p => p.nombre === orderModalSupplier);
+  const diasEntrega = provider ? getProviderDiasEntrega(provider) : [];
+  if(!diasEntrega.length){ if(hint) hint.textContent = ''; return; }
+  const dayIdx = new Date(input.value + 'T00:00:00').getDay(); // 0=domingo
+  const weekDayName = WEEK_DAYS[(dayIdx + 6) % 7];
+  if(!diasEntrega.includes(weekDayName)){
+    const next = nextValidDeliveryDate(input.value, diasEntrega);
+    input.value = next;
+    if(!silent) showToast(`${orderModalSupplier} solo entrega: ${diasEntrega.join(', ')}. Fecha ajustada.`);
+  }
+  if(hint) hint.textContent = `Días de entrega de ${orderModalSupplier}: ${diasEntrega.join(', ')}`;
+}
+
+function nextValidDeliveryDate(dateStr, diasEntrega){
+  const d = new Date(dateStr + 'T00:00:00');
+  for(let i=0;i<8;i++){
+    const weekDayName = WEEK_DAYS[(d.getDay() + 6) % 7];
+    if(diasEntrega.includes(weekDayName)) return d.toISOString().slice(0,10);
+    d.setDate(d.getDate()+1);
+  }
+  return dateStr;
 }
 
 function selectOrderSupplier(supplier){
@@ -8658,6 +8708,7 @@ function sugerirPorDeficit(){
 function updateOrderLineQty(ingredientId, value){
   const line = orderModalLines.find(l => l.ingredientId === ingredientId);
   if(line) line.cantidad = parseFloat(value) || 0;
+  renderOrderSummary();
 }
 
 // Crea (o reutiliza) el pedido a partir del formulario del modal "Nuevo Pedido".
