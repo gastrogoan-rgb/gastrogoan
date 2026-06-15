@@ -862,21 +862,7 @@ td.wrap{white-space:normal}
       </div>
 
       <div id="stock-tab-elab" class="ge-tab-panel">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Elaboración</th>
-                <th>Stock actual</th>
-                <th>Mínimo</th>
-                <th>Unidad</th>
-                <th>Estado</th>
-                <th>Ajustar</th>
-              </tr>
-            </thead>
-            <tbody id="stock-tbody-elab"></tbody>
-          </table>
-        </div>
+        <div id="stock-elab-groups" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px"></div>
       </div>
     </section>
 
@@ -4553,25 +4539,24 @@ function renderStock(){
     const low = row.qty <= row.min;
     const isElab = row.type === 'elab';
     const fromEscandallo = isElab && !!row.recipeId;
+    const statusBadge = low ? '<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> Bajo mín.</span>' : '<span class="badge badge-green" style="font-size:10px">OK</span>';
     return `
-      <tr>
-        <td><strong>${escapeHtml(row.name)}</strong>${fromEscandallo ? ' <span class="badge badge-gray" style="font-size:10px">Escandallo</span>' : ''}</td>
-        <td>${fmtNum(row.qty)}</td>
-        <td>
-          <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" ${editUnlocked?'':'disabled'}
-            onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-        </td>
-        <td>${escapeHtml(row.unit)}</td>
-        <td>${low ? '<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> Bajo mínimo</span>' : '<span class="badge badge-green">OK</span>'}</td>
-        <td class="actions-cell">
+      <div class="list-row" style="padding:6px 10px;flex-wrap:wrap">
+        <div class="list-row-name"><span>${escapeHtml(row.name)}</span>${fromEscandallo ? ' <span class="badge badge-gray" style="font-size:10px">Escandallo</span>' : ''}</div>
+        <span style="font-size:12.5px;color:var(--muted);white-space:nowrap">${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
+        <span style="font-size:11.5px;color:var(--muted)">Mín.</span>
+        <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+          onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
+        ${statusBadge}
+        <div class="actions-cell" style="gap:4px">
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i></button>
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}">Ajustar</button>
+          <button class="btn btn-sm btn-icon" title="Ajustar" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i></button>
           ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
           ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="Editar escandallo" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ti-chef-hat"></i></button>` : ''}
-        </td>
-      </tr>
+        </div>
+      </div>
     `;
   };
 
@@ -4590,30 +4575,18 @@ function renderStock(){
       return ia - ib;
     });
     groupsWrap.innerHTML = cats.map(cat => `
-      <div class="view-subtitle" style="margin-top:18px;margin-bottom:6px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ingrediente</th>
-              <th>Stock actual</th>
-              <th>Mínimo</th>
-              <th>Unidad</th>
-              <th>Estado</th>
-              <th>Ajustar</th>
-            </tr>
-          </thead>
-          <tbody>${byCat[cat].map(renderRow).join('')}</tbody>
-        </table>
+      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
+        ${byCat[cat].map(renderRow).join('')}
       </div>
     `).join('');
   }
 
   /* Elaboraciones */
-  const tbodyElab = document.getElementById('stock-tbody-elab');
-  tbodyElab.innerHTML = elabs.length
+  const elabGroupsWrap = document.getElementById('stock-elab-groups');
+  elabGroupsWrap.innerHTML = elabs.length
     ? elabs.map(renderRow).join('')
-    : `<tr><td colspan="6"><div class="empty"><i class="ti ti-package"></i>No hay elaboraciones en stock.</div></td></tr>`;
+    : `<div class="empty"><i class="ti ti-package"></i>No hay elaboraciones en stock.</div>`;
 }
 
 function updateStockMin(ingredientId, value){
