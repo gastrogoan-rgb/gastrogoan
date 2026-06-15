@@ -201,7 +201,7 @@ td.wrap{white-space:normal}
 /* ===== Modal ===== */
 .modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
-  align-items:center;justify-content:center;z-index:200;padding:16px;
+  align-items:center;justify-content:center;z-index:300;padding:16px;
 }
 .modal-overlay.active{display:flex}
 .modal{
@@ -1219,7 +1219,7 @@ td.wrap{white-space:normal}
   </div>
   <div class="chat-author-row">
     <span>Escribo como:</span>
-    <select id="chat-author-sel" onchange="setChatAuthor(this.value)"></select>
+    <select id="chat-author-sel" onchange="onChatAuthorChange(this)"></select>
   </div>
   <div class="help-tab-panel active" style="display:flex">
     <div class="help-chat-messages" id="chat-messages"></div>
@@ -3701,9 +3701,11 @@ function openHelpContactEmail(){
 const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
 const CHAT_CHANNEL_LABELS = {general:'General', cocina:'Cocina', sala:'Sala'};
 let currentChatChannel = 'general';
+let chatOwnerVerified = false;
+let chatPinPrevValue = '';
 
 function getChatAuthor(){
-  return localStorage.getItem('chatAuthor') || 'owner';
+  return localStorage.getItem('chatAuthor') || '';
 }
 function setChatAuthor(val){
   localStorage.setItem('chatAuthor', val);
@@ -3721,8 +3723,50 @@ function populateChatAuthorSelect(){
   sel.innerHTML = `<option value="owner">Jefe/a</option>`
     + (cocinaOpts ? `<optgroup label="Cocina">${cocinaOpts}</optgroup>` : '')
     + (salaOpts ? `<optgroup label="Sala">${salaOpts}</optgroup>` : '');
-  sel.value = DB.employees.some(e => String(e.id)===String(current)) || current==='owner' ? current : 'owner';
+  const valid = current==='owner' ? chatOwnerVerified : DB.employees.some(e => String(e.id)===String(current));
+  sel.value = valid ? current : (DB.employees[0] ? String(DB.employees[0].id) : 'owner');
   if(sel.value !== current) setChatAuthor(sel.value);
+}
+function onChatAuthorChange(sel){
+  const val = sel.value;
+  if(val === 'owner' && !chatOwnerVerified){
+    requestChatOwnerPin(sel);
+    return;
+  }
+  setChatAuthor(val);
+}
+function requestChatOwnerPin(sel){
+  chatPinPrevValue = getChatAuthor();
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> Acceso como Jefe/a</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">Introduce el PIN de acceso del negocio para escribir en el chat como Jefe/a.</p>
+    <div class="field">
+      <label>PIN de acceso</label>
+      <input type="password" id="chat-owner-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmChatOwnerPin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmChatOwnerPin()">Desbloquear</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('chat-owner-pin-input')?.focus(), 50);
+}
+function confirmChatOwnerPin(){
+  const val = document.getElementById('chat-owner-pin-input').value;
+  const sel = document.getElementById('chat-author-sel');
+  if(val !== DB.business.pin){
+    showToast('PIN incorrecto');
+    if(sel) sel.value = chatPinPrevValue || getChatAuthor();
+    return;
+  }
+  chatOwnerVerified = true;
+  setChatAuthor('owner');
+  closeModal();
+  showToast('Acceso como Jefe/a concedido');
+  if(sel) sel.value = 'owner';
 }
 function toggleChatPanel(){
   const panel = document.getElementById('chat-panel');
