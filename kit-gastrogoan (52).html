@@ -6937,6 +6937,8 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
+      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal('takeaway')"><i class="ti ti-shopping-bag"></i> Para Llevar</button>` : ''}
+      ${tiposServicio.delivery !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal('delivery')"><i class="ti ti-moped"></i> Delivery</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
@@ -7069,6 +7071,49 @@ function confirmOpenTableOrder(tableId){
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
 
   const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+// Permite crear desde el TPV un pedido para llevar o a domicilio de forma manual (clientes que piden en el local).
+function openNewToGoOrderModal(tipo){
+  const isDelivery = tipo === 'delivery';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${isDelivery?'Nuevo pedido a domicilio':'Nuevo pedido para llevar'}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del cliente (opcional)</label>
+      <input type="text" id="togo-cliente-nombre" placeholder="Nombre">
+    </div>
+    <div class="field">
+      <label>Teléfono (opcional)</label>
+      <input type="tel" id="togo-cliente-telefono" placeholder="Teléfono">
+    </div>
+    ${isDelivery ? `
+    <div class="field">
+      <label>Dirección de entrega (opcional)</label>
+      <input type="text" id="togo-cliente-direccion" placeholder="Dirección">
+    </div>
+    ` : ''}
+    ${renderCamareroFieldHtml('togo-camarero-sel')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewToGoOrder('${tipo}')"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewToGoOrder(tipo){
+  const camareroSel = document.getElementById('togo-camarero-sel');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
+  const clienteTelefono = document.getElementById('togo-cliente-telefono').value.trim();
+  const direccionInput = document.getElementById('togo-cliente-direccion');
+  const order = {id: genId(), tableId: null, tipo, clienteNombre, clienteTelefono, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  if(direccionInput) order.clienteDireccion = direccionInput.value.trim();
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
