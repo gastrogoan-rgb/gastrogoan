@@ -4178,7 +4178,12 @@ document.getElementById('modal-overlay').addEventListener('click', (e)=>{
    DASHBOARD
    ============================================================ */
 function geTotalFijos(){
-  return (DB.ge.fijos||[]).reduce((s,g)=>s+parseFloat(g.importe||0),0);
+  return (DB.ge.fijos||[]).reduce((s,g)=>s+gfMonthlyImporte(g),0);
+}
+// Importe mensual equivalente de un gasto fijo: si se paga cada X meses (trimestral, anual...),
+// se reparte el importe entre esos meses para poder sumarlo junto a los gastos mensuales.
+function gfMonthlyImporte(g){
+  return parseFloat(g.importe||0) / (parseInt(g.periodicidadMeses)||1);
 }
 function geTotalVariablesMes(year, month){
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
@@ -9058,9 +9063,9 @@ const GE = (function(){
   }
 
   /* -- Helpers -- */
-  function totalFijos(){ return fijos().reduce((s,g)=>s+parseFloat(g.importe||0),0); }
-  function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+parseFloat(g.importe||0),0); }
-  function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+parseFloat(g.importe||0),0); }
+  function totalFijos(){ return fijos().reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
   function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function totalVariablesMes(mes, año=currentYear){ return variablesMes(mes,año).reduce((s,v)=>s+parseFloat(v.importe||0),0); }
   function facturacionMes(mes, año=currentYear){
@@ -9122,20 +9127,32 @@ const GE = (function(){
       visEl.style.display = 'none';
     }
   }
+  const GF_PERIODOS = [
+    {v:1, lbl:'Mensual'}, {v:2, lbl:'Cada 2 meses (bimestral)'}, {v:3, lbl:'Cada 3 meses (trimestral)'},
+    {v:4, lbl:'Cada 4 meses (cuatrimestral)'}, {v:6, lbl:'Cada 6 meses (semestral)'}, {v:12, lbl:'Cada 12 meses (anual)'}
+  ];
   function renderGFList(elId, items){
-    document.getElementById(elId).innerHTML = items.length ? items.map(g=>`
-      <div class="ge-item">
-        <span style="flex:1;font-size:14px;font-weight:500">${escapeHtml(g.nombre)}</span>
-        <span style="font-size:12px;color:var(--muted);margin-right:8px">${g.diaPago?'día '+g.diaPago:''}</span>
-        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(parseFloat(g.importe||0))}</span>
+    document.getElementById(elId).innerHTML = items.length ? items.map(g=>{
+      const periodoMeses = parseInt(g.periodicidadMeses)||1;
+      const mensual = gfMonthlyImporte(g);
+      const detalles = [];
+      if(g.diaPago) detalles.push(`día ${g.diaPago}`);
+      if(periodoMeses>1) detalles.push(`cada ${periodoMeses} meses · ${fmtMoney(parseFloat(g.importe||0))}/pago`);
+      if(g.autoCalc) detalles.push(`Neto ${fmtMoney(parseFloat(g.sueldoNeto||0))} + retenciones = Bruto ${fmtMoney(g.sueldoBruto||0)} + SS Empresa ${fmtMoney(g.ssEmpresa||0)}`);
+      return `
+      <div class="ge-item" style="flex-wrap:wrap">
+        <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:14px;min-width:80px;text-align:right">${fmtMoney(mensual)}${periodoMeses>1?'<span style="font-size:10px;color:var(--muted);font-weight:400">/mes</span>':''}</span>
         <button class="btn btn-sm btn-icon" onclick="GE.editGF(${g.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGF(${g.id})"><i class="ti ti-trash"></i></button>
-      </div>`).join('')
+        ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
+      </div>`;
+    }).join('')
     : `<div class="empty" style="padding:12px 16px">Sin gastos. Añade el primero.</div>`;
   }
   function newGF(cat){
     editingGF = null;
-    openGFModal(cat==='PERSONAL'?'Personal (nómina/SS)':'Gasto fijo', {nombre:'',importe:'',diaPago:'',categoria:cat});
+    openGFModal(cat==='PERSONAL'?'Personal (nómina/SS)':'Gasto fijo', {nombre:'',importe:'',diaPago:'',categoria:cat, periodicidadMeses:1});
   }
   function editGF(id){
     const g = fijos().find(x=>x.id===id); if(!g) return;
@@ -9144,6 +9161,7 @@ const GE = (function(){
   }
   function openGFModal(title, g){
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${s}">`).join('');
+    const autoCalc = !!g.autoCalc;
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
@@ -9151,9 +9169,39 @@ const GE = (function(){
         <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}">
         <datalist id="gf-sugerencias">${sugerencias}</datalist>
       </div>
+      ${g.categoria==='PERSONAL' ? `
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="gf-f-autocalc" ${autoCalc?'checked':''} onchange="GE.toggleGFAutoCalc()" style="width:auto">
+        Calcular el coste total a partir del sueldo neto (incluye Seguridad Social a cargo de la empresa)
+      </label>
+      <div id="gf-autocalc-fields" style="display:${autoCalc?'block':'none'}">
+        <div class="field-row">
+          <div class="field"><label>Sueldo neto mensual (€)</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>% Retenciones (IRPF + SS trabajador)</label><input type="number" id="gf-f-retpct" min="0" max="99" step="0.1" value="${g.retPct!=null?g.retPct:15}" oninput="GE.recalcGFAuto()"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>% Seguridad Social empresa (sobre el bruto)</label><input type="number" id="gf-f-sspct" min="0" max="100" step="0.1" value="${g.ssPct!=null?g.ssPct:30}" oninput="GE.recalcGFAuto()"></div>
+        </div>
+        <div class="ge-kpi-grid" style="margin-bottom:10px">
+          <div class="ge-kpi"><div class="lbl">Sueldo bruto</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">SS Empresa</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">Coste total empresa</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
+        </div>
+      </div>
+      ` : ''}
       <div class="field-row">
-        <div class="field"><label>Importe (€/mes)</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}"></div>
+        <div class="field"><label>Importe (€) ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
         <div class="field"><label>Día de pago</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
+      </div>
+      <div class="field">
+        <label>Periodicidad del pago</label>
+        <select id="gf-f-periodo">
+          ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Comentario (opcional)</label>
+        <textarea id="gf-f-notas" rows="2" placeholder="Notas internas sobre este gasto...">${escapeHtml(g.notas||'')}</textarea>
       </div>
       <input type="hidden" id="gf-f-cat" value="${g.categoria}">
       <div class="modal-footer">
@@ -9161,15 +9209,59 @@ const GE = (function(){
         <button class="btn btn-primary" onclick="GE.saveGF()">Guardar</button>
       </div>
     `);
+    if(autoCalc) recalcGFAuto();
+  }
+  function toggleGFAutoCalc(){
+    const on = document.getElementById('gf-f-autocalc').checked;
+    document.getElementById('gf-autocalc-fields').style.display = on ? 'block' : 'none';
+    const importeInput = document.getElementById('gf-f-importe');
+    importeInput.readOnly = on;
+    if(on) recalcGFAuto();
+  }
+  // Sueldo bruto = neto / (1 - retenciones%); SS empresa = bruto * ss%; coste total = bruto + SS empresa.
+  function recalcGFAuto(){
+    const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
+    const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+    const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+    const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
+    const ssEmpresa = bruto * ssPct/100;
+    const total = bruto + ssEmpresa;
+    document.getElementById('gf-auto-bruto').textContent = fmtMoney(bruto);
+    document.getElementById('gf-auto-ss').textContent = fmtMoney(ssEmpresa);
+    document.getElementById('gf-auto-total').textContent = fmtMoney(total);
+    document.getElementById('gf-f-importe').value = total.toFixed(2);
   }
   function saveGF(){
     const nombre = document.getElementById('gf-f-nombre').value.trim();
     const importe = parseFloat(document.getElementById('gf-f-importe').value);
     if(!nombre){ showToast('El concepto es obligatorio'); return; }
     if(isNaN(importe) || importe<0){ showToast('Introduce el importe'); return; }
-    const data = {nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null, categoria:document.getElementById('gf-f-cat').value};
+    const data = {
+      nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
+      categoria:document.getElementById('gf-f-cat').value,
+      periodicidadMeses: parseInt(document.getElementById('gf-f-periodo').value)||1,
+      notas: document.getElementById('gf-f-notas').value.trim()
+    };
+    const autocalcEl = document.getElementById('gf-f-autocalc');
+    if(autocalcEl && autocalcEl.checked){
+      const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
+      const retPct = parseFloat(document.getElementById('gf-f-retpct').value) || 0;
+      const ssPct = parseFloat(document.getElementById('gf-f-sspct').value) || 0;
+      const bruto = retPct < 100 ? neto / (1 - retPct/100) : 0;
+      data.autoCalc = true;
+      data.sueldoNeto = neto;
+      data.retPct = retPct;
+      data.ssPct = ssPct;
+      data.sueldoBruto = bruto;
+      data.ssEmpresa = bruto * ssPct/100;
+    }else{
+      data.autoCalc = false;
+      delete data.sueldoNeto; delete data.retPct; delete data.ssPct; delete data.sueldoBruto; delete data.ssEmpresa;
+    }
     if(editingGF){
-      Object.assign(fijos().find(x=>x.id===editingGF), data);
+      const existing = fijos().find(x=>x.id===editingGF);
+      Object.keys(existing).forEach(k=>delete existing[k]);
+      Object.assign(existing, {id:editingGF}, data);
     }else{
       fijos().push({id:genId(), ...data});
     }
@@ -9795,12 +9887,13 @@ const GE = (function(){
     rows.push([]);
 
     rows.push(['GASTOS FIJOS MENSUALES (recurrentes)']);
-    rows.push(['Concepto','Categoría','Día de pago','Importe mensual (€)']);
+    rows.push(['Concepto','Categoría','Día de pago','Periodicidad','Importe mensual equiv. (€)']);
     let sumFijos = 0;
     fijos().forEach(g => {
-      const imp = parseFloat(g.importe||0);
+      const imp = gfMonthlyImporte(g);
       sumFijos += imp;
-      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', imp]);
+      const periodo = (parseInt(g.periodicidadMeses)||1)===1 ? 'Mensual' : `Cada ${g.periodicidadMeses} meses`;
+      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, imp]);
     });
     if(!fijos().length) rows.push(['Sin gastos fijos registrados.']);
     rows.push(['','','TOTAL', sumFijos]);
@@ -9899,7 +9992,7 @@ const GE = (function(){
     showToast('CSV descargado, adjúntalo en el correo abierto');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
+  return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
 })();
 
 /* ============================================================
