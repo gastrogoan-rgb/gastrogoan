@@ -126,10 +126,18 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
 
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
+
+.mesa-card{padding:8px 22px 8px 8px;margin-bottom:0;font-size:11px}
+.mesa-card .mesa-name{font-size:12.5px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mesa-card .badge{font-size:9.5px;padding:2px 6px;gap:2px}
+.mesa-card .mesa-total{margin-top:4px;font-weight:700;font-size:13px}
+.mesa-card .mesa-del{position:absolute;top:4px;right:4px;width:16px;height:16px;font-size:10px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;opacity:.55}
+.mesa-card .mesa-del:hover{opacity:1}
 
 .view-toggle{display:flex;gap:4px}
 .view-toggle .btn.active{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}
@@ -6891,15 +6899,19 @@ function renderMesaCard(t){
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
   let badge = '<span class="badge badge-green">Libre</span>';
   if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
+  // Si la mesa tiene zona asignada, ya va agrupada bajo un encabezado con esa
+  // zona, así que quitamos el sufijo "(Interior)"/"(Terraza)" del nombre para
+  // que sea más corto y no se corte en tarjetas pequeñas.
+  const displayName = t.zona ? (t.name||'').replace(/\s*\([^)]*\)\s*$/, '') : t.name;
   return `
-    <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
-      <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-      ${badge} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
-      ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
-      ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
-      <div style="margin-top:10px">
-        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
-      </div>
+    <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${t.id})" title="${escapeHtml(t.name)}">
+      <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''} title="Eliminar mesa"><i class="ti ti-trash"></i></button>
+      <div class="mesa-name"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(displayName)}</div>
+      ${badge}
+      ${hayNuevos ? '<div style="margin-top:3px"><span class="badge badge-amber"><i class="ti ti-bell-ringing"></i></span></div>' : ''}
+      ${order && order.pagado ? '<div style="margin-top:3px"><span class="badge badge-green"><i class="ti ti-credit-card"></i></span></div>' : ''}
+      ${order && order.pax ? `<div style="margin-top:3px;color:var(--muted)">👥 ${order.pax}</div>` : ''}
+      ${order ? `<div class="mesa-total">${fmtMoney(total)}</div>` : ''}
     </div>
   `;
 }
@@ -6910,7 +6922,7 @@ function renderTpvMesas(tiposServicio){
   if(!sortedTables.length){
     return `
       <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
-      <div class="grid grid-4"><div class="empty">No hay mesas. Crea las mesas con el orden y numeración de tu restaurante, o configura cuántas mesas tienes en Mi Negocio.</div></div>
+      <div class="grid grid-4"><div class="empty">No hay mesas configuradas. Ve a Mi Negocio → Operativa, indica cuántas mesas tienes y pulsa "Sincronizar mesas con TPV".</div></div>
     `;
   }
 
@@ -6920,7 +6932,7 @@ function renderTpvMesas(tiposServicio){
   if(!hasZonas){
     return `
       <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
-      <div class="grid grid-4">${sortedTables.map(renderMesaCard).join('')}</div>
+      <div class="grid grid-mesas">${sortedTables.map(renderMesaCard).join('')}</div>
     `;
   }
 
@@ -6931,14 +6943,14 @@ function renderTpvMesas(tiposServicio){
     if(!tables.length) return;
     html += `
       <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${ZONA_LABELS[z]}</h3>
-      <div class="grid grid-4">${tables.map(renderMesaCard).join('')}</div>
+      <div class="grid grid-mesas">${tables.map(renderMesaCard).join('')}</div>
     `;
   });
   const sinZona = sortedTables.filter(t => !t.zona);
   if(sinZona.length){
     html += `
       <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Otras mesas</h3>
-      <div class="grid grid-4">${sinZona.map(renderMesaCard).join('')}</div>
+      <div class="grid grid-mesas">${sinZona.map(renderMesaCard).join('')}</div>
     `;
   }
   return html;
@@ -7010,7 +7022,6 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
-      ${tiposServicio.mesa ? `<button class="btn btn-primary" onclick="addTable()"><i class="ti ti-plus"></i> Nueva Mesa</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
@@ -7049,90 +7060,6 @@ function renderCamareroFieldHtml(selectId, selectedId){
   `;
 }
 
-function addTable(){
-  const pendingReservas = getTodayPendingReservations();
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Nueva mesa</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Tipo de cliente</label>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-table-tipo-cliente" value="paso" checked onchange="toggleNewTableReservaField()" style="width:auto"> Cliente de paso</label>
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-table-tipo-cliente" value="reserva" onchange="toggleNewTableReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
-      </div>
-    </div>
-    <div class="field" id="new-table-reserva-field" style="display:none">
-      <label>Selecciona la reserva</label>
-      <select id="new-table-reserva-sel">
-        ${pendingReservas.map(r=>{
-          const client = DB.clients.find(c=>c.id===r.clientId);
-          const name = client ? client.name : (r.clientName||'—');
-          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} pers.</option>`;
-        }).join('')}
-      </select>
-    </div>
-    <div class="field">
-      <label>Número o nombre de la mesa</label>
-      <input type="text" id="new-table-name" placeholder="Ej. Mesa 5, Terraza 2...">
-    </div>
-    <div class="field" id="new-table-pax-field">
-      <label>¿Cuántas personas?</label>
-      <input type="number" id="new-table-pax" min="1" value="2">
-    </div>
-    ${renderCamareroFieldHtml('new-table-camarero-sel')}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmAddTable()">Crear mesa y abrir comanda</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('new-table-name')?.focus(), 50);
-}
-
-function toggleNewTableReservaField(){
-  const isReserva = document.querySelector('input[name="new-table-tipo-cliente"]:checked').value === 'reserva';
-  document.getElementById('new-table-reserva-field').style.display = isReserva ? '' : 'none';
-  document.getElementById('new-table-pax-field').style.display = isReserva ? 'none' : '';
-}
-
-function confirmAddTable(){
-  const name = (document.getElementById('new-table-name').value||'').trim();
-  if(!name){ showToast('Escribe un número o nombre para la mesa'); return; }
-  const tipo = document.querySelector('input[name="new-table-tipo-cliente"]:checked')?.value || 'paso';
-
-  let pax, clienteNombre = '', clientId = null, reservationId = null, r = null;
-  if(tipo === 'reserva'){
-    const resId = parseInt(document.getElementById('new-table-reserva-sel').value);
-    r = DB.reservations.find(x=>x.id===resId);
-    if(!r){ showToast('Selecciona una reserva'); return; }
-    pax = r.people;
-    clientId = r.clientId;
-    const client = DB.clients.find(c=>c.id===r.clientId);
-    clienteNombre = client ? client.name : (r.clientName||'');
-    reservationId = r.id;
-  }else{
-    pax = parseInt(document.getElementById('new-table-pax').value) || 0;
-    if(pax <= 0){ showToast('Indica el número de personas'); return; }
-  }
-
-  const table = {id: genId(), name};
-  DB.tables.push(table);
-  if(r){
-    r.llegada = true;
-    r.tableId = table.id;
-    if(clientId) registerClientVisit(clientId);
-  }
-
-  const camareroSel = document.getElementById('new-table-camarero-sel');
-  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
-
-  const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
-  DB.tpvOrders.push(order);
-  saveDB();
-  renderTPV();
-  renderTableOrderModal(order.id);
-}
 function deleteTable(id){
   if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
   if(!confirm('¿Eliminar esta mesa?')) return;
