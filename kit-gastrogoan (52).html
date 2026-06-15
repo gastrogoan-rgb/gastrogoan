@@ -6905,7 +6905,11 @@ function confirmAddTable(){
 
   const table = {id: genId(), name};
   DB.tables.push(table);
-  if(r){ r.llegada = true; r.tableId = table.id; }
+  if(r){
+    r.llegada = true;
+    r.tableId = table.id;
+    if(clientId) registerClientVisit(clientId);
+  }
 
   const camareroSel = document.getElementById('new-table-camarero-sel');
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
@@ -7001,6 +7005,7 @@ function confirmOpenTableOrder(tableId){
     reservationId = r.id;
     r.llegada = true;
     if(!r.tableId) r.tableId = tableId;
+    if(clientId) registerClientVisit(clientId);
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast('Indica el número de personas'); return; }
@@ -11427,13 +11432,20 @@ function saveClient(id){
 }
 
 function adjustClientVisit(id){
+  registerClientVisit(id);
+  renderClientes();
+}
+
+// Suma un punto de fidelidad a un cliente (p.ej. al confirmar su llegada desde una reserva,
+// para que el contador se rellene solo sin tener que hacerlo a mano en Clientes).
+function registerClientVisit(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
   c.points = Math.min((c.points||0) + 1, 10);
+  c.ultimoContacto = todayStr();
   saveDB();
-  renderClientes();
   if(c.points >= 10) showToast('¡' + c.name + ' ha llegado a 10 puntos! Dale su premio de fidelidad');
-  else showToast('+1 punto de fidelidad');
+  else showToast('+1 punto de fidelidad para ' + c.name);
 }
 
 function clientFavoriteItem(c){
@@ -11492,9 +11504,56 @@ function confirmClientReward(id){
   if(!Array.isArray(c.rewardsHistory)) c.rewardsHistory = [];
   c.rewardsHistory.push({fecha: todayStr(), premio: reward});
   saveDB();
-  closeModal();
   renderClientes();
   showToast('Premio entregado: ' + reward);
+  openRewardNotifyModal(id, reward);
+}
+
+// Texto preconfigurado para avisar al cliente de su premio de fidelidad.
+function rewardMessageText(c, reward){
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  return `¡Hola ${c.name}! 🎉 Gracias por tu fidelidad en ${bizName}. Has conseguido un premio: ${reward}. ¡Te esperamos para que lo disfrutes en tu próxima visita!`;
+}
+
+// Tras dar un premio, ofrece avisar al cliente por WhatsApp/SMS o email con el texto ya preparado.
+function openRewardNotifyModal(id, reward){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  const msg = rewardMessageText(c, reward);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-bell"></i> Avisar a ${escapeHtml(c.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px;line-height:1.6">Puedes avisar a ${escapeHtml(c.name)} de su premio ahora mismo con un mensaje ya preparado:</p>
+    <div class="field">
+      <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?'disabled title="Este cliente no tiene teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?'disabled title="Este cliente no tiene email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Ahora no</button>
+    </div>
+  `);
+}
+
+function sendRewardWhatsapp(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.phone){ showToast('Este cliente no tiene teléfono guardado'); return; }
+  const tel = c.phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('reward-notify-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+}
+
+function sendRewardEmail(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.email){ showToast('Este cliente no tiene email guardado'); return; }
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const subject = encodeURIComponent('¡Tienes un premio en ' + bizName + '!');
+  const body = encodeURIComponent(document.getElementById('reward-notify-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
 
 function deleteClient(id){
