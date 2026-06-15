@@ -10418,9 +10418,9 @@ function doFichaje(employeeId, action){
 /* ============================================================
    PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
-const LIMPIEZA_TABS = ['manos','semana','mes','temperaturas','alergenos','plagas','mantenimiento'];
+const LIMPIEZA_TABS = ['manos','mes','temperaturas','alergenos','plagas','mantenimiento'];
 const LIMPIEZA_TAB_LABELS = {
-  manos: '🧼 Higiene de Manos', semana: '🧹 Limpieza Semanal', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
+  manos: '🧼 Higiene de Manos', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
   alergenos: '⚠️ Alérgenos', plagas: '🐜 Plagas', mantenimiento: '🔧 Mantenimiento'
 };
 const LIMPIEZA_LOG_CONFIG = {
@@ -10446,20 +10446,13 @@ function ensureLimpiezaData(){
   if(!l.mantenimiento) l.mantenimiento = [];
 }
 
-function getLimpiezaSemanaKey(){
-  const d = new Date();
-  const day = d.getDay() || 7;
-  const mon = new Date(d);
-  mon.setDate(d.getDate() - (day-1));
-  return dateStr(mon);
-}
-
 function cleaningTasksToday(){
   ensureLimpiezaData();
-  const dk = WEEK_DAY_KEYS[(new Date().getDay()+6)%7];
-  const semana = getLimpiezaSemanaKey();
-  const checks = DB.limpieza.checks[semana] || {};
-  return DB.limpieza.tareas.filter(t => !(checks[t.id] && checks[t.id][dk]));
+  const today = new Date();
+  const day = today.getDate();
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const checks = DB.limpieza.checksMes[monthKey] || {};
+  return DB.limpieza.tareas.filter(t => t.tipo==='mensual' && parseInt(t.diaMes)===day && !checks[t.id]);
 }
 
 function renderLimpieza(){
@@ -10477,7 +10470,6 @@ function setLimpiezaTab(t){ limpiezaTab = t; renderLimpieza(); }
 function renderLimpiezaTab(){
   switch(limpiezaTab){
     case 'manos': renderLimpiezaManos(); break;
-    case 'semana': renderLimpiezaSemana(); break;
     case 'mes': renderLimpiezaMes(); break;
     case 'temperaturas': renderLimpiezaLog('temperaturas'); break;
     case 'alergenos': renderLimpiezaLog('alergenos'); break;
@@ -10541,103 +10533,11 @@ function printManosProtocolo(){
   w.print();
 }
 
-function renderLimpiezaSemana(){
-  const box = document.getElementById('limpieza-tab-content');
-  const tareas = DB.limpieza.tareas.filter(t => t.tipo !== 'mensual');
-  const semana = getLimpiezaSemanaKey();
-  const checks = DB.limpieza.checks[semana] || {};
-
-  box.innerHTML = `
-    <div class="toolbar">
-      <div class="left" style="font-size:13px;color:var(--muted)">Semana del ${semana}</div>
-      <div style="display:flex;gap:8px">
-        <button class="owner-only btn btn-sm" onclick="addLimpiezaTarea()"><i class="ti ti-plus"></i> Añadir tarea</button>
-        <button class="btn btn-sm" onclick="printLimpiezaSemana()"><i class="ti ti-printer"></i> Imprimir</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Área / Tarea</th>${WEEK_DAYS.map(d=>`<th style="text-align:center">${d.slice(0,3)}</th>`).join('')}<th></th></tr></thead>
-        <tbody>${tareas.length ? tareas.map(t => `
-          <tr>
-            <td><strong>${escapeHtml(t.area)}</strong>${t.producto?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(t.producto)}</span>`:''}</td>
-            ${WEEK_DAY_KEYS.map(dk => `<td style="text-align:center"><input type="checkbox" style="width:18px;height:18px" ${(checks[t.id]&&checks[t.id][dk])?'checked':''} onchange="toggleLimpiezaCheck(${t.id},'${dk}',this.checked)"></td>`).join('')}
-            <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaTarea(${t.id})"><i class="ti ti-trash"></i></button></td>
-          </tr>
-        `).join('') : `<tr><td colspan="9"><div class="empty" style="padding:14px">No hay áreas de limpieza definidas.</div></td></tr>`}</tbody>
-      </table>
-    </div>
-  `;
-}
-function addLimpiezaTarea(){
-  openModal(`
-    <div class="modal-header">
-      <h3>Nueva área de limpieza</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>Área o tarea de limpieza</label>
-      <input type="text" id="new-limpieza-area" placeholder="Ej. Campana extractora, Suelo cocina...">
-    </div>
-    <div class="field">
-      <label>Producto limpiador (opcional)</label>
-      <input type="text" id="new-limpieza-producto" placeholder="Ej. Desengrasante">
-    </div>
-    <div class="field">
-      <label>Frecuencia</label>
-      <select id="new-limpieza-tipo" onchange="document.getElementById('new-limpieza-diames-wrap').style.display = this.value==='mensual' ? '' : 'none'">
-        <option value="semanal">Semanal (se marca día a día)</option>
-        <option value="mensual">Mensual (un día concreto del mes)</option>
-      </select>
-    </div>
-    <div class="field" id="new-limpieza-diames-wrap" style="display:none">
-      <label>Día del mes</label>
-      <input type="number" id="new-limpieza-diames" min="1" max="31" value="1">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmAddLimpiezaTarea()">Añadir</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
-}
-function confirmAddLimpiezaTarea(){
-  const area = document.getElementById('new-limpieza-area').value;
-  if(!area || !area.trim()){ showToast('Escribe un área o tarea'); return; }
-  const producto = document.getElementById('new-limpieza-producto').value || '';
-  const tipo = document.getElementById('new-limpieza-tipo').value;
-  const tarea = {id: genId(), area: area.trim(), producto: producto.trim(), tipo};
-  if(tipo === 'mensual'){
-    let dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
-    tarea.diaMes = Math.min(31, Math.max(1, dia));
-  }
-  DB.limpieza.tareas.push(tarea);
-  saveDB();
-  closeModal();
-  renderLimpiezaTab();
-}
 function deleteLimpiezaTarea(id){
   if(!confirm('¿Eliminar esta tarea?')) return;
   DB.limpieza.tareas = DB.limpieza.tareas.filter(t => t.id!==id);
   saveDB();
   renderLimpiezaTab();
-}
-function toggleLimpiezaCheck(tareaId, dia, val){
-  const semana = getLimpiezaSemanaKey();
-  if(!DB.limpieza.checks[semana]) DB.limpieza.checks[semana] = {};
-  if(!DB.limpieza.checks[semana][tareaId]) DB.limpieza.checks[semana][tareaId] = {};
-  DB.limpieza.checks[semana][tareaId][dia] = val;
-  saveDB();
-}
-function printLimpiezaSemana(){
-  const tareas = DB.limpieza.tareas;
-  const html = `<h2>Plan de limpieza semanal</h2><table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:12px"><tr><th>Área/Tarea</th>${WEEK_DAYS.map(d=>`<th>${d}</th>`).join('')}</tr>` +
-    tareas.map(t => `<tr><td>${escapeHtml(t.area)}${t.producto?'<br><small>'+escapeHtml(t.producto)+'</small>':''}</td>${WEEK_DAYS.map(()=>'<td style="text-align:center">☐</td>').join('')}</tr>`).join('') + `</table>`;
-  const w = window.open('', '_blank', 'width=800,height=600');
-  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Plan de limpieza semanal</title><style>body{font-family:Arial,sans-serif;padding:20px}</style></head><body>${html}</body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
 }
 
 function renderLimpiezaMes(){
@@ -10663,12 +10563,17 @@ function renderLimpiezaMes(){
     cells += `
       <div class="card" style="padding:8px;${isToday?'border-color:var(--brand-orange)':''}">
         <div style="font-weight:700;margin-bottom:4px">${day}</div>
-        ${tareasDelDia.map(t => `
-          <label style="display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px;cursor:pointer">
-            <input type="checkbox" ${checks[t.id]?'checked':''} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
-            <span style="${checks[t.id]?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
-          </label>
-        `).join('')}
+        ${tareasDelDia.map(t => {
+          const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
+          return `
+          <div style="margin-bottom:4px;cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" onclick="event.stopPropagation()">
+              <input type="checkbox" ${checks[t.id]?'checked':''} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
+              <span style="${checks[t.id]?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
+            </label>
+            ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-left:20px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
+          </div>
+        `;}).join('')}
       </div>
     `;
   }
@@ -10681,13 +10586,13 @@ function renderLimpiezaMes(){
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-sm" onclick="addLimpiezaTarea()"><i class="ti ti-plus"></i> Añadir tarea</button>
+      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
       ${cells}
-    </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>No hay tareas mensuales. Añade una nueva tarea con frecuencia "Mensual".</div>`}
+    </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>No hay tareas de limpieza mensual. Añade la primera.</div>`}
   `;
 }
 function toggleLimpiezaCheckMes(monthKey, tareaId, val){
@@ -10696,6 +10601,69 @@ function toggleLimpiezaCheckMes(monthKey, tareaId, val){
   DB.limpieza.checksMes[monthKey][tareaId] = val;
   saveDB();
   renderLimpiezaMes();
+}
+function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
+  if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
+  if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
+  DB.limpieza.checksMes[monthKey][tareaId] = val;
+  saveDB();
+  renderDistDetail();
+}
+
+function openLimpiezaTareaMesModal(id){
+  const t = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
+  const empOptions = DB.employees.map(e=>`<option value="${e.id}"${t&&t.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  openModal(`
+    <div class="modal-header">
+      <h3>${t?'Editar':'Nueva'} tarea de limpieza mensual</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Área o tarea de limpieza</label>
+      <input type="text" id="new-limpieza-area" value="${t?escapeHtml(t.area):''}" placeholder="Ej. Campana extractora, Cámara frigorífica...">
+    </div>
+    <div class="field">
+      <label>Producto limpiador (opcional)</label>
+      <input type="text" id="new-limpieza-producto" value="${t?escapeHtml(t.producto||''):''}" placeholder="Ej. Desengrasante">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Día del mes</label>
+        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${t?t.diaMes:1}">
+      </div>
+      <div class="field">
+        <label>Responsable</label>
+        <select id="new-limpieza-responsable">
+          <option value="">Sin asignar</option>
+          ${empOptions}
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      ${t ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${t.id});closeModal()">Eliminar</button>` : ''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${t?t.id:'null'})">${t?'Guardar':'Añadir'}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
+}
+function confirmLimpiezaTareaMes(id){
+  const area = document.getElementById('new-limpieza-area').value;
+  if(!area || !area.trim()){ showToast('Escribe un área o tarea'); return; }
+  const producto = document.getElementById('new-limpieza-producto').value || '';
+  let dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
+  dia = Math.min(31, Math.max(1, dia));
+  const responsableVal = document.getElementById('new-limpieza-responsable').value;
+  const responsableId = responsableVal ? parseInt(responsableVal) : null;
+  if(id){
+    const t = DB.limpieza.tareas.find(x=>x.id===id);
+    Object.assign(t, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
+  } else {
+    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId});
+  }
+  saveDB();
+  closeModal();
+  renderLimpiezaTab();
 }
 
 function renderLimpiezaLog(key){
@@ -10973,6 +10941,19 @@ function renderDistDetail(){
 
   const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
 
+  ensureLimpiezaData();
+  const today = new Date();
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const checksMes = DB.limpieza.checksMes[monthKey] || {};
+  const tareasLimpieza = DB.limpieza.tareas.filter(t => t.tipo==='mensual' && t.responsableId===emp.id).sort((a,b)=>a.diaMes-b.diaMes);
+  const limpiezaTareasHtml = tareasLimpieza.length ? tareasLimpieza.map(t => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="checkbox" ${checksMes[t.id]?'checked':''} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${t.id},this.checked)">
+      <span style="flex:1;${checksMes[t.id]?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}${t.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(t.producto)})</span>`:''}</span>
+      <span class="badge">Día ${t.diaMes}</span>
+    </label>
+  `).join('') : '<div class="empty" style="padding:10px"><i class="ti ti-spray"></i>Sin tareas de limpieza asignadas</div>';
+
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
@@ -11009,7 +10990,17 @@ function renderDistDetail(){
       <h3><i class="ti ti-clipboard-list"></i> Plan de producción semanal</h3>
       ${diasHtml}
     </div>
+
+    <div class="card">
+      <h3 style="justify-content:space-between"><span><i class="ti ti-spray"></i> Tareas de limpieza asignadas</span><button class="btn btn-sm" onclick="goToLimpiezaMes()"><i class="ti ti-calendar-month"></i> Limpieza Mensual</button></h3>
+      ${limpiezaTareasHtml}
+    </div>
   `;
+}
+
+function goToLimpiezaMes(){
+  navigate('limpieza');
+  setLimpiezaTab('mes');
 }
 
 function addEmployeeFromDistribucion(){
