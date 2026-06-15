@@ -2534,6 +2534,7 @@ function migrateHorarioDia(d){
 function defaultData(){
   return {
     ingredients: [],
+    ingredientCategories: [], // user-defined categories for ingredientes (además de las preestablecidas)
     recipes: [],
     recipeCategories: [], // user-defined categories for Escandallo/Carta/Fichas
     fichas: [],
@@ -4328,7 +4329,7 @@ function renderMegalista(){
   `).join('');
 }
 
-function openIngredientModal(id){
+function openIngredientModal(id, overrideState){
   const areaProviders = DB.providers.filter(p => (p.area||'cocina') === currentArea());
   if(!areaProviders.length){
     openModal(`
@@ -4344,7 +4345,7 @@ function openIngredientModal(id){
     `);
     return;
   }
-  const ing = id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:areaProviders[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()};
+  const ing = overrideState || (id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:areaProviders[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()});
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -4363,8 +4364,10 @@ function openIngredientModal(id){
     <div class="field-row">
       <div class="field">
         <label>Categoría</label>
-        <select id="ing-category">
+        <select id="ing-category" onchange="onIngredientCategoryChange(${id||'null'})">
           ${CATEGORIES.map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
+          ${DB.ingredientCategories.map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+          <option value="__new__">+ Nueva categoría...</option>
         </select>
       </div>
       <div class="field">
@@ -4408,6 +4411,64 @@ function openIngredientModal(id){
 function updateIngPackPrice(){
   const unit = document.getElementById('ing-unit').value;
   document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${unit==='g'?', ej. 1000 = 1 kg':''})`;
+}
+
+let ingredientFormStateBeforeCategory = null;
+function currentIngredientFormState(id){
+  const ing = id ? getIngredient(id) : {};
+  const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
+  return {
+    name: document.getElementById('ing-name').value,
+    category: document.getElementById('ing-category').value,
+    unit: document.getElementById('ing-unit').value,
+    supplier: document.getElementById('ing-supplier').value,
+    packQty: document.getElementById('ing-pack-qty').value,
+    packPrice: document.getElementById('ing-pack-price').value,
+    price: ing.price,
+    allergens,
+    area: ing.area || currentArea()
+  };
+}
+function onIngredientCategoryChange(id){
+  const sel = document.getElementById('ing-category');
+  if(sel.value === '__new__'){
+    ingredientFormStateBeforeCategory = currentIngredientFormState(id);
+    openModal(`
+      <div class="modal-header">
+        <h3>Nueva categoría</h3>
+        <button class="modal-close" onclick="cancelNewIngredientCategory(${id||'null'})">&times;</button>
+      </div>
+      <div class="field">
+        <label>Nombre de la categoría</label>
+        <input type="text" id="new-ingredient-category-name" placeholder="Ej. Panadería, Salsas, Especias...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelNewIngredientCategory(${id||'null'})">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmNewIngredientCategory(${id||'null'})">Añadir</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('new-ingredient-category-name')?.focus(), 50);
+  }
+}
+function cancelNewIngredientCategory(id){
+  const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
+  state.category = CATEGORIES[0];
+  ingredientFormStateBeforeCategory = null;
+  openIngredientModal(id, state);
+}
+function confirmNewIngredientCategory(id){
+  const name = document.getElementById('new-ingredient-category-name').value;
+  const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
+  if(name && name.trim()){
+    const cat = name.trim();
+    if(!CATEGORIES.includes(cat) && !DB.ingredientCategories.includes(cat)) DB.ingredientCategories.push(cat);
+    state.category = cat;
+  } else {
+    state.category = CATEGORIES[0];
+  }
+  ingredientFormStateBeforeCategory = null;
+  saveDB();
+  openIngredientModal(id, state);
 }
 
 function saveIngredient(id){
