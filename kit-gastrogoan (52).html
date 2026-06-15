@@ -941,7 +941,8 @@ td.wrap{white-space:normal}
         <div class="ge-kpi-grid" id="gv-kpis"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
-            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> Añadir compra</button></div>
+            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> Añadir compra extra</button></div>
+          <div style="padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)"><i class="ti ti-info-circle"></i> Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</div>
           <div id="gv-list"></div>
           <div id="gv-empty" class="empty" style="display:none">Sin compras registradas este mes.</div>
         </div>
@@ -8768,6 +8769,37 @@ function setPedidoComprobacion(value){
   renderPedidoDetail();
 }
 
+// Categoría de Gastos Variables (Gestión Económica) a la que se imputa la compra de un ingrediente
+function gvCategoryForIngredient(ing){
+  if(ing && ing.category === 'Bebidas') return 'BEBIDAS';
+  return 'MATERIA PRIMA';
+}
+
+// Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría
+function registerPedidoComoGastoVariable(o){
+  if(o.gvCreated) return;
+  const byCat = {};
+  (o.items||[]).forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+    const cost = (recibida||0) * (ing ? (ing.price||0) : 0);
+    if(cost <= 0) return;
+    const cat = gvCategoryForIngredient(ing);
+    byCat[cat] = (byCat[cat]||0) + cost;
+  });
+  if(!Object.keys(byCat).length){ o.gvCreated = true; return; }
+  const fecha = todayStr();
+  const d = new Date(fecha);
+  Object.entries(byCat).forEach(([cat, importe]) => {
+    DB.ge.variables.push({
+      id: genId(), mes: d.getMonth(), año: d.getFullYear(),
+      categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
+      fecha, pedidoId: o.id, auto: true
+    });
+  });
+  o.gvCreated = true;
+}
+
 function changePedidoEstado(estado){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
@@ -8779,10 +8811,11 @@ function changePedidoEstado(estado){
       s.qty = (s.qty||0) + (recibida||0);
     });
     renderStock();
+    registerPedidoComoGastoVariable(o);
   }
   saveDB();
   renderPedidoDetail();
-  showToast(estado === 'RECIBIDO' ? 'Pedido recibido y stock actualizado' : 'Pedido marcado como enviado');
+  showToast(estado === 'RECIBIDO' ? 'Pedido recibido, stock actualizado y compra registrada en Gestión Económica' : 'Pedido marcado como enviado');
 }
 
 function pedidoTexto(o){
@@ -9299,7 +9332,7 @@ const GE = (function(){
       list.innerHTML = Object.entries(bycat).map(([cat,its])=>`
         <div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>
         ${its.map(v=>`<div class="ge-item">
-          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}</span>
+          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}${v.auto?' <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedido recibido</span>':''}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:8px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(v.importe||0))}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
