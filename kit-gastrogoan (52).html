@@ -10978,10 +10978,13 @@ function goToFichaForDish(name){
   else openFichaModal(null, r.id);
 }
 
+// Solo platos/bebidas del área actual: en Sala, fichas con area:'sala' y cartas de
+// bebidas; en Cocina, fichas con area:'cocina' y cartas de comida.
 function getAllDishNames(){
   const names = new Set();
-  DB.recipes.forEach(r => { if(r.name) names.add(r.name); });
+  DB.recipes.filter(r => (r.area||'cocina') === currentArea()).forEach(r => { if(r.name) names.add(r.name); });
   DB.cartas.forEach(c => {
+    if(isBebidaCarta(c) !== (currentArea()==='sala')) return;
     (c.secciones||[]).forEach(sec => {
       (sec.platos||[]).forEach(p => { if(p.nombre) names.add(p.nombre); });
     });
