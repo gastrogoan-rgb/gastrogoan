@@ -907,7 +907,7 @@ td.wrap{white-space:normal}
         <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> Exportar contabilidad mensual</button>
       </div>
 
-      <nav class="ge-tab-row">
+      <nav class="ge-tab-row" id="ge-tabs-row">
         <button class="ge-tab active" onclick="GE.tab('fijos')">💰 Gastos Fijos</button>
         <button class="ge-tab" onclick="GE.tab('variables')">🛒 Gastos Variables</button>
         <button class="ge-tab" onclick="GE.tab('cdr')">📊 Cuenta de Resultados</button>
@@ -9088,7 +9088,7 @@ const GE = (function(){
 
   function init(){ tab('fijos'); }
   function tab(t){
-    document.querySelectorAll('.ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===t));
+    document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===t));
     document.querySelectorAll('.ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+t).classList.add('active');
     if(t==='fijos') renderFijos();
