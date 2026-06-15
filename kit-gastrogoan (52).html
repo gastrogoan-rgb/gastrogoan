@@ -7161,6 +7161,7 @@ function renderOrderLinesHtml(order){
             <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
             <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
             <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
+            ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" title="Marchar este plato a cocina" style="color:var(--brand-orange)" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
             ${line.estado === 'entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
           </div>
         </div>
@@ -7170,11 +7171,33 @@ function renderOrderLinesHtml(order){
   }).join('')}</div>`;
 }
 
+// Botón principal: marcha el primer grupo (tanda) con platos pendientes (p.ej. "Entrantes"
+// primero). Los siguientes grupos (segundos, postres...) se marchan con su propio botón
+// dentro de cada tarjeta cuando el cliente esté listo.
 function renderOrderMarcharButtons(order){
-  const count = orderPendingKitchenLines(order).reduce((s,l)=>s+l.qty, 0);
-  return count
-    ? `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id})"><i class="ti ti-chef-hat"></i> Marchar a cocina (${count})</button>`
-    : `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" disabled><i class="ti ti-chef-hat"></i> Marchar a cocina</button>`;
+  const groups = groupOrderItemsByTanda(order);
+  const pendingGroup = groups.find(g => orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0) > 0);
+  if(!pendingGroup){
+    return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" disabled><i class="ti ti-chef-hat"></i> Marchar vale</button>`;
+  }
+  const count = orderPendingKitchenLines(order, pendingGroup.tanda).reduce((s,l)=>s+l.qty, 0);
+  const label = pendingGroup.tanda ? `Marchar vale · ${pendingGroup.tanda}` : 'Marchar vale';
+  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(pendingGroup.tanda)}')"><i class="ti ti-chef-hat"></i> ${escapeHtml(label)} (${count})</button>`;
+}
+
+// Marcha un solo plato (línea) a cocina, sin esperar al resto del grupo.
+function marcharLine(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const line = (order.items||[])[idx];
+  if(!line || line.qty <= (line.marchada||0)){ showToast('No hay unidades nuevas que marchar'); return; }
+  line.estado = 'cocina';
+  line.enviadoAt = new Date().toISOString();
+  line.marchada = line.qty;
+  order.cerrada = false;
+  saveDB();
+  renderTableOrderModal(order.id);
+  showToast('Plato marchado a cocina');
 }
 
 function renderTableOrderModal(orderId){
