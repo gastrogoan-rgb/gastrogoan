@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AutoTeoría Express · Aprueba el teórico en 48h</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --orange:#DF7039;--orange-d:#8B3A18;--orange-l:#FDEEE4;
+  --green:#3B6D11;--green-l:#EAF3DE;
+  --red:#E24B4A;--red-l:#FCEBEB;
+  --blue:#185FA5;--blue-l:#E6F1FB;
+  --bg:#F6EDD5;--surface:#FFFFFF;--border:#E4D8C0;
+  --text:#1A1A1A;--muted:#7A6A58;--dark:#000;
+  --radius:16px;--shadow:0 4px 18px rgba(0,0,0,.08);
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none}
+#app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:10px}
+.hdr .logo{font-weight:800;font-size:18px;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.hdr .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--orange)}
+.hdr .spacer{flex:1}
+.hdr .streak{font-size:13px;font-weight:700;color:var(--orange-d);background:var(--orange-l);padding:6px 11px;border-radius:20px}
+.back{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:0 4px 0 0;line-height:1}
+
+/* Layout */
+.screen{flex:1;padding:18px;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:26px;line-height:1.2;letter-spacing:-.5px;margin-bottom:6px}
+h2{font-size:19px;margin-bottom:10px;letter-spacing:-.3px}
+.sub{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:18px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
+.tile{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;cursor:pointer;transition:transform .12s,box-shadow .12s;width:100%;text-align:left}
+.tile:active{transform:scale(.98)}
+.tile .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:24px;flex-shrink:0}
+.tile .t{font-weight:700;font-size:16px}
+.tile .d{color:var(--muted);font-size:13px;margin-top:2px}
+.tile .chev{margin-left:auto;color:var(--muted);font-size:20px}
+
+/* Progress ring */
+.ring-wrap{display:flex;align-items:center;gap:18px;margin-bottom:6px}
+.ring{position:relative;width:96px;height:96px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring .val{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:22px}
+.statline{font-size:13px;color:var(--muted);margin-top:3px}
+.statline b{color:var(--text)}
+
+/* Buttons */
+.btn{display:block;width:100%;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .12s,filter .12s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-dark{background:var(--dark);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* Plan 48h */
+.block{display:flex;align-items:center;gap:13px;padding:13px 0;border-bottom:1px solid var(--border)}
+.block:last-child{border-bottom:none}
+.block .num{width:30px;height:30px;border-radius:50%;background:var(--orange-l);color:var(--orange-d);font-weight:800;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.block.done .num{background:var(--green);color:#fff}
+.block .info{flex:1}
+.block .info .bt{font-weight:600;font-size:15px}
+.block .info .bd{font-size:12px;color:var(--muted)}
+.block .go{font-size:13px;font-weight:700;color:var(--orange);background:var(--orange-l);padding:7px 13px;border-radius:10px;border:none;cursor:pointer}
+
+/* Quiz */
+.qcount{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between}
+.qbar{height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:18px}
+.qbar > i{display:block;height:100%;background:var(--orange);border-radius:4px;transition:width .3s}
+.qsign{font-size:64px;text-align:center;margin:6px 0 14px}
+.qtext{font-size:19px;font-weight:700;line-height:1.35;margin-bottom:18px}
+.opt{display:block;width:100%;text-align:left;background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:15px 16px;margin-bottom:11px;font-size:15px;cursor:pointer;transition:border-color .12s,background .12s;line-height:1.35}
+.opt:active{transform:scale(.99)}
+.opt .k{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--orange-l);color:var(--orange-d);font-weight:800;font-size:13px;margin-right:10px;vertical-align:middle}
+.opt.correct{border-color:var(--green);background:var(--green-l)}
+.opt.correct .k{background:var(--green);color:#fff}
+.opt.wrong{border-color:var(--red);background:var(--red-l)}
+.opt.wrong .k{background:var(--red);color:#fff}
+.opt:disabled{cursor:default}
+
+/* Feedback */
+.fb{border-radius:14px;padding:14px 16px;margin-top:4px;animation:fade .25s}
+.fb.ok{background:var(--green-l);border:1px solid var(--green)}
+.fb.no{background:var(--red-l);border:1px solid var(--red)}
+.fb .ft{font-weight:800;font-size:15px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.fb.ok .ft{color:var(--green)}
+.fb.no .ft{color:var(--red)}
+.fb .fx{font-size:14px;line-height:1.5}
+.fb .tip{margin-top:9px;font-size:13px;background:rgba(255,255,255,.6);border-radius:10px;padding:9px 11px;line-height:1.45}
+.fb .tip b{color:var(--orange-d)}
+
+/* Learn cards */
+.lc{font-size:15px;line-height:1.6}
+.lc h3{font-size:17px;margin:14px 0 6px;color:var(--orange-d)}
+.lc ul{margin:8px 0 8px 18px}
+.lc li{margin-bottom:7px}
+.lc .key{background:var(--orange-l);border-left:4px solid var(--orange);border-radius:0 10px 10px 0;padding:11px 13px;margin:12px 0;font-weight:600}
+.lc .signrow{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+.lc .signitem{text-align:center;width:78px}
+.lc .signitem .e{font-size:38px}
+.lc .signitem .n{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.2}
+
+/* Result */
+.result-big{text-align:center;padding:20px 0}
+.result-big .em{font-size:72px}
+.result-big .sc{font-size:44px;font-weight:800;margin:6px 0}
+.result-big .verdict{font-size:18px;font-weight:700;padding:8px 18px;border-radius:24px;display:inline-block;margin-top:6px}
+.verdict.pass{background:var(--green-l);color:var(--green)}
+.verdict.fail{background:var(--red-l);color:var(--red)}
+
+/* Nav */
+.nav{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.nav button{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);font-weight:600;padding:4px}
+.nav button .ni{font-size:21px}
+.nav button.active{color:var(--orange)}
+
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--blue-l);color:var(--blue);margin-bottom:8px}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--dark);color:#fff;padding:11px 18px;border-radius:24px;font-size:14px;font-weight:600;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="hdr">
+    <button class="back" id="backBtn" style="display:none" onclick="goBack()">‹</button>
+    <div class="logo"><span class="dot"></span>AutoTeoría<span style="color:var(--orange)">Express</span></div>
+    <div class="spacer"></div>
+    <div class="streak" id="streak">🔥 0</div>
+  </header>
+  <div id="view"></div>
+  <nav class="nav" id="nav"></nav>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   AutoTeoría Express — MVP
+   App de 1 archivo. Datos en localStorage. Sin servidor.
+   Pedagogía: micro-aprendizaje + corrección inmediata con
+   explicación + repaso espaciado de fallos + simulacro DGT.
+   ============================================================ */
+
+/* ---------- BANCO DE PREGUNTAS (ampliable) ----------
+   Cada pregunta: tema, señal(emoji opcional), enunciado,
+   opciones, índice de la correcta, explicación y "regla
+   para recordarlo" (lo que hace que se quede).            */
+const TEMAS = {
+  senales:   {nombre:"Señales", emoji:"🚸", color:"#185FA5"},
+  velocidad: {nombre:"Velocidad y distancias", emoji:"🚗", color:"#3B6D11"},
+  prioridad: {nombre:"Prioridad e intersecciones", emoji:"🔀", color:"#DF7039"},
+  alcohol:   {nombre:"Alcohol, drogas y multas", emoji:"🍺", color:"#E24B4A"},
+  docs:      {nombre:"Documentación y seguridad", emoji:"📋", color:"#533BAB"},
+  maniobras: {nombre:"Maniobras y luces", emoji:"💡", color:"#C8821A"},
+};
+
+const QUESTIONS = [
+  // ---- SEÑALES ----
+  {id:"s1",tema:"senales",sign:"🔺",q:"Una señal triangular con el borde rojo y la punta hacia arriba indica…",
+   opts:["Una prohibición","Un peligro o advertencia","Una obligación"],a:1,
+   exp:"Los triángulos con borde rojo avisan de un PELIGRO próximo. No prohíben ni obligan, solo te ponen alerta.",
+   tip:"Triángulo = ¡cuidado! Te avisa de algo que viene."},
+  {id:"s2",tema:"senales",sign:"⛔",q:"Un círculo rojo con una línea blanca horizontal en el centro significa…",
+   opts:["Dirección prohibida","Entrada prohibida a todo tipo de vehículos","Calle sin salida"],a:1,
+   exp:"Es la señal de 'entrada prohibida' (popularmente, 'el sentido prohibido'). Prohíbe el paso a todos los vehículos.",
+   tip:"Círculo rojo = PROHIBIDO. Si está casi todo rojo, no puedes pasar."},
+  {id:"s3",tema:"senales",sign:"🔵",q:"Las señales circulares de fondo azul normalmente indican…",
+   opts:["Una prohibición","Una obligación","El final de una prohibición"],a:1,
+   exp:"El azul circular es OBLIGACIÓN (p. ej. sentido obligatorio, velocidad mínima). El rojo prohíbe; el azul manda.",
+   tip:"Azul redondo = obligación. Rojo redondo = prohibición."},
+  {id:"s4",tema:"senales",sign:"🛑",q:"Ante una señal de STOP debes…",
+   opts:["Reducir y pasar si no viene nadie","Detener completamente el vehículo y ceder el paso","Tocar el claxon y continuar"],a:1,
+   exp:"El STOP obliga a DETENERSE por completo (ruedas paradas) en la línea de detención y ceder el paso. No basta con frenar.",
+   tip:"STOP = parar del todo, aunque no venga nadie."},
+  {id:"s5",tema:"senales",sign:"🔻",q:"La señal de 'Ceda el paso' (triángulo invertido) te obliga a…",
+   opts:["Parar siempre por completo","Ceder el paso, deteniéndote solo si es necesario","Tener tú la prioridad"],a:1,
+   exp:"En el 'Ceda el paso' cedes la preferencia: si no viene nadie, puedes seguir sin pararte; si viene, dejas pasar.",
+   tip:"Ceda ≠ STOP. En el Ceda solo paras si hace falta."},
+
+  // ---- VELOCIDAD Y DISTANCIAS ----
+  {id:"v1",tema:"velocidad",q:"¿Cuál es la velocidad máxima genérica en vías urbanas de un solo carril por sentido?",
+   opts:["50 km/h","30 km/h","20 km/h"],a:1,
+   exp:"Desde 2021, en ciudad el límite general es 30 km/h en vías de un único carril por sentido, y 20 km/h si la calzada y la acera están al mismo nivel.",
+   tip:"Ciudad de un carril por sentido = 30. Plataforma única = 20."},
+  {id:"v2",tema:"velocidad",q:"Velocidad máxima para un turismo en autopista o autovía:",
+   opts:["100 km/h","120 km/h","130 km/h"],a:1,
+   exp:"Para coches, la máxima en autopista/autovía es 120 km/h (salvo señal que indique otra cosa).",
+   tip:"Autovía/autopista turismo = 120."},
+  {id:"v3",tema:"velocidad",q:"En carretera convencional (fuera de ciudad, sin separación), la máxima para un turismo es…",
+   opts:["90 km/h","100 km/h","110 km/h"],a:0,
+   exp:"En carreteras convencionales el límite genérico es 90 km/h para turismos.",
+   tip:"Convencional = 90. Autovía = 120."},
+  {id:"v4",tema:"velocidad",q:"¿Cómo se calcula de forma sencilla la distancia de seguridad con el vehículo de delante?",
+   opts:["Regla de los 2 segundos","Siempre 10 metros fijos","La mitad de tu velocidad en metros"],a:0,
+   exp:"La regla de los 2 segundos: cuando el de delante pase por un punto fijo, cuenta 'mil uno, mil dos'. Si llegas antes de terminar, vas muy pegado.",
+   tip:"2 segundos de hueco. Con lluvia, dóblalo a 4."},
+
+  // ---- PRIORIDAD ----
+  {id:"p1",tema:"prioridad",q:"En un cruce sin señales ni semáforos, ¿quién tiene preferencia?",
+   opts:["El que llega primero","El que viene por la derecha","El vehículo más grande"],a:1,
+   exp:"Sin señales, la norma general es ceder al que viene por tu DERECHA.",
+   tip:"Sin señales: gana la derecha."},
+  {id:"p2",tema:"prioridad",q:"En una glorieta (rotonda), por regla general…",
+   opts:["Tiene preferencia quien va a entrar","Tiene preferencia quien ya circula dentro","Siempre el de la derecha"],a:1,
+   exp:"Salvo señalización en contra, quien ya está circulando dentro de la rotonda tiene preferencia sobre el que va a entrar.",
+   tip:"En la rotonda manda el que ya está dentro."},
+  {id:"p3",tema:"prioridad",q:"Te acercas a un paso de peatones y hay personas esperando para cruzar. Debes…",
+   opts:["Pasar rápido antes de que crucen","Detenerte y cederles el paso","Tocar el claxon"],a:1,
+   exp:"En un paso de peatones señalizado, el peatón tiene prioridad. Debes detenerte y dejar cruzar.",
+   tip:"Peatón en su paso = siempre prioridad."},
+  {id:"p4",tema:"prioridad",q:"Un vehículo prioritario (ambulancia, policía) circula con señales luminosas y acústicas. Tú debes…",
+   opts:["Acelerar para no estorbar","Facilitarle el paso, apartándote con seguridad","Frenar en seco donde estés"],a:1,
+   exp:"Hay que facilitarles el paso lo antes posible y con seguridad, normalmente apartándote a la derecha. No frenes bruscamente sin mirar.",
+   tip:"Ambulancia con sirena = apártate con cabeza, no en seco."},
+
+  // ---- ALCOHOL Y MULTAS ----
+  {id:"a1",tema:"alcohol",q:"Tasa máxima de alcohol en sangre para un conductor novel (menos de 2 años de carnet):",
+   opts:["0,5 g/l","0,3 g/l","0,0 g/l"],a:1,
+   exp:"Conductores noveles y profesionales: 0,3 g/l en sangre (0,15 mg/l en aire espirado). Para el resto, 0,5 g/l.",
+   tip:"Novel = 0,3. Resto = 0,5. Lo seguro: 0,0."},
+  {id:"a2",tema:"alcohol",q:"¿Con cuántos puntos empieza un conductor novel?",
+   opts:["12 puntos","8 puntos","6 puntos"],a:1,
+   exp:"El permiso novel arranca con 8 puntos. A los 3 años sin perder ninguno pasas a 12, y luego puedes llegar a 15.",
+   tip:"Novel empieza con 8 puntos, no con 12."},
+  {id:"a3",tema:"alcohol",q:"¿Puede un agente obligarte a hacer la prueba de alcoholemia?",
+   opts:["No, es voluntaria","Sí, y negarse es delito","Solo tras un accidente"],a:1,
+   exp:"Someterse a la prueba es obligatorio cuando lo requiere un agente. Negarse es un delito penal, más grave incluso que dar positivo.",
+   tip:"Negarte a soplar = delito. Siempre obligatorio."},
+  {id:"a4",tema:"alcohol",q:"El consumo de ciertos medicamentos al volante…",
+   opts:["Nunca afecta a la conducción","Puede afectar; revisa el prospecto y el pictograma","Solo afecta si se mezcla con café"],a:1,
+   exp:"Muchos medicamentos reducen reflejos o dan sueño. Llevan un pictograma de un coche advirtiéndolo. Consulta prospecto y médico.",
+   tip:"Pictograma del coche en la caja = ojo al conducir."},
+
+  // ---- DOCUMENTACIÓN Y SEGURIDAD ----
+  {id:"d1",tema:"docs",q:"¿Es obligatorio el uso del cinturón en los asientos traseros?",
+   opts:["No, solo delante","Sí, en todas las plazas que dispongan de él","Solo en autopista"],a:1,
+   exp:"El cinturón es obligatorio en todas las plazas, delante y detrás, siempre que el vehículo lo lleve.",
+   tip:"Cinturón: todas las plazas, siempre."},
+  {id:"d2",tema:"docs",q:"Un niño que mide menos de 135 cm debe viajar…",
+   opts:["En el asiento delantero","Con un sistema de retención infantil homologado","En brazos de un adulto detrás"],a:1,
+   exp:"Los menores de 135 cm deben usar silla o sistema de retención adecuado a su talla y peso, normalmente en los asientos traseros.",
+   tip:"Menos de 135 cm = sillita homologada."},
+  {id:"d3",tema:"docs",q:"¿Qué debes llevar siempre en el vehículo para circular?",
+   opts:["Solo el carnet","Permiso de conducir, de circulación y la ITV/seguro en regla","Nada, basta con la matrícula"],a:1,
+   exp:"Debes poder acreditar tu permiso de conducir, el permiso de circulación, la ficha técnica con la ITV al día y el seguro obligatorio en vigor.",
+   tip:"Carnet + circulación + ITV + seguro."},
+  {id:"d4",tema:"docs",q:"El uso del teléfono móvil sostenido con la mano mientras conduces…",
+   opts:["Está permitido en caravana","Está prohibido y resta puntos","Solo se permite para el GPS"],a:1,
+   exp:"Sujetar el móvil con la mano al conducir está prohibido y conlleva multa y pérdida de puntos (6 puntos). Usa manos libres bien instalado.",
+   tip:"Móvil en la mano = multa y −6 puntos."},
+
+  // ---- MANIOBRAS Y LUCES ----
+  {id:"m1",tema:"maniobras",q:"Antes de adelantar, lo primero que debes comprobar es…",
+   opts:["Que tienes prisa","Que hay visibilidad y espacio suficiente y nadie te adelanta a ti","Que el de delante va lento"],a:1,
+   exp:"Adelantar exige visibilidad suficiente, espacio libre por delante y asegurarte de que nadie ha iniciado el adelantamiento sobre ti. Señaliza siempre.",
+   tip:"Antes de adelantar: mira, espejo, intermitente."},
+  {id:"m2",tema:"maniobras",q:"¿Cuándo es obligatorio usar las luces de cruce (cortas)?",
+   opts:["Solo de noche","De noche, en túneles y con poca visibilidad","Nunca en ciudad"],a:1,
+   exp:"Las luces de cruce se usan de noche, en túneles, y cuando la visibilidad sea reducida (lluvia, niebla). En ciudad iluminada también son las de referencia.",
+   tip:"Túnel o poca luz = luces de cruce encendidas."},
+  {id:"m3",tema:"maniobras",q:"Las luces largas (de carretera) NO deben usarse…",
+   opts:["En carretera sin alumbrado y sin tráfico de frente","Cuando hay vehículos de frente o vas detrás de otro","Nunca, son ilegales"],a:1,
+   exp:"Las largas deslumbran. No se usan con vehículos de frente, ni circulando detrás de otro, ni en ciudad iluminada. Cámbialas a cortas para no cegar.",
+   tip:"Si hay alguien delante o de frente: nada de largas."},
+  {id:"m4",tema:"maniobras",q:"Para estacionar correctamente en la vía debes…",
+   opts:["Dejar el coche donde quieras si es un momento","Hacerlo sin obstaculizar la circulación ni invadir pasos o aceras","Aparcar siempre en doble fila"],a:1,
+   exp:"Hay que estacionar sin obstaculizar a los demás ni a los peatones: nada de pasos de cebra, aceras, vados, carriles bus o paradas.",
+   tip:"Aparca sin molestar: ni acera, ni paso, ni vado."},
+];
+
+/* ---------- FICHAS DE APRENDIZAJE por tema ---------- */
+const LEARN = {
+  senales:`<div class="lc">
+    <div class="key">Truco maestro: el COLOR y la FORMA ya te dicen casi todo, aunque no entiendas el dibujo.</div>
+    <h3>Por forma y color</h3>
+    <div class="signrow">
+      <div class="signitem"><div class="e">🔺</div><div class="n">Triángulo rojo<br>PELIGRO (avisa)</div></div>
+      <div class="signitem"><div class="e">⛔</div><div class="n">Círculo rojo<br>PROHIBIDO</div></div>
+      <div class="signitem"><div class="e">🔵</div><div class="n">Círculo azul<br>OBLIGACIÓN</div></div>
+      <div class="signitem"><div class="e">🟦</div><div class="n">Cuadrado azul<br>INFORMA / indica</div></div>
+    </div>
+    <ul>
+      <li><b>Triángulo</b> = peligro próximo. Solo avisa, no prohíbe.</li>
+      <li><b>Círculo rojo</b> = te prohíbe algo (entrar, adelantar, aparcar…).</li>
+      <li><b>Círculo azul</b> = te obliga a algo (sentido, velocidad mínima…).</li>
+      <li><b>STOP</b> = parar del todo y ceder. <b>Ceda</b> = ceder, parar solo si hace falta.</li>
+    </ul>
+    <div class="key">Si dudas en el examen: rojo = "no puedo", azul redondo = "tengo que", triángulo = "ojo que viene algo".</div>
+  </div>`,
+  velocidad:`<div class="lc">
+    <div class="key">Memoriza 3 números base: 30 ciudad · 90 convencional · 120 autovía/autopista (turismos).</div>
+    <h3>Límites de velocidad (turismo)</h3>
+    <ul>
+      <li><b>Ciudad</b>: 30 km/h en vías de un carril por sentido. 20 km/h si acera y calzada van al mismo nivel. 50 solo en vías de 2+ carriles por sentido.</li>
+      <li><b>Carretera convencional</b>: 90 km/h.</li>
+      <li><b>Autovía / autopista</b>: 120 km/h.</li>
+    </ul>
+    <h3>Distancia de seguridad</h3>
+    <ul>
+      <li><b>Regla de los 2 segundos</b>: cuenta "mil uno, mil dos" desde que el de delante pasa por un punto. Si llegas antes, vas pegado.</li>
+      <li>Con lluvia, niebla o hielo: <b>dobla la distancia</b> (4 segundos).</li>
+    </ul>
+    <div class="key">Más velocidad = más distancia de frenado. La velocidad no se sanciona "por correr", sino porque reduce tu margen de reacción.</div>
+  </div>`,
+  prioridad:`<div class="lc">
+    <div class="key">Sin señales que digan lo contrario: PREFERENCIA PARA LA DERECHA.</div>
+    <h3>Quién pasa primero</h3>
+    <ul>
+      <li><b>Cruce sin señales</b>: cede al que viene por tu derecha.</li>
+      <li><b>Rotonda</b>: tiene preferencia el que ya circula dentro.</li>
+      <li><b>Peatón en su paso</b>: prioridad absoluta, te detienes.</li>
+      <li><b>Vehículo prioritario</b> (sirena + luces): le facilitas el paso con seguridad, apartándote, sin frenazos.</li>
+      <li><b>Transporte público</b> que sale de su parada en ciudad: facilítale la incorporación.</li>
+    </ul>
+    <div class="key">Truco: la prioridad NO se "toma", se "cede". Ante la duda, cede; nunca fuerces tu paso.</div>
+  </div>`,
+  alcohol:`<div class="lc">
+    <div class="key">Tasas en sangre: NOVEL/profesional 0,3 g/l · resto 0,5 g/l. Lo realmente seguro: 0,0.</div>
+    <h3>Alcohol y drogas</h3>
+    <ul>
+      <li><b>Novel</b> (menos de 2 años): 0,3 g/l en sangre · 0,15 mg/l en aire.</li>
+      <li><b>Resto</b>: 0,5 g/l en sangre · 0,25 mg/l en aire.</li>
+      <li><b>Negarse</b> a la prueba = delito (más grave que dar positivo).</li>
+      <li><b>Drogas</b>: tolerancia cero, basta con detectar presencia.</li>
+    </ul>
+    <h3>Puntos del carnet</h3>
+    <ul>
+      <li><b>Novel</b> empieza con <b>8 puntos</b>; el resto con 12 (hasta 15 con buen historial).</li>
+      <li>Móvil en mano: −6. Sin cinturón: −4. Alcohol alto: −6.</li>
+    </ul>
+    <div class="key">Si llegas a 0 puntos pierdes el permiso. Los noveles parten con menos margen: cuídalos.</div>
+  </div>`,
+  docs:`<div class="lc">
+    <div class="key">Lleva siempre: permiso de conducir + permiso de circulación + ITV/ficha técnica + seguro en vigor.</div>
+    <h3>Seguridad de los ocupantes</h3>
+    <ul>
+      <li><b>Cinturón</b>: obligatorio en TODAS las plazas, delante y detrás.</li>
+      <li><b>Niños &lt; 135 cm</b>: sistema de retención homologado, normalmente detrás.</li>
+      <li><b>Casco</b>: obligatorio en moto y ciclomotor, conductor y pasajero.</li>
+    </ul>
+    <h3>Distracciones</h3>
+    <ul>
+      <li><b>Móvil en la mano</b>: prohibido (−6 puntos). Usa manos libres bien instalado.</li>
+      <li>Auriculares conectados al sonido: prohibidos al conducir.</li>
+    </ul>
+    <div class="key">El examen insiste mucho en cinturón y sillas infantiles: son respuestas casi siempre "obligatorio / sí".</div>
+  </div>`,
+  maniobras:`<div class="lc">
+    <div class="key">Toda maniobra: 1) MIRA (espejos y ángulo muerto) · 2) SEÑALIZA (intermitente) · 3) MANIOBRA con seguridad.</div>
+    <h3>Adelantar</h3>
+    <ul>
+      <li>Necesitas <b>visibilidad y espacio</b> suficientes y que nadie te adelante a ti.</li>
+      <li>Señaliza, hazlo rápido y vuelve a tu carril sin cerrar al adelantado.</li>
+    </ul>
+    <h3>Luces</h3>
+    <ul>
+      <li><b>Cruce (cortas)</b>: de noche, túneles y poca visibilidad.</li>
+      <li><b>Carretera (largas)</b>: solo sin nadie de frente ni delante; deslumbran.</li>
+      <li><b>Emergencia</b>: avería o peligro, intermitentes de emergencia.</li>
+    </ul>
+    <h3>Estacionar</h3>
+    <ul><li>Sin obstaculizar: nada de aceras, pasos de cebra, vados, carriles bus o paradas.</li></ul>
+    <div class="key">En el examen, la opción correcta casi siempre es la más prudente y la que menos molesta a los demás.</div>
+  </div>`,
+};
+
+/* ---------- ESTADO / PERSISTENCIA ---------- */
+const STORE_KEY = "autoteoria_v1";
+const todayStr = () => new Date().toISOString().slice(0,10);
+let S = load();
+function load(){
+  try{const r=JSON.parse(localStorage.getItem(STORE_KEY));if(r)return r;}catch(e){}
+  return {seen:{},stats:{}, /* perId: {seen,ok,fail, due:dateStr} */
+          streak:0,lastDay:null,blocks:{},bestExam:null};
+}
+function save(){localStorage.setItem(STORE_KEY,JSON.stringify(S));}
+function bumpStreak(){
+  const t=todayStr();
+  if(S.lastDay===t)return;
+  const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+  S.streak = (S.lastDay===y)? S.streak+1 : 1;
+  S.lastDay=t;save();
+}
+
+/* Spaced repetition muy simple para repaso de fallos */
+function recordAnswer(qid,correct){
+  const st=S.stats[qid]||{seen:0,ok:0,fail:0,box:0};
+  st.seen++;
+  if(correct){st.ok++;st.box=Math.min(st.box+1,4);}
+  else{st.fail++;st.box=0;}
+  // due = hoy + dias según caja (0=hoy,1=1d,2=3d,3=7d,4=dominada)
+  const days=[0,1,3,7,30][st.box];
+  st.due=new Date(Date.now()+days*864e5).toISOString().slice(0,10);
+  S.stats[qid]=st;bumpStreak();save();
+}
+function masteredCount(){return Object.values(S.stats).filter(s=>s.box>=3).length;}
+function failPool(){
+  // preguntas con fallos recientes y "vencidas" para repasar
+  return QUESTIONS.filter(q=>{const s=S.stats[q.id];return s&&s.box<3&&(s.fail>0)&&s.due<=todayStr();});
+}
+
+/* ---------- NAVEGACIÓN ---------- */
+let stack=[];
+function nav(view,opts){stack.push({view,opts});render();}
+function goBack(){if(stack.length>1){stack.pop();render();}}
+const view=document.getElementById('view');
+function render(){
+  const top=stack[stack.length-1];
+  document.getElementById('backBtn').style.display = stack.length>1?'block':'none';
+  document.getElementById('streak').textContent = "🔥 "+(S.streak||0);
+  view.innerHTML="";
+  view.className="screen";
+  VIEWS[top.view](top.opts||{});
+  renderNav(top.view);
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1600);}
+
+/* ---------- BOTTOM NAV ---------- */
+function renderNav(active){
+  const items=[
+    {v:'home',i:'🏠',t:'Inicio'},
+    {v:'learn',i:'📖',t:'Aprender'},
+    {v:'practice',i:'✍️',t:'Practicar'},
+    {v:'exam',i:'🏁',t:'Examen'},
+  ];
+  const root=['home','learn','practice','exam'].includes(active)?active:null;
+  document.getElementById('nav').innerHTML=items.map(it=>
+    `<button class="${it.v===root?'active':''}" onclick="resetTo('${it.v}')"><span class="ni">${it.i}</span>${it.t}</button>`
+  ).join('');
+}
+function resetTo(v){stack=[{view:v}];render();}
+
+/* ---------- VISTAS ---------- */
+const VIEWS={};
+
+VIEWS.home=()=>{
+  const total=QUESTIONS.length, mastered=masteredCount();
+  const pct=Math.round(mastered/total*100);
+  const pend=failPool().length;
+  const best=S.bestExam;
+  view.innerHTML=`
+    <h1>Hola 👋 Vamos a sacarte el teórico</h1>
+    <p class="sub">Plan intensivo: aprende lo esencial, practica con corrección al instante y repasa solo lo que fallas. Aprobar = máximo 3 fallos de 30.</p>
+    <div class="card">
+      <div class="ring-wrap">
+        ${ringSVG(pct)}
+        <div>
+          <div style="font-weight:800;font-size:16px">Tu dominio</div>
+          <div class="statline"><b>${mastered}</b> de ${total} preguntas dominadas</div>
+          <div class="statline">Repaso pendiente: <b>${pend}</b></div>
+          <div class="statline">Mejor simulacro: <b>${best!=null?best+"/30":"—"}</b></div>
+        </div>
+      </div>
+    </div>
+    <h2>Tu plan de 48&nbsp;horas</h2>
+    <div class="card">${planHTML()}</div>
+    <button class="btn btn-primary" onclick="resetTo('practice')">▶ Empezar a practicar</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost" onclick="startQuiz(failPool(),'Repaso de fallos')" ${pend?'':'disabled'}>🔁 Repasar mis fallos (${pend})</button>
+  `;
+};
+
+function planHTML(){
+  const plan=[
+    {k:'b1',t:'Bloque 1 · Señales',d:'Aprende formas y colores + 5 preguntas',go:()=>{S.blocks.b1=1;save();nav('learnTema',{tema:'senales'});}},
+    {k:'b2',t:'Bloque 2 · Velocidad y prioridad',d:'Números clave y quién pasa primero',go:()=>{S.blocks.b2=1;save();nav('learnTema',{tema:'velocidad'});}},
+    {k:'b3',t:'Bloque 3 · Alcohol, puntos y seguridad',d:'Tasas, cinturón, móvil',go:()=>{S.blocks.b3=1;save();nav('learnTema',{tema:'alcohol'});}},
+    {k:'b4',t:'Bloque 4 · Maniobras y luces',d:'Adelantar, luces, estacionar',go:()=>{S.blocks.b4=1;save();nav('learnTema',{tema:'maniobras'});}},
+    {k:'b5',t:'Bloque 5 · Simulacro final',d:'Examen completo de 30 preguntas',go:()=>startExam()},
+  ];
+  window._planGo={};
+  return plan.map((p,i)=>{
+    window._planGo[p.k]=p.go;
+    const done=S.blocks[p.k];
+    return `<div class="block ${done?'done':''}">
+      <div class="num">${done?'✓':i+1}</div>
+      <div class="info"><div class="bt">${p.t}</div><div class="bd">${p.d}</div></div>
+      <button class="go" onclick="window._planGo['${p.k}']()">${done?'Repetir':'Ir'}</button>
+    </div>`;
+  }).join('');
+}
+
+VIEWS.learn=()=>{
+  view.innerHTML=`<h1>Aprender 📖</h1><p class="sub">Fichas cortas con lo que de verdad cae. Léelas, no hace falta memorizar todo de golpe.</p>`+
+    Object.entries(TEMAS).map(([k,t])=>`
+      <button class="tile" onclick="nav('learnTema',{tema:'${k}'})">
+        <div class="ic" style="background:${t.color}22">${t.emoji}</div>
+        <div><div class="t">${t.nombre}</div><div class="d">Ficha + practicar</div></div>
+        <div class="chev">›</div>
+      </button>`).join('');
+};
+
+VIEWS.learnTema=({tema})=>{
+  const t=TEMAS[tema];
+  view.innerHTML=`<span class="pill">${t.emoji} ${t.nombre}</span>
+    <div class="card">${LEARN[tema]}</div>
+    <button class="btn btn-primary" onclick="startQuiz(QUESTIONS.filter(q=>q.tema==='${tema}'),'${t.nombre}')">✍️ Practicar este tema</button>`;
+};
+
+VIEWS.practice=()=>{
+  view.innerHTML=`<h1>Practicar ✍️</h1><p class="sub">Elige un tema o lánzate a un test mezclado. Tras cada respuesta verás por qué.</p>`+
+    Object.entries(TEMAS).map(([k,t])=>{
+      const qs=QUESTIONS.filter(q=>q.tema===k);
+      const dom=qs.filter(q=>(S.stats[q.id]?.box||0)>=3).length;
+      return `<button class="tile" onclick="startQuiz(QUESTIONS.filter(q=>q.tema==='${k}'),'${t.nombre}')">
+        <div class="ic" style="background:${t.color}22">${t.emoji}</div>
+        <div><div class="t">${t.nombre}</div><div class="d">${dom}/${qs.length} dominadas</div></div>
+        <div class="chev">›</div>
+      </button>`;
+    }).join('')+
+    `<div style="height:6px"></div>
+     <button class="btn btn-dark" onclick="startQuiz(shuffle(QUESTIONS.slice()),'Test mezclado')">🎲 Test mezclado (todas)</button>`;
+};
+
+VIEWS.exam=()=>{
+  const best=S.bestExam;
+  view.innerHTML=`<h1>Simulacro de examen 🏁</h1>
+    <p class="sub">Como el examen real de la DGT: 30 preguntas, máximo 3 fallos para aprobar. Sin pistas hasta el final.</p>
+    <div class="card" style="text-align:center">
+      <div style="font-size:46px">📝</div>
+      <div style="font-weight:800;font-size:18px;margin:6px 0">30 preguntas · 3 fallos máx.</div>
+      <div class="statline">Mejor resultado: <b>${best!=null?best+"/30":"aún sin hacer"}</b></div>
+    </div>
+    <button class="btn btn-primary" onclick="startExam()">▶ Empezar simulacro</button>`;
+};
+
+/* ---------- MOTOR DE QUIZ ---------- */
+let Q={list:[],idx:0,ok:0,wrong:0,answered:false,mode:'practice',title:''};
+
+function startQuiz(list,title){
+  if(!list.length){toast('No hay preguntas aquí 🙂');return;}
+  Q={list:shuffle(list.slice()),idx:0,ok:0,wrong:0,answered:false,mode:'practice',title};
+  nav('quiz');
+}
+function startExam(){
+  const list=shuffle(QUESTIONS.slice()).slice(0,Math.min(30,QUESTIONS.length));
+  // repetimos para llegar a 30 si el banco es menor (MVP)
+  while(list.length<30 && QUESTIONS.length){list.push(...shuffle(QUESTIONS.slice()).slice(0,30-list.length));}
+  Q={list,idx:0,ok:0,wrong:0,answered:false,mode:'exam',title:'Simulacro'};
+  nav('quiz');
+}
+
+VIEWS.quiz=()=>{
+  const q=Q.list[Q.idx];
+  const prog=Math.round(Q.idx/Q.list.length*100);
+  view.innerHTML=`
+    <div class="qcount"><span>${Q.title}</span><span>${Q.idx+1} / ${Q.list.length}</span></div>
+    <div class="qbar"><i style="width:${prog}%"></i></div>
+    ${q.sign?`<div class="qsign">${q.sign}</div>`:''}
+    <div class="qtext">${q.q}</div>
+    <div id="opts"></div>
+    <div id="fb"></div>
+    <div id="next"></div>
+  `;
+  const optsEl=document.getElementById('opts');
+  q.opts.forEach((o,i)=>{
+    const b=document.createElement('button');
+    b.className='opt';
+    b.innerHTML=`<span class="k">${'ABC'[i]}</span>${o}`;
+    b.onclick=()=>answer(i,q);
+    optsEl.appendChild(b);
+  });
+};
+
+function answer(i,q){
+  if(Q.answered)return;Q.answered=true;
+  const correct=i===q.a;
+  const btns=document.querySelectorAll('#opts .opt');
+  btns.forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('correct');if(j===i&&!correct)b.classList.add('wrong');});
+  if(correct)Q.ok++;else Q.wrong++;
+  recordAnswer(q.id,correct);
+
+  // En examen no mostramos explicación hasta el final
+  if(Q.mode!=='exam'){
+    document.getElementById('fb').innerHTML=`
+      <div class="fb ${correct?'ok':'no'}">
+        <div class="ft">${correct?'✅ ¡Correcto!':'❌ Casi… la correcta es '+'ABC'[q.a]}</div>
+        <div class="fx">${q.exp}</div>
+        <div class="tip">🧠 <b>Para que se quede:</b> ${q.tip}</div>
+      </div>`;
+  }
+  document.getElementById('next').innerHTML=
+    `<div style="height:12px"></div><button class="btn btn-primary" onclick="nextQ()">${Q.idx+1<Q.list.length?'Siguiente →':'Ver resultado'}</button>`;
+  document.getElementById('next').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function nextQ(){
+  if(Q.idx+1<Q.list.length){Q.idx++;Q.answered=false;render();}
+  else finishQuiz();
+}
+
+function finishQuiz(){
+  if(Q.mode==='exam'){
+    if(S.bestExam==null||Q.ok>S.bestExam){S.bestExam=Q.ok;save();}
+  }
+  nav('result');
+}
+
+VIEWS.result=()=>{
+  const total=Q.list.length;
+  const passExam = Q.mode==='exam' ? Q.wrong<=3 : null;
+  let em,verdict;
+  if(Q.mode==='exam'){
+    em=passExam?'🎉':'💪';
+    verdict=passExam?`<span class="verdict pass">APTO · ${Q.wrong} fallo${Q.wrong===1?'':'s'}</span>`
+                    :`<span class="verdict fail">NO APTO · ${Q.wrong} fallos</span>`;
+  }else{
+    const r=Q.ok/total;
+    em=r>=.9?'🏆':r>=.7?'👍':'📚';
+    verdict=`<span class="verdict ${r>=.7?'pass':'fail'}">${Math.round(r*100)}% de aciertos</span>`;
+  }
+  view.innerHTML=`
+    <div class="result-big">
+      <div class="em">${em}</div>
+      <div class="sc">${Q.ok}/${total}</div>
+      ${verdict}
+    </div>
+    ${Q.mode==='exam'&&!passExam?`<p class="sub" style="text-align:center">Para aprobar necesitas 3 fallos o menos. Repasa tus errores y vuelve a intentarlo, ¡estás cerca!</p>`:''}
+    ${Q.mode==='exam'&&passExam?`<p class="sub" style="text-align:center">¡Con este resultado aprobarías el teórico real! Repite algún simulacro más para asegurar.</p>`:''}
+    <button class="btn btn-primary" onclick="${Q.mode==='exam'?'startExam()':'startQuiz(Q.list,Q.title)'}">🔁 Repetir</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost" onclick="resetTo('home')">🏠 Volver al inicio</button>
+  `;
+};
+
+/* ---------- UTILES ---------- */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function ringSVG(pct){
+  const r=42,c=2*Math.PI*r,off=c-(pct/100)*c;
+  return `<div class="ring">
+    <svg width="96" height="96" viewBox="0 0 96 96">
+      <circle cx="48" cy="48" r="${r}" fill="none" stroke="#E4D8C0" stroke-width="9"/>
+      <circle cx="48" cy="48" r="${r}" fill="none" stroke="#DF7039" stroke-width="9"
+        stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+    </svg>
+    <div class="val">${pct}%</div>
+  </div>`;
+}
+
+/* ---------- ARRANQUE ---------- */
+stack=[{view:'home'}];
+render();
+</script>
+</body>
+</html>
