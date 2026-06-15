@@ -1162,6 +1162,13 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="view-title">Manual de Uso</div>
       <div class="view-subtitle">Guía rápida de cada módulo</div>
+
+      <div class="card" style="margin-bottom:14px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-map-2"></i> Tour guiado interactivo</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> 💬 (botón inferior derecho) para preguntas concretas del día a día.</p>
+        <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> Iniciar tour guiado</button>
+      </div>
+
       <div class="manual-wrap">
         <div class="manual-nav" id="manual-nav"></div>
         <div class="manual-detail" id="manual-detail"></div>
@@ -2953,8 +2960,16 @@ const I18N = {
     'tour.s25.desc': 'Aquí registras gastos e ingresos, y la app calcula tu cuenta de resultados y tu punto de equilibrio (cuánto necesitas vender para cubrir costes). Es tu herramienta para tomar decisiones económicas con datos reales.',
     'tour.s26.title': 'Mi Negocio: datos y acceso',
     'tour.s26.desc': 'Configura el nombre, dirección y datos fiscales de tu negocio, así como el PIN de acceso para tu equipo. Es importante mantener estos datos actualizados, ya que aparecen en tickets y documentos.',
-    'tour.s27.title': 'Mi Negocio: nube, idioma y este tour',
-    'tour.s27.desc': 'Aquí gestionas la conexión a tu nube (copia de seguridad automática), el idioma de la app y el archivado de datos antiguos. Y recuerda: siempre puedes volver a ver este tour guiado pulsando "Ver tour de la app".',
+    'tour.s27.title': 'Mi Negocio: nube, idioma y configuración',
+    'tour.s27.desc': 'Aquí gestionas la conexión a tu nube (copia de seguridad automática), el idioma de la app, el archivado de datos antiguos y toda la configuración de tu negocio: horarios, tipos de servicio, QR de mesas y mucho más.',
+    'tour.s28.title': 'Tu equipo: Horario del Personal',
+    'tour.s28.desc': 'Da de alta a cada empleado con su nombre, color identificativo, rol, área de trabajo (Cocina o Sala), teléfono, email y un PIN de 4 dígitos. Con ese PIN cada empleado ficha sus horas y puede usar el Chat interno. Desde aquí también planificas el calendario semanal de turnos.',
+    'tour.s29.title': 'Chat interno: comunícate con tu equipo',
+    'tour.s29.desc': 'Este botón abre el Chat interno, con canales de General, Cocina y Sala. Cada empleado elige su nombre (con su PIN) antes de escribir, y el dueño/a puede identificarse como "Jefe/a" introduciendo el PIN de Gestión. Ideal para avisos rápidos sin grupos de WhatsApp externos.',
+    'tour.s30.title': 'Centro de ayuda: resuelve dudas al instante',
+    'tour.s30.desc': 'Este botón abre el Centro de ayuda, con un asistente que responde preguntas frecuentes sobre cómo usar cada parte de la app. Si te atascas en algo durante el día a día, es el camino más rápido para encontrar la respuesta.',
+    'tour.s31.title': '¡Ya está! Tu manual siempre a mano',
+    'tour.s31.desc': 'Has terminado el tour, pero esto no es un examen: vuelve cuando quieras a "Manual de Uso" (aquí mismo, en Gestión) para leer con calma cada módulo paso a paso, con ejemplos y consejos. Y recuerda que puedes repetir este tour guiado siempre que quieras pulsando "Iniciar tour guiado" en esta misma pantalla.',
     'help.title': 'Centro de ayuda',
     'help.tab.assistant': 'Asistente',
     'help.tab.contact': 'Contacto',
@@ -3234,6 +3249,7 @@ const TOUR_STEPS = [
   {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo'},
   {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock'},
   {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios'},
+  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios'},
   {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina'},
 
   // ---- Sala ----
@@ -3256,6 +3272,11 @@ const TOUR_STEPS = [
   {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true},
   {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true},
   {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true},
+
+  // ---- Otras ayudas ----
+  {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab'},
+  {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab'},
+  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav'},
 ];
 let tourStepIndex = 0;
 
@@ -3600,9 +3621,9 @@ const HELP_FAQS = [
       ca:['tour','veure tour','repetir tour','tutorial','tornar a veure el tour'],
       en:['tour','view tour','replay tour','tutorial','watch the tour again']},
     answers:{
-      es:'Puedes repetir el tour guiado en cualquier momento desde <strong>Mi Negocio</strong>, pulsando el botón <strong>"Ver tour de la app"</strong>.',
-      ca:'Pots repetir el tour guiat en qualsevol moment des de <strong>El Meu Negoci</strong>, prement el botó <strong>"Veure tour de l\'app"</strong>.',
-      en:'You can replay the guided tour anytime from <strong>My Business</strong>, by pressing the <strong>"View app tour"</strong> button.' } },
+      es:'Puedes repetir el tour guiado en cualquier momento desde <strong>Manual de Uso</strong> (en Gestión), pulsando el botón <strong>"Iniciar tour guiado"</strong>.',
+      ca:'Pots repetir el tour guiat en qualsevol moment des de <strong>Manual d\'Ús</strong> (a Gestió), prement el botó <strong>"Iniciar tour guiat"</strong>.',
+      en:'You can replay the guided tour anytime from the <strong>User Manual</strong> (in Management), by pressing the <strong>"Start guided tour"</strong> button.' } },
   { keywords:{es:['enlace publico','codigo qr','qr','web de reservas','pagina web','web publica'],
       ca:['enllac public','codi qr','qr','web de reserves','pagina web','web publica'],
       en:['public link','qr code','qr','reservations website','website','public website']},
@@ -12626,12 +12647,6 @@ function renderMiNegocio(){
     delivery: prevServ.delivery !== undefined ? prevServ.delivery : (b.tiposServicio?.delivery !== false),
   };
   document.getElementById('minegocio-content').innerHTML = `
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-map-2"></i> Tour de la app</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Repasa en cualquier momento el tour guiado que explica cómo funciona cada parte de GastroGoan.</p>
-      <button class="btn btn-sm" onclick="startAppTour()"><i class="ti ti-player-play"></i> Ver tour de la app</button>
-    </div>
-
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> Acceso propietario</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El acceso a Gestión está protegido por PIN. Cámbialo cuando quieras.</p>
@@ -13689,22 +13704,21 @@ const MANUAL_CHAPTERS = [
     title:'🏪 Mi Negocio',
     content:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">🗺️ <strong>Tour de la app</strong> — repite en cualquier momento el tour guiado de bienvenida.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🆔 <strong>Identidad</strong> — logo, nombre, tipo de negocio y año de apertura.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">📝 <strong>Descripción</strong> — concepto del local. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📇 <strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">📷 <strong>Redes sociales</strong> — Instagram y Facebook.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🏬 <strong>Operativa</strong> — propietario, aforo, mesas y horario en texto.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">📅 <strong>Horario semanal</strong> — horario de cada día, con asignación de carta y carta de bebidas por turno.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
-    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
-    <div class="manual-step"><div class="sn">15</div><div class="st">🔳 <strong>QR auto pedido</strong> — un QR descargable por cada mesa.</div></div>
-    <div class="manual-step"><div class="sn">16</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🆔 <strong>Identidad</strong> — logo, nombre, tipo de negocio y año de apertura.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">📝 <strong>Descripción</strong> — concepto del local. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">📇 <strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📷 <strong>Redes sociales</strong> — Instagram y Facebook.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">🏬 <strong>Operativa</strong> — propietario, aforo, mesas y horario en texto.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">📅 <strong>Horario semanal</strong> — horario de cada día, con asignación de carta y carta de bebidas por turno.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">🔳 <strong>QR auto pedido</strong> — un QR descargable por cada mesa.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
 
     <h4>🔒 Acceso propietario (PIN)</h4>
     <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
