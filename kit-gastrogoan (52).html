@@ -7854,7 +7854,7 @@ function renderProveedores(){
       ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
       ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
       ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
-      ${p.diaEntrega ? `<div><i class="ti ti-truck-delivery"></i> Entrega: ${escapeHtml(p.diaEntrega)}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}h aprox.`:''}</div>` : ''}
+      ${getProviderDiasEntrega(p).length ? `<div><i class="ti ti-truck-delivery"></i> Entrega: ${getProviderDiasEntrega(p).map(escapeHtml).join(', ')}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}h aprox.`:''}</div>` : ''}
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(p.pago)}</span>` : ''}
@@ -7863,8 +7863,17 @@ function renderProveedores(){
   `).join('');
 }
 
+// Devuelve los días de entrega de un proveedor como array, migrando el antiguo
+// campo diaEntrega (un único día o "Varios días") al nuevo diasEntrega (array).
+function getProviderDiasEntrega(p){
+  if(Array.isArray(p.diasEntrega)) return p.diasEntrega;
+  if(p.diaEntrega && WEEK_DAYS.includes(p.diaEntrega)) return [p.diaEntrega];
+  return [];
+}
+
 function openProviderModal(id){
   const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:'',diaEntrega:'',horaEntrega:''};
+  const diasEntrega = getProviderDiasEntrega(p);
   openModal(`
     <div class="modal-header">
       <h3>${id?'Editar':'Nuevo'} Proveedor</h3>
@@ -7883,16 +7892,18 @@ function openProviderModal(id){
       <div class="field"><label>Teléfono</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
       <div class="field"><label>Email</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Día de entrega habitual</label>
-        <select id="prov-dia-entrega">
-          <option value="">— Sin especificar —</option>
-          ${WEEK_DAYS.map(d=>`<option ${p.diaEntrega===d?'selected':''}>${d}</option>`).join('')}
-          <option ${p.diaEntrega==='Varios días'?'selected':''}>Varios días</option>
-        </select>
+    <div class="field">
+      <label>Días de entrega habituales</label>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${WEEK_DAYS.map((d,i)=>`
+          <label style="display:flex;align-items:center;gap:4px;font-weight:400;font-size:13px">
+            <input type="checkbox" id="prov-dia-entrega-${i}" value="${escapeHtml(d)}" ${diasEntrega.includes(d)?'checked':''} style="width:auto">
+            ${d}
+          </label>
+        `).join('')}
       </div>
-      <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     </div>
+    <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
     <div class="field"><label>Notas</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
@@ -7914,7 +7925,7 @@ function saveProvider(id){
     email: document.getElementById('prov-email').value.trim(),
     dir: document.getElementById('prov-dir').value.trim(),
     iban: document.getElementById('prov-iban').value.trim(),
-    diaEntrega: document.getElementById('prov-dia-entrega').value,
+    diasEntrega: WEEK_DAYS.filter((_,i)=>document.getElementById(`prov-dia-entrega-${i}`).checked),
     horaEntrega: document.getElementById('prov-hora-entrega').value,
     notas: document.getElementById('prov-notas').value.trim()
   };
