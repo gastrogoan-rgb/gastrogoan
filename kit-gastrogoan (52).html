@@ -582,17 +582,17 @@ td.wrap{white-space:normal}
 
       <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
 
-      <div class="card" style="margin-bottom:16px">
-        <h3><i class="ti ti-alert-triangle"></i> Requiere tu atención</h3>
-        <div id="dashboard-alerts"></div>
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-trending-up"></i> Comparación de ventas del año</h3>
+        <div id="dashboard-trend-ventas"></div>
       </div>
 
-      <div class="card" style="margin-bottom:16px">
-        <h3><i class="ti ti-arrows-diff"></i> Comparativa con el periodo anterior</h3>
-        <div id="dashboard-comparison"></div>
-      </div>
+      <div class="grid grid-3" id="dashboard-gastos-kpis" style="margin:16px 0"></div>
 
-      <div class="grid grid-4" id="dashboard-kpis"></div>
+      <div class="card" style="margin-top:16px">
+        <h3><i class="ti ti-receipt-2"></i> Comparación de gastos del año</h3>
+        <div id="dashboard-trend-gastos"></div>
+      </div>
 
       <div class="card" style="margin-top:16px">
         <h3><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
@@ -600,8 +600,8 @@ td.wrap{white-space:normal}
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-trending-up"></i> Ventas últimos 12 meses</h3>
-        <div id="dashboard-trend"></div>
+        <h3><i class="ti ti-chart-line"></i> Comparación del resultado mensual del año</h3>
+        <div id="dashboard-trend-resultado"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
@@ -642,16 +642,6 @@ td.wrap{white-space:normal}
           <div class="ge-sec-head"><h4>👻 Sin ventas en el periodo</h4></div>
           <div id="platos-sin-ventas"></div>
         </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-calendar-event"></i> Próximas Reservas</h3>
-        <div id="dashboard-reservas"></div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-bolt"></i> Acceso Rápido</h3>
-        <div class="grid grid-4" id="dashboard-shortcuts"></div>
       </div>
     </section>
 
@@ -4201,19 +4191,47 @@ function salesTotalForMonth(year, month){
   const end = `${year}-${String(month+1).padStart(2,'0')}-31`;
   return salesTotalForRange(start, end);
 }
+function daysInMonth(year, month){
+  return new Date(year, month+1, 0).getDate();
+}
+// Gastos variables (compras) registrados con fecha concreta dentro del rango
+function geVariablesTotalForRange(startDate, endDate){
+  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+}
+// Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana"
+function geFijosForRange(startDate, endDate){
+  const fijosMonth = geTotalFijos();
+  if(!fijosMonth) return 0;
+  let total = 0;
+  let d = new Date(startDate+'T00:00:00');
+  const end = new Date(endDate+'T00:00:00');
+  while(d <= end){
+    total += fijosMonth / daysInMonth(d.getFullYear(), d.getMonth());
+    d.setDate(d.getDate()+1);
+  }
+  return total;
+}
+function geGastosTotalForRange(startDate, endDate){
+  return geVariablesTotalForRange(startDate, endDate) + geFijosForRange(startDate, endDate);
+}
+function renderDashboardBarTrend(elId, trend, allowNegative){
+  const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);
+  document.getElementById(elId).innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
+      ${trend.map(t => {
+        const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--brand-orange)';
+        return `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${t.value!==0?fmtMoney(t.value):''}</div>
+          <div style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${Math.max(2,(Math.abs(t.value)/maxVal*100))}%"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
+        </div>
+      `}).join('')}
+    </div>
+  `;
+}
 
 function renderDashboard(){
-  const totalIngredients = DB.ingredients.length;
-  const totalRecipes = DB.recipes.length;
-  const totalMenuItems = DB.cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
-
-  const stockAlerts = DB.ingredients.filter(ing => {
-    const s = DB.stock[ing.id];
-    return s && s.qty <= s.min;
-  });
-
-  const pendingOrders = DB.purchaseOrders.filter(o => o.estado !== 'RECIBIDO');
-
   let avgFoodCost = 0;
   if(DB.recipes.length){
     const pcts = DB.recipes.map(r => recipeFoodCostPct(r)).filter(p => isFinite(p));
@@ -4235,7 +4253,7 @@ function renderDashboard(){
     <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Ventas mes en curso</div><div class="value">${fmtMoney(monthSales)}</div></div>
   `;
 
-  // Resultado del mes (P&L) - calculado aquí para usarlo también en la comparativa
+  // Resultado del mes (P&L)
   const year = today.getFullYear();
   const month = today.getMonth();
   const facturacion = salesTotalForMonth(year, month);
@@ -4243,70 +4261,39 @@ function renderDashboard(){
   const fijos = geTotalFijos();
   const resultado = facturacion - variables - fijos;
 
-  // Comparativa con el periodo anterior
-  const prevWeekEnd = dateStr(new Date(today.getTime() - 7*86400000));
-  const prevWeekStart = dateStr(new Date(today.getTime() - 13*86400000));
-  const prevWeekSales = salesTotalForRange(prevWeekStart, prevWeekEnd);
-
-  const dayOfMonth = today.getDate();
-  const prevMonthDate = new Date(year, month - 1, 1);
-  const prevMonthLastDay = new Date(year, month, 0).getDate();
-  const prevMonthSameDay = Math.min(dayOfMonth, prevMonthLastDay);
-  const prevMonthStart = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth()+1).padStart(2,'0')}-01`;
-  const prevMonthEnd = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth()+1).padStart(2,'0')}-${String(prevMonthSameDay).padStart(2,'0')}`;
-  const prevMonthSalesSamePeriod = salesTotalForRange(prevMonthStart, prevMonthEnd);
-
-  const prevMonthFacturacion = salesTotalForMonth(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
-  const prevMonthVariables = geTotalVariablesMes(prevMonthDate.getFullYear(), prevMonthDate.getMonth());
-  const prevMonthFijos = geTotalFijos();
-  const prevMonthResultado = prevMonthFacturacion - prevMonthVariables - prevMonthFijos;
-
-  function pctChangeBlock(label, curr, prev, periodNote){
-    let pctHtml;
-    if(prev === 0){
-      pctHtml = curr > 0 ? `<span style="color:var(--green)"><i class="ti ti-arrow-up-right"></i> nuevo</span>` : `<span style="color:var(--muted)">—</span>`;
-    }else{
-      const pct = ((curr - prev) / Math.abs(prev)) * 100;
-      const up = pct >= 0;
-      pctHtml = `<span style="color:${up?'var(--green)':'var(--red)'}"><i class="ti ti-arrow-${up?'up':'down'}-right"></i> ${up?'+':''}${pct.toFixed(1)}%</span>`;
-    }
-    return `
-      <div class="kpi">
-        <div class="label">${label}</div>
-        <div class="value">${fmtMoney(curr)}</div>
-        <div style="font-size:13px;font-weight:700;margin-top:2px">${pctHtml}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">vs ${fmtMoney(prev)} ${periodNote}</div>
-      </div>
-    `;
+  // Comparación de ventas del año (12 meses)
+  const ventasTrend = [];
+  const gastosTrend = [];
+  const resultadoTrend = [];
+  for(let i=11; i>=0; i--){
+    const d = new Date(year, month - i, 1);
+    const y = d.getFullYear(), m = d.getMonth();
+    const sales = salesTotalForMonth(y, m);
+    const variablesM = geTotalVariablesMes(y, m);
+    const fijosM = geTotalFijos();
+    const label = MONTH_NAMES[m].slice(0,3);
+    ventasTrend.push({label, value: sales});
+    gastosTrend.push({label, value: variablesM + fijosM});
+    resultadoTrend.push({label, value: sales - variablesM - fijosM});
   }
+  renderDashboardBarTrend('dashboard-trend-ventas', ventasTrend);
+  renderDashboardBarTrend('dashboard-trend-gastos', gastosTrend);
+  renderDashboardBarTrend('dashboard-trend-resultado', resultadoTrend, true);
 
-  document.getElementById('dashboard-comparison').innerHTML = `
-    <div class="grid grid-3">
-      ${pctChangeBlock('Ventas últimos 7 días', weekSales, prevWeekSales, '(7 días previos)')}
-      ${pctChangeBlock('Ventas mes en curso', monthSales, prevMonthSalesSamePeriod, '(mismo periodo, mes anterior)')}
-      ${pctChangeBlock('Resultado del mes', resultado, prevMonthResultado, '(mes anterior completo)')}
-    </div>
+  // Gastos hoy / últimos 7 días / mes en curso (variables con fecha + fijos prorrateados)
+  const todayGastos = geGastosTotalForRange(todayDate, todayDate);
+  const weekGastos = geGastosTotalForRange(weekAgo, todayDate);
+  const monthGastos = geGastosTotalForRange(monthStart, todayDate);
+
+  document.getElementById('dashboard-gastos-kpis').innerHTML = `
+    <div class="kpi"><div class="label"><i class="ti ti-receipt-2"></i> Gastos hoy</div><div class="value">${fmtMoney(todayGastos)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> Gastos últimos 7 días</div><div class="value">${fmtMoney(weekGastos)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Gastos mes en curso</div><div class="value">${fmtMoney(monthGastos)}</div></div>
   `;
-
-  const kpis = [
-    {label:'Ingredientes', value: totalIngredients, icon:'ti-list-details', cls:''},
-    {label:'Platos / Recetas', value: totalRecipes, icon:'ti-chef-hat', cls:''},
-    {label:'Items en Carta', value: totalMenuItems, icon:'ti-toolsKitchen', cls:''},
-    {label:'Alertas de Stock', value: stockAlerts.length, icon:'ti-alert-triangle', cls: stockAlerts.length ? 'warn':'ok'},
-    {label:'Pedidos pendientes', value: pendingOrders.length, icon:'ti-shopping-cart', cls: pendingOrders.length ? 'warn':'ok'},
-    {label:'Food Cost medio', value: DB.recipes.length ? avgFoodCost.toFixed(1)+'%' : '—', icon:'ti-percentage', cls: avgFoodCost>35?'warn':'ok'},
-    {label:'Tareas limpieza hoy', value: cleaningTasksToday().length, icon:'ti-spray', cls:''}
-  ];
-
-  document.getElementById('dashboard-kpis').innerHTML = kpis.map(k => `
-    <div class="kpi ${k.cls}">
-      <div class="label"><i class="ti ${k.icon}"></i> ${k.label}</div>
-      <div class="value">${k.value}</div>
-    </div>
-  `).join('');
 
   // Resultado del mes (P&L)
   const fcPct = facturacion > 0 ? (avgFoodCost) : 0;
+  const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
       <div class="kpi"><div class="label">Facturación (mes)</div><div class="value">${fmtMoney(facturacion)}</div></div>
@@ -4314,25 +4301,9 @@ function renderDashboard(){
       <div class="kpi"><div class="label">Gastos fijos</div><div class="value">${fmtMoney(fijos)}</div></div>
       <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">Resultado</div><div class="value">${fmtMoney(resultado)}</div></div>
     </div>
-    <div style="margin-top:8px;font-size:13px;color:var(--muted)">% Food Cost medio: <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> (objetivo ${DB.ge.config.foodCostObj||35}%)</div>
-  `;
-
-  // 12-month sales trend
-  const trend = [];
-  for(let i=11; i>=0; i--){
-    const d = new Date(year, month - i, 1);
-    trend.push({label: MONTH_NAMES[d.getMonth()].slice(0,3), value: salesTotalForMonth(d.getFullYear(), d.getMonth())});
-  }
-  const maxVal = Math.max(...trend.map(t=>t.value), 1);
-  document.getElementById('dashboard-trend').innerHTML = `
-    <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
-      ${trend.map(t => `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${t.value>0?fmtMoney(t.value):''}</div>
-          <div style="width:100%;background:var(--brand-orange);border-radius:4px 4px 0 0;height:${Math.max(2,(t.value/maxVal*100))}%"></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
-        </div>
-      `).join('')}
+    <div style="margin-top:8px;font-size:13px;color:var(--muted)">
+      Margen sobre ventas: <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
+      &nbsp;·&nbsp; % Food Cost medio: <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> (objetivo ${DB.ge.config.foodCostObj||35}%)
     </div>
   `;
 
@@ -4422,7 +4393,6 @@ function renderDashboard(){
   const dias = parseFloat(cfg.diasApertura) || 0;
   const fc = parseFloat(cfg.foodCostObj) || 35;
   let breakevenHtml;
-  let breakevenAlert = null;
   if(!tick || !dias){
     breakevenHtml = `<div class="empty">Configura el ticket medio y los días de apertura en Gestión Económica → Punto de Equilibrio.</div>`;
   }else{
@@ -4439,68 +4409,13 @@ function renderDashboard(){
         </div>
         <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'✅ Por encima del punto de equilibrio':'⚠️ Por debajo del punto de equilibrio'}</div>
       `;
-      if(diff < 0) breakevenAlert = `Estás ${Math.abs(diff)} cubiertos/mes por debajo del punto de equilibrio`;
     }else{
       breakevenHtml = `<div class="empty">No se puede calcular: revisa el % food cost.</div>`;
     }
   }
   document.getElementById('dashboard-breakeven').innerHTML = breakevenHtml;
 
-  // Próximas reservas
-  const upcoming = DB.reservations
-    .filter(r => r.status==='confirmada' && r.date >= todayDate)
-    .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time))
-    .slice(0,6);
-  const reservasBox = document.getElementById('dashboard-reservas');
-  if(!upcoming.length){
-    reservasBox.innerHTML = `<div class="empty"><i class="ti ti-calendar-off"></i>No hay próximas reservas</div>`;
-  }else{
-    reservasBox.innerHTML = `<div class="table-wrap"><table><tbody>` +
-      upcoming.map(r => {
-        const client = DB.clients.find(c=>c.id===r.clientId);
-        return `<tr><td>${r.date}</td><td><strong>${escapeHtml(r.time)}</strong></td><td>${escapeHtml(client?client.name:(r.clientName||'—'))}</td><td>${r.people}p</td></tr>`;
-      }).join('') + `</tbody></table></div>`;
-  }
-
-  // Dynamic alerts feed
-  const alerts = [];
-  stockAlerts.forEach(ing => alerts.push({icon:'ti-package', cls:'warn', text:`Stock bajo de ${ing.name}`}));
-  pendingOrders.forEach(o => alerts.push({icon:'ti-shopping-cart', cls:'warn', text:`Pedido a ${o.supplier} en estado ${o.estado}`}));
-  if(breakevenAlert) alerts.push({icon:'ti-scale', cls:'warn', text: breakevenAlert});
-  if(avgFoodCost > (cfg.foodCostObj||35)) alerts.push({icon:'ti-percentage', cls:'warn', text:`Food cost medio (${avgFoodCost.toFixed(1)}%) por encima del objetivo (${cfg.foodCostObj||35}%)`});
-  const todayReservas = DB.reservations.filter(r=>r.date===todayDate && r.status==='confirmada');
-  if(todayReservas.length) alerts.push({icon:'ti-calendar-event', cls:'ok', text:`${todayReservas.length} reserva(s) para hoy`});
-  const pendingCleaning = cleaningTasksToday();
-  if(pendingCleaning.length) alerts.push({icon:'ti-spray', cls:'warn', text:`${pendingCleaning.length} tarea(s) de limpieza pendientes hoy`});
-
-  const alertsBox = document.getElementById('dashboard-alerts');
-  if(!alerts.length){
-    alertsBox.innerHTML = `<div class="empty"><i class="ti ti-check"></i>Sin alertas. Todo en orden.</div>`;
-  }else{
-    alertsBox.innerHTML = alerts.map(a => `
-      <div class="kpi ${a.cls}" style="text-align:left;margin-bottom:8px"><div class="label"><i class="ti ${a.icon}"></i> ${escapeHtml(a.text)}</div></div>
-    `).join('');
-  }
-
-  // Quick access shortcuts
-  const shortcuts = [
-    {view:'tpv', icon:'ti-device-desktop', label:'TPV'},
-    {view:'pedidos', icon:'ti-shopping-cart', label:'Pedidos'},
-    {view:'megalista', icon:'ti-list-details', label:'Mega Lista'},
-    {view:'escandallo', icon:'ti-calculator', label:'Escandallo'},
-    {view:'horarios', icon:'ti-calendar-time', label:'Horarios'},
-    {view:'limpieza', icon:'ti-spray', label:'Plan de Limpieza'},
-    {view:'reservas', icon:'ti-calendar-event', label:'Reservas'},
-    {view:'economia', icon:'ti-coin', label:'Gestión Económica'},
-  ];
   GE.renderPlatos();
-
-  document.getElementById('dashboard-shortcuts').innerHTML = shortcuts.map(s => `
-    <div class="card" style="text-align:center;cursor:pointer" onclick="navigate('${s.view}')">
-      <i class="ti ${s.icon}" style="font-size:24px;color:var(--brand-orange)"></i>
-      <div style="margin-top:6px;font-weight:600;font-size:13px">${s.label}</div>
-    </div>
-  `).join('');
 }
 function todayStr(){
   return new Date().toISOString().slice(0,10);
@@ -10767,15 +10682,6 @@ function ensureLimpiezaData(){
   if(!l.mantenimiento) l.mantenimiento = [];
 }
 
-function cleaningTasksToday(){
-  ensureLimpiezaData();
-  const today = new Date();
-  const day = today.getDate();
-  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const checks = DB.limpieza.checksMes[monthKey] || {};
-  return DB.limpieza.tareas.filter(t => t.tipo==='mensual' && parseInt(t.diaMes)===day && !checks[t.id]);
-}
-
 function renderLimpieza(){
   ensureLimpiezaData();
   const box = document.getElementById('limpieza-content');
@@ -13672,25 +13578,24 @@ const MANUAL_CHAPTERS = [
     <p>El Panel de Control es la primera pantalla que deberías mirar cada día. No introduces nada aquí: simplemente reúne y resume datos de todos los demás módulos (TPV, Gestión Económica, Stock, Reservas, Fichas Técnicas...) para darte, de un vistazo, el estado de salud de tu negocio. Si solo tuvieras un minuto al día para "mirar" la app, sería este.</p>
 
     <h4>Qué encontrarás y cómo interpretarlo</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>KPIs del periodo</strong> — ventas de hoy, de esta semana y de este mes. Te dice cómo va el ritmo de facturación en tiempo real.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Resultado</strong> — facturación, gastos y resultado del mes en curso, calculado con los datos de Gestión Económica. Si está en negativo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Tendencia</strong> — gráfico de ventas mensuales del año. Te ayuda a detectar estacionalidad (meses fuertes y flojos) y a comparar este año con el anterior si llevas tiempo usando la app.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Comparativa con el periodo anterior</strong> — variación de ventas y resultado respecto a la semana o mes anterior, en %. Útil para saber si una caída de ventas es algo puntual (un día de lluvia) o una tendencia que dura semanas.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Análisis de ventas</strong> — ticket medio, platos más vendidos y platos de mayor margen en los últimos 30 días. Te dice qué está funcionando ahora mismo.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Análisis de Platos</strong> — ranking de los platos más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Alertas</strong> — avisos automáticos cuando algo necesita tu atención: food cost por encima del objetivo, resultado del mes negativo, fichas técnicas pendientes de completar, stock por debajo del mínimo, etc. Pulsa sobre una alerta para ir directamente al módulo correspondiente y resolverla.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Próximas reservas</strong> — las reservas de hoy y mañana, para que sepas qué esperar en el servicio sin entrar en el módulo de Reservas.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Accesos directos</strong> — botones a los módulos que más usas, para no tener que navegar por los menús.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Ventas hoy / últimos 7 días / mes en curso</strong> — el ritmo de facturación en tiempo real, en tres cifras.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Comparación de ventas del año</strong> — gráfico con la facturación de cada uno de los últimos 12 meses. Te ayuda a detectar estacionalidad (meses fuertes y flojos) y a ver la evolución de tu negocio mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Gastos hoy / últimos 7 días / mes en curso</strong> — incluye las compras registradas con fecha en Gestión Económica (gastos variables) más una parte proporcional de tus gastos fijos mensuales (alquiler, personal, suministros...), repartida día a día. Así puedes ver cuánto te está costando el negocio al mismo ritmo que ves las ventas.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Comparación de gastos del año</strong> — gráfico con el total de gastos (fijos + variables) de cada uno de los últimos 12 meses, para comparar con el gráfico de ventas y ver si tus costes crecen al mismo ritmo que tu facturación.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Resultado del mes (P&amp;L)</strong> — facturación, gastos variables, gastos fijos y resultado (beneficio o pérdida) del mes en curso, más el <strong>margen sobre ventas</strong> y el <strong>% Food Cost medio</strong> frente a tu objetivo. Si el resultado está en rojo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Comparación del resultado mensual del año</strong> — gráfico con el resultado (ventas menos gastos) de cada uno de los últimos 12 meses. Las barras en rojo señalan los meses con pérdidas y las naranjas los meses con beneficio, para ver de un vistazo la rentabilidad real mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Análisis de ventas (últimos 30 días)</strong> — ticket medio, número de ventas, platos más vendidos, platos de mayor margen bruto y la distribución de ventas por hora del día. Te dice qué está funcionando ahora mismo y a qué horas se concentra tu facturación.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Análisis de Platos</strong> — ranking de los platos más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
 
     <h4>Rutina recomendada</h4>
     <p>Cada mañana, antes de abrir:</p>
     <ol>
-      <li>Revisa las <strong>Alertas</strong> y resuelve las urgentes (stock bajo, fichas pendientes).</li>
-      <li>Mira las <strong>KPIs del periodo</strong> y la <strong>comparativa</strong> para saber si vas en línea con lo esperado.</li>
-      <li>Echa un ojo a las <strong>próximas reservas</strong> para avisar a cocina y sala de la previsión del día.</li>
+      <li>Mira las <strong>ventas y gastos de hoy/semana/mes</strong> y compáralos con los gráficos de los últimos 12 meses para saber si vas en línea con lo esperado.</li>
+      <li>Revisa el <strong>Resultado del mes</strong> y el <strong>Punto de equilibrio</strong> para saber si vas camino de cubrir gastos o necesitas reaccionar.</li>
+      <li>Echa un ojo al <strong>Análisis de Platos</strong> para detectar qué platos potenciar o revisar.</li>
     </ol>
-    <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las alertas están limpias y las ventas van en línea con la comparativa, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
+    <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las ventas y el resultado van en línea con los meses anteriores y por encima del punto de equilibrio, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
   },
   {
     title:'🏪 Mi Negocio',
