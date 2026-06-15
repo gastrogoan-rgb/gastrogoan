@@ -6822,6 +6822,20 @@ function rejectOnlineOrder(orderId){
   showToast('Pedido rechazado');
 }
 
+// Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
+function renderCamareroFieldHtml(selectId, selectedId){
+  if(!DB.employees.length) return '';
+  return `
+    <div class="field">
+      <label>Camarero/a que toma la nota</label>
+      <select id="${selectId}">
+        <option value="">Sin asignar</option>
+        ${DB.employees.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
 function addTable(){
   const pendingReservas = getTodayPendingReservations();
   openModal(`
@@ -6854,6 +6868,7 @@ function addTable(){
       <label>¿Cuántas personas?</label>
       <input type="number" id="new-table-pax" min="1" value="2">
     </div>
+    ${renderCamareroFieldHtml('new-table-camarero-sel')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmAddTable()">Crear mesa y abrir comanda</button>
@@ -6892,7 +6907,10 @@ function confirmAddTable(){
   DB.tables.push(table);
   if(r){ r.llegada = true; r.tableId = table.id; }
 
-  const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const camareroSel = document.getElementById('new-table-camarero-sel');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+
+  const order = {id: genId(), tableId: table.id, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTPV();
@@ -6955,6 +6973,7 @@ function openNewOrderPaxModal(tableId){
       <label>¿Cuántas personas?</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
+    ${renderCamareroFieldHtml('new-order-camarero-sel')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">Abrir mesa</button>
@@ -6986,7 +7005,10 @@ function confirmOpenTableOrder(tableId){
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast('Indica el número de personas'); return; }
   }
-  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const camareroSel = document.getElementById('new-order-camarero-sel');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -7243,6 +7265,8 @@ function renderTableOrderModal(orderId){
     : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
+  const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
+  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="Cambiar camarero/a"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : 'Asignar camarero/a'}</span>` : '';
 
   const linesHtml = renderOrderLinesHtml(order);
   const total = orderTotal(order);
@@ -7253,7 +7277,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     <div class="kpi" style="margin-bottom:10px">
@@ -7271,6 +7295,31 @@ function renderTableOrderModal(orderId){
       <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
     </div>
   `, {order:true});
+}
+
+// Permite anotar o cambiar qué camarero/a ha tomado o atiende esta comanda.
+function openSetCamareroModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-user"></i> Camarero/a</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${renderCamareroFieldHtml('set-camarero-sel', order.camareroId)}
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSetCamarero(${orderId})"><i class="ti ti-check"></i> Guardar</button>
+    </div>
+  `);
+}
+function confirmSetCamarero(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const sel = document.getElementById('set-camarero-sel');
+  order.camareroId = sel && sel.value ? parseInt(sel.value) : null;
+  saveDB();
+  renderTableOrderModal(orderId);
 }
 
 function orderPendingKitchenLines(order, tanda){
