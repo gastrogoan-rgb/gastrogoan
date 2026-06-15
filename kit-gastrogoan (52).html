@@ -193,6 +193,8 @@ td.wrap{white-space:normal}
 .alg-pill{display:inline-block;padding:5px 12px;border-radius:99px;font-size:11.5px;font-weight:700;background:#eee;color:#666;cursor:pointer;border:1px solid var(--border);user-select:none}
 .alg-pill.on{background:var(--red-l);color:var(--red);border-color:var(--red)}
 .alg-grid{display:flex;flex-wrap:wrap;gap:6px}
+.ingredients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ingredient-pill{background:var(--bg-soft,#f4f5f7);border-radius:8px;padding:8px 12px;font-size:13px}
 .step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
 .step-num{width:24px;height:24px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
 
@@ -5480,6 +5482,20 @@ function renderFichaCard(r){
   `;
 }
 
+// Devuelve las líneas de ingredientes (cantidad para 1 ración base, unidad y nombre)
+// del escandallo vinculado a la ficha, para poder recalcularlas según la producción.
+function getFichaIngredientLines(f){
+  const r = f.recipeId ? getRecipe(f.recipeId) : null;
+  if(r){
+    return (r.ingredients||[]).map(line => {
+      const info = renderEscandalloLineLabel(line);
+      return info ? {qty: line.qty, unit: info.unit, name: info.name} : null;
+    }).filter(Boolean);
+  }
+  // Sin escandallo vinculado: usar las cantidades guardadas como texto, sin recalcular
+  return (f.ingredients||[]).filter(Boolean).map(s => ({qty: null, unit:'', name: s}));
+}
+
 function openFichaModal(id, recipeId){
   if(id){
     const f = getFicha(id);
@@ -5488,10 +5504,13 @@ function openFichaModal(id, recipeId){
     if(!Array.isArray(fichaModalState.ingredients) || !fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
     if(!Array.isArray(fichaModalState.pasos) || !fichaModalState.pasos.length) fichaModalState.pasos = [''];
     if(!Array.isArray(fichaModalState.allergens)) fichaModalState.allergens = [];
+    if(!fichaModalState.baseComensales) fichaModalState.baseComensales = fichaModalState.comensales || 1;
+    if(!fichaModalState.produccion) fichaModalState.produccion = fichaModalState.comensales || fichaModalState.baseComensales;
   } else if(recipeId){
     const r = getRecipe(recipeId);
     fichaModalState = {
       id: null, name: r.name, recipeId: r.id, comensales: r.comensales||2,
+      baseComensales: r.comensales||1, produccion: r.comensales||1,
       tiempo: '', temp: 'CALIENTE',
       ingredients: (r.ingredients||[]).map(line => {
         const ing = getIngredient(line.ingredientId);
@@ -5504,8 +5523,14 @@ function openFichaModal(id, recipeId){
     if(!fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
     if(!fichaModalState.pasos.length) fichaModalState.pasos = [''];
   } else {
-    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, tiempo:'', temp:'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
+    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp:'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
   }
+  renderFichaModal();
+}
+
+function updateFichaProduccion(value){
+  syncFichaModalFields();
+  fichaModalState.produccion = Math.max(1, parseFloat(value)||1);
   renderFichaModal();
 }
 
@@ -5521,10 +5546,12 @@ function renderFichaModal(){
     `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
   ).join('');
 
-  const ingredientsHtml = f.ingredients.map((ing, idx) => `
-    <div class="field-row" style="margin-bottom:6px">
-      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" ${lockedAttr}>
-    </div>
+  const baseComensales = f.baseComensales || f.comensales || 1;
+  const produccion = f.produccion || baseComensales;
+  const factor = baseComensales ? (produccion / baseComensales) : 1;
+  const ingredientLines = getFichaIngredientLines(f);
+  const ingredientsHtml = ingredientLines.map(l => `
+    <div class="ingredient-pill">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</div>
   `).join('');
 
   const stepsHtml = f.pasos.map((p, idx) => `
@@ -5556,8 +5583,12 @@ function renderFichaModal(){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Comensales</label>
+        <label>Comensales (escandallo)</label>
         <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
+      </div>
+      <div class="field">
+        <label>Producción (raciones a elaborar)</label>
+        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" onchange="updateFichaProduccion(this.value)" ${roAttr}>
       </div>
       <div class="field">
         <label>Tiempo de elaboración (min)</label>
@@ -5570,8 +5601,8 @@ function renderFichaModal(){
     </div>
 
     <div class="field">
-      <label>Ingredientes (del escandallo)</label>
-      <div id="ficha-ingredients">${ingredientsHtml}</div>
+      <label>Ingredientes (cantidades para ${fmtNum(produccion)} ración${produccion==1?'':'es'})</label>
+      <div id="ficha-ingredients" class="ingredients-grid">${ingredientsHtml}</div>
     </div>
 
     <div class="field">
@@ -5640,6 +5671,8 @@ function saveFicha(){
     name,
     recipeId: f.recipeId || '',
     comensales: parseInt(f.comensales)||1,
+    baseComensales: f.baseComensales || parseInt(f.comensales) || 1,
+    produccion: f.produccion || parseInt(f.comensales) || 1,
     tiempo: f.tiempo ? parseInt(f.tiempo) : '',
     temp: f.temp || 'CALIENTE',
     ingredients: f.ingredients.filter(i => i && i.trim()),
@@ -5672,7 +5705,11 @@ function printFicha(id){
   const algs = (f.allergens||[]).length
     ? f.allergens.map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
     : 'Ninguno';
-  const ings = (f.ingredients||[]).map(i=>`<li style="margin:3px 0">${escapeHtml(i)}</li>`).join('');
+  const baseComensales = f.baseComensales || f.comensales || 1;
+  const produccion = f.produccion || baseComensales;
+  const factor = baseComensales ? (produccion / baseComensales) : 1;
+  const ingredientLines = getFichaIngredientLines(f);
+  const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(f.name)}</title>
@@ -5682,7 +5719,7 @@ function printFicha(id){
   ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
   <h1>${escapeHtml(f.name)}</h1>
   <div class="meta">
-    ${f.comensales?`<span>👥 ${f.comensales} comensal${f.comensales!==1?'es':''}</span>`:''}
+    ${produccion?`<span>👥 ${fmtNum(produccion)} ración${produccion!==1?'es':''}</span>`:''}
     ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}
     ${f.temp?`<span>${escapeHtml(f.temp)}</span>`:''}
   </div>
