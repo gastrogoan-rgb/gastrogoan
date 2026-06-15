@@ -11547,57 +11547,50 @@ const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecerí
 function renderTramoFields(prefix, tramo, label){
   tramo = tramo || {};
   return `
-    <div class="field-row">
-      <div class="field">
-        <label>${label} — Apertura</label>
-        <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}">
-      </div>
-      <div class="field">
-        <label>${label} — Cierre</label>
-        <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}">
-      </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
+      <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto">
+      <span style="color:var(--muted);font-size:12px">a</span>
+      <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto">
     </div>
   `;
 }
 
 function renderHorarioRows(horario){
   horario = horario && horario.length===7 ? horario.map(migrateHorarioDia) : defaultHorario();
-  return horario.map((d,i) => {
+  const cards = horario.map((d,i) => {
     const modoSeguido = d.modo === 'seguido';
     return `
-    <div class="ge-section" style="margin-bottom:10px">
-      <div class="ge-sec-head">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--brand-cream);border-bottom:1px solid var(--border)">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer">
           <input type="checkbox" id="mn-hor-${i}-abierto" ${d.abierto!==false?'checked':''} onchange="toggleHorarioDia(${i})">
           ${DIAS_SEMANA[i]}
         </label>
+        <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})" style="padding:2px 4px;font-size:11px;width:auto;min-height:auto;display:${d.abierto!==false?'inline-block':'none'}">
+          <option value="turnos" ${!modoSeguido?'selected':''}>Por turnos</option>
+          <option value="seguido" ${modoSeguido?'selected':''}>Seguido</option>
+        </select>
       </div>
-      <div id="mn-hor-${i}-turnos" style="display:${d.abierto!==false?'block':'none'};padding:10px 14px">
-        <div class="field" style="margin-bottom:10px">
-          <label>Modo de horario</label>
-          <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})">
-            <option value="turnos" ${!modoSeguido?'selected':''}>Por turnos (hasta 2 tramos, ej. comidas y cenas)</option>
-            <option value="seguido" ${modoSeguido?'selected':''}>Horario seguido (un único tramo)</option>
-          </select>
-        </div>
+      <div id="mn-hor-${i}-turnos" style="display:${d.abierto!==false?'block':'none'};padding:8px 10px">
         <div id="mn-hor-${i}-seguido-box" style="display:${modoSeguido?'block':'none'}">
           ${renderTramoFields(`mn-hor-${i}-seguido`, d.seguido, 'Horario')}
         </div>
         <div id="mn-hor-${i}-turnos-box" style="display:${modoSeguido?'none':'block'}">
-          <div style="font-weight:600;font-size:13px;margin-bottom:4px">Turno 1</div>
           ${renderTramoFields(`mn-hor-${i}-t1`, d.turnos && d.turnos[0], 'Turno 1')}
-          <div style="font-weight:600;font-size:13px;margin:8px 0 4px">Turno 2 (opcional)</div>
           ${renderTramoFields(`mn-hor-${i}-t2`, d.turnos && d.turnos[1], 'Turno 2')}
         </div>
       </div>
     </div>
   `;
-  }).join('');
+  });
+  return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${cards.join('')}</div>`;
 }
 
 function toggleHorarioDia(i){
   const open = document.getElementById(`mn-hor-${i}-abierto`).checked;
   document.getElementById(`mn-hor-${i}-turnos`).style.display = open ? 'block' : 'none';
+  document.getElementById(`mn-hor-${i}-modo`).style.display = open ? 'inline-block' : 'none';
 }
 
 function toggleHorarioModo(i){
