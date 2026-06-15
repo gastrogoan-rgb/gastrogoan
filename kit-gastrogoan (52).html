@@ -292,9 +292,20 @@ td.wrap{white-space:normal}
 .help-contact i{font-size:36px;color:var(--teal)}
 .help-contact h4{font-size:15px}
 .help-contact p{font-size:13px;color:var(--muted)}
+.chat-fab{right:88px}
+.chat-fab .chat-badge{
+  position:absolute;top:-2px;right:-2px;background:#E74C3C;color:#fff;font-size:10px;font-weight:700;
+  border-radius:50%;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;
+}
+.chat-author-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12.5px}
+.chat-author-row select{flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit}
+.help-msg.own{align-self:flex-end;background:var(--teal-l);color:var(--teal-d);border-bottom-right-radius:2px}
+.help-msg.other{align-self:flex-start;background:var(--dark2);color:#fff;border-bottom-left-radius:2px}
+.help-msg .chat-meta{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px;font-weight:600}
 @media (max-width:480px){
   .help-panel{right:10px;bottom:80px;width:calc(100vw - 20px)}
   .help-fab{right:14px;bottom:14px}
+  .chat-fab{right:80px}
 }
 
 /* ===== Gestión Económica ===== */
@@ -1187,6 +1198,34 @@ td.wrap{white-space:normal}
       <h4 data-i18n="help.contact.title"></h4>
       <p data-i18n="help.contact.desc"></p>
       <button class="btn btn-primary btn-sm" onclick="openHelpContactEmail()"><i class="ti ti-mail"></i> <span data-i18n="help.contact.button"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CHAT INTERNO ========== -->
+<button class="help-fab chat-fab" id="chat-fab" onclick="toggleChatPanel()" title="Chat interno">
+  <i class="ti ti-messages"></i>
+  <span class="chat-badge" id="chat-badge" style="display:none"></span>
+</button>
+<div class="help-panel" id="chat-panel">
+  <div class="help-panel-header">
+    <h4><i class="ti ti-messages"></i> Chat interno</h4>
+    <button class="help-panel-close" onclick="toggleChatPanel()">&times;</button>
+  </div>
+  <div class="help-tabs">
+    <button class="help-tab active" id="chat-tab-btn-general" onclick="switchChatTab('general')">General</button>
+    <button class="help-tab" id="chat-tab-btn-cocina" onclick="switchChatTab('cocina')">Cocina</button>
+    <button class="help-tab" id="chat-tab-btn-sala" onclick="switchChatTab('sala')">Sala</button>
+  </div>
+  <div class="chat-author-row">
+    <span>Escribo como:</span>
+    <select id="chat-author-sel" onchange="setChatAuthor(this.value)"></select>
+  </div>
+  <div class="help-tab-panel active" style="display:flex">
+    <div class="help-chat-messages" id="chat-messages"></div>
+    <div class="help-chat-input-row">
+      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+      <button onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
 </div>
@@ -2565,6 +2604,7 @@ function defaultData(){
       mantenimiento: []    // {id, nombre, ultimo, proximo, responsable, estado, notas}
     },
     clients: [],
+    chatMessages: [], // {id, channel:'general'|'cocina'|'sala', authorId, authorName, text, ts}
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     business: {
@@ -2635,6 +2675,7 @@ async function loadDB(){
     if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
     if(!Array.isArray(merged.promos)) merged.promos = [];
     if(!Array.isArray(merged.loyaltyRewards)) merged.loyaltyRewards = ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'];
+    if(!Array.isArray(merged.chatMessages)) merged.chatMessages = [];
     (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
     (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;
@@ -3654,6 +3695,98 @@ function appendHelpMessage(html, who){
 function openHelpContactEmail(){
   const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.nombre) ? ' - ' + DB.business.nombre : ''));
   window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject;
+}
+
+/* ===== Chat interno ===== */
+const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
+const CHAT_CHANNEL_LABELS = {general:'General', cocina:'Cocina', sala:'Sala'};
+let currentChatChannel = 'general';
+
+function getChatAuthor(){
+  return localStorage.getItem('chatAuthor') || 'owner';
+}
+function setChatAuthor(val){
+  localStorage.setItem('chatAuthor', val);
+}
+function getChatAuthorName(val){
+  if(val === 'owner') return 'Dueño/a';
+  const e = DB.employees.find(x => String(x.id) === String(val));
+  return e ? e.name : 'Dueño/a';
+}
+function populateChatAuthorSelect(){
+  const sel = document.getElementById('chat-author-sel');
+  const current = getChatAuthor();
+  const options = [`<option value="owner">Dueño/a</option>`]
+    .concat(DB.employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`));
+  sel.innerHTML = options.join('');
+  sel.value = DB.employees.some(e => String(e.id)===String(current)) || current==='owner' ? current : 'owner';
+  if(sel.value !== current) setChatAuthor(sel.value);
+}
+function toggleChatPanel(){
+  const panel = document.getElementById('chat-panel');
+  const opening = !panel.classList.contains('active');
+  panel.classList.toggle('active');
+  if(opening){
+    populateChatAuthorSelect();
+    renderChatMessages();
+    markChatRead(currentChatChannel);
+    updateChatBadge();
+  }
+}
+function switchChatTab(channel){
+  currentChatChannel = channel;
+  CHAT_CHANNELS.forEach(c => document.getElementById('chat-tab-btn-'+c).classList.toggle('active', c===channel));
+  renderChatMessages();
+  markChatRead(channel);
+  updateChatBadge();
+}
+function renderChatMessages(){
+  const box = document.getElementById('chat-messages');
+  const author = getChatAuthor();
+  const msgs = (DB.chatMessages||[]).filter(m => m.channel === currentChatChannel);
+  box.innerHTML = msgs.map(m => `
+    <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}">
+      <span class="chat-meta">${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
+      ${escapeHtml(m.text)}
+    </div>
+  `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> Sin mensajes en ${escapeHtml(CHAT_CHANNEL_LABELS[currentChatChannel])} todavía</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+function sendChatMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  const authorId = getChatAuthor();
+  DB.chatMessages.push({
+    id: genId(),
+    channel: currentChatChannel,
+    authorId,
+    authorName: getChatAuthorName(authorId),
+    text,
+    ts: new Date().toISOString()
+  });
+  saveDB();
+  input.value = '';
+  renderChatMessages();
+}
+function markChatRead(channel){
+  localStorage.setItem('chatLastRead_'+channel, new Date().toISOString());
+}
+function updateChatBadge(){
+  const badge = document.getElementById('chat-badge');
+  if(!badge) return;
+  let unread = 0;
+  CHAT_CHANNELS.forEach(c => {
+    const lastRead = localStorage.getItem('chatLastRead_'+c);
+    const count = (DB.chatMessages||[]).filter(m => m.channel===c && (!lastRead || m.ts > lastRead)).length;
+    unread += count;
+  });
+  if(unread > 0){
+    badge.style.display = 'flex';
+    badge.textContent = unread > 9 ? '9+' : String(unread);
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 /* ============== Áreas de trabajo ============== */
@@ -13314,6 +13447,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   syncPublicMirror();
   initPublicRequestsListener();
   applyHelpI18n();
+  updateChatBadge();
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
