@@ -6882,8 +6882,8 @@ function renderTpvToGo(tiposServicio){
         const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
         return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
-          <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':'Para recoger'}</span> ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
+          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':o.express?'Pedido Express':'Para recoger'}</span> ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
@@ -6902,7 +6902,7 @@ function renderTpvPendingOnline(){
       ${pendingOnline.map(o => `
         <div class="card" style="border:2px solid var(--brand-orange)">
           <h3 style="justify-content:space-between;font-size:14px">
-            <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</span>
+            <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">Nuevo</span>
           </h3>
           ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
@@ -6937,7 +6937,7 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
-      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-shopping-bag"></i> Pedido para llevar</button>` : ''}
+      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> Pedido Express</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
@@ -6986,6 +6986,12 @@ function deleteTable(id){
 
 function orderTotal(order){
   return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
+}
+
+// Etiqueta del pedido para TPV, cocina y ticket: los tickets rápidos de mostrador se llaman "Pedido Express".
+function togoOrderLabel(order){
+  if(order.express) return 'Pedido Express';
+  return order.tipo==='delivery' ? 'Delivery' : 'Take Away';
 }
 
 function openTableOrder(tableId, orderId){
@@ -7080,7 +7086,7 @@ function confirmOpenTableOrder(tableId){
 function openNewToGoOrderModal(){
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-shopping-bag"></i> Pedido para llevar</h3>
+      <h3><i class="ti ti-bolt"></i> Pedido Express</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
@@ -7099,7 +7105,7 @@ function confirmNewToGoOrder(){
   const camareroSel = document.getElementById('togo-camarero-sel');
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
   const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
-  const order = {id: genId(), tableId: null, tipo:'takeaway', clienteNombre, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId: null, tipo:'takeaway', express:true, clienteNombre, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -7358,8 +7364,7 @@ function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
   const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
-    : order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
-    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+    : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
@@ -7481,8 +7486,7 @@ function setLineEstado(orderId, idx, estado){
 function comandaOrderTitle(order){
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
   if(table) return `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`;
-  return order.tipo==='delivery' ? `Delivery${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
-    : `Take Away${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+  return `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
 }
 
 function timeAgo(iso){
@@ -7872,7 +7876,7 @@ function finalizeCharge(orderId){
   const total = orderTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
   discountStockForOrder(order);
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
   order.status = 'pagada';
@@ -8108,7 +8112,7 @@ function finalizeSplitOrder(orderId){
   const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
   const sale = {
     id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
-    tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa',
+    tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', metodoPago: metodos.length===1?metodos[0]:'Dividido',
     pagos, items: order.items.map(l=>({...l}))
   };
@@ -8167,7 +8171,7 @@ function buildTicketText(sale, opts={}){
   const lines = [...buildTicketHeaderLines()];
   if(opts.factura) lines.push('FACTURA SIMPLIFICADA Nº ' + sale.facturaNum);
   lines.push(sale.date);
-  lines.push(`${sale.tipo==='delivery'?'Delivery':sale.tipo==='takeaway'?'Take Away':'Mesa'}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
+  lines.push(`${sale.tipo==='mesa'?'Mesa':sale.express?'Pedido Express':sale.tipo==='delivery'?'Delivery':'Take Away'}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
   lines.push('------------------------------');
   sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
   lines.push('------------------------------');
