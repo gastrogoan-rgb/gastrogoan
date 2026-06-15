@@ -4808,6 +4808,33 @@ function setEscandalloView(mode){
   renderEscandallo();
 }
 
+// Carpeta de categoría actualmente abierta en Escandallo (null = vista de carpetas)
+let escandalloFolder = null;
+function openEscandalloFolder(catKey){
+  escandalloFolder = catKey;
+  renderEscandallo();
+}
+function backToEscandalloFolders(){
+  escandalloFolder = null;
+  document.getElementById('escandallo-search').value = '';
+  renderEscandallo();
+}
+
+// Agrupa los platos por categoría para la vista de carpetas, devolviendo
+// [claveCategoria, etiqueta, platos] (clave '__none__' para sin categoría).
+function getEscandalloFolders(recipes){
+  const groups = {};
+  recipes.forEach(r => {
+    const key = r.category || '__none__';
+    (groups[key] = groups[key] || []).push(r);
+  });
+  const result = [];
+  DB.recipeCategories.forEach(c => { if(groups[c]) result.push([c, c, groups[c]]); });
+  Object.keys(groups).forEach(c => { if(c !== '__none__' && !DB.recipeCategories.includes(c)) result.push([c, c, groups[c]]); });
+  if(groups['__none__']) result.push(['__none__', 'Sin categoría', groups['__none__']]);
+  return result;
+}
+
 function renderEscandallo(){
   populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
@@ -4833,16 +4860,48 @@ function renderEscandallo(){
     box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay ${noun}s. Crea el primer escandallo.</div>`;
     return;
   }
+
+  const searching = !!(search || cat);
+
+  if(!searching && escandalloFolder === null){
+    // Vista de carpetas por categoría
+    const folders = getEscandalloFolders(areaRecipes);
+    box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
+      <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
+        <h3><i class="ti ti-folder"></i> ${escapeHtml(label)}</h3>
+        <div style="font-size:12px;color:var(--muted)">${group.length} ${group.length===1?noun:noun+'s'}</div>
+      </div>
+    `).join('')}</div>`;
+    return;
+  }
+
   if(!recipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    return;
+  }
+
+  const visibleRecipes = (!searching && escandalloFolder !== null)
+    ? recipes.filter(r => (r.category || '__none__') === escandalloFolder)
+    : recipes;
+
+  const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
+
+  if(!visibleRecipes.length){
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
     return;
   }
 
   const gridClass = escandalloView==='list' ? '' : 'grid grid-compact';
-  box.innerHTML = groupRecipesByCategory(recipes).map(([catName, group]) => `
-    <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-    <div class="${gridClass}">${group.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>
-  `).join('');
+
+  if(searching){
+    box.innerHTML = groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
+      <h3 class="cat-heading">${escapeHtml(catName)}</h3>
+      <div class="${gridClass}">${group.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>
+    `).join('');
+  } else {
+    box.innerHTML = backBtn + `<div class="${gridClass}">${visibleRecipes.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>`;
+  }
 }
 
 function renderEscandalloRow(r){
@@ -4929,7 +4988,7 @@ function renderRecipeModal(id, r){
   const breakdown = recipeCostBreakdown({...r, ingredients: recipeModalLines});
   const area = r.area || currentArea();
 
-  const ingredientOptions = DB.ingredients.filter(i => (i.area||'cocina') === area).map(i => `<option value="${i.id}">${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
+  const areaIngredients = DB.ingredients.filter(i => (i.area||'cocina') === area);
 
   const linesHtml = recipeModalLines.map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
@@ -4987,10 +5046,12 @@ function renderRecipeModal(id, r){
           <tbody>${linesHtml || '<tr><td colspan="6"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
         </table>
       </div>
-      ${ingredientOptions ? `
+      ${areaIngredients.length ? `
       <div class="field-row">
-        <div class="field" style="margin-bottom:0">
-          <select id="recipe-add-ingredient">${ingredientOptions}</select>
+        <div class="field" style="margin-bottom:0;position:relative">
+          <input type="text" id="recipe-add-ingredient-search" placeholder="Buscar ingrediente..." autocomplete="off" oninput="filterRecipeIngredientResults(${id||'null'})" onfocus="filterRecipeIngredientResults(${id||'null'})" onblur="setTimeout(()=>hideRecipeIngredientResults(${id||'null'}), 150)">
+          <input type="hidden" id="recipe-add-ingredient">
+          <div id="recipe-add-ingredient-results" style="display:none;position:absolute;z-index:10;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
         </div>
         <div class="field" style="margin-bottom:0">
           <input type="number" id="recipe-add-qty" placeholder="Cantidad" step="0.01" min="0" value="1">
@@ -5013,6 +5074,37 @@ function renderRecipeModal(id, r){
       <button class="btn btn-primary" onclick="saveRecipe(${id||'null'})">Guardar</button>
     </div>
   `);
+}
+
+function filterRecipeIngredientResults(id){
+  const r = id ? getRecipe(id) : null;
+  const area = (r && r.area) || currentArea();
+  const search = document.getElementById('recipe-add-ingredient-search').value.trim().toLowerCase();
+  const results = document.getElementById('recipe-add-ingredient-results');
+  const matches = DB.ingredients
+    .filter(i => (i.area||'cocina') === area)
+    .filter(i => !search || i.name.toLowerCase().includes(search))
+    .slice(0, 30);
+  if(!matches.length){
+    results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">Sin resultados</div>`;
+  } else {
+    results.innerHTML = matches.map(i => `
+      <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, ${i.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
+        ${escapeHtml(i.name)} <span style="color:var(--muted)">(${escapeHtml(i.unit)})</span>
+      </div>
+    `).join('');
+  }
+  results.style.display = 'block';
+}
+function hideRecipeIngredientResults(id){
+  const results = document.getElementById('recipe-add-ingredient-results');
+  if(results) results.style.display = 'none';
+}
+function selectRecipeIngredientResult(id, ingredientId){
+  const ing = getIngredient(ingredientId);
+  document.getElementById('recipe-add-ingredient').value = ingredientId;
+  document.getElementById('recipe-add-ingredient-search').value = ing ? ing.name : '';
+  hideRecipeIngredientResults(id);
 }
 
 function addRecipeLine(id){
