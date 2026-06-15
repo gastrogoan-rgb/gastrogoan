@@ -6153,12 +6153,11 @@ function removeMenuOpcion(grupoId, opcionId){
 const KITCHEN_STATES = {
   cocina:     {label:'En espera',      icon:'ti-clock',        cls:'badge-amber'},
   preparando: {label:'En preparación', icon:'ti-flame',        cls:'badge-blue'},
-  listo:      {label:'Listo',          icon:'ti-check',        cls:'badge-green'},
-  servido:    {label:'Servido',        icon:'ti-circle-check', cls:'badge-gray'}
+  entregado:  {label:'Entregado',      icon:'ti-circle-check', cls:'badge-green'}
 };
 function kitchenStatusBadge(line){
   const st = KITCHEN_STATES[line.estado];
-  if(!st || line.estado === 'servido') return '';
+  if(!st || line.estado === 'entregado') return '';
   return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${st.label}</span>`;
 }
 function getActiveCartas(){
@@ -6329,16 +6328,16 @@ function renderTpvKpis(){
   const ticketCount = todaySalesArr.length;
   const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
 
-  const platosListos = DB.tpvOrders
-    .filter(o => o.status !== 'pagada')
-    .reduce((s,o) => s + (o.items||[]).filter(l => l.estado === 'listo').reduce((s2,l)=>s2+l.qty,0), 0);
+  const comandasEnCocina = DB.tpvOrders
+    .filter(o => o.status !== 'pagada' && !o.cerrada)
+    .reduce((s,o) => s + ((o.items||[]).some(l => l.estado === 'cocina' || l.estado === 'preparando') ? 1 : 0), 0);
 
   return `
     <div class="grid grid-4" style="margin-bottom:14px">
       <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
       <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
       <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi ${platosListos ? 'ok' : ''}"><div class="label">🔔 Platos listos</div><div class="value">${platosListos}</div></div>
+      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label">👨‍🍳 En cocina</div><div class="value">${comandasEnCocina}</div></div>
     </div>
   `;
 }
@@ -6349,14 +6348,13 @@ function renderTpvMesas(tiposServicio){
   const mesaCards = sortedTables.map(t => {
     const order = getOpenOrderForTable(t.id);
     const total = order ? orderTotal(order) : 0;
-    const hayListos = order && (order.items||[]).some(l => l.estado === 'listo');
     const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
     let badge = '<span class="badge badge-green">Libre</span>';
     if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
         <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-        ${badge} ${hayListos ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+        ${badge} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
         ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
         ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
         <div style="margin-top:10px">
@@ -6383,7 +6381,7 @@ function renderTpvToGo(tiposServicio){
         return `
         <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || (o.tipo==='delivery'?'Delivery':'Take Away'))}</h3>
-          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':'Para recoger'}</span> ${(o.items||[]).some(l => l.estado === 'listo') ? '<span class="badge badge-green"><i class="ti ti-bell-ringing"></i> Listo</span>' : ''} ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':'Para recoger'}</span> ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
           ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
@@ -6779,15 +6777,6 @@ function groupOrderItemsByTanda(order){
   return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
-// Quita el aviso de "recoger" de una tanda una vez sala lo ha visto/recogido
-function dismissAviso(orderId, tanda){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order || !order.avisos) return;
-  delete order.avisos[tanda||''];
-  saveDB();
-  renderTableOrderModal(orderId);
-}
-
 function renderOrderLinesHtml(order){
   const groups = groupOrderItemsByTanda(order);
   if(!groups.length) return `<div class="empty" style="padding:10px">Comanda vacía</div>`;
@@ -6795,14 +6784,12 @@ function renderOrderLinesHtml(order){
     const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
     const enviados = g.items.map(({line}) => line.enviadoAt).filter(Boolean);
     const elapsedBadge = enviados.length ? urgencyBadge(minutesSince(enviados.sort()[0])) : '';
-    const avisoRecoger = order.avisos && order.avisos[g.tanda||''];
     return `
     <div class="card card-compact">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
         <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
         ${elapsedBadge}
       </div>
-      ${avisoRecoger ? `<div style="margin-bottom:6px"><span class="badge badge-green" style="cursor:pointer" onclick="dismissAviso(${order.id}, '${escapeJsAttr(g.tanda)}')" title="Toca para descartar el aviso"><i class="ti ti-bell-ringing"></i> Cocina avisa: recoger este plato</span></div>` : ''}
       ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button></div>` : ''}
       ${g.items.map(({line, idx}) => `
         <div class="list-row">
@@ -6815,7 +6802,7 @@ function renderOrderLinesHtml(order){
             <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
             <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
             <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
-            ${line.estado === 'listo' ? `<button class="btn btn-sm" onclick="setLineEstado(${order.id}, ${idx}, 'servido')"><i class="ti ti-check"></i> Servido</button>` : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+            ${line.estado === 'entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
           </div>
         </div>
       `).join('')}
@@ -6888,9 +6875,9 @@ function marcharComanda(orderId, tanda){
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
-      if(order.avisos) delete order.avisos[l.tanda||''];
     }
   });
+  order.cerrada = false;
   saveDB();
   renderTableOrderModal(order.id);
   showToast('Comanda marchada a cocina');
@@ -6899,6 +6886,18 @@ function marcharComanda(orderId, tanda){
 /* ============================================================
    COMANDAS COCINA — Pantalla en tiempo real para cocina
    ============================================================ */
+let comandasCocinaTab = 'activas';
+function setComandasCocinaTab(tab){
+  comandasCocinaTab = tab;
+  renderComandasCocina();
+}
+
+// Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
+function checkComandaCierre(order){
+  const items = (order.items||[]).filter(l => l.estado);
+  order.cerrada = items.length > 0 && items.every(l => l.estado === 'entregado');
+}
+
 function setLineEstado(orderId, idx, estado){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -6906,7 +6905,8 @@ function setLineEstado(orderId, idx, estado){
   if(!line) return;
   line.estado = estado;
   if(estado === 'preparando') line.preparandoAt = new Date().toISOString();
-  if(estado === 'listo') line.listoAt = new Date().toISOString();
+  if(estado === 'entregado') line.entregadoAt = new Date().toISOString();
+  checkComandaCierre(order);
   saveDB();
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-comandascocina') renderComandasCocina();
@@ -6941,35 +6941,60 @@ function urgencyBadge(mins){
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
 
-// Notifica desde cocina que un bloque de platos (tanda) está listo para recoger
-function avisarRecogida(orderId, tanda){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  order.avisos = order.avisos || {};
-  order.avisos[tanda||''] = true;
-  saveDB();
-  renderComandasCocina();
-  if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
-  showToast('Sala avisada para recoger');
-}
-
-// Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> listo
+// Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> entregado
 function cycleLineEstado(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line) return;
   if(line.estado === 'cocina') setLineEstado(orderId, idx, 'preparando');
-  else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'listo');
+  else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
 }
 
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
 
-  const tickets = DB.tpvOrders
-    .filter(o => o.status !== 'pagada')
+  const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
+
+  const tabsHtml = `
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
+    </div>
+  `;
+
+  if(comandasCocinaTab === 'cerradas'){
+    const closed = allOrders
+      .filter(o => o.cerrada)
+      .map(order => {
+        const lines = (order.items||[]).filter(l => l.estado);
+        const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
+        return {order, lines, maxMs};
+      })
+      .sort((a,b) => b.maxMs - a.maxMs);
+
+    if(!closed.length){
+      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-history"></i>No hay comandas cerradas todavía.</div>`;
+      return;
+    }
+
+    box.innerHTML = tabsHtml + `<div class="grid grid-3">${closed.map(({order, lines, maxMs}) => `
+      <div class="card" style="aspect-ratio:1/1;overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+          <span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregada</span>
+        </div>
+        ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
+        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+      </div>
+    `).join('')}</div>`;
+    return;
+  }
+
+  const tickets = allOrders
+    .filter(o => !o.cerrada)
     .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado && line.estado !== 'servido');
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado);
       const activeLines = allLines.filter(({line}) => line.estado === 'cocina' || line.estado === 'preparando');
       return {order, allLines, activeLines};
     })
@@ -6982,11 +7007,11 @@ function renderComandasCocina(){
   });
 
   if(!tickets.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-bell-ringing"></i>No hay comandas pendientes. Cuando sala marche un pedido aparecerá aquí al instante.</div>`;
+    box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>No hay comandas pendientes. Cuando sala marche un pedido aparecerá aquí al instante.</div>`;
     return;
   }
 
-  box.innerHTML = `<div class="grid grid-3">${tickets.map(({order, allLines, activeLines}) => {
+  box.innerHTML = tabsHtml + `<div class="grid grid-3">${tickets.map(({order, allLines, activeLines}) => {
     const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
     const groups = tandaOrder.map(t => ({
       tanda: t,
@@ -6996,19 +7021,12 @@ function renderComandasCocina(){
     const minMs = Math.min(...activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now()));
     const mins = minutesSince(new Date(minMs).toISOString());
 
-    const avisos = order.avisos || {};
-    const readyTandas = tandaOrder.filter(t => {
-      const items = allLines.filter(({line}) => (line.tanda||'') === t);
-      return items.length && items.every(({line}) => line.estado === 'listo') && !avisos[t];
-    });
-
     return `
     <div class="card" style="aspect-ratio:1/1;overflow-y:auto;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
         <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
         ${urgencyBadge(mins)}
       </div>
-      ${readyTandas.map(t => `<button class="btn btn-sm" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:6px" onclick="avisarRecogida(${order.id}, '${escapeJsAttr(t)}')"><i class="ti ti-bell-ringing"></i> Recoger${t ? ': '+escapeHtml(t) : ''}</button>`).join('')}
       ${groups.map(g => `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
           ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px">${escapeHtml(g.tanda)}</div>` : ''}
