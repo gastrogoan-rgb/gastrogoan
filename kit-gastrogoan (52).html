@@ -7305,6 +7305,27 @@ function cycleLineEstado(orderId, idx){
   else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
 }
 
+// Click sobre el nombre de un grupo (tanda) en cocina: avanza el estado de todos sus platos a la vez
+function cycleGroupEstado(orderId, tanda){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  let changed = false;
+  (order.items||[]).forEach(line => {
+    if((line.tanda||'') === tanda){
+      if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
+      else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
+    }
+  });
+  if(!changed) return;
+  checkComandaCierre(order);
+  saveDB();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -7384,7 +7405,7 @@ function renderComandasCocina(){
       </div>
       ${groups.map(g => `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
-          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px">${escapeHtml(g.tanda)}</div>` : ''}
+          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px;cursor:pointer" onclick="cycleGroupEstado(${order.id}, '${g.tanda.replace(/'/g,"\\'")}')" title="Toca para avanzar el estado de todo el grupo"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
           ${g.active.map(({line, idx}) => `
             <div style="padding:6px 0;cursor:pointer" onclick="cycleLineEstado(${order.id}, ${idx})" title="Toca para avanzar el estado">
               <strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
