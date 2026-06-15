@@ -2499,16 +2499,15 @@ const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado',
 
 // Horario semanal: un array de 7 días (Lunes..Domingo). Cada día puede ser
 // "seguido" (un único tramo horario) o "turnos" (hasta 2 tramos, para horario
-// partido). Cada tramo (seguido o turno) puede tener asignada una carta de
-// comida y una carta de bebidas, que se activarán automáticamente en la web
-// de pedidos online durante ese tramo. abierto:false = cerrado ese día.
+// partido). Se usa para reservas y para indicar si el negocio está abierto.
+// abierto:false = cerrado ese día.
 function defaultHorario(){
   return DIAS_SEMANA.map(() => ({
     modo: 'turnos', abierto: true,
-    seguido: {ini:'', fin:'', cartaId:null, bebidasId:null},
+    seguido: {ini:'', fin:''},
     turnos: [
-      {ini:'', fin:'', cartaId:null, bebidasId:null},
-      {ini:'', fin:'', cartaId:null, bebidasId:null}
+      {ini:'', fin:''},
+      {ini:'', fin:''}
     ]
   }));
 }
@@ -2522,10 +2521,10 @@ function migrateHorarioDia(d){
   if('t1i' in d){
     return {
       modo: 'turnos', abierto: d.abierto!==false,
-      seguido: {ini:'', fin:'', cartaId:null, bebidasId:null},
+      seguido: {ini:'', fin:''},
       turnos: [
-        {ini: d.t1i||'', fin: d.t1f||'', cartaId:null, bebidasId:null},
-        {ini: d.t2i||'', fin: d.t2f||'', cartaId:null, bebidasId:null}
+        {ini: d.t1i||'', fin: d.t1f||''},
+        {ini: d.t2i||'', fin: d.t2f||''}
       ]
     };
   }
@@ -6227,45 +6226,12 @@ function cartaIsActiveNow(c, now){
   });
 }
 
-// Busca, en el Horario semanal de Mi Negocio, el tramo (seguido o turno) en el
-// que cae el momento actual para el día de hoy, y devuelve las cartas (comida
-// y bebidas) asignadas a ese tramo, si las hay. Devuelve {cartaId, bebidasId}
-// con valores null si no hay tramo o no hay carta asignada.
-function getHorarioAssignedCartas(now){
-  now = now || new Date();
-  const horario = DB.business?.horario;
-  if(!Array.isArray(horario) || horario.length!==7) return {cartaId:null, bebidasId:null};
-  const jsDay = now.getDay();
-  const dayIdx = (jsDay + 6) % 7; // 0=lunes..6=domingo
-  const d = migrateHorarioDia(horario[dayIdx]);
-  if(!d || d.abierto===false) return {cartaId:null, bebidasId:null};
-  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  const tramos = d.modo==='seguido' ? [d.seguido] : (d.turnos||[]);
-  for(const t of tramos){
-    if(!t || (!t.ini && !t.fin)) continue;
-    // Tramo que cruza medianoche (ej. 20:00-02:00)
-    const enRango = t.fin && t.fin < t.ini
-      ? (time >= t.ini || time <= t.fin)
-      : (t.ini && t.fin ? (time >= t.ini && time <= t.fin) : false);
-    if(enRango && (t.cartaId || t.bebidasId)) return {cartaId: t.cartaId||null, bebidasId: t.bebidasId||null};
-  }
-  return {cartaId:null, bebidasId:null};
-}
-
 // Todas las cartas que deberían estar activas ahora mismo (puede haber varias
-// a la vez, p.ej. la carta de comida y la de bebidas).
+// a la vez, p.ej. la carta de comida y la de bebidas), según el horario propio
+// configurado en cada carta.
 function computeAutoActiveCartaIds(){
   if(!DB.cartas || !DB.cartas.length) return [];
   const now = new Date();
-  // Si el horario semanal tiene asignada una carta (y/o carta de bebidas) para
-  // el tramo actual, esas tienen prioridad sobre el horario propio de la carta.
-  const assigned = getHorarioAssignedCartas(now);
-  if(assigned.cartaId || assigned.bebidasId){
-    const ids = [];
-    if(assigned.cartaId && DB.cartas.some(c=>String(c.id)===String(assigned.cartaId))) ids.push(assigned.cartaId);
-    if(assigned.bebidasId && DB.cartas.some(c=>String(c.id)===String(assigned.bebidasId))) ids.push(assigned.bebidasId);
-    if(ids.length) return ids;
-  }
   return DB.cartas.filter(c => cartaIsActiveNow(c, now)).map(c=>c.id);
 }
 
@@ -6678,12 +6644,33 @@ function renderMenusComboHtml(order){
   `;
 }
 
+// Cartas de comida activas (todas las activas que no son de bebidas).
+function getActiveComidaCartas(){
+  return getActiveCartas().filter(c => !isBebidaCarta(c));
+}
+
+// Guarda en la comanda qué carta de comida se usará, cuando hay varias activas
+// a la vez y hace falta elegir una.
+function setOrderCarta(orderId, cartaId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.cartaElegidaId = cartaId;
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
 // Devuelve las "carpetas" del menú para una comanda: una por cada sección de
 // carta con platos disponibles, ordenadas con las cartas de bebida primero.
+// Si hay varias cartas de comida activas a la vez, solo se usa la elegida
+// para esta comanda (ver setOrderCarta).
 function getOrderMenuFolders(order){
   const activeCartas = getActiveCartas();
   const bebidaCartas = activeCartas.filter(isBebidaCarta);
-  const comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  if(comidaCartas.length > 1){
+    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
+    if(elegida) comidaCartas = [elegida];
+  }
   const folders = [];
   [...bebidaCartas, ...comidaCartas].forEach(c => {
     (c.secciones||[]).forEach(sec => {
@@ -6715,6 +6702,17 @@ function closeTpvMenuFolder(orderId){
 
 function renderOrderMenuHtml(order){
   const menusHtml = renderMenusComboHtml(order);
+
+  const comidaCartas = getActiveComidaCartas();
+  if(comidaCartas.length > 1 && !comidaCartas.some(c => c.id === order.cartaElegidaId)){
+    return menusHtml + `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Hay varias cartas activas a esta hora. Elige cuál usar para esta comanda:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</button>`).join('')}
+      </div>
+    `;
+  }
+
   const folders = getOrderMenuFolders(order);
   if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
 
@@ -11545,18 +11543,7 @@ function deletePromo(id){
    ============================================================ */
 const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
 
-// Genera las opciones de un <select> de cartas (comida o bebidas) para un tramo horario.
-function renderCartaOptions(selectedId, soloBebidas){
-  let cartas = DB.cartas || [];
-  if(soloBebidas){
-    const bebidas = cartas.filter(c => /bebida/i.test(c.nombre||''));
-    if(bebidas.length) cartas = bebidas;
-  }
-  const opts = cartas.map(c => `<option value="${c.id}" ${String(selectedId)===String(c.id)?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('');
-  return `<option value="">— Automático —</option>${opts}`;
-}
-
-// Renderiza los campos de un tramo (seguido o turno): horas + cartas asignadas.
+// Renderiza los campos de un tramo (seguido o turno): horas de apertura/cierre.
 function renderTramoFields(prefix, tramo, label){
   tramo = tramo || {};
   return `
@@ -11568,16 +11555,6 @@ function renderTramoFields(prefix, tramo, label){
       <div class="field">
         <label>${label} — Cierre</label>
         <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}">
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Carta / menú</label>
-        <select id="${prefix}-carta">${renderCartaOptions(tramo.cartaId, false)}</select>
-      </div>
-      <div class="field">
-        <label>Carta de bebidas</label>
-        <select id="${prefix}-bebidas">${renderCartaOptions(tramo.bebidasId, true)}</select>
       </div>
     </div>
   `;
@@ -11633,8 +11610,6 @@ function readTramoFromForm(prefix){
   return {
     ini: document.getElementById(`${prefix}-ini`).value,
     fin: document.getElementById(`${prefix}-fin`).value,
-    cartaId: document.getElementById(`${prefix}-carta`).value || null,
-    bebidasId: document.getElementById(`${prefix}-bebidas`).value || null,
   };
 }
 
