@@ -206,6 +206,7 @@ td.wrap{white-space:normal}
   background:#fff;border-radius:var(--radius);width:100%;max-width:540px;
   max-height:90vh;overflow-y:auto;padding:20px;
 }
+.modal.modal-xl{max-width:920px;max-height:95vh}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .modal-header h3{font-size:19px}
 .modal-close{background:none;border:none;font-size:26px;cursor:pointer;color:var(--muted);min-height:44px;min-width:44px}
@@ -3952,13 +3953,16 @@ function renderFolder(){
 }
 
 /* ============== Modal helpers ============== */
-function openModal(html){
-  document.getElementById('modal-box').innerHTML = html;
+function openModal(html, opts){
+  const box = document.getElementById('modal-box');
+  box.innerHTML = html;
+  box.classList.toggle('modal-xl', !!(opts && opts.xl));
   document.getElementById('modal-overlay').classList.add('active');
 }
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('active');
   document.getElementById('modal-box').innerHTML = '';
+  document.getElementById('modal-box').classList.remove('modal-xl');
 }
 document.getElementById('modal-overlay').addEventListener('click', (e)=>{
   if(e.target.id === 'modal-overlay') closeModal();
@@ -5509,6 +5513,9 @@ function renderFichaModal(){
   const f = fichaModalState;
   const ro = !editUnlocked;
   const roAttr = ro ? 'disabled' : '';
+  // Los datos que vienen del escandallo (nombre, vinculación, comensales e ingredientes)
+  // siempre quedan bloqueados: la ficha técnica solo aporta información de elaboración.
+  const lockedAttr = 'disabled';
 
   const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
     `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
@@ -5516,8 +5523,7 @@ function renderFichaModal(){
 
   const ingredientsHtml = f.ingredients.map((ing, idx) => `
     <div class="field-row" style="margin-bottom:6px">
-      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" oninput="updateFichaIngredient(${idx}, this.value)" ${roAttr}>
-      <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredient(${idx})" ${f.ingredients.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+      <input type="text" value="${escapeHtml(ing)}" placeholder="Ingrediente y cantidad" style="flex:1" ${lockedAttr}>
     </div>
   `).join('');
 
@@ -5541,17 +5547,17 @@ function renderFichaModal(){
     <div class="field-row">
       <div class="field">
         <label>Nombre del plato</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky" ${roAttr}>
+        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky" ${lockedAttr}>
       </div>
       <div class="field">
         <label>Vincular a Escandallo</label>
-        <select id="ficha-recipe" ${roAttr}>${recipeOptions}</select>
+        <select id="ficha-recipe" ${lockedAttr}>${recipeOptions}</select>
       </div>
     </div>
     <div class="field-row">
       <div class="field">
         <label>Comensales</label>
-        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${roAttr}>
+        <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
       </div>
       <div class="field">
         <label>Tiempo de elaboración (min)</label>
@@ -5564,9 +5570,8 @@ function renderFichaModal(){
     </div>
 
     <div class="field">
-      <label>Ingredientes</label>
+      <label>Ingredientes (del escandallo)</label>
       <div id="ficha-ingredients">${ingredientsHtml}</div>
-      <button class="owner-only btn btn-sm" onclick="addFichaIngredient()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
     </div>
 
     <div class="field">
@@ -5589,7 +5594,7 @@ function renderFichaModal(){
       <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
       <button class="owner-only btn btn-primary" onclick="saveFicha()">Guardar</button>
     </div>
-  `);
+  `, {xl:true});
 }
 
 function syncFichaModalFields(){
@@ -5608,14 +5613,6 @@ function syncFichaModalFields(){
   if(presEl) f.presentation = presEl.value;
 }
 
-function updateFichaIngredient(idx, value){ fichaModalState.ingredients[idx] = value; }
-function addFichaIngredient(){ syncFichaModalFields(); fichaModalState.ingredients.push(''); renderFichaModal(); }
-function removeFichaIngredient(idx){
-  if(fichaModalState.ingredients.length<=1) return;
-  syncFichaModalFields();
-  fichaModalState.ingredients.splice(idx,1);
-  renderFichaModal();
-}
 
 function updateFichaStep(idx, value){ fichaModalState.pasos[idx] = value; }
 function addFichaStep(){ syncFichaModalFields(); fichaModalState.pasos.push(''); renderFichaModal(); }
