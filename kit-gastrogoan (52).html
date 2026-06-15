@@ -9673,6 +9673,18 @@ function hoursBetween(t1, t2){
   if(diff < 0) diff += 24*60;
   return diff/60;
 }
+function turnoHours(t){
+  if(t.tipo==='D') return 0;
+  let h = hoursBetween(t.entrada, t.salida);
+  if(t.tipo==='P' && t.entrada2 && t.salida2) h += hoursBetween(t.entrada2, t.salida2);
+  return h;
+}
+function turnoHorarioLabel(t){
+  if(t.tipo==='D') return '—';
+  let s = `${t.entrada}-${t.salida}`;
+  if(t.tipo==='P' && t.entrada2 && t.salida2) s += ` / ${t.entrada2}-${t.salida2}`;
+  return s;
+}
 
 function renderHorarios(){
   const box = document.getElementById('horarios-content');
@@ -9719,7 +9731,7 @@ function renderHorariosDia(){
     const t = turnos.find(x => x.employeeId===emp.id);
     if(t){
       const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
-      const hh = hoursBetween(t.entrada, t.salida);
+      const hh = turnoHours(t);
       return `
         <tr>
           <td>
@@ -9729,7 +9741,7 @@ function renderHorariosDia(){
             </span>
           </td>
           <td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px">${t.tipo} - ${tipo.label}</span></td>
-          <td>${t.tipo!=='D' ? `${escapeHtml(t.entrada)} - ${escapeHtml(t.salida)}` : '—'}</td>
+          <td>${escapeHtml(turnoHorarioLabel(t))}</td>
           <td>${hh>0?hh.toFixed(1)+'h':'—'}</td>
           <td class="wrap">${escapeHtml(t.notas||'—')}</td>
           <td class="actions-cell">
@@ -9840,9 +9852,9 @@ function renderHorariosSemana(){
       const t = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
       if(t){
         const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
-        const hh = hoursBetween(t.entrada, t.salida);
+        const hh = turnoHours(t);
         if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(t.entrada)}-${escapeHtml(t.salida)}</span>`:''}</span></td>`;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(turnoHorarioLabel(t))}</span>`:''}</span></td>`;
       }
       return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="if(editUnlocked) openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
     }).join('');
@@ -9987,25 +9999,9 @@ function renderHorariosPersonal(){
   `;
 }
 
-function bulkSetRange(type){
-  const now = new Date();
-  let start, end;
-  if(type==='semana'){
-    const day = now.getDay() || 7;
-    start = new Date(now); start.setDate(now.getDate() - (day-1));
-    end = new Date(start); end.setDate(start.getDate()+6);
-  } else {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
-    end = new Date(now.getFullYear(), now.getMonth()+1, 0);
-  }
-  document.getElementById('bulk-desde').value = dateStr(start);
-  document.getElementById('bulk-hasta').value = dateStr(end);
-}
-
 function openBulkTurnoModal(employeeId){
   if(!DB.employees.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
   const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===(employeeId||DB.employees[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
-  const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}">${k} - ${v.label}</option>`).join('');
   const today = new Date();
   const end = new Date(today); end.setDate(today.getDate()+6);
 
@@ -10016,86 +10012,141 @@ function openBulkTurnoModal(employeeId){
     </div>
     <div class="field">
       <label>Empleado</label>
-      <select id="bulk-employee">${empOptions}</select>
+      <select id="bulk-employee" onchange="renderBulkCalendar()">${empOptions}</select>
     </div>
     <div class="field-row">
       <div class="field">
         <label>Desde</label>
-        <input type="date" id="bulk-desde" value="${dateStr(today)}">
+        <input type="date" id="bulk-desde" value="${dateStr(today)}" onchange="renderBulkCalendar()">
       </div>
       <div class="field">
         <label>Hasta</label>
-        <input type="date" id="bulk-hasta" value="${dateStr(end)}">
-      </div>
-    </div>
-    <div style="display:flex;gap:6px;margin:-4px 0 10px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="bulkSetRange('semana')">Esta semana</button>
-      <button class="btn btn-sm" onclick="bulkSetRange('mes')">Este mes</button>
-    </div>
-    <div class="field">
-      <label>Días de la semana a aplicar</label>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-        ${WEEK_DAYS.map((d,i) => `<label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day" value="${i}" checked> ${d.slice(0,3)}</label>`).join('')}
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="document.querySelectorAll('.bulk-day').forEach(c=>c.checked=true)">Toda la semana</button>
-        <button class="btn btn-sm" onclick="document.querySelectorAll('.bulk-day').forEach((c,i)=>c.checked = i<5)">Lun-Vie</button>
-        <button class="btn btn-sm" onclick="document.querySelectorAll('.bulk-day').forEach(c=>c.checked=false)">Ninguno</button>
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Tipo de turno</label>
-        <select id="bulk-tipo">${tipoOptions}</select>
-      </div>
-      <div class="field">
-        <label>Entrada</label>
-        <input type="time" id="bulk-entrada" value="09:00">
-      </div>
-      <div class="field">
-        <label>Salida</label>
-        <input type="time" id="bulk-salida" value="17:00">
+        <input type="date" id="bulk-hasta" value="${dateStr(end)}" onchange="renderBulkCalendar()">
       </div>
     </div>
     <div class="field">
-      <label>Notas (opcional)</label>
+      <label>Horario de cada día del periodo</label>
+      <div id="bulk-calendar"></div>
+    </div>
+    <div class="field">
+      <label>Notas (opcional, se aplica a todos los días)</label>
       <input type="text" id="bulk-notas" placeholder="Notas para todos estos turnos...">
     </div>
-    <p style="font-size:12px;color:var(--muted)">Se asignará este turno a todos los días seleccionados dentro del periodo. Si ya había un turno asignado ese día a este empleado, se sustituirá.</p>
+    <p style="font-size:12px;color:var(--muted)">Si ya había un turno asignado ese día a este empleado, se sustituirá.</p>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="applyBulkTurno()">Aplicar</button>
     </div>
   `);
+  renderBulkCalendar();
+}
+
+function bulkTipoOptions(selected){
+  return ['M','T','C'].map(k => `<option value="${k}"${k===selected?' selected':''}>${k} - ${SHIFT_TYPES[k].label}</option>`).join('');
+}
+
+function renderBulkCalendar(){
+  const box = document.getElementById('bulk-calendar');
+  if(!box) return;
+  const desde = document.getElementById('bulk-desde').value;
+  const hasta = document.getElementById('bulk-hasta').value;
+  const employeeId = parseInt(document.getElementById('bulk-employee').value);
+  if(!desde || !hasta || desde > hasta){
+    box.innerHTML = `<p style="font-size:12px;color:var(--muted)">Selecciona un periodo válido.</p>`;
+    return;
+  }
+
+  let html = '';
+  const cursor = new Date(desde + 'T00:00:00');
+  const end = new Date(hasta + 'T00:00:00');
+  let guard = 0;
+  while(cursor <= end && guard < 62){
+    const ds = dateStr(cursor);
+    const dow = (cursor.getDay()+6)%7;
+    const existing = (DB.turnos||[]).find(x => x.employeeId===employeeId && x.fecha===ds);
+    const isFestivo = !!existing && existing.tipo === 'D';
+    const isPartido = !!existing && existing.tipo === 'P';
+    const tipo = (existing && !isFestivo && !isPartido) ? existing.tipo : 'M';
+    const entrada = existing?.entrada || '09:00';
+    const salida = existing?.salida || '17:00';
+    const entrada2 = existing?.entrada2 || '17:00';
+    const salida2 = existing?.salida2 || '21:00';
+
+    html += `
+      <div class="card bulk-day-card" data-date="${ds}" style="margin-bottom:8px;padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+          <strong>${WEEK_DAYS[dow]} ${cursor.getDate()}/${cursor.getMonth()+1}</strong>
+          <label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> Festivo</label>
+        </div>
+        <div class="bulk-day-fields" style="${isFestivo?'display:none':''}">
+          <label style="display:flex;align-items:center;gap:4px;font-size:13px;margin-bottom:6px"><input type="checkbox" class="bulk-day-partido" ${isPartido?'checked':''} onchange="toggleBulkDayFields(this)"> Turno partido (2 tramos)</label>
+          <div class="field-row bulk-day-seguido" style="${isPartido?'display:none':''}">
+            <select class="bulk-day-tipo">${bulkTipoOptions(tipo)}</select>
+            <input type="time" class="bulk-day-entrada" value="${entrada}">
+            <input type="time" class="bulk-day-salida" value="${salida}">
+          </div>
+          <div class="field-row bulk-day-partido-fields" style="${isPartido?'':'display:none'}">
+            <input type="time" class="bulk-day-entrada1" value="${entrada}">
+            <input type="time" class="bulk-day-salida1" value="${salida}">
+            <input type="time" class="bulk-day-entrada2" value="${entrada2}">
+            <input type="time" class="bulk-day-salida2" value="${salida2}">
+          </div>
+        </div>
+      </div>
+    `;
+    cursor.setDate(cursor.getDate()+1);
+    guard++;
+  }
+  box.innerHTML = html;
+}
+
+function toggleBulkDayFields(el){
+  const card = el.closest('.bulk-day-card');
+  const festivo = card.querySelector('.bulk-day-festivo').checked;
+  const partido = card.querySelector('.bulk-day-partido').checked;
+  card.querySelector('.bulk-day-fields').style.display = festivo ? 'none' : '';
+  card.querySelector('.bulk-day-seguido').style.display = partido ? 'none' : '';
+  card.querySelector('.bulk-day-partido-fields').style.display = partido ? '' : 'none';
 }
 
 function applyBulkTurno(){
   const employeeId = parseInt(document.getElementById('bulk-employee').value);
-  const desde = document.getElementById('bulk-desde').value;
-  const hasta = document.getElementById('bulk-hasta').value;
-  if(!desde || !hasta || desde > hasta){ showToast('Revisa las fechas del periodo'); return; }
-  const days = Array.from(document.querySelectorAll('.bulk-day')).filter(c=>c.checked).map(c=>parseInt(c.value));
-  if(!days.length){ showToast('Selecciona al menos un día de la semana'); return; }
-  const tipo = document.getElementById('bulk-tipo').value;
-  const entrada = document.getElementById('bulk-entrada').value;
-  const salida = document.getElementById('bulk-salida').value;
   const notas = document.getElementById('bulk-notas').value.trim();
+  const cards = document.querySelectorAll('.bulk-day-card');
+  if(!cards.length){ showToast('Revisa las fechas del periodo'); return; }
 
   if(!DB.turnos) DB.turnos = [];
   let count = 0;
-  const cursor = new Date(desde + 'T00:00:00');
-  const end = new Date(hasta + 'T00:00:00');
-  while(cursor <= end){
-    const dow = (cursor.getDay()+6)%7; // 0 = Lunes ... 6 = Domingo
-    if(days.includes(dow)){
-      const ds = dateStr(cursor);
-      const existing = DB.turnos.find(x => x.employeeId===employeeId && x.fecha===ds);
-      if(existing) Object.assign(existing, {tipo, entrada, salida, notas});
-      else DB.turnos.push({id: genId(), employeeId, fecha: ds, tipo, entrada, salida, notas});
-      count++;
+  cards.forEach(card => {
+    const ds = card.dataset.date;
+    const festivo = card.querySelector('.bulk-day-festivo').checked;
+    const partido = card.querySelector('.bulk-day-partido').checked;
+    let data;
+    if(festivo){
+      data = {tipo:'D', entrada:'', salida:'', entrada2:'', salida2:'', notas};
+    } else if(partido){
+      data = {
+        tipo:'P',
+        entrada: card.querySelector('.bulk-day-entrada1').value,
+        salida: card.querySelector('.bulk-day-salida1').value,
+        entrada2: card.querySelector('.bulk-day-entrada2').value,
+        salida2: card.querySelector('.bulk-day-salida2').value,
+        notas
+      };
+    } else {
+      data = {
+        tipo: card.querySelector('.bulk-day-tipo').value,
+        entrada: card.querySelector('.bulk-day-entrada').value,
+        salida: card.querySelector('.bulk-day-salida').value,
+        entrada2: '', salida2: '',
+        notas
+      };
     }
-    cursor.setDate(cursor.getDate()+1);
-  }
+    const existing = DB.turnos.find(x => x.employeeId===employeeId && x.fecha===ds);
+    if(existing) Object.assign(existing, data);
+    else DB.turnos.push({id: genId(), employeeId, fecha: ds, ...data});
+    count++;
+  });
   saveDB();
   closeModal();
   renderHorariosTab();
