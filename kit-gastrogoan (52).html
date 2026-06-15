@@ -72,11 +72,13 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .btn-back{margin-bottom:16px}
 
 /* ===== Home (selección de área) ===== */
+#view-home.active{display:flex;flex-direction:column;min-height:calc(100vh - var(--header-h) - 44px)}
 .home-hero{
-  background:linear-gradient(135deg,var(--dark) 0%,#1A1A1A 100%);
+  background:linear-gradient(135deg,var(--brand-orange) 0%,#C85A28 100%);
   padding:48px 28px 36px;text-align:center;
   margin:-22px -22px 0;border-radius:0 0 24px 24px;
 }
+.folder-grid{flex:1;align-content:center}
 .home-hero .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,0,.15);color:var(--brand-yellow);border:1px solid rgba(255,255,0,.35);font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;margin-bottom:16px}
 .home-hero h1{font-size:28px;font-weight:800;color:#fff;margin-bottom:6px}
 .home-hero p{color:rgba(255,255,255,.55);font-size:15px}
