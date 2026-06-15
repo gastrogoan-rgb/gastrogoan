@@ -2495,6 +2495,7 @@ function openCloudWizard(){
 const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
 const UNITS = ['g','ud'];
+const BASE_UNITS = ['L','ml','kg','g','ud'];
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 
 // Horario semanal: un array de 7 días (Lunes..Domingo). Cada día puede ser
@@ -4759,14 +4760,31 @@ function recipeFoodCostPct(r){
   const cost = recipeCost(r);
   return (cost / r.price) * 100;
 }
-function recipeIngredientCost(line){
+// Coste de una elaboración base (caldo, sofrito, masa...) por unidad de su rendimiento.
+// `visited` evita bucles infinitos si una base se referencia a sí misma (directa o indirectamente).
+function recipeBaseCostPerUnit(baseRecipe, visited){
+  if(!baseRecipe) return 0;
+  visited = visited || new Set();
+  if(visited.has(baseRecipe.id)) return 0;
+  visited.add(baseRecipe.id);
+  const total = recipeCostBreakdown(baseRecipe, visited).total;
+  const yieldQty = baseRecipe.baseYield || 1;
+  return yieldQty > 0 ? total / yieldQty : 0;
+}
+function recipeIngredientCost(line, visited){
+  if(line.type === 'base'){
+    const baseRecipe = getRecipe(line.baseRecipeId);
+    if(!baseRecipe) return 0;
+    const bruto = line.qty * (1 + (line.merma||0)/100);
+    return recipeBaseCostPerUnit(baseRecipe, visited) * bruto;
+  }
   const ing = getIngredient(line.ingredientId);
   if(!ing) return 0;
   const bruto = line.qty * (1 + (line.merma||0)/100);
   return ing.price * bruto;
 }
-function recipeCostBreakdown(r){
-  const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line), 0);
+function recipeCostBreakdown(r, visited){
+  const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line, visited), 0);
   const consPct = r.consumiblesPct || 0;
   const costeCons = costeIng * consPct / 100;
   return {costeIng, costeCons, total: costeIng + costeCons};
@@ -4907,6 +4925,20 @@ function renderEscandallo(){
 function renderEscandalloRow(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
+    if(r.isBase){
+      const perUnit = recipeBaseCostPerUnit(r);
+      return `
+        <div class="list-row">
+          <div class="list-row-name"><i class="ti ti-soup"></i> <span>${escapeHtml(r.name)}</span></div>
+          <span style="font-size:12px;color:var(--muted)">Coste total ${fmtMoney(cost)} · Rendimiento ${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</span>
+          <span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>
+          <div class="actions-cell">
+            <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
+            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }
     const pct = recipeFoodCostPct(r);
     const margin = (r.price||0) - cost;
     const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
@@ -4926,34 +4958,50 @@ function renderEscandalloRow(r){
     `;
 }
 
+function renderEscandalloLineLabel(line){
+  if(line.type === 'base'){
+    const base = getRecipe(line.baseRecipeId);
+    return base ? {name: base.name, unit: base.baseUnit||'L'} : null;
+  }
+  const ing = getIngredient(line.ingredientId);
+  return ing ? {name: ing.name, unit: ing.unit} : null;
+}
+
 function renderEscandalloCard(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
     const margin = (r.price||0) - cost;
-    const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
+    const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
+    const pctBadge = r.isBase ? `<span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>`
+      : !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
       : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
       : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
       : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
 
     const lines = (r.ingredients||[]).map(line => {
-      const ing = getIngredient(line.ingredientId);
-      if(!ing) return '';
+      const label = renderEscandalloLineLabel(line);
+      if(!label) return '';
       const lineCost = recipeIngredientCost(line);
       const merma = line.merma||0;
-      return `<tr><td>${escapeHtml(ing.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(ing.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td></tr>`;
+      return `<tr><td>${escapeHtml(label.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(label.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td></tr>`;
     }).join('');
 
     return `
       <div class="card card-compact">
         <h3 style="justify-content:space-between">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-chef-hat"></i> ${escapeHtml(r.name)}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</span>
           ${pctBadge}
         </h3>
         <div class="grid grid-3" style="margin-bottom:6px">
-          <div class="kpi"><div class="label">Coste</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
+          ${r.isBase ? `
+          <div class="kpi"><div class="label">Rendimiento</div><div class="value" style="font-size:14px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
+          <div class="kpi"><div class="label">Coste/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:14px">${fmtMoney(perUnit)}</div></div>
+          ` : `
           <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:14px">${fmtMoney(r.price||0)}</div></div>
           <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:14px">${fmtMoney(margin)}</div></div>
+          `}
         </div>
         <details>
           <summary>Ver detalle de ingredientes</summary>
@@ -4979,7 +5027,7 @@ function renderEscandalloCard(r){
 let recipeModalLines = [];
 
 function openRecipeModal(id){
-  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea()};
+  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:false, baseYield:1, baseUnit:'L'};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
   renderRecipeModal(id, r);
 }
@@ -4991,14 +5039,14 @@ function renderRecipeModal(id, r){
   const areaIngredients = DB.ingredients.filter(i => (i.area||'cocina') === area);
 
   const linesHtml = recipeModalLines.map((line, idx) => {
-    const ing = getIngredient(line.ingredientId);
+    const label = renderEscandalloLineLabel(line);
     return `
       <tr>
-        <td>${ing ? escapeHtml(ing.name) : '—'}</td>
+        <td>${label ? escapeHtml(label.name) + (line.type==='base'?' <span style="font-size:11px;color:var(--muted)">(base)</span>':'') : '—'}</td>
         <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
-        <td>${ing ? escapeHtml(ing.unit) : ''}</td>
+        <td>${label ? escapeHtml(label.unit) : ''}</td>
         <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>
-        <td>${ing ? fmtMoney(recipeIngredientCost(line)) : '—'}</td>
+        <td>${label ? fmtMoney(recipeIngredientCost(line)) : '—'}</td>
         <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeRecipeLine(${idx}, ${id||'null'})"><i class="ti ti-x"></i></button></td>
       </tr>
     `;
@@ -5039,6 +5087,27 @@ function renderRecipeModal(id, r){
     </div>
 
     <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+        <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
+        Es una elaboración base (caldo, sofrito, masa...) que se puede usar como ingrediente en otros platos
+      </label>
+    </div>
+    ${r.isBase ? `
+    <div class="field-row">
+      <div class="field">
+        <label>Rendimiento (cantidad que produce esta receta)</label>
+        <input type="number" id="recipe-base-yield" value="${r.baseYield!=null?r.baseYield:1}" step="0.01" min="0.01" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
+      </div>
+      <div class="field">
+        <label>Unidad</label>
+        <select id="recipe-base-unit" onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
+          ${BASE_UNITS.map(u=>`<option value="${u}" ${(r.baseUnit||'L')===u?'selected':''}>${u}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="field">
       <label>Ingredientes</label>
       <div class="table-wrap" style="margin-bottom:8px">
         <table>
@@ -5068,6 +5137,11 @@ function renderRecipeModal(id, r){
       <div class="kpi"><div class="label">Consumibles</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeCons)}</div></div>
       <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total)}</div></div>
     </div>
+    ${r.isBase ? `
+    <div class="grid grid-2" style="margin-bottom:10px">
+      <div class="kpi ok"><div class="label">Coste por ${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total / (parseFloat(r.baseYield)||1))}</div></div>
+    </div>
+    ` : ''}
 
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -5081,16 +5155,21 @@ function filterRecipeIngredientResults(id){
   const area = (r && r.area) || currentArea();
   const search = document.getElementById('recipe-add-ingredient-search').value.trim().toLowerCase();
   const results = document.getElementById('recipe-add-ingredient-results');
-  const matches = DB.ingredients
+  const ingMatches = DB.ingredients
     .filter(i => (i.area||'cocina') === area)
     .filter(i => !search || i.name.toLowerCase().includes(search))
-    .slice(0, 30);
+    .map(i => ({type:'ingredient', id:i.id, name:i.name, unit:i.unit}));
+  const baseMatches = DB.recipes
+    .filter(b => b.isBase && (b.area||'cocina') === area && b.id !== id)
+    .filter(b => !search || b.name.toLowerCase().includes(search))
+    .map(b => ({type:'base', id:b.id, name:b.name, unit:b.baseUnit||'L', perUnit: recipeBaseCostPerUnit(b)}));
+  const matches = [...baseMatches, ...ingMatches].slice(0, 30);
   if(!matches.length){
     results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">Sin resultados</div>`;
   } else {
-    results.innerHTML = matches.map(i => `
-      <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, ${i.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
-        ${escapeHtml(i.name)} <span style="color:var(--muted)">(${escapeHtml(i.unit)})</span>
+    results.innerHTML = matches.map(m => `
+      <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
+        ${m.type==='base' ? '<i class="ti ti-soup"></i> ' : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`Base — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
       </div>
     `).join('');
   }
@@ -5100,20 +5179,28 @@ function hideRecipeIngredientResults(id){
   const results = document.getElementById('recipe-add-ingredient-results');
   if(results) results.style.display = 'none';
 }
-function selectRecipeIngredientResult(id, ingredientId){
-  const ing = getIngredient(ingredientId);
-  document.getElementById('recipe-add-ingredient').value = ingredientId;
-  document.getElementById('recipe-add-ingredient-search').value = ing ? ing.name : '';
+function selectRecipeIngredientResult(id, type, refId){
+  const name = type === 'base' ? (getRecipe(refId)||{}).name : (getIngredient(refId)||{}).name;
+  document.getElementById('recipe-add-ingredient').value = `${type}:${refId}`;
+  document.getElementById('recipe-add-ingredient-search').value = name || '';
   hideRecipeIngredientResults(id);
 }
 
 function addRecipeLine(id){
-  const ingredientId = parseInt(document.getElementById('recipe-add-ingredient').value);
+  const raw = document.getElementById('recipe-add-ingredient').value;
   const qty = parseFloat(document.getElementById('recipe-add-qty').value) || 0;
-  if(!ingredientId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
-  const existing = recipeModalLines.find(l => l.ingredientId === ingredientId);
-  if(existing){ existing.qty += qty; }
-  else { recipeModalLines.push({ingredientId, qty, merma:0}); }
+  const [type, refIdStr] = raw.split(':');
+  const refId = parseInt(refIdStr);
+  if(!refId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
+  if(type === 'base'){
+    const existing = recipeModalLines.find(l => l.type === 'base' && l.baseRecipeId === refId);
+    if(existing){ existing.qty += qty; }
+    else { recipeModalLines.push({type:'base', baseRecipeId: refId, qty, merma:0}); }
+  } else {
+    const existing = recipeModalLines.find(l => l.type !== 'base' && l.ingredientId === refId);
+    if(existing){ existing.qty += qty; }
+    else { recipeModalLines.push({type:'ingredient', ingredientId: refId, qty, merma:0}); }
+  }
   renderRecipeModal(id, currentRecipeFormState(id));
 }
 function updateRecipeLineQty(idx, value, id){
@@ -5177,6 +5264,9 @@ function currentRecipeFormState(id){
   const comensalesEl = document.getElementById('recipe-comensales');
   const consumiblesEl = document.getElementById('recipe-consumibles');
   const categoryEl = document.getElementById('recipe-category');
+  const isBaseEl = document.getElementById('recipe-is-base');
+  const baseYieldEl = document.getElementById('recipe-base-yield');
+  const baseUnitEl = document.getElementById('recipe-base-unit');
   const r = id ? getRecipe(id) : {};
   return {
     name: nameEl ? nameEl.value : (r.name||''),
@@ -5184,6 +5274,9 @@ function currentRecipeFormState(id){
     comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
     consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
     category: categoryEl ? categoryEl.value : (r.category||''),
+    isBase: isBaseEl ? isBaseEl.checked : !!r.isBase,
+    baseYield: baseYieldEl ? baseYieldEl.value : (r.baseYield!=null?r.baseYield:1),
+    baseUnit: baseUnitEl ? baseUnitEl.value : (r.baseUnit||'L'),
     area: r.area || currentArea(),
   };
 }
@@ -5196,20 +5289,29 @@ function saveRecipe(id){
   const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
   const categoryEl = document.getElementById('recipe-category');
   const category = categoryEl ? categoryEl.value : '';
+  const isBaseEl = document.getElementById('recipe-is-base');
+  const isBase = isBaseEl ? isBaseEl.checked : false;
+  const baseYield = isBase ? (parseFloat(document.getElementById('recipe-base-yield').value) || 1) : 1;
+  const baseUnit = isBase ? document.getElementById('recipe-base-unit').value : 'L';
   const ingredients = recipeModalLines.map(l => ({...l}));
 
-  // Alérgenos derivados de los ingredientes
+  // Alérgenos derivados de los ingredientes y de las bases usadas
   const allergenSet = new Set();
   ingredients.forEach(line => {
+    if(line.type === 'base'){
+      const base = getRecipe(line.baseRecipeId);
+      (base && base.allergens || []).forEach(a => allergenSet.add(a));
+      return;
+    }
     const ing = getIngredient(line.ingredientId);
     (ing && ing.allergens || []).forEach(a => allergenSet.add(a));
   });
 
   if(id){
     const r = getRecipe(id);
-    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet]});
+    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase, baseYield, baseUnit});
   }else{
-    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea()});
+    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   saveDB();
   closeModal();
