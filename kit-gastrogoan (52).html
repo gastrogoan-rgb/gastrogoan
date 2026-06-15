@@ -400,7 +400,7 @@ td.wrap{white-space:normal}
 .te-bar-fill{height:100%;border-radius:3px;transition:width .4s}
 .dist-config{display:flex;gap:10px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:16px;align-items:center}
 .dist-field{display:flex;align-items:center;gap:6px;font-size:13px}
-.dist-field input{width:50px;text-align:right;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:6px}
+.dist-field input{width:58px;text-align:right;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:6px}
 .kpi-mini{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center}
 .kpi-mini .v{font-size:18px;font-weight:700;margin:4px 0}
 .kpi-mini .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
@@ -986,11 +986,12 @@ td.wrap{white-space:normal}
         <div class="month-sel" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div class="dist-config">
-          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo:</span>
-          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">Gastos Variables <input type="number" id="te-pct-mp" value="35" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
-          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" oninput="GE.renderTesoreria()">%</div>
+          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo (suma 100%):</span>
+          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
+          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-gf')">%</div>
+          <div class="dist-field">Gastos Variables <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-mp')">%</div>
+          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-og')">%</div>
+          <div class="dist-field">Beneficio <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-ben')">%</div>
         </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4>Distribución de tesorería <span class="ge-auto">AUTO</span></h4></div>
@@ -9073,6 +9074,7 @@ const GE = (function(){
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
   let cdrYear = new Date().getFullYear();
+  let distPctLoaded = false;
   let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   const currentYear = new Date().getFullYear();
 
@@ -9740,11 +9742,21 @@ const GE = (function(){
     document.getElementById('te-months').innerHTML = MESES.map((m,i)=>`
       <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}</div>`).join('');
 
-    const pctPer = (parseFloat(document.getElementById('te-pct-per')?.value)||30)/100;
-    const pctGF = (parseFloat(document.getElementById('te-pct-gf')?.value)||20)/100;
-    const pctMP = (parseFloat(document.getElementById('te-pct-mp')?.value)||35)/100;
-    const pctOG = (parseFloat(document.getElementById('te-pct-og')?.value)||5)/100;
-    const pctBen = Math.max(0, 1-pctPer-pctGF-pctMP-pctOG);
+    const dp = config().distPct;
+    if(dp && !distPctLoaded){
+      document.getElementById('te-pct-per').value = dp.per;
+      document.getElementById('te-pct-gf').value = dp.gf;
+      document.getElementById('te-pct-mp').value = dp.mp;
+      document.getElementById('te-pct-og').value = dp.og;
+      document.getElementById('te-pct-ben').value = dp.ben;
+      distPctLoaded = true;
+    }
+
+    const pctPer = (parseFloat(document.getElementById('te-pct-per')?.value)||0)/100;
+    const pctGF = (parseFloat(document.getElementById('te-pct-gf')?.value)||0)/100;
+    const pctMP = (parseFloat(document.getElementById('te-pct-mp')?.value)||0)/100;
+    const pctOG = (parseFloat(document.getElementById('te-pct-og')?.value)||0)/100;
+    const pctBen = (parseFloat(document.getElementById('te-pct-ben')?.value)||0)/100;
 
     const facBruta = facturacionMes(activeMonth);
     const facNeta = facturacionNetaMes(activeMonth);
@@ -9803,6 +9815,26 @@ const GE = (function(){
     document.getElementById('te-annual-chart').innerHTML = barChartHTML(MESES.map((m,i)=>({lbl:m, v:resultadoMes(i)})));
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
+  function adjustDistPct(changedId){
+    const ids = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'];
+    const els = {}; ids.forEach(id=>els[id]=document.getElementById(id));
+    const vals = {}; ids.forEach(id=>vals[id]=Math.max(0,Math.min(100,parseFloat(els[id].value)||0)));
+    const changedVal = vals[changedId];
+    const otherIds = ids.filter(id=>id!==changedId);
+    const othersSum = otherIds.reduce((s,id)=>s+vals[id],0);
+    const remaining = 100 - changedVal;
+    if(othersSum<=0){
+      otherIds.forEach(id=>vals[id]=remaining/otherIds.length);
+    }else{
+      otherIds.forEach(id=>vals[id]=Math.max(0, remaining*vals[id]/othersSum));
+    }
+    vals[changedId]=changedVal;
+    ids.forEach(id=>els[id].value = Math.round(vals[id]*10)/10);
+    config().distPct = {per:vals['te-pct-per'], gf:vals['te-pct-gf'], mp:vals['te-pct-mp'], og:vals['te-pct-og'], ben:vals['te-pct-ben']};
+    distPctLoaded = true;
+    saveDB();
+    renderTesoreria();
+  }
   function setPctImpuesto(){
     config().pctImpuestoBeneficio = parseFloat(document.getElementById('res-pct-impuesto').value) || 0;
     saveDB();
@@ -10122,7 +10154,7 @@ const GE = (function(){
     showToast('CSV descargado, adjúntalo en el correo abierto');
   }
 
-  return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, deleteGVGroup, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
+  return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, deleteGVGroup, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
 })();
 
 /* ============================================================
