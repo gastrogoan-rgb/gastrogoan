@@ -10848,6 +10848,14 @@ function getPromosForEmployeeDay(empId, dayIdx){
     .sort((a,b)=>a.fecha.localeCompare(b.fecha));
 }
 
+function goToFichaForDish(name){
+  const r = DB.recipes.find(rec => rec.name === name && (rec.area||'cocina') === currentArea());
+  if(!r){ showToast('No se encontró la ficha técnica de este plato'); return; }
+  const ficha = DB.fichas.find(f => f.recipeId === r.id);
+  if(ficha) openFichaModal(ficha.id);
+  else openFichaModal(null, r.id);
+}
+
 function getAllDishNames(){
   const names = new Set();
   DB.recipes.forEach(r => { if(r.name) names.add(r.name); });
@@ -10924,12 +10932,12 @@ function renderDistDetail(){
   const allDishes = getAllDishNames();
 
   const platosHtml = d.platos.length
-    ? d.platos.map((pl,i)=>`
-        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
-          <span>${escapeHtml(pl)}</span>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
+        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${pl.replace(/'/g,"\\'")}')" title="Ver ficha técnica">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(pl)}</span>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('')
+      `).join('') + `</div>`
     : '<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>Sin platos asignados</div>';
 
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
