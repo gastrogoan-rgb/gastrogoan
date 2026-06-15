@@ -10272,45 +10272,56 @@ function renderHorariosFichar(){
     const horasSemana = employeeHoursInRange(e.id, weekDates);
     const propinasSemana = employeePropinasInRange(e.id, weekDates);
     return `
-      <div class="card" style="text-align:center">
+      <div class="card" style="text-align:center;cursor:pointer" onclick="openFichajeHistoryModal(${e.id})">
         <h3 style="justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
         ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> Fichado desde las ${fmtHora(open.entrada)}</span>` : `<span class="badge badge-gray">Fuera de servicio</span>`}
-        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center" onclick="event.stopPropagation()">
           <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> Entrada</button>
           <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
         </div>
         <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
         <div style="font-size:12px;color:var(--muted)">Propinas esta semana: <strong>${fmtMoney(propinasSemana)}</strong></div>
+        <div style="margin-top:6px;font-size:12px;color:var(--brand-orange)"><i class="ti ti-history"></i> Ver últimos fichajes</div>
       </div>
     `;
   }).join('');
 
-  const historico = [...(DB.fichajes||[])].sort((a,b) => (b.entrada||'').localeCompare(a.entrada||'')).slice(0, 30);
+  box.innerHTML = `<div class="grid grid-3">${cards}</div>`;
+}
 
-  box.innerHTML = `
-    <div class="grid grid-3">${cards}</div>
-    <h3 style="margin-top:16px"><i class="ti ti-history"></i> Histórico de fichajes</h3>
-    ${historico.length ? `
+function openFichajeHistoryModal(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const fichajes = (DB.fichajes||[]).filter(f => f.employeeId===employeeId)
+    .sort((a,b) => (b.entrada||'').localeCompare(a.entrada||'')).slice(0, 20);
+
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-history"></i> Últimos fichajes — ${escapeHtml(e.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${fichajes.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Empleado</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Propinas</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Propinas</th></tr></thead>
           <tbody>
-            ${historico.map(f => {
-              const emp = DB.employees.find(e=>e.id===f.employeeId);
-              return `<tr>
-                <td>${escapeHtml(emp ? emp.name : '—')}</td>
+            ${fichajes.map(f => `
+              <tr>
                 <td>${escapeHtml(f.fecha)}</td>
                 <td>${fmtHora(f.entrada)}</td>
                 <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
                 <td>${f.salida ? fmtDuracion(fichajeHoras(f)) : '—'}</td>
                 <td>${f.propinas ? fmtMoney(f.propinas) : '—'}</td>
-              </tr>`;
-            }).join('')}
+              </tr>
+            `).join('')}
           </tbody>
         </table>
       </div>
     ` : `<div class="empty"><i class="ti ti-clock-play"></i>Sin fichajes registrados todavía.</div>`}
-  `;
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cerrar</button>
+    </div>
+  `);
 }
 
 function openFichajeModal(employeeId, action){
