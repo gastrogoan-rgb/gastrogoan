@@ -6669,31 +6669,66 @@ function renderTpvKpis(){
   `;
 }
 
+const ZONA_LABELS = {interior:'Interior', terraza:'Terraza', barra:'Barra'};
+const ZONA_ICONS = {interior:'ti-home', terraza:'ti-sun', barra:'ti-glass-cocktail'};
+
+function renderMesaCard(t){
+  const order = getOpenOrderForTable(t.id);
+  const total = order ? orderTotal(order) : 0;
+  const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
+  let badge = '<span class="badge badge-green">Libre</span>';
+  if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
+  return `
+    <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
+      <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
+      ${badge} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+      ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
+      ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
+      <div style="margin-top:10px">
+        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  `;
+}
+
 function renderTpvMesas(tiposServicio){
   if(!tiposServicio.mesa) return '';
   const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
-  const mesaCards = sortedTables.map(t => {
-    const order = getOpenOrderForTable(t.id);
-    const total = order ? orderTotal(order) : 0;
-    const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
-    let badge = '<span class="badge badge-green">Libre</span>';
-    if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
+  if(!sortedTables.length){
     return `
-      <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(${t.id})">
-        <h3 style="justify-content:center"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</h3>
-        ${badge} ${hayNuevos ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido cliente</span>' : ''} ${order && order.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
-        ${order && order.pax ? `<div style="margin-top:6px;font-size:12px;color:var(--muted)">👥 ${order.pax} persona${order.pax!==1?'s':''}</div>` : ''}
-        ${order ? `<div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(total)}</div>` : ''}
-        <div style="margin-top:10px">
-          <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''}><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <div class="grid grid-4"><div class="empty">No hay mesas. Crea las mesas con el orden y numeración de tu restaurante, o configura cuántas mesas tienes en Mi Negocio.</div></div>
     `;
-  }).join('');
-  return `
-    <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
-    <div class="grid grid-4">${mesaCards || '<div class="empty">No hay mesas. Crea las mesas con el orden y numeración de tu restaurante.</div>'}</div>
-  `;
+  }
+
+  // Si hay mesas con zona asignada (interior/terraza/barra), las agrupamos en
+  // secciones; las mesas sin zona (creadas manualmente) van en un grupo aparte.
+  const hasZonas = sortedTables.some(t => t.zona);
+  if(!hasZonas){
+    return `
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <div class="grid grid-4">${sortedTables.map(renderMesaCard).join('')}</div>
+    `;
+  }
+
+  const zonas = ['interior','terraza','barra'];
+  let html = '';
+  zonas.forEach(z => {
+    const tables = sortedTables.filter(t => t.zona === z);
+    if(!tables.length) return;
+    html += `
+      <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${ZONA_LABELS[z]}</h3>
+      <div class="grid grid-4">${tables.map(renderMesaCard).join('')}</div>
+    `;
+  });
+  const sinZona = sortedTables.filter(t => !t.zona);
+  if(sinZona.length){
+    html += `
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Otras mesas</h3>
+      <div class="grid grid-4">${sinZona.map(renderMesaCard).join('')}</div>
+    `;
+  }
+  return html;
 }
 
 function renderTpvToGo(tiposServicio){
@@ -12261,6 +12296,10 @@ function renderMiNegocio(){
           <label>Mesas de terraza</label>
           <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4">
         </div>
+        <div class="field">
+          <label>Mesas/taburetes de barra</label>
+          <input type="number" id="mn-mesas-barra" value="${escapeHtml(b.mesasBarra||'')}" placeholder="3">
+        </div>
       </div>
       <div class="field">
         <label>Horario de apertura (texto)</label>
@@ -12468,13 +12507,18 @@ function renderHeader(){
 function syncMesasConfig(){
   const interior = parseInt(document.getElementById('mn-mesas-interior').value) || 0;
   const terraza = parseInt(document.getElementById('mn-mesas-terraza').value) || 0;
-  const interiorActuales = DB.tables.filter(t=>t.zona!=='terraza').length;
+  const barra = parseInt(document.getElementById('mn-mesas-barra').value) || 0;
+  const interiorActuales = DB.tables.filter(t=>!t.zona || t.zona==='interior').length;
   const terrazaActuales = DB.tables.filter(t=>t.zona==='terraza').length;
+  const barraActuales = DB.tables.filter(t=>t.zona==='barra').length;
   for(let i = interiorActuales + 1; i <= interior; i++){
     DB.tables.push({id: genId(), name: `Mesa ${i} (Interior)`, zona:'interior'});
   }
   for(let i = terrazaActuales + 1; i <= terraza; i++){
     DB.tables.push({id: genId(), name: `Mesa ${i} (Terraza)`, zona:'terraza'});
+  }
+  for(let i = barraActuales + 1; i <= barra; i++){
+    DB.tables.push({id: genId(), name: `Barra ${i}`, zona:'barra'});
   }
   saveDB();
   showToast('Mesas sincronizadas con el TPV');
@@ -12497,6 +12541,7 @@ function saveBusiness(){
     prop: document.getElementById('mn-prop').value.trim(),
     mesasInterior: document.getElementById('mn-mesas-interior').value.trim(),
     mesasTerraza: document.getElementById('mn-mesas-terraza').value.trim(),
+    mesasBarra: document.getElementById('mn-mesas-barra').value.trim(),
     aforo: document.getElementById('mn-aforo').value.trim(),
     ig: document.getElementById('mn-ig').value.trim(),
     fb: document.getElementById('mn-fb').value.trim(),
