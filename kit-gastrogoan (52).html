@@ -713,6 +713,7 @@ td.wrap{white-space:normal}
             <button class="btn btn-sm" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
             <button class="btn btn-sm" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
           </div>
+          <button class="btn btn-sm" onclick="renderFichas()"><i class="ti ti-refresh"></i> Actualizar</button>
         </div>
       </div>
       <div id="fichas-list"></div>
@@ -5348,6 +5349,18 @@ function setFichasView(mode){
   renderFichas();
 }
 
+// Carpeta de categoría actualmente abierta en Fichas Técnicas (null = vista de carpetas)
+let fichasFolder = null;
+function openFichaFolder(catKey){
+  fichasFolder = catKey;
+  renderFichas();
+}
+function backToFichaFolders(){
+  fichasFolder = null;
+  document.getElementById('fichas-search').value = '';
+  renderFichas();
+}
+
 function renderFichas(){
   populateRecipeCategoryFilter('fichas-filter-cat');
   const search = document.getElementById('fichas-search').value.toLowerCase();
@@ -5369,19 +5382,43 @@ function renderFichas(){
     return;
   }
 
+  const searching = !!(search || cat);
   const gridClass = fichasView==='list' ? '' : 'grid grid-compact';
   const renderCard = r => fichasView==='list' ? renderFichaRow(r) : renderFichaCard(r);
 
-  if(!recipes.length){
-    html += `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
-  } else {
-    html += groupRecipesByCategory(recipes).map(([catName, group]) => `
+  if(!searching && fichasFolder === null){
+    // Vista de carpetas por categoría
+    const folders = getEscandalloFolders(areaRecipes);
+    box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
+      <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
+        <h3><i class="ti ti-folder"></i> ${escapeHtml(label)}</h3>
+        <div style="font-size:12px;color:var(--muted)">${group.length} plato${group.length===1?'':'s'}</div>
+      </div>
+    `).join('')}</div>`;
+    return;
+  }
+
+  const backBtn = (!searching && fichasFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
+
+  const visibleRecipes = (!searching && fichasFolder !== null)
+    ? recipes.filter(r => (r.category || '__none__') === fichasFolder)
+    : recipes;
+
+  if(!visibleRecipes.length){
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    return;
+  }
+
+  if(searching){
+    html += groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
       <h3 class="cat-heading">${escapeHtml(catName)}</h3>
       <div class="${gridClass}">${group.map(renderCard).join('')}</div>
     `).join('');
+  } else {
+    html += backBtn + `<div class="${gridClass}">${visibleRecipes.map(renderCard).join('')}</div>`;
   }
 
-  const orphanFichas = DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
+  const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
   if(orphanFichas.length){
     html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
       <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
