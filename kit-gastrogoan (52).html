@@ -379,6 +379,8 @@ td.wrap{white-space:normal}
 .ge-grid tr.total td{background:var(--brand-black);color:#fff;font-weight:700}
 .ge-grid td.pos{color:var(--green)}
 .ge-grid td.neg{color:var(--red)}
+.ge-grid tr.total td.pos{color:var(--green)}
+.ge-grid tr.total td.neg{color:#ff8a8a}
 
 .month-pill{padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-weight:500}
 .month-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d)}
@@ -974,6 +976,7 @@ td.wrap{white-space:normal}
         <div class="dist-config" style="margin-bottom:14px">
           <div class="dist-field">Impuesto sobre beneficios (IRPF/IS) <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
         </div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets) y el impuesto sobre beneficios: es lo que realmente te llevas.</p>
         <div class="ge-grid"><table id="res-table"></table></div>
       </div>
 
@@ -9105,6 +9108,17 @@ const GE = (function(){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
+  // % de IVA incluido en los precios de venta (configurado en Ajustes > Facturación, por defecto 10%)
+  function ivaVentasPct(){
+    return (DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  }
+  // Facturación sin IVA: el IVA cobrado no es ingreso del negocio, hay que reservarlo para Hacienda.
+  function facturacionNetaMes(mes, año=currentYear){
+    return facturacionMes(mes,año) / (1 + ivaVentasPct()/100);
+  }
+  function ivaVentasMes(mes, año=currentYear){
+    return facturacionMes(mes,año) - facturacionNetaMes(mes,año);
+  }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
   // sobre las ventas del mes que llegaron por esas plataformas.
   function comisionesMes(mes, año=currentYear){
@@ -9120,8 +9134,15 @@ const GE = (function(){
       return s + (elapsed>=0 && elapsed<cuotas ? parseFloat(c.cuotaMensual||0) : 0);
     }, 0);
   }
+  // Resultado antes de impuestos: facturación neta de IVA menos todos los gastos.
+  function resultadoAntesImpMes(mes, año=currentYear){
+    return facturacionNetaMes(mes,año) - totalVariablesMes(mes,año) - totalFijos() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
+  }
+  // Resultado Neto: lo que realmente te llevas, después de IVA e impuesto sobre beneficios.
   function resultadoMes(mes, año=currentYear){
-    return facturacionMes(mes,año) - totalVariablesMes(mes,año) - totalFijos() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
+    const r = resultadoAntesImpMes(mes,año);
+    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
+    return r>0 ? r*(1-pctImp) : r;
   }
 
   /* -- GASTOS FIJOS -- */
@@ -9415,13 +9436,19 @@ const GE = (function(){
     const yearSel = document.getElementById('cdr-year');
     if(yearSel) yearSel.textContent = cdrYear;
     const tf = totalFijos();
+    const ivaPct = ivaVentasPct();
+    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     const rows = [
-      {lbl:'Facturación (TPV)', vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
+      {lbl:'Facturación (TPV, IVA incl.)', vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
+      {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, vals:MESES.map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
+      {lbl:'Facturación neta', vals:MESES.map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
       {lbl:'Gastos Variables', vals:MESES.map((_,i)=>-totalVariablesMes(i,cdrYear)), auto:true},
       {lbl:'Gastos Fijos', vals:MESES.map(()=>-tf), auto:true},
       {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
       {lbl:'Cuotas inversión financiada', vals:MESES.map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
-      {lbl:'Resultado Mensual', vals:MESES.map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true},
+      {lbl:'Resultado Antes de Impuestos', vals:MESES.map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
+      {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, vals:MESES.map((_,i)=>{ const r=resultadoAntesImpMes(i,cdrYear); return r>0?-(r*pctImp):0; }), auto:true},
+      {lbl:'Resultado Neto', vals:MESES.map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
     let html = `<thead><tr><th>Concepto</th>${MESES.map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">AÑO</th></tr></thead><tbody>`;
@@ -9432,10 +9459,11 @@ const GE = (function(){
       html += `<tr class="${cls}"><td>${r.lbl}${r.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
       r.vals.forEach(v=>{
         const c = r.isResult ? (v>=0?'pos':'neg') : '';
-        html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v)):'—'}</td>`;
+        const sign = r.isResult && v<0 ? '-' : '';
+        html += `<td class="${c}">${v!==0?sign+fmtMoney(Math.abs(v)):'—'}</td>`;
       });
-      q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)">${v!==0?fmtMoney(Math.abs(v)):'—'}</td>`; });
-      html += `<td style="background:rgba(0,0,0,.1)">${total!==0?fmtMoney(Math.abs(total)):'—'}</td></tr>`;
+      q.forEach(v=>{ html += `<td style="background:rgba(0,0,0,.05)">${v!==0?(r.isResult&&v<0?'-':'')+fmtMoney(Math.abs(v)):'—'}</td>`; });
+      html += `<td style="background:rgba(0,0,0,.1)">${total!==0?(r.isResult&&total<0?'-':'')+fmtMoney(Math.abs(total)):'—'}</td></tr>`;
     });
     html += '</tbody>';
     document.getElementById('cdr-table').innerHTML = html;
@@ -9635,18 +9663,21 @@ const GE = (function(){
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
     const amort = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12*3; // amortización 5 años, por trimestre
-    const resAntesImp = m => facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3-capexCuotaMes(m);
+    const ivaPct = ivaVentasPct();
+    const resAntesImp = m => facturacionNetaMes(m)-totalVariablesMes(m)-tf-comisionesMes(m)-amort/3-capexCuotaMes(m);
 
     const conceptos = [
-      {lbl:'Ventas Netas', fn:m=>facturacionMes(m), bold:true},
+      {lbl:'Facturación (TPV, IVA incl.)', fn:m=>facturacionMes(m), bold:true},
+      {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, fn:m=>ivaVentasMes(m), auto:true},
+      {lbl:'Ventas Netas', fn:m=>facturacionNetaMes(m), highlight:true, bold:true},
       {lbl:'Coste de Ventas (MP)', fn:m=>totalVariablesMes(m)},
-      {lbl:'Margen Bruto', fn:m=>facturacionMes(m)-totalVariablesMes(m), highlight:true, bold:true},
+      {lbl:'Margen Bruto', fn:m=>facturacionNetaMes(m)-totalVariablesMes(m), highlight:true, bold:true},
       {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
       {lbl:'Gastos Explotación', fn:()=>tf*3},
       {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
-      {lbl:'EBITDA Operativo', fn:m=>facturacionMes(m)-totalVariablesMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
+      {lbl:'EBITDA Operativo', fn:m=>facturacionNetaMes(m)-totalVariablesMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
       {lbl:'Amortizaciones CAPEX', fn:()=>amort, auto:true},
-      {lbl:'Resultado Antes Impuestos', fn:resAntesImp, bold:true},
+      {lbl:'Resultado Antes Impuestos', fn:resAntesImp, isResult:true, bold:true},
       {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
       {lbl:'Resultado Neto', fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
     ];
@@ -9656,7 +9687,8 @@ const GE = (function(){
       qMonths.forEach(months=>{
         const v = qVal(months, c.fn);
         const cls = c.isResult ? (v>=0?'pos':'neg') : '';
-        html += `<td class="${cls}">${fmtMoney(Math.abs(v))}</td>`;
+        const sign = c.isResult && v<0 ? '-' : '';
+        html += `<td class="${cls}">${sign+fmtMoney(Math.abs(v))}</td>`;
       });
       html += '</tr>';
     });
