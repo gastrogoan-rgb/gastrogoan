@@ -1129,6 +1129,7 @@ td.wrap{white-space:normal}
         <button class="ge-tab" id="promo-tab-dia" onclick="setPromoTab('dia')">Día</button>
         <button class="ge-tab" id="promo-tab-semana" onclick="setPromoTab('semana')">Semana</button>
         <button class="ge-tab" id="promo-tab-mes" onclick="setPromoTab('mes')">Mes</button>
+        <button class="ge-tab" id="promo-tab-clientes" onclick="setPromoTab('clientes')">Clientes</button>
       </nav>
       <div id="promo-tab-content"></div>
     </section>
@@ -12007,6 +12008,7 @@ function renderPromocion(){
 
   if(promoTab === 'semana') renderPromoSemana();
   else if(promoTab === 'mes') renderPromoMes();
+  else if(promoTab === 'clientes') renderPromoClientes();
   else renderPromoDia();
 }
 
@@ -12134,6 +12136,124 @@ function renderPromoMes(){
       ${cells}
     </div>
   `;
+}
+
+// Mensajes preconfigurados para la interacción post-servicio con el cliente
+// (cumpleaños, reseñas, clientes que hace tiempo no vienen).
+const PROMO_MESSAGE_TEMPLATES = {
+  cumple: (c, biz) => `¡Feliz cumpleaños, ${c.name}! 🎉 Todo el equipo de ${biz} te desea un día genial. Ven a celebrarlo con nosotros, ¡te invitamos a un postre o una bebida! 🎂🥂`,
+  resena: (c, biz) => `¡Hola ${c.name}! Gracias por tu visita a ${biz} 🙏 Si te ha gustado la experiencia, nos ayudaría mucho que nos dejaras una breve reseña. ¡Gracias de corazón!`,
+  vuelve: (c, biz) => `¡Hola ${c.name}! Hace tiempo que no te vemos por ${biz} y te echamos de menos 😊 Si te apetece volver, nos encantaría tenerte de nuevo por aquí. ¡Un saludo!`
+};
+const PROMO_MESSAGE_SUBJECTS = {
+  cumple: '¡Feliz cumpleaños! 🎉',
+  resena: '¿Nos dejas una reseña?',
+  vuelve: 'Te echamos de menos'
+};
+
+// Días que faltan hasta el próximo cumpleaños (cumpleanos en formato YYYY-MM-DD).
+function nextBirthdayDays(cumpleanos){
+  if(!cumpleanos) return null;
+  const parts = cumpleanos.split('-');
+  if(parts.length < 3) return null;
+  const month = parseInt(parts[1]) - 1, day = parseInt(parts[2]);
+  if(isNaN(month) || isNaN(day)) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  let next = new Date(today.getFullYear(), month, day);
+  if(next < today) next = new Date(today.getFullYear()+1, month, day);
+  return Math.round((next - today) / 86400000);
+}
+
+function renderPromoClientes(){
+  const box = document.getElementById('promo-tab-content');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const birthdays = DB.clients
+    .map(c => ({c, days: nextBirthdayDays(c.cumpleanos)}))
+    .filter(x => x.days !== null && x.days <= 30)
+    .sort((a,b) => a.days - b.days);
+
+  const withContact = DB.clients.filter(c => c.phone || c.email);
+  const recientes = withContact
+    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}))
+    .filter(x => x.days !== null && x.days >= 0 && x.days <= 7)
+    .sort((a,b) => a.days - b.days);
+  const inactivos = withContact
+    .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}))
+    .filter(x => x.days === null || x.days >= 60)
+    .sort((a,b) => (b.days ?? 999999) - (a.days ?? 999999));
+
+  const clientCard = (c, templateKey, badge) => `
+    <div class="card">
+      <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+      </div>
+    </div>
+  `;
+
+  box.innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> Acciones rápidas de fidelización: felicitar cumpleaños, pedir reseñas tras la visita e invitar a volver a clientes que hace tiempo no vienen. Los mensajes ya están escritos, listos para enviar por WhatsApp o email.</p>
+
+    <h3><i class="ti ti-cake"></i> Próximos cumpleaños (30 días)</h3>
+    <div class="grid grid-3" style="margin-bottom:18px">
+      ${birthdays.length ? birthdays.map(({c,days}) => clientCard(c, 'cumple', days===0 ? '<span class="badge badge-amber">¡Hoy!</span>' : `<span class="badge badge-gray">en ${days} día${days!==1?'s':''}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-cake"></i>Sin cumpleaños en los próximos 30 días.</div>`}
+    </div>
+
+    <h3><i class="ti ti-star"></i> Visitas recientes — pedir reseña</h3>
+    <div class="grid grid-3" style="margin-bottom:18px">
+      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'resena', `<span class="badge badge-green">hace ${days===0?'hoy':days+' día'+(days!==1?'s':'')}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-star"></i>Sin visitas recientes con datos de contacto.</div>`}
+    </div>
+
+    <h3><i class="ti ti-mood-empty"></i> Clientes que hace tiempo no vienen</h3>
+    <div class="grid grid-3">
+      ${inactivos.length ? inactivos.slice(0,12).map(({c,days}) => clientCard(c, 'vuelve', days!=null ? `<span class="badge badge-gray">${days} días</span>` : '<span class="badge badge-gray">sin visitas</span>')).join('')
+        : `<div class="empty"><i class="ti ti-users"></i>No hay clientes inactivos.</div>`}
+    </div>
+  `;
+}
+
+// Abre un mensaje preconfigurado (cumpleaños, reseña, recuperación de cliente) listo
+// para enviar por WhatsApp/SMS o email, igual que en el premio de fidelidad.
+function openClientMessageModal(clientId, templateKey){
+  const c = DB.clients.find(x=>x.id===clientId);
+  if(!c) return;
+  const biz = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const msg = PROMO_MESSAGE_TEMPLATES[templateKey](c, biz);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message"></i> Mensaje para ${escapeHtml(c.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr(PROMO_MESSAGE_SUBJECTS[templateKey]||'')}')" ${!c.email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cerrar</button>
+    </div>
+  `);
+}
+
+function sendPromoClientWhatsapp(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.phone){ showToast('Este cliente no tiene teléfono guardado'); return; }
+  const tel = c.phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('promo-msg-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+}
+
+function sendPromoClientEmail(id, subject){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.email){ showToast('Este cliente no tiene email guardado'); return; }
+  const body = encodeURIComponent(document.getElementById('promo-msg-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+encodeURIComponent(subject)+'&body='+body;
 }
 
 function openPromoModal(id, fecha){
