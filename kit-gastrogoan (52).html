@@ -334,6 +334,10 @@ td.wrap{white-space:normal}
 .manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 .manual-step .st{font-size:13px;line-height:1.5}
 .manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d)}
+.manual-warning{background:#FEF3E2;border-left:3px solid var(--brand-orange);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#9A5B1F}
+.manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px}
+.manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
+.manual-detail table th{background:var(--bg);font-weight:700}
 @media (max-width:720px){.manual-wrap{grid-template-columns:1fr}.manual-nav{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}.manual-chapter{border-left:none;border-bottom:3px solid transparent}.manual-chapter.active{border-left:none;border-bottom-color:var(--teal)}}
 
 .ge-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden}
@@ -13165,177 +13169,398 @@ let manualChapter = 0;
 const MANUAL_CHAPTERS = [
   {
     title:'🚀 Cómo empezar',
-    content:`<h3>Primeros pasos</h3>
-    <p>El Kit sigue un orden lógico. Completa los módulos en secuencia y cada uno alimentará al siguiente automáticamente.</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mi Negocio</strong> — Rellena los datos de tu establecimiento. Personalizan la app y aparecen en los tickets.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Lista</strong> — Añade todos tus ingredientes con precio de compra y proveedor. Es la base de todo.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Escandallo</strong> — Crea tus recetas con los ingredientes de la Mega Lista. El sistema calcula el coste automáticamente.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Fichas Técnicas</strong> — Añade los pasos de elaboración y alérgenos. Se crean automáticamente desde el Escandallo.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Carta</strong> — Crea tu menú importando los platos del Escandallo. Puedes tener varias cartas por horario.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>TPV</strong> — Gestiona mesas, comandas, clientes y reservas. Las ventas alimentan la Gestión Económica automáticamente.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Gestión Económica</strong> — Registra gastos fijos y compras a proveedores. El P&amp;L y el punto de equilibrio se calculan solos.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Panel de Control</strong> — Consulta aquí cada día para tener todo el negocio a la vista en segundos.</div></div>
-    <div class="manual-tip">💡 Los datos persisten automáticamente. No hay que guardar archivos ni hacer copias — todo se guarda en el navegador (localStorage).</div>
-    <h4>Usar el Kit como una app (móvil, tablet y ordenador)</h4>
-    <p>El Kit funciona perfectamente en cualquier dispositivo desde el navegador. Para acceder más rápido, sin escribir la dirección cada vez y con una pantalla más limpia (a pantalla completa, sin barra del navegador), puedes <strong>anclarlo a la pantalla de inicio</strong>:</p>
+    content:`<h3>Qué es GastroGoan y cómo está organizado</h3>
+    <p>GastroGoan es un <strong>kit de gestión integral</strong> para bares y restaurantes: un único sistema donde la información fluye de un módulo a otro sin que tengas que copiar nada a mano. La app está dividida en tres grandes áreas, accesibles desde la pantalla de inicio:</p>
     <ul>
-      <li><strong>Móvil/tablet Android (Chrome):</strong> abre el Kit → menú ⋮ (arriba a la derecha) → "Añadir a pantalla de inicio" o "Instalar app"</li>
-      <li><strong>iPhone/iPad (Safari):</strong> abre el Kit → botón compartir <i class="ti ti-share-2"></i> → "Añadir a pantalla de inicio"</li>
-      <li><strong>Ordenador (Chrome/Edge):</strong> abre el Kit → icono de instalar en la barra de direcciones (o menú ⋮ → "Instalar aplicación")</li>
+      <li><strong>Cocina</strong> — ingredientes, recetas, escandallos, fichas técnicas, stock, pedidos a proveedores, personal y limpieza del lado de cocina.</li>
+      <li><strong>Sala</strong> — los mismos módulos pero para el equipo de sala, más TPV, clientes, reservas y promoción.</li>
+      <li><strong>Gestión</strong> — la parte económica y administrativa: finanzas, panel de control, datos del negocio y este manual.</li>
     </ul>
-    <div class="manual-tip">💡 Así tendrás un icono propio de GastroGoan para abrir el Kit al instante, igual que cualquier otra app, en el TPV de la barra, en la tablet de sala o en tu móvil.</div>`
+    <p>La idea central es que <strong>cada dato se introduce una sola vez</strong> y se reutiliza en cascada: el precio de un ingrediente en la Mega Lista recalcula el coste de la receta en el Escandallo, esa receta alimenta la Ficha Técnica y la Carta, la Carta se usa en el TPV, y las ventas del TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control. Si sigues el orden correcto desde el principio, te ahorrarás trabajo repetido y los números del negocio estarán siempre actualizados solos.</p>
+    <h4>Ruta recomendada para configurar tu negocio desde cero</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mi Negocio</strong> (en Gestión) — Es el primer paso siempre. Rellena el nombre, dirección, horario semanal, tipos de servicio (mesa/take away/delivery) y configuración del ticket. Estos datos personalizan toda la app: aparecen en los tickets impresos, en la web de pedidos online y condicionan qué carta se activa en cada horario.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Lista</strong> (en Cocina) — Da de alta todos los ingredientes y productos que compras, con su precio de compra, formato (cantidad por la que pagas ese precio) y unidad. Es la base de todos los cálculos de coste posteriores: si esta lista no es precisa, ningún food cost del resto de la app lo será.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Proveedores</strong> (en Cocina) — Da de alta tus proveedores habituales y vincula cada ingrediente al proveedor que te lo suministra. Esto te permitirá generar pedidos por proveedor más adelante.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Escandallo</strong> (en Cocina) — Crea cada plato como una receta: elige los ingredientes de la Mega Lista, indica los gramajes netos y la merma de cada uno. La app calcula automáticamente el coste por ración, el food cost y el margen sobre el precio de venta que tú definas.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Fichas Técnicas</strong> (en Cocina) — Para cada receta del Escandallo, añade los pasos de elaboración, la presentación y los alérgenos. Sirven como procedimiento estándar para que cualquier cocinero elabore el plato siempre igual, y son obligatorias de cara a inspección sanitaria por el tema de alérgenos.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (en Cocina o Sala) — Crea una o varias cartas importando los platos directamente del Escandallo (ya con su precio de coste calculado), organízalos por secciones (Entrantes, Principales, Postres...) y marca cuáles están disponibles. Puedes programar distintas cartas según el horario (comidas, cenas, fin de semana, carta de bebidas...).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Stock y Pedidos</strong> (en Cocina) — Define el stock mínimo de cada ingrediente. A partir de aquí, el sistema descuenta stock automáticamente con cada venta del TPV y lo repone automáticamente cuando marcas un pedido a proveedor como "Recibido".</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Personal y Plan de Limpieza</strong> (en Cocina y Sala) — Da de alta a tu equipo, organiza turnos y reparte tareas. Configura el plan de limpieza APPCC para cumplir con la normativa de higiene alimentaria.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (en Sala) — Aquí es donde tu equipo trabaja cada turno: abrir mesas, tomar comandas, marchar a cocina, cobrar y cerrar caja. Cada venta queda registrada y alimenta el resto del sistema sin pasos adicionales.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Gestión Económica</strong> (en Gestión) — Añade tus gastos fijos (nóminas, alquiler, suministros...) una sola vez. A partir de ahí, la Cuenta de Resultados, el Punto de Equilibrio y la Tesorería se calculan solos combinando estos gastos con las ventas reales del TPV.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Panel de Control</strong> (en Gestión) — Tu pantalla de control diario. Una vez que los módulos anteriores están en marcha, aquí verás en segundos cómo va el negocio: ventas, resultado, alertas y próximas reservas.</div></div>
+    <div class="manual-tip">💡 No hace falta completar el 100% de cada módulo antes de pasar al siguiente. Puedes empezar con lo básico (ingredientes y recetas más vendidas, por ejemplo) e ir ampliando poco a poco mientras ya usas el TPV en el día a día.</div>
+    <h4>Cómo se guardan los datos</h4>
+    <p>Todo lo que introduces se guarda automáticamente en tu dispositivo (no hace falta pulsar ningún botón de "Guardar" salvo en formularios concretos que sí lo indican). Si activas la <strong>licencia y la nube</strong> desde Mi Negocio, además los datos se sincronizan entre todos los dispositivos del negocio (móvil del camarero, tablet de cocina, ordenador de oficina) y quedan respaldados en caso de que se borre el navegador o se cambie de dispositivo.</p>
+    <div class="manual-warning">⚠️ Si trabajas sin la nube activada, los datos quedan solo en ese navegador/dispositivo. Te recomendamos activar la licencia cuanto antes y, además, hacer copias de seguridad periódicas desde Mi Negocio → Mantenimiento de datos.</div>
+    <h4>Usar el Kit como una app (móvil, tablet y ordenador)</h4>
+    <p>El Kit funciona perfectamente en cualquier dispositivo desde el navegador, sin instalar nada de una tienda de aplicaciones. Para acceder más rápido, sin escribir la dirección cada vez y con una pantalla más limpia (a pantalla completa, sin barra del navegador), puedes <strong>anclarlo a la pantalla de inicio</strong> como si fuera una app nativa:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Móvil/tablet Android (Chrome):</strong> abre el Kit → pulsa el menú de tres puntos ⋮ (arriba a la derecha) → "Añadir a pantalla de inicio" o "Instalar app" → confirma. Aparecerá un icono de GastroGoan junto a tus demás apps.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>iPhone/iPad (Safari):</strong> abre el Kit → pulsa el botón de compartir <i class="ti ti-share-2"></i> (el cuadrado con la flecha hacia arriba, en la barra inferior) → desplázate y elige "Añadir a pantalla de inicio" → confirma el nombre y pulsa "Añadir".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Ordenador (Chrome/Edge):</strong> abre el Kit → busca el icono de instalar (un monitor con una flecha) en el extremo derecho de la barra de direcciones, o entra al menú ⋮ → "Instalar aplicación" o "Aplicaciones" → "Instalar este sitio como aplicación".</div></div>
+    <div class="manual-tip">💡 Así tendrás un icono propio de GastroGoan para abrir el Kit al instante, igual que cualquier otra app: en el TPV de la barra, en la tablet de la cocina o en el móvil del encargado. Recomendamos instalarlo en cada dispositivo que vaya a usarse a diario.</div>
+    <h4>Roles: quién ve qué</h4>
+    <p>La sección <strong>Gestión</strong> está protegida con un PIN (configurable en Mi Negocio) porque contiene información sensible: finanzas, costes y configuración general. El equipo de cocina y sala puede usar libremente sus respectivos módulos (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...) sin necesidad de ese PIN. Reparte el PIN de Gestión solo a quien deba ver esos datos.</p>`
   },
   {
     title:'📋 Mega Lista',
-    content:`<h3>Ingredientes y proveedores</h3>
-    <p>Aquí registras todos los ingredientes y productos que compras, con su precio y proveedor.</p>
-    <h4>Campos clave</h4>
+    content:`<h3>Qué es y por qué es el módulo más importante</h3>
+    <p>La Mega Lista es el <strong>catálogo maestro de todos los ingredientes y productos</strong> que compras: desde materias primas (carne, pescado, verdura) hasta productos ya elaborados que utilizas para montar tus platos (salsas envasadas, panes, bebidas...). Es la primera pieza que debes montar bien, porque <strong>todo lo demás se calcula a partir de los precios que pongas aquí</strong>: el coste de las recetas del Escandallo, el food cost de cada plato, el valor del stock y, en cascada, los informes de la Gestión Económica.</p>
+    <p>Piensa en la Mega Lista como la "lista de la compra permanente" de tu negocio: cada vez que un producto nuevo entra en tu cocina o tu barra, debe tener aquí una ficha.</p>
+    <h4>Cómo añadir un ingrediente, paso a paso</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Ingrediente"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escribe el <strong>Nombre</strong> tal y como lo identificas habitualmente (ej. "Solomillo de ternera", "Aceite de oliva virgen extra", "Coca-Cola lata 33cl"). Usa nombres claros: este nombre aparecerá luego en los desplegables del Escandallo.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Elige o crea la <strong>Categoría</strong> (Carnes, Pescados, Verduras, Lácteos, Bebidas, Limpieza...) para poder filtrar y organizar la lista cuando crezca.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Selecciona el <strong>Proveedor</strong> habitual de ese producto (si todavía no lo has creado, puedes hacerlo desde el módulo Proveedores y volver después a vincularlo).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Indica la <strong>Unidad</strong> de medida: usa <strong>g</strong> (gramos) o <strong>ml</strong> (mililitros) para todo lo que se pesa, mide o se sirve a granel, y <strong>UNIDAD</strong> para productos que cuentas por piezas (huevos, latas, limones, botellas...).</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Indica la <strong>Cantidad de compra</strong>: el tamaño del formato en el que realmente lo compras, expresado en la unidad anterior. Por ejemplo, si compras una caja de tomates de 5&nbsp;kg, pon <strong>5000</strong> (g); si compras una botella de aceite de 1&nbsp;litro, pon <strong>1000</strong> (ml); si compras huevos por docenas, pon <strong>12</strong> (UNIDAD).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">Indica el <strong>Precio</strong> que pagas por esa cantidad de compra completa (el precio de la caja, de la botella, de la docena...), no el precio por gramo — la app hace esa división automáticamente.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Guarda. La app calculará y mostrará el <strong>precio unitario</strong> (precio por gramo, mililitro o unidad), que es el valor que se usará después en el Escandallo para calcular el coste de cada receta.</div></div>
+    <h4>Ejemplo práctico</h4>
+    <p>Compras una garrafa de aceite de oliva de 5&nbsp;litros por 22&nbsp;€. En la Mega Lista crearías: Nombre "Aceite de oliva 0,4º", Unidad "ml", Cantidad de compra "5000", Precio "22". La app calcula automáticamente 22&nbsp;÷&nbsp;5000&nbsp;=&nbsp;0,0044&nbsp;€/ml. Si una receta usa 30&nbsp;ml de ese aceite, el Escandallo sumará 0,132&nbsp;€ por ese ingrediente sin que tengas que calcular nada a mano.</p>
+    <h4>Buscar, filtrar y mantener la lista al día</h4>
     <ul>
-      <li><strong>Nombre:</strong> identifica el producto</li>
-      <li><strong>Proveedor:</strong> de dónde lo compras</li>
-      <li><strong>Cantidad de compra:</strong> el formato en el que lo compras (ej. 1000 g si compras 1 kg)</li>
-      <li><strong>Unidad:</strong> g/ml para todo lo que se pesa o mide, UNIDAD para lo que se cuenta (huevos, limones...)</li>
-      <li><strong>Precio:</strong> lo que pagas por esa cantidad de compra</li>
+      <li>Usa el <strong>buscador</strong> para localizar rápidamente un producto cuando la lista crezca.</li>
+      <li>Filtra por <strong>categoría</strong> para revisar solo, por ejemplo, las bebidas o los lácteos.</li>
+      <li>El icono de <strong>editar</strong> (lápiz) te permite actualizar precio, proveedor o cualquier dato sin tener que crear el ingrediente de nuevo.</li>
+      <li>El icono de <strong>eliminar</strong> (papelera) borra el ingrediente — solo hazlo si no se usa en ninguna receta activa, porque las recetas que lo usaran perderían esa línea de coste.</li>
     </ul>
-    <div class="manual-tip">💡 Cuando actualices el precio de un ingrediente, el coste de todas las recetas del Escandallo que lo usen se actualizará automáticamente.</div>`
+    <h4>Mantener los precios actualizados: la clave del food cost real</h4>
+    <p>Cuando recibas una factura nueva del proveedor con un precio distinto, entra en la Mega Lista, edita ese ingrediente y actualiza el <strong>Precio</strong> (y la Cantidad de compra si el formato ha cambiado). No necesitas tocar nada más.</p>
+    <div class="manual-tip">💡 Cuando actualices el precio de un ingrediente, el coste de <strong>todas</strong> las recetas del Escandallo que lo usen se recalcula automáticamente al instante — incluyendo su food cost y su margen. Así, mantener la Mega Lista al día es la forma más rápida de tener un control de costes realista sin recalcular receta por receta.</div>
+    <div class="manual-warning">⚠️ Si un ingrediente aparece con coste 0 o muy bajo en el Escandallo, normalmente es porque su precio o cantidad de compra están mal puestos aquí (por ejemplo, se ha confundido la cantidad de compra en gramos con la cantidad en kilos). Revisa siempre estos dos campos si un coste no te encaja.</div>`
   },
   {
     title:'🏭 Proveedores',
-    content:`<h3>Contactos y condiciones</h3>
-    <p>Mantén un listado de tus proveedores con datos de contacto, condiciones de pago y plazos de entrega.</p>
-    <h4>Para qué sirve</h4>
+    content:`<h3>Tu agenda de proveedores centralizada</h3>
+    <p>Este módulo es la agenda de contactos de todos los proveedores con los que trabajas: desde el mayorista de congelados hasta el repartidor de bebidas o el proveedor de productos de limpieza. Tenerlos bien dados de alta aquí es lo que permite que, más adelante, generar un pedido sea cuestión de un par de clics en lugar de buscar el número de teléfono en una libreta.</p>
+    <h4>Cómo dar de alta un proveedor</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Proveedor"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Nombre</strong> — el nombre comercial por el que lo reconoces (ej. "Mariscos Hermanos López", "Distribuciones Bebidas Goan").</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Contacto, Teléfono y Email</strong> — la persona de contacto habitual y sus datos. Estos campos generan enlaces directos para llamar o escribir sin copiar números.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Condiciones de pago</strong> — anota aquí cómo y cuándo pagas (ej. "Contado", "30 días fecha factura", "Transferencia semanal") para tenerlo siempre a la vista y evitar confusiones con la administración.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Día y hora de entrega</strong> — si el proveedor tiene un día fijo de reparto (ej. "Martes y viernes, por la mañana"), anótalo. Te ayuda a planificar cuándo hacer el pedido para que llegue a tiempo.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Dirección e IBAN</strong> — útiles si necesitas domiciliar pagos o enviar correspondencia.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Notas</strong> — cualquier información adicional: mínimos de pedido, descuentos por volumen, productos estacionales, incidencias habituales...</div></div>
+    <h4>Vincular ingredientes a su proveedor</h4>
+    <p>Desde la <strong>Mega Lista</strong>, al crear o editar cada ingrediente, asigna el proveedor correspondiente de esta lista. Esta vinculación es la que permite que, en el módulo <strong>Pedidos</strong>, puedas generar un pedido filtrado por proveedor: la app te propone automáticamente todos los ingredientes de ese proveedor que están por debajo de su stock mínimo.</p>
+    <h4>Uso en el día a día</h4>
     <ul>
-      <li>Vincula cada ingrediente de la Mega Lista a su proveedor</li>
-      <li>Consulta teléfono/email rápidamente al hacer un pedido</li>
-      <li>Sirve de base para el módulo de Pedidos</li>
-    </ul>`
+      <li>Antes de hacer una llamada de pedido, abre la ficha del proveedor para tener a mano el teléfono y las condiciones acordadas.</li>
+      <li>Si cambias de proveedor para un producto, simplemente edítalo en la Mega Lista y selecciona el nuevo proveedor — no es necesario tocar las recetas, porque el Escandallo solo usa el precio, no el proveedor.</li>
+      <li>Mantén actualizada esta lista cuando incorpores nuevos proveedores de temporada (ej. proveedor de marisco solo en Navidad).</li>
+    </ul>
+    <div class="manual-tip">💡 Cuantos más ingredientes tengas correctamente vinculados a su proveedor, más útil será el módulo de Pedidos: podrás generar el pedido completo de un proveedor con un solo clic en lugar de añadir línea a línea.</div>`
   },
   {
     title:'🧮 Escandallo',
-    content:`<h3>Coste de los platos</h3>
-    <p>Calcula el coste real de cada plato usando los precios de la Mega Lista.</p>
-    <h4>Cómo crear una receta</h4>
+    content:`<h3>Qué es un escandallo y para qué sirve</h3>
+    <p>El escandallo es la <strong>ficha de coste de cada plato</strong>: el desglose de qué ingredientes lleva, en qué cantidad, y cuánto cuesta cada uno según los precios de tu Mega Lista. Con él sabes <strong>cuánto te cuesta realmente producir un plato</strong> y, comparándolo con su precio de venta, si ese plato te da margen o te hace perder dinero. Es la herramienta más directa para fijar precios de carta con criterio en lugar de "a ojo".</p>
+    <h4>Cómo crear una receta paso a paso</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Plato"</strong> (o "Nueva Elaboración" si es un semielaborado que usarás dentro de otras recetas, como una salsa o un caldo base).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Ponle <strong>nombre</strong> (el mismo que aparecerá luego en la Carta) y elige la <strong>categoría</strong> (Entrantes, Principales, Postres, Cócteles...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Indica los <strong>comensales/raciones</strong> que rinde la receta tal y como la estás introduciendo — esto es clave si introduces, por ejemplo, una receta de fondo de tomate para 10 raciones: el sistema calculará el coste por ración dividiendo entre 10.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Añade líneas de <strong>ingredientes</strong>: selecciona cada uno del desplegable (proviene directamente de tu Mega Lista — si no aparece el que buscas, primero debes crearlo allí).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Para cada ingrediente indica la <strong>cantidad neta</strong> que lleva el plato en la unidad correspondiente (gramos, mililitros o unidades): la cantidad que realmente queda en el plato servido, ya limpia y lista.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Indica la <strong>merma</strong> de ese ingrediente: el porcentaje de producto que se pierde al limpiar, pelar, deshuesar o cocinar (por ejemplo, un pescado entero puede tener un 30-40% de merma entre espinas, piel y cabeza; una verdura pelada puede tener un 10-15%).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automáticamente la <strong>cantidad bruta</strong> (lo que realmente debes comprar/sacar de almacén) y el <strong>coste</strong> de esa línea, multiplicando la cantidad bruta por el precio unitario de la Mega Lista.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Repite para todos los ingredientes del plato. El <strong>coste total</strong> de la receta es la suma de todas las líneas, y el <strong>coste por ración</strong> es ese total dividido entre los comensales indicados.</div></div>
+    <h4>La fórmula de la merma, explicada con un ejemplo</h4>
+    <p>La relación es: <strong>cantidad bruta = cantidad neta × (1 + merma%)</strong>.</p>
+    <p>Ejemplo: tu receta necesita <strong>100&nbsp;g netos</strong> de lomo de merluza ya limpio para el plato. Si al limpiar la merluza entera pierdes un 20% (espinas, piel, recortes), necesitas comprar/usar <strong>100 × (1 + 0,20) = 120&nbsp;g brutos</strong> de merluza para obtener esos 100&nbsp;g netos. El escandallo calculará el coste de la receta usando esos 120&nbsp;g al precio por gramo de la Mega Lista — no los 100&nbsp;g, porque esos 20&nbsp;g de merma también los has pagado.</p>
+    <div class="manual-warning">⚠️ Si dejas la merma a 0% en productos que sí tienen desperdicio (pescados con piel/espina, verduras sin pelar, carnes con grasa o hueso), tu coste real estará infravalorado y el food cost que verás será más bajo que el real. Revisa la merma de cada ingrediente con cuidado, especialmente en pescados y carnes.</div>
+    <h4>Consumibles: el "extra" que no se mide plato a plato</h4>
+    <p>El campo <strong>Consumibles (%)</strong> añade un porcentaje sobre el coste de la receta para cubrir ingredientes que serían imposibles o muy tediosos de medir línea a línea: el chorrito de aceite para saltear, la sal, las especias, el agua, el gas o la electricidad del horno, el papel de horno, etc. Un valor habitual está entre el <strong>5% y el 8%</strong> del coste de la receta, aunque puede variar según el tipo de plato (un plato muy elaborado con muchas cocciones puede justificar un % algo mayor).</p>
+    <h4>PVP (precio de venta) y food cost</h4>
+    <p>En el campo <strong>PVP</strong> introduce el precio al que vendes (o quieres vender) ese plato al cliente, IVA incluido o sin él según cómo trabajes habitualmente — sé consistente con el resto de tus cálculos. La app calcula automáticamente el <strong>food cost</strong> como: <em>coste de la receta (con consumibles) ÷ PVP × 100</em>.</p>
+    <p>El resultado se colorea como semáforo para que lo veas de un vistazo:</p>
+    <table>
+      <tr><th>Color</th><th>Food cost</th><th>Qué significa</th></tr>
+      <tr><td>🟢 Verde</td><td>menor del 30%</td><td>Margen saludable, plato muy rentable</td></tr>
+      <tr><td>🟡 Ámbar</td><td>entre 30% y 35%</td><td>Margen aceptable, vigílalo</td></tr>
+      <tr><td>🔴 Rojo</td><td>mayor del 35%</td><td>Margen ajustado o negativo — revisa precio, ración o proveedor</td></tr>
+    </table>
+    <h4>Qué hacer cuando un plato sale en rojo</h4>
     <ul>
-      <li>Haz clic en <strong>Nueva receta</strong> y ponle nombre</li>
-      <li>Selecciona los ingredientes del desplegable (viene de tu Mega Lista)</li>
-      <li>Indica la <strong>cantidad neta</strong> en gramos que lleva el plato</li>
-      <li>Indica la <strong>merma</strong> — el % de producto que se pierde al limpiar o preparar (ej. 20% en pescado)</li>
-      <li>El sistema calcula la <strong>cantidad bruta</strong> (lo que realmente consumes) y el <strong>coste</strong></li>
+      <li><strong>Sube el PVP</strong> si el mercado lo permite (compara con la competencia).</li>
+      <li><strong>Ajusta la ración</strong> — quizá la cantidad neta es mayor de lo necesario para el tipo de plato.</li>
+      <li><strong>Busca otro proveedor o formato de compra</strong> más económico para los ingredientes que más pesan en el coste.</li>
+      <li><strong>Revisa la merma real</strong> — a veces una mejor técnica de limpieza/corte reduce el desperdicio.</li>
+      <li>Si nada de esto es viable, valora si ese plato debe seguir en carta o sustituirlo por otro con mejor margen.</li>
     </ul>
-    <h4>Consumibles</h4>
-    <p>Porcentaje que añades para cubrir ingredientes de difícil medición: aceite, sal, agua, energía. Valor habitual: 5-8%.</p>
-    <h4>PVP y food cost</h4>
-    <p>Pon el precio de venta y el sistema calcula tu food cost. Verde (&lt;30%), ámbar (30-35%), rojo (&gt;35%).</p>
-    <div class="manual-tip">💡 La merma se calcula como: cantidad bruta = cantidad neta × (1 + merma%). Si necesitas 100g netos con 20% de merma, debes usar 120g brutos.</div>`
+    <h4>Elaboraciones propias (semielaborados)</h4>
+    <p>Usa <strong>"Nueva Elaboración"</strong> para crear bases que luego se usan dentro de otras recetas (caldos, salsas, masas, mises en place). Defínelas igual que una receta normal, indicando para cuántas raciones o qué cantidad total rinden; después podrás añadirlas como un "ingrediente" más dentro de otras recetas del Escandallo, y su coste por unidad se calculará y propagará igual que el de cualquier ingrediente de la Mega Lista.</p>
+    <div class="manual-tip">💡 Una vez creado el escandallo de un plato, ya no tienes que volver a calcular nada manualmente: si cambia el precio de un ingrediente en la Mega Lista, este plato (y su food cost y margen) se actualizan solos. Revisa el Escandallo periódicamente, sobre todo tras subidas de precios de proveedores, para detectar platos que han pasado a zona ámbar o roja.</div>`
   },
   {
     title:'📄 Fichas Técnicas',
-    content:`<h3>Elaboración y alérgenos</h3>
-    <p>Estandariza la elaboración de cada receta para que cualquier persona del equipo la ejecute igual.</p>
-    <h4>Creación automática desde Escandallo</h4>
-    <p>Al entrar en Fichas Técnicas verás las recetas del Escandallo que aún no tienen ficha. Selecciónala y se pre-rellena con nombre, comensales e ingredientes con gramajes.</p>
-    <h4>Qué añadir en la ficha</h4>
+    content:`<h3>El "manual de instrucciones" de cada plato</h3>
+    <p>Mientras que el Escandallo se centra en el <strong>coste</strong> de un plato, la Ficha Técnica se centra en su <strong>ejecución</strong>: cómo se prepara paso a paso, cómo se presenta y qué alérgenos contiene. Es la herramienta que garantiza que un plato salga igual sin importar quién esté ese día en la partida, y es también el documento que necesitas tener a mano (y a veces mostrar) ante una inspección de seguridad alimentaria por el control de alérgenos.</p>
+    <h4>Creación automática desde el Escandallo</h4>
+    <p>Para no tener que volver a escribir nombre, comensales e ingredientes, al entrar en Fichas Técnicas la app te muestra automáticamente la lista de <strong>recetas del Escandallo que todavía no tienen ficha creada</strong>. Pulsa sobre una de ellas y se generará una ficha nueva pre-rellenada con:</p>
     <ul>
-      <li><strong>Pasos de elaboración</strong> — numerados, claros y en orden</li>
-      <li><strong>Alérgenos</strong> — marca los 14 alérgenos reglamentarios de la UE</li>
-      <li><strong>Presentación</strong> — cómo se emplata y sirve</li>
+      <li>El nombre del plato</li>
+      <li>El número de comensales/raciones</li>
+      <li>La lista de ingredientes con sus gramajes (netos y brutos) tal y como están en el Escandallo</li>
     </ul>
-    <h4>Imprimir</h4>
-    <p>El botón <strong>Imprimir</strong> genera una hoja limpia, lista para plastificar y colgar en cocina.</p>`
+    <p>A partir de esa base, solo tienes que completar la parte que no está en el Escandallo: los pasos y los alérgenos.</p>
+    <h4>Cómo redactar los pasos de elaboración</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Añade los pasos <strong>en el orden real de trabajo</strong>, desde la preparación de ingredientes (mise en place) hasta el emplatado final.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Sé concreto con tiempos, temperaturas y técnicas: por ejemplo, "Sellar el solomillo en plancha muy caliente, 1 minuto por cada lado" en lugar de "cocinar la carne".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Separa los pasos en unidades pequeñas y numeradas — es más fácil de seguir durante el servicio que un párrafo largo.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Si hay puntos críticos de seguridad alimentaria (temperaturas mínimas de cocción, tiempos de regeneración, etc.), indícalos explícitamente en el paso correspondiente.</div></div>
+    <h4>Alérgenos: los 14 reglamentarios de la UE</h4>
+    <p>La normativa europea obliga a informar de la presencia de 14 alérgenos e intolerancias en los alimentos que se sirven: <strong>cereales con gluten, crustáceos, huevos, pescado, cacahuetes, soja, leche/lácteos, frutos de cáscara, apio, mostaza, sésamo, dióxido de azufre/sulfitos, altramuces y moluscos</strong>. En la Ficha Técnica marca todos los que apliquen al plato, revisando también los ingredientes "ocultos" (por ejemplo, muchas salsas comerciales llevan gluten o lácteos como espesante).</p>
+    <div class="manual-warning">⚠️ Revisa los alérgenos cada vez que cambies un ingrediente de una receta en el Escandallo (por ejemplo, si sustituyes un caldo casero por uno comercial). Un cambio de proveedor o de producto puede introducir un alérgeno que antes no estaba presente.</div>
+    <h4>Presentación / emplatado</h4>
+    <p>Describe cómo debe verse el plato en el momento de servir: tipo de plato o recipiente, disposición de los elementos, salsas y su colocación, guarniciones, decoración y temperatura de servicio. Si es posible, complementa la descripción con una foto de referencia que el equipo pueda consultar.</p>
+    <h4>Imprimir y usar en cocina</h4>
+    <p>El botón <strong>Imprimir</strong> genera una hoja limpia con toda la información de la ficha (ingredientes, pasos, alérgenos y presentación), lista para imprimir, plastificar y colgar en la partida correspondiente de la cocina. Es especialmente útil para:</p>
+    <ul>
+      <li>Formar a personal nuevo sin depender de que alguien le "enseñe de memoria"</li>
+      <li>Mantener la consistencia cuando hay varios turnos o varios cocineros rotando</li>
+      <li>Tener a mano la información de alérgenos para responder con seguridad a un cliente que pregunte</li>
+    </ul>
+    <div class="manual-tip">💡 Dedica un rato a completar las fichas de los platos más vendidos primero — son los que más impacto tienen en la consistencia del servicio y en las preguntas de alérgenos de los clientes.</div>`
   },
   {
     title:'🍽 Carta',
-    content:`<h3>Menú por horarios</h3>
-    <p>Crea y gestiona tus menús. Puedes tener varias cartas activas según horario (mediodía, noche, fin de semana).</p>
-    <h4>Crear una carta</h4>
+    content:`<h3>De las recetas a lo que ve el cliente</h3>
+    <p>La Carta es la traducción de tu Escandallo en algo que el cliente puede pedir: una colección de platos organizados por secciones, con su precio de venta, agrupados en una o varias "cartas" que se activan según el día y la hora. Es el puente entre tu trabajo de cocina (recetas con coste calculado) y la operativa de sala (TPV y pedidos online).</p>
+    <h4>Por qué tener varias cartas</h4>
+    <p>Muchos negocios no ofrecen siempre lo mismo: el menú del mediodía no es la carta de la noche, el fin de semana hay platos especiales, o existe una carta de bebidas distinta a la de comida. GastroGoan permite crear <strong>tantas cartas como necesites</strong> (Carta de Mediodía, Carta de Noche, Carta de Bebidas, Carta de Fin de Semana...) y programarlas para que se activen solas según el horario.</p>
+    <h4>Cómo crear una carta paso a paso</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nueva Carta"</strong> y dale un nombre descriptivo (ej. "Carta Mediodía", "Carta Bebidas").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Configura el <strong>horario de activación</strong>: elige el <strong>Turno</strong> (Turno 1, Turno 2, o "todo el horario de apertura") y marca los <strong>días de la semana</strong> en los que esta carta debe estar activa. Las horas concretas de cada turno se toman del <strong>Horario semanal</strong> que hayas configurado en Mi Negocio — así no tienes que repetir horarios en cada carta.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Crea <strong>secciones</strong> para organizar la carta (ej. Entrantes, Arroces, Carnes, Pescados, Postres, Cócteles, Refrescos...). Pulsa <strong>"Nueva Sección"</strong> y dale nombre.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Dentro de cada sección, pulsa <strong>"Importar del Escandallo"</strong> para añadir platos que ya tienes definidos con su receta y coste. Se importan con el nombre y puedes ajustar el precio de venta si todavía no lo habías fijado en el Escandallo.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Si necesitas un plato que no tiene receta en el Escandallo (por ejemplo, un producto envasado que revendes tal cual, como una lata de refresco o un postre comprado), añádelo como <strong>plato manual</strong> directamente desde la Carta, indicando nombre y precio.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repite para todas las secciones hasta tener la carta completa.</div></div>
+    <h4>Disponibilidad de platos: el interruptor más usado del día a día</h4>
+    <p>Cada plato de la carta tiene un interruptor <strong>Disponible / No disponible</strong>. Cuando se te acabe un producto durante el servicio (por ejemplo, "se ha terminado el rape"), simplemente desactiva ese plato:</p>
     <ul>
-      <li>Dale un nombre</li>
-      <li>Elige el <strong>Turno</strong> (Turno 1, Turno 2 o todo el horario de apertura) y los <strong>días activos</strong> — las horas concretas se toman del <strong>Horario semanal</strong> configurado en Mi Negocio</li>
-      <li>Usa <strong>Importar del Escandallo</strong> para añadir tus platos automáticamente</li>
-      <li>Organiza por secciones: Entrantes, Principales, Postres...</li>
-      <li>Añade <strong>platos manuales</strong> que no estén en el Escandallo</li>
+      <li>Deja de aparecer inmediatamente en el <strong>TPV</strong>, así el equipo de sala no puede comandarlo por error.</li>
+      <li>Deja de aparecer en la <strong>web de pedidos online</strong> (Take Away/Delivery), evitando que un cliente pida algo que no puedes servir.</li>
     </ul>
-    <h4>Disponibilidad de platos</h4>
-    <p>Cada plato tiene un interruptor <strong>Disponible / No disponible</strong>. Los platos no disponibles no aparecen en el TPV ni en la web de pedidos online.</p>
-    <h4>Vinculación con el TPV</h4>
-    <p>Con <strong>Cambio automático según horario</strong> activado (por defecto), el TPV cambia solo de carta activa según el turno y día que hayas configurado en cada carta. Las comandas solo muestran los platos de la carta activa en ese momento. Si lo desactivas, puedes elegir manualmente la carta activa desde el desplegable del TPV.</p>
-    <div class="manual-tip">💡 La carta activa en el TPV es también la que se muestra en la página de pedidos online (Take Away / Delivery). Si tus clientes ven "La carta no está disponible", revisa que haya una carta programada para ese día/hora con platos marcados como Disponible.</div>`
+    <p>Al día siguiente, cuando vuelvas a tener el producto, simplemente reactiva el interruptor — no hace falta volver a crear el plato.</p>
+    <h4>Cómo se decide qué carta está activa en el TPV</h4>
+    <p>Con la opción <strong>"Cambio automático según horario"</strong> activada (que es el comportamiento por defecto), GastroGoan revisa continuamente el día y la hora actuales y activa automáticamente la carta (y la carta de bebidas, si la tienes separada) que hayas programado para ese momento según el paso 2. El equipo de sala no tiene que hacer nada: al entrar en el TPV, la carta correcta ya está activa.</p>
+    <p>Si por alguna razón necesitas forzar manualmente otra carta (por ejemplo, un evento especial), puedes <strong>desactivar el cambio automático</strong> desde la configuración y elegir tú mismo la carta activa desde el desplegable correspondiente en el TPV. Recuerda volver a activarlo después si quieres que el sistema retome el control automático.</p>
+    <h4>La carta y los pedidos online</h4>
+    <p>La carta activa en el TPV es exactamente la misma que se muestra en la página pública de pedidos online (Take Away/Delivery) y en el QR de las mesas. Esto significa que cualquier cambio que hagas aquí (disponibilidad, precios, secciones) se refleja también de cara al cliente, normalmente en pocos segundos.</p>
+    <div class="manual-warning">⚠️ Si tus clientes ven el mensaje "La carta no está disponible" en la web de pedidos online, comprueba: (1) que exista una carta programada para el día y hora actuales en su horario de activación, y (2) que esa carta tenga al menos un plato marcado como Disponible. Si ambas cosas están en orden, el aviso desaparecerá en cuanto entréis en ese tramo horario.</div>
+    <div class="manual-tip">💡 Organiza las secciones en el mismo orden en que aparecen físicamente en tu carta de papel o pizarra — facilita que el equipo encuentre rápido los platos durante el servicio, sobre todo en horas de mucho ritmo.</div>`
   },
   {
     title:'📦 Stock',
-    content:`<h3>Inventario y alertas de mínimos</h3>
-    <p>Controla las existencias de cada ingrediente y recibe avisos cuando bajan del mínimo configurado.</p>
+    content:`<h3>Saber qué tienes y cuándo se te va a acabar</h3>
+    <p>El módulo de Stock mantiene el inventario de cantidades disponibles de cada ingrediente de tu Mega Lista, y te avisa cuando algo está a punto de agotarse. Su gran ventaja es que <strong>no tienes que actualizarlo manualmente cada vez que vendes o recibes algo</strong>: se mueve solo en función de lo que pasa en el TPV y en Pedidos.</p>
+    <h4>Configurar el stock mínimo</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Para cada ingrediente, indica la <strong>cantidad actual</strong> que tienes (puedes hacer un inventario inicial contando lo que hay físicamente en cocina/almacén).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Indica el <strong>stock mínimo</strong>: la cantidad por debajo de la cual quieres recibir un aviso porque hay riesgo de quedarte sin ese producto antes del próximo pedido. Piensa en tu ritmo de consumo y en cuántos días tardas en recibir un pedido nuevo de ese proveedor.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Activa el filtro <strong>"Solo alertas"</strong> para ver de un vistazo únicamente los ingredientes que están en (o por debajo de) su mínimo — es la lista que debes repasar antes de hacer un pedido.</div></div>
+    <h4>Cómo se mueve el stock automáticamente</h4>
     <ul>
-      <li>Define un <strong>stock mínimo</strong> por ingrediente</li>
-      <li>El stock se descuenta automáticamente al cerrar comandas en el TPV (según los gramajes del Escandallo)</li>
-      <li>El stock aumenta automáticamente al recibir un pedido en el módulo Pedidos</li>
+      <li><strong>Bajan las existencias</strong> cuando se cierra una comanda en el TPV: la app descuenta de cada ingrediente la cantidad bruta que indica el Escandallo del plato vendido, multiplicada por las unidades vendidas.</li>
+      <li><strong>Suben las existencias</strong> cuando marcas un pedido a proveedor como <strong>"Recibido"</strong> en el módulo Pedidos: se añaden al stock las cantidades de ese pedido.</li>
     </ul>
-    <div class="manual-tip">💡 Revisa los avisos de stock bajo antes de hacer un nuevo pedido a proveedores.</div>`
+    <p>Esto significa que el stock que ves aquí es una <strong>estimación calculada</strong>, no necesariamente el conteo físico exacto en cada momento (las mermas reales en cocina, roturas, autoconsumo del personal, etc. no se descuentan automáticamente). Por eso es recomendable hacer recuentos físicos periódicos y ajustar el stock manualmente cuando detectes diferencias importantes.</p>
+    <h4>Elaboraciones propias en el stock</h4>
+    <p>Las elaboraciones propias (caldos, salsas, masas...) creadas en el Escandallo también pueden tener su propio stock y mínimo, igual que los ingredientes comprados — útil para controlar, por ejemplo, cuánto caldo casero te queda preparado para el servicio.</p>
+    <div class="manual-tip">💡 Revisa la pestaña de alertas de stock bajo justo antes de planificar el pedido de la semana — así generas pedidos completos y evitas rotos de producto durante el servicio.</div>`
   },
   {
     title:'🛒 Pedidos',
-    content:`<h3>Compras a proveedores</h3>
-    <p>Gestiona el ciclo de vida completo de un pedido a proveedor.</p>
-    <h4>Estados</h4>
+    content:`<h3>El ciclo completo de una compra a proveedor</h3>
+    <p>El módulo de Pedidos te permite preparar, enviar y recibir pedidos a tus proveedores, y es el paso que conecta el aviso de "stock bajo" con la reposición real de producto — y de ahí, automáticamente, con el Stock y con la Gestión Económica (gastos variables).</p>
+    <h4>Los tres estados de un pedido</h4>
+    <table>
+      <tr><th>Estado</th><th>Qué significa</th><th>Qué puedes hacer</th></tr>
+      <tr><td><strong>Borrador</strong></td><td>Estás preparando el pedido, todavía no se ha comunicado a nadie</td><td>Añadir, quitar o modificar líneas y cantidades libremente</td></tr>
+      <tr><td><strong>Enviado</strong></td><td>El pedido ya se ha comunicado al proveedor (por teléfono, email, etc.)</td><td>Sirve como registro de "lo pedido", a la espera de recepción</td></tr>
+      <tr><td><strong>Recibido</strong></td><td>La mercancía ha llegado físicamente</td><td>Al marcarlo, el Stock se actualiza automáticamente sumando las cantidades del pedido</td></tr>
+    </table>
+    <h4>Cómo crear y gestionar un pedido</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Pedido"</strong> y elige el <strong>proveedor</strong> al que va dirigido.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Añade líneas con los <strong>ingredientes</strong> que necesitas reponer (la pantalla de Stock con el filtro de alertas activado te ayuda a saber qué incluir) y la <strong>cantidad</strong> que vas a pedir de cada uno.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Revisa el pedido completo — en estado <strong>Borrador</strong> puedes seguir ajustando cantidades o quitar líneas hasta que esté tal y como vas a comunicarlo.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Cuando hayas hablado con el proveedor (llamada, email, app del proveedor...) y el pedido esté confirmado, cambia el estado a <strong>Enviado</strong>. Esto te sirve de recordatorio de "pedido pendiente de llegar".</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Cuando la mercancía llegue físicamente a tu cocina, marca el pedido como <strong>Recibido</strong>. En ese momento, y solo en ese momento, el Stock de cada ingrediente del pedido aumenta con las cantidades indicadas.</div></div>
+    <h4>Conexión con Stock y Gestión Económica</h4>
+    <div class="manual-warning">⚠️ Solo los pedidos marcados como <strong>Recibido</strong> afectan al Stock y se contabilizan como gasto en la Gestión Económica (Gastos Variables). Un pedido en Borrador o Enviado no mueve ningún número económico — es importante recordar pasar el pedido a Recibido cuando la mercancía llegue, o tus informes de stock y de gastos no reflejarán la realidad.</div>
+    <h4>Buenas prácticas</h4>
     <ul>
-      <li><strong>Borrador</strong> — estás preparando el pedido, puedes añadir/quitar líneas</li>
-      <li><strong>Enviado</strong> — el pedido se ha comunicado al proveedor</li>
-      <li><strong>Recibido</strong> — al marcarlo como recibido, el Stock se actualiza automáticamente con las cantidades pedidas</li>
-    </ul>
-    <div class="manual-tip">💡 Solo los pedidos en estado Recibido afectan al Stock y a la Gestión Económica.</div>`
+      <li>Genera un pedido por proveedor para mantener cada pedido claro y fácil de comunicar.</li>
+      <li>Si el proveedor entrega menos cantidad de la pedida (rotura de stock en su almacén, por ejemplo), ajusta las cantidades del pedido antes de marcarlo como Recibido, para que el Stock refleje lo que realmente ha entrado.</li>
+      <li>Revisa periódicamente los pedidos "Enviados" que lleven mucho tiempo sin marcarse como Recibidos — puede ser una señal de que se olvidó actualizar el estado tras la entrega.</li>
+    </ul>`
   },
   {
     title:'📅 Horario del Personal',
-    content:`<h3>Turnos del equipo</h3>
-    <p>Crea tu equipo y planifica los turnos semanales en formato calendario.</p>
-    <ul>
-      <li>Da de alta a cada empleado con su rol y un color identificativo</li>
-      <li>Asigna turnos por día de la semana (mañana, tarde, partido...)</li>
-      <li>Consulta de un vistazo la cobertura de cada día</li>
-    </ul>`
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Este módulo es el corazón de la gestión de tu equipo: aquí das de alta a cada trabajador, organizas sus turnos semana a semana en formato calendario, controlas las horas que ficha cada persona y mantienes sus datos de contacto a mano. Tener el horario bien planificado evita los dos problemas más típicos de un restaurante: quedarte corto de personal en una hora punta, o pagar horas de más porque "nadie sabía quién tenía que venir".</p>
+
+    <h4>Pestaña Personal: dar de alta a un empleado</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nuevo empleado"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escribe su <strong>nombre</strong> y elige un <strong>rol</strong> (Camarero/a, Cocinero/a, Ayudante, Encargado/a...). El rol es solo descriptivo, te ayuda a identificar quién hace qué.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Elige un <strong>color identificativo</strong>. Ese color se usará en todo el calendario de turnos para reconocer a esa persona de un vistazo, sin tener que leer el nombre cada vez.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Selecciona el <strong>área de trabajo</strong>: Cocina o Sala. Este dato se usa, entre otras cosas, para agrupar a los empleados en el selector de autor del Chat interno.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Rellena <strong>teléfono</strong> y <strong>email</strong> si los tienes. Aparecerán como enlaces directos para llamar/escribir por WhatsApp o enviar un correo sin tener que copiar el número.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Define un <strong>PIN de 4 dígitos</strong> para que el empleado pueda fichar y, si tu plan lo permite, acceder a su propia vista de la app. El PIN por defecto es "1234"; pídele que lo cambie la primera vez que lo use.</div></div>
+    <div class="manual-warning">⚠️ No repitas el mismo PIN para dos empleados distintos: el PIN identifica a la persona en Fichar, en el Chat interno y en cualquier acción que quede registrada a su nombre.</div>
+
+    <h4>Pestaña Horario: el calendario semanal</h4>
+    <p>Aquí ves la semana en columnas (Lunes a Domingo) y una fila por cada empleado.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Haz clic en la celda del día y empleado que quieras editar.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Elige el tipo de turno: <strong>Mañana</strong>, <strong>Tarde</strong>, <strong>Partido</strong> (mañana y tarde con descanso entre medio), <strong>Libre</strong>, <strong>Vacaciones</strong> o <strong>Baja</strong>. Indica también la hora de inicio y fin si quieres que conste en el horario.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">El calendario pinta cada turno con el color del empleado, así puedes ver de un vistazo si un día está bien cubierto o si te falta alguien en sala o en cocina.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Usa las flechas de navegación para moverte a la semana anterior o siguiente y planificar con antelación.</div></div>
+    <div class="manual-tip">💡 Planifica el horario con al menos una semana de antelación y avisa al equipo. Así evitas cambios de última hora y reclamaciones por turnos no comunicados.</div>
+
+    <h4>Control de horas: Fichar</h4>
+    <p>En la pestaña <strong>Fichar</strong>, cada empleado puede registrar su entrada y salida con su PIN. La app suma automáticamente las horas trabajadas y muestra el total de <strong>"Horas este mes"</strong> por empleado, para que puedas comparar las horas planificadas con las horas reales fichadas.</p>
+    <div class="manual-tip">💡 Si ves que un empleado acumula muchas más horas de las que tenía asignadas en el calendario, revisa si hubo turnos extra, sustituciones o si simplemente se olvidó de fichar la salida.</div>`
   },
   {
     title:'📋 Distribución del Trabajo',
-    content:`<h3>Tareas por empleado y turno</h3>
-    <p>Vista maestro-detalle: selecciona un empleado del equipo para ver y editar su asignación.</p>
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. Este módulo resuelve el segundo problema: te permite repartir responsabilidades concretas — qué platos prepara cada cocinero, qué tareas de limpieza o mise en place le tocan cada día — y dejarlo todo por escrito para que no haya confusiones ni "yo pensaba que eso lo hacías tú".</p>
+
+    <h4>Vista maestro-detalle</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su ficha de trabajo a la derecha.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
+
     <h4>Platos a su cargo</h4>
-    <p>Asigna a cada empleado los platos de los que es responsable, eligiéndolos del Escandallo/Carta o escribiéndolos manualmente.</p>
+    <p>Aquí defines qué platos prepara habitualmente ese empleado.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Añadir plato"</strong> y elige uno de tu Escandallo o Carta (así queda enlazado a la ficha técnica real), o escribe el nombre a mano si es algo puntual.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repite para todos los platos de los que sea responsable. Por ejemplo, a tu pastelero le asignas todos los postres; a tu cocinero de partida fría, las ensaladas y entrantes fríos.</div></div>
+    <div class="manual-tip">💡 Esta lista es muy útil para formar a un empleado nuevo: en cuanto entra, ya sabe qué platos tiene que dominar.</div>
+
     <h4>Plan de producción semanal</h4>
-    <p>Añade tareas concretas para cada día de la semana (ej. "Mise en place", "Limpiar cámara fría").</p>
-    <h4>Imprimir</h4>
-    <p>Genera una hoja con la asignación de un empleado o de todo el equipo, lista para imprimir y repartir.</p>`
+    <p>Aquí añades tareas concretas, día por día, además de la elaboración de platos.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Elige el día de la semana (Lunes a Domingo).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escribe la tarea: por ejemplo "Mise en place de salsas", "Limpiar cámara fría", "Hacer pedido a proveedor de pescado", "Revisar caducidades de la nevera de postres".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Añade tantas tareas como necesites por día. Quedan listadas bajo cada jornada, así el empleado ve de un vistazo su plan completo de la semana.</div></div>
+    <div class="manual-tip">💡 Reparte también las tareas "menos agradecidas" (limpieza profunda, control de caducidades) de forma rotativa entre el equipo usando este plan, así queda constancia de quién la tiene asignada cada semana.</div>
+
+    <h4>Imprimir y repartir</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Con la ficha de un empleado abierta, pulsa <strong>Imprimir</strong> para generar una hoja solo con su asignación (platos a su cargo + plan de producción).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si quieres la hoja de todo el equipo de golpe, usa la opción de imprimir todo: genera una hoja por empleado, lista para repartir o pegar en el tablón de cocina.</div></div>
+    <div class="manual-warning">⚠️ Si cambias la carta o el escandallo (por ejemplo, eliminas un plato), revisa este módulo: los platos "a cargo" de cada empleado no se actualizan solos si el plato ya no existe.</div>`
   },
   {
     title:'🧽 Plan de Limpieza',
-    content:`<h3>APPCC e higiene alimentaria</h3>
-    <p>Suite de 6 pestañas para cumplir con los registros obligatorios de Análisis de Peligros y Puntos de Control Crítico (APPCC).</p>
-    <ul>
-      <li><strong>Manos</strong> — registro de lavado de manos</li>
-      <li><strong>Limpieza</strong> — calendario de tareas de limpieza por zona y frecuencia</li>
-      <li><strong>Temperaturas</strong> — control de cámaras y equipos de frío</li>
-      <li><strong>Alérgenos</strong> — registro de control de alérgenos</li>
-      <li><strong>Plagas</strong> — control de plagas</li>
-      <li><strong>Mantenimiento</strong> — incidencias y revisiones de equipos</li>
-    </ul>
-    <div class="manual-tip">💡 Mantener estos registros al día es obligatorio para las inspecciones sanitarias.</div>`
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 6 hojas de registro más habituales que pide Sanidad, ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. Si te visita un inspector, aquí tienes el historial completo.</p>
+
+    <h4>1. Manos — registro de lavado de manos</h4>
+    <p>Cada vez que un empleado se lava las manos en momentos críticos (al empezar turno, tras tocar alimentos crudos, tras ir al baño, tras tocar dinero o basura), registra la hora y la persona.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa "+ Registrar" en la pestaña Manos.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Selecciona el empleado y, si quieres, el motivo (cambio de tarea, después del baño...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Queda guardado con fecha y hora automáticas.</div></div>
+
+    <h4>2. Limpieza — calendario por zona y frecuencia</h4>
+    <p>Define las zonas de tu local (cocina, cámaras, baños, sala, almacén...) y la frecuencia de limpieza de cada una (diaria, semanal, mensual).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Crea cada zona/tarea con su frecuencia.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cuando se realiza la limpieza, márcala como hecha: queda registrada la fecha y quién la hizo.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Si una tarea lleva varios días sin marcarse y ya toca, destaca visualmente para que no se te olvide.</div></div>
+
+    <h4>3. Temperaturas — control de cámaras y equipos de frío</h4>
+    <p>Registra periódicamente la temperatura de cada cámara, congelador o vitrina.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Da de alta cada equipo de frío con un nombre (ej. "Cámara pescado", "Congelador 1").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cada día (o varias veces al día), anota la temperatura leída en el termómetro del equipo.</div></div>
+    <div class="manual-warning">⚠️ Si una temperatura sale fuera de rango (cámaras normalmente entre 0-4ºC, congeladores a -18ºC o menos), anótalo igualmente y registra la acción correctiva (se avisó al técnico, se trasladó el género...). Esa traza es justo lo que pide una inspección.</div>
+
+    <h4>4. Alérgenos — control de alérgenos</h4>
+    <p>Registra qué alérgenos contiene cada plato o materia prima y mantén actualizada esa información, especialmente si cambias proveedores o recetas.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Revisa periódicamente que la lista de alérgenos de tus platos sigue siendo correcta (sobre todo tras cambios de receta o de marca de un ingrediente).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si trabajas con Fichas Técnicas, puedes apoyarte en los ingredientes ahí indicados para no olvidar ninguno.</div></div>
+    <div class="manual-tip">💡 La información de alérgenos debe estar disponible para el cliente que la pida (en carta, cartel o verbalmente). Tenla siempre actualizada, no solo registrada.</div>
+
+    <h4>5. Plagas — control de plagas</h4>
+    <p>Registra las visitas de tu empresa de control de plagas, los tratamientos realizados y cualquier incidencia detectada (presencia de insectos, roedores...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Cada vez que venga el técnico de plagas, registra la fecha, lo que se hizo y, si te entrega un certificado, guárdalo como referencia.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si detectas tú mismo algún indicio entre visitas, regístralo también: ayuda a justificar visitas extra si fuera necesario.</div></div>
+
+    <h4>6. Mantenimiento — incidencias y revisiones de equipos</h4>
+    <p>Registra averías, reparaciones y revisiones periódicas de tus equipos (hornos, cámaras, lavavajillas, extractores...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Cuando detectes una avería, regístrala aquí: equipo afectado, descripción del problema y fecha.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cuando se repare o revise, marca la incidencia como resuelta y anota qué se hizo. Así tienes el historial completo de cada equipo, útil para decidir si conviene repararlo otra vez o sustituirlo.</div></div>
+
+    <div class="manual-tip">💡 La rutina ganadora es: dedica 5 minutos al abrir y 5 minutos al cerrar para repasar estas 6 pestañas y registrar lo que toque. En un mes tendrás un historial completo, sin esfuerzo añadido en tu día a día.</div>
+    <div class="manual-warning">⚠️ Mantener estos registros al día no es opcional: es un requisito legal y lo primero que se revisa en una inspección sanitaria. Un registro vacío o desactualizado puede acarrear sanciones aunque tu cocina esté impecable.</div>`
   },
   {
     title:'👤 Clientes',
-    content:`<h3>Fichas y fidelización</h3>
-    <p>Base de datos de clientes con métricas calculadas automáticamente a partir de las ventas del TPV: visitas, ticket medio y última visita.</p>
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Conocer a tus clientes habituales es una de las formas más baratas de aumentar tus ventas: cuesta mucho menos conseguir que un cliente que ya te conoce vuelva, que atraer a uno nuevo. Este módulo es tu base de datos de clientes: guarda sus datos de contacto y calcula automáticamente, a partir de las ventas registradas en el TPV, cómo se está comportando cada uno (cuánto gasta, con qué frecuencia viene y cuándo fue la última vez).</p>
+
+    <h4>Dar de alta a un cliente</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nuevo cliente"</strong> y rellena nombre, teléfono y email (al menos uno de los dos para poder contactarle).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si quieres, añade notas: alergias, preferencias ("siempre pide mesa en terraza"), fecha de cumpleaños, etc. Esa información te permite dar un trato más personal.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Cuando creas una reserva nueva con un teléfono que no está en la base de datos, la app te ofrecerá añadirlo directamente desde ahí, sin tener que venir a este módulo.</div></div>
+
+    <h4>Métricas automáticas</h4>
+    <p>Cada vez que se registra una venta en el TPV asociada a un cliente, la app actualiza por sí sola:</p>
     <ul>
-      <li>Los enlaces de WhatsApp y email son directos</li>
-      <li>Un semáforo indica clientes activos, en riesgo o inactivos según su frecuencia de visita</li>
-    </ul>`
+      <li><strong>Nº de visitas</strong> — cuántas veces ha venido en total</li>
+      <li><strong>Ticket medio</strong> — cuánto gasta de media cada vez</li>
+      <li><strong>Última visita</strong> — la fecha de su última compra/reserva</li>
+    </ul>
+    <p>No tienes que calcular ni actualizar nada a mano: simplemente usa el TPV con normalidad y este módulo se mantiene al día solo.</p>
+
+    <h4>Semáforo de actividad</h4>
+    <p>Cada cliente lleva un indicador de color según su frecuencia de visita reciente:</p>
+    <table>
+      <tr><th>Color</th><th>Significado</th><th>Qué hacer</th></tr>
+      <tr><td>🟢 Verde</td><td>Cliente activo, viene con normalidad</td><td>Nada especial, mantén el buen servicio</td></tr>
+      <tr><td>🟡 Ámbar</td><td>Cliente en riesgo, tarda más de lo habitual en volver</td><td>Una llamada, un mensaje o una oferta personalizada puede recuperarlo</td></tr>
+      <tr><td>🔴 Rojo</td><td>Cliente inactivo, hace mucho que no viene</td><td>Campaña de reactivación: descuento de bienvenida, novedades de carta...</td></tr>
+    </table>
+
+    <h4>Contactar directamente</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa el icono de <strong>WhatsApp</strong> junto al teléfono de un cliente para abrir directamente una conversación con él, sin copiar números.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Pulsa el icono de <strong>email</strong> para abrir tu gestor de correo con la dirección del cliente ya puesta en el destinatario.</div></div>
+
+    <div class="manual-tip">💡 Filtra por clientes en ámbar o rojo una vez al mes y dedica 15 minutos a escribirles. Es la lista de clientes con más probabilidad de responder a una promoción, porque ya te conocen.</div>
+    <div class="manual-tip">💡 Combina este módulo con la pestaña "Clientes" de Promoción: desde ahí puedes lanzar campañas dirigidas a estos grupos.</div>`
   },
   {
     title:'📆 Reservas',
-    content:`<h3>Reservas vinculadas a mesas</h3>
-    <p>Gestiona reservas en vista Día, Semana o Mes.</p>
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Este módulo es tu libro de reservas digital. Te permite ver y gestionar todas las reservas de tu negocio en tres vistas (Día, Semana, Mes), controlar el aforo de cada turno y atender automáticamente las reservas que tus clientes hagan desde tu web pública (módulo Reservas y Pedidos Online).</p>
+
+    <h4>Vistas disponibles</h4>
     <ul>
-      <li>Al crear una reserva, si el cliente no está en la base de datos, se te ofrece añadirlo</li>
-      <li>Las reservas de hoy y de mañana aparecen en el Panel de Control</li>
-    </ul>`
+      <li><strong>Día</strong> — la más usada en el servicio: lista de reservas de hoy, hora a hora, con el aforo de cada turno.</li>
+      <li><strong>Semana</strong> — visión general de los próximos 7 días, útil para planificar personal y compras.</li>
+      <li><strong>Mes</strong> — calendario completo, ideal para ver de un vistazo días flojos o fechas con muchas reservas (festivos, eventos...).</li>
+    </ul>
+
+    <h4>Crear una reserva manualmente</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nueva reserva"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Indica fecha, hora, número de comensales y, opcionalmente, la mesa a asignar.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Escribe el nombre y teléfono del cliente. Si ese teléfono no está en tu base de datos de Clientes, la app te preguntará si quieres añadirlo: di que sí para empezar a acumular su historial de visitas.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Añade notas si hace falta (alergias, celebración, silla para bebé, mesa junto a la ventana...).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Guarda. La reserva aparecerá en la vista Día correspondiente.</div></div>
+
+    <h4>Aforo por turno</h4>
+    <p>Si en Mi Negocio configuraste el <strong>Aforo (plazas por turno)</strong>, la vista del día muestra para cada turno cuántas personas hay reservadas frente al máximo:</p>
+    <table>
+      <tr><th>Color</th><th>Situación</th></tr>
+      <tr><td>🟢 Verde</td><td>Hay sitio de sobra</td></tr>
+      <tr><td>🟡 Ámbar</td><td>El turno está cerca de completarse</td></tr>
+      <tr><td>🔴 Rojo</td><td>El turno está completo</td></tr>
+    </table>
+    <p>Si al crear o confirmar una reserva se supera el aforo, la app te avisa con los números exactos (por ejemplo "ya hay 38 de 40 plazas, esta reserva añade 6") y te pregunta si quieres confirmarla igualmente, por si puedes habilitar mesas extra.</p>
+
+    <h4>Solicitudes online pendientes</h4>
+    <p>Las reservas que un cliente hace desde tu página web pública no se confirman solas: llegan a la sección <strong>"Solicitudes online pendientes"</strong>, donde puedes revisarlas y decidir si las aceptas, las modificas (por ejemplo cambiar la mesa) o las rechazas si no tienes disponibilidad real.</p>
+    <div class="manual-tip">💡 Revisa las solicitudes pendientes varias veces al día, especialmente antes de cada servicio, para no dejar a un cliente esperando confirmación.</div>
+
+    <h4>En el Panel de Control</h4>
+    <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>
+    <div class="manual-warning">⚠️ Si cancelas o cambias una reserva confirmada desde la web pública, recuerda avisar al cliente por teléfono o WhatsApp: la cancelación no le envía un mensaje automático.</div>`
   },
   {
     title:'🖥 TPV',
@@ -13375,32 +13600,90 @@ const MANUAL_CHAPTERS = [
   },
   {
     title:'📊 Gestión Económica',
-    content:`<h3>Control financiero completo</h3>
-    <h4>Gastos Fijos</h4><p>Registra todos los gastos mensuales que no varían: nóminas, alquiler, seguros, suministros. Se usan automáticamente en el Punto de Equilibrio y la Cuenta de Resultados.</p>
-    <h4>Gastos Variables</h4><p>Registra cada compra a proveedor mes a mes. El food cost real se compara con tu food cost objetivo (configurable en Punto de Equilibrio).</p>
-    <h4>Cuenta de Resultados</h4><p>Vista mensual con facturación (del TPV), gastos (de las otras pestañas) y resultado del mes, todo calculado automáticamente. Usa las flechas para navegar entre años y ver el histórico mes a mes.</p>
-    <h4>Resultado</h4><p>P&amp;L trimestral y anual automático: Ventas → Margen Bruto → EBITDA → Resultado Antes de Impuestos → Resultado Neto. Configura el % de impuesto sobre beneficios (IRPF/IS) según tu forma de tributación.</p>
-    <h4>Tesorería</h4><p>Muestra cómo distribuir la facturación entre Personal, Gastos Fijos, Gastos Variables, Otros y Beneficio, e indica cuánto reservar para IVA y para impuestos sobre el beneficio (IRPF/IS), mostrando el beneficio neto realmente disponible. Configura los porcentajes objetivo y comprueba si estás en línea.</p>
-    <h4>Punto de Equilibrio</h4><p>Introduce ticket medio, cubiertos al mes, días de apertura y food cost objetivo. El sistema te dice cuántos cubiertos necesitas para no perder dinero.</p>
-    <h4>CAPEX</h4><p>Registro de inversiones y equipamientos. Puedes marcar una inversión como financiada a plazos indicando la cuota mensual y el número de cuotas: esa cuota computa como gasto mientras dure la financiación.</p>
-    <div class="manual-tip">💡 El Análisis de Platos (más/menos vendidos y más/menos rentables) se encuentra ahora en el Panel de Control.</div>`
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 7 pestañas que conviene rellenar en este orden.</p>
+
+    <h4>1. Gastos Fijos</h4>
+    <p>Aquí van todos los gastos mensuales que <strong>no cambian</strong> aunque vendas más o menos: nóminas (incluida la tuya si te pagas un sueldo), alquiler, seguros, cuotas de autónomo, luz/agua/internet si son más o menos estables, software, etc.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa "+ Añadir gasto fijo", escribe el concepto (ej. "Alquiler local") y el importe mensual.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repite con todos tus gastos fijos. Revísalos cada vez que cambie algo (nueva contratación, subida de alquiler, nuevo seguro...).</div></div>
+    <p>Estos importes alimentan automáticamente el Punto de Equilibrio y la Cuenta de Resultados.</p>
+
+    <h4>2. Gastos Variables</h4>
+    <p>Aquí registras las compras a proveedores, mes a mes: comida, bebida, desechables... todo lo que varía según cuánto produces y vendes.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Registra cada compra con su importe y mes. Si ya gestionas tus compras en el módulo Proveedores/Pedidos, procura mantener ambos coherentes.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">La app calcula tu <strong>food cost real</strong> (gasto variable / facturación) y lo compara con tu <strong>food cost objetivo</strong>, que configuras en Punto de Equilibrio.</div></div>
+    <div class="manual-warning">⚠️ Si tu food cost real está muy por encima del objetivo, revisa: escandallos sin actualizar, mermas, robos/descontrol de stock, o precios de carta desactualizados frente a lo que te cuesta ahora la materia prima.</div>
+
+    <h4>3. Cuenta de Resultados</h4>
+    <p>Vista mensual automática: <strong>Facturación</strong> (sumada del TPV) menos <strong>Gastos</strong> (de las dos pestañas anteriores) = <strong>Resultado del mes</strong>. Usa las flechas para moverte entre meses y años y ver tu evolución histórica de un vistazo.</p>
+    <div class="manual-tip">💡 Revisa esta pestaña el día 1 o 2 de cada mes, en cuanto tengas cerrado el mes anterior. Te da una foto rápida de cómo te ha ido.</div>
+
+    <h4>4. Resultado (P&amp;L)</h4>
+    <p>Cuenta de pérdidas y ganancias trimestral y anual, calculada en cascada:</p>
+    <table>
+      <tr><th>Paso</th><th>Qué es</th></tr>
+      <tr><td>Ventas</td><td>Toda tu facturación del periodo</td></tr>
+      <tr><td>− Coste de ventas</td><td>Lo que te ha costado producir lo que has vendido (food cost)</td></tr>
+      <tr><td>= Margen Bruto</td><td>Lo que te queda para pagar el resto</td></tr>
+      <tr><td>− Gastos fijos y de estructura</td><td>Personal, alquiler, suministros...</td></tr>
+      <tr><td>= EBITDA</td><td>Resultado antes de financiación, amortizaciones e impuestos</td></tr>
+      <tr><td>− Amortizaciones / financiación (CAPEX)</td><td>Cuotas de equipamiento financiado</td></tr>
+      <tr><td>= Resultado Antes de Impuestos</td><td>Lo que "ganarías" antes de pagar IRPF/Sociedades</td></tr>
+      <tr><td>− Impuesto sobre beneficios</td><td>Según el % que configures (IRPF si eres autónomo, IS si eres sociedad)</td></tr>
+      <tr><td>= Resultado Neto</td><td>Lo que realmente te queda</td></tr>
+    </table>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Configura el % de impuesto sobre beneficios que te corresponde según tu forma de tributación (consulta a tu gestor si no lo sabes con exactitud).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Revisa el P&amp;L cada trimestre para detectar tendencias (¿el margen bruto está bajando? ¿los gastos fijos pesan cada vez más sobre las ventas?).</div></div>
+
+    <h4>5. Tesorería: a dónde va cada euro que entra</h4>
+    <p>Esta pestaña reparte tu facturación en partidas para que sepas, de cada 100€ que entran en caja, cuánto es realmente "tuyo" y cuánto está comprometido.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Configura el % objetivo de cada partida: Personal, Gastos Fijos, Gastos Variables, Otros y Beneficio (deben sumar el 100% de la facturación).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">La app calcula también cuánto debes reservar de IVA (normalmente repercutido en tus ventas y que no es "tuyo") y cuánto de impuesto sobre el beneficio (IRPF/IS).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">El resultado final es tu <strong>beneficio neto realmente disponible</strong>: el dinero que puedes usar sin sorpresas, después de apartar lo de Hacienda.</div></div>
+    <div class="manual-tip">💡 Muchos negocios "ganan dinero sobre el papel" pero van ahogados porque gastan el IVA cobrado como si fuera suyo. Si separas mentalmente (o en una cuenta aparte) el % de IVA que indica esta pestaña, evitas ese problema.</div>
+
+    <h4>6. Punto de Equilibrio</h4>
+    <p>Te dice cuántos cubiertos al mes necesitas vender como mínimo para que tus ingresos cubran tus gastos (ni ganas ni pierdes).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Introduce tu <strong>ticket medio</strong> (lo que gasta de media un cliente).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Introduce los <strong>días de apertura al mes</strong>.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Introduce tu <strong>food cost objetivo</strong> (% que quieres que represente la materia prima sobre tus ventas, normalmente 28-35% según el tipo de negocio).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">La app cruza estos datos con tus Gastos Fijos y te devuelve los <strong>cubiertos/mes</strong> y <strong>cubiertos/día</strong> que necesitas para cubrir gastos. Todo lo que vendas por encima de esa cifra es lo que empieza a generar beneficio real.</div></div>
+    <p><strong>Ejemplo:</strong> si tus gastos fijos son 6.000€/mes, tu ticket medio es 18€ y tu food cost objetivo es 30% (es decir, cada 18€ de venta dejan 12,60€ de margen bruto), necesitarías unos 6.000 / 12,60 ≈ 476 cubiertos al mes para cubrir gastos. Si abres 26 días, son unos 18-19 cubiertos al día como mínimo.</p>
+    <div class="manual-tip">💡 Compara cada mes tus cubiertos reales (los puedes estimar dividiendo la facturación entre el ticket medio) con este mínimo. El Panel de Control te muestra esta comparación automáticamente.</div>
+
+    <h4>7. CAPEX (inversiones y equipamiento)</h4>
+    <p>Registra aquí las inversiones grandes: horno nuevo, cámara, obra, mobiliario...</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Da de alta la inversión con su importe total y fecha.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si la has financiado a plazos, marca la opción correspondiente e indica la <strong>cuota mensual</strong> y el <strong>número de cuotas</strong>. Esa cuota se sumará como gasto mensual mientras dure la financiación, y desaparecerá sola cuando termine.</div></div>
+
+    <div class="manual-tip">💡 El ranking de platos más/menos vendidos y más/menos rentables (Análisis de Platos) se encuentra ahora en el Panel de Control.</div>`
   },
   {
     title:'📈 Panel de Control',
-    content:`<h3>KPIs centralizados</h3>
-    <p>Tu centro de mando diario. Lee datos de todos los módulos y los presenta en una sola pantalla.</p>
-    <ul>
-      <li><strong>KPIs del periodo:</strong> ventas de hoy, de la semana y del mes</li>
-      <li><strong>Resultado:</strong> facturación, gastos y resultado del mes</li>
-      <li><strong>Tendencia:</strong> gráfico de ventas mensuales del año</li>
-      <li><strong>Punto de equilibrio:</strong> situación frente al objetivo</li>
-      <li><strong>Comparativa con el periodo anterior:</strong> variación de ventas y resultado respecto a la semana/mes anterior</li>
-      <li><strong>Análisis de ventas:</strong> ticket medio, platos más vendidos y de mayor margen en los últimos 30 días</li>
-      <li><strong>Análisis de Platos:</strong> ranking de más/menos vendidos y más/menos rentables por periodo</li>
-      <li><strong>Alertas:</strong> avisos automáticos si algo va mal (food cost alto, resultado negativo, fichas pendientes, stock bajo)</li>
-      <li><strong>Próximas reservas</strong> y accesos directos a los módulos más usados</li>
-    </ul>
-    <div class="manual-tip">💡 Revisa el Panel de Control cada mañana antes de abrir. En 30 segundos sabes cómo está tu negocio.</div>`
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>El Panel de Control es la primera pantalla que deberías mirar cada día. No introduces nada aquí: simplemente reúne y resume datos de todos los demás módulos (TPV, Gestión Económica, Stock, Reservas, Fichas Técnicas...) para darte, de un vistazo, el estado de salud de tu negocio. Si solo tuvieras un minuto al día para "mirar" la app, sería este.</p>
+
+    <h4>Qué encontrarás y cómo interpretarlo</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>KPIs del periodo</strong> — ventas de hoy, de esta semana y de este mes. Te dice cómo va el ritmo de facturación en tiempo real.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Resultado</strong> — facturación, gastos y resultado del mes en curso, calculado con los datos de Gestión Económica. Si está en negativo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Tendencia</strong> — gráfico de ventas mensuales del año. Te ayuda a detectar estacionalidad (meses fuertes y flojos) y a comparar este año con el anterior si llevas tiempo usando la app.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Comparativa con el periodo anterior</strong> — variación de ventas y resultado respecto a la semana o mes anterior, en %. Útil para saber si una caída de ventas es algo puntual (un día de lluvia) o una tendencia que dura semanas.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Análisis de ventas</strong> — ticket medio, platos más vendidos y platos de mayor margen en los últimos 30 días. Te dice qué está funcionando ahora mismo.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Análisis de Platos</strong> — ranking de los platos más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Alertas</strong> — avisos automáticos cuando algo necesita tu atención: food cost por encima del objetivo, resultado del mes negativo, fichas técnicas pendientes de completar, stock por debajo del mínimo, etc. Pulsa sobre una alerta para ir directamente al módulo correspondiente y resolverla.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>Próximas reservas</strong> — las reservas de hoy y mañana, para que sepas qué esperar en el servicio sin entrar en el módulo de Reservas.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Accesos directos</strong> — botones a los módulos que más usas, para no tener que navegar por los menús.</div></div>
+
+    <h4>Rutina recomendada</h4>
+    <p>Cada mañana, antes de abrir:</p>
+    <ol>
+      <li>Revisa las <strong>Alertas</strong> y resuelve las urgentes (stock bajo, fichas pendientes).</li>
+      <li>Mira las <strong>KPIs del periodo</strong> y la <strong>comparativa</strong> para saber si vas en línea con lo esperado.</li>
+      <li>Echa un ojo a las <strong>próximas reservas</strong> para avisar a cocina y sala de la previsión del día.</li>
+    </ol>
+    <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las alertas están limpias y las ventas van en línea con la comparativa, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
   },
   {
     title:'🏪 Mi Negocio',
