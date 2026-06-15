@@ -695,7 +695,10 @@ td.wrap{white-space:normal}
             <button class="btn btn-sm" id="escandallo-view-list" onclick="setEscandalloView('list')"><i class="ti ti-list"></i></button>
           </div>
         </div>
-        <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+        <div style="display:flex;gap:8px">
+          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> Nueva Elaboración</button>
+          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+        </div>
       </div>
 
       <div id="escandallo-list"></div>
@@ -4544,14 +4547,15 @@ function renderStock(){
     const matchSearch = !search || e.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
     return matchArea && matchSearch && matchAlert;
-  }).map(e => ({type:'elab', id: e.id, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
+  }).map(e => ({type:'elab', id: e.id, recipeId: e.recipeId||null, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
   const renderRow = row => {
     const low = row.qty <= row.min;
     const isElab = row.type === 'elab';
+    const fromEscandallo = isElab && !!row.recipeId;
     return `
       <tr>
-        <td><strong>${escapeHtml(row.name)}</strong></td>
+        <td><strong>${escapeHtml(row.name)}</strong>${fromEscandallo ? ' <span class="badge badge-gray" style="font-size:10px">Escandallo</span>' : ''}</td>
         <td>${fmtNum(row.qty)}</td>
         <td>
           <input type="number" value="${row.min}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" ${editUnlocked?'':'disabled'}
@@ -4563,8 +4567,9 @@ function renderStock(){
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i></button>
           <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}">Ajustar</button>
-          ${isElab ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
+          ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
+          ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="Editar escandallo" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ti-chef-hat"></i></button>` : ''}
         </td>
       </tr>
     `;
@@ -5033,8 +5038,8 @@ function renderEscandalloCard(r){
 
 let recipeModalLines = [];
 
-function openRecipeModal(id){
-  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:false, baseYield:1, baseUnit:'L'};
+function openRecipeModal(id, forceBase){
+  const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:!!forceBase, baseYield:1, baseUnit:'L'};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
   renderRecipeModal(id, r);
 }
@@ -5061,7 +5066,7 @@ function renderRecipeModal(id, r){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Nuevo'} Plato</h3>
+      <h3>${id ? 'Editar' : 'Nuevo'} ${r.isBase ? 'Elaboración' : 'Plato'}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
@@ -5170,15 +5175,20 @@ function filterRecipeIngredientResults(id){
     .filter(b => b.isBase && (b.area||'cocina') === area && b.id !== id)
     .filter(b => !search || b.name.toLowerCase().includes(search))
     .map(b => ({type:'base', id:b.id, name:b.name, unit:b.baseUnit||'L', perUnit: recipeBaseCostPerUnit(b)}));
-  const matches = [...baseMatches, ...ingMatches].slice(0, 30);
-  if(!matches.length){
+  const baseLimited = baseMatches.slice(0, 15);
+  const ingLimited = ingMatches.slice(0, 30);
+  if(!baseLimited.length && !ingLimited.length){
     results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">Sin resultados</div>`;
   } else {
-    results.innerHTML = matches.map(m => `
+    const renderItem = m => `
       <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
         ${m.type==='base' ? '<i class="ti ti-soup"></i> ' : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`Base — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
       </div>
-    `).join('');
+    `;
+    const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#f4f5f7)">${label}</div>`;
+    results.innerHTML =
+      (baseLimited.length ? sectionHeader('Elaboraciones') + baseLimited.map(renderItem).join('') : '') +
+      (ingLimited.length ? sectionHeader('Ingredientes') + ingLimited.map(renderItem).join('') : '');
   }
   results.style.display = 'block';
 }
@@ -5314,21 +5324,38 @@ function saveRecipe(id){
     (ing && ing.allergens || []).forEach(a => allergenSet.add(a));
   });
 
+  let recipeId = id;
   if(id){
     const r = getRecipe(id);
     Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase, baseYield, baseUnit});
   }else{
-    DB.recipes.push({id: genId(), name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
+    recipeId = genId();
+    DB.recipes.push({id: recipeId, name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
+  syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   saveDB();
   closeModal();
   renderEscandallo();
-  showToast('Plato guardado');
+  showToast(isBase ? 'Elaboración guardada' : 'Plato guardado');
+}
+
+// Mantiene sincronizada la entrada de Stock > Elaboraciones con los platos
+// marcados como "elaboración base" en el Escandallo.
+function syncElaboracionForRecipe(recipeId, isBase, name, unit){
+  if(!DB.elaboraciones) DB.elaboraciones = [];
+  const existing = DB.elaboraciones.find(e => e.recipeId === recipeId);
+  if(isBase){
+    if(existing){ existing.name = name; existing.unit = unit; }
+    else { DB.elaboraciones.push({id: genId(), recipeId, name, unit, qty:0, min:0, area: currentArea()}); }
+  } else if(existing){
+    DB.elaboraciones = DB.elaboraciones.filter(e => e.recipeId !== recipeId);
+  }
 }
 
 function deleteRecipe(id){
   if(!confirm('¿Eliminar este plato?')) return;
   DB.recipes = DB.recipes.filter(r => r.id !== id);
+  DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
   DB.cartas.forEach(c => {
     (c.secciones||[]).forEach(sec => {
       sec.platos = (sec.platos||[]).filter(p => p.recipeId !== id);
