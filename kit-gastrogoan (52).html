@@ -10135,6 +10135,8 @@ function renderHorariosPersonal(){
         <div><strong>${escapeHtml(e.name)}</strong><div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div></div>
       </div>
       <div class="actions-cell">
+        ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+        ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
         <button class="owner-only btn btn-sm btn-icon" onclick="openBulkTurnoModal(${e.id})" title="Asignar turnos"><i class="ti ti-calendar-plus"></i></button>
         <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
@@ -10329,6 +10331,17 @@ function openEmployeeModal(id){
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
       </div>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="Ej. 600123456">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="emp-email" value="${escapeHtml(e.email||'')}" placeholder="ejemplo@correo.com">
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">Para comentarios o envío de documentación (WhatsApp / email).</p>
     ${id ? `
     <div class="field">
       <label>PIN de fichaje</label>
@@ -10359,10 +10372,12 @@ function saveEmployee(id){
   if(!name){ showToast('El nombre es obligatorio'); return; }
   const rol = document.getElementById('emp-rol').value.trim();
   const color = document.getElementById('emp-color').value;
+  const phone = document.getElementById('emp-phone').value.trim();
+  const email = document.getElementById('emp-email').value.trim();
   if(id){
-    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color});
+    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color, phone, email});
   } else {
-    DB.employees.push({id: genId(), name, rol, color, pin:'1234', pinChanged:false});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, pin:'1234', pinChanged:false});
   }
   saveDB();
   closeModal();
@@ -10421,10 +10436,13 @@ function renderHorariosFichar(){
     return;
   }
   const weekDates = getWeekDates(0).map(d=>dateStr(d));
+  const now = new Date();
+  const monthDates = Array.from({length: new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}, (_,i) => dateStr(new Date(now.getFullYear(), now.getMonth(), i+1)));
 
   const cards = DB.employees.map(e => {
     const open = getOpenFichaje(e.id);
     const horasSemana = employeeHoursInRange(e.id, weekDates);
+    const horasMes = employeeHoursInRange(e.id, monthDates);
     const propinasSemana = employeePropinasInRange(e.id, weekDates);
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openFichajeHistoryModal(${e.id})">
@@ -10435,6 +10453,7 @@ function renderHorariosFichar(){
           <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
         </div>
         <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
+        <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
         <div style="font-size:12px;color:var(--muted)">Propinas esta semana: <strong>${fmtMoney(propinasSemana)}</strong></div>
         <div style="margin-top:6px;font-size:12px;color:var(--brand-orange)"><i class="ti ti-history"></i> Ver últimos fichajes</div>
       </div>
