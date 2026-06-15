@@ -2676,7 +2676,7 @@ async function loadDB(){
     if(!Array.isArray(merged.promos)) merged.promos = [];
     if(!Array.isArray(merged.loyaltyRewards)) merged.loyaltyRewards = ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'];
     if(!Array.isArray(merged.chatMessages)) merged.chatMessages = [];
-    (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } });
+    (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } if(!e.area) e.area = 'cocina'; });
     (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;
   }catch(e){
@@ -3709,16 +3709,18 @@ function setChatAuthor(val){
   localStorage.setItem('chatAuthor', val);
 }
 function getChatAuthorName(val){
-  if(val === 'owner') return 'Dueño/a';
+  if(val === 'owner') return 'Jefe/a';
   const e = DB.employees.find(x => String(x.id) === String(val));
-  return e ? e.name : 'Dueño/a';
+  return e ? e.name : 'Jefe/a';
 }
 function populateChatAuthorSelect(){
   const sel = document.getElementById('chat-author-sel');
   const current = getChatAuthor();
-  const options = [`<option value="owner">Dueño/a</option>`]
-    .concat(DB.employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`));
-  sel.innerHTML = options.join('');
+  const cocinaOpts = DB.employees.filter(e => (e.area||'cocina')==='cocina').map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  const salaOpts = DB.employees.filter(e => e.area==='sala').map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  sel.innerHTML = `<option value="owner">Jefe/a</option>`
+    + (cocinaOpts ? `<optgroup label="Cocina">${cocinaOpts}</optgroup>` : '')
+    + (salaOpts ? `<optgroup label="Sala">${salaOpts}</optgroup>` : '');
   sel.value = DB.employees.some(e => String(e.id)===String(current)) || current==='owner' ? current : 'owner';
   if(sel.value !== current) setChatAuthor(sel.value);
 }
@@ -10444,7 +10446,7 @@ function applyBulkTurno(){
 }
 
 function openEmployeeModal(id){
-  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039'};
+  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
   openModal(`
     <div class="modal-header">
       <h3>${id ? 'Editar' : 'Nuevo'} Empleado</h3>
@@ -10463,6 +10465,13 @@ function openEmployeeModal(id){
         <label>Color identificativo</label>
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
       </div>
+    </div>
+    <div class="field">
+      <label>Área de trabajo</label>
+      <select id="emp-area">
+        <option value="cocina"${(e.area||'cocina')==='cocina'?' selected':''}>Cocina</option>
+        <option value="sala"${e.area==='sala'?' selected':''}>Sala</option>
+      </select>
     </div>
     <div class="field-row">
       <div class="field">
@@ -10507,10 +10516,11 @@ function saveEmployee(id){
   const color = document.getElementById('emp-color').value;
   const phone = document.getElementById('emp-phone').value.trim();
   const email = document.getElementById('emp-email').value.trim();
+  const area = document.getElementById('emp-area').value;
   if(id){
-    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color, phone, email});
+    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color, phone, email, area});
   } else {
-    DB.employees.push({id: genId(), name, rol, color, phone, email, pin:'1234', pinChanged:false});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, area, pin:'1234', pinChanged:false});
   }
   saveDB();
   closeModal();
