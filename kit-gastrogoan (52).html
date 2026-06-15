@@ -83,9 +83,9 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 
 .folder-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;padding:32px 0 8px;max-width:960px;margin:0 auto}
 .folder-card{
-  border-radius:18px;padding:28px;cursor:pointer;
-  position:relative;overflow:hidden;min-height:220px;
-  display:flex;flex-direction:column;justify-content:space-between;
+  border-radius:18px;padding:40px 28px;cursor:pointer;
+  position:relative;overflow:hidden;min-height:240px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;
   border:1px solid rgba(255,255,255,.08);
   transition:transform .2s, box-shadow .2s;
 }
@@ -94,12 +94,10 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .folder-card.folder-cocina{background:linear-gradient(140deg,#1A1A1A,#2A1500)}
 .folder-card.folder-sala{background:linear-gradient(140deg,#0A0A1A,#1A1A1A)}
 .folder-card.folder-gestion{background:linear-gradient(140deg,#150A00,#2A1200)}
-.folder-icon{font-size:40px;margin-bottom:10px;display:block}
-.folder-card h2{font-size:26px;font-weight:800;color:#fff;margin-bottom:6px}
-.folder-card p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:16px}
-.folder-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:18px}
-.folder-chip{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.1)}
-.folder-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:9px 16px;border-radius:9px;width:fit-content;color:var(--teal);background:rgba(223,112,57,.12);border:1px solid rgba(223,112,57,.3)}
+.folder-icon{font-size:64px;display:block;line-height:1}
+.folder-card h2{font-size:28px;font-weight:800;color:#fff;margin:0}
+.folder-card p,.folder-chips{display:none}
+.folder-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:10px 22px;border-radius:9px;width:fit-content;color:var(--teal);background:rgba(223,112,57,.12);border:1px solid rgba(223,112,57,.3)}
 .folder-count{display:none}
 
 /* ===== Folder (módulos de un área) ===== */
@@ -3914,12 +3912,8 @@ function renderHome(){
   document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
   document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
     <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
-      <div>
-        <span class="folder-icon">${f.emoji}</span>
-        <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
-        <p>${escapeHtml(t(`folder.${key}.desc`))}</p>
-        <div class="folder-chips">${t(`folder.${key}.chips`).map(c=>`<span class="folder-chip">${escapeHtml(c)}</span>`).join('')}</div>
-      </div>
+      <span class="folder-icon">${f.emoji}</span>
+      <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
       <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
     </div>
   `).join('');
