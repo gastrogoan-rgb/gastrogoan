@@ -5576,50 +5576,76 @@ function renderCartaList(){
 }
 
 // Horario semanal por defecto para una carta/menú: activo todos los días, sin
-// franja horaria concreta (= disponible todo el día).
+// franja horaria concreta (= disponible todo el día). Cada día admite hasta 2
+// franjas horarias (para horario partido, p.ej. mediodía y noche).
 function defaultItemHorario(){
-  return WEEK_DAYS.map(()=>({activo:true, desde:'', hasta:''}));
+  return WEEK_DAYS.map(()=>({activo:true, franjas:[{desde:'', hasta:''}]}));
 }
-// Construye el horario semanal de una carta/menú a partir de los campos
-// antiguos turno+dias, para mantener compatibilidad con datos previos.
+// Construye el horario semanal de una carta/menú a partir de formatos previos:
+// - antiguo turno+dias (sin horario)
+// - antiguo horario:[7x{activo,desde,hasta}] (1 sola franja por día)
 function migrateItemHorario(item){
-  if(Array.isArray(item.horario) && item.horario.length===7) return item.horario;
+  if(Array.isArray(item.horario) && item.horario.length===7){
+    return item.horario.map(d => {
+      if(d && Array.isArray(d.franjas) && d.franjas.length) return {activo: d.activo!==false, franjas: d.franjas};
+      return {activo: d ? d.activo!==false : true, franjas:[{desde:(d&&d.desde)||'', hasta:(d&&d.hasta)||''}]};
+    });
+  }
   const dias = Array.isArray(item.dias) ? item.dias : [0,1,2,3,4,5,6];
-  return WEEK_DAYS.map((_,i)=>({activo: dias.includes(i), desde:'', hasta:''}));
+  return WEEK_DAYS.map((_,i)=>({activo: dias.includes(i), franjas:[{desde:'', hasta:''}]}));
 }
 // Renderiza las filas de días/horario compartidas por el editor de cartas y menús.
+// Diseño compacto: una fila por día, con hasta 2 franjas horarias apilables.
 function renderScheduleRows(prefix, horario){
-  return horario.map((d,i) => `
-    <div class="ge-section" style="margin-bottom:8px">
-      <div class="ge-sec-head">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:700">
-          <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})">
-          ${WEEK_DAYS[i]}
-        </label>
-      </div>
-      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};gap:10px;padding:10px 14px;flex-wrap:wrap">
-        <div class="field" style="flex:1;min-width:140px">
-          <label>Desde <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-          <input type="time" id="${prefix}-hor-${i}-desde" value="${escapeHtml(d.desde||'')}">
-        </div>
-        <div class="field" style="flex:1;min-width:140px">
-          <label>Hasta <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-          <input type="time" id="${prefix}-hor-${i}-hasta" value="${escapeHtml(d.hasta||'')}">
-        </div>
+  return `<div style="display:flex;flex-direction:column;gap:6px">${horario.map((d,i) => {
+    const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
+    return `
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;${d.activo===false?'opacity:.5':''}">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;min-width:46px;padding-top:4px;cursor:pointer">
+        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})">
+        ${WEEK_DAYS[i].slice(0,3)}
+      </label>
+      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:4px;flex:1;padding:2px 0">
+        ${franjas.map((f,j) => `
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:4px 6px;font-size:13px;width:auto">
+            <span style="color:var(--muted);font-size:12px">a</span>
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:4px 6px;font-size:13px;width:auto">
+            <span style="font-size:11px;color:var(--muted)">${j===0?'(vacío = todo el día)':''}</span>
+            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar franja"><i class="ti ti-x"></i></button>` : ''}
+          </div>
+        `).join('')}
+        ${franjas.length < 2 ? `<button class="btn btn-sm" style="align-self:flex-start;padding:3px 8px;font-size:12px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i> Añadir franja</button>` : ''}
       </div>
     </div>
-  `).join('');
+  `}).join('')}</div>`;
 }
 function toggleScheduleDia(prefix, i){
   const on = document.getElementById(`${prefix}-hor-${i}-activo`).checked;
   document.getElementById(`${prefix}-hor-${i}-rango`).style.display = on ? 'flex' : 'none';
 }
+function addScheduleFranja(prefix, i){
+  const horario = readScheduleFromForm(prefix);
+  if(horario[i].franjas.length < 2) horario[i].franjas.push({desde:'', hasta:''});
+  document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, horario);
+}
+function removeScheduleFranja(prefix, i, j){
+  const horario = readScheduleFromForm(prefix);
+  horario[i].franjas.splice(j, 1);
+  document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, horario);
+}
 function readScheduleFromForm(prefix){
-  return WEEK_DAYS.map((_,i)=>({
-    activo: document.getElementById(`${prefix}-hor-${i}-activo`).checked,
-    desde: document.getElementById(`${prefix}-hor-${i}-desde`).value,
-    hasta: document.getElementById(`${prefix}-hor-${i}-hasta`).value,
-  }));
+  return WEEK_DAYS.map((_,i)=>{
+    const activo = document.getElementById(`${prefix}-hor-${i}-activo`).checked;
+    const franjas = [];
+    for(let j=0; j<2; j++){
+      const elDesde = document.getElementById(`${prefix}-hor-${i}-${j}-desde`);
+      if(!elDesde) break;
+      const elHasta = document.getElementById(`${prefix}-hor-${i}-${j}-hasta`);
+      franjas.push({desde: elDesde.value, hasta: elHasta.value});
+    }
+    return {activo, franjas: franjas.length ? franjas : [{desde:'', hasta:''}]};
+  });
 }
 
 function newCarta(){
@@ -6184,16 +6210,21 @@ function setCartaAuto(checked){
 }
 
 // Comprueba si una carta debería estar activa ahora mismo, según el horario
-// semanal propio configurado en su editor (días + franja horaria opcional).
+// semanal propio configurado en su editor (días + franjas horarias opcionales).
 function cartaIsActiveNow(c, now){
   const jsDay = now.getDay();
   const dayIdx = (jsDay + 6) % 7; // 0=lunes..6=domingo
   const horario = migrateItemHorario(c);
   const day = horario[dayIdx];
   if(!day || day.activo === false) return false;
-  if(!day.desde || !day.hasta) return true; // sin franja concreta: activa todo el día
+  const franjas = day.franjas && day.franjas.length ? day.franjas : [{desde:'', hasta:''}];
   const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  return time >= day.desde && time <= day.hasta;
+  return franjas.some(f => {
+    if(!f.desde || !f.hasta) return true; // sin franja concreta: activa todo el día
+    // Franja que cruza medianoche (ej. 20:00-02:00)
+    if(f.hasta < f.desde) return time >= f.desde || time <= f.hasta;
+    return time >= f.desde && time <= f.hasta;
+  });
 }
 
 // Busca, en el Horario semanal de Mi Negocio, el tramo (seguido o turno) en el
