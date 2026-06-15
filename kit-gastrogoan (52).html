@@ -2256,20 +2256,28 @@ function renderTableQrCard(){
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-qrcode"></i> QR auto pedido</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Descarga un QR para cada mesa e imprímelo: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${DB.tables.map(t => {
-          const tLink = `${link}&mesa=${t.id}`;
-          const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(tLink);
-          return `
-          <div class="ge-item" style="align-items:center;gap:12px">
-            <span style="flex:1;font-weight:600"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(t.name)}</span>
-            <a class="btn btn-sm" style="text-decoration:none" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
-          </div>`;
-        }).join('')}
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Pulsa sobre una mesa para ver su QR y descargarlo. Imprímelo y colócalo en esa mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${DB.tables.map(t => `<button class="btn btn-sm" style="font-size:12px;padding:4px 10px" onclick="showTableQr(${t.id})"><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</button>`).join('')}
       </div>
     </div>
   `;
+}
+
+function showTableQr(tableId){
+  const t = DB.tables.find(x => x.id === tableId);
+  const link = getPublicClientLink();
+  if(!t || !link) return;
+  const tLink = `${link}&mesa=${t.id}`;
+  const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(tLink);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="text-align:center">
+      <img src="${tQr}" alt="QR ${escapeHtml(t.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
+      <p style="font-size:13px;color:var(--muted);margin:10px 0">Tus clientes escanean este código para pedir desde <strong>${escapeHtml(t.name)}</strong>.</p>
+      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
+    </div>
+  `);
 }
 
 /* ============================================================
@@ -2619,7 +2627,7 @@ function defaultData(){
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     business: {
-      name:'', address:'', phone:'', email:'', schedule:'', description:'',
+      name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
       mesasInterior:'', mesasTerraza:'', aforo:'', ig:'', fb:'',
       pin:'1234', pinSet:false,
@@ -12664,7 +12672,9 @@ function renderMiNegocio(){
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-id-badge-2"></i> Identidad</h3>
+      <h3><i class="ti ti-building-store"></i> Datos del negocio</h3>
+
+      <h4 style="margin-top:0"><i class="ti ti-id-badge-2"></i> Identidad</h4>
       <div class="field">
         <label>Logo del establecimiento</label>
         <div style="display:flex;align-items:center;gap:12px">
@@ -12694,19 +12704,18 @@ function renderMiNegocio(){
           <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020">
         </div>
       </div>
-    </div>
+      <div class="field">
+        <label>Propietario</label>
+        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo">
+      </div>
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-notes"></i> Descripción</h3>
+      <h4><i class="ti ti-notes"></i> Descripción</h4>
       <div class="field">
         <label>Descripción / Concepto</label>
         <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
       </div>
-      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar todo</button>
-    </div>
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-address-book"></i> Contacto</h3>
+      <h4><i class="ti ti-address-book"></i> Contacto</h4>
       <div class="field">
         <label>Dirección</label>
         <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad">
@@ -12731,10 +12740,8 @@ function renderMiNegocio(){
           <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678">
         </div>
       </div>
-    </div>
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-brand-instagram"></i> Redes sociales</h3>
+      <h4><i class="ti ti-brand-instagram"></i> Redes sociales</h4>
       <div class="field-row">
         <div class="field">
           <label>Instagram</label>
@@ -12745,20 +12752,16 @@ function renderMiNegocio(){
           <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal">
         </div>
       </div>
+
+      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar todo</button>
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-building-store"></i> Operativa</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Propietario</label>
-          <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo">
-        </div>
-        <div class="field">
-          <label>Aforo (plazas por turno)</label>
-          <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40">
-          <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
-        </div>
+      <h3><i class="ti ti-layout-grid"></i> Operativa</h3>
+      <div class="field">
+        <label>Aforo (plazas por turno)</label>
+        <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40">
+        <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
       </div>
       <div class="field-row">
         <div class="field">
@@ -12766,7 +12769,7 @@ function renderMiNegocio(){
           <input type="number" id="mn-mesas-interior" value="${escapeHtml(b.mesasInterior!=null?b.mesasInterior:(b.mesasInt||''))}" placeholder="8">
         </div>
         <div class="field">
-          <label>Mesas de terraza</label>
+          <label>Mesas de exterior/terraza</label>
           <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4">
         </div>
         <div class="field">
@@ -12774,17 +12777,9 @@ function renderMiNegocio(){
           <input type="number" id="mn-mesas-barra" value="${escapeHtml(b.mesasBarra||'')}" placeholder="3">
         </div>
       </div>
-      <div class="field">
-        <label>Horario de apertura (texto)</label>
-        <input type="text" id="business-schedule" value="${escapeHtml(b.schedule||'')}" placeholder="Ej. Lun-Dom 12:00-00:00">
-      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Estas cantidades son las mesas que verás organizadas por zonas (Interior, Terraza, Barra) en el plano de mesas del TPV.</p>
       <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Sincronizar mesas con TPV</button>
-    </div>
-
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-calendar-time"></i> Horario semanal (reservas y pedidos online)</h3>
-      <p style="font-size:13px;color:var(--muted,#888)">Marca los días que abres y las horas. Si un día tienes horario partido (ej. abres a mediodía, cierras, y vuelves a abrir por la noche), rellena también el "Turno 2". Estos horarios limitan las horas que tus clientes pueden elegir al reservar mesa o hacer un pedido online.</p>
-      <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Crea automáticamente en el TPV las mesas que falten hasta llegar a estas cantidades (no borra ni duplica las que ya existen).</p>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -12801,6 +12796,13 @@ function renderMiNegocio(){
           <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
         </label>
       </div>
+    </div>
+
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-calendar-time"></i> Horario de apertura</h3>
+      <p style="font-size:13px;color:var(--muted,#888)">Es el horario general de tu negocio, día por día. Si un día tienes horario partido (ej. abres a mediodía, cierras, y vuelves a abrir por la noche), rellena también el "Turno 2". Marca como cerrado los días que no abras.</p>
+      <p style="font-size:13px;color:var(--muted,#888)">Este horario se usa para calcular el aforo disponible por turno en Reservas, y para limitar las horas que tus clientes pueden elegir al reservar mesa o hacer un pedido para llevar/domicilio online. Dentro de cada franja, la carta que verán tus clientes es la que tengas marcada como disponible en cada momento (sección Carta).</p>
+      <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
     </div>
 
     ${renderTicketConfigCard()}
@@ -13004,7 +13006,6 @@ function saveBusiness(){
     address: document.getElementById('business-address').value.trim(),
     phone: document.getElementById('business-phone').value.trim(),
     email: document.getElementById('business-email').value.trim(),
-    schedule: document.getElementById('business-schedule').value.trim(),
     horario: readHorarioFromForm(),
     description: document.getElementById('business-description').value.trim(),
     tipo: document.getElementById('mn-tipo').value,
@@ -13041,6 +13042,7 @@ const DELIVERY_PLATFORM_SUGGESTIONS = ['Glovo','Uber Eats','Just Eat','Deliveroo
 
 function renderDeliveryPlatformsCard(){
   const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
+  const couriers = (DB.business && DB.business.ownCouriers) || [];
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-moped"></i> Plataformas de delivery</h3>
@@ -13056,8 +13058,71 @@ function renderDeliveryPlatformsCard(){
         : `<div class="empty" style="padding:12px 16px">Sin plataformas configuradas. Si recibes pedidos solo por tu cuenta (reparto propio), no necesitas añadir nada.</div>`}
       </div>
       <button class="btn btn-sm" onclick="newDeliveryPlatform()"><i class="ti ti-plus"></i> Añadir plataforma</button>
+
+      <h4><i class="ti ti-user-bolt"></i> Repartidores propios</h4>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Si reparties los pedidos a domicilio con tu propio personal (sin pasar por una plataforma), anota aquí a tus repartidores para localizarlos rápido por WhatsApp y coordinar quién lleva cada pedido.</p>
+      <div id="own-couriers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        ${couriers.length ? couriers.map(c=>`
+          <div class="ge-item">
+            <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(c.nombre)}</span>
+            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#25D366" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+            <button class="btn btn-sm btn-icon" onclick="editOwnCourier(${c.id})"><i class="ti ti-edit"></i></button>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteOwnCourier(${c.id})"><i class="ti ti-trash"></i></button>
+          </div>`).join('')
+        : `<div class="empty" style="padding:12px 16px">Sin repartidores propios registrados.</div>`}
+      </div>
+      <button class="btn btn-sm" onclick="newOwnCourier()"><i class="ti ti-plus"></i> Añadir repartidor</button>
     </div>
   `;
+}
+
+function newOwnCourier(){
+  openOwnCourierModal('Añadir repartidor', {id:null, nombre:'', telefono:''});
+}
+function editOwnCourier(id){
+  const c = (DB.business.ownCouriers||[]).find(x=>x.id===id); if(!c) return;
+  openOwnCourierModal('Editar repartidor', c);
+}
+function openOwnCourierModal(title, c){
+  openModal(`
+    <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="oc-f-nombre" value="${escapeHtml(c.nombre)}" placeholder="Ej. Juan">
+    </div>
+    <div class="field">
+      <label>Teléfono (WhatsApp)</label>
+      <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="Ej. 600 000 000">
+    </div>
+    <input type="hidden" id="oc-f-id" value="${c.id||''}">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOwnCourier()">Guardar</button>
+    </div>
+  `);
+}
+function saveOwnCourier(){
+  const nombre = document.getElementById('oc-f-nombre').value.trim();
+  const telefono = document.getElementById('oc-f-telefono').value.trim();
+  if(!nombre){ showToast('El nombre es obligatorio'); return; }
+  if(!DB.business.ownCouriers) DB.business.ownCouriers = [];
+  const idVal = document.getElementById('oc-f-id').value;
+  if(idVal){
+    const c = DB.business.ownCouriers.find(x=>x.id===parseInt(idVal));
+    if(c) Object.assign(c, {nombre, telefono});
+  }else{
+    DB.business.ownCouriers.push({id: genId(), nombre, telefono});
+  }
+  saveDB();
+  closeModal();
+  renderMiNegocio();
+  showToast('Repartidor guardado');
+}
+function deleteOwnCourier(id){
+  if(!confirm('¿Eliminar este repartidor?')) return;
+  DB.business.ownCouriers = (DB.business.ownCouriers||[]).filter(c=>c.id!==id);
+  saveDB();
+  renderMiNegocio();
 }
 
 function newDeliveryPlatform(){
@@ -13346,7 +13411,7 @@ const MANUAL_CHAPTERS = [
     <p>Muchos negocios no ofrecen siempre lo mismo: el menú del mediodía no es la carta de la noche, el fin de semana hay platos especiales, o existe una carta de bebidas distinta a la de comida. GastroGoan permite crear <strong>tantas cartas como necesites</strong> (Carta de Mediodía, Carta de Noche, Carta de Bebidas, Carta de Fin de Semana...) y programarlas para que se activen solas según el horario.</p>
     <h4>Cómo crear una carta paso a paso</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nueva Carta"</strong> y dale un nombre descriptivo (ej. "Carta Mediodía", "Carta Bebidas").</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">Configura el <strong>horario de activación</strong>: elige el <strong>Turno</strong> (Turno 1, Turno 2, o "todo el horario de apertura") y marca los <strong>días de la semana</strong> en los que esta carta debe estar activa. Las horas concretas de cada turno se toman del <strong>Horario semanal</strong> que hayas configurado en Mi Negocio — así no tienes que repetir horarios en cada carta.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Configura el <strong>horario de activación</strong>: elige el <strong>Turno</strong> (Turno 1, Turno 2, o "todo el horario de apertura") y marca los <strong>días de la semana</strong> en los que esta carta debe estar activa. Las horas concretas de cada turno se toman del <strong>Horario de apertura</strong> que hayas configurado en Mi Negocio — así no tienes que repetir horarios en cada carta.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Crea <strong>secciones</strong> para organizar la carta (ej. Entrantes, Arroces, Carnes, Pescados, Postres, Cócteles, Refrescos...). Pulsa <strong>"Nueva Sección"</strong> y dale nombre.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Dentro de cada sección, pulsa <strong>"Importar del Escandallo"</strong> para añadir platos que ya tienes definidos con su receta y coste. Se importan con el nombre y puedes ajustar el precio de venta si todavía no lo habías fijado en el Escandallo.</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">Si necesitas un plato que no tiene receta en el Escandallo (por ejemplo, un producto envasado que revendes tal cual, como una lata de refresco o un postre comprado), añádelo como <strong>plato manual</strong> directamente desde la Carta, indicando nombre y precio.</div></div>
@@ -13705,47 +13770,66 @@ const MANUAL_CHAPTERS = [
     content:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🆔 <strong>Identidad</strong> — logo, nombre, tipo de negocio y año de apertura.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">📝 <strong>Descripción</strong> — concepto del local. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">📇 <strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📷 <strong>Redes sociales</strong> — Instagram y Facebook.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">🏬 <strong>Operativa</strong> — propietario, aforo, mesas y horario en texto.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">📅 <strong>Horario semanal</strong> — horario de cada día, con asignación de carta y carta de bebidas por turno.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
-    <div class="manual-step"><div class="sn">13</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
-    <div class="manual-step"><div class="sn">14</div><div class="st">🔳 <strong>QR auto pedido</strong> — un QR descargable por cada mesa.</div></div>
-    <div class="manual-step"><div class="sn">15</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🏢 <strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🏬 <strong>Operativa</strong> — aforo por turno y número de mesas de interior, exterior/terraza y barra.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📅 <strong>Horario de apertura</strong> — horario general del negocio, configurable día por día.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🛵 <strong>Plataformas de delivery y repartidores propios</strong> — Glovo, Uber Eats, Just Eat... con su comisión, y tu propio equipo de reparto.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">🔳 <strong>QR auto pedido</strong> — un botón con QR por cada mesa configurada.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
 
     <h4>🔒 Acceso propietario (PIN)</h4>
     <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
 
-    <h4>🏬 Operativa: mesas de interior y terraza</h4>
-    <p>Indica por separado cuántas <strong>mesas de interior</strong> y cuántas <strong>mesas de terraza</strong> tienes. Al pulsar <strong>Sincronizar mesas con TPV</strong>, GastroGoan crea automáticamente las mesas que falten en el TPV, nombrándolas "Mesa N (Interior)" o "Mesa N (Terraza)" para que se distingan a simple vista en el plano de sala.</p>
+    <h4>🏢 Datos del negocio</h4>
+    <p>Es la tarjeta principal con toda la información de identidad y contacto, dividida en cuatro bloques:</p>
+    <ul>
+      <li><strong>Identidad</strong> — logo, nombre del negocio, <strong>propietario</strong>, tipo de negocio y año de apertura.</li>
+      <li><strong>Descripción</strong> — el concepto de tu local (aparece en la web de pedidos online).</li>
+      <li><strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</li>
+      <li><strong>Redes sociales</strong> — Instagram y Facebook.</li>
+    </ul>
+    <p>Al final de esta tarjeta está el botón <strong>Guardar todo</strong>, que guarda los cambios de <em>todas</em> las tarjetas de Mi Negocio a la vez.</p>
+
+    <h4>🏬 Operativa</h4>
+    <p>Aquí defines la capacidad y distribución física de tu local:</p>
+    <ul>
+      <li><strong>Aforo (plazas por turno)</strong> — número máximo de comensales que puedes atender en cada turno de comida/cena. Se usa en Reservas para avisarte si un turno se llena.</li>
+      <li><strong>Mesas de interior</strong>, <strong>mesas de exterior/terraza</strong> y <strong>mesas/taburetes de barra</strong> — indica cuántas tienes de cada tipo.</li>
+    </ul>
+    <p>Estas tres cantidades son las que verás organizadas por zonas (<strong>Interior</strong>, <strong>Terraza</strong>, <strong>Barra</strong>) en el plano de mesas del TPV.</p>
+    <div class="manual-tip">💡 <strong>Sincronizar mesas con TPV</strong>: al pulsar este botón, GastroGoan crea automáticamente en el TPV las mesas que falten hasta llegar a las cantidades indicadas, nombrándolas "Mesa N (Interior)", "Mesa N (Terraza)" o "Barra N" para que se distingan a simple vista en el plano de sala. No borra ni duplica las mesas que ya existen, así que puedes usarlo siempre que cambies estas cantidades.</div>
 
     <h4>🔁 Tipos de servicio</h4>
     <p>Activa o desactiva con las casillas los servicios que ofreces: <strong>Mesa/Sala</strong>, <strong>Take Away</strong> y <strong>Delivery</strong>. Esto controla qué botones y opciones aparecen en el TPV y en la página de pedidos online (por ejemplo, si desactivas Delivery, tus clientes ya no podrán elegir esa opción al pedir desde el móvil). Recuerda pulsar <strong>Guardar todo</strong> para que el cambio se aplique.</p>
 
-    <h4>📅 Horario semanal: turnos con carta y bebidas</h4>
-    <p>Para cada día de la semana (<strong>Lunes a Domingo</strong>), primero decides si ese día abres (casilla) y luego eliges el <strong>modo de horario</strong>:</p>
+    <h4>📅 Horario de apertura</h4>
+    <p>Es el horario general de tu negocio, configurado <strong>día por día</strong> porque no todos los días tienen por qué ser iguales. Para cada día de la semana (<strong>Lunes a Domingo</strong>), primero decides si ese día abres (casilla) y luego eliges el <strong>modo de horario</strong>:</p>
     <ul>
       <li><strong>Horario seguido</strong> — un único tramo (apertura y cierre), por ejemplo si tu local abre sin descanso de 12:00 a 00:00.</li>
-      <li><strong>Por turnos</strong> — hasta dos tramos (ej. comidas de 12:00 a 16:00 y cenas de 20:00 a 23:30), típico del horario partido.</li>
+      <li><strong>Por turnos</strong> — hasta dos tramos (ej. comidas de 12:00 a 16:00 y cenas de 20:00 a 23:30), típico del horario partido. Si un día tienes horario partido, rellena también el "Turno 2".</li>
     </ul>
-    <p>En <strong>cada tramo</strong> (sea el horario seguido o cada turno) puedes asignar opcionalmente:</p>
+    <p>Marca como <strong>cerrado</strong> los días que no abras.</p>
+    <p>Este horario tiene dos usos:</p>
     <ul>
-      <li>🍽️ <strong>Carta / menú</strong> — la carta de comida que se activará automáticamente durante ese tramo.</li>
-      <li>🥤 <strong>Carta de bebidas</strong> — la carta de bebidas que se activará durante ese tramo.</li>
+      <li>Calcula el <strong>aforo disponible por turno</strong> en Reservas (cuántas personas hay reservadas frente al máximo de cada turno).</li>
+      <li>Limita las horas que tus clientes pueden elegir al <strong>reservar mesa</strong> o hacer un <strong>pedido para llevar/domicilio</strong> online: solo podrán elegir horas dentro de los tramos que hayas abierto aquí.</li>
     </ul>
-    <p>Si dejas un desplegable en <strong>"— Automático —"</strong>, GastroGoan sigue decidiendo la carta activa con su lógica habitual (según el horario propio configurado en cada carta de la sección Carta). Pero si asignas una carta y/o una carta de bebidas a un tramo, esa asignación tiene prioridad: en cuanto entres en ese tramo (según el día y la hora actuales), esa carta y esa carta de bebidas pasarán a estar activas tanto en el <strong>TPV</strong> como en la <strong>página de pedidos online</strong> para tus clientes.</p>
-    <div class="manual-tip">💡 Estos horarios también limitan automáticamente las horas que un cliente puede elegir al reservar mesa o hacer un pedido online, día por día.</div>
+    <p>Dentro de cada franja horaria, la <strong>carta concreta</strong> que verán tus clientes (tanto en el TPV como en los pedidos online) es la que tengas marcada como <strong>disponible</strong> en cada momento desde la sección <strong>Carta</strong> — ahí decides qué platos y cartas están activos en cada horario, sin tener que repetir esa configuración aquí.</p>
 
-    <h4>📱 Reserva y pedidos online / 🔳 QR auto pedido</h4>
-    <p>La tarjeta <strong>Reserva y pedidos online</strong> te da el enlace y el QR general de tu negocio para que los clientes reserven mesa o pidan take away/delivery desde el móvil.</p>
-    <p>La tarjeta <strong>QR auto pedido</strong> (justo debajo) genera, para cada mesa configurada, un botón <strong>Descargar QR</strong> con el nombre de la mesa (ej. "Mesa 1 (Terraza)"). El QR no se muestra en pantalla para no saturar la página: descárgalo e imprímelo para colocarlo en cada mesa. Cuando un cliente lo escanea desde su mesa, el pedido que haga llegará directamente asignado a esa mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`
+    <h4>🛵 Plataformas de delivery y repartidores propios</h4>
+    <p>Si trabajas con apps como Glovo, Uber Eats o Just Eat, añádelas en <strong>Plataformas de delivery</strong> con la comisión que te cobran: así, cuando registres una venta de delivery a través de esa plataforma, esa comisión se restará automáticamente como gasto en Gestión Económica.</p>
+    <p>Si además (o en su lugar) repartes los pedidos a domicilio con tu <strong>propio personal</strong>, usa la sección <strong>Repartidores propios</strong> para anotar a tus repartidores (nombre y teléfono). Tendrás un acceso directo por <strong>WhatsApp</strong> para localizarlos rápido y coordinar quién lleva cada pedido.</p>
+
+    <h4>📱 Reserva y pedidos online</h4>
+    <p>Con la licencia y la nube activadas, esta tarjeta te da el <strong>enlace público</strong> y el <strong>código QR</strong> general de tu negocio para que los clientes reserven mesa o pidan take away/delivery desde el móvil.</p>
+
+    <h4>🔳 QR auto pedido</h4>
+    <p>Muestra un botón pequeño por cada <strong>mesa</strong> que hayas configurado en Operativa (interior, exterior/terraza y barra). Al pulsar sobre el nombre de una mesa (ej. "Mesa 3 (Interior)" o "Barra 1") se abre su <strong>código QR</strong>, listo para descargar e imprimir. Cuando un cliente lo escanea desde esa mesa, el pedido que haga llegará directamente asignado a ese número de mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`
   },
   {
     title:'🌐 Reservas y Pedidos Online',
@@ -13761,11 +13845,11 @@ const MANUAL_CHAPTERS = [
       <li>Si no hay carta activa o ningún plato disponible, los clientes verán el aviso "La carta no está disponible para pedidos online".</li>
     </ul>
     <h4>Horario de reservas y pedidos</h4>
-    <p>En <strong>Mi Negocio</strong>, configura el <strong>Horario semanal</strong> (día por día, con turnos). La web de reservas y pedidos solo permitirá elegir fecha/hora dentro de tu horario de ese día. Si no configuras ningún horario, no se aplica ningún límite.</p>
+    <p>En <strong>Mi Negocio</strong>, configura el <strong>Horario de apertura</strong> (día por día, con turnos). La web de reservas y pedidos solo permitirá elegir fecha/hora dentro de tu horario de ese día. Si no configuras ningún horario, no se aplica ningún límite.</p>
     <h4>Solicitudes de clientes</h4>
     <p>Las reservas y pedidos que hagan los clientes desde la web pública llegan a tu Kit automáticamente: las reservas aparecen en <strong>Reservas → Solicitudes online pendientes</strong>, y los pedidos en <strong>TPV</strong> como pedidos pendientes online.</p>
     <h4>Aforo por turno</h4>
-    <p>En <strong>Mi Negocio</strong> indica tu <strong>Aforo (plazas por turno)</strong>: el número máximo de comensales que puedes atender en cada turno de comida/cena (según tu Horario semanal).</p>
+    <p>En <strong>Mi Negocio</strong> indica tu <strong>Aforo (plazas por turno)</strong>: el número máximo de comensales que puedes atender en cada turno de comida/cena (según tu Horario de apertura).</p>
     <ul>
       <li>En <strong>Reservas → vista del día</strong> verás, para cada turno, cuántas personas hay reservadas frente al aforo (verde = hay sitio, ámbar = cerca del límite, rojo = aforo completo)</li>
       <li>Si al crear o confirmar una reserva se supera el aforo del turno, la app te avisa con los números exactos y te pregunta si quieres confirmarla igualmente (por ejemplo, si puedes habilitar mesas extra)</li>
