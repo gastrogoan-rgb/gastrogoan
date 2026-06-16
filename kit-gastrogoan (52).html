@@ -514,15 +514,15 @@ td.wrap{white-space:normal}
 .bs-item:hover{border-color:var(--brand-orange)}
 .bs-item.active{border:2px solid var(--brand-orange)}
 .bs-item-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bs-group{display:flex;flex-direction:column;gap:4px}
-.bs-group-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s;font-weight:700}
+.bs-group{display:flex;flex-direction:column;gap:3px}
+.bs-group-header{display:flex;align-items:center;gap:8px;padding:11px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s,border-radius .2s;font-weight:700;user-select:none}
 .bs-group-header:hover{border-color:var(--brand-orange)}
 .bs-group-header.active{border:2px solid var(--brand-orange)}
-.bs-sucursal{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px 9px 32px;border:1px solid var(--border);border-radius:10px;background:#fafafa;cursor:pointer;transition:border-color .15s;font-size:14px}
-.bs-sucursal:hover{border-color:var(--brand-orange);background:#fff}
-.bs-sucursal.active{border:2px solid var(--brand-orange);background:#fff}
-.bs-add-sucursal{display:flex;align-items:center;gap:6px;padding:7px 14px 7px 32px;font-size:12px;color:var(--brand-orange);cursor:pointer;border-radius:8px;transition:background .15s}
-.bs-add-sucursal:hover{background:rgba(234,88,12,.07)}
+.bs-group-header.open{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom-color:transparent}
+.bs-group-children{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-top:none;border-bottom-left-radius:12px;border-bottom-right-radius:12px;overflow:hidden}
+.bs-sub-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px 10px 28px;background:#fafafa;cursor:pointer;transition:background .15s;font-size:14px;border-top:1px solid var(--border)}
+.bs-sub-item:hover{background:#fff3ec}
+.bs-sub-item.active{background:#fff7f0;font-weight:600}
 
 /* Transición de entrada del contenido */
 .content .view.active{animation:view-fade-in .35s ease}
@@ -1463,8 +1463,16 @@ function showBusinessSelectScreen(){
   screen.classList.remove('hide');
 }
 
+/* IDs de grupos actualmente expandidos en el selector */
+let _bsOpenGroups = new Set();
+
 function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
+  // Pre-abrir el grupo que contiene el slot activo
+  const activeSlot = slots.find(s => s.id === ACTIVE_SLOT);
+  if(activeSlot?.parentId) _bsOpenGroups.add(activeSlot.parentId);
+  else if(slots.some(s => s.parentId === ACTIVE_SLOT)) _bsOpenGroups.add(ACTIVE_SLOT);
+
   const showSearch = slots.length > 5;
   return `
     <div class="bs-box">
@@ -1477,57 +1485,90 @@ function renderBusinessSelectScreenHtml(){
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
       </div>
-      <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo negocio independiente</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo independiente</button>
+        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> Abrir sucursal</button>
+      </div>
     </div>
   `;
 }
 
-/* Renderiza negocios agrupados: cada negocio raíz con sus sucursales anidadas */
-function renderBsGroups(slots){
-  if(!slots.length) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
-  const total = getBusinessSlots().length; // para el botón de borrar
-  // Raíces: slots sin parentId
-  const roots = slots.filter(s => !s.parentId);
-  // Sucursales que pertenecen a un padre incluido en la lista filtrada
-  const rootIds = new Set(roots.map(s => s.id));
-  const allSlots = getBusinessSlots();
+function renderBsGroups(allSlots){
+  if(!allSlots.length) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
+  const total = getBusinessSlots().length;
+  const roots = allSlots.filter(s => !s.parentId);
+  const allDB = getBusinessSlots();
 
   return roots.map(root => {
-    const sucursales = allSlots.filter(s => s.parentId === root.id);
-    const isActive = root.id === ACTIVE_SLOT;
+    const sucursales = allDB.filter(s => s.parentId === root.id);
+    const isRootActive = root.id === ACTIVE_SLOT;
     const hasSuc = sucursales.length > 0;
+    const isOpen = _bsOpenGroups.has(root.id);
 
-    const rootHtml = `
-      <div class="bs-group-header ${isActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
-        <i class="ti ${hasSuc?'ti-building':'ti-building-store'}" style="flex-shrink:0"></i>
-        <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||'Negocio')}</span>
-        ${isActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-        ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
-      </div>`;
-
-    const sucHtml = sucursales.map(s => {
-      const sActive = s.id === ACTIVE_SLOT;
+    if(!hasSuc){
+      // Negocio independiente — muestra "(independiente)" como badge
       return `
-        <div class="bs-sucursal ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
-            <i class="ti ti-corner-down-right" style="color:var(--muted);flex-shrink:0"></i>
+        <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
-            <span class="bs-item-name">${escapeHtml(s.name||'Sucursal')}</span>
+            <span class="bs-item-name">${escapeHtml(root.name||'Negocio')}</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;flex-shrink:0">(independiente)</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            ${sActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>
+            ${isRootActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
           </div>
         </div>`;
-    }).join('');
+    }
 
-    const addSucHtml = `
-      <div class="bs-add-sucursal" onclick="addSucursal('${escapeHtml(root.id)}')">
-        <i class="ti ti-plus"></i> Abrir sucursal de "${escapeHtml(root.name||'este negocio')}"
+    // Negocio con sucursales — cabecera expandible
+    const childrenHtml = isOpen ? `
+      <div class="bs-group-children">
+        <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+            <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sede principal</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            ${isRootActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+          </div>
+        </div>
+        ${sucursales.map(s => {
+          const sActive = s.id === ACTIVE_SLOT;
+          return `
+          <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+            <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+              <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(s.name||'Sucursal')}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              ${sActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+              <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
+
+    return `
+      <div class="bs-group">
+        <div class="bs-group-header ${(isRootActive || sucursales.some(s=>s.id===ACTIVE_SLOT))?'active':''} ${isOpen?'open':''}"
+             onclick="toggleBsGroup('${escapeHtml(root.id)}')">
+          <i class="ti ti-building" style="flex-shrink:0"></i>
+          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||'Negocio')}</span>
+          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} locales</span>
+          <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--muted);margin-left:4px"></i>
+        </div>
+        ${childrenHtml}
       </div>`;
-
-    return `<div class="bs-group">${rootHtml}${sucHtml}${addSucHtml}</div>`;
   }).join('');
+}
+
+function toggleBsGroup(rootId){
+  if(_bsOpenGroups.has(rootId)) _bsOpenGroups.delete(rootId);
+  else _bsOpenGroups.add(rootId);
+  const list = document.getElementById('bs-list');
+  if(list) list.innerHTML = renderBsGroups(getBusinessSlots());
 }
 
 function filterBusinessSlots(query){
@@ -1536,14 +1577,46 @@ function filterBusinessSlots(query){
   const allSlots = getBusinessSlots();
   const q = query.trim().toLowerCase();
   if(!q){ list.innerHTML = renderBsGroups(allSlots); return; }
-  // Filtrar: incluir raíces que coincidan O que tengan sucursales que coincidan
-  const matchSlots = allSlots.filter(s => (s.name||'').toLowerCase().includes(q));
-  const matchIds = new Set(matchSlots.map(s => s.id));
-  // Incluir padres de sucursales que coincidan
-  matchSlots.forEach(s => { if(s.parentId) matchIds.add(s.parentId); });
-  const filtered = allSlots.filter(s => matchIds.has(s.id));
-  list.innerHTML = renderBsGroups(filtered);
+  const matchIds = new Set();
+  allSlots.forEach(s => {
+    if((s.name||'').toLowerCase().includes(q)){
+      matchIds.add(s.id);
+      if(s.parentId) matchIds.add(s.parentId); // incluir el padre si coincide una sucursal
+    }
+  });
+  // abrir todos los grupos que tengan coincidencias
+  allSlots.filter(s => !s.parentId && matchIds.has(s.id)).forEach(r => _bsOpenGroups.add(r.id));
+  list.innerHTML = renderBsGroups(allSlots.filter(s => matchIds.has(s.id)));
 }
+
+/* "Abrir sucursal": pide al usuario que elija el negocio padre */
+function pickParentForSucursal(){
+  const allSlots = getBusinessSlots();
+  // Candidatos: negocios raíz (independientes o ya con sucursales)
+  const roots = allSlots.filter(s => !s.parentId);
+  if(roots.length === 0){ showToast('No hay ningún negocio base sobre el que crear una sucursal.'); return; }
+  if(roots.length === 1){ addSucursal(roots[0].id); return; }
+  // Mostrar modal de selección
+  const optsHtml = roots.map(r => `
+    <div class="bs-item" style="cursor:pointer" onclick="addSucursal('${escapeHtml(r.id)}');closeBsPickModal()">
+      <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <i class="ti ti-building-store"></i>
+        <span class="bs-item-name">${escapeHtml(r.name||'Negocio')}</span>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--muted)"></i>
+    </div>`).join('');
+  const modal = document.createElement('div');
+  modal.id = 'bs-pick-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-weight:800;font-size:17px">¿Sucursal de qué negocio?</div>
+      <div style="display:flex;flex-direction:column;gap:8px">${optsHtml}</div>
+      <button class="btn" onclick="closeBsPickModal()">Cancelar</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+function closeBsPickModal(){ document.getElementById('bs-pick-modal')?.remove(); }
 
 function hideBusinessSelectScreen(){
   document.getElementById('business-select-screen').classList.add('hide');
