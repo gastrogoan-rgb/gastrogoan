@@ -394,7 +394,8 @@ td.wrap{white-space:normal}
 .bar-fill{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
 .bar-lbl{font-size:9px;color:var(--muted);white-space:nowrap}
 
-.te-row{display:grid;grid-template-columns:1fr 70px 90px 90px 90px 70px;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.te-row{display:grid;grid-template-columns:1fr 70px 100px 100px 100px 70px;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.te-row span{white-space:nowrap}
 .te-row:last-child{border-bottom:none}
 .te-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:0 16px 10px}
 .te-bar-fill{height:100%;border-radius:3px;transition:width .4s}
@@ -9702,9 +9703,9 @@ const GE = (function(){
     const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
-    const amort = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12*3; // amortización 5 años, por trimestre
+    const amortMensual = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12; // amortización a 5 años, por mes
     const ivaPct = ivaVentasPct();
-    const resAntesImp = m => facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m)-amort/3-capexCuotaMes(m);
+    const resAntesImp = m => facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m)-amortMensual-capexCuotaMes(m);
     const ivaCPct = ivaComprasPct();
 
     const conceptos = [
@@ -9714,10 +9715,10 @@ const GE = (function(){
       {lbl:`Coste de Ventas (MP, sin IVA, ${ivaCPct}%)`, fn:m=>totalVariablesNetoMes(m)},
       {lbl:'Margen Bruto', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m), highlight:true, bold:true},
       {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
-      {lbl:'Gastos Explotación', fn:()=>tf*3},
+      {lbl:'Gastos Explotación', fn:()=>tf},
       {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
       {lbl:'EBITDA Operativo', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
-      {lbl:'Amortizaciones CAPEX', fn:()=>amort, auto:true},
+      {lbl:'Amortizaciones CAPEX', fn:()=>amortMensual, auto:true},
       {lbl:'Resultado Antes Impuestos', fn:resAntesImp, isResult:true, bold:true},
       {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
       {lbl:'Resultado Neto', fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
@@ -9727,8 +9728,8 @@ const GE = (function(){
       html += `<tr class="${c.isResult?'total':c.highlight?'highlight':''}"><td>${c.lbl}${c.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
       qMonths.forEach(months=>{
         const v = qVal(months, c.fn);
-        const cls = c.isResult ? (v>=0?'pos':'neg') : '';
-        const sign = c.isResult && v<0 ? '-' : '';
+        const cls = v<0 ? 'neg' : (c.isResult ? 'pos' : '');
+        const sign = v<0 ? '-' : '';
         html += `<td class="${cls}">${sign+fmtMoney(Math.abs(v))}</td>`;
       });
       html += '</tr>';
