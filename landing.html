@@ -20,7 +20,6 @@
   --surface:#FFFFFF;
   --yellow:#FFFF00;
   --red:#E24B4A;
-  --green:#3B6D11;
   --green-bright:#27C93F;
 }
 html{scroll-behavior:smooth}
@@ -47,81 +46,129 @@ nav{
   text-align:center;padding:110px 24px 90px;position:relative;overflow:hidden;
 }
 .hero::before{
-  content:'';position:absolute;top:-30%;left:50%;transform:translateX(-50%);
-  width:800px;height:800px;
-  background:radial-gradient(circle,rgba(223,112,57,.2) 0%,transparent 65%);
+  content:'';position:absolute;top:-20%;left:50%;transform:translateX(-50%);
+  width:900px;height:900px;
+  background:radial-gradient(circle,rgba(223,112,57,.22) 0%,transparent 65%);
   pointer-events:none;
 }
-.hero-inner{max-width:760px;position:relative}
+.hero-inner{max-width:780px;position:relative}
 .hero-badge{
   display:inline-flex;align-items:center;gap:7px;
   background:rgba(255,255,0,.13);color:var(--yellow);
   border:1px solid rgba(255,255,0,.35);
   font-size:12px;font-weight:700;padding:5px 14px;
-  border-radius:999px;margin-bottom:30px;letter-spacing:.5px;text-transform:uppercase;
+  border-radius:999px;margin-bottom:28px;letter-spacing:.5px;text-transform:uppercase;
 }
 .hero h1{
-  font-size:clamp(38px,6.5vw,76px);font-weight:900;color:#fff;
-  line-height:1.02;margin-bottom:22px;letter-spacing:-2px;
+  font-size:clamp(38px,6.5vw,78px);font-weight:900;color:#fff;
+  line-height:1.02;margin-bottom:24px;letter-spacing:-2.5px;
 }
 .hero h1 em{color:var(--orange);font-style:normal}
 .hero-sub{
-  font-size:clamp(16px,2vw,20px);color:rgba(255,255,255,.68);
-  margin-bottom:44px;max-width:580px;margin-left:auto;margin-right:auto;
-  font-weight:400;line-height:1.6;
+  font-size:clamp(17px,2.2vw,21px);color:rgba(255,255,255,.7);
+  margin-bottom:46px;max-width:600px;margin-left:auto;margin-right:auto;
+  font-weight:400;line-height:1.65;
 }
-.hero-sub strong{color:rgba(255,255,255,.95)}
+.hero-sub strong{color:#fff}
 .hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
 .btn-primary{
   display:inline-flex;align-items:center;gap:8px;
   background:var(--orange);color:#fff;border:none;
-  padding:17px 34px;border-radius:12px;font-weight:800;font-size:17px;
+  padding:17px 36px;border-radius:12px;font-weight:800;font-size:17px;
   text-decoration:none;transition:transform .15s,box-shadow .15s;
   box-shadow:0 8px 32px rgba(223,112,57,.5);
 }
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 44px rgba(223,112,57,.6)}
 .btn-ghost{
   display:inline-flex;align-items:center;gap:8px;
-  background:transparent;color:rgba(255,255,255,.8);
-  border:1.5px solid rgba(255,255,255,.25);
+  background:transparent;color:rgba(255,255,255,.75);
+  border:1.5px solid rgba(255,255,255,.22);
   padding:17px 28px;border-radius:12px;font-weight:600;font-size:17px;
   text-decoration:none;transition:border-color .15s;
 }
-.btn-ghost:hover{border-color:rgba(255,255,255,.55)}
-.trust-row{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
-.trust-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.45);font-size:13px;font-weight:500}
+.btn-ghost:hover{border-color:rgba(255,255,255,.5)}
+.trust-row{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap}
+.trust-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.42);font-size:13px;font-weight:500}
 .trust-item::before{content:'✓';color:var(--orange);font-weight:800}
 
 /* PAIN */
-.pain{background:#0f0f0f;padding:96px 24px;text-align:center}
+.pain{background:#0a0a0a;padding:100px 24px;text-align:center}
 .section-label{display:inline-block;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:14px}
-.pain h2{font-size:clamp(26px,4vw,46px);font-weight:900;color:#fff;margin-bottom:14px;line-height:1.12;letter-spacing:-1px}
-.pain-intro{font-size:17px;color:rgba(255,255,255,.5);max-width:480px;margin:0 auto 52px;line-height:1.6}
-.pain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;max-width:860px;margin:0 auto 36px}
-.pain-card{background:#141414;border:1px solid #222;border-radius:14px;padding:22px 18px;text-align:left}
-.pain-card-cat{font-size:12px;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:6px}
-.pain-card-name{font-size:14px;font-weight:700;color:rgba(255,255,255,.75);margin-bottom:10px}
-.pain-card-price{font-size:30px;font-weight:900;color:var(--red);letter-spacing:-1px}
-.pain-card-price span{font-size:13px;font-weight:400;color:rgba(255,255,255,.3)}
-.pain-vs{display:flex;align-items:stretch;gap:16px;max-width:580px;margin:0 auto}
-.pain-vs-box{flex:1;border-radius:16px;padding:28px 24px;text-align:center}
-.pain-vs-box.bad{background:rgba(226,75,74,.1);border:1.5px solid rgba(226,75,74,.3)}
-.pain-vs-box.good{background:var(--orange);border:1.5px solid var(--orange)}
-.pain-vs-label{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;opacity:.7}
-.pain-vs-box.bad .pain-vs-label{color:rgba(255,255,255,.6)}
-.pain-vs-box.good .pain-vs-label{color:rgba(255,255,255,.85)}
-.pain-vs-amount{font-size:42px;font-weight:900;letter-spacing:-2px;line-height:1}
-.pain-vs-box.bad .pain-vs-amount{color:var(--red)}
-.pain-vs-box.good .pain-vs-amount{color:#fff}
-.pain-vs-sub{font-size:13px;margin-top:5px;font-weight:500}
-.pain-vs-box.bad .pain-vs-sub{color:rgba(255,255,255,.4)}
-.pain-vs-box.good .pain-vs-sub{color:rgba(255,255,255,.85)}
-.pain-vs-arrow{display:flex;align-items:center;color:rgba(255,255,255,.2);font-size:26px;padding:0 4px}
+.pain h2{font-size:clamp(26px,4vw,46px);font-weight:900;color:#fff;margin-bottom:14px;line-height:1.1;letter-spacing:-1px}
+.pain-intro{font-size:17px;color:rgba(255,255,255,.45);max-width:500px;margin:0 auto 56px;line-height:1.65}
+
+/* Bubbles equation */
+.pain-equation{max-width:820px;margin:0 auto}
+.pain-bubbles{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  margin-bottom:28px;
+}
+.bubble{
+  display:inline-flex;align-items:center;gap:7px;
+  background:#141414;border:1px solid #2a2a2a;
+  border-radius:999px;padding:10px 18px;
+  font-size:14px;font-weight:600;color:rgba(255,255,255,.75);
+  white-space:nowrap;
+}
+.bubble-icon{font-size:16px}
+.bubble:nth-child(1){border-color:#2a1a1a;color:#ff8a6a}
+.bubble:nth-child(2){border-color:#1a1a2a;color:#8ab4ff}
+.bubble:nth-child(3){border-color:#1a2a1a;color:#7ddc7d}
+.bubble:nth-child(4){border-color:#2a2a1a;color:#ffd97d}
+.bubble:nth-child(5){border-color:#2a1a2a;color:#c4a0ff}
+.bubble:nth-child(6){border-color:#1a2a2a;color:#7ddfdf}
+.bubble:nth-child(7){border-color:#2a2010;color:#ffb86a}
+
+.pain-equals{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  margin-bottom:32px;flex-wrap:wrap;
+}
+.pain-eq-line{flex:1;max-width:120px;height:1.5px;background:linear-gradient(90deg,transparent,#333)}
+.pain-eq-line.right{background:linear-gradient(90deg,#333,transparent)}
+.pain-eq-sign{font-size:22px;color:rgba(255,255,255,.2);font-weight:700}
+.pain-total-pill{
+  background:rgba(226,75,74,.12);border:1.5px solid rgba(226,75,74,.35);
+  border-radius:16px;padding:20px 36px;
+}
+.pain-total-pill .ptl{font-size:13px;color:rgba(255,255,255,.4);font-weight:600;margin-bottom:4px}
+.pain-total-pill .pta{font-size:46px;font-weight:900;color:var(--red);letter-spacing:-2px;line-height:1}
+.pain-total-pill .pts{font-size:14px;color:rgba(255,255,255,.3);margin-top:3px}
+
+.pain-arrow-down{font-size:28px;color:rgba(255,255,255,.15);margin:28px 0;line-height:1}
+
+/* Solution box */
+.solution-box{
+  background:var(--orange);border-radius:20px;
+  padding:36px 28px;max-width:640px;margin:0 auto;
+  text-align:center;
+}
+.solution-box-label{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:10px}
+.solution-box-title{font-size:22px;font-weight:900;color:#fff;margin-bottom:20px;line-height:1.3}
+.solution-bubbles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px}
+.sol-bubble{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,0,0,.18);border-radius:999px;
+  padding:7px 14px;font-size:13px;font-weight:600;color:rgba(255,255,255,.92);
+}
+.solution-price-row{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.solution-price{font-size:72px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:1}
+.solution-price sup{font-size:26px;vertical-align:top;margin-top:14px;opacity:.8}
+.solution-period{text-align:left}
+.solution-period-main{font-size:18px;font-weight:800;color:#fff;line-height:1.2}
+.solution-period-sub{font-size:13px;color:rgba(255,255,255,.65)}
+.solution-cta{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#000;color:#fff;border:none;
+  padding:16px 32px;border-radius:11px;font-weight:800;font-size:16px;
+  text-decoration:none;transition:opacity .15s;
+  box-shadow:0 6px 24px rgba(0,0,0,.35);
+}
+.solution-cta:hover{opacity:.85}
 
 /* FEATURES */
 .features{padding:96px 24px;background:var(--cream);text-align:center}
 .features h2{font-size:clamp(26px,4vw,46px);font-weight:900;margin-bottom:12px;letter-spacing:-1px}
-.features-sub{font-size:17px;color:var(--muted);max-width:480px;margin:0 auto 52px}
+.features-sub{font-size:17px;color:var(--muted);max-width:500px;margin:0 auto 52px}
 .features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;max-width:1060px;margin:0 auto}
 .feat-card{
   background:var(--surface);border:1px solid var(--border);
@@ -134,68 +181,6 @@ nav{
 .feat-card h3{font-size:15px;font-weight:800;margin-bottom:5px}
 .feat-card p{font-size:13px;color:var(--muted);line-height:1.55}
 
-/* APP PREVIEW */
-.preview{background:#0f0f0f;padding:96px 24px;text-align:center}
-.preview h2{font-size:clamp(26px,4vw,46px);font-weight:900;color:#fff;margin-bottom:12px;letter-spacing:-1px}
-.preview-sub{font-size:17px;color:rgba(255,255,255,.5);max-width:460px;margin:0 auto 52px}
-
-.app-shell{
-  max-width:960px;margin:0 auto;
-  background:#0a0a0a;border:1px solid #222;border-radius:20px;overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,.6);
-}
-.app-topbar{
-  background:#000;height:52px;display:flex;align-items:center;padding:0 18px;gap:12px;
-  border-bottom:1px solid #1a1a1a;
-}
-.app-topbar-logo{display:flex;align-items:center;gap:8px}
-.app-topbar-icon{width:30px;height:30px;border-radius:8px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:15px}
-.app-topbar-name{font-weight:800;font-size:14px;color:#fff}
-.app-topbar-right{margin-left:auto;display:flex;gap:8px}
-.app-topbar-pill{background:#1a1a1a;border-radius:6px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,.5);font-weight:600}
-
-.app-hero-strip{
-  background:linear-gradient(135deg,#000 0%,#1A1A1A 100%);
-  padding:28px 24px 22px;text-align:center;border-bottom:1px solid #1a1a1a;
-}
-.app-hero-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,0,.15);color:var(--yellow);border:1px solid rgba(255,255,0,.4);font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;margin-bottom:10px}
-.app-hero-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px}
-.app-hero-sub{color:rgba(255,255,255,.6);font-size:12px}
-
-.app-folders{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
-  padding:20px;
-}
-.app-folder{
-  border-radius:16px;padding:24px 16px;
-  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;
-  border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden;
-  cursor:pointer;
-}
-.app-folder::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--orange)}
-.app-folder.cocina{background:linear-gradient(140deg,#1A1A1A,#2A1500)}
-.app-folder.sala{background:linear-gradient(140deg,#0A0A1A,#1A1A1A)}
-.app-folder.gestion{background:linear-gradient(140deg,#150A00,#2A1200)}
-.app-folder-emoji{font-size:38px}
-.app-folder-name{font-size:16px;font-weight:800;color:#fff}
-.app-folder-btn{font-size:12px;font-weight:700;padding:7px 18px;border-radius:7px;background:var(--orange);color:#fff;border:none}
-
-.app-kpis{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
-  background:#1a1a1a;border-top:1px solid #1a1a1a;
-}
-.app-kpi{background:#0f0f0f;padding:16px;text-align:center}
-.app-kpi-label{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:5px}
-.app-kpi-val{font-size:20px;font-weight:900;color:#fff;letter-spacing:-1px}
-.app-kpi-val.green{color:var(--green-bright)}
-.app-kpi-val.orange{color:var(--orange)}
-
-@media(max-width:640px){
-  .app-folders{grid-template-columns:1fr}
-  .app-kpis{grid-template-columns:repeat(2,1fr)}
-  .app-folder-emoji{font-size:28px}
-}
-
 /* PRICING */
 .pricing{
   padding:96px 24px;
@@ -203,7 +188,7 @@ nav{
   text-align:center;
 }
 .pricing h2{font-size:clamp(26px,4vw,46px);font-weight:900;color:#fff;margin-bottom:12px;letter-spacing:-1px}
-.pricing-sub{font-size:17px;color:rgba(255,255,255,.5);max-width:400px;margin:0 auto 52px}
+.pricing-sub{font-size:17px;color:rgba(255,255,255,.45);max-width:400px;margin:0 auto 52px}
 .pricing-card{
   background:#0f0f0f;border:2px solid var(--orange);
   border-radius:24px;padding:44px 36px;max-width:500px;margin:0 auto;
@@ -215,13 +200,13 @@ nav{
   font-size:11px;font-weight:800;padding:5px 13px;
   border-radius:999px;margin-bottom:20px;letter-spacing:.5px;text-transform:uppercase;
 }
-.pricing-context{font-size:15px;color:rgba(255,255,255,.35);margin-bottom:10px}
-.pricing-context s{color:rgba(226,75,74,.7)}
-.pricing-price{font-size:88px;font-weight:900;color:#fff;letter-spacing:-4px;line-height:1}
-.pricing-price sup{font-size:30px;letter-spacing:0;vertical-align:top;margin-top:16px;color:var(--orange)}
-.pricing-period{font-size:16px;color:rgba(255,255,255,.4);margin-top:6px;margin-bottom:32px}
+.pricing-context{font-size:15px;color:rgba(255,255,255,.3);margin-bottom:10px}
+.pricing-context s{color:rgba(226,75,74,.65)}
+.pricing-price{font-size:92px;font-weight:900;color:#fff;letter-spacing:-4px;line-height:1}
+.pricing-price sup{font-size:30px;letter-spacing:0;vertical-align:top;margin-top:18px;color:var(--orange)}
+.pricing-period{font-size:16px;color:rgba(255,255,255,.38);margin-top:6px;margin-bottom:32px}
 .pricing-highlights{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:32px;text-align:left}
-.ph{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(255,255,255,.75);font-weight:500}
+.ph{display:flex;align-items:center;gap:8px;font-size:14px;color:rgba(255,255,255,.72);font-weight:500}
 .ph::before{content:'✓';color:var(--orange);font-weight:900;flex-shrink:0}
 .pricing-cta{
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -231,7 +216,7 @@ nav{
   box-shadow:0 8px 32px rgba(223,112,57,.4);
 }
 .pricing-cta:hover{opacity:.88}
-.pricing-note{font-size:12px;color:rgba(255,255,255,.25);margin-top:14px}
+.pricing-note{font-size:12px;color:rgba(255,255,255,.22);margin-top:14px}
 
 /* FAQ */
 .faq{padding:96px 24px;background:var(--cream)}
@@ -248,7 +233,7 @@ nav{
 /* CTA FINAL */
 .cta-final{background:var(--orange);padding:96px 24px;text-align:center}
 .cta-final h2{font-size:clamp(28px,5vw,58px);font-weight:900;color:#fff;letter-spacing:-1.5px;line-height:1.08;margin-bottom:14px}
-.cta-final-sub{font-size:18px;color:rgba(255,255,255,.82);margin-bottom:36px;max-width:440px;margin-left:auto;margin-right:auto}
+.cta-final-sub{font-size:18px;color:rgba(255,255,255,.82);margin-bottom:36px;max-width:420px;margin-left:auto;margin-right:auto}
 .btn-dark{display:inline-flex;align-items:center;gap:8px;background:#000;color:#fff;border:none;padding:18px 40px;border-radius:12px;font-weight:800;font-size:18px;text-decoration:none;transition:opacity .15s;box-shadow:0 8px 30px rgba(0,0,0,.35)}
 .btn-dark:hover{opacity:.85}
 .final-trust{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:18px}
@@ -256,8 +241,8 @@ nav{
 .final-trust span::before{content:'✓';font-weight:900}
 
 /* FOOTER */
-footer{background:#000;padding:36px 24px;text-align:center;color:rgba(255,255,255,.3);font-size:13px}
-footer a{color:rgba(255,255,255,.45);text-decoration:none}
+footer{background:#000;padding:36px 24px;text-align:center;color:rgba(255,255,255,.28);font-size:13px}
+footer a{color:rgba(255,255,255,.42);text-decoration:none}
 footer a:hover{color:var(--orange)}
 
 /* ANIMATIONS */
@@ -271,8 +256,7 @@ footer a:hover{color:var(--orange)}
   .pricing-price{font-size:72px}
   .pricing-highlights{grid-template-columns:1fr}
   nav .nav-cta{display:none}
-  .pain-vs{flex-direction:column}
-  .pain-vs-arrow{transform:rotate(90deg);align-self:center}
+  .pain-eq-line{display:none}
 }
 </style>
 </head>
@@ -290,13 +274,14 @@ footer a:hover{color:var(--orange)}
 <section class="hero">
   <div class="hero-inner fade-up">
     <div class="hero-badge">🍽️ Para restaurantes que quieren crecer</div>
-    <h1>¿Sabes exactamente<br>cuánto ganas <em>hoy?</em></h1>
+    <h1>¿Cuánto dinero llevas<br>pagando cada año<br>solo en <em>aplicaciones?</em></h1>
     <p class="hero-sub">
-      La mayoría de hosteleros no lo sabe. GastroGoan conecta tu TPV, cocina, sala, stock y finanzas en un solo lugar — para que <strong>tomes decisiones con datos reales, no con intuición.</strong>
+      No necesitas un montón de apps con suscripciones cada mes.<br>
+      <strong>Con GastroGoan lo tienes todo en uno — con un solo pago.</strong>
     </p>
     <div class="hero-ctas">
       <a href="https://buy.stripe.com/PLACEHOLDER" class="btn-primary">Comprar ahora — 100€</a>
-      <a href="#preview" class="btn-ghost">Ver la app ↓</a>
+      <a href="#pain" class="btn-ghost">Ver el problema ↓</a>
     </div>
     <div class="trust-row">
       <span class="trust-item">Pago único</span>
@@ -308,44 +293,58 @@ footer a:hover{color:var(--orange)}
 </section>
 
 <!-- PAIN -->
-<section class="pain">
+<section class="pain" id="pain">
   <div class="fade-up">
     <span class="section-label">El problema</span>
-    <h2>Cada mes pagas<br>por 4 apps que no se hablan</h2>
-    <p class="pain-intro">Y al final del mes sigues sin saber si tu restaurante gana o pierde dinero.</p>
-    <div class="pain-grid">
-      <div class="pain-card">
-        <div class="pain-card-cat">Software TPV</div>
-        <div class="pain-card-name">Revo / ICG</div>
-        <div class="pain-card-price">€49<span>/mes</span></div>
+    <h2>Esto es lo que pagas ahora</h2>
+    <p class="pain-intro">Cada herramienta que usas en tu restaurante tiene su propia factura mensual. Suma y verás.</p>
+
+    <div class="pain-equation">
+      <div class="pain-bubbles">
+        <div class="bubble"><span class="bubble-icon">🖥️</span> Software TPV</div>
+        <div class="bubble"><span class="bubble-icon">🛵</span> Plataformas delivery</div>
+        <div class="bubble"><span class="bubble-icon">📱</span> Carta digital / QR</div>
+        <div class="bubble"><span class="bubble-icon">👥</span> Gestión de personal</div>
+        <div class="bubble"><span class="bubble-icon">💰</span> Gestión económica</div>
+        <div class="bubble"><span class="bubble-icon">📅</span> Reservas online</div>
+        <div class="bubble"><span class="bubble-icon">📦</span> Control de stock</div>
       </div>
-      <div class="pain-card">
-        <div class="pain-card-cat">Reservas online</div>
-        <div class="pain-card-name">TheFork / Cover</div>
-        <div class="pain-card-price">€35<span>/mes</span></div>
+
+      <div class="pain-equals">
+        <div class="pain-eq-line"></div>
+        <div class="pain-eq-sign">=</div>
+        <div class="pain-total-pill">
+          <div class="ptl">Lo que pagas cada mes</div>
+          <div class="pta">+300€</div>
+          <div class="pts">más de 3.600€ al año · solo en suscripciones</div>
+        </div>
+        <div class="pain-eq-line right"></div>
       </div>
-      <div class="pain-card">
-        <div class="pain-card-cat">Control de stock</div>
-        <div class="pain-card-name">Mapal / Apicbase</div>
-        <div class="pain-card-price">€40<span>/mes</span></div>
-      </div>
-      <div class="pain-card">
-        <div class="pain-card-cat">Gestión de personal</div>
-        <div class="pain-card-name">Factorial / Combo</div>
-        <div class="pain-card-price">€25<span>/mes</span></div>
-      </div>
-    </div>
-    <div class="pain-vs">
-      <div class="pain-vs-box bad">
-        <div class="pain-vs-label">Así ahora</div>
-        <div class="pain-vs-amount">149€</div>
-        <div class="pain-vs-sub">cada mes · 1.788€/año</div>
-      </div>
-      <div class="pain-vs-arrow">→</div>
-      <div class="pain-vs-box good">
-        <div class="pain-vs-label">Con GastroGoan</div>
-        <div class="pain-vs-amount">100€</div>
-        <div class="pain-vs-sub">una vez · para siempre</div>
+
+      <div class="pain-arrow-down">↓</div>
+
+      <div class="solution-box">
+        <div class="solution-box-label">Tu solución</div>
+        <div class="solution-box-title">GastroGoan — todo en el mismo sitio</div>
+        <div class="solution-bubbles">
+          <div class="sol-bubble">🖥️ TPV</div>
+          <div class="sol-bubble">👨‍🍳 Cocina</div>
+          <div class="sol-bubble">🍽️ Sala</div>
+          <div class="sol-bubble">📅 Reservas</div>
+          <div class="sol-bubble">📦 Stock</div>
+          <div class="sol-bubble">👥 Personal</div>
+          <div class="sol-bubble">💰 Finanzas</div>
+          <div class="sol-bubble">🧹 Limpieza</div>
+          <div class="sol-bubble">🏪 Multi-sucursal</div>
+        </div>
+        <div class="solution-price-row">
+          <div class="solution-price"><sup>€</sup>100</div>
+          <div class="solution-period">
+            <div class="solution-period-main">pago único</div>
+            <div class="solution-period-sub">sin cuotas · para siempre</div>
+          </div>
+        </div>
+        <a href="https://buy.stripe.com/PLACEHOLDER" class="solution-cta">🛒 Quiero GastroGoan</a>
       </div>
     </div>
   </div>
@@ -356,7 +355,7 @@ footer a:hover{color:var(--orange)}
   <div class="fade-up">
     <span class="section-label" style="color:var(--orange)">Qué incluye</span>
     <h2>Una app.<br>Todo tu restaurante.</h2>
-    <p class="features-sub">Cada módulo conectado con el resto. Sin integraciones, sin datos duplicados.</p>
+    <p class="features-sub">Cada módulo conectado con el resto. Sin integraciones, sin datos duplicados, sin sorpresas.</p>
   </div>
   <div class="features-grid fade-up">
     <div class="feat-card">
@@ -367,12 +366,12 @@ footer a:hover{color:var(--orange)}
     <div class="feat-card">
       <span class="feat-icon">👨‍🍳</span>
       <h3>Cocina</h3>
-      <p>Fichas técnicas, escandallos y recetas con costes reales actualizados cada vez que cambia el precio de un ingrediente.</p>
+      <p>Fichas técnicas, escandallos y recetas con costes reales actualizados automáticamente.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">🍽️</span>
       <h3>Carta y Menús</h3>
-      <p>Diseña y activa platos al instante. Gestión de alérgenos incluida.</p>
+      <p>Diseña y activa platos al instante. Gestión de alérgenos incluida, sin papel.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">📅</span>
@@ -392,7 +391,7 @@ footer a:hover{color:var(--orange)}
     <div class="feat-card">
       <span class="feat-icon">💰</span>
       <h3>Gestión Económica</h3>
-      <p>Gastos fijos, variables, CAPEX y tesorería. Todo conectado automáticamente a tus ventas.</p>
+      <p>Gastos fijos, variables, CAPEX y tesorería conectados automáticamente a tus ventas diarias.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">📊</span>
@@ -402,83 +401,22 @@ footer a:hover{color:var(--orange)}
     <div class="feat-card">
       <span class="feat-icon">🧹</span>
       <h3>Limpieza y APPCC</h3>
-      <p>Checklists digitales y registro de cumplimiento de normativa. Sin papel.</p>
+      <p>Checklists digitales y registro de cumplimiento de normativa. Sin papel ni carpetas.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">🏪</span>
       <h3>Multi-sucursal</h3>
-      <p>Abre nuevas sucursales que heredan carta, recetas y protocolos. Cada local con sus propios datos.</p>
+      <p>Abre sucursales que heredan carta, recetas y protocolos. Cada local con sus propios datos.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">🔒</span>
       <h3>Datos en tu poder</h3>
-      <p>Guardados localmente en tu dispositivo. Ninguna empresa los tiene. Ninguna te los puede quitar.</p>
+      <p>Guardados en tu dispositivo. Ninguna empresa los tiene ni te los puede quitar.</p>
     </div>
     <div class="feat-card">
       <span class="feat-icon">⚡</span>
       <h3>Offline total</h3>
       <p>Sin internet, sin caídas de servidor, sin sorpresas en mitad del servicio.</p>
-    </div>
-  </div>
-</section>
-
-<!-- APP PREVIEW -->
-<section class="preview" id="preview">
-  <div class="fade-up">
-    <span class="section-label">Vista previa</span>
-    <h2>Así se ve por dentro</h2>
-    <p class="preview-sub">Diseñada para que cualquiera de tu equipo la use desde el primer día.</p>
-  </div>
-  <div class="app-shell fade-up">
-    <div class="app-topbar">
-      <div class="app-topbar-logo">
-        <div class="app-topbar-icon">🍽️</div>
-        <span class="app-topbar-name">GastroGoan</span>
-      </div>
-      <div class="app-topbar-right">
-        <span class="app-topbar-pill">Restaurante El Patio</span>
-        <span class="app-topbar-pill">🔓 Edición</span>
-      </div>
-    </div>
-    <div class="app-hero-strip">
-      <div class="app-hero-badge">⭐ Kit de Gestión Hostelera</div>
-      <div class="app-hero-title">¿Qué área quieres gestionar?</div>
-      <div class="app-hero-sub">Selecciona un módulo para empezar</div>
-    </div>
-    <div class="app-folders">
-      <div class="app-folder cocina">
-        <div class="app-folder-emoji">👨‍🍳</div>
-        <div class="app-folder-name">Cocina</div>
-        <button class="app-folder-btn">Entrar</button>
-      </div>
-      <div class="app-folder sala">
-        <div class="app-folder-emoji">🍽️</div>
-        <div class="app-folder-name">Sala</div>
-        <button class="app-folder-btn">Entrar</button>
-      </div>
-      <div class="app-folder gestion">
-        <div class="app-folder-emoji">📊</div>
-        <div class="app-folder-name">Gestión</div>
-        <button class="app-folder-btn">Entrar</button>
-      </div>
-    </div>
-    <div class="app-kpis">
-      <div class="app-kpi">
-        <div class="app-kpi-label">Ventas hoy</div>
-        <div class="app-kpi-val green">2.340€</div>
-      </div>
-      <div class="app-kpi">
-        <div class="app-kpi-label">Ticket medio</div>
-        <div class="app-kpi-val orange">26,90€</div>
-      </div>
-      <div class="app-kpi">
-        <div class="app-kpi-label">Mesas activas</div>
-        <div class="app-kpi-val">7 / 18</div>
-      </div>
-      <div class="app-kpi">
-        <div class="app-kpi-label">EBITDA mes</div>
-        <div class="app-kpi-val green">+8.420€</div>
-      </div>
     </div>
   </div>
 </section>
@@ -491,7 +429,7 @@ footer a:hover{color:var(--orange)}
     <p class="pricing-sub">Un precio, una compra, todo incluido. Para siempre.</p>
     <div class="pricing-card">
       <div class="pricing-badge">🔥 Precio de lanzamiento</div>
-      <p class="pricing-context">En vez de <s>+1.788€/año</s> en suscripciones</p>
+      <p class="pricing-context">En vez de <s>+3.600€/año</s> en suscripciones</p>
       <div class="pricing-price"><sup>€</sup>100</div>
       <p class="pricing-period">pago único · sin cuotas · sin renovaciones</p>
       <div class="pricing-highlights">
@@ -526,15 +464,15 @@ footer a:hover{color:var(--orange)}
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
       <div class="faq-q"><span>¿Cuántos dispositivos y usuarios?</span><span class="faq-icon">+</span></div>
-      <div class="faq-a">Sin límite. Instálala en la tablet de cocina, el móvil de sala, el ordenador de oficina — todos los dispositivos que necesites sin pagar más.</div>
+      <div class="faq-a">Sin límite. Instálala en la tablet de cocina, el móvil de sala, el ordenador de oficina — todos los que necesites sin pagar más.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
       <div class="faq-q"><span>¿Y si tengo varias sucursales?</span><span class="faq-icon">+</span></div>
-      <div class="faq-a">Multi-sucursal incluido. Creas una sucursal y hereda automáticamente la carta, recetas y protocolos del local principal. Cada sucursal gestiona sus propios empleados, mesas y finanzas.</div>
+      <div class="faq-a">Multi-sucursal incluido. Creas una sucursal y hereda carta, recetas y protocolos del local principal. Cada sucursal gestiona sus propios empleados, mesas y finanzas de forma independiente.</div>
     </div>
     <div class="faq-item" onclick="toggleFaq(this)">
       <div class="faq-q"><span>¿Qué pasa con las actualizaciones?</span><span class="faq-icon">+</span></div>
-      <div class="faq-a">Incluidas sin coste adicional. Cuando haya una nueva versión te llegará por el mismo canal que la app.</div>
+      <div class="faq-a">Incluidas sin coste adicional. Cuando haya una nueva versión te llegará por el mismo canal que la app, sin renovaciones ni sorpresas.</div>
     </div>
   </div>
 </section>
@@ -542,8 +480,8 @@ footer a:hover{color:var(--orange)}
 <!-- CTA FINAL -->
 <section class="cta-final">
   <div class="fade-up">
-    <h2>Deja de adivinar.<br>Empieza a saber.</h2>
-    <p class="cta-final-sub">100€ una vez. Control total para siempre.</p>
+    <h2>Deja de pagar cada mes.<br>Paga una vez. Para siempre.</h2>
+    <p class="cta-final-sub">100€ ahora. Control total de tu restaurante para siempre.</p>
     <a href="https://buy.stripe.com/PLACEHOLDER" class="btn-dark">🛒 Comprar GastroGoan — 100€</a>
     <div class="final-trust">
       <span>Pago único</span>
