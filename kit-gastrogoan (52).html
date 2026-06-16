@@ -1331,6 +1331,83 @@ function addNewBusiness(){
   switchToBusiness(id);
 }
 
+/* Abre una sucursal copiando toda la configuración del negocio actual
+   (carta, recetas, ingredientes, proveedores, mesas, empleados, gastos fijos,
+   CAPEX, configuración) pero sin datos operativos (ventas, reservas, etc.).
+   La sucursal arranca lista para operar desde el primer día. */
+async function addSucursal(){
+  const nombre = prompt('Nombre de la nueva sucursal:', (DB.business?.name ? DB.business.name + ' — Sucursal 2' : 'Sucursal 2'));
+  if(!nombre) return;
+
+  const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+  // Construir la snapshot de configuración: todo excepto datos operativos
+  const def = defaultData();
+  const snap = {
+    ...def,
+    // Configuración general
+    business: JSON.parse(JSON.stringify(DB.business || def.business)),
+    // Carta y menú
+    ingredients: JSON.parse(JSON.stringify(DB.ingredients || [])),
+    ingredientCategories: JSON.parse(JSON.stringify(DB.ingredientCategories || [])),
+    recipes: JSON.parse(JSON.stringify(DB.recipes || [])),
+    recipeCategories: JSON.parse(JSON.stringify(DB.recipeCategories || [])),
+    fichas: JSON.parse(JSON.stringify(DB.fichas || [])),
+    menuItems: JSON.parse(JSON.stringify(DB.menuItems || [])),
+    cartas: JSON.parse(JSON.stringify(DB.cartas || [])),
+    activeCartaIds: JSON.parse(JSON.stringify(DB.activeCartaIds || [])),
+    menus: JSON.parse(JSON.stringify(DB.menus || [])),
+    activeMenuIds: JSON.parse(JSON.stringify(DB.activeMenuIds || [])),
+    elaboraciones: JSON.parse(JSON.stringify(DB.elaboraciones || [])),
+    // Proveedores y logística
+    providers: JSON.parse(JSON.stringify(DB.providers || [])),
+    // Sala
+    tables: JSON.parse(JSON.stringify(DB.tables || [])),
+    // Personal (sin fichajes ni turnos históricos)
+    employees: JSON.parse(JSON.stringify(DB.employees || [])),
+    workDistribution: JSON.parse(JSON.stringify(DB.workDistribution || {})),
+    // Limpieza: solo configuración, no histórico
+    limpieza: {
+      ...def.limpieza,
+      manosPasos: JSON.parse(JSON.stringify(DB.limpieza?.manosPasos || def.limpieza.manosPasos)),
+      tareas: JSON.parse(JSON.stringify(DB.limpieza?.tareas || [])),
+    },
+    // Gestión económica: estructura, sin historial de gastos variables
+    ge: {
+      fijos: JSON.parse(JSON.stringify(DB.ge?.fijos || [])),
+      variables: [],
+      capex: JSON.parse(JSON.stringify(DB.ge?.capex || [])),
+      config: JSON.parse(JSON.stringify(DB.ge?.config || def.ge.config)),
+    },
+    // Fidelización
+    loyaltyRewards: JSON.parse(JSON.stringify(DB.loyaltyRewards || def.loyaltyRewards)),
+    // config extra (IVA, impuesto, tesorería...)
+    config: JSON.parse(JSON.stringify(DB.config || {})),
+    // Stock vacío — cada sucursal gestiona su propio inventario
+    stock: {},
+    nextId: DB.nextId || 1,
+  };
+
+  // Escribir en la IDB de la nueva sucursal antes de cambiar
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.open(slotIdbName(id), 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(snap, 'gastrogoan_data_v1');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+    req.onerror = () => reject(req.error);
+  });
+
+  const slots = getBusinessSlots();
+  slots.push({ id, name: nombre });
+  saveBusinessSlots(slots);
+  switchToBusiness(id);
+}
+
 function removeBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
@@ -1362,6 +1439,7 @@ function showBusinessSelectScreen(){
 
 function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
+  const showSearch = slots.length > 4;
   return `
     <div class="bs-box">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="Cerrar">&times;</button>
@@ -1369,23 +1447,41 @@ function renderBusinessSelectScreenHtml(){
         <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff"><i class="ti ti-tools-kitchen-2"></i></div>
         Selecciona tu negocio
       </div>
-      <div class="bs-list">
-        ${slots.map(s => `
-          <div class="bs-item ${s.id===ACTIVE_SLOT?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-            <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
-              <i class="ti ti-building-store"></i>
-              <span class="bs-item-name">${escapeHtml(s.name || 'Negocio')}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
-              ${slots.length>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
-            </div>
-          </div>
-        `).join('')}
+      ${showSearch ? `<input id="bs-search" type="search" placeholder="Buscar negocio o sucursal..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
+      <div class="bs-list" id="bs-list">
+        ${renderBsItems(slots, slots)}
       </div>
-      <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Añadir otro negocio</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo negocio</button>
+        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="addSucursal()"><i class="ti ti-copy"></i> Abrir sucursal</button>
+      </div>
     </div>
   `;
+}
+
+function renderBsItems(slots, allSlots){
+  if(slots.length === 0) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
+  return slots.map(s => `
+    <div class="bs-item ${s.id===ACTIVE_SLOT?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+      <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
+        <i class="ti ti-building-store"></i>
+        <span class="bs-item-name">${escapeHtml(s.name || 'Negocio')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
+        ${allSlots.length>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterBusinessSlots(query){
+  const list = document.getElementById('bs-list');
+  if(!list) return;
+  const allSlots = getBusinessSlots();
+  const q = query.trim().toLowerCase();
+  const filtered = q ? allSlots.filter(s => (s.name||'').toLowerCase().includes(q)) : allSlots;
+  list.innerHTML = renderBsItems(filtered, allSlots);
 }
 
 function hideBusinessSelectScreen(){
