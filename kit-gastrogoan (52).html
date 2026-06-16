@@ -514,6 +514,15 @@ td.wrap{white-space:normal}
 .bs-item:hover{border-color:var(--brand-orange)}
 .bs-item.active{border:2px solid var(--brand-orange)}
 .bs-item-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bs-group{display:flex;flex-direction:column;gap:4px}
+.bs-group-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:border-color .15s;font-weight:700}
+.bs-group-header:hover{border-color:var(--brand-orange)}
+.bs-group-header.active{border:2px solid var(--brand-orange)}
+.bs-sucursal{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px 9px 32px;border:1px solid var(--border);border-radius:10px;background:#fafafa;cursor:pointer;transition:border-color .15s;font-size:14px}
+.bs-sucursal:hover{border-color:var(--brand-orange);background:#fff}
+.bs-sucursal.active{border:2px solid var(--brand-orange);background:#fff}
+.bs-add-sucursal{display:flex;align-items:center;gap:6px;padding:7px 14px 7px 32px;font-size:12px;color:var(--brand-orange);cursor:pointer;border-radius:8px;transition:background .15s}
+.bs-add-sucursal:hover{background:rgba(234,88,12,.07)}
 
 /* Transición de entrada del contenido */
 .content .view.active{animation:view-fade-in .35s ease}
@@ -1335,77 +1344,94 @@ function addNewBusiness(){
    (carta, recetas, ingredientes, proveedores, mesas, empleados, gastos fijos,
    CAPEX, configuración) pero sin datos operativos (ventas, reservas, etc.).
    La sucursal arranca lista para operar desde el primer día. */
-async function addSucursal(){
-  const nombre = prompt('Nombre de la nueva sucursal:', (DB.business?.name ? DB.business.name + ' — Sucursal 2' : 'Sucursal 2'));
+/* Lee los datos de cualquier slot (activo u otro) desde su IDB */
+async function readSlotDB(slotId){
+  if(slotId === ACTIVE_SLOT) return DB;
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(slotIdbName(slotId), 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readonly');
+      const gr = tx.objectStore('kv').get(DB_KEY);
+      gr.onsuccess = () => { db.close(); resolve(gr.result || defaultData()); };
+      gr.onerror = () => { db.close(); reject(gr.error); };
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* Crea una nueva sucursal clonando la configuración del slot indicado.
+   parentSlotId: slot del que se copian los datos (el negocio "padre").
+   Si no se pasa, usa el slot activo. */
+async function addSucursal(parentSlotId){
+  parentSlotId = parentSlotId || ACTIVE_SLOT;
+  const slots = getBusinessSlots();
+  const parentSlot = slots.find(s => s.id === parentSlotId);
+  const parentName = parentSlot?.name || 'Negocio';
+  const sucursalesExistentes = slots.filter(s => s.parentId === parentSlotId).length;
+  const nombreSugerido = `${parentName} — Sucursal ${sucursalesExistentes + 2}`;
+  const nombre = prompt(`Nueva sucursal de "${parentName}":`, nombreSugerido);
   if(!nombre) return;
 
-  const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  // Leer datos del padre (puede ser el activo u otro slot)
+  let src;
+  try { src = await readSlotDB(parentSlotId); } catch(e){ src = defaultData(); }
 
-  // Construir la snapshot de configuración: todo excepto datos operativos
   const def = defaultData();
   const snap = {
     ...def,
-    // Configuración general
-    business: JSON.parse(JSON.stringify(DB.business || def.business)),
-    // Carta y menú
-    ingredients: JSON.parse(JSON.stringify(DB.ingredients || [])),
-    ingredientCategories: JSON.parse(JSON.stringify(DB.ingredientCategories || [])),
-    recipes: JSON.parse(JSON.stringify(DB.recipes || [])),
-    recipeCategories: JSON.parse(JSON.stringify(DB.recipeCategories || [])),
-    fichas: JSON.parse(JSON.stringify(DB.fichas || [])),
-    menuItems: JSON.parse(JSON.stringify(DB.menuItems || [])),
-    cartas: JSON.parse(JSON.stringify(DB.cartas || [])),
-    activeCartaIds: JSON.parse(JSON.stringify(DB.activeCartaIds || [])),
-    menus: JSON.parse(JSON.stringify(DB.menus || [])),
-    activeMenuIds: JSON.parse(JSON.stringify(DB.activeMenuIds || [])),
-    elaboraciones: JSON.parse(JSON.stringify(DB.elaboraciones || [])),
-    // Proveedores y logística
-    providers: JSON.parse(JSON.stringify(DB.providers || [])),
-    // Sala
-    tables: JSON.parse(JSON.stringify(DB.tables || [])),
-    // Personal (sin fichajes ni turnos históricos)
-    employees: JSON.parse(JSON.stringify(DB.employees || [])),
-    workDistribution: JSON.parse(JSON.stringify(DB.workDistribution || {})),
-    // Limpieza: solo configuración, no histórico
+    business: JSON.parse(JSON.stringify(src.business || def.business)),
+    ingredients: JSON.parse(JSON.stringify(src.ingredients || [])),
+    ingredientCategories: JSON.parse(JSON.stringify(src.ingredientCategories || [])),
+    recipes: JSON.parse(JSON.stringify(src.recipes || [])),
+    recipeCategories: JSON.parse(JSON.stringify(src.recipeCategories || [])),
+    fichas: JSON.parse(JSON.stringify(src.fichas || [])),
+    menuItems: JSON.parse(JSON.stringify(src.menuItems || [])),
+    cartas: JSON.parse(JSON.stringify(src.cartas || [])),
+    activeCartaIds: JSON.parse(JSON.stringify(src.activeCartaIds || [])),
+    menus: JSON.parse(JSON.stringify(src.menus || [])),
+    activeMenuIds: JSON.parse(JSON.stringify(src.activeMenuIds || [])),
+    elaboraciones: JSON.parse(JSON.stringify(src.elaboraciones || [])),
+    providers: JSON.parse(JSON.stringify(src.providers || [])),
+    tables: JSON.parse(JSON.stringify(src.tables || [])),
+    employees: JSON.parse(JSON.stringify(src.employees || [])),
+    workDistribution: JSON.parse(JSON.stringify(src.workDistribution || {})),
     limpieza: {
       ...def.limpieza,
-      manosPasos: JSON.parse(JSON.stringify(DB.limpieza?.manosPasos || def.limpieza.manosPasos)),
-      tareas: JSON.parse(JSON.stringify(DB.limpieza?.tareas || [])),
+      manosPasos: JSON.parse(JSON.stringify(src.limpieza?.manosPasos || def.limpieza.manosPasos)),
+      tareas: JSON.parse(JSON.stringify(src.limpieza?.tareas || [])),
     },
-    // Gestión económica: estructura, sin historial de gastos variables
     ge: {
-      fijos: JSON.parse(JSON.stringify(DB.ge?.fijos || [])),
+      fijos: JSON.parse(JSON.stringify(src.ge?.fijos || [])),
       variables: [],
-      capex: JSON.parse(JSON.stringify(DB.ge?.capex || [])),
-      config: JSON.parse(JSON.stringify(DB.ge?.config || def.ge.config)),
+      capex: JSON.parse(JSON.stringify(src.ge?.capex || [])),
+      config: JSON.parse(JSON.stringify(src.ge?.config || def.ge.config)),
     },
-    // Fidelización
-    loyaltyRewards: JSON.parse(JSON.stringify(DB.loyaltyRewards || def.loyaltyRewards)),
-    // config extra (IVA, impuesto, tesorería...)
-    config: JSON.parse(JSON.stringify(DB.config || {})),
-    // Stock vacío — cada sucursal gestiona su propio inventario
+    loyaltyRewards: JSON.parse(JSON.stringify(src.loyaltyRewards || def.loyaltyRewards)),
+    config: JSON.parse(JSON.stringify(src.config || {})),
     stock: {},
-    nextId: DB.nextId || 1,
+    nextId: src.nextId || 1,
   };
 
-  // Escribir en la IDB de la nueva sucursal antes de cambiar
+  const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
   await new Promise((resolve, reject) => {
-    const req = indexedDB.open(slotIdbName(id), 1);
+    const req = indexedDB.open(slotIdbName(newId), 1);
     req.onupgradeneeded = () => req.result.createObjectStore('kv');
     req.onsuccess = () => {
       const db = req.result;
       const tx = db.transaction('kv', 'readwrite');
-      tx.objectStore('kv').put(snap, 'gastrogoan_data_v1');
+      tx.objectStore('kv').put(snap, DB_KEY);
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); reject(tx.error); };
     };
     req.onerror = () => reject(req.error);
   });
 
-  const slots = getBusinessSlots();
-  slots.push({ id, name: nombre });
+  slots.push({ id: newId, name: nombre, parentId: parentSlotId });
   saveBusinessSlots(slots);
-  switchToBusiness(id);
+  switchToBusiness(newId);
 }
 
 function removeBusinessSlot(slotId){
@@ -1439,7 +1465,7 @@ function showBusinessSelectScreen(){
 
 function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
-  const showSearch = slots.length > 4;
+  const showSearch = slots.length > 5;
   return `
     <div class="bs-box">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="Cerrar">&times;</button>
@@ -1449,30 +1475,59 @@ function renderBusinessSelectScreenHtml(){
       </div>
       ${showSearch ? `<input id="bs-search" type="search" placeholder="Buscar negocio o sucursal..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
       <div class="bs-list" id="bs-list">
-        ${renderBsItems(slots, slots)}
+        ${renderBsGroups(slots)}
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo negocio</button>
-        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="addSucursal()"><i class="ti ti-copy"></i> Abrir sucursal</button>
-      </div>
+      <button class="btn btn-primary" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo negocio independiente</button>
     </div>
   `;
 }
 
-function renderBsItems(slots, allSlots){
-  if(slots.length === 0) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
-  return slots.map(s => `
-    <div class="bs-item ${s.id===ACTIVE_SLOT?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
-      <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
-        <i class="ti ti-building-store"></i>
-        <span class="bs-item-name">${escapeHtml(s.name || 'Negocio')}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        ${s.id===ACTIVE_SLOT ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right"></i>'}
-        ${allSlots.length>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
-      </div>
-    </div>
-  `).join('');
+/* Renderiza negocios agrupados: cada negocio raíz con sus sucursales anidadas */
+function renderBsGroups(slots){
+  if(!slots.length) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
+  const total = getBusinessSlots().length; // para el botón de borrar
+  // Raíces: slots sin parentId
+  const roots = slots.filter(s => !s.parentId);
+  // Sucursales que pertenecen a un padre incluido en la lista filtrada
+  const rootIds = new Set(roots.map(s => s.id));
+  const allSlots = getBusinessSlots();
+
+  return roots.map(root => {
+    const sucursales = allSlots.filter(s => s.parentId === root.id);
+    const isActive = root.id === ACTIVE_SLOT;
+    const hasSuc = sucursales.length > 0;
+
+    const rootHtml = `
+      <div class="bs-group-header ${isActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
+        <i class="ti ${hasSuc?'ti-building':'ti-building-store'}" style="flex-shrink:0"></i>
+        <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||'Negocio')}</span>
+        ${isActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+        ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+      </div>`;
+
+    const sucHtml = sucursales.map(s => {
+      const sActive = s.id === ACTIVE_SLOT;
+      return `
+        <div class="bs-sucursal ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
+          <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+            <i class="ti ti-corner-down-right" style="color:var(--muted);flex-shrink:0"></i>
+            <i class="ti ti-building-store" style="flex-shrink:0"></i>
+            <span class="bs-item-name">${escapeHtml(s.name||'Sucursal')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            ${sActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`;
+    }).join('');
+
+    const addSucHtml = `
+      <div class="bs-add-sucursal" onclick="addSucursal('${escapeHtml(root.id)}')">
+        <i class="ti ti-plus"></i> Abrir sucursal de "${escapeHtml(root.name||'este negocio')}"
+      </div>`;
+
+    return `<div class="bs-group">${rootHtml}${sucHtml}${addSucHtml}</div>`;
+  }).join('');
 }
 
 function filterBusinessSlots(query){
@@ -1480,8 +1535,14 @@ function filterBusinessSlots(query){
   if(!list) return;
   const allSlots = getBusinessSlots();
   const q = query.trim().toLowerCase();
-  const filtered = q ? allSlots.filter(s => (s.name||'').toLowerCase().includes(q)) : allSlots;
-  list.innerHTML = renderBsItems(filtered, allSlots);
+  if(!q){ list.innerHTML = renderBsGroups(allSlots); return; }
+  // Filtrar: incluir raíces que coincidan O que tengan sucursales que coincidan
+  const matchSlots = allSlots.filter(s => (s.name||'').toLowerCase().includes(q));
+  const matchIds = new Set(matchSlots.map(s => s.id));
+  // Incluir padres de sucursales que coincidan
+  matchSlots.forEach(s => { if(s.parentId) matchIds.add(s.parentId); });
+  const filtered = allSlots.filter(s => matchIds.has(s.id));
+  list.innerHTML = renderBsGroups(filtered);
 }
 
 function hideBusinessSelectScreen(){
