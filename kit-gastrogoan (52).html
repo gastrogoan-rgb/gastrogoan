@@ -14333,6 +14333,7 @@ const MANUAL_CHAPTERS = [
     <ul>
       <li>Usa el <strong>buscador</strong> para localizar rápidamente un producto cuando la lista crezca.</li>
       <li>Filtra por <strong>categoría</strong> para revisar solo, por ejemplo, las bebidas o los lácteos.</li>
+      <li>Filtra por <strong>proveedor</strong> para ver de golpe qué productos compras a un proveedor concreto (útil al preparar un pedido o revisar precios de ese proveedor).</li>
       <li>El icono de <strong>editar</strong> (lápiz) te permite actualizar precio, proveedor o cualquier dato sin tener que crear el ingrediente de nuevo.</li>
       <li>El icono de <strong>eliminar</strong> (papelera) borra el ingrediente — solo hazlo si no se usa en ninguna receta activa, porque las recetas que lo usaran perderían esa línea de coste.</li>
     </ul>
@@ -14367,6 +14368,7 @@ const MANUAL_CHAPTERS = [
     title:'🧮 Escandallo',
     content:`<h3>Qué es un escandallo y para qué sirve</h3>
     <p>El escandallo es la <strong>ficha de coste de cada plato</strong>: el desglose de qué ingredientes lleva, en qué cantidad, y cuánto cuesta cada uno según los precios de tu Mega Lista. Con él sabes <strong>cuánto te cuesta realmente producir un plato</strong> y, comparándolo con su precio de venta, si ese plato te da margen o te hace perder dinero. Es la herramienta más directa para fijar precios de carta con criterio en lugar de "a ojo".</p>
+    <div class="manual-tip">💡 Al entrar en Escandallo ves primero las <strong>carpetas por categoría</strong>; al pulsar una, la lista de <strong>nombres de platos</strong>; y al pulsar un nombre, su <strong>escandallo completo</strong>. Así no se satura la pantalla cuando tienes muchos platos. (El buscador sigue mostrando los resultados directos.) El Stock funciona igual: carpetas → producto → detalle.</div>
     <h4>Cómo crear una receta paso a paso</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Plato"</strong> (o "Nueva Elaboración" si es un semielaborado que usarás dentro de otras recetas, como una salsa o un caldo base).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Ponle <strong>nombre</strong> (el mismo que aparecerá luego en la Carta) y elige la <strong>categoría</strong> (Entrantes, Principales, Postres, Cócteles...).</div></div>
@@ -14440,6 +14442,10 @@ const MANUAL_CHAPTERS = [
     <p>La Carta es la traducción de tu Escandallo en algo que el cliente puede pedir: una colección de platos organizados por secciones, con su precio de venta, agrupados en una o varias "cartas" que se activan según el día y la hora. Es el puente entre tu trabajo de cocina (recetas con coste calculado) y la operativa de sala (TPV y pedidos online).</p>
     <h4>Por qué tener varias cartas</h4>
     <p>Muchos negocios no ofrecen siempre lo mismo: el menú del mediodía no es la carta de la noche, el fin de semana hay platos especiales, o existe una carta de bebidas distinta a la de comida. GastroGoan permite crear <strong>tantas cartas como necesites</strong> (Carta de Mediodía, Carta de Noche, Carta de Bebidas, Carta de Fin de Semana...) y programarlas para que se activen solas según el horario.</p>
+    <h4>Cartas de comida (Cocina) y cartas de bebidas (Sala)</h4>
+    <p>El módulo Carta está tanto en <strong>Cocina</strong> como en <strong>Sala</strong>. Cualquier carta o menú que crees entrando desde <strong>Sala se considera carta de bebidas</strong>; las que creas desde <strong>Cocina son de comida</strong>. Esto es importante porque las <strong>bebidas no aparecen en la pantalla de Cocina</strong> (allí solo sale la comida a elaborar), y en el TPV las pestañas de carta salen siempre con las bebidas primero. No tienes que marcar nada: se sabe por el área desde la que creas la carta.</p>
+    <h4>Traducción automática de la carta</h4>
+    <p>Los nombres de secciones y platos se <strong>traducen solos</strong> (castellano, catalán e inglés) en segundo plano al guardar la carta, usando un traductor automático. Cuando cambies el idioma de la app (selector de arriba), la carta se mostrará en ese idioma tanto al equipo como, en la web pública, a tus clientes.</p>
     <h4>Cómo crear una carta paso a paso</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nueva Carta"</strong> y dale un nombre descriptivo (ej. "Carta Mediodía", "Carta Bebidas").</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Configura el <strong>horario de activación</strong>: elige el <strong>Turno</strong> (Turno 1, Turno 2, o "todo el horario de apertura") y marca los <strong>días de la semana</strong> en los que esta carta debe estar activa. Las horas concretas de cada turno se toman del <strong>Horario de apertura</strong> que hayas configurado en Mi Negocio — así no tienes que repetir horarios en cada carta.</div></div>
@@ -14491,8 +14497,10 @@ const MANUAL_CHAPTERS = [
       <tr><td><strong>Enviado</strong></td><td>El pedido ya se ha comunicado al proveedor (por teléfono, email, etc.)</td><td>Sirve como registro de "lo pedido", a la espera de recepción</td></tr>
       <tr><td><strong>Recibido</strong></td><td>La mercancía ha llegado físicamente</td><td>Al marcarlo, el Stock se actualiza automáticamente sumando las cantidades del pedido</td></tr>
     </table>
+    <h4>Dos pestañas: Realizar Pedido e Historial</h4>
+    <p>El módulo Pedidos tiene dos pestañas: en <strong>"Realizar Pedido"</strong> compones el pedido (eliges proveedor, fecha y cantidades, con sugerencia por déficit de stock) y lo envías por <strong>WhatsApp o Email</strong> o lo imprimes. En <strong>"Historial de Pedidos"</strong> tienes todos los pedidos hechos con su estado. Al enviar un pedido, pasa automáticamente al historial.</p>
     <h4>Cómo crear y gestionar un pedido</h4>
-    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Pedido"</strong> y elige el <strong>proveedor</strong> al que va dirigido.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">En la pestaña <strong>"Realizar Pedido"</strong>, elige el <strong>proveedor</strong> al que va dirigido.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Añade líneas con los <strong>ingredientes</strong> que necesitas reponer (la pantalla de Stock con el filtro de alertas activado te ayuda a saber qué incluir) y la <strong>cantidad</strong> que vas a pedir de cada uno.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Revisa el pedido completo — en estado <strong>Borrador</strong> puedes seguir ajustando cantidades o quitar líneas hasta que esté tal y como vas a comunicarlo.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Cuando hayas hablado con el proveedor (llamada, email, app del proveedor...) y el pedido esté confirmado, cambia el estado a <strong>Enviado</strong>. Esto te sirve de recordatorio de "pedido pendiente de llegar".</div></div>
@@ -14515,11 +14523,13 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nuevo empleado"</strong>.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Escribe su <strong>nombre</strong> y elige un <strong>rol</strong> (Camarero/a, Cocinero/a, Ayudante, Encargado/a...). El rol es solo descriptivo, te ayuda a identificar quién hace qué.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">Elige un <strong>color identificativo</strong>. Ese color se usará en todo el calendario de turnos para reconocer a esa persona de un vistazo, sin tener que leer el nombre cada vez.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">Selecciona el <strong>área de trabajo</strong>: Cocina o Sala. Este dato se usa, entre otras cosas, para agrupar a los empleados en el selector de autor del Chat interno.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">Rellena <strong>teléfono</strong> y <strong>email</strong> si los tienes. Aparecerán como enlaces directos para llamar/escribir por WhatsApp o enviar un correo sin tener que copiar el número.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Rellena <strong>teléfono</strong> y <strong>email</strong> si los tienes. Aparecerán como enlaces directos para llamar/escribir por WhatsApp o enviar un correo sin tener que copiar el número.</div></div>
+    <p><strong>El área (Cocina o Sala) ya no se pregunta:</strong> el empleado se asigna automáticamente al área desde la que lo creas. Si entras a Personal desde <strong>Cocina</strong>, ves y das de alta personal de cocina; desde <strong>Sala</strong>, personal de sala. Lo mismo aplica en Distribución del trabajo, Fichar y los turnos.</p>
     <div class="manual-step"><div class="sn">6</div><div class="st">Define un <strong>PIN de 4 dígitos</strong> para que el empleado pueda fichar y, si tu plan lo permite, acceder a su propia vista de la app. El PIN por defecto es "1234"; pídele que lo cambie la primera vez que lo use.</div></div>
     <div class="manual-warning">⚠️ No repitas el mismo PIN para dos empleados distintos: el PIN identifica a la persona en Fichar, en el Chat interno y en cualquier acción que quede registrada a su nombre.</div>
 
+    <h4>Asignar turnos: desde Día, Semana o Mes</h4>
+    <p>Los turnos se asignan desde las vistas <strong>Día, Semana o Mes</strong>: pulsa sobre el empleado/día y elige el turno. (La asignación masiva por periodo se ha retirado de la pestaña Personal para que todo el reparto de turnos esté en un solo sitio, el calendario.)</p>
     <h4>Pestaña Horario: el calendario semanal</h4>
     <p>Aquí ves la semana en columnas (Lunes a Domingo) y una fila por cada empleado.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Haz clic en la celda del día y empleado que quieras editar.</div></div>
@@ -14654,6 +14664,8 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st">Escribe el nombre y teléfono del cliente. Si ese teléfono no está en tu base de datos de Clientes, la app te preguntará si quieres añadirlo: di que sí para empezar a acumular su historial de visitas.</div></div>
     <div class="manual-step"><div class="sn">4</div><div class="st">Añade notas si hace falta (alergias, celebración, silla para bebé, mesa junto a la ventana...).</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">Guarda. La reserva aparecerá en la vista Día correspondiente.</div></div>
+    <p>Las mesas que puedes asignar son las que tengas configuradas en <strong>Mi Negocio → Operativa</strong> (con el nombre/número que les hayas puesto). Una misma mesa <strong>no se puede reservar dos veces con menos de 1 hora y media de diferencia</strong>: por ejemplo, si está reservada a las 13:30, vuelve a aparecer como disponible a partir de las 15:00. El desplegable solo muestra las mesas libres para esa hora.</p>
+    <div class="manual-tip">💡 Cuando un cliente con reserva se sienta y abres su mesa en el TPV, su reserva se marca automáticamente como "llegada" y desaparece de la lista de reservas del día para no estorbar la vista.</div>
 
     <h4>Aforo por turno</h4>
     <p>Si en Mi Negocio configuraste el <strong>Aforo (plazas por turno)</strong>, la vista del día muestra para cada turno cuántas personas hay reservadas frente al máximo:</p>
@@ -14677,25 +14689,22 @@ const MANUAL_CHAPTERS = [
     title:'🖥 TPV',
     content:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
-    <p>Crea las mesas con la numeración y el orden propios de tu restaurante. Al abrir una comanda se pide el número de personas.</p>
-    <h4>Comandas</h4>
+    <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada muestra de un vistazo en qué <strong>fase del servicio</strong> está (📝 Tomando nota, ⏳ Marchado, 🔥 En cocina, ✅ Servido), su número de comensales y el total.</p>
+    <h4>Abrir una mesa: cliente de paso o con reserva</h4>
+    <p>Al pulsar una mesa libre, eliges si el cliente es <strong>"de paso"</strong> (indicas el número de comensales) o <strong>"tiene reserva"</strong> (eliges la reserva del día y se rellena solo). El camarero/a que se asigna a la comanda solo puede ser <strong>personal del área Sala</strong>.</p>
+    <h4>Tomar la comanda (selector a dos columnas)</h4>
     <ul>
-      <li>Selecciona la <strong>carta activa</strong> arriba</li>
-      <li>Haz clic en una <strong>mesa</strong> para abrir la comanda</li>
-      <li>Añade platos de la carta activa, ajusta cantidades</li>
-      <li><strong>Cobrar</strong> — abre el desglose de pago con calculadora de cambio, genera el ticket imprimible, registra la venta y libera la mesa</li>
+      <li>Arriba aparecen las <strong>pestañas de cartas y menús</strong> disponibles, siempre con las <strong>bebidas primero</strong> (así no se olvida pedir la bebida).</li>
+      <li>A la <strong>izquierda</strong> eliges los platos: ves todas las secciones (Entrantes, Principales...) con sus platos a la vista. Al pulsar un plato se suma a la comanda.</li>
+      <li>A la <strong>derecha</strong> se va formando la <strong>comanda en vivo</strong>, en el mismo orden en que eliges los platos (arriba lo primero que se come, abajo lo último). De cada plato ves el nombre, la cantidad, puedes ponerle <strong>notas</strong> o quitarlo.</li>
     </ul>
-    <h4>Categorías o "pases" de la comanda (entrantes, primeros, segundos, postres...)</h4>
-    <p>Dentro de la comanda verás <strong>"Categoría / pase actual"</strong>: el camarero puede crear las categorías que necesite (Entrantes, Primeros, Segundos, Postres, Cafés... o cualquier nombre, según sea menú o carta) y todos los platos que añada a partir de ahí se asignan automáticamente a esa categoría.</p>
+    <h4>Marchar y seguimiento del servicio</h4>
     <ul>
-      <li>Pulsa <strong>"Nueva categoría"</strong> (o usa los atajos sugeridos) y escribe el nombre del pase, ej. "Primeros"</li>
-      <li>Añade los platos de ese pase desde la carta — se asignan solos a "Primeros"</li>
-      <li>Crea otra categoría, ej. "Segundos", y añade esos platos — quedan agrupados aparte</li>
-      <li>La comanda se muestra agrupada por categoría, y cada plato tiene un selector para moverlo a otra si te equivocas</li>
-      <li>Al marchar a cocina aparece un botón por cada categoría con platos pendientes (ej. "Marchar Primeros", "Marchar Segundos"), para enviarlos por separado y en el momento adecuado</li>
-      <li>En la pantalla de <strong>Cocina</strong> cada plato muestra su categoría</li>
+      <li>Cada grupo de platos (sección) tiene su botón <strong>Marchar</strong>, y muestra su estado, sincronizado con la pantalla de Cocina: <strong>⏳ Marchado → 🔥 En preparación → 🍽️ Listo para recoger → ✅ Recogido</strong>. Cuando en Cocina marcan un plato como listo/recogido, en Sala se actualiza solo.</li>
+      <li>El botón <strong>"Marchar vale"</strong> envía de una vez <strong>todas las bebidas a sala/barra y el primer grupo de comida a cocina</strong>. Los siguientes grupos (segundos, postres...) se marchan con su propio botón cuando el cliente esté listo.</li>
+      <li>Cuando <strong>todos los platos están servidos</strong>, aparece abajo el botón <strong>Cobrar</strong>, que abre el desglose de pago, genera el ticket, registra la venta y libera la mesa.</li>
     </ul>
-    <div class="manual-tip">💡 Así puedes tomar nota de todo de una vez (sea menú o carta) y luego marchar primero entrantes/primeros y, cuando toque, segundos y postres — el camarero decide las categorías según el caso.</div>
+    <div class="manual-tip">💡 Puedes elegir en <strong>Mi Negocio → Comandas de cocina y sala</strong> si las comandas se ven en la <strong>pantalla de Cocina/Sala</strong> o se <strong>imprimen en un vale</strong> al marchar (un vale de cocina con la comida y otro de sala/barra con las bebidas).</div>
     <h4>Para llevar / Delivery</h4>
     <p>También puedes registrar ventas para llevar o a domicilio sin asignarlas a una mesa.</p>
     <h4>Cierre de caja / Arqueo</h4>
@@ -14832,10 +14841,13 @@ const MANUAL_CHAPTERS = [
       <li><strong>Mesas de interior</strong>, <strong>mesas de exterior/terraza</strong> y <strong>mesas/taburetes de barra</strong> — indica cuántas tienes de cada tipo.</li>
     </ul>
     <p>Estas tres cantidades son las que verás organizadas por zonas (<strong>Interior</strong>, <strong>Terraza</strong>, <strong>Barra</strong>) en el plano de mesas del TPV.</p>
-    <div class="manual-tip">💡 <strong>Sincronizar mesas con TPV</strong>: al pulsar este botón, GastroGoan crea automáticamente en el TPV las mesas que falten hasta llegar a las cantidades indicadas, nombrándolas "Mesa N (Interior)", "Mesa N (Terraza)" o "Barra N" para que se distingan a simple vista en el plano de sala. No borra ni duplica las mesas que ya existen, así que puedes usarlo siempre que cambies estas cantidades.</div>
+    <div class="manual-tip">💡 <strong>Crear mesas automáticamente</strong>: crea las mesas que falten hasta llegar a las cantidades indicadas. Después, en la lista <strong>"Mesas configuradas"</strong> de más abajo puedes <strong>ponerle a cada mesa el nombre o número que quieras</strong>, cambiarle la zona, o añadir/eliminar mesas una a una. Esas mesas son exactamente las que aparecen en el TPV, en las reservas y en los QR de auto-pedido (un QR por mesa).</div>
+
+    <h4>🖨️ Comandas de cocina y sala</h4>
+    <p>Elige cómo recibe el equipo las comandas al marchar: <strong>verlas en pantalla</strong> (la pantalla de Cocina/Sala) o <strong>imprimir un vale</strong> automáticamente (un vale de cocina con la comida y otro de sala/barra con las bebidas). Si eliges imprimir, indica el ancho del papel (58 u 80 mm) y usa "Imprimir vale de prueba". La impresora concreta se elige en el cuadro de impresión del navegador/sistema; si tienes una impresora térmica de tickets, configúrala como impresora del dispositivo.</p>
 
     <h4>🔁 Tipos de servicio</h4>
-    <p>Activa o desactiva con las casillas los servicios que ofreces: <strong>Mesa/Sala</strong>, <strong>Take Away</strong> y <strong>Delivery</strong>. Esto controla qué botones y opciones aparecen en el TPV y en la página de pedidos online (por ejemplo, si desactivas Delivery, tus clientes ya no podrán elegir esa opción al pedir desde el móvil). Recuerda pulsar <strong>Guardar todo</strong> para que el cambio se aplique.</p>
+    <p>Activa o desactiva con las casillas los servicios que ofreces: <strong>Mesa/Sala</strong>, <strong>Take Away</strong> y <strong>Delivery</strong>. Esto controla qué botones y opciones aparecen en el TPV y en la página de pedidos online (por ejemplo, si desactivas Delivery, tus clientes ya no podrán elegir esa opción al pedir desde el móvil). <strong>Cada cambio se guarda al instante</strong> al marcar/desmarcar (debe quedar al menos un servicio activo).</p>
 
     <h4>📅 Horario de apertura</h4>
     <p>Es el horario general de tu negocio, configurado <strong>día por día</strong> porque no todos los días tienen por qué ser iguales. Para cada día de la semana (<strong>Lunes a Domingo</strong>), primero decides si ese día abres (casilla) y luego eliges el <strong>modo de horario</strong>:</p>
