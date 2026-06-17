@@ -7879,10 +7879,14 @@ function renderComandasCocina(){
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
           ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px;cursor:pointer" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda)}')" title="Toca para avanzar el estado de todo el grupo"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
           ${g.lines.map(({line, idx}) => `
-            <div style="padding:6px 0;${line.estado!=='entregado'?'cursor:pointer':''}" ${line.estado!=='entregado'?`onclick="cycleLineEstado(${order.id}, ${idx})" title="Toca para avanzar el estado"`:''}>
-              <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-              ${line.estado==='entregado' ? ` <span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>` : kitchenStatusBadge(line)}
-              ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
+              <div style="flex:1;min-width:0">
+                <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+                ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+              </div>
+              ${line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparar</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-circle-check"></i> Entregar</button>`
+              : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>`}
             </div>
           `).join('')}
         </div>
