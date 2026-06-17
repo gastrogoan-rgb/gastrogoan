@@ -10699,15 +10699,16 @@ function renderHorariosDia(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
 
-  if(!DB.employees.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
+  const emps = areaEmployees();
+  if(!emps.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
     return;
   }
 
   const date = horariosDate;
   const turnos = (DB.turnos||[]).filter(t => t.fecha === date);
 
-  const rows = DB.employees.map(emp => {
+  const rows = emps.map(emp => {
     const t = turnos.find(x => x.employeeId===emp.id);
     if(t){
       const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
@@ -10778,8 +10779,9 @@ function renderHorariosMes(){
   const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const empIds = new Set(areaEmployees().map(e => e.id));
   const counts = {};
-  (DB.turnos||[]).forEach(t => { if(t.tipo !== 'D') counts[t.fecha] = (counts[t.fecha]||0) + 1; });
+  (DB.turnos||[]).forEach(t => { if(t.tipo !== 'D' && empIds.has(t.employeeId)) counts[t.fecha] = (counts[t.fecha]||0) + 1; });
 
   let cells = '';
   for(let i=0; i<startOffset; i++) cells += `<div></div>`;
@@ -10816,8 +10818,9 @@ function renderHorariosSemana(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
 
-  if(!DB.employees.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
+  const emps = areaEmployees();
+  if(!emps.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
     return;
   }
 
@@ -10826,7 +10829,7 @@ function renderHorariosSemana(){
   const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
   const headerCells = dates.map((d,i) => `<th>${WEEK_DAYS[i].slice(0,3)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
-  const rows = DB.employees.map(emp => {
+  const rows = emps.map(emp => {
     let totalH = 0;
     const cells = dateStrs.map(ds => {
       const t = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
@@ -10873,10 +10876,11 @@ function renderHorariosSemana(){
 }
 
 function openTurnoModal(id, employeeId, fecha){
-  if(!DB.employees.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
+  const emps = areaEmployees();
+  if(!emps.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
   let t = id ? (DB.turnos||[]).find(x => x.id===id) : null;
-  const state = t ? {...t} : {id:null, employeeId: employeeId||DB.employees[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
-  const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const state = t ? {...t} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
+  const empOptions = emps.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
 
   openModal(`
@@ -10950,10 +10954,17 @@ function deleteTurno(id){
   renderHorariosTab();
 }
 
+// Empleados del área actual (cocina o sala). El personal se gestiona por separado
+// según desde qué carpeta (Cocina/Sala) se entre a Horarios.
+function areaEmployees(){
+  return DB.employees.filter(e => (e.area||'cocina') === currentArea());
+}
+
 function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
-  const cards = DB.employees.map(e => `
+  const emps = areaEmployees();
+  const cards = emps.map(e => `
     <div class="card" style="display:flex;align-items:center;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
@@ -10962,7 +10973,6 @@ function renderHorariosPersonal(){
       <div class="actions-cell">
         ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
         ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
-        <button class="owner-only btn btn-sm btn-icon" onclick="openBulkTurnoModal(${e.id})" title="Asignar turnos"><i class="ti ti-calendar-plus"></i></button>
         <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
       </div>
@@ -10973,11 +10983,10 @@ function renderHorariosPersonal(){
     <div class="toolbar">
       <div class="left"></div>
       <div style="display:flex;gap:8px">
-        ${DB.employees.length ? `<button class="owner-only btn btn-primary" onclick="openBulkTurnoModal()"><i class="ti ti-calendar-plus"></i> Asignar turnos</button>` : ''}
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
       </div>
     </div>
-    ${DB.employees.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añade el primero.</div>`}
+    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añade el primero.</div>`}
   `;
 }
 
@@ -11156,13 +11165,6 @@ function openEmployeeModal(id){
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
       </div>
     </div>
-    <div class="field">
-      <label>Área de trabajo</label>
-      <select id="emp-area">
-        <option value="cocina"${(e.area||'cocina')==='cocina'?' selected':''}>Cocina</option>
-        <option value="sala"${e.area==='sala'?' selected':''}>Sala</option>
-      </select>
-    </div>
     <div class="field-row">
       <div class="field">
         <label>Teléfono</label>
@@ -11206,13 +11208,14 @@ function saveEmployee(id){
   const color = document.getElementById('emp-color').value;
   const phone = document.getElementById('emp-phone').value.trim();
   const email = document.getElementById('emp-email').value.trim();
-  const area = document.getElementById('emp-area').value;
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
-    Object.assign(emp, {name, rol, color, phone, email, area});
+    // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
+    Object.assign(emp, {name, rol, color, phone, email, area: emp.area||currentArea()});
   } else {
-    DB.employees.push({id: genId(), name, rol, color, phone, email, area, pin:'1234', pinChanged:false});
+    // Nuevo empleado: se asigna automáticamente al área desde la que se crea.
+    DB.employees.push({id: genId(), name, rol, color, phone, email, area: currentArea(), pin:'1234', pinChanged:false});
   }
   saveDB();
   closeModal();
@@ -11266,15 +11269,16 @@ function employeePropinasInRange(employeeId, dates){
 function renderHorariosFichar(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
-  if(!DB.employees.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos en la pestaña Personal.</div>`;
+  const emps = areaEmployees();
+  if(!emps.length){
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
     return;
   }
   const weekDates = getWeekDates(0).map(d=>dateStr(d));
   const now = new Date();
   const monthDates = Array.from({length: new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}, (_,i) => dateStr(new Date(now.getFullYear(), now.getMonth(), i+1)));
 
-  const cards = DB.employees.map(e => {
+  const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
     const horasSemana = employeeHoursInRange(e.id, weekDates);
     const horasMes = employeeHoursInRange(e.id, monthDates);
