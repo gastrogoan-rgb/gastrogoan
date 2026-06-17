@@ -2259,6 +2259,7 @@ function initPublicRequestsListener(){
           });
         }
       }else if(req.type === 'pedido'){
+        const onlineItems = (req.items || []).map(l => ({platoId: l.platoId||null, recipeId: l.recipeId||null, name: l.name||l.nombre||'', price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||''}));
         DB.tpvOrders.push({
           id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
@@ -2266,7 +2267,7 @@ function initPublicRequestsListener(){
           notas: req.notas || '',
           date: req.date || '', time: req.time || '',
           costeEnvio: req.costeEnvio || 0,
-          status: 'pendiente-online', items: req.items || [], tandas: [], createdAt: new Date().toISOString(),
+          status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
           clientRef: req.clientRef || null
         });
       }else if(req.type === 'pago_confirmado'){
@@ -4863,6 +4864,7 @@ function saveIngredient(id){
 
   if(id){
     const ing = getIngredient(id);
+    if(!ing) return;
     Object.assign(ing, {name, category, unit, supplier, price, packQty, packPrice, allergens});
   }else{
     const newId = genId();
@@ -5682,6 +5684,7 @@ function saveRecipe(id){
   let recipeId = id;
   if(id){
     const r = getRecipe(id);
+    if(!r) return;
     Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
@@ -6063,7 +6066,9 @@ function saveFicha(){
     presentation: (f.presentation||'').trim()
   };
   if(f.id){
-    Object.assign(getFicha(f.id), data);
+    const ficha = getFicha(f.id);
+    if(!ficha) return;
+    Object.assign(ficha, data);
   } else {
     DB.fichas.push({id: genId(), ...data, area: currentArea()});
   }
@@ -7191,6 +7196,17 @@ function acceptOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   order.status = 'abierta';
+  if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
+    const ahora = new Date().toISOString();
+    (order.items||[]).forEach(l => {
+      if(!l.estado){
+        l.estado = 'cocina';
+        l.enviadoAt = ahora;
+        l.marchada = l.qty;
+      }
+    });
+    order.cerrada = false;
+  }
   saveDB();
   renderTPV();
   showToast('Pedido aceptado');
@@ -7859,7 +7875,7 @@ function renderComandasCocina(){
       </div>
       ${groups.map(g => `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
-          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px;cursor:pointer" onclick="cycleGroupEstado(${order.id}, '${g.tanda.replace(/'/g,"\\'")}')" title="Toca para avanzar el estado de todo el grupo"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
+          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px;cursor:pointer" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda)}')" title="Toca para avanzar el estado de todo el grupo"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
           ${g.lines.map(({line, idx}) => `
             <div style="padding:6px 0;${line.estado!=='entregado'?'cursor:pointer':''}" ${line.estado!=='entregado'?`onclick="cycleLineEstado(${order.id}, ${idx})" title="Toca para avanzar el estado"`:''}>
               <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
@@ -7975,7 +7991,10 @@ function changeOrderItemQty(orderId, idx, delta){
   const line = order.items[idx];
   line.qty += delta;
   if(line.qty <= 0) order.items.splice(idx,1);
-  else autoSendTakeawayLine(order, line);
+  else {
+    if(line.marchada > line.qty) line.marchada = line.qty;
+    autoSendTakeawayLine(order, line);
+  }
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -8763,7 +8782,9 @@ function saveProvider(id){
     notas: document.getElementById('prov-notas').value.trim()
   };
   if(id){
-    Object.assign(DB.providers.find(p=>p.id===id), data);
+    const prov = DB.providers.find(p=>p.id===id);
+    if(!prov) return;
+    Object.assign(prov, data);
   }else{
     DB.providers.push({id: genId(), ...data, area: currentArea()});
   }
@@ -10980,7 +11001,9 @@ function saveEmployee(id){
   const email = document.getElementById('emp-email').value.trim();
   const area = document.getElementById('emp-area').value;
   if(id){
-    Object.assign(DB.employees.find(e => e.id===id), {name, rol, color, phone, email, area});
+    const emp = DB.employees.find(e => e.id===id);
+    if(!emp) return;
+    Object.assign(emp, {name, rol, color, phone, email, area});
   } else {
     DB.employees.push({id: genId(), name, rol, color, phone, email, area, pin:'1234', pinChanged:false});
   }
@@ -12040,7 +12063,9 @@ function saveClient(id){
   const notes = document.getElementById('client-notes').value.trim();
 
   if(id){
-    Object.assign(DB.clients.find(x=>x.id===id), {name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
+    const client = DB.clients.find(x=>x.id===id);
+    if(!client) return;
+    Object.assign(client, {name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
   }else{
     DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
   }
