@@ -3160,10 +3160,14 @@ async function translateField(item){
 
 async function autoTranslateCarta(carta){
   let changed = false;
+  if(await translateField(carta)) changed = true;
   for(const sec of (carta.secciones||[])){
     if(await translateField(sec)) changed = true;
     for(const p of (sec.platos||[])){
       if(await translateField(p)) changed = true;
+      for(const m of (p.modificadores||[])){
+        if(await translateField(m)) changed = true;
+      }
     }
   }
   if(changed) saveDB();
@@ -6467,7 +6471,7 @@ function renderCartaList(){
             const nsec = (c.secciones||[]).length;
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
-              <td><strong>${escapeHtml(c.nombre)}</strong>${(DB.activeCartaIds||[]).includes(c.id)?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
+              <td><strong>${escapeHtml(tItem(c))}</strong>${(DB.activeCartaIds||[]).includes(c.id)?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(c)}</td>
               <td>${nsec}</td>
               <td>${nplat}</td>
@@ -6620,7 +6624,7 @@ function renderCartaSecciones(){
   box.innerHTML = cartaEdit.secciones.map(sec => `
     <div class="ge-section">
       <div class="ge-sec-head">
-        <h4>${escapeHtml(sec.nombre)}</h4>
+        <h4>${escapeHtml(tItem(sec))}</h4>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${itemNoun(true)} manual</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> Escandallo</button>
@@ -6629,7 +6633,7 @@ function renderCartaSecciones(){
       </div>
       ${(sec.platos||[]).length ? sec.platos.map(p => `
         <div class="ge-item">
-          <span style="flex:1;font-weight:600">${escapeHtml(p.nombre)}</span>
+          <span style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> Extras${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
@@ -6726,14 +6730,14 @@ function renderPlatoModsModalHtml(secId, platoId){
   const noun = itemNoun();
   return `
     <div class="modal-header">
-      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(p.nombre)}"</h3>
+      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(tItem(p))}"</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para esta ${noun} (ej. "${noun==='bebida'?'Con hielo' : 'Extra queso'}" +1€). Se podrán añadir al tomar la comanda.</p>
     <div style="margin-bottom:12px">
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
-          <span style="flex:1">${escapeHtml(m.nombre)}</span>
+          <span style="flex:1">${escapeHtml(tItem(m))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : 'Gratis'}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
@@ -6889,7 +6893,7 @@ function renderMenuList(){
           ${DB.menus.map(m => {
             const ngrupos = (m.grupos||[]).length;
             return `<tr>
-              <td><strong>${escapeHtml(m.nombre)}</strong>${(DB.activeMenuIds||[]).includes(m.id)?' <span class="badge badge-green">Activo en TPV</span>':''}</td>
+              <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?' <span class="badge badge-green">Activo en TPV</span>':''}</td>
               <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(m)}</td>
               <td>${ngrupos}</td>
@@ -7199,7 +7203,7 @@ function renderTpvCartaSelector(){
         ${DB.cartas.length ? DB.cartas.map(c=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
             <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
-            ${escapeHtml(c.nombre)}
+            ${escapeHtml(tItem(c))}
           </label>
         `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
       </div>
@@ -7226,7 +7230,7 @@ function renderTpvMenuSelector(){
         ${DB.menus.map(m=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
             <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
-            ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}
+            ${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}
           </label>
         `).join('')}
       </div>
@@ -7602,7 +7606,7 @@ function renderMenusComboHtml(order){
   return `
     <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:0 0 6px"><i class="ti ti-list-details"></i> Menús</p>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-      ${activeMenus.map(m => `<button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${m.id})">${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}</button>`).join('')}
+      ${activeMenus.map(m => `<button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${m.id})">${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</button>`).join('')}
     </div>
   `;
 }
@@ -7638,7 +7642,7 @@ function getOrderMenuFolders(order){
   [...bebidaCartas, ...comidaCartas].forEach(c => {
     (c.secciones||[]).forEach(sec => {
       const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
-      if(platos.length) folders.push({cartaId: c.id, secId: sec.id, nombre: sec.nombre, icono: sec.icono || guessSeccionEmoji(sec.nombre), platos});
+      if(platos.length) folders.push({cartaId: c.id, secId: sec.id, nombre: sec.nombre, i18n: sec.i18n, icono: sec.icono || guessSeccionEmoji(sec.nombre), platos});
     });
   });
   return folders;
@@ -7677,7 +7681,7 @@ function renderOrderMenuHtml(order){
     return menusHtml + `
       <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Hay varias cartas activas a esta hora. Elige cuál usar para esta comanda:</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(c.nombre)}</button>`).join('')}
+        ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(tItem(c))}</button>`).join('')}
       </div>
     `;
   }
@@ -7691,10 +7695,10 @@ function renderOrderMenuHtml(order){
   if(folder){
     return menusHtml + `
       <div style="margin-bottom:8px">
-        <button class="btn btn-sm" onclick="closeTpvMenuFolder(${order.id})"><i class="ti ti-arrow-left"></i> ${folder.icono} ${escapeHtml(folder.nombre)}</button>
+        <button class="btn btn-sm" onclick="closeTpvMenuFolder(${order.id})"><i class="ti ti-arrow-left"></i> ${folder.icono} ${escapeHtml(tItem(folder))}</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${folder.platos.map(p => `<button class="btn" onclick="addOrderItem(${order.id}, ${folder.secId}, ${p.id})">${escapeHtml(p.nombre)} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+        ${folder.platos.map(p => `<button class="btn" onclick="addOrderItem(${order.id}, ${folder.secId}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
       </div>
     `;
   }
@@ -7711,17 +7715,17 @@ function openMenuConfigModal(orderId, menuId){
   if(!m) return;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-list-details"></i> ${escapeHtml(m.nombre)} · ${fmtMoney(m.precio)}</h3>
+      <h3><i class="ti ti-list-details"></i> ${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     ${(m.grupos||[]).map(g => `
       <div class="field">
-        <label>${escapeHtml(g.nombre)}</label>
+        <label>${escapeHtml(tItem(g))}</label>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${(g.opciones||[]).map((o,i) => `
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto">
-              ${escapeHtml(o.nombre)}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
+              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
             </label>
           `).join('')}
         </div>
@@ -7918,7 +7922,7 @@ function renderTableOrderModal(orderId){
   }
 
   // Pestañas de cartas/menús
-  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(c.nombre)}</button>`).join('');
+  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(tItem(c))}</button>`).join('');
   const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
@@ -8340,7 +8344,7 @@ function addOrderItem(orderId, secId, platoId){
   const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && !(l.notas) && (l.tanda||'') === tanda);
   let line;
   if(existing){ existing.qty += 1; line = existing; }
-  else{ line = {platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
+  else{ line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   saveDB();
@@ -8355,7 +8359,7 @@ function openAddItemModal(orderId, secId, platoId){
   const mods = p.modificadores || [];
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(p.nombre)} · ${fmtMoney(p.precio)}</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(p.precio)}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     ${mods.length ? `
@@ -8365,7 +8369,7 @@ function openAddItemModal(orderId, secId, platoId){
           ${mods.map(m => `
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="checkbox" class="add-item-mod" value="${m.id}" style="width:auto">
-              ${escapeHtml(m.nombre)}${m.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
+              ${escapeHtml(tItem(m))}${m.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
             </label>
           `).join('')}
         </div>

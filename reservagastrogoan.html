@@ -557,7 +557,7 @@ function getActiveCartasConPlatos(){
 
 function buildMenuHtml(cartas){
   return cartas.map(carta => `
-    ${cartas.length > 1 ? `<h2>${escapeHtml(carta.nombre)}</h2>` : ''}
+    ${cartas.length > 1 ? `<h2>${escapeHtml(trItem(carta))}</h2>` : ''}
     ${(carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
       ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
       ${sec.platos.filter(p=>p.disponible!==false).map(p => `
