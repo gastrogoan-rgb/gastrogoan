@@ -2072,6 +2072,69 @@ function hideFirebaseSetupGate(){
   if(g) g.remove();
 }
 
+/* Paso guiado obligatorio después de configurar la nube: subir la app a un
+   hosting público (Netlify) para que el QR de reservas/pedidos funcione.
+   Solo se muestra al propietario y hasta que confirma que ya está subida. */
+function showNetlifySetupGate(){
+  if(document.getElementById('netlify-gate')) return;
+  const hosted = (location.protocol === 'http:' || location.protocol === 'https:') &&
+                 !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  const g = document.createElement('div');
+  g.id = 'netlify-gate';
+  g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px';
+  const step = (n, title, body) => `
+    <div style="display:flex;gap:12px;margin-bottom:16px">
+      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
+      <div style="flex:1;min-width:0">
+        <p style="font-weight:700;font-size:13.5px;margin-bottom:4px">${title}</p>
+        <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
+      </div>
+    </div>`;
+  const stepsHtml = `
+    ${step(1, 'Crea una cuenta gratis en Netlify', `Abre <code>www.netlify.com</code> en otra pestaña y pulsa <strong>"Sign up"</strong>. Puedes entrar con tu cuenta de Google. Es gratis y no pide tarjeta.`)}
+    ${step(2, 'Ten los dos archivos juntos en una carpeta', `En una carpeta de tu ordenador deja <strong>los dos archivos</strong> de GastroGoan: <code>kit-gastrogoan.html</code> y <code>reservagastrogoan.html</code>. <strong>No renombres</strong> el segundo.`)}
+    ${step(3, 'Arrastra la carpeta a Netlify', `En Netlify, ve a <strong>"Sites"</strong> y arrastra tu carpeta al recuadro <strong>"Drag and drop your site output folder here"</strong> (o "Deploys" → "Deploy manually").`)}
+    ${step(4, 'Copia la dirección que te da', `En unos segundos Netlify publica el sitio y te da una dirección tipo <code>https://tu-sitio.netlify.app</code>. Puedes cambiar el nombre en "Site settings" → "Change site name".`)}
+    ${step(5, 'Abre SIEMPRE la app desde esa dirección', `A partir de ahora gestiona la app desde <code>https://tu-sitio.netlify.app/kit-gastrogoan.html</code>. Solo así el QR de reservas y pedidos funcionará de verdad para tus clientes.`)}`;
+
+  const hostedBox = hosted
+    ? `<div style="background:#E9F8EF;border-left:4px solid #34C759;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
+    : `<div style="background:#FDECEA;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ Ahora mismo estás abriendo la app <strong>desde un archivo local</strong>, no desde internet. Las reservas/pedidos por QR <strong>no funcionarán</strong> hasta que subas la app a Netlify y la abras desde su dirección pública.</div>`;
+
+  g.innerHTML = `
+    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
+      <div style="text-align:center">
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
+        <h2 style="margin-bottom:4px">Sube tu app a internet</h2>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Para que tus clientes puedan reservar y pedir por QR (≈5 minutos, una sola vez)</p>
+      </div>
+      ${hostedBox}
+      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+        La app de gestión funciona abierta en tu navegador, pero el <strong>QR de reservas y pedidos online</strong> solo funciona si subes los dos archivos a un hosting público gratuito como <strong>Netlify</strong>. Tienes el tutorial completo en <strong>tutorial-netlify.html</strong> (junto a la app).
+      </div>
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Sigue estos pasos:</h3>
+      ${stepsHtml}
+      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px">✅ Ya está subida — Continuar</button>
+      <button onclick="postponeNetlify()" style="width:100%;background:none;color:var(--muted);border:none;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;margin-top:4px">Lo haré más tarde (recordármelo)</button>
+    </div>`;
+  document.body.appendChild(g);
+}
+function hideNetlifySetupGate(){
+  const g = document.getElementById('netlify-gate');
+  if(g) g.remove();
+}
+function confirmNetlifyDone(){
+  DB.business.netlifySetupDone = true;
+  saveDB();
+  hideNetlifySetupGate();
+  if(!DB.business.tourSeen) promptAppTour();
+}
+function postponeNetlify(){
+  // No marca como hecho: volverá a aparecer la próxima vez que abra la app.
+  hideNetlifySetupGate();
+  if(!DB.business.tourSeen) promptAppTour();
+}
+
 function activateLicenseFromGate(){
   const key = (document.getElementById('license-key-input').value || '').trim().toUpperCase();
   const parsed = validateLicenseKey(key);
@@ -2463,7 +2526,8 @@ function renderOnlineCard(){
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
           Este enlace y QR solo funcionan si los dos archivos de GastroGoan — la app de gestión (este archivo) y <strong>reservagastrogoan.html</strong> (la página que ven tus clientes) — están <strong>subidos juntos, dentro de la misma carpeta, en un hosting con dirección (URL) pública en internet</strong>.<br><br>
           Es decir: no basta con tenerlos guardados en el ordenador o el móvil y abrirlos haciendo doble clic. "Hosting con URL pública" significa un servicio que aloja tus archivos en internet y les da una dirección web (algo como <code>https://tu-restaurante.netlify.app/</code>) a la que cualquier cliente puede acceder desde su móvil. Hay opciones gratuitas y sencillas (por ejemplo Netlify: se arrastran los dos archivos a su web y ya tienen dirección pública).<br><br>
-          Si abres la app directamente desde tu ordenador (sin subirla a ningún sitio), el QR y el enlace no llevarán a ninguna página real.
+          Si abres la app directamente desde tu ordenador (sin subirla a ningún sitio), el QR y el enlace no llevarán a ninguna página real.<br><br>
+          📘 <strong>¿No sabes cómo subirlos?</strong> Sigue el tutorial paso a paso <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> (subir a Netlify, gratis, 5 minutos). Debe estar en la misma carpeta que esta app.
         </div>
       </details>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
@@ -14928,10 +14992,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
+  const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   if(!getLicense()){
     showActivationGate();
   }else if(!getCloudConfig()){
     showFirebaseSetupGate();
+  }else if(onbRole === 'owner' && !DB.business.netlifySetupDone){
+    // Tras configurar la nube, el propietario debe subir la app a Netlify.
+    showNetlifySetupGate();
   }else if(!DB.business.tourSeen){
     promptAppTour();
   }
