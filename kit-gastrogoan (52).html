@@ -11782,7 +11782,8 @@ function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
 
 function openLimpiezaTareaMesModal(id){
   const t = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
-  const empOptions = DB.employees.map(e=>`<option value="${e.id}"${t&&t.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  // El responsable de la tarea solo puede ser empleado del área actual (cocina/sala).
+  const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${t&&t.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   openModal(`
     <div class="modal-header">
       <h3>${t?'Editar':'Nueva'} tarea de limpieza mensual</h3>
@@ -13329,7 +13330,7 @@ function openPromoModal(id, fecha){
       <label>Responsable</label>
       <select id="promo-responsable" ${dis}>
         <option value="">— Sin asignar —</option>
-        ${DB.employees.map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+        ${DB.employees.filter(e=>(e.area||'cocina')==='sala').map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
     <div class="modal-footer">
