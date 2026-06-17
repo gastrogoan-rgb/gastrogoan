@@ -7430,6 +7430,12 @@ function findCartaSeccion(secId){
   }
   return null;
 }
+function isSeccionBebida(secId){
+  for(const c of (DB.cartas||[])){
+    if((c.secciones||[]).some(s=>s.id===secId)) return isBebidaCarta(c);
+  }
+  return false;
+}
 
 function openTpvMenuFolder(orderId, cartaId, secId){
   tpvMenuOrderId = orderId;
@@ -7722,9 +7728,8 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const items = order.items||[];
-  // El vale se cierra solo cuando TODOS los platos han salido (entregados).
-  order.cerrada = items.length > 0 && items.every(l => l.estado === 'entregado');
+  const food = (order.items||[]).filter(l => !l.bebida);
+  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado');
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -7813,13 +7818,16 @@ function renderComandasCocina(){
   `;
 
   if(comandasCocinaTab === 'cerradas'){
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayMs = todayStart.getTime();
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).filter(l => l.estado);
+        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
         const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
+      .filter(({lines, maxMs}) => lines.length && maxMs >= todayMs)
       .sort((a,b) => b.maxMs - a.maxMs);
 
     if(!closed.length){
@@ -7828,7 +7836,7 @@ function renderComandasCocina(){
     }
 
     box.innerHTML = tabsHtml + `<div class="grid grid-3">${closed.map(({order, lines, maxMs}) => `
-      <div class="card" style="aspect-ratio:1/1;overflow-y:auto;display:flex;flex-direction:column">
+      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
           <span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregada</span>
@@ -7843,9 +7851,9 @@ function renderComandasCocina(){
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
   const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))
     .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx}));
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
       return {order, allLines};
     });
 
@@ -7874,7 +7882,7 @@ function renderComandasCocina(){
     const mins = minutesSince(new Date(minMs).toISOString());
 
     return `
-    <div class="card" style="aspect-ratio:1/1;overflow-y:auto;display:flex;flex-direction:column">
+    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
         <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
         ${urgencyBadge(mins)}
@@ -7945,7 +7953,7 @@ function addOrderItem(orderId, secId, platoId){
   const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && !(l.notas) && (l.tanda||'') === tanda);
   let line;
   if(existing){ existing.qty += 1; line = existing; }
-  else{ line = {platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''}; order.items.push(line); }
+  else{ line = {platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   saveDB();
@@ -8006,6 +8014,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
     platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
     notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
   };
+  if(isSeccionBebida(secId)) line.bebida = true;
   order.items.push(line);
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
