@@ -5221,13 +5221,26 @@ function setEscandalloView(mode){
 
 // Carpeta de categoría actualmente abierta en Escandallo (null = vista de carpetas)
 let escandalloFolder = null;
+let escandalloRecipe = null;
 function openEscandalloFolder(catKey){
   escandalloFolder = catKey;
+  escandalloRecipe = null;
   renderEscandallo();
 }
 function backToEscandalloFolders(){
   escandalloFolder = null;
+  escandalloRecipe = null;
   document.getElementById('escandallo-search').value = '';
+  renderEscandallo();
+}
+// Abre el escandallo completo de un plato dentro de la carpeta.
+function openEscandalloRecipe(id){
+  escandalloRecipe = id;
+  renderEscandallo();
+}
+// Vuelve de la vista de un plato a la lista de nombres de la carpeta.
+function backToEscandalloRecipes(){
+  escandalloRecipe = null;
   renderEscandallo();
 }
 
@@ -5310,8 +5323,20 @@ function renderEscandallo(){
       <h3 class="cat-heading">${escapeHtml(catName)}</h3>
       <div class="${gridClass}">${group.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>
     `).join('');
+  } else if(escandalloRecipe !== null){
+    // Dentro de la carpeta, con un plato seleccionado: escandallo completo.
+    const sel = visibleRecipes.find(r => r.id === escandalloRecipe);
+    if(!sel){ escandalloRecipe = null; renderEscandallo(); return; }
+    const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${escapeHtml(escandalloFolder==='__none__'?'Sin categoría':escandalloFolder)}</button>`;
+    box.innerHTML = recBackBtn + `<div class="grid grid-compact">${renderEscandalloCard(sel)}</div>`;
   } else {
-    box.innerHTML = backBtn + `<div class="${gridClass}">${visibleRecipes.map(r => escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r)).join('')}</div>`;
+    // Dentro de la carpeta, sin plato seleccionado: solo nombres clicables.
+    box.innerHTML = backBtn + `<div class="table-wrap"><table><tbody>${visibleRecipes.map(r => `
+      <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
+        <td><strong><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</td>
+        <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
+      </tr>
+    `).join('')}</tbody></table></div>`;
   }
 }
 
