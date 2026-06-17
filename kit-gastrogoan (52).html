@@ -7723,7 +7723,8 @@ function setComandasCocinaTab(tab){
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
   const items = order.items||[];
-  order.cerrada = items.length > 0 && items.every(l => l.estado === 'entregado');
+  const marchados = items.filter(l => l.estado);
+  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado') && !items.some(l => !l.estado && l.qty > (l.marchada||0));
 }
 
 function setLineEstado(orderId, idx, estado){
