@@ -7724,7 +7724,7 @@ function setComandasCocinaTab(tab){
 function checkComandaCierre(order){
   const items = order.items||[];
   const marchados = items.filter(l => l.estado);
-  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado') && !items.some(l => !l.estado && l.qty > (l.marchada||0));
+  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado');
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -7843,7 +7843,7 @@ function renderComandasCocina(){
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
   const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
+    .filter(o => !o.cerrada && (o.items||[]).some(l => (l.estado && l.estado !== 'entregado') || (!l.estado && l.qty > (l.marchada||0))))
     .map(order => {
       const allLines = (order.items||[]).map((line, idx) => ({line, idx}));
       return {order, allLines};
