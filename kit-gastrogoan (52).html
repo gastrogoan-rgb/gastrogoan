@@ -11590,7 +11590,7 @@ function renderLimpiezaMes(){
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
       </div>
-      <button class="btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
+      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
@@ -11727,7 +11727,7 @@ function renderLimpiezaMantenimiento(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
+      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
     </div>
     <div class="table-wrap">
       <table>
