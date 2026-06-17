@@ -7849,8 +7849,8 @@ function renderComandasCocina(){
     .filter(t => t.allLines.length);
 
   tickets.sort((a,b) => {
-    const ta = Math.min(...a.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now()));
-    const tb = Math.min(...b.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now()));
+    const ta = a.activeLines.length ? Math.min(...a.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
+    const tb = b.activeLines.length ? Math.min(...b.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
     return ta - tb;
   });
 
@@ -7866,7 +7866,7 @@ function renderComandasCocina(){
       lines: allLines.filter(({line}) => (line.tanda||'') === t)
     })).filter(g => g.lines.length);
 
-    const minMs = Math.min(...activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now()));
+    const minMs = activeLines.length ? Math.min(...activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
 
     return `
