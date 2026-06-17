@@ -12835,10 +12835,29 @@ function getReservationTimeSlots(dateStr){
 
 // Mesas disponibles para una fecha/hora: excluye las que ya tienen otra
 // reserva (no cancelada) a esa misma hora.
+// Minutos desde medianoche de una hora "HH:MM" (null si no es válida).
+function reservaTimeToMinutes(t){
+  if(!t || !t.includes(':')) return null;
+  const [h,m] = t.split(':').map(Number);
+  if(isNaN(h) || isNaN(m)) return null;
+  return h*60 + m;
+}
+
+// Ventana mínima entre dos reservas de la misma mesa: 90 min (hora y media).
+// Una mesa reservada a las 13:30 no se podrá volver a reservar hasta las 15:00.
+const RESERVA_VENTANA_MIN = 90;
+
 function getAvailableTablesForReservation(dateStr, time, excludeId){
+  const reqMin = reservaTimeToMinutes(time);
   const occupied = new Set(
     DB.reservations
-      .filter(r => r.date === dateStr && r.time === time && r.id !== excludeId && r.status !== 'cancelada')
+      .filter(r => {
+        if(r.date !== dateStr || r.id === excludeId || r.status === 'cancelada') return false;
+        const rMin = reservaTimeToMinutes(r.time);
+        // Si no podemos comparar horas, caemos al criterio antiguo (hora exacta).
+        if(reqMin == null || rMin == null) return r.time === time;
+        return Math.abs(rMin - reqMin) < RESERVA_VENTANA_MIN;
+      })
       .map(r => r.tableId)
       .filter(Boolean)
   );
@@ -12962,6 +12981,16 @@ function saveReservation(id){
   const notes = document.getElementById('reservation-notes').value.trim();
 
   if(!clientId && !clientName){ showToast('Indica un cliente o un nombre'); return; }
+
+  // No permitir reservar la misma mesa dos veces con menos de 1h30 de diferencia.
+  if(tableId){
+    const disponible = getAvailableTablesForReservation(date, time, id).some(t => t.id === tableId);
+    if(!disponible){
+      const table = DB.tables.find(t=>t.id===tableId);
+      showToast(`${table?table.name:'Esa mesa'} ya está reservada cerca de esa hora (mínimo 1h30 entre reservas)`);
+      return;
+    }
+  }
 
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
   const status = existing ? existing.status : 'confirmada';
@@ -13557,8 +13586,18 @@ function renderMiNegocio(){
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Estas cantidades son las mesas que verás organizadas por zonas (Interior, Terraza, Barra) en el plano de mesas del TPV.</p>
-      <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Sincronizar mesas con TPV</button>
-      <p style="font-size:12px;color:var(--muted);margin-top:6px">Crea automáticamente en el TPV las mesas que falten hasta llegar a estas cantidades (no borra ni duplica las que ya existen).</p>
+      <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Crear mesas automáticamente</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">Crea automáticamente las mesas que falten hasta llegar a estas cantidades (no borra ni duplica las que ya existen). Después puedes renombrarlas abajo.</p>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> Mesas configuradas</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Edita el nombre o número de cada mesa, su zona, o añade/elimina mesas. Estas son exactamente las mesas que aparecen en el TPV y en las reservas.</p>
+      <div id="mn-mesas-list"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-sm" onclick="addTableManual('interior')"><i class="ti ti-plus"></i> Mesa interior</button>
+        <button class="btn btn-sm" onclick="addTableManual('terraza')"><i class="ti ti-plus"></i> Mesa terraza</button>
+        <button class="btn btn-sm" onclick="addTableManual('barra')"><i class="ti ti-plus"></i> Mesa barra</button>
+      </div>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -13599,6 +13638,69 @@ function renderMiNegocio(){
     ${renderDataMaintenanceCard()}
   `;
   loadRedsysCardStatus();
+  renderMesasConfigList();
+}
+
+// Lista editable de mesas en Mi Negocio: nombre/número editable, zona y borrar.
+function renderMesasConfigList(){
+  const box = document.getElementById('mn-mesas-list');
+  if(!box) return;
+  if(!DB.tables.length){
+    box.innerHTML = `<p style="font-size:13px;color:var(--muted)">No hay mesas todavía. Usa "Crear mesas automáticamente" o el botón de añadir.</p>`;
+    return;
+  }
+  const zonas = ['interior','terraza','barra', null];
+  const zonaLabel = z => z==='interior'?'Interior':z==='terraza'?'Terraza':z==='barra'?'Barra':'Sin zona';
+  let html = '';
+  zonas.forEach(z => {
+    const tables = DB.tables.filter(t => (t.zona||null) === z);
+    if(!tables.length) return;
+    html += `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:8px 0 4px">${zonaLabel(z)}</div>`;
+    html += tables.map(t => {
+      const ocupada = getOpenOrderForTable(t.id);
+      return `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input type="text" value="${escapeHtml(t.name||'')}" onchange="updateTableName(${t.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Nombre o nº de mesa">
+        <select onchange="updateTableZona(${t.id}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          <option value="interior" ${(t.zona||'interior')==='interior'?'selected':''}>Interior</option>
+          <option value="terraza" ${t.zona==='terraza'?'selected':''}>Terraza</option>
+          <option value="barra" ${t.zona==='barra'?'selected':''}>Barra</option>
+        </select>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" ${ocupada?'disabled':''} title="${ocupada?'Mesa ocupada':'Eliminar mesa'}"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('');
+  });
+  box.innerHTML = html;
+}
+
+function updateTableName(id, val){
+  const t = DB.tables.find(x => x.id === id);
+  if(!t) return;
+  t.name = (val||'').trim() || t.name;
+  saveDB();
+}
+function updateTableZona(id, val){
+  const t = DB.tables.find(x => x.id === id);
+  if(!t) return;
+  t.zona = val;
+  saveDB();
+  renderMesasConfigList();
+}
+function addTableManual(zona){
+  const sameZone = DB.tables.filter(t => (t.zona||'interior') === zona).length;
+  const prefix = zona==='barra' ? 'Barra' : 'Mesa';
+  const zonaSuffix = zona==='interior' ? ' (Interior)' : zona==='terraza' ? ' (Terraza)' : '';
+  const name = zona==='barra' ? `Barra ${sameZone+1}` : `${prefix} ${sameZone+1}${zonaSuffix}`;
+  DB.tables.push({id: genId(), name, zona});
+  saveDB();
+  renderMesasConfigList();
+}
+function deleteTableFromConfig(id){
+  if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
+  if(!confirm('¿Eliminar esta mesa?')) return;
+  DB.tables = DB.tables.filter(t => t.id !== id);
+  saveDB();
+  renderMesasConfigList();
 }
 
 /* ============================================================
