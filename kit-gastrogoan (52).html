@@ -903,8 +903,10 @@ td.wrap{white-space:normal}
       <div class="view-subtitle">Gestión de compras a proveedores</div>
 
       <div class="toolbar">
-        <div class="left"></div>
-        <button class="owner-only btn btn-primary" onclick="openOrderModal()"><i class="ti ti-plus"></i> Nuevo Pedido</button>
+        <div class="left">
+          <button class="btn btn-sm" id="pedidos-tab-crear" onclick="setPedidosTab('crear')"><i class="ti ti-plus"></i> Realizar Pedido</button>
+          <button class="btn btn-sm" id="pedidos-tab-historial" onclick="setPedidosTab('historial')"><i class="ti ti-history"></i> Historial de Pedidos</button>
+        </div>
       </div>
 
       <div id="pedidos-list"></div>
@@ -8918,13 +8920,29 @@ function pedidoSuppliers(){
   return [...new Set([...fromProviders, ...fromIngredients])].sort();
 }
 
+let pedidosTab = 'crear';
+function setPedidosTab(t){
+  pedidosTab = t;
+  pedidoDetailId = null;
+  if(t === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
+  renderPedidos();
+}
+function updatePedidosTabsUI(){
+  const c = document.getElementById('pedidos-tab-crear');
+  const h = document.getElementById('pedidos-tab-historial');
+  if(c) c.classList.toggle('btn-primary', pedidosTab === 'crear');
+  if(h) h.classList.toggle('btn-primary', pedidosTab === 'historial');
+}
+
 function renderPedidos(){
+  updatePedidosTabsUI();
   const o = pedidoDetailId && getPurchaseOrder(pedidoDetailId);
   if(o && (o.area||'cocina') === currentArea()){
     renderPedidoDetail();
   }else{
     pedidoDetailId = null;
-    renderPedidoList();
+    if(pedidosTab === 'crear') renderPedidoCrear();
+    else renderPedidoList();
   }
 }
 
@@ -8968,6 +8986,8 @@ function renderPedidoList(){
 
 function openPedido(id){
   pedidoDetailId = id;
+  pedidosTab = 'historial';
+  updatePedidosTabsUI();
   renderPedidoDetail();
 }
 
@@ -9208,6 +9228,7 @@ function printPedido(){
 let orderModalSupplier = '';
 let orderModalLines = [];
 let orderModalSearch = '';
+let orderFormInline = false; // true cuando el formulario se muestra en la pestaña (no en modal)
 
 function openOrderModal(){
   if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast('Añade ingredientes en Mega Lista primero'); return; }
@@ -9217,7 +9238,9 @@ function openOrderModal(){
   renderOrderModal();
 }
 
-function renderOrderModal(){
+// Construye el cuerpo del formulario de pedido (campos + artículos + resumen),
+// compartido por la versión inline (pestaña Realizar Pedido) y el modal.
+function orderFormBodyHtml(){
   const suppliers = pedidoSuppliers();
   const supplierOptions = `<option value="">— Selecciona proveedor —</option>` +
     suppliers.map(s => `<option value="${escapeHtml(s)}" ${orderModalSupplier===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
@@ -9252,7 +9275,7 @@ function renderOrderModal(){
         `;
       }).join('');
       itemsHtml = `
-        <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="renderOrderModal()" style="margin-bottom:8px;width:100%">
+        <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="refreshOrderForm()" style="margin-bottom:8px;width:100%">
         <div style="max-height:480px;overflow:auto;margin-bottom:8px">
           ${rows || '<div class="empty" style="padding:10px">Sin resultados</div>'}
         </div>
@@ -9261,11 +9284,7 @@ function renderOrderModal(){
     }
   }
 
-  openModal(`
-    <div class="modal-header">
-      <h3>Nuevo Pedido</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
+  const html = `
     <div class="field-row">
       <div class="field">
         <label>Proveedor</label>
@@ -9287,18 +9306,66 @@ function renderOrderModal(){
         <div id="order-summary" style="max-height:480px;overflow:auto">${orderSummaryHtml()}</div>
       </div>
     </div>
-    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> Imprimir</button>
-      <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
-      <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> Enviar por Email</button>
-    </div>
-  `, {xl:true});
+  `;
+  return {dateVal, html};
+}
+
+// Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
+function orderFormButtonsHtml(){
+  return `
+    <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> Imprimir</button>
+    <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
+    <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> Enviar por Email</button>
+  `;
+}
+
+// Tras renderizar el formulario, restaura los valores de fecha y búsqueda.
+function afterOrderFormRender(dateVal){
   const dEl = document.getElementById('order-date');
   if(dEl) dEl.value = dateVal || todayStr();
   if(dEl) validateOrderDate(dEl, true);
   const sEl = document.getElementById('order-item-search');
   if(sEl) sEl.value = orderModalSearch;
+}
+
+// Re-renderiza el formulario activo (inline en la pestaña, o el modal).
+function refreshOrderForm(){
+  if(orderFormInline) renderPedidoCrear();
+  else renderOrderModal();
+}
+
+// Versión inline del formulario, dentro de la pestaña "Realizar Pedido".
+function renderPedidoCrear(){
+  orderFormInline = true;
+  const box = document.getElementById('pedidos-list');
+  const {dateVal, html} = orderFormBodyHtml();
+  box.innerHTML = `
+    <div class="card">
+      <h3><i class="ti ti-shopping-cart-plus"></i> Realizar Pedido</h3>
+      ${html}
+      <div class="actions-cell" style="flex-wrap:wrap;gap:8px;margin-top:10px">
+        ${orderFormButtonsHtml()}
+      </div>
+    </div>
+  `;
+  afterOrderFormRender(dateVal);
+}
+
+function renderOrderModal(){
+  orderFormInline = false;
+  const {dateVal, html} = orderFormBodyHtml();
+  openModal(`
+    <div class="modal-header">
+      <h3>Nuevo Pedido</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${html}
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      ${orderFormButtonsHtml()}
+    </div>
+  `, {xl:true});
+  afterOrderFormRender(dateVal);
 }
 
 // Resumen en vivo de los artículos con cantidad > 0 mientras se compone el pedido.
@@ -9347,7 +9414,7 @@ function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
   orderModalSearch = '';
   orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea()).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
-  renderOrderModal();
+  refreshOrderForm();
 }
 
 function sugerirPorDeficit(){
@@ -9355,7 +9422,7 @@ function sugerirPorDeficit(){
     const s = getStockEntry(line.ingredientId);
     line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
   });
-  renderOrderModal();
+  refreshOrderForm();
   showToast('Cantidades sugeridas según déficit de stock');
 }
 
@@ -9393,7 +9460,13 @@ function printPedidoBorrador(){
 function sendNewPedido(method){
   const order = buildNewPedido();
   if(!order) return;
-  closeModal();
+  if(orderFormInline){
+    // Vacía el formulario inline y pasa al historial para ver el pedido creado.
+    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = '';
+    pedidosTab = 'historial';
+  }else{
+    closeModal();
+  }
   renderPedidos();
   if(method === 'whatsapp') sendPedidoWhatsapp(order);
   else sendPedidoEmail(order);
