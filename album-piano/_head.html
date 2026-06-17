@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Álbum de Ejercicios de Piano · 44 Días para Pasarlo Bien</title>
+<style>
+/* ===================== BASE ===================== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#2b2440;        /* texto principal */
+  --ink-soft:#6b6480;   /* texto suave */
+  --paper:#fffdf8;      /* fondo papel */
+  --cream:#fbf4e6;
+  --line:#e7ddc9;
+
+  /* Paleta por bloques */
+  --b1:#3aa0a0; --b1-l:#e3f4f3;  /* iniciación - turquesa */
+  --b2:#e08a2b; --b2-l:#fcefdc;  /* despegue - naranja */
+  --b3:#c0497a; --b3-l:#fbe5ee;  /* reto - frambuesa */
+
+  --gold:#e7b400; --gold-l:#fff6d6;
+  --tip:#3b6db0;  --tip-l:#e7f0fb;
+  --fun:#7a4fc0;  --fun-l:#f0e9fc;
+  --ok:#3f8f4a;   --ok-l:#e8f5e9;
+  --warn:#d05a3a; --warn-l:#fbe7e1;
+
+  --wk:#ffffff;   /* tecla blanca */
+  --bk:#2b2440;   /* tecla negra */
+}
+html{font-size:15px}
+body{
+  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  color:var(--ink);background:#cdc4b4;line-height:1.55;
+}
+.page{
+  width:210mm;min-height:297mm;margin:10px auto;background:var(--paper);
+  padding:18mm 16mm;position:relative;
+  box-shadow:0 4px 22px rgba(0,0,0,.18);
+  page-break-after:always;overflow:hidden;
+}
+h1,h2,h3,h4{line-height:1.15;font-weight:800}
+p{margin:.35em 0}
+small{color:var(--ink-soft)}
+
+/* ===================== PORTADA ===================== */
+.cover{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+  background:linear-gradient(160deg,#fbf4e6 0%,#f6ead2 60%,#efe0c2 100%);}
+.cover .kbd-deco{margin:14px 0 26px}
+.cover h1{font-size:54px;letter-spacing:-1px;color:var(--ink);margin:6px 0}
+.cover .sub{font-size:22px;color:var(--b2);font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.cover .tag{font-size:18px;color:var(--ink-soft);max-width:60%;margin-top:20px}
+.cover .by{margin-top:48px;font-size:15px;color:var(--ink-soft)}
+.cover .big-note{font-size:120px;line-height:1}
+
+/* ===================== CABECERA DE DÍA ===================== */
+.day-top{display:flex;align-items:stretch;gap:14px;margin-bottom:14px}
+.day-badge{flex:0 0 auto;width:78px;border-radius:16px;color:#fff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:8px 4px;font-weight:800}
+.day-badge .lbl{font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.9}
+.day-badge .num{font-size:40px;line-height:1}
+.day-headinfo{flex:1 1 auto}
+.day-headinfo .piece{font-size:26px;margin:0 0 2px}
+.day-headinfo .composer{color:var(--ink-soft);font-size:14px;font-weight:600}
+.day-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--cream);border:1px solid var(--line);
+  border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:600;color:var(--ink)}
+.chip .ic{font-size:13px}
+.stars{letter-spacing:2px;font-size:14px}
+
+/* color helpers por bloque */
+.b1 .day-badge{background:var(--b1)} .b1 .accent{color:var(--b1)} .b1 .ribbon{background:var(--b1)}
+.b2 .day-badge{background:var(--b2)} .b2 .accent{color:var(--b2)} .b2 .ribbon{background:var(--b2)}
+.b3 .day-badge{background:var(--b3)} .b3 .accent{color:var(--b3)} .b3 .ribbon{background:var(--b3)}
+
+/* ===================== BLOQUES DE CONTENIDO ===================== */
+.box{border-radius:14px;padding:12px 15px;margin:11px 0;border:1px solid var(--line)}
+.box h4{display:flex;align-items:center;gap:8px;font-size:15px;margin-bottom:6px}
+.box h4 .em{font-size:18px}
+.box.theory{background:var(--gold-l);border-color:#e6d98c}
+.box.theory h4{color:#9a7b00}
+.box.tip{background:var(--tip-l);border-color:#bcd4f0}
+.box.tip h4{color:var(--tip)}
+.box.fun{background:var(--fun-l);border-color:#d8c8f3}
+.box.fun h4{color:var(--fun)}
+.box.warn{background:var(--warn-l);border-color:#f0c4b6}
+.box.warn h4{color:var(--warn)}
+.box.warm{background:var(--b1-l);border-color:#bfe6e3}
+.box.warm h4{color:#1f7d7d}
+
+/* paso a paso de ejercicios */
+.steps{counter-reset:st;margin:6px 0}
+.step{position:relative;padding:9px 12px 9px 44px;margin:8px 0;background:#fff;border:1px solid var(--line);
+  border-radius:12px}
+.step:before{counter-increment:st;content:counter(st);position:absolute;left:10px;top:10px;width:24px;height:24px;
+  border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.step .st-t{font-weight:700}
+.b1 .step:before{background:var(--b1)} .b2 .step:before{background:var(--b2)} .b3 .step:before{background:var(--b3)}
+
+/* ===================== TECLADO ===================== */
+/* Teclado de 1 octava (Do a Si). Para resaltar una tecla: añade clase .hl
+   y dentro un <span class="fg">N</span> con el número de dedo (1-5).
+   Para nombrar la nota: <span class="nn">Do</span> */
+.kbd{position:relative;display:inline-flex;background:var(--ink);padding:7px 7px 0;border-radius:8px;
+  box-shadow:0 3px 0 #1c1830;margin:30px 0 8px}
+.kbd .wk{position:relative;width:34px;height:120px;background:var(--wk);border:1px solid #cbb;border-radius:0 0 6px 6px;
+  margin-right:2px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:6px}
+.kbd .wk:last-child{margin-right:0}
+.kbd .wk.hl{background:linear-gradient(#fff,#ffe9a8);box-shadow:inset 0 -6px 0 #f2c94c}
+.kbd .bk{position:absolute;top:7px;width:22px;height:74px;background:var(--bk);border-radius:0 0 5px 5px;z-index:3}
+.kbd .bk.hl{background:linear-gradient(#5a4fa0,#7a4fc0)}
+.kbd .nn{font-size:10.5px;font-weight:700;color:var(--ink-soft)}
+.kbd .wk.hl .nn{color:#8a6a00}
+.kbd .fg{position:absolute;top:-26px;left:50%;transform:translateX(-50%);width:21px;height:21px;border-radius:50%;
+  background:var(--warn);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.kbd .bk .fg{top:-26px}
+.kbd-deco .kbd{transform:scale(1.25)}
+.kbd-cap{font-size:12px;color:var(--ink-soft);margin:2px 0 8px}
+
+/* ===================== TIRA DE RITMO ===================== */
+.rhythm{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;background:#fff;border:1px solid var(--line);
+  border-radius:12px;padding:12px;margin:8px 0}
+.beat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:34px}
+.beat .fig{font-size:30px;line-height:.8}
+.beat .syl{font-size:12px;font-weight:700;color:var(--b2)}
+.bar{width:2px;align-self:stretch;background:var(--line);margin:0 3px}
+
+/* ===================== TABLA DE DEDOS ===================== */
+.fingers{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.fcell{flex:1 1 0;min-width:60px;text-align:center;border:1px solid var(--line);border-radius:10px;
+  padding:7px 4px;background:#fff}
+.fcell .fn{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;
+  font-weight:800;align-items:center;justify-content:center;font-size:12px}
+.fcell .nt{font-weight:700;margin-top:4px;font-size:14px}
+.fcell small{display:block}
+
+/* ===================== CHECKLIST ===================== */
+.check{list-style:none;margin:6px 0}
+.check li{display:flex;align-items:flex-start;gap:9px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.check li:last-child{border-bottom:0}
+.check .bx{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--ink-soft);border-radius:5px;margin-top:2px}
+
+/* divisor con icono */
+.section-h{display:flex;align-items:center;gap:9px;margin:14px 0 4px;font-size:17px;font-weight:800}
+.section-h .em{font-size:20px}
+
+/* footer de página */
+.pg-foot{position:absolute;bottom:9mm;left:16mm;right:16mm;display:flex;justify-content:space-between;
+  font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:5px}
+.ribbon{display:inline-block;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;letter-spacing:.5px}
+
+/* grids utilidades */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.note-badges{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.nb{display:inline-flex;flex-direction:column;align-items:center;background:#fff;border:1px solid var(--line);
+  border-radius:10px;padding:6px 10px;min-width:44px}
+.nb b{font-size:16px}
+.nb .fn{width:20px;height:20px;border-radius:50%;background:var(--b2);color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;margin-top:3px}
+
+/* ÍNDICE / CALENDARIO */
+.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.cal .cell{border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;min-height:62px}
+.cal .cell .d{font-size:12px;font-weight:800;color:#fff;display:inline-block;border-radius:6px;padding:1px 7px;margin-bottom:4px}
+.cal .cell .pz{font-size:12px;font-weight:700;line-height:1.2}
+.cal .cell.k1 .d{background:var(--b1)} .cal .cell.k2 .d{background:var(--b2)} .cal .cell.k3 .d{background:var(--b3)}
+
+/* leyenda */
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.leg-item{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+.leg-item .ic{font-size:22px;flex:0 0 auto}
+
+/* glosario */
+.gloss dt{font-weight:800;color:var(--b2);margin-top:9px}
+.gloss dd{margin-left:0;color:var(--ink)}
+
+@media print{
+  body{background:#fff}
+  .page{margin:0;box-shadow:none;width:auto;min-height:auto}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
