@@ -669,6 +669,9 @@ td.wrap{white-space:normal}
           <select id="megalista-filter-cat" onchange="renderMegalista()">
             <option value="">Todas las categorías</option>
           </select>
+          <select id="megalista-filter-prov" onchange="renderMegalista()">
+            <option value="">Todos los proveedores</option>
+          </select>
         </div>
         <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
       </div>
@@ -4675,16 +4678,37 @@ function populateCategoryFilter(){
   sel.value = current;
 }
 
+// Llena el filtro de proveedores con los proveedores del área actual más
+// cualquier proveedor que aparezca en los ingredientes (por si quedó alguno
+// de un proveedor ya borrado de la lista).
+function populateProviderFilter(){
+  const sel = document.getElementById('megalista-filter-prov');
+  if(!sel) return;
+  const current = sel.value;
+  const names = new Set();
+  DB.providers.filter(p => (p.area||'cocina') === currentArea())
+    .forEach(p => { if(p.nombre) names.add(p.nombre); });
+  DB.ingredients.filter(i => (i.area||'cocina') === currentArea())
+    .forEach(i => { if(i.supplier) names.add(i.supplier); });
+  const sorted = [...names].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML = '<option value="">Todos los proveedores</option>' +
+    sorted.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  sel.value = current;
+}
+
 function renderMegalista(){
   populateCategoryFilter();
+  populateProviderFilter();
   const search = document.getElementById('megalista-search').value.toLowerCase();
   const cat = document.getElementById('megalista-filter-cat').value;
+  const prov = document.getElementById('megalista-filter-prov').value;
 
   let items = DB.ingredients.filter(i => {
     const matchArea = (i.area||'cocina') === currentArea();
     const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
     const matchCat = !cat || i.category === cat;
-    return matchArea && matchSearch && matchCat;
+    const matchProv = !prov || (i.supplier||'') === prov;
+    return matchArea && matchSearch && matchCat && matchProv;
   });
 
   const tbody = document.getElementById('megalista-tbody');
