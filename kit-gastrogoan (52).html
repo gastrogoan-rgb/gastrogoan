@@ -7839,6 +7839,8 @@ function renderComandasCocina(){
     return;
   }
 
+  allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
+
   const tickets = allOrders
     .filter(o => !o.cerrada)
     .map(order => {
@@ -7846,7 +7848,7 @@ function renderComandasCocina(){
       const activeLines = allLines.filter(({line}) => line.estado === 'cocina' || line.estado === 'preparando');
       return {order, allLines, activeLines};
     })
-    .filter(t => t.allLines.length);
+    .filter(t => t.activeLines.length);
 
   tickets.sort((a,b) => {
     const ta = a.activeLines.length ? Math.min(...a.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
