@@ -2494,13 +2494,25 @@ function renderTableQrCard(){
   if(!getTenantId() || !getCloudConfig()) return '';
   const link = getPublicClientLink();
   if(!link) return '';
+  // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona
+  // (interior / terraza / barra). Solo hay tantos QR como mesas configuradas.
+  const zonas = [['interior','🏠 Interior'], ['terraza','🌤️ Terraza'], ['barra','🍸 Barra'], [null,'Otras mesas']];
+  const zonasHtml = zonas.map(([z, label]) => {
+    const tables = DB.tables.filter(t => (t.zona||null) === z);
+    if(!tables.length) return '';
+    return `
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${tables.map(t => `<button class="btn btn-sm" style="font-size:12px;padding:4px 10px" onclick="showTableQr(${t.id})"><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</button>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-qrcode"></i> QR auto pedido</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Pulsa sobre una mesa para ver su QR y descargarlo. Imprímelo y colócalo en esa mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${DB.tables.map(t => `<button class="btn btn-sm" style="font-size:12px;padding:4px 10px" onclick="showTableQr(${t.id})"><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</button>`).join('')}
-      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Hay un QR por cada mesa configurada en Mi Negocio (${DB.tables.length} en total). Pulsa sobre una mesa para ver su QR y descargarlo. Imprímelo y colócalo en esa mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
+      ${zonasHtml}
     </div>
   `;
 }
@@ -13603,16 +13615,16 @@ function renderMiNegocio(){
 
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-toggle-right"></i> Tipos de servicio</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Activa los servicios que ofrece tu negocio. Esto controla qué opciones aparecen en el TPV y en la página de reservas online para tus clientes.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Activa los servicios que ofrece tu negocio. Esto controla qué opciones aparecen en el TPV y en la página de reservas online para tus clientes. <strong>Los cambios se guardan al instante.</strong></p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} style="width:18px;height:18px"> 🍽️ Mesa / Sala (reservas y comandas en el local)
+          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ Mesa / Sala (reservas y comandas en el local)
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} style="width:18px;height:18px"> 🥡 Take Away (recogida en el local)
+          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 Take Away (recogida en el local)
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
+          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
         </label>
       </div>
     </div>
@@ -13879,6 +13891,27 @@ function syncMesasConfig(){
   }
   saveDB();
   showToast('Mesas sincronizadas con el TPV');
+}
+
+// Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
+// instante. Debe quedar siempre al menos un servicio activo.
+function toggleTipoServicio(tipo, checked){
+  const actual = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+  const nuevo = {
+    mesa: actual.mesa !== false,
+    takeaway: actual.takeaway !== false,
+    delivery: actual.delivery !== false,
+    [tipo]: checked
+  };
+  if(!nuevo.mesa && !nuevo.takeaway && !nuevo.delivery){
+    showToast('Debe quedar al menos un tipo de servicio activo');
+    const el = document.getElementById('mn-serv-'+tipo);
+    if(el) el.checked = true;
+    return;
+  }
+  DB.business = {...DB.business, tiposServicio: nuevo};
+  saveDB();
+  showToast(`Servicio ${checked?'activado':'desactivado'}`);
 }
 
 function saveBusiness(){
