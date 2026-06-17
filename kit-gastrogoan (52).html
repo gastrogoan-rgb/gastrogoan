@@ -6252,13 +6252,15 @@ function renderCarta(){
 }
 
 function renderCartaList(){
-  const totalPlatos = DB.cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
+  // En Sala solo se listan las cartas de bebidas; en Cocina solo las de comida.
+  const cartas = DB.cartas.filter(c => isBebidaCarta(c) === (currentArea()==='sala'));
+  const totalPlatos = cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
   document.getElementById('carta-stats').innerHTML = `
-    <div class="kpi"><div class="label">Cartas / Menús</div><div class="value">${DB.cartas.length}</div></div>
+    <div class="kpi"><div class="label">Cartas / Menús</div><div class="value">${cartas.length}</div></div>
     <div class="kpi"><div class="label">Total ${itemNoun()}s</div><div class="value">${totalPlatos}</div></div>
   `;
   const box = document.getElementById('carta-list');
-  if(!DB.cartas.length){
+  if(!cartas.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-book-off"></i>Sin cartas aún. Crea tu primera carta e importa platos del Escandallo.</div>`;
     return;
   }
@@ -6267,7 +6269,7 @@ function renderCartaList(){
       <table>
         <thead><tr><th>Nombre</th><th>Horario</th><th>Secciones</th><th>Platos</th><th></th></tr></thead>
         <tbody>
-          ${DB.cartas.map(c => {
+          ${cartas.map(c => {
             const nsec = (c.secciones||[]).length;
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
@@ -6361,7 +6363,9 @@ function readScheduleFromForm(prefix){
 }
 
 function newCarta(){
-  cartaEdit = {id: genId(), nombre:'', horario: defaultItemHorario(), secciones:[]};
+  // El área en que se crea la carta determina su tipo: en Sala es carta de
+  // bebidas (no aparece en cocina); en Cocina es carta de comida.
+  cartaEdit = {id: genId(), nombre:'', area: currentArea(), horario: defaultItemHorario(), secciones:[]};
   renderCarta();
 }
 function openCarta(id){
@@ -6390,6 +6394,8 @@ function saveCarta(){
   const nombre = document.getElementById('carta-f-nombre').value.trim();
   if(!nombre){ showToast('Ponle un nombre a la carta'); return; }
   cartaEdit.nombre = nombre.toUpperCase();
+  // Asegura el área: una carta editada en Sala es de bebidas, en Cocina de comida.
+  if(!cartaEdit.area) cartaEdit.area = currentArea();
   cartaEdit.horario = readScheduleFromForm('carta');
   delete cartaEdit.turno;
   delete cartaEdit.dias;
@@ -7369,9 +7375,11 @@ function confirmNewToGoOrder(){
   renderTableOrderModal(order.id);
 }
 
-// Las cartas cuyo nombre contiene "bebida" se consideran la carta de bebidas
+// Una carta es de bebidas si se creó en el área de Sala (campo area==='sala').
+// Para cartas antiguas sin ese campo, se mantiene la detección por nombre
 // (p.ej. "Bebidas", "Carta de Bebidas"). El resto se consideran de comida.
 function isBebidaCarta(c){
+  if(c && c.area) return c.area === 'sala';
   return /bebida/i.test(c.nombre||'');
 }
 
