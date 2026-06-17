@@ -3,181 +3,269 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Álbum de Ejercicios de Piano · 44 Días para Pasarlo Bien</title>
+<title>El Cuaderno del Pianista · Estudio progresivo de repertorio en 44 sesiones</title>
 <style>
-/* ===================== BASE ===================== */
+/* ============================================================
+   EL CUADERNO DEL PIANISTA · hoja de estilo editorial
+   ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --ink:#2b2440;        /* texto principal */
-  --ink-soft:#6b6480;   /* texto suave */
-  --paper:#fffdf8;      /* fondo papel */
-  --cream:#fbf4e6;
-  --line:#e7ddc9;
-
-  /* Paleta por bloques */
-  --b1:#3aa0a0; --b1-l:#e3f4f3;  /* iniciación - turquesa */
-  --b2:#e08a2b; --b2-l:#fcefdc;  /* despegue - naranja */
-  --b3:#c0497a; --b3-l:#fbe5ee;  /* reto - frambuesa */
-
-  --gold:#e7b400; --gold-l:#fff6d6;
-  --tip:#3b6db0;  --tip-l:#e7f0fb;
-  --fun:#7a4fc0;  --fun-l:#f0e9fc;
-  --ok:#3f8f4a;   --ok-l:#e8f5e9;
-  --warn:#d05a3a; --warn-l:#fbe7e1;
-
-  --wk:#ffffff;   /* tecla blanca */
-  --bk:#2b2440;   /* tecla negra */
+  --ink:#23211c;          /* tinta principal, negro cálido */
+  --ink-2:#4a463d;        /* tinta secundaria */
+  --muted:#827b6c;        /* texto tenue */
+  --paper:#faf7f0;        /* marfil */
+  --paper-2:#f3eee2;      /* marfil más cálido */
+  --line:#ddd4c0;         /* filete */
+  --line-2:#cabfa3;
+  --gold:#a8884e;         /* dorado apagado */
+  --gold-soft:#f0e7d2;
+  --slate:#3d4f63;        /* azul pizarra (análisis/teoría) */
+  --slate-soft:#e9eef3;
+  --bord:#7a2e3a;         /* granate (pasajes difíciles) */
+  --bord-soft:#f6e8e8;
+  --green:#3c5d4a;        /* etapa fundamentos */
+  --blue:#33526e;         /* etapa desarrollo */
+  --wine:#7a2e3a;         /* etapa maestría */
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,'Times New Roman',serif;
+  --sans:'Inter','Segoe UI',-apple-system,system-ui,Roboto,sans-serif;
 }
-html{font-size:15px}
-body{
-  font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
-  color:var(--ink);background:#cdc4b4;line-height:1.55;
-}
-.page{
-  width:210mm;min-height:297mm;margin:10px auto;background:var(--paper);
-  padding:18mm 16mm;position:relative;
-  box-shadow:0 4px 22px rgba(0,0,0,.18);
+html{font-size:14.5px}
+body{font-family:var(--sans);color:var(--ink);line-height:1.62;background:#b8b1a3;}
+h1,h2,h3,h4,h5{font-family:var(--serif);font-weight:700;line-height:1.18;color:var(--ink)}
+p{margin:.42em 0}
+b,strong{font-weight:700;color:var(--ink)}
+small{color:var(--muted)}
+em{font-style:italic}
+
+/* ---------- HOJAS ---------- */
+.page{                 /* hoja de tamaño fijo (portada / preliminares) */
+  width:210mm;height:297mm;margin:12px auto;background:var(--paper);
+  padding:24mm 22mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   page-break-after:always;overflow:hidden;
 }
-h1,h2,h3,h4{line-height:1.15;font-weight:800}
-p{margin:.35em 0}
-small{color:var(--ink-soft)}
+.sheet{                /* día: fluye y puede ocupar más de una hoja al imprimir */
+  width:210mm;min-height:297mm;margin:12px auto;background:var(--paper);
+  padding:20mm 22mm 24mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
+  break-before:page;overflow:hidden;
+}
+.eyebrow{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--gold)}
+.rule{height:1px;background:var(--line);border:0;margin:10px 0}
+.rule.gold{height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
 
-/* ===================== PORTADA ===================== */
-.cover{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
-  background:linear-gradient(160deg,#fbf4e6 0%,#f6ead2 60%,#efe0c2 100%);}
-.cover .kbd-deco{margin:14px 0 26px}
-.cover h1{font-size:54px;letter-spacing:-1px;color:var(--ink);margin:6px 0}
-.cover .sub{font-size:22px;color:var(--b2);font-weight:700;letter-spacing:2px;text-transform:uppercase}
-.cover .tag{font-size:18px;color:var(--ink-soft);max-width:60%;margin-top:20px}
-.cover .by{margin-top:48px;font-size:15px;color:var(--ink-soft)}
-.cover .big-note{font-size:120px;line-height:1}
+/* ============================================================
+   PORTADA
+   ============================================================ */
+.cover{background:
+   radial-gradient(120% 80% at 50% -10%, #fffdf8 0%, var(--paper) 55%, var(--paper-2) 100%);
+   padding:0;}
+.cover-frame{position:absolute;inset:13mm;border:1px solid var(--gold);}
+.cover-frame:before{content:"";position:absolute;inset:3mm;border:1px solid var(--line-2)}
+.cover-inner{position:absolute;inset:13mm;display:flex;flex-direction:column;
+  align-items:center;justify-content:space-between;text-align:center;padding:16mm 16mm}
+.cover .clef{font-family:var(--serif);font-size:150px;line-height:.8;color:var(--gold);opacity:.9}
+.cover .top{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4mm}
+.cover .top .eyebrow{font-size:12px;letter-spacing:5px}
+.cover h1{font-size:62px;letter-spacing:-.5px;margin:6px 0 2px}
+.cover .subtitle{font-family:var(--serif);font-style:italic;font-size:23px;color:var(--ink-2)}
+.cover .mid{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.cover .summary{font-size:14px;color:var(--ink-2);max-width:78%;line-height:1.7}
+.cover .pillars{display:flex;gap:0;width:100%;justify-content:center;margin-top:4px}
+.cover .pillars span{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--gold);padding:0 16px;border-right:1px solid var(--line-2)}
+.cover .pillars span:last-child{border-right:0}
+.cover .bottom{width:100%}
+.cover .bottom .by{font-family:var(--serif);font-size:15px;color:var(--ink-2)}
+.cover .bottom .meta{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.cover-kbd{margin:2mm 0}
 
-/* ===================== CABECERA DE DÍA ===================== */
-.day-top{display:flex;align-items:stretch;gap:14px;margin-bottom:14px}
-.day-badge{flex:0 0 auto;width:78px;border-radius:16px;color:#fff;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:8px 4px;font-weight:800}
-.day-badge .lbl{font-size:11px;letter-spacing:1px;text-transform:uppercase;opacity:.9}
-.day-badge .num{font-size:40px;line-height:1}
-.day-headinfo{flex:1 1 auto}
-.day-headinfo .piece{font-size:26px;margin:0 0 2px}
-.day-headinfo .composer{color:var(--ink-soft);font-size:14px;font-weight:600}
-.day-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--cream);border:1px solid var(--line);
-  border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:600;color:var(--ink)}
-.chip .ic{font-size:13px}
-.stars{letter-spacing:2px;font-size:14px}
+/* teclado decorativo de portada */
+.kbd-strip{display:inline-flex;border:1px solid var(--ink);border-radius:3px;overflow:hidden;
+  box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.kbd-strip .w{width:18px;height:58px;background:#fffef9;border-right:1px solid #cfc6b2;position:relative}
+.kbd-strip .w:last-child{border-right:0}
+.kbd-strip .w.on{background:linear-gradient(#fff,var(--gold-soft))}
+.kbd-strip .b{width:11px;height:36px;background:var(--ink);margin:0 -5.5px;z-index:2;border-radius:0 0 2px 2px}
 
-/* color helpers por bloque */
-.b1 .day-badge{background:var(--b1)} .b1 .accent{color:var(--b1)} .b1 .ribbon{background:var(--b1)}
-.b2 .day-badge{background:var(--b2)} .b2 .accent{color:var(--b2)} .b2 .ribbon{background:var(--b2)}
-.b3 .day-badge{background:var(--b3)} .b3 .accent{color:var(--b3)} .b3 .ribbon{background:var(--b3)}
+/* ============================================================
+   PRELIMINARES (índice, guía, glosario)
+   ============================================================ */
+.lead{font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink-2)}
+.page-title{font-size:30px;margin:2px 0 2px}
+.page-head{margin-bottom:14px}
+.col2{column-count:2;column-gap:26px}
+.col2 p{margin:0 0 .6em}
 
-/* ===================== BLOQUES DE CONTENIDO ===================== */
-.box{border-radius:14px;padding:12px 15px;margin:11px 0;border:1px solid var(--line)}
-.box h4{display:flex;align-items:center;gap:8px;font-size:15px;margin-bottom:6px}
-.box h4 .em{font-size:18px}
-.box.theory{background:var(--gold-l);border-color:#e6d98c}
-.box.theory h4{color:#9a7b00}
-.box.tip{background:var(--tip-l);border-color:#bcd4f0}
-.box.tip h4{color:var(--tip)}
-.box.fun{background:var(--fun-l);border-color:#d8c8f3}
-.box.fun h4{color:var(--fun)}
-.box.warn{background:var(--warn-l);border-color:#f0c4b6}
-.box.warn h4{color:var(--warn)}
-.box.warm{background:var(--b1-l);border-color:#bfe6e3}
-.box.warm h4{color:#1f7d7d}
+.toc{width:100%;border-collapse:collapse;font-size:12.5px}
+.toc th{font-family:var(--sans);text-transform:uppercase;letter-spacing:1.5px;font-size:9.5px;
+  color:var(--muted);text-align:left;border-bottom:1.5px solid var(--ink);padding:6px 8px}
+.toc td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.toc .n{font-family:var(--serif);font-weight:700;color:var(--gold);width:42px}
+.toc .pz{font-weight:600}
+.toc .stage{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.toc tr.h td{background:var(--paper-2);font-family:var(--serif);font-style:italic;color:var(--ink);font-size:13px}
 
-/* paso a paso de ejercicios */
+.guide-step{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.guide-step .gn{font-family:var(--serif);font-size:26px;color:var(--gold);width:38px;flex:0 0 auto;line-height:1}
+.guide-step h4{font-size:15px;margin-bottom:1px}
+.guide-step p{margin:0;font-size:13px;color:var(--ink-2)}
+
+.legend2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:8px}
+.legend2 .li{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);
+  border-radius:4px;padding:10px 12px;background:#fff}
+.legend2 .li .lk{font-family:var(--serif);font-style:italic;font-weight:700;color:var(--gold);font-size:13px;
+  flex:0 0 86px}
+.legend2 .li p{margin:0;font-size:12px;color:var(--ink-2)}
+
+.gloss2{columns:2;column-gap:26px}
+.gloss2 .g{break-inside:avoid;margin:0 0 9px}
+.gloss2 dt{font-family:var(--serif);font-weight:700;color:var(--slate);font-size:14px}
+.gloss2 dd{margin:0;font-size:12.5px;color:var(--ink-2)}
+
+/* ============================================================
+   CABECERA DE DÍA
+   ============================================================ */
+.s1{--stage:var(--green)} .s2{--stage:var(--blue)} .s3{--stage:var(--wine)}
+.day-head{border-top:3px solid var(--stage);padding-top:12px;margin-bottom:14px}
+.day-head .row1{display:flex;justify-content:space-between;align-items:baseline}
+.day-head .stage-lbl{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--stage)}
+.day-head .sess{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:13px}
+.day-head h2{font-size:33px;margin:5px 0 1px;letter-spacing:-.4px}
+.day-head .composer{font-family:var(--serif);font-style:italic;font-size:16px;color:var(--ink-2)}
+
+/* ficha técnica */
+.specs{display:flex;flex-wrap:wrap;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:5px;
+  background:#fff;overflow:hidden}
+.specs .sp{flex:1 1 0;min-width:96px;padding:8px 12px;border-right:1px solid var(--line)}
+.specs .sp:last-child{border-right:0}
+.specs .sp .k{font-family:var(--sans);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.specs .sp .v{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);margin-top:1px}
+.specs .sp .v.diff{letter-spacing:1px;color:var(--stage)}
+
+/* ============================================================
+   SECCIONES Y PANELES
+   ============================================================ */
+.sec{margin:16px 0 4px;break-inside:avoid-page}
+.sec-h{display:flex;align-items:center;gap:11px;margin-bottom:7px}
+.sec-h .rn{font-family:var(--serif);font-weight:700;font-size:13px;color:#fff;background:var(--stage);
+  width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sec-h h3{font-size:19px;letter-spacing:-.2px}
+.sec-h .rule{flex:1;margin:0 0 0 4px}
+
+.panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:13px 16px;margin:9px 0;break-inside:avoid}
+.panel p:first-child{margin-top:0}.panel p:last-child{margin-bottom:0}
+.panel h4{font-size:14.5px;margin-bottom:5px}
+.panel--soft{background:var(--paper-2);border-color:var(--line)}
+.panel--theory{background:var(--slate-soft);border-color:#c5d3df}
+.panel--theory h4{color:var(--slate)}
+.panel--gold{background:var(--gold-soft);border-color:#e2d2ac}
+.panel--gold h4{color:#7c6224}
+.panel--quote{border-left:3px solid var(--gold);background:transparent;border-radius:0;
+  font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-2)}
+
+.lede{font-family:var(--serif);font-size:15px;color:var(--ink-2);line-height:1.6}
+
+/* lista de definiciones inline (análisis) */
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:6px 0}
+.facts dt{font-weight:700;color:var(--slate)}
+.facts dd{margin:0;color:var(--ink-2)}
+
+/* pasos de estudio */
 .steps{counter-reset:st;margin:6px 0}
-.step{position:relative;padding:9px 12px 9px 44px;margin:8px 0;background:#fff;border:1px solid var(--line);
-  border-radius:12px}
-.step:before{counter-increment:st;content:counter(st);position:absolute;left:10px;top:10px;width:24px;height:24px;
-  border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.step{position:relative;padding:9px 14px 9px 42px;margin:7px 0;background:#fff;border:1px solid var(--line);
+  border-radius:5px;break-inside:avoid}
+.step:before{counter-increment:st;content:counter(st);position:absolute;left:0;top:0;bottom:0;width:32px;
+  background:var(--stage);color:#fff;font-family:var(--serif);font-weight:700;font-size:15px;
+  display:flex;align-items:center;justify-content:center}
 .step .st-t{font-weight:700}
-.b1 .step:before{background:var(--b1)} .b2 .step:before{background:var(--b2)} .b3 .step:before{background:var(--b3)}
+.step .bpm{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:12.5px}
 
-/* ===================== TECLADO ===================== */
-/* Teclado de 1 octava (Do a Si). Para resaltar una tecla: añade clase .hl
-   y dentro un <span class="fg">N</span> con el número de dedo (1-5).
-   Para nombrar la nota: <span class="nn">Do</span> */
-.kbd{position:relative;display:inline-flex;background:var(--ink);padding:7px 7px 0;border-radius:8px;
-  box-shadow:0 3px 0 #1c1830;margin:30px 0 8px}
-.kbd .wk{position:relative;width:34px;height:120px;background:var(--wk);border:1px solid #cbb;border-radius:0 0 6px 6px;
+/* ---------- PASAJES DIFÍCILES (destacado) ---------- */
+.hard{border:1px solid var(--line-2);border-radius:6px;overflow:hidden;margin:9px 0;break-inside:avoid}
+.hard-top{display:flex;align-items:center;gap:10px;background:var(--bord);color:#fff;padding:7px 14px}
+.hard-top .cc{font-family:var(--serif);font-weight:700;font-size:14px;background:rgba(255,255,255,.16);
+  padding:1px 10px;border-radius:3px}
+.hard-top .tt{font-weight:700;font-size:13px;letter-spacing:.3px}
+.hard-top .gauge{margin-left:auto;display:flex;gap:3px}
+.hard-top .gauge i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35);display:block}
+.hard-top .gauge i.on{background:#fff}
+.hard-body{padding:10px 14px;background:var(--bord-soft)}
+.hard-body p{margin:.25em 0;font-size:13px}
+.hard-body .lab{font-family:var(--sans);font-weight:700;color:var(--bord);font-size:11px;
+  letter-spacing:1px;text-transform:uppercase}
+
+/* ============================================================
+   COMPONENTES MUSICALES
+   ============================================================ */
+/* teclado 1 octava (Do–Si). Resaltar blanca: clase hl + opcional <span class="fg">N</span> y <span class="nn">Do</span>.
+   Negras left fijo: 31/67/139/175/211 = Do# Re# Fa# Sol# La#. */
+.kbd{position:relative;display:inline-flex;background:var(--ink);padding:7px 7px 0;border-radius:5px;
+  box-shadow:0 3px 0 #18160f;margin:30px 0 6px}
+.kbd .wk{position:relative;width:34px;height:118px;background:#fffef9;border:1px solid #cfc6b2;border-radius:0 0 4px 4px;
   margin-right:2px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:6px}
 .kbd .wk:last-child{margin-right:0}
-.kbd .wk.hl{background:linear-gradient(#fff,#ffe9a8);box-shadow:inset 0 -6px 0 #f2c94c}
-.kbd .bk{position:absolute;top:7px;width:22px;height:74px;background:var(--bk);border-radius:0 0 5px 5px;z-index:3}
-.kbd .bk.hl{background:linear-gradient(#5a4fa0,#7a4fc0)}
-.kbd .nn{font-size:10.5px;font-weight:700;color:var(--ink-soft)}
-.kbd .wk.hl .nn{color:#8a6a00}
-.kbd .fg{position:absolute;top:-26px;left:50%;transform:translateX(-50%);width:21px;height:21px;border-radius:50%;
-  background:var(--warn);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.kbd .bk .fg{top:-26px}
-.kbd-deco .kbd{transform:scale(1.25)}
-.kbd-cap{font-size:12px;color:var(--ink-soft);margin:2px 0 8px}
+.kbd .wk.hl{background:linear-gradient(#fff,var(--gold-soft));box-shadow:inset 0 -6px 0 var(--gold)}
+.kbd .wk.hl2{background:linear-gradient(#fff,var(--slate-soft));box-shadow:inset 0 -6px 0 var(--slate)}
+.kbd .bk{position:absolute;top:7px;width:22px;height:72px;background:var(--ink);border-radius:0 0 3px 3px;z-index:3}
+.kbd .bk.hl{background:linear-gradient(#6a563a,var(--gold))}
+.kbd .nn{font-size:10px;font-weight:700;color:var(--muted);font-family:var(--sans)}
+.kbd .wk.hl .nn{color:#7c6224}
+.kbd .fg{position:absolute;top:-25px;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;
+  background:var(--stage,var(--ink));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--sans)}
+.kbd-cap{font-size:11.5px;color:var(--muted);margin:2px 0 6px;font-style:italic;font-family:var(--serif)}
 
-/* ===================== TIRA DE RITMO ===================== */
-.rhythm{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;background:#fff;border:1px solid var(--line);
-  border-radius:12px;padding:12px;margin:8px 0}
-.beat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:34px}
-.beat .fig{font-size:30px;line-height:.8}
-.beat .syl{font-size:12px;font-weight:700;color:var(--b2)}
-.bar{width:2px;align-self:stretch;background:var(--line);margin:0 3px}
+/* escala con digitación */
+.scale{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.scale .sc{min-width:50px;text-align:center;border:1px solid var(--line);border-radius:5px;background:#fff;padding:6px 4px}
+.scale .sc .nt{font-family:var(--serif);font-weight:700;font-size:15px}
+.scale .sc .fn{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--slate);color:#fff;
+  font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-top:3px;font-family:var(--sans)}
+.scale .sc small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
 
-/* ===================== TABLA DE DEDOS ===================== */
+/* acorde (apilado) */
+.chordbox{display:inline-flex;flex-direction:column-reverse;border:1px solid var(--line);border-radius:5px;
+  background:#fff;padding:5px;margin:2px 6px 2px 0;vertical-align:top;text-align:center;min-width:54px}
+.chordbox b{font-size:13px}.chordbox .sym{font-family:var(--serif);font-weight:700;color:var(--gold);font-size:14px;
+  border-top:1px solid var(--line);margin-top:3px;padding-top:2px}
+
+/* tira de ritmo */
+.rhythm{display:flex;flex-wrap:wrap;gap:5px;align-items:flex-end;background:#fff;border:1px solid var(--line);
+  border-radius:5px;padding:11px 13px;margin:8px 0}
+.rhythm .beat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:32px}
+.rhythm .fig{font-size:27px;line-height:.8}
+.rhythm .syl{font-size:11px;font-weight:700;color:var(--slate);font-family:var(--sans)}
+.rhythm .bar{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+
+/* tabla de dedos */
 .fingers{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
-.fcell{flex:1 1 0;min-width:60px;text-align:center;border:1px solid var(--line);border-radius:10px;
-  padding:7px 4px;background:#fff}
-.fcell .fn{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;
-  font-weight:800;align-items:center;justify-content:center;font-size:12px}
-.fcell .nt{font-weight:700;margin-top:4px;font-size:14px}
-.fcell small{display:block}
+.fingers .fc{flex:1 1 0;min-width:58px;text-align:center;border:1px solid var(--line);border-radius:5px;padding:7px 4px;background:#fff}
+.fingers .fc .fn{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;
+  font-weight:700;align-items:center;justify-content:center;font-size:12px;font-family:var(--sans)}
+.fingers .fc .nt{font-family:var(--serif);font-weight:700;margin-top:4px;font-size:14px}
 
-/* ===================== CHECKLIST ===================== */
-.check{list-style:none;margin:6px 0}
-.check li{display:flex;align-items:flex-start;gap:9px;padding:5px 0;border-bottom:1px dashed var(--line)}
-.check li:last-child{border-bottom:0}
-.check .bx{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--ink-soft);border-radius:5px;margin-top:2px}
+/* checklist objetivos */
+.goals{list-style:none;margin:6px 0}
+.goals li{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.goals li:last-child{border-bottom:0}
+.goals .bx{flex:0 0 auto;width:16px;height:16px;border:1.5px solid var(--ink-2);border-radius:3px;margin-top:3px}
+.metro{display:inline-flex;align-items:center;gap:7px;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:20px;padding:4px 13px;font-size:12.5px;font-family:var(--serif);font-style:italic;color:var(--ink-2)}
+.metro b{font-style:normal;font-family:var(--sans);color:var(--ink)}
 
-/* divisor con icono */
-.section-h{display:flex;align-items:center;gap:9px;margin:14px 0 4px;font-size:17px;font-weight:800}
-.section-h .em{font-size:20px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.two .panel{margin:0}
 
-/* footer de página */
-.pg-foot{position:absolute;bottom:9mm;left:16mm;right:16mm;display:flex;justify-content:space-between;
-  font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:5px}
-.ribbon{display:inline-block;color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;letter-spacing:.5px}
-
-/* grids utilidades */
-.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.note-badges{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-.nb{display:inline-flex;flex-direction:column;align-items:center;background:#fff;border:1px solid var(--line);
-  border-radius:10px;padding:6px 10px;min-width:44px}
-.nb b{font-size:16px}
-.nb .fn{width:20px;height:20px;border-radius:50%;background:var(--b2);color:#fff;font-size:11px;font-weight:800;
-  display:flex;align-items:center;justify-content:center;margin-top:3px}
-
-/* ÍNDICE / CALENDARIO */
-.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-.cal .cell{border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff;min-height:62px}
-.cal .cell .d{font-size:12px;font-weight:800;color:#fff;display:inline-block;border-radius:6px;padding:1px 7px;margin-bottom:4px}
-.cal .cell .pz{font-size:12px;font-weight:700;line-height:1.2}
-.cal .cell.k1 .d{background:var(--b1)} .cal .cell.k2 .d{background:var(--b2)} .cal .cell.k3 .d{background:var(--b3)}
-
-/* leyenda */
-.legend{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.leg-item{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
-.leg-item .ic{font-size:22px;flex:0 0 auto}
-
-/* glosario */
-.gloss dt{font-weight:800;color:var(--b2);margin-top:9px}
-.gloss dd{margin-left:0;color:var(--ink)}
+/* pie de página */
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:8px;
+  border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);font-family:var(--sans)}
+.foot .stage-tag{font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--stage)}
 
 @media print{
   body{background:#fff}
-  .page{margin:0;box-shadow:none;width:auto;min-height:auto}
+  .page,.sheet{margin:0;box-shadow:none;width:auto}
+  .page{height:auto;min-height:auto}
   @page{size:A4;margin:0}
+  .sec,.panel,.hard,.step,.specs,.kbd{break-inside:avoid}
 }
 </style>
 </head>
