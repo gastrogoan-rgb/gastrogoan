@@ -7614,6 +7614,7 @@ function marcharLine(orderId, idx){
   line.marchada = line.qty;
   order.cerrada = false;
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(order.id);
   showToast('Plato marchado a cocina');
 }
@@ -7705,6 +7706,7 @@ function marcharComanda(orderId, tanda){
   });
   order.cerrada = false;
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(order.id);
   showToast('Comanda marchada a cocina');
 }
@@ -14298,7 +14300,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setInterval(() => {
     const active = document.querySelector('.view.active');
     if(active && active.id === 'view-comandascocina') renderComandasCocina();
-  }, 60000);
+  }, 3000);
 
   updateAutoActiveCarta();
   updateAutoActiveMenu();
