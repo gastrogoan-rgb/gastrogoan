@@ -5166,7 +5166,7 @@ function populateRecipeCategoryFilter(selectId){
   if(!sel) return;
   const current = sel.value;
   sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    DB.recipeCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+    DB.recipeCategories.map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`; }).join('') +
     '<option value="__none__">Sin categoría</option>';
   sel.value = current;
 }
@@ -5449,7 +5449,7 @@ function renderRecipeModal(id, r){
         <label>Categoría</label>
         <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
           <option value="">Sin categoría</option>
-          ${DB.recipeCategories.map(c=>`<option value="${escapeHtml(c)}" ${(r.category||'')===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
+          ${DB.recipeCategories.map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
           <option value="__new__">+ Nueva categoría...</option>
         </select>
       </div>
@@ -9342,7 +9342,7 @@ const GE = (function(){
   function init(){ tab('fijos'); }
   function tab(t){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===t));
-    document.querySelectorAll('.ge-tab-panel').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+t).classList.add('active');
     if(t==='fijos') renderFijos();
     if(t==='variables') renderVariables();
