@@ -7799,24 +7799,6 @@ function cycleGroupEstado(orderId, tanda){
   if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
-// Cierra todas las comandas activas de golpe (útil para limpiar datos de prueba
-// o comandas antiguas que quedaron a medias). Marca lo pendiente como entregado.
-function limpiarComandasCocina(){
-  if(!confirm('¿Cerrar todas las comandas activas de cocina? Esto las marca como entregadas y las mueve a "Cerradas".')) return;
-  const ahora = new Date().toISOString();
-  DB.tpvOrders.filter(o => o.status !== 'pagada' && !o.cerrada).forEach(o => {
-    (o.items||[]).forEach(l => {
-      if(l.estado && l.estado !== 'entregado'){ l.estado = 'entregado'; l.entregadoAt = ahora; }
-    });
-    const marchados = (o.items||[]).filter(l => l.estado);
-    if(marchados.length && marchados.every(l => l.estado === 'entregado')) o.cerrada = true;
-  });
-  saveDB();
-  if(typeof flushCloudSync === 'function') flushCloudSync();
-  renderComandasCocina();
-  showToast('Comandas activas cerradas');
-}
-
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -7827,7 +7809,6 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
-      <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="limpiarComandasCocina()"><i class="ti ti-trash"></i> Limpiar comandas viejas</button>
     </div>
   `;
 
