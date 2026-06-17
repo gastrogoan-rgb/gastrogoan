@@ -11590,7 +11590,7 @@ function renderLimpiezaMes(){
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
+      <button class="btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
@@ -11727,7 +11727,7 @@ function renderLimpiezaMantenimiento(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
+      <button class="btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -11846,15 +11846,15 @@ function renderDistribucion(){
   migrateWorkDistribution();
   const box = document.getElementById('distribucion-content');
 
-  if(!DB.employees.length){
+  if(!areaEmployees().length){
     box.innerHTML = `
       <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
-      <div class="empty"><i class="ti ti-users"></i>No hay empleados. Añádelos para asignarles tareas.</div>
+      <div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos para asignarles tareas.</div>
     `;
     return;
   }
 
-  if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId)){
+  if(distCurrentEmployeeId && DB.employees.find(e=>e.id===distCurrentEmployeeId) && (DB.employees.find(e=>e.id===distCurrentEmployeeId).area||'cocina')===currentArea()){
     renderDistDetail();
   } else {
     distCurrentEmployeeId = null;
@@ -11864,7 +11864,7 @@ function renderDistribucion(){
 
 function renderDistList(){
   const box = document.getElementById('distribucion-content');
-  const cards = DB.employees.map(emp => {
+  const cards = areaEmployees().map(emp => {
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
     const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
