@@ -7064,6 +7064,7 @@ const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
 let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
 let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
+let tpvSelectedCartaId = null; // id de la carta/menú seleccionada en las pestañas de la comanda
 
 // Emoji por defecto para una sección de carta sin icono propio asignado
 function guessSeccionEmoji(nombre){
@@ -7157,17 +7158,32 @@ function renderMesaCard(t){
   const order = getOpenOrderForTable(t.id);
   const total = order ? orderTotal(order) : 0;
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
-  let badge = '<span class="badge badge-green">Libre</span>';
-  if(order) badge = '<span class="badge badge-amber">Ocupada</span>';
-  // Si la mesa tiene zona asignada, ya va agrupada bajo un encabezado con esa
-  // zona, así que quitamos el sufijo "(Interior)"/"(Terraza)" del nombre para
-  // que sea más corto y no se corte en tarjetas pequeñas.
   const displayName = t.zona ? (t.name||'').replace(/\s*\([^)]*\)\s*$/, '') : t.name;
+
+  let badge = '<span class="badge badge-green">Libre</span>';
+  let phaseInfo = '';
+  if(order){
+    badge = '<span class="badge badge-amber">Ocupada</span>';
+    // Mostrar fase del servicio
+    const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
+    const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
+    if(allDelivered) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-green" style="font-size:8px">✅ Servido</span></div>';
+    else {
+      const preparing = foodItems.filter(l => l.estado === 'preparando');
+      const inKitchen = foodItems.filter(l => l.estado === 'cocina');
+      const pending = (order.items||[]).filter(l => !l.bebida && l.qty > (l.marchada||0));
+      if(preparing.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-blue" style="font-size:8px">🔥 En cocina</span></div>';
+      else if(inKitchen.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-amber" style="font-size:8px">⏳ Marchado</span></div>';
+      else if(pending.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-gray" style="font-size:8px">📝 Tomando nota</span></div>';
+    }
+  }
+
   return `
     <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${t.id})" title="${escapeHtml(t.name)}">
       <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''} title="Eliminar mesa"><i class="ti ti-trash"></i></button>
       <div class="mesa-name"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(displayName)}</div>
       ${badge}
+      ${phaseInfo}
       ${hayNuevos ? '<div style="margin-top:3px"><span class="badge badge-amber"><i class="ti ti-bell-ringing"></i></span></div>' : ''}
       ${order && order.pagado ? '<div style="margin-top:3px"><span class="badge badge-green"><i class="ti ti-credit-card"></i></span></div>' : ''}
       ${order && order.pax ? `<div style="margin-top:3px;color:var(--muted)">👥 ${order.pax}</div>` : ''}
@@ -7320,13 +7336,15 @@ function rejectOnlineOrder(orderId){
 
 // Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
 function renderCamareroFieldHtml(selectId, selectedId){
-  if(!DB.employees.length) return '';
+  // Solo empleados del área sala que sean camareros
+  const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
+  if(!camareros.length) return '';
   return `
     <div class="field">
       <label>Camarero/a que toma la nota</label>
       <select id="${selectId}">
         <option value="">Sin asignar</option>
-        ${DB.employees.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+        ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
   `;
@@ -7697,16 +7715,52 @@ function renderOrderLinesHtml(order){
 // primero). Los siguientes grupos (segundos, postres...) se marchan con su propio botón
 // dentro de cada tarjeta cuando el cliente esté listo.
 function renderOrderMarcharButtons(order){
-  // Los pedidos "para llevar" mandan cada plato a cocina automáticamente, no necesitan botón de marchar.
   if(order.tipo === 'takeaway') return '';
   const groups = groupOrderItemsByTanda(order);
-  const pendingGroup = groups.find(g => orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0) > 0);
-  if(!pendingGroup){
-    return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" disabled><i class="ti ti-chef-hat"></i> Marchar vale</button>`;
+  const hasPending = groups.some(g => orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0) > 0);
+  if(!hasPending) return '';
+
+  // "Marchar vale": marcha todas las bebidas + el primer grupo de comida pendiente
+  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> Marchar vale</button>`;
+}
+
+// Marcha automáticamente: todas las bebidas + el primer grupo de comida con platos pendientes.
+function marcharValeCompleto(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const ahora = new Date().toISOString();
+  let marchados = 0;
+
+  // 1. Marchar todas las bebidas pendientes
+  (order.items||[]).forEach(l => {
+    if(l.bebida && l.qty > (l.marchada||0)){
+      l.estado = 'cocina';
+      l.enviadoAt = ahora;
+      l.marchada = l.qty;
+      marchados++;
+    }
+  });
+
+  // 2. Marchar el primer grupo de comida (tanda) con platos pendientes
+  const groups = groupOrderItemsByTanda(order);
+  const firstPendingFood = groups.find(g => g.items.some(({line}) => !line.bebida && line.qty > (line.marchada||0)));
+  if(firstPendingFood){
+    firstPendingFood.items.forEach(({line}) => {
+      if(!line.bebida && line.qty > (line.marchada||0)){
+        line.estado = 'cocina';
+        line.enviadoAt = ahora;
+        line.marchada = line.qty;
+        marchados++;
+      }
+    });
   }
-  const count = orderPendingKitchenLines(order, pendingGroup.tanda).reduce((s,l)=>s+l.qty, 0);
-  const label = pendingGroup.tanda ? `Marchar vale · ${pendingGroup.tanda}` : 'Marchar vale';
-  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(pendingGroup.tanda)}')"><i class="ti ti-chef-hat"></i> ${escapeHtml(label)} (${count})</button>`;
+
+  if(!marchados){ showToast('No hay platos nuevos que marchar'); return; }
+  order.cerrada = false;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(order.id);
+  showToast('Vale marchado');
 }
 
 // Marcha un solo plato (línea) a cocina, sin esperar al resto del grupo.
@@ -7735,33 +7789,145 @@ function renderTableOrderModal(orderId){
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
   const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="Cambiar camarero/a"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : 'Asignar camarero/a'}</span>` : '';
 
-  const linesHtml = renderOrderLinesHtml(order);
   const total = orderTotal(order);
   if(order.items.some(l => l.nuevo)){
     order.items.forEach(l => delete l.nuevo);
     saveDB();
   }
 
+  // Todas las cartas+menús activos, sala primero, luego comida
+  const activeCartas = getActiveCartas();
+  const bebidaCartas = activeCartas.filter(isBebidaCarta);
+  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  if(comidaCartas.length > 1){
+    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
+    if(elegida) comidaCartas = [elegida];
+  }
+  const allCartas = [...bebidaCartas, ...comidaCartas];
+  const activeMenus = getActiveMenus ? getActiveMenus() : (DB.menus||[]);
+
+  // Autoseleccionar la primera carta si no hay selección
+  if(!tpvSelectedCartaId || !allCartas.some(c=>c.id===tpvSelectedCartaId) && !activeMenus.some(m=>m.id===tpvSelectedCartaId)){
+    tpvSelectedCartaId = allCartas.length ? allCartas[0].id : (activeMenus.length ? activeMenus[0].id : null);
+  }
+
+  // Pestañas de cartas/menús
+  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(c.nombre)}</button>`).join('');
+  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(m.nombre)}</button>`).join('');
+
+  // Contenido del selector según la pestaña seleccionada
+  let selectorHtml = '';
+  const selectedMenu = activeMenus.find(m=>m.id===tpvSelectedCartaId);
+  const selectedCarta = allCartas.find(c=>c.id===tpvSelectedCartaId);
+  if(selectedMenu){
+    selectorHtml = renderMenuSelectorInline(order, selectedMenu);
+  } else if(selectedCarta){
+    selectorHtml = renderCartaSelectorInline(order, selectedCarta);
+  }
+
+  // Comanda (lado derecho): items agrupados por sección con estado de marchar
+  const comandaHtml = renderOrderComandaPanel(order);
+
+  // Estado del servicio y botones de acción
+  const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
+  const actionButtons = allDelivered && order.items.length
+    ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button>`
+    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button></div>`;
+
   openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Comanda — ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
+    <div class="modal-header" style="flex-wrap:wrap;gap:6px">
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
-    <div class="kpi" style="margin-bottom:10px">
-      <div class="label">Total</div>
-      <div class="value">${fmtMoney(total)}</div>
+    <!-- Pestañas de cartas/menús -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      ${cartaTabs}${menuTabs}
     </div>
-    <div style="margin-bottom:10px">
-      ${linesHtml}
+    <!-- Layout a dos columnas: selector izquierda, comanda derecha -->
+    <div style="display:flex;gap:12px;min-height:50vh;max-height:70vh">
+      <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px">
+        ${selectorHtml}
+      </div>
+      <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--brand-cream)">
+        ${comandaHtml}
+      </div>
     </div>
-    <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
-      ${renderOrderMenuHtml(order)}
-    </div>
-    <div class="modal-footer">
-      ${renderOrderMarcharButtons(order)}
-      <button class="btn btn-primary" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar</button>
+    <div style="margin-top:10px">
+      ${actionButtons}
     </div>
   `, {order:true});
+}
+
+// Selector de platos dentro de una carta concreta (secciones + platos visibles).
+function renderCartaSelectorInline(order, carta){
+  const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
+  if(!secciones.length) return `<div class="empty" style="padding:10px">No hay platos disponibles en esta carta.</div>`;
+  return secciones.map(sec => {
+    const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
+    const icono = sec.icono || guessSeccionEmoji(sec.nombre);
+    return `
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(sec.nombre)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Selector de menú (combo con grupos y opciones).
+function renderMenuSelectorInline(order, menu){
+  return `
+    <div style="margin-bottom:8px"><strong>${escapeHtml(menu.nombre)}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
+    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> Añadir ${escapeHtml(menu.nombre)} al pedido</button>
+  `;
+}
+
+// Panel de comanda: los ítems del pedido con estado, agrupados por sección (tanda),
+// ordenados como se fueron añadiendo (arriba lo primero, abajo lo último).
+function renderOrderComandaPanel(order){
+  const groups = groupOrderItemsByTanda(order);
+  if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>Comanda vacía<br><span style="font-size:12px;color:var(--muted)">Selecciona platos de la carta</span></div>`;
+  const total = orderTotal(order);
+  let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Comanda</span><span>${fmtMoney(total)}</span></div>`;
+  html += groups.map(g => {
+    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
+    const allInGroup = g.items;
+    const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
+    const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
+    let statusBadge = '';
+    if(allDelivered) statusBadge = '<span class="badge badge-green" style="font-size:10px">✅ Recogido</span>';
+    else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = '<span class="badge badge-green" style="font-size:10px">🍽️ Listo para recoger</span>';
+    else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = '<span class="badge badge-blue" style="font-size:10px">🔥 En preparación</span>';
+    else if(allFired) statusBadge = '<span class="badge badge-amber" style="font-size:10px">⏳ Marchado</span>';
+
+    return `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
+        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${statusBadge}
+          ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar</button>` : ''}
+        </div>
+      </div>
+      ${allInGroup.map(({line, idx}) => {
+        let lineStatus = '';
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
+        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+        return `
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}</span>
+          <button class="btn btn-sm btn-icon" style="width:24px;height:24px;min-height:auto;font-size:10px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
+          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:24px;height:24px;min-height:auto;font-size:10px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+        </div>
+        ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      `;}).join('')}
+    </div>
+    `;
+  }).join('');
+  return html;
 }
 
 // Permite anotar o cambiar qué camarero/a ha tomado o atiende esta comanda.
@@ -12511,7 +12677,8 @@ function goToReservasDia(date){
 function renderReservasDia(){
   const box = document.getElementById('reservas-tab-content');
   const date = reservasDate;
-  const items = DB.reservations.filter(r => r.date === date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+  // Las reservas ya llegadas (marcadas desde el TPV) se ocultan para no molestar.
+  const items = DB.reservations.filter(r => r.date === date && !r.llegada).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
 
   const tableHtml = !items.length
     ? `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`
