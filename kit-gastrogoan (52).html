@@ -10340,9 +10340,12 @@ const GE = (function(){
     const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
-    const amortMensual = capex().reduce((s,c)=>s+parseFloat(c.importe||0),0)/5/12; // amortización a 5 años, por mes
     const ivaPct = ivaVentasPct();
-    const resAntesImp = m => facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m)-amortMensual-capexCuotaMes(m);
+    // Resultado antes de impuestos en criterio de caja (cuotas reales de inversión
+    // financiada). Coincide con resultadoAntesImpMes para que todas las vistas
+    // (Resultado, Cuenta de Resultados, Panel, Tesorería) muestren el mismo número
+    // sin doble cómputo (antes restaba además la amortización CAPEX).
+    const resAntesImp = m => resultadoAntesImpMes(m);
     const ivaCPct = ivaComprasPct();
 
     const conceptos = [
@@ -10353,9 +10356,8 @@ const GE = (function(){
       {lbl:'Margen Bruto', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m), highlight:true, bold:true},
       {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
       {lbl:'Gastos Explotación', fn:()=>tf},
-      {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
       {lbl:'EBITDA Operativo', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
-      {lbl:'Amortizaciones CAPEX', fn:()=>amortMensual, auto:true},
+      {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
       {lbl:'Resultado Antes Impuestos', fn:resAntesImp, isResult:true, bold:true},
       {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
       {lbl:'Resultado Neto', fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
