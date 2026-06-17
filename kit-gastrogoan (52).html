@@ -7722,7 +7722,7 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const items = (order.items||[]).filter(l => l.estado);
+  const items = order.items||[];
   order.cerrada = items.length > 0 && items.every(l => l.estado === 'entregado');
 }
 
@@ -7842,17 +7842,17 @@ function renderComandasCocina(){
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
   const tickets = allOrders
-    .filter(o => !o.cerrada)
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
     .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado);
-      const activeLines = allLines.filter(({line}) => line.estado === 'cocina' || line.estado === 'preparando');
-      return {order, allLines, activeLines};
-    })
-    .filter(t => t.activeLines.length);
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx}));
+      return {order, allLines};
+    });
 
   tickets.sort((a,b) => {
-    const ta = a.activeLines.length ? Math.min(...a.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
-    const tb = b.activeLines.length ? Math.min(...b.activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
+    const envA = a.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const envB = b.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const ta = envA.length ? Math.min(...envA) : Date.now();
+    const tb = envB.length ? Math.min(...envB) : Date.now();
     return ta - tb;
   });
 
@@ -7861,14 +7861,15 @@ function renderComandasCocina(){
     return;
   }
 
-  box.innerHTML = tabsHtml + `<div class="grid grid-3">${tickets.map(({order, allLines, activeLines}) => {
+  box.innerHTML = tabsHtml + `<div class="grid grid-3">${tickets.map(({order, allLines}) => {
     const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
     const groups = tandaOrder.map(t => ({
       tanda: t,
       lines: allLines.filter(({line}) => (line.tanda||'') === t)
     })).filter(g => g.lines.length);
 
-    const minMs = activeLines.length ? Math.min(...activeLines.map(({line}) => line.enviadoAt ? new Date(line.enviadoAt).getTime() : Date.now())) : Date.now();
+    const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
     const mins = minutesSince(new Date(minMs).toISOString());
 
     return `
@@ -7879,14 +7880,15 @@ function renderComandasCocina(){
       </div>
       ${groups.map(g => `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
-          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px;cursor:pointer" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda)}')" title="Toca para avanzar el estado de todo el grupo"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
+          ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase;margin-bottom:4px"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : ''}
           ${g.lines.map(({line, idx}) => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
               <div style="flex:1;min-width:0">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
-              ${line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparar</button>`
+              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> Pendiente</span>`
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparar</button>`
               : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-circle-check"></i> Entregar</button>`
               : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>`}
             </div>
