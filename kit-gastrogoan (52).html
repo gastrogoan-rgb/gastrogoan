@@ -7723,8 +7723,8 @@ function setComandasCocinaTab(tab){
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
   const items = order.items||[];
-  const marchados = items.filter(l => l.estado);
-  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado');
+  // El vale se cierra solo cuando TODOS los platos han salido (entregados).
+  order.cerrada = items.length > 0 && items.every(l => l.estado === 'entregado');
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -7799,6 +7799,24 @@ function cycleGroupEstado(orderId, tanda){
   if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
+// Cierra todas las comandas activas de golpe (útil para limpiar datos de prueba
+// o comandas antiguas que quedaron a medias). Marca lo pendiente como entregado.
+function limpiarComandasCocina(){
+  if(!confirm('¿Cerrar todas las comandas activas de cocina? Esto las marca como entregadas y las mueve a "Cerradas".')) return;
+  const ahora = new Date().toISOString();
+  DB.tpvOrders.filter(o => o.status !== 'pagada' && !o.cerrada).forEach(o => {
+    (o.items||[]).forEach(l => {
+      if(l.estado && l.estado !== 'entregado'){ l.estado = 'entregado'; l.entregadoAt = ahora; }
+    });
+    const marchados = (o.items||[]).filter(l => l.estado);
+    if(marchados.length && marchados.every(l => l.estado === 'entregado')) o.cerrada = true;
+  });
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderComandasCocina();
+  showToast('Comandas activas cerradas');
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -7806,9 +7824,10 @@ function renderComandasCocina(){
   const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
 
   const tabsHtml = `
-    <div style="display:flex;gap:8px;margin-bottom:14px">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
+      <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="limpiarComandasCocina()"><i class="ti ti-trash"></i> Limpiar comandas viejas</button>
     </div>
   `;
 
@@ -7843,7 +7862,7 @@ function renderComandasCocina(){
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
   const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => (l.estado && l.estado !== 'entregado') || (!l.estado && l.qty > (l.marchada||0))))
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
     .map(order => {
       const allLines = (order.items||[]).map((line, idx) => ({line, idx}));
       return {order, allLines};
@@ -7888,9 +7907,9 @@ function renderComandasCocina(){
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
-              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> Pendiente</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparar</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-circle-check"></i> Entregar</button>`
+              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> Sin marchar</span>`
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> En espera → Preparar</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparando → Entregar</button>`
               : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>`}
             </div>
           `).join('')}
@@ -7918,6 +7937,18 @@ function autoSendTakeawayLine(order, line){
   order.cerrada = false;
 }
 
+// El primer grupo de platos (primer tanda añadida a la comanda) se marcha a
+// cocina automáticamente. Los siguientes grupos se marchan manualmente.
+function autoSendFirstCourse(order, line, tanda){
+  if(!line || order.tipo === 'takeaway') return;
+  const firstTanda = (order.tandas||[])[0];
+  if(firstTanda === undefined || (tanda||'') !== (firstTanda||'')) return;
+  line.estado = 'cocina';
+  line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  line.marchada = line.qty;
+  order.cerrada = false;
+}
+
 function addOrderItem(orderId, secId, platoId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
@@ -7935,7 +7966,9 @@ function addOrderItem(orderId, secId, platoId){
   if(existing){ existing.qty += 1; line = existing; }
   else{ line = {platoId: p.id, recipeId: p.recipeId, name: p.nombre, price: p.precio, qty:1, tanda, notas:''}; order.items.push(line); }
   autoSendTakeawayLine(order, line);
+  autoSendFirstCourse(order, line, tanda);
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
 }
 
@@ -7994,7 +8027,9 @@ function confirmAddOrderItem(orderId, secId, platoId){
   };
   order.items.push(line);
   autoSendTakeawayLine(order, line);
+  autoSendFirstCourse(order, line, tanda);
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
 }
 function changeOrderItemQty(orderId, idx, delta){
