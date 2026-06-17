@@ -3101,6 +3101,29 @@ async function autoTranslateCarta(carta){
   }
   if(changed) saveDB();
 }
+
+// Traduce las secciones y opciones de un menú (combo) a los idiomas que falten.
+async function autoTranslateMenu(menu){
+  let changed = false;
+  if(await translateField(menu)) changed = true;
+  for(const g of (menu.grupos||[])){
+    if(await translateField(g)) changed = true;
+    for(const o of (g.opciones||[])){
+      if(await translateField(o)) changed = true;
+    }
+  }
+  if(changed) saveDB();
+}
+
+// Devuelve el nombre de un ítem (sección, plato, menú, opción) en el idioma
+// actual de la app, usando la traducción automática guardada (i18n) si existe;
+// si no, devuelve el texto original tal cual se escribió.
+function tItem(item){
+  if(!item) return '';
+  const lang = getLang();
+  if(item.i18n && item.i18n[lang] && item.i18n[lang].trim()) return item.i18n[lang];
+  return item.nombre || '';
+}
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -6860,6 +6883,7 @@ function saveMenu(){
   if(idx>=0) DB.menus[idx] = menuEdit;
   else DB.menus.push(menuEdit);
   saveDB();
+  autoTranslateMenu(menuEdit).catch(()=>{});
   menuEdit = null;
   updateAutoActiveMenu(true);
   renderMenu();
@@ -7825,7 +7849,7 @@ function renderTableOrderModal(orderId){
 
   // Pestañas de cartas/menús
   const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(c.nombre)}</button>`).join('');
-  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(m.nombre)}</button>`).join('');
+  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
   let selectorHtml = '';
@@ -7879,9 +7903,9 @@ function renderCartaSelectorInline(order, carta){
     const icono = sec.icono || guessSeccionEmoji(sec.nombre);
     return `
       <div style="margin-bottom:12px">
-        <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(sec.nombre)}</div>
+        <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(sec))}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(p.nombre)} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+          ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
         </div>
       </div>
     `;
@@ -7891,8 +7915,8 @@ function renderCartaSelectorInline(order, carta){
 // Selector de menú (combo con grupos y opciones).
 function renderMenuSelectorInline(order, menu){
   return `
-    <div style="margin-bottom:8px"><strong>${escapeHtml(menu.nombre)}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
-    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> Añadir ${escapeHtml(menu.nombre)} al pedido</button>
+    <div style="margin-bottom:8px"><strong>${escapeHtml(tItem(menu))}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
+    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> Añadir ${escapeHtml(tItem(menu))} al pedido</button>
   `;
 }
 
@@ -14174,20 +14198,6 @@ const MANUAL_CHAPTERS = [
       <li><strong>Gestión</strong> — la parte económica y administrativa: finanzas, panel de control, datos del negocio y este manual.</li>
     </ul>
     <p>La idea central es que <strong>cada dato se introduce una sola vez</strong> y se reutiliza en cascada: el precio de un ingrediente en la Mega Lista recalcula el coste de la receta en el Escandallo, esa receta alimenta la Ficha Técnica y la Carta, la Carta se usa en el TPV, y las ventas del TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control. Si sigues el orden correcto desde el principio, te ahorrarás trabajo repetido y los números del negocio estarán siempre actualizados solos.</p>
-    <h4>🆕 Novedades y cómo funcionan ahora algunas partes</h4>
-    <p>Estas son las mejoras más recientes del Kit. Léelas para sacarles partido:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Cocina y Sala están separadas en todo</strong> — Mega Lista, Proveedores, Escandallo, Fichas, Stock, Pedidos, Personal, Distribución y Carta muestran solo lo del área desde la que entras. Si entras por <strong>Cocina</strong>, ves ingredientes/recetas/personal de cocina; si entras por <strong>Sala</strong>, los de sala. No tienes que elegir el área: se sabe por la carpeta desde la que entras.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Las cartas de Sala son de bebidas</strong> — Cualquier carta o menú que crees entrando desde <strong>Sala</strong> se considera de bebidas. Las bebidas <strong>no aparecen en la pantalla de Cocina</strong> (allí solo sale comida). En el TPV, al tomar una comanda, las pestañas de carta salen siempre con las <strong>bebidas primero</strong>, para no olvidar pedirlas.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Pantalla de Cocina más limpia</strong> — Solo muestra comida (nunca bebidas), las comandas ya cerradas se ocultan automáticamente cada día, y las tarjetas se ajustan para ver la comanda entera sin tener que deslizar.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Escandallo y Stock por carpetas</strong> — Al entrar ves carpetas por categoría; al pulsar una ves la lista de nombres; y al pulsar un nombre se abre el detalle completo (escandallo o ficha de stock). Así no se satura la pantalla cuando hay muchos productos.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Mega Lista con filtro por proveedor</strong> — Puedes filtrar la lista para ver de golpe qué productos compras a un proveedor concreto.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Pedidos con dos pestañas</strong> — "Realizar Pedido" (el formulario para componer y enviar el pedido al proveedor por WhatsApp/Email) e "Historial de Pedidos" (todos los pedidos hechos, con su estado). Al enviar un pedido pasa solo al historial.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Turnos de personal</strong> — Los turnos se asignan desde las vistas <strong>Día, Semana o Mes</strong> (pulsando sobre el empleado o el día). El personal que ves es solo el del área actual.</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Reservas y mesas</strong> — En <strong>Mi Negocio → Operativa</strong> defines tus mesas y puedes <strong>ponerle el nombre o número que quieras</strong> a cada una, por zona (Interior, Terraza, Barra). Esas son exactamente las mesas que aparecen en el TPV y en las reservas. Una mesa <strong>no se puede reservar dos veces con menos de 1 hora y media de diferencia</strong> (p. ej. si está reservada a las 13:30, vuelve a estar libre a partir de las 15:00). Cuando un cliente con reserva se sienta (abres su mesa en el TPV), su reserva se marca como llegada y desaparece de la lista para no molestar.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV de Sala renovado</strong> — Al abrir una mesa: arriba las pestañas de cartas/menús (bebidas primero); a la izquierda eliges platos con todas las secciones a la vista; a la derecha se va formando la comanda en vivo (con cantidad, notas y opción de quitar). El orden de los platos es el orden en que los eliges. Cada grupo de platos tiene su botón <strong>Marchar</strong> y muestra su estado (marchado ⏳ → en preparación 🔥 → listo para recoger 🍽️ → recogido ✅, sincronizado con Cocina). El botón <strong>"Marchar vale"</strong> envía de golpe todas las bebidas a sala y el primer grupo de comida a cocina. Cuando todo está servido aparece el botón <strong>Cobrar</strong>. Cada mesa ocupada muestra en qué fase del servicio está. El camarero que se asigna solo puede ser personal de sala.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Mi Negocio</strong> — Los <strong>tipos de servicio</strong> (Mesa / Take Away / Delivery) se guardan al instante al marcarlos/desmarcarlos (debe quedar al menos uno activo). Los <strong>QR de auto-pedido</strong> son uno por cada mesa configurada, agrupados por zona.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Promoción</strong> — El responsable de cada acción de promoción solo puede ser un empleado de sala.</div></div>
-
     <h4>Ruta recomendada para configurar tu negocio desde cero</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mi Negocio</strong> (en Gestión) — Es el primer paso siempre. Rellena el nombre, dirección, horario semanal, tipos de servicio (mesa/take away/delivery) y configuración del ticket. Estos datos personalizan toda la app: aparecen en los tickets impresos, en la web de pedidos online y condicionan qué carta se activa en cada horario.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Lista</strong> (en Cocina) — Da de alta todos los ingredientes y productos que compras, con su precio de compra, formato (cantidad por la que pagas ese precio) y unidad. Es la base de todos los cálculos de coste posteriores: si esta lista no es precisa, ningún food cost del resto de la app lo será.</div></div>
