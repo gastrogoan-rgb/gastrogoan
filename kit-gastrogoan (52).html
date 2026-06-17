@@ -2896,6 +2896,9 @@ function defaultData(){
         mostrarWeb: false,
         ivaPct: 10
       },
+      // Cómo se muestran las comandas al marchar: 'pantalla' (pantalla de Cocina/Sala)
+      // o 'impresion' (se imprime un vale al marchar). anchoTicket: 58 o 80 mm.
+      comandas: { modo: 'pantalla', anchoTicket: 80 },
       facturaCounter: 0,
       deliveryPlatforms: [] // {id, nombre, comisionPct, ivaPct} - apps de delivery (Glovo, Uber Eats...) y su comisión
     },
@@ -7765,15 +7768,15 @@ function marcharValeCompleto(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const ahora = new Date().toISOString();
-  let marchados = 0;
+  const fired = [];
 
   // 1. Marchar todas las bebidas pendientes
   (order.items||[]).forEach(l => {
     if(l.bebida && l.qty > (l.marchada||0)){
+      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: true});
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
-      marchados++;
     }
   });
 
@@ -7783,18 +7786,19 @@ function marcharValeCompleto(orderId){
   if(firstPendingFood){
     firstPendingFood.items.forEach(({line}) => {
       if(!line.bebida && line.qty > (line.marchada||0)){
+        fired.push({qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: false});
         line.estado = 'cocina';
         line.enviadoAt = ahora;
         line.marchada = line.qty;
-        marchados++;
       }
     });
   }
 
-  if(!marchados){ showToast('No hay platos nuevos que marchar'); return; }
+  if(!fired.length){ showToast('No hay platos nuevos que marchar'); return; }
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
   showToast('Vale marchado');
 }
@@ -7805,12 +7809,14 @@ function marcharLine(orderId, idx){
   if(!order) return;
   const line = (order.items||[])[idx];
   if(!line || line.qty <= (line.marchada||0)){ showToast('No hay unidades nuevas que marchar'); return; }
+  const fired = [{qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: line.bebida}];
   line.estado = 'cocina';
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
   showToast('Plato marchado a cocina');
 }
@@ -8005,8 +8011,10 @@ function marcharComanda(orderId, tanda){
   if(!pending.length){ showToast('No hay platos nuevos que marchar'); return; }
 
   const ahora = new Date().toISOString();
+  const fired = [];
   (order.items||[]).forEach(l => {
     if((tanda === undefined || (l.tanda||'') === (tanda||'')) && l.qty > (l.marchada||0)){
+      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: l.bebida});
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
@@ -8015,8 +8023,21 @@ function marcharComanda(orderId, tanda){
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
   showToast('Comanda marchada a cocina');
+}
+
+// Si la impresión de comandas está activada, imprime un vale de cocina (platos)
+// y otro de sala/barra (bebidas) con las líneas recién marchadas.
+function printMarchadasIfEnabled(order, firedLines){
+  if(!comandaPrintEnabled() || !firedLines || !firedLines.length) return;
+  const table = order.tableId ? DB.tables.find(t=>t.id===order.tableId) : null;
+  const titulo = table ? table.name : togoOrderLabel(order);
+  const comida = firedLines.filter(l => !l.bebida && l.qty > 0);
+  const bebida = firedLines.filter(l => l.bebida && l.qty > 0);
+  if(comida.length) printComandaTicket('COCINA', titulo, comida);
+  if(bebida.length) printComandaTicket('SALA / BARRA', titulo, bebida);
 }
 
 /* ============================================================
@@ -13664,6 +13685,8 @@ function renderMiNegocio(){
 
     ${renderTicketConfigCard()}
 
+    ${renderComandaPrintCard()}
+
     ${renderRedsysCard()}
 
     ${renderPedidosConfigCard()}
@@ -14156,6 +14179,73 @@ function renderTicketConfigCard(){
       <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
     </div>
   `;
+}
+
+// Configuración de cómo se gestionan las comandas de cocina y sala: verlas en
+// pantalla (pantalla de Cocina) o imprimir un vale automáticamente al marchar.
+function renderComandaPrintCard(){
+  const c = (DB.business && DB.business.comandas) || {modo:'pantalla', anchoTicket:80};
+  const esImpresion = c.modo === 'impresion';
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-printer"></i> Comandas de cocina y sala</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Elige cómo quieres que el personal reciba las comandas cuando se marchan desde el TPV.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="radio" name="comanda-modo" value="pantalla" ${!esImpresion?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px"> 🖥️ Verlas en pantalla (pantalla de Cocina / Sala)
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="radio" name="comanda-modo" value="impresion" ${esImpresion?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px"> 🧾 Imprimir un vale al marchar
+        </label>
+      </div>
+      <div id="comanda-print-opts" style="display:${esImpresion?'block':'none'}">
+        <div class="field">
+          <label>Ancho del papel de la impresora</label>
+          <select id="comanda-ancho" onchange="setComandaAncho(this.value)" style="max-width:200px">
+            <option value="80" ${c.anchoTicket!=58?'selected':''}>80 mm (estándar)</option>
+            <option value="58" ${c.anchoTicket==58?'selected':''}>58 mm (compacta)</option>
+          </select>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">La impresora se selecciona en el cuadro de impresión del navegador/sistema que aparece al imprimir. Si tienes una impresora de tickets (térmica) conectada por USB/red, configúrala como impresora del dispositivo y elígela ahí. Recomendamos activar la impresión automática en el navegador para que no pida confirmar cada vez.</p>
+        <button class="btn btn-sm" onclick="testComandaPrint()"><i class="ti ti-printer"></i> Imprimir vale de prueba</button>
+      </div>
+    </div>
+  `;
+}
+function setComandaModo(modo){
+  DB.business.comandas = {...(DB.business.comandas||{anchoTicket:80}), modo};
+  saveDB();
+  const opts = document.getElementById('comanda-print-opts');
+  if(opts) opts.style.display = modo==='impresion' ? 'block' : 'none';
+  showToast(modo==='impresion' ? 'Las comandas se imprimirán al marchar' : 'Las comandas se verán en pantalla');
+}
+function setComandaAncho(val){
+  DB.business.comandas = {...(DB.business.comandas||{modo:'impresion'}), anchoTicket: parseInt(val)||80};
+  saveDB();
+}
+function comandaPrintEnabled(){
+  return (DB.business && DB.business.comandas && DB.business.comandas.modo === 'impresion');
+}
+// Imprime un vale de comanda (cocina o sala) con las líneas marchadas.
+function printComandaTicket(destino, titulo, lineas){
+  if(!lineas || !lineas.length) return;
+  const ancho = (DB.business && DB.business.comandas && DB.business.comandas.anchoTicket) || 80;
+  const widthPx = ancho == 58 ? 200 : 280;
+  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
+  const win = window.open('', '_blank', `width=${widthPx+40},height=520`);
+  if(!win) return;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title></head>
+    <body style="font-family:monospace;width:${widthPx}px;padding:8px;margin:0">
+      <div style="text-align:center;font-weight:700;font-size:16px;border-bottom:1px dashed #000;padding-bottom:4px;margin-bottom:6px">${escapeHtml(destino)}</div>
+      <div style="font-size:13px;margin-bottom:6px">${escapeHtml(titulo)} · ${hora}</div>
+      ${filas}
+      <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+function testComandaPrint(){
+  printComandaTicket('COCINA', 'Mesa de prueba', [{qty:2, name:'Ejemplo de plato', notas:'sin sal'}, {qty:1, name:'Otro plato'}]);
 }
 
 function saveTicketConfig(){
