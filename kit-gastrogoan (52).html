@@ -4926,6 +4926,13 @@ function stockTab(tab){
   document.getElementById('stock-new-elab-btn').style.display = tab === 'elab' ? '' : 'none';
 }
 
+let stockFolder = null;   // categoría abierta en la pestaña de ingredientes
+let stockItem = null;     // producto seleccionado dentro de la carpeta
+function openStockFolder(cat){ stockFolder = cat; stockItem = null; renderStock(); }
+function openStockItem(id){ stockItem = id; renderStock(); }
+function backToStockFolders(){ stockFolder = null; stockItem = null; renderStock(); }
+function backToStockItems(){ stockItem = null; renderStock(); }
+
 function renderStock(){
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
@@ -4970,26 +4977,60 @@ function renderStock(){
     `;
   };
 
-  /* Ingredientes agrupados por familia */
+  /* Ingredientes: navegación carpetas (categoría) → nombres → detalle */
   const groupsWrap = document.getElementById('stock-ing-groups');
+  const searching = !!(search || onlyAlerts);
+
+  const byCat = {};
+  items.forEach(it => { (byCat[it.category] = byCat[it.category] || []).push(it); });
+  const cats = Object.keys(byCat).sort((a,b) => {
+    const ia = CATEGORIES.indexOf(a), ib = CATEGORIES.indexOf(b);
+    if(ia === -1 && ib === -1) return a.localeCompare(b);
+    if(ia === -1) return 1;
+    if(ib === -1) return -1;
+    return ia - ib;
+  });
+
   if(!items.length){
     groupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>No hay ingredientes en stock.</div>`;
-  } else {
-    const byCat = {};
-    items.forEach(it => { (byCat[it.category] = byCat[it.category] || []).push(it); });
-    const cats = Object.keys(byCat).sort((a,b) => {
-      const ia = CATEGORIES.indexOf(a), ib = CATEGORIES.indexOf(b);
-      if(ia === -1 && ib === -1) return a.localeCompare(b);
-      if(ia === -1) return 1;
-      if(ib === -1) return -1;
-      return ia - ib;
-    });
+  } else if(searching){
+    // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
     groupsWrap.innerHTML = cats.map(cat => `
       <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
         ${byCat[cat].map(renderRow).join('')}
       </div>
     `).join('');
+  } else if(stockFolder === null){
+    // Vista de carpetas por categoría.
+    groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
+      <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
+        <h3><i class="ti ti-folder"></i> ${escapeHtml(cat)}</h3>
+        <div style="font-size:12px;color:var(--muted)">${byCat[cat].length} producto${byCat[cat].length===1?'':'s'}</div>
+      </div>
+    `).join('')}</div>`;
+  } else {
+    const folderItems = byCat[stockFolder] || [];
+    const backFolders = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToStockFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>`;
+    if(!folderItems.length){
+      stockFolder = null; renderStock(); return;
+    }
+    if(stockItem !== null){
+      // Producto seleccionado: muestra su info y controles.
+      const row = folderItems.find(it => it.id === stockItem);
+      if(!row){ stockItem = null; renderStock(); return; }
+      const backItems = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToStockItems()"><i class="ti ti-arrow-left"></i> ${escapeHtml(stockFolder)}</button>`;
+      groupsWrap.innerHTML = backItems + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">${renderRow(row)}</div>`;
+    } else {
+      // Carpeta abierta: lista de nombres clicables.
+      groupsWrap.innerHTML = backFolders + `<div class="table-wrap"><table><tbody>${folderItems.map(it => {
+        const low = it.qty <= it.min;
+        return `<tr style="cursor:pointer" onclick="openStockItem(${it.id})">
+          <td><strong>${escapeHtml(it.name)}</strong></td>
+          <td style="text-align:right">${low ? '<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> Bajo mín.</span>' : '<span class="badge badge-green" style="font-size:10px">OK</span>'} <i class="ti ti-chevron-right" style="color:var(--muted)"></i></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
   }
 
   /* Elaboraciones */
