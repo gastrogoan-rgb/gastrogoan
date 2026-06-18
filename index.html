@@ -3011,6 +3011,7 @@ async function loadDB(){
     }
     delete merged.activeCartaId;
     if(!Array.isArray(merged.menus)) merged.menus = [];
+    (merged.menus||[]).forEach(m => { if(!m.area) m.area = 'cocina'; });
     if(!Array.isArray(merged.activeMenuIds)) merged.activeMenuIds = [];
     if(!Array.isArray(merged.fichajes)) merged.fichajes = [];
     if(!Array.isArray(merged.promos)) merged.promos = [];
@@ -6902,14 +6903,18 @@ function renderMenu(){
   else renderMenuList();
 }
 
+function areaMenus(){
+  return DB.menus.filter(m => (m.area||'cocina') === currentArea());
+}
 function renderMenuList(){
-  const totalGrupos = DB.menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
+  const menus = areaMenus();
+  const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
   document.getElementById('menu-stats').innerHTML = `
-    <div class="kpi"><div class="label">Menús</div><div class="value">${DB.menus.length}</div></div>
+    <div class="kpi"><div class="label">Menús</div><div class="value">${menus.length}</div></div>
     <div class="kpi"><div class="label">Total grupos</div><div class="value">${totalGrupos}</div></div>
   `;
   const box = document.getElementById('menu-list');
-  if(!DB.menus.length){
+  if(!menus.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>Sin menús aún. Crea un menú con precio cerrado y grupos de platos a elegir.</div>`;
     return;
   }
@@ -6918,7 +6923,7 @@ function renderMenuList(){
       <table>
         <thead><tr><th>Nombre</th><th>Precio</th><th>Horario</th><th>Grupos</th><th></th></tr></thead>
         <tbody>
-          ${DB.menus.map(m => {
+          ${menus.map(m => {
             const ngrupos = (m.grupos||[]).length;
             return `<tr>
               <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?' <span class="badge badge-green">Activo en TPV</span>':''}</td>
@@ -6938,7 +6943,7 @@ function renderMenuList(){
 }
 
 function newMenu(){
-  menuEdit = {id: genId(), nombre:'', precio:0, horario: defaultItemHorario(), grupos:[], desglosarPases:false};
+  menuEdit = {id: genId(), nombre:'', precio:0, horario: defaultItemHorario(), grupos:[], desglosarPases:false, area: currentArea()};
   renderMenu();
 }
 function openMenu(id){
