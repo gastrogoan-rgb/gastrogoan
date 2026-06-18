@@ -2092,10 +2092,10 @@ function showNetlifySetupGate(){
     </div>`;
   const stepsHtml = `
     ${step(1, 'Crea una cuenta gratis en Netlify', `Abre <code>www.netlify.com</code> en otra pestaña y pulsa <strong>"Sign up"</strong>. Puedes entrar con tu cuenta de Google. Es gratis y no pide tarjeta.`)}
-    ${step(2, 'Ten los dos archivos juntos en una carpeta', `En una carpeta de tu ordenador deja <strong>los dos archivos</strong> de GastroGoan: <code>kit-gastrogoan.html</code> y <code>reservagastrogoan.html</code>. <strong>No renombres</strong> el segundo.`)}
+    ${step(2, 'Ten los dos archivos juntos en una carpeta', `En una carpeta de tu ordenador deja <strong>los dos archivos</strong> de GastroGoan: <code>index.html</code> y <code>reservagastrogoan.html</code>. <strong>No renombres</strong> ninguno de los dos.`)}
     ${step(3, 'Arrastra la carpeta a Netlify', `En Netlify, ve a <strong>"Sites"</strong> y arrastra tu carpeta al recuadro <strong>"Drag and drop your site output folder here"</strong> (o "Deploys" → "Deploy manually").`)}
     ${step(4, 'Copia la dirección que te da', `En unos segundos Netlify publica el sitio y te da una dirección tipo <code>https://tu-sitio.netlify.app</code>. Puedes cambiar el nombre en "Site settings" → "Change site name".`)}
-    ${step(5, 'Abre SIEMPRE la app desde esa dirección', `A partir de ahora gestiona la app desde <code>https://tu-sitio.netlify.app/kit-gastrogoan.html</code>. Solo así el QR de reservas y pedidos funcionará de verdad para tus clientes.`)}`;
+    ${step(5, 'Abre SIEMPRE la app desde esa dirección', `A partir de ahora gestiona la app desde <code>https://tu-sitio.netlify.app</code>. Al llamarse index.html, se abre directamente. Solo así el QR de reservas y pedidos funcionará de verdad para tus clientes.`)}`;
 
   const hostedBox = hosted
     ? `<div style="background:#E9F8EF;border-left:4px solid #34C759;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
