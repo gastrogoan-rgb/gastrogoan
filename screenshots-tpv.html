@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroGoan TPV — Capturas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#1a1a1a;color:#fff;padding:40px;display:flex;flex-direction:column;gap:60px;align-items:center}
+h1{font-size:32px;text-align:center;margin-bottom:10px}
+p.intro{color:#aaa;text-align:center;font-size:14px;margin-bottom:20px}
+.screenshot{width:1200px;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid #333}
+.screenshot-label{font-size:18px;font-weight:700;color:#DF7039;margin-bottom:12px;text-align:center}
+
+/* === SHARED APP STYLES === */
+:root{
+  --brand-orange:#DF7039;--brand-yellow:#FFFF00;--brand-cream:#F6EDD5;
+  --dark:#000;--surface:#fff;--border:#DFD0B8;--text:#1A1A1A;--muted:#7A6A58;
+  --green:#3B6D11;--red:#E24B4A;--blue:#185FA5;--teal:#DF7039;--teal-l:#FDEEE4;
+}
+.app{background:var(--brand-cream);color:var(--text);font-size:14px;line-height:1.4}
+.app-hdr{height:54px;background:#000;display:flex;align-items:center;padding:0 16px;gap:12px}
+.app-hdr .logo{display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:15px}
+.app-hdr .logo-icon{width:32px;height:32px;background:var(--brand-orange);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.app-hdr .hdr-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid #444;color:#ccc;background:transparent;display:flex;align-items:center;gap:4px;cursor:default}
+.app-hdr .hdr-btn.active{background:var(--brand-orange);border-color:var(--brand-orange);color:#fff}
+.app-hdr .spacer{flex:1}
+
+.content-area{padding:18px;max-width:100%}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.badge-green{background:#EAF3DE;color:var(--green)}
+.badge-red{background:#FCEBEB;color:var(--red)}
+.badge-orange{background:var(--teal-l);color:#8B3A18}
+.badge-blue{background:#E6F1FB;color:var(--blue)}
+.badge-gray{background:#f0ece4;color:var(--muted)}
+
+/* === TPV MESA GRID === */
+.zona-label{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin:12px 0 6px;padding-left:4px}
+.mesa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.mesa{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;position:relative;cursor:default}
+.mesa::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.mesa.libre::before{background:var(--green)}
+.mesa.ocupada::before{background:var(--brand-orange)}
+.mesa.servida::before{background:var(--blue)}
+.mesa-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.mesa-status{font-size:11px;color:var(--muted)}
+.mesa-total{font-size:14px;font-weight:800;color:var(--brand-orange);margin-top:3px}
+.mesa-pax{font-size:10px;color:var(--muted)}
+.mesa-phase{font-size:10px;margin-top:2px}
+
+/* === COMANDA PANEL === */
+.comanda-split{display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:500px}
+.carta-panel{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.carta-tabs{display:flex;background:#f5f0e6;border-bottom:1px solid var(--border)}
+.carta-tab{padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);cursor:default;border-bottom:2px solid transparent}
+.carta-tab.active{color:var(--brand-orange);border-bottom-color:var(--brand-orange)}
+.carta-section{padding:10px 14px}
+.carta-section-title{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.plato-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:default}
+.plato-row:hover{background:var(--teal-l)}
+.plato-name{font-size:13px;font-weight:600}
+.plato-price{font-size:13px;font-weight:700;color:var(--brand-orange)}
+
+.comanda-panel{background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column}
+.comanda-header{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.comanda-items{flex:1;padding:10px 14px;overflow:auto}
+.comanda-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0ece4;font-size:13px}
+.comanda-line .qty{background:var(--teal-l);color:#8B3A18;font-weight:700;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;margin-right:8px}
+.comanda-line .line-name{flex:1}
+.comanda-line .line-price{font-weight:700;color:var(--brand-orange)}
+.comanda-footer{padding:12px 14px;border-top:2px solid var(--brand-orange);display:flex;justify-content:space-between;align-items:center}
+.comanda-total-label{font-size:13px;color:var(--muted)}
+.comanda-total{font-size:22px;font-weight:800;color:var(--brand-orange)}
+.btn-confirmar{background:var(--brand-orange);color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:default;margin-top:8px;width:100%}
+
+/* === COCINA SCREEN === */
+.cocina-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.cocina-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.cocina-card-header{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.cocina-mesa{font-weight:700;font-size:14px}
+.cocina-time{font-size:11px;color:var(--muted)}
+.cocina-items{padding:10px 14px}
+.cocina-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid #f5f0e6}
+.cocina-item:last-child{border:none}
+.cocina-item .ci-qty{font-weight:700;color:var(--brand-orange)}
+.cocina-item .ci-name{flex:1}
+.cocina-item .ci-notes{font-size:11px;color:var(--red);font-style:italic}
+.cocina-group{padding:6px 14px;background:#f9f5ed;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.cocina-group-label{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.cocina-group-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--brand-orange);color:var(--brand-orange);background:transparent;cursor:default}
+
+/* === DASHBOARD === */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px}
+.kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--muted)}
+.kpi .value{font-size:26px;font-weight:800;margin-top:4px}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.kpi.green .value{color:var(--green)}
+.kpi.red .value{color:var(--red)}
+
+/* === RESERVAS === */
+.reserva-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:6px}
+.reserva-time{font-size:18px;font-weight:800;color:var(--brand-orange);min-width:50px}
+.reserva-info{flex:1}
+.reserva-name{font-weight:700;font-size:14px}
+.reserva-detail{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<h1>📸 GastroGoan TPV — Capturas de Pantalla</h1>
+<p class="intro">Haz clic derecho en cada imagen → "Guardar imagen como..." o usa la tecla de captura de tu SO</p>
+
+<!-- ============ SCREENSHOT 1: PLANO DE MESAS ============ -->
+<div class="screenshot-label">1. Plano de mesas — Vista general del TPV</div>
+<div class="screenshot">
+<div class="app">
+  <div class="app-hdr">
+    <div class="logo"><div class="logo-icon">🍽</div> GastroGoan</div>
+    <div class="hdr-btn active">☀️ Cocina</div>
+    <div class="hdr-btn">🍷 Sala</div>
+    <div class="hdr-btn">📊 Gestión</div>
+    <div class="spacer"></div>
+    <div class="hdr-btn">🔓 La Taberna del Puerto</div>
+  </div>
+  <div class="content-area">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:20px;font-weight:800">TPV — Mesas</div>
+        <div style="color:var(--muted);font-size:13px">18 mesas · 3 ocupadas · 5 reservas hoy</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div class="hdr-btn" style="border-color:var(--border);color:var(--text)">🛍 Take Away</div>
+        <div class="hdr-btn" style="border-color:var(--border);color:var(--text)">🛵 Delivery</div>
+        <div class="hdr-btn" style="border-color:var(--border);color:var(--text)">📋 Pedidos para llevar</div>
+      </div>
+    </div>
+
+    <div class="zona-label">🏠 Interior — 8 mesas</div>
+    <div class="mesa-grid">
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 1</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa ocupada"><div class="mesa-name">🍽 Mesa 2</div><div class="mesa-pax">👥 2 pax</div><div class="mesa-phase">🔥 En cocina</div><div class="mesa-total">65,50 €</div></div>
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 3</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 4</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 5</div><div class="badge badge-blue" style="margin-top:4px">🕐 Reserva 21:00</div></div>
+      <div class="mesa ocupada"><div class="mesa-name">🍽 Mesa 6</div><div class="mesa-pax">👥 4 pax</div><div class="mesa-phase">⏳ Preparando</div><div class="mesa-total">91,50 €</div></div>
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 7</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🍽 Mesa 8</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+    </div>
+
+    <div class="zona-label">☀️ Terraza — 6 mesas</div>
+    <div class="mesa-grid">
+      <div class="mesa libre"><div class="mesa-name">🌴 Terraza 1</div><div class="badge badge-blue" style="margin-top:4px">🕐 Reserva 14:30</div></div>
+      <div class="mesa ocupada"><div class="mesa-name">🌴 Terraza 2</div><div class="mesa-pax">👥 2 pax</div><div class="mesa-phase">📝 Tomando nota</div><div class="mesa-total">40,00 €</div></div>
+      <div class="mesa libre"><div class="mesa-name">🌴 Terraza 3</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🌴 Terraza 4</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🌴 Terraza 5</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">🌴 Terraza 6</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+    </div>
+
+    <div class="zona-label">🍺 Barra — 4 puestos</div>
+    <div class="mesa-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="mesa libre"><div class="mesa-name">Barra 1</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">Barra 2</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">Barra 3</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+      <div class="mesa libre"><div class="mesa-name">Barra 4</div><div class="badge badge-green" style="margin-top:4px">Libre</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ SCREENSHOT 2: TOMAR COMANDA ============ -->
+<div class="screenshot-label">2. Tomar comanda — Carta + pedido en tiempo real</div>
+<div class="screenshot">
+<div class="app">
+  <div class="app-hdr">
+    <div class="logo"><div class="logo-icon">🍽</div> GastroGoan</div>
+    <div class="hdr-btn active">☀️ Cocina</div>
+    <div class="hdr-btn">🍷 Sala</div>
+    <div class="hdr-btn">📊 Gestión</div>
+    <div class="spacer"></div>
+    <div class="hdr-btn">🔓 La Taberna del Puerto</div>
+  </div>
+  <div class="content-area">
+    <div style="font-size:18px;font-weight:800;margin-bottom:12px">Mesa 6 · 👥 4 comensales · Camarero: Ana Martínez</div>
+    <div class="comanda-split">
+      <div class="carta-panel">
+        <div class="carta-tabs">
+          <div class="carta-tab active">Carta Principal</div>
+          <div class="carta-tab">Menú del Día 16,50€</div>
+        </div>
+        <div class="carta-section">
+          <div class="carta-section-title">🥗 Entrantes</div>
+          <div class="plato-row"><span class="plato-name">Ensalada mediterránea</span><span class="plato-price">12,50 €</span></div>
+          <div class="plato-row" style="background:var(--teal-l)"><span class="plato-name">Gambas al ajillo</span><span class="plato-price">16,00 €</span></div>
+          <div class="plato-row"><span class="plato-name">Croquetas caseras (8 uds)</span><span class="plato-price">11,00 €</span></div>
+        </div>
+        <div class="carta-section">
+          <div class="carta-section-title">🥘 Arroces</div>
+          <div class="plato-row"><span class="plato-name">Arroz a banda</span><span class="plato-price">18,00 €</span></div>
+          <div class="plato-row" style="background:var(--teal-l)"><span class="plato-name">Paella valenciana <span class="badge badge-orange">👥 min. 2 pax</span></span><span class="plato-price">22,00 €</span></div>
+        </div>
+        <div class="carta-section">
+          <div class="carta-section-title">🥩 Carnes</div>
+          <div class="plato-row"><span class="plato-name">Solomillo a la pimienta</span><span class="plato-price">24,00 €</span></div>
+          <div class="plato-row"><span class="plato-name">Secreto ibérico a la brasa</span><span class="plato-price">19,50 €</span></div>
+        </div>
+        <div class="carta-section">
+          <div class="carta-section-title">🐟 Pescados</div>
+          <div class="plato-row"><span class="plato-name">Lubina a la espalda</span><span class="plato-price">21,00 €</span></div>
+        </div>
+        <div class="carta-section">
+          <div class="carta-section-title">🍰 Postres</div>
+          <div class="plato-row"><span class="plato-name">Tarta de queso</span><span class="plato-price">7,50 €</span></div>
+          <div class="plato-row"><span class="plato-name">Crema catalana</span><span class="plato-price">6,50 €</span></div>
+        </div>
+      </div>
+      <div class="comanda-panel">
+        <div class="comanda-header">
+          <span>📋 Comanda</span>
+          <span class="badge badge-orange">6 items</span>
+        </div>
+        <div class="comanda-items">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:4px 0">Entrantes</div>
+          <div class="comanda-line"><span class="qty">2</span><span class="line-name">Ensalada mediterránea</span><span class="line-price">25,00 €</span></div>
+          <div class="comanda-line"><span class="qty">1</span><span class="line-name">Croquetas caseras (8 uds)</span><span class="line-price">11,00 €</span></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Arroces</div>
+          <div class="comanda-line"><span class="qty">2</span><span class="line-name">Paella valenciana</span><span class="line-price">44,00 €</span></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:8px 0 4px">Bebidas</div>
+          <div class="comanda-line"><span class="qty">1</span><span class="line-name">Botella Ribera del Duero</span><span class="line-price">22,00 €</span></div>
+          <div class="comanda-line"><span class="qty">2</span><span class="line-name">Agua mineral</span><span class="line-price">4,00 €</span></div>
+        </div>
+        <div class="comanda-footer">
+          <div>
+            <div class="comanda-total-label">Total pedido</div>
+            <div class="comanda-total">106,00 €</div>
+          </div>
+        </div>
+        <div style="padding:0 14px 14px"><button class="btn-confirmar">✅ Marchar comanda</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ SCREENSHOT 3: PANTALLA DE COCINA ============ -->
+<div class="screenshot-label">3. Pantalla de Cocina — Comandas en tiempo real</div>
+<div class="screenshot">
+<div class="app">
+  <div class="app-hdr">
+    <div class="logo"><div class="logo-icon">🍽</div> GastroGoan</div>
+    <div class="hdr-btn active">☀️ Cocina</div>
+    <div class="hdr-btn">🍷 Sala</div>
+    <div class="hdr-btn">📊 Gestión</div>
+    <div class="spacer"></div>
+    <div class="hdr-btn">🔓 La Taberna del Puerto</div>
+  </div>
+  <div class="content-area">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">🔥 Comandas de Cocina</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px">3 comandas activas · Se actualiza automáticamente</div>
+    <div class="cocina-grid">
+      <!-- Comanda 1 -->
+      <div class="cocina-card" style="border-left:4px solid var(--red)">
+        <div class="cocina-card-header">
+          <span class="cocina-mesa">🍽 Mesa 2</span>
+          <span class="badge badge-red">⏱ 12 min</span>
+        </div>
+        <div class="cocina-items">
+          <div class="cocina-item"><span class="ci-qty">1×</span><span class="ci-name">Solomillo a la pimienta</span><span class="badge badge-orange">🔥 En cocina</span></div>
+          <div class="cocina-item"><span class="ci-qty">1×</span><span class="ci-name">Lubina a la espalda</span><span class="badge badge-orange">🔥 En cocina</span></div>
+        </div>
+        <div class="cocina-group">
+          <span class="cocina-group-label">Segundos</span>
+          <button class="cocina-group-btn">✅ Entregar todo</button>
+        </div>
+      </div>
+      <!-- Comanda 2 -->
+      <div class="cocina-card" style="border-left:4px solid #f39c12">
+        <div class="cocina-card-header">
+          <span class="cocina-mesa">🍽 Mesa 6</span>
+          <span class="badge badge-orange">⏱ 8 min</span>
+        </div>
+        <div class="cocina-items">
+          <div class="cocina-item"><span class="ci-qty">2×</span><span class="ci-name">Paella valenciana</span><span class="badge badge-orange">⏳ Preparando</span></div>
+        </div>
+        <div class="cocina-group">
+          <span class="cocina-group-label">Arroces</span>
+          <button class="cocina-group-btn">✅ Entregar todo</button>
+        </div>
+      </div>
+      <!-- Comanda 3 -->
+      <div class="cocina-card" style="border-left:4px solid var(--blue)">
+        <div class="cocina-card-header">
+          <span class="cocina-mesa">🌴 Terraza 2</span>
+          <span class="badge badge-blue">⏱ 1 min</span>
+        </div>
+        <div class="cocina-items">
+          <div class="cocina-item"><span class="ci-qty">1×</span><span class="ci-name">Gambas al ajillo</span><span class="badge badge-gray">📝 Pendiente</span></div>
+          <div class="cocina-item"><span class="ci-qty">2×</span><span class="ci-name">Secreto ibérico a la brasa</span><span class="ci-notes">Sin sal, poco hecho</span></div>
+        </div>
+        <div class="cocina-group">
+          <span class="cocina-group-label">Entrantes</span>
+          <button class="cocina-group-btn">🔥 Preparar todo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ SCREENSHOT 4: DASHBOARD ============ -->
+<div class="screenshot-label">4. Dashboard — KPIs y análisis del día</div>
+<div class="screenshot">
+<div class="app">
+  <div class="app-hdr">
+    <div class="logo"><div class="logo-icon">🍽</div> GastroGoan</div>
+    <div class="hdr-btn">☀️ Cocina</div>
+    <div class="hdr-btn">🍷 Sala</div>
+    <div class="hdr-btn active">📊 Gestión</div>
+    <div class="spacer"></div>
+    <div class="hdr-btn">🔓 La Taberna del Puerto</div>
+  </div>
+  <div class="content-area">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">📊 Dashboard</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px">Miércoles 18 de junio 2026 · La Taberna del Puerto</div>
+    <div class="kpi-grid">
+      <div class="kpi green"><div class="label">Ventas hoy</div><div class="value">1.247,80 €</div><div class="sub">↑ 12% vs. martes</div></div>
+      <div class="kpi"><div class="label">Ticket medio</div><div class="value">38,99 €</div><div class="sub">32 tickets</div></div>
+      <div class="kpi green"><div class="label">Comensales</div><div class="value">78</div><div class="sub">Ocupación: 65%</div></div>
+      <div class="kpi"><div class="label">Food Cost</div><div class="value">28,4%</div><div class="sub">Objetivo: < 35%</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:10px">🏆 Top 5 platos más vendidos</div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ece4"><span>1. Paella valenciana</span><span style="font-weight:700">14 uds</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ece4"><span>2. Gambas al ajillo</span><span style="font-weight:700">11 uds</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ece4"><span>3. Solomillo a la pimienta</span><span style="font-weight:700">9 uds</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ece4"><span>4. Ensalada mediterránea</span><span style="font-weight:700">8 uds</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span>5. Tarta de queso</span><span style="font-weight:700">7 uds</span></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:10px">📅 Reservas de hoy</div>
+        <div class="reserva-row" style="margin-bottom:6px;padding:8px 10px">
+          <span class="reserva-time">13:30</span>
+          <div class="reserva-info"><div class="reserva-name">Pedro Alonso</div><div class="reserva-detail">4 pax · Mesa 1 · Aniversario</div></div>
+          <span class="badge badge-green">✓ Confirmada</span>
+        </div>
+        <div class="reserva-row" style="margin-bottom:6px;padding:8px 10px">
+          <span class="reserva-time">14:00</span>
+          <div class="reserva-info"><div class="reserva-name">Sofía Reyes</div><div class="reserva-detail">2 pax · Mesa 3</div></div>
+          <span class="badge badge-green">✓ Confirmada</span>
+        </div>
+        <div class="reserva-row" style="margin-bottom:6px;padding:8px 10px">
+          <span class="reserva-time">14:30</span>
+          <div class="reserva-info"><div class="reserva-name">Miguel Torres</div><div class="reserva-detail">6 pax · Terraza · Alergia lactosa</div></div>
+          <span class="badge badge-orange">⏳ Pendiente</span>
+        </div>
+        <div class="reserva-row" style="margin-bottom:6px;padding:8px 10px">
+          <span class="reserva-time">21:00</span>
+          <div class="reserva-info"><div class="reserva-name">Laura Vega</div><div class="reserva-detail">3 pax · Mesa 5</div></div>
+          <span class="badge badge-orange">⏳ Pendiente</span>
+        </div>
+        <div class="reserva-row" style="padding:8px 10px">
+          <span class="reserva-time">21:30</span>
+          <div class="reserva-info"><div class="reserva-name">Grupo TechCorp</div><div class="reserva-detail">8 pax · Cena empresa · 2 vegetarianos</div></div>
+          <span class="badge badge-orange">⏳ Pendiente</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============ SCREENSHOT 5: ESCANDALLO ============ -->
+<div class="screenshot-label">5. Escandallo — Control de costes por plato</div>
+<div class="screenshot">
+<div class="app">
+  <div class="app-hdr">
+    <div class="logo"><div class="logo-icon">🍽</div> GastroGoan</div>
+    <div class="hdr-btn active">☀️ Cocina</div>
+    <div class="hdr-btn">🍷 Sala</div>
+    <div class="hdr-btn">📊 Gestión</div>
+    <div class="spacer"></div>
+    <div class="hdr-btn">🔓 La Taberna del Puerto</div>
+  </div>
+  <div class="content-area">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">📊 Escandallo</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px">Cálculo automático de costes de platos</div>
+    <div class="card" style="max-width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:18px;font-weight:800">🍳 Paella valenciana</div>
+        <span class="badge badge-green" style="font-size:13px;padding:5px 12px">24,3% FC</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:20px">5,35 €</div></div>
+        <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:20px">22,00 €</div></div>
+        <div class="kpi green"><div class="label">Margen</div><div class="value" style="font-size:20px">16,65 €</div></div>
+        <div class="kpi"><div class="label">Food Cost</div><div class="value" style="font-size:20px">24,3%</div></div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">👥 2 comensales · Consumibles: 3%</div>
+      <div style="overflow:hidden;border:1px solid var(--border);border-radius:10px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--teal-l)">
+            <th style="padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B3A18;font-weight:700">Ingrediente</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B3A18;font-weight:700">Cantidad</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B3A18;font-weight:700">Merma</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B3A18;font-weight:700">Coste</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B3A18;font-weight:700">% del total</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:8px 14px;border-bottom:1px solid #f0ece4"><strong>Arroz bomba</strong></td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">0,25 kg</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">—</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;font-weight:700">0,88 €</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;color:var(--muted)">16,4%</td></tr>
+            <tr><td style="padding:8px 14px;border-bottom:1px solid #f0ece4"><strong>Pechuga de pollo</strong></td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">0,20 kg</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">—</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;font-weight:700">1,30 €</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;color:var(--muted)">24,3%</td></tr>
+            <tr><td style="padding:8px 14px;border-bottom:1px solid #f0ece4"><strong>Pimiento rojo</strong></td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">0,10 kg</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">—</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;font-weight:700">0,32 €</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;color:var(--muted)">6,0%</td></tr>
+            <tr><td style="padding:8px 14px;border-bottom:1px solid #f0ece4"><strong>Patata</strong></td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">0,08 kg</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4">—</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;font-weight:700">0,14 €</td><td style="padding:8px 14px;border-bottom:1px solid #f0ece4;color:var(--muted)">2,7%</td></tr>
+            <tr><td style="padding:8px 14px"><strong>Azafrán</strong></td><td style="padding:8px 14px">0,50 g</td><td style="padding:8px 14px">—</td><td style="padding:8px 14px;font-weight:700">0,43 €</td><td style="padding:8px 14px;color:var(--muted)">8,0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="height:40px"></div>
+</body>
+</html>
