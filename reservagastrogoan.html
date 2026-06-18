@@ -552,9 +552,15 @@ function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
 /* ============ TIEMPO DE ANTELACIÓN / ZONA DE REPARTO ============ */
 // Si el pedido es para hoy, no se puede elegir una hora anterior a
 // "ahora + tiempo de antelación configurado por el restaurante".
+// Antelación mínima (minutos) que vale tanto para reservas como para pedidos.
+// Se configura en Mi Negocio → Operativa. Mantiene compatibilidad con el ajuste antiguo.
+function getLeadTimeMin(){
+  const b = DB.business || {};
+  if(b.leadTimeMin != null) return parseInt(b.leadTimeMin) || 0;
+  return parseInt((b.pedidos||{}).leadTimeMin) || 0;
+}
 function applyLeadTime(dateInputId, timeInputId, hintBoxId){
-  const p = (DB.business||{}).pedidos || {};
-  const leadTimeMin = parseInt(p.leadTimeMin) || 0;
+  const leadTimeMin = getLeadTimeMin();
   const date = document.getElementById(dateInputId).value;
   const timeInput = document.getElementById(timeInputId);
   const hintBox = document.getElementById(hintBoxId);
@@ -621,7 +627,7 @@ function renderReservaForm(){
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
-          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint')">
+          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint'); applyLeadTime('r-date','r-time','r-hour-hint')">
         </div>
         <div class="field">
           <label>${t('hora')}</label>
@@ -641,6 +647,7 @@ function renderReservaForm(){
     </div>
   `;
   updateTimeInputRange('r-date','r-time','r-hour-hint');
+  applyLeadTime('r-date','r-time','r-hour-hint');
 }
 
 function submitReserva(){
@@ -664,6 +671,16 @@ function submitReserva(){
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
     alert(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     return;
+  }
+
+  const leadTimeMin = getLeadTimeMin();
+  if(leadTimeMin && date === todayStr()){
+    const now = new Date(Date.now() + leadTimeMin * 60000);
+    const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if(time < minTime){
+      alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      return;
+    }
   }
 
   const disponible = getAforoDisponible(date, time);
@@ -860,7 +877,7 @@ async function submitOrder(){
     return;
   }
 
-  const leadTimeMin = parseInt(p.leadTimeMin) || 0;
+  const leadTimeMin = getLeadTimeMin();
   if(leadTimeMin && date === todayStr()){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');

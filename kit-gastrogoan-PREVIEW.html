@@ -2665,11 +2665,7 @@ function renderPedidosConfigCard(){
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-clock-hour-4"></i> Pedidos para llevar / domicilio</h3>
-      <div class="field">
-        <label>Tiempo mínimo de antelación (minutos)</label>
-        <input type="number" id="mn-leadtime" min="0" step="5" value="${escapeHtml(p.leadTimeMin||0)}" placeholder="30">
-        <small style="color:var(--muted)">Tus clientes no podrán elegir una hora de recogida/entrega antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
-      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> La antelación mínima se configura en la sección <strong>Operativa</strong> (vale tanto para reservas como para pedidos).</p>
       <div class="field">
         <label>Pedido mínimo (€)</label>
         <input type="number" id="mn-pedidominimo" min="0" step="0.5" value="${escapeHtml(p.pedidoMinimo||0)}" placeholder="10">
@@ -2707,7 +2703,6 @@ function renderPedidosConfigCard(){
 async function savePedidosConfig(){
   const b = DB.business;
   const p = b.pedidos || {};
-  p.leadTimeMin = Math.max(0, parseInt(document.getElementById('mn-leadtime').value) || 0);
   p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
   p.permitirPagoLocal = document.getElementById('mn-pagolocal').checked;
 
@@ -14182,6 +14177,11 @@ function renderMiNegocio(){
         <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
       </div>
+      <div class="field">
+        <label>Antelación mínima para reservar mesa y pedir online (minutos)</label>
+        <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
+        <small style="color:var(--muted)">Tus clientes no podrán reservar una mesa ni pedir online para una hora antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>Mesas de interior</label>
@@ -14538,6 +14538,11 @@ function saveBusiness(silent){
   if(el('mn-mesas-terraza')) DB.business.mesasTerraza = el('mn-mesas-terraza').value.trim();
   if(el('mn-mesas-barra')) DB.business.mesasBarra = el('mn-mesas-barra').value.trim();
   if(el('mn-aforo')) DB.business.aforo = el('mn-aforo').value.trim();
+  if(el('mn-leadtime-min')){
+    DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);
+    if(!DB.business.pedidos) DB.business.pedidos = {};
+    DB.business.pedidos.leadTimeMin = DB.business.leadTimeMin;
+  }
   if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
   if(el('mn-serv-mesa') && el('mn-serv-takeaway') && el('mn-serv-delivery')) {
