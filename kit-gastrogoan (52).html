@@ -7576,7 +7576,6 @@ function confirmOpenTableOrder(tableId){
     reservationId = r.id;
     r.llegada = true;
     if(!r.tableId) r.tableId = tableId;
-    if(clientId) registerClientVisit(clientId);
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast('Indica el número de personas'); return; }
@@ -12479,7 +12478,7 @@ function renderClientes(){
       loyaltyBtn = `<button class="btn btn-sm" onclick="openRewardModal(${c.id})" title="Dar premio y reiniciar"><i class="ti ti-gift"></i> Dar premio</button>`;
     } else {
       loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
-      loyaltyBtn = `<button class="btn btn-sm btn-icon" onclick="adjustClientVisit(${c.id})" title="Sumar punto de visita"><i class="ti ti-plus"></i></button>`;
+      loyaltyBtn = '';
     }
     return `
     <tr>
@@ -12510,7 +12509,7 @@ function showLoyaltyInfo(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13.5px;line-height:1.6">
-      Cada vez que un cliente viene al establecimiento, pulsa el botón <strong>+</strong> para sumarle 1 punto.
+      Los puntos se suman automáticamente cada vez que <strong>confirmas una reserva</strong> de un cliente.
     </p>
     <p style="font-size:13.5px;line-height:1.6">
       <span class="badge badge-gray">0-6/10</span> el cliente va sumando visitas con normalidad.<br>
@@ -12592,8 +12591,8 @@ function openClientModal(id){
         <input type="date" id="client-ultimo-contacto" value="${escapeHtml(c.ultimoContacto||'')}">
       </div>
       <div class="field">
-        <label>Puntos de fidelidad (0-10)</label>
-        <input type="number" id="client-points" value="${c.points||0}" min="0" max="10">
+        <label>Puntos de fidelidad</label>
+        <div style="padding:10px 0;font-size:14px"><span class="badge ${(c.points||0)>=10?'badge-green':(c.points||0)>=7?'badge-amber':'badge-gray'}">${c.points||0}/10</span> <span style="font-size:12px;color:var(--muted)">Se suman automáticamente al confirmar reservas</span></div>
       </div>
     </div>
     <div class="field">
@@ -12626,16 +12625,15 @@ function saveClient(id){
   const cp = document.getElementById('client-cp').value.trim();
   const cumpleanos = document.getElementById('client-cumpleanos').value;
   const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
-  const points = Math.max(0, Math.min(10, parseInt(document.getElementById('client-points').value) || 0));
   const allergies = document.getElementById('client-allergies').value.trim();
   const notes = document.getElementById('client-notes').value.trim();
 
   if(id){
     const client = DB.clients.find(x=>x.id===id);
     if(!client) return;
-    Object.assign(client, {name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
+    Object.assign(client, {name, phone, email, cp, cumpleanos, ultimoContacto, allergies, notes});
   }else{
-    DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points, allergies, notes});
+    DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points:0, allergies, notes});
   }
   saveDB();
   closeModal();
@@ -12854,6 +12852,14 @@ function setReservationStatus(id, status){
   }
 
   r.status = status;
+  if(status === 'confirmada'){
+    let cid = r.clientId;
+    if(!cid && r.clientPhone){
+      const match = DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === r.clientPhone.replace(/\D/g,''));
+      if(match) cid = match.id;
+    }
+    if(cid) registerClientVisit(cid);
+  }
   saveDB();
   renderReservas();
   showToast(status==='confirmada' ? 'Reserva confirmada' : 'Reserva rechazada');
