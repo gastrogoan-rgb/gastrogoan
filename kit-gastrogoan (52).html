@@ -4138,7 +4138,7 @@ function appendHelpMessage(html, who){
   box.scrollTop = box.scrollHeight;
 }
 function openHelpContactEmail(){
-  const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.nombre) ? ' - ' + DB.business.nombre : ''));
+  const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.name) ? ' - ' + DB.business.name : ''));
   window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject;
 }
 
@@ -5910,7 +5910,7 @@ function confirmNewRecipeCategory(id){
   const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
-    if(!DB.recipeCategories.includes(cat)) DB.recipeCategories.push(cat);
+    if(!DB.recipeCategories.includes(cat)){ DB.recipeCategories.push(cat); saveDB(); }
     state.category = cat;
   } else {
     state.category = '';
@@ -6967,7 +6967,7 @@ function renderMenu(){
 }
 
 function areaMenus(){
-  return DB.menus.filter(m => (m.area||'cocina') === currentArea());
+  return DB.menus.filter(m => !m.area || m.area === currentArea());
 }
 function renderMenuList(){
   const menus = areaMenus();
@@ -8682,7 +8682,8 @@ function confirmAddOrderItem(orderId, secId, platoId){
   order.tandas = order.tandas || [];
   if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
   const modKey = selectedMods.map(m=>m.id).sort().join(',');
-  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && !l.marchada && ((l.modificadores||[]).map(m=>m.nombre).sort().join(',')) === (selectedMods.map(m=>m.nombre).sort().join(',')));
+  const normMods = (m) => JSON.stringify(m && m.length ? m.map(x=>x.nombre).sort() : []);
+  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && !l.marchada && normMods(l.modificadores) === normMods(selectedMods));
   let line;
   if(existing){
     existing.qty += 1;
@@ -8703,6 +8704,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
 }
 function changeOrderItemQty(orderId, idx, delta){
   const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items[idx]) return;
   const line = order.items[idx];
   line.qty += delta;
   if(line.qty <= 0) order.items.splice(idx,1);
@@ -8715,6 +8717,7 @@ function changeOrderItemQty(orderId, idx, delta){
 }
 function removeOrderItem(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
   order.items.splice(idx,1);
   saveDB();
   renderTableOrderModal(orderId);
@@ -11545,8 +11548,8 @@ function saveTurno(id){
     tipo,
     entrada: noHorario ? '' : document.getElementById('turno-entrada').value,
     salida: noHorario ? '' : document.getElementById('turno-salida').value,
-    entrada2: isPartido ? document.getElementById('turno-entrada2').value : '',
-    salida2: isPartido ? document.getElementById('turno-salida2').value : '',
+    entrada2: isPartido && document.getElementById('turno-entrada2') ? document.getElementById('turno-entrada2').value : '',
+    salida2: isPartido && document.getElementById('turno-salida2') ? document.getElementById('turno-salida2').value : '',
     notas: document.getElementById('turno-notas').value.trim()
   };
   if(!DB.turnos) DB.turnos = [];
@@ -13807,7 +13810,9 @@ function savePromo(id){
   if(!titulo){ showToast('Indica un título'); return; }
 
   if(id){
-    Object.assign(DB.promos.find(x=>x.id===id), {fecha, titulo, descripcion, responsableId});
+    const promo = DB.promos.find(x=>x.id===id);
+    if(!promo){ showToast('Promo no encontrada'); return; }
+    Object.assign(promo, {fecha, titulo, descripcion, responsableId});
   }else{
     DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId});
   }
@@ -14365,32 +14370,31 @@ function toggleTipoServicio(tipo, checked){
 
 function saveBusiness(silent){
   const el = id => document.getElementById(id);
-  if(!el('business-name')) return;
-  DB.business = {
-    ...DB.business,
-    name: el('business-name').value.trim(),
-    address: el('business-address').value.trim(),
-    phone: el('business-phone').value.trim(),
-    email: el('business-email').value.trim(),
-    horario: readHorarioFromForm(),
-    description: el('business-description').value.trim(),
-    tipo: el('mn-tipo').value,
-    anyo: el('mn-anyo').value.trim(),
-    web: el('mn-web').value.trim(),
-    cif: el('mn-cif').value.trim(),
-    prop: el('mn-prop').value.trim(),
-    mesasInterior: el('mn-mesas-interior').value.trim(),
-    mesasTerraza: el('mn-mesas-terraza').value.trim(),
-    mesasBarra: el('mn-mesas-barra').value.trim(),
-    aforo: el('mn-aforo').value.trim(),
-    ig: el('mn-ig').value.trim(),
-    fb: el('mn-fb').value.trim(),
-    tiposServicio: {
+  if(!DB.business) DB.business = {};
+  if(el('business-name')) DB.business.name = el('business-name').value.trim();
+  if(el('business-address')) DB.business.address = el('business-address').value.trim();
+  if(el('business-phone')) DB.business.phone = el('business-phone').value.trim();
+  if(el('business-email')) DB.business.email = el('business-email').value.trim();
+  if(el('business-description')) DB.business.description = el('business-description').value.trim();
+  if(el('mn-tipo')) DB.business.tipo = el('mn-tipo').value;
+  if(el('mn-anyo')) DB.business.anyo = el('mn-anyo').value.trim();
+  if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
+  if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
+  if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
+  if(el('mn-mesas-interior')) DB.business.mesasInterior = el('mn-mesas-interior').value.trim();
+  if(el('mn-mesas-terraza')) DB.business.mesasTerraza = el('mn-mesas-terraza').value.trim();
+  if(el('mn-mesas-barra')) DB.business.mesasBarra = el('mn-mesas-barra').value.trim();
+  if(el('mn-aforo')) DB.business.aforo = el('mn-aforo').value.trim();
+  if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
+  if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
+  if(el('mn-serv-mesa') && el('mn-serv-takeaway') && el('mn-serv-delivery')) {
+    DB.business.tiposServicio = {
       mesa: el('mn-serv-mesa').checked,
       takeaway: el('mn-serv-takeaway').checked,
       delivery: el('mn-serv-delivery').checked,
-    },
-  };
+    };
+  }
+  DB.business.horario = readHorarioFromForm();
   saveDB();
   renderHeader();
   updateAutoActiveCarta(true);
