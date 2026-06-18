@@ -39,15 +39,29 @@ em{font-style:italic}
 
 /* ---------- HOJAS ---------- */
 .page{                 /* hoja de tamaño fijo (portada / preliminares) */
-  width:210mm;height:297mm;margin:12px auto;background:var(--paper);
+  width:210mm;height:297mm;margin:12px auto;background-color:var(--paper);
   padding:24mm 22mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   page-break-after:always;overflow:hidden;
 }
 .sheet{                /* día: fluye y puede ocupar más de una hoja al imprimir */
-  width:210mm;min-height:297mm;margin:12px auto;background:var(--paper);
+  width:210mm;min-height:297mm;margin:12px auto;background-color:var(--paper);
   padding:20mm 22mm 24mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   break-before:page;overflow:hidden;
 }
+/* Sello T-CLAS en la esquina de cada hoja (menos la portada/contraportada) */
+.sheet, .page:not(.cover){
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%23ffffff' stroke='%23222222' stroke-width='2'/><circle cx='50' cy='50' r='29' fill='%231b2433'/><text x='50' y='19' font-family='Arial,Helvetica,sans-serif' font-size='11' font-weight='bold' fill='%23222222' text-anchor='middle' letter-spacing='1'>T-CLAS</text><text x='50' y='68' font-family='Georgia,serif' font-size='44' fill='%23ffffff' text-anchor='middle'>𝄞</text></svg>");
+  background-repeat:no-repeat;
+  background-position:top 9mm right 12mm;
+  background-size:40px 40px;
+  background-origin:border-box;
+}
+/* Logo completo en portada y contraportada */
+.cover-logo{display:flex;justify-content:center;margin:6px 0}
+.cover-logo svg{width:208px;height:208px;display:block}
+.brand .bt{fill:#1a1a1a;font-family:var(--serif);font-weight:700}
+.brand .bb{fill:#1a1a1a;font-family:var(--sans);font-weight:700}
+.brand .clef-g{fill:#ffffff;font-family:var(--serif)}
 .eyebrow{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:3px;
   text-transform:uppercase;color:var(--gold)}
 .rule{height:1px;background:var(--line);border:0;margin:10px 0}

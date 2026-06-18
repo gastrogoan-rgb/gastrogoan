@@ -1,35 +1,38 @@
-# 🎹 44 días al piano — Álbum de ejercicios
+# 🎹 El Cuaderno del Pianista — T-Clas
 
-Cuaderno de ejercicios de piano para los alumnos, basado en sus partituras.
-Pensado para **pasarlo bien tocando**, con micro-teoría, trucos y juegos.
+Cuaderno de estudio de piano para los alumnos, basado en sus partituras.
+Material de nivel adulto: análisis musical, técnica e interpretación, con un
+enfoque cercano para **disfrutar entendiendo lo que se toca**.
 
 ## Cómo verlo e imprimirlo
 
 1. Abre **`index.html`** en cualquier navegador (Chrome, Edge, Safari...). Es un único
-   archivo, no necesita internet ni programas.
+   archivo, no necesita internet ni programas. El logo está incrustado como vector (SVG),
+   así que se ve nítido a cualquier tamaño y no depende de imágenes externas.
 2. Para imprimir o crear un PDF: `Ctrl+P` (o `Cmd+P` en Mac) → tamaño **A4** →
-   **márgenes "Ninguno"** y activa **"Gráficos de fondo"** para que salgan los colores.
-   Cada día sale en su propia hoja.
+   **márgenes "Ninguno"** y activa **"Gráficos de fondo"** para que salgan los colores y el sello.
 
 ## Qué contiene
 
-- Portada + guía "Cómo usar" + leyenda de símbolos + mini-diccionario de música.
-- Calendario visual de los 44 días.
-- **44 días** de ejercicios organizados en 3 etapas:
-  - **Iniciación** (días 1–9): piezas fáciles para coger soltura.
-  - **Despegue** (días 10–29): dificultad media, 2 días por pieza.
-  - **Reto final** (días 30–44): las piezas más largas/difíciles, 3 días por pieza.
-- Cada día: dato curioso · dificultad (estrellas) · calentamiento · micro-teoría ·
-  ejercicios por partes (manos separadas → juntas) · truco de la profe · reto divertido ·
-  autoevaluación. Con diagramas de teclado, números de dedos y tiras de ritmo.
+- **Portada** con el logo de T-Clas + preliminares: "Cómo aprovechar el cuaderno",
+  "Símbolos y convenciones" e **índice del repertorio** (las 23 obras por nivel,
+  sin fechas: cada alumno avanza a su ritmo).
+- **44 sesiones** organizadas en tres niveles por dificultad:
+  - **Nivel I · Fundamentos** — piezas accesibles para asentar la base.
+  - **Nivel II · Desarrollo** — dificultad media, 2 sesiones por obra.
+  - **Nivel III · Maestría** — las obras más largas/difíciles, 3 sesiones por obra.
+- Cada sesión tiene 7 apartados: **I La obra · II Análisis musical · III Técnica del día ·
+  IV Plan de estudio · V Pasajes exigentes · VI Interpretación · VII Objetivos**.
+  Con diagramas de teclado, escalas con digitación, tiras de ritmo, metas de metrónomo
+  y recuadros destacados para los pasajes difíciles. El sello de T-Clas aparece en cada hoja.
 
-## Editar el álbum
+## Editar el cuaderno
 
 El contenido está troceado para poder retocarlo fácil:
 
-- `_head.html` — estilos y portada técnica.
-- `_front.html` — portada, guía, leyenda, glosario y calendario.
-- `partials/diaNN.html` — cada día por separado.
+- `_head.html` — estilos, logo (sello) y configuración técnica.
+- `_front.html` — portada, prólogo, símbolos e índice del repertorio.
+- `partials/diaNN.html` — cada sesión por separado.
 - `_tail.html` — contraportada.
 
 Tras editar cualquier parte, regenera el documento final con:

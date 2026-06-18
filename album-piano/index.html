@@ -39,15 +39,29 @@ em{font-style:italic}
 
 /* ---------- HOJAS ---------- */
 .page{                 /* hoja de tamaño fijo (portada / preliminares) */
-  width:210mm;height:297mm;margin:12px auto;background:var(--paper);
+  width:210mm;height:297mm;margin:12px auto;background-color:var(--paper);
   padding:24mm 22mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   page-break-after:always;overflow:hidden;
 }
 .sheet{                /* día: fluye y puede ocupar más de una hoja al imprimir */
-  width:210mm;min-height:297mm;margin:12px auto;background:var(--paper);
+  width:210mm;min-height:297mm;margin:12px auto;background-color:var(--paper);
   padding:20mm 22mm 24mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   break-before:page;overflow:hidden;
 }
+/* Sello T-CLAS en la esquina de cada hoja (menos la portada/contraportada) */
+.sheet, .page:not(.cover){
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%23ffffff' stroke='%23222222' stroke-width='2'/><circle cx='50' cy='50' r='29' fill='%231b2433'/><text x='50' y='19' font-family='Arial,Helvetica,sans-serif' font-size='11' font-weight='bold' fill='%23222222' text-anchor='middle' letter-spacing='1'>T-CLAS</text><text x='50' y='68' font-family='Georgia,serif' font-size='44' fill='%23ffffff' text-anchor='middle'>𝄞</text></svg>");
+  background-repeat:no-repeat;
+  background-position:top 9mm right 12mm;
+  background-size:40px 40px;
+  background-origin:border-box;
+}
+/* Logo completo en portada y contraportada */
+.cover-logo{display:flex;justify-content:center;margin:6px 0}
+.cover-logo svg{width:208px;height:208px;display:block}
+.brand .bt{fill:#1a1a1a;font-family:var(--serif);font-weight:700}
+.brand .bb{fill:#1a1a1a;font-family:var(--sans);font-weight:700}
+.brand .clef-g{fill:#ffffff;font-family:var(--serif)}
 .eyebrow{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:3px;
   text-transform:uppercase;color:var(--gold)}
 .rule{height:1px;background:var(--line);border:0;margin:10px 0}
@@ -275,8 +289,21 @@ em{font-style:italic}
   <div class="cover-frame"></div>
   <div class="cover-inner">
     <div class="top">
-      <div class="eyebrow">Método de piano · Estudio de repertorio</div>
-      <div class="clef">𝄞</div>
+      <div class="eyebrow">Método de piano T-Clas · Estudio de repertorio</div>
+      <div class="cover-logo">
+        <svg class="brand" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <path id="arcTop" d="M100,100 m-78,0 a78,78 0 1,1 156,0"/>
+            <path id="arcBot" d="M100,100 m-70,0 a70,70 0 0,0 140,0"/>
+          </defs>
+          <circle cx="100" cy="100" r="96" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.5"/>
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#cabfa3" stroke-width="1"/>
+          <circle cx="100" cy="100" r="60" fill="#1b2433"/>
+          <text class="bt" font-size="27" letter-spacing="6"><textPath href="#arcTop" startOffset="50%" text-anchor="middle">T-CLAS</textPath></text>
+          <text class="bb" font-size="11.5" letter-spacing="3"><textPath href="#arcBot" startOffset="50%" text-anchor="middle">DESPIERTA TU SONIDO INTERIOR</textPath></text>
+          <text class="clef-g" x="100" y="140" font-size="94" text-anchor="middle">𝄞</text>
+        </svg>
+      </div>
       <h1>El Cuaderno del&nbsp;Pianista</h1>
       <div class="subtitle">Cuarenta y cuatro sesiones de estudio progresivo</div>
     </div>
@@ -381,79 +408,47 @@ em{font-style:italic}
   </div>
 </section>
 
-<!-- ===================== GLOSARIO ===================== -->
-<section class="page">
-  <div class="page-head">
-    <div class="eyebrow">Referencia</div>
-    <h2 class="page-title">Glosario de términos musicales</h2>
-    <hr class="rule gold">
-  </div>
-  <p class="lead">Un diccionario de consulta para cualquier término que aparezca en las sesiones.</p>
-  <hr class="rule">
-  <dl class="gloss2">
-    <div class="g"><dt>Tonalidad</dt><dd>El centro de gravedad de una pieza y la familia de notas que la rige (Do mayor, La menor…). Define qué notas suenan "en casa".</dd></div>
-    <div class="g"><dt>Armadura</dt><dd>Los sostenidos o bemoles al principio del pentagrama que indican la tonalidad y se aplican a toda la pieza.</dd></div>
-    <div class="g"><dt>Escala</dt><dd>Las notas de una tonalidad ordenadas por grados. Tocarla es el mejor calentamiento.</dd></div>
-    <div class="g"><dt>Grado</dt><dd>La posición de una nota dentro de la escala (I = tónica, V = dominante…). Explica la función de cada acorde.</dd></div>
-    <div class="g"><dt>Tónica y dominante</dt><dd>Los dos polos de la armonía: la tónica (I) es reposo; la dominante (V) es tensión que pide resolver.</dd></div>
-    <div class="g"><dt>Acorde</dt><dd>Tres o más notas simultáneas. La tríada (fundamental, tercera y quinta) es la base.</dd></div>
-    <div class="g"><dt>Inversión</dt><dd>Un acorde con una nota distinta de la fundamental en el bajo. Suaviza los cambios.</dd></div>
-    <div class="g"><dt>Séptima</dt><dd>Acorde de cuatro notas (p. ej. G7) con sonoridad inestable que empuja al acorde siguiente.</dd></div>
-    <div class="g"><dt>Arpegio</dt><dd>Las notas de un acorde tocadas sucesivamente en lugar de a la vez.</dd></div>
-    <div class="g"><dt>Cadencia</dt><dd>La fórmula armónica que cierra una frase, como un signo de puntuación musical.</dd></div>
-    <div class="g"><dt>Modulación</dt><dd>El cambio de una tonalidad a otra dentro de la pieza.</dd></div>
-    <div class="g"><dt>Forma</dt><dd>La arquitectura de la obra (binaria, ABA, estrofa-estribillo…).</dd></div>
-    <div class="g"><dt>Compás</dt><dd>La agrupación regular de pulsos. El 4/4 tiene cuatro tiempos; el 3/4, tres; el 6/8 se cuenta en dos.</dd></div>
-    <div class="g"><dt>Anacrusa</dt><dd>Una o varias notas que preceden al primer tiempo fuerte del compás.</dd></div>
-    <div class="g"><dt>Síncopa</dt><dd>Un acento desplazado a una parte débil del compás; genera "groove".</dd></div>
-    <div class="g"><dt>Tresillo</dt><dd>Tres notas tocadas en el espacio de dos. Se marca con un 3.</dd></div>
-    <div class="g"><dt>Legato / Staccato</dt><dd>Notas ligadas y continuas / notas cortas y separadas. Articulaciones opuestas.</dd></div>
-    <div class="g"><dt>Dinámica</dt><dd>El volumen y sus matices: <b>p</b> (suave), <b>f</b> (fuerte), <em>crescendo</em> (creciendo)…</dd></div>
-    <div class="g"><dt>Fraseo</dt><dd>El modo de agrupar las notas en frases con sentido, con sus respiraciones.</dd></div>
-    <div class="g"><dt>Cifrado americano</dt><dd>Acordes nombrados con letras: C=Do, D=Re, E=Mi, F=Fa, G=Sol, A=La, B=Si; "m" = menor, "7" = séptima.</dd></div>
-    <div class="g"><dt>Ostinato</dt><dd>Un patrón breve que se repite con insistencia y sostiene el discurso.</dd></div>
-  </dl>
-</section>
-
-<!-- ===================== ÍNDICE ===================== -->
+<!-- ===================== ÍNDICE / REPERTORIO ===================== -->
 <section class="page">
   <div class="page-head">
     <div class="eyebrow">Contenido</div>
-    <h2 class="page-title">Índice de las 44 sesiones</h2>
+    <h2 class="page-title">El repertorio del cuaderno</h2>
     <hr class="rule gold">
   </div>
+  <p class="lead">Estas son las obras que trabajaremos. Aparecen ordenadas en tres niveles por orden de
+  dificultad, no por fechas: <b>cada alumno avanza a su propio ritmo</b> y dedica a cada pieza las sesiones
+  que necesite.</p>
   <table class="toc">
-    <thead><tr><th>Sesión</th><th>Obra</th><th>Compositor</th><th>Tonalidad</th></tr></thead>
+    <thead><tr><th>Obra</th><th>Compositor</th><th>Tonalidad</th></tr></thead>
     <tbody>
-      <tr class="h"><td colspan="4">Etapa I · Fundamentos — sesiones 1 a 9</td></tr>
-      <tr><td class="n">1</td><td class="pz">Himno de la Alegría</td><td>L. van Beethoven</td><td>Do mayor</td></tr>
-      <tr><td class="n">2</td><td class="pz">El Submarino Amarillo</td><td>Lennon / McCartney</td><td>Sol mayor</td></tr>
-      <tr><td class="n">3</td><td class="pz">Oh, When the Saints</td><td>Tradicional</td><td>Do mayor</td></tr>
-      <tr><td class="n">4</td><td class="pz">We Wish You a Merry Christmas</td><td>Tradicional</td><td>Sol mayor</td></tr>
-      <tr><td class="n">5</td><td class="pz">Ejercicios a cuatro manos · I</td><td>F. Le Couppey</td><td>Do mayor</td></tr>
-      <tr><td class="n">6</td><td class="pz">Ejercicios a cuatro manos · II</td><td>F. Le Couppey</td><td>Do mayor</td></tr>
-      <tr><td class="n">7</td><td class="pz">The Beginner (4 manos)</td><td>C. Gurlitt</td><td>Do mayor</td></tr>
-      <tr><td class="n">8</td><td class="pz">Sonatina en La menor (4 manos)</td><td>M. Bazzoni</td><td>La menor</td></tr>
-      <tr><td class="n">9</td><td class="pz">Over the Rainbow (cifrado)</td><td>H. Arlen</td><td>Do mayor</td></tr>
+      <tr class="h"><td colspan="3">Nivel I · Fundamentos</td></tr>
+      <tr><td class="pz">Himno de la Alegría</td><td>L. van Beethoven</td><td>Do mayor</td></tr>
+      <tr><td class="pz">El Submarino Amarillo</td><td>Lennon / McCartney</td><td>Sol mayor</td></tr>
+      <tr><td class="pz">Oh, When the Saints</td><td>Tradicional</td><td>Do mayor</td></tr>
+      <tr><td class="pz">We Wish You a Merry Christmas</td><td>Tradicional</td><td>Sol mayor</td></tr>
+      <tr><td class="pz">Ejercicios a cuatro manos</td><td>F. Le Couppey</td><td>Do mayor</td></tr>
+      <tr><td class="pz">The Beginner (4 manos)</td><td>C. Gurlitt</td><td>Do mayor</td></tr>
+      <tr><td class="pz">Sonatina en La menor (4 manos)</td><td>M. Bazzoni</td><td>La menor</td></tr>
+      <tr><td class="pz">Over the Rainbow (cifrado)</td><td>H. Arlen</td><td>Do mayor</td></tr>
 
-      <tr class="h"><td colspan="4">Etapa II · Desarrollo — sesiones 10 a 29</td></tr>
-      <tr><td class="n">10–11</td><td class="pz">The Scientist</td><td>Coldplay</td><td>Do mayor</td></tr>
-      <tr><td class="n">12–13</td><td class="pz">Titanic (My Heart Will Go On)</td><td>J. Horner</td><td>Fa mayor</td></tr>
-      <tr><td class="n">14–15</td><td class="pz">The Sound of Silence</td><td>Simon &amp; Garfunkel</td><td>Fa mayor</td></tr>
-      <tr><td class="n">16–17</td><td class="pz">One Moment in Time (cifrado)</td><td>Hammond / Bettis</td><td>Do mayor</td></tr>
-      <tr><td class="n">18–19</td><td class="pz">Heart and Soul</td><td>H. Carmichael</td><td>Fa mayor</td></tr>
-      <tr><td class="n">20–21</td><td class="pz">La Primavera</td><td>A. Vivaldi</td><td>Mi mayor</td></tr>
-      <tr><td class="n">22–23</td><td class="pz">Perfect</td><td>Ed Sheeran</td><td>Sol mayor</td></tr>
-      <tr><td class="n">24–25</td><td class="pz">Scherzo (4 manos)</td><td>A. Diabelli</td><td>Do mayor</td></tr>
-      <tr><td class="n">26–27</td><td class="pz">Romance (4 manos)</td><td>A. Diabelli</td><td>Fa mayor</td></tr>
-      <tr><td class="n">28–29</td><td class="pz">Sonatina en Sol mayor (4 manos)</td><td>M. Bazzoni</td><td>Sol mayor</td></tr>
+      <tr class="h"><td colspan="3">Nivel II · Desarrollo</td></tr>
+      <tr><td class="pz">The Scientist</td><td>Coldplay</td><td>Do mayor</td></tr>
+      <tr><td class="pz">Titanic (My Heart Will Go On)</td><td>J. Horner</td><td>Fa mayor</td></tr>
+      <tr><td class="pz">The Sound of Silence</td><td>Simon &amp; Garfunkel</td><td>Fa mayor</td></tr>
+      <tr><td class="pz">One Moment in Time (cifrado)</td><td>Hammond / Bettis</td><td>Do mayor</td></tr>
+      <tr><td class="pz">Heart and Soul</td><td>H. Carmichael</td><td>Fa mayor</td></tr>
+      <tr><td class="pz">La Primavera</td><td>A. Vivaldi</td><td>Mi mayor</td></tr>
+      <tr><td class="pz">Perfect</td><td>Ed Sheeran</td><td>Sol mayor</td></tr>
+      <tr><td class="pz">Scherzo (4 manos)</td><td>A. Diabelli</td><td>Do mayor</td></tr>
+      <tr><td class="pz">Romance (4 manos)</td><td>A. Diabelli</td><td>Fa mayor</td></tr>
+      <tr><td class="pz">Sonatina en Sol mayor (4 manos)</td><td>M. Bazzoni</td><td>Sol mayor</td></tr>
 
-      <tr class="h"><td colspan="4">Etapa III · Maestría — sesiones 30 a 44</td></tr>
-      <tr><td class="n">30–32</td><td class="pz">Gladiator (Now We Are Free)</td><td>H. Zimmer</td><td>Re mayor</td></tr>
-      <tr><td class="n">33–35</td><td class="pz">7 Years</td><td>Lukas Graham</td><td>Sol menor</td></tr>
-      <tr><td class="n">36–38</td><td class="pz">El Golpe (The Entertainer)</td><td>S. Joplin</td><td>Do mayor</td></tr>
-      <tr><td class="n">39–41</td><td class="pz">Believer</td><td>Imagine Dragons</td><td>Fa / Si mayor</td></tr>
-      <tr><td class="n">42–44</td><td class="pz">Penélope (cifrado)</td><td>J. M. Serrat</td><td>Sol menor → La mayor</td></tr>
+      <tr class="h"><td colspan="3">Nivel III · Maestría</td></tr>
+      <tr><td class="pz">Gladiator (Now We Are Free)</td><td>H. Zimmer</td><td>Re mayor</td></tr>
+      <tr><td class="pz">7 Years</td><td>Lukas Graham</td><td>Sol menor</td></tr>
+      <tr><td class="pz">El Golpe (The Entertainer)</td><td>S. Joplin</td><td>Do mayor</td></tr>
+      <tr><td class="pz">Believer</td><td>Imagine Dragons</td><td>Fa / Si mayor</td></tr>
+      <tr><td class="pz">Penélope (cifrado)</td><td>J. M. Serrat</td><td>Sol menor → La mayor</td></tr>
     </tbody>
   </table>
 </section>
@@ -5328,7 +5323,20 @@ em{font-style:italic}
   <div class="cover-inner">
     <div class="top">
       <div class="eyebrow">Al terminar el cuaderno</div>
-      <div class="clef">𝄐</div>
+      <div class="cover-logo">
+        <svg class="brand" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <path id="arcTop2" d="M100,100 m-78,0 a78,78 0 1,1 156,0"/>
+            <path id="arcBot2" d="M100,100 m-70,0 a70,70 0 0,0 140,0"/>
+          </defs>
+          <circle cx="100" cy="100" r="96" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.5"/>
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#cabfa3" stroke-width="1"/>
+          <circle cx="100" cy="100" r="60" fill="#1b2433"/>
+          <text class="bt" font-size="27" letter-spacing="6"><textPath href="#arcTop2" startOffset="50%" text-anchor="middle">T-CLAS</textPath></text>
+          <text class="bb" font-size="11.5" letter-spacing="3"><textPath href="#arcBot2" startOffset="50%" text-anchor="middle">DESPIERTA TU SONIDO INTERIOR</textPath></text>
+          <text class="clef-g" x="100" y="140" font-size="94" text-anchor="middle">𝄞</text>
+        </svg>
+      </div>
     </div>
     <div class="mid">
       <h1 style="font-size:40px">Coda</h1>
