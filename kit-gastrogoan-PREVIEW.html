@@ -5558,7 +5558,7 @@ function renderEscandallo(){
     const sel = visibleRecipes.find(r => r.id === escandalloRecipe);
     if(!sel){ escandalloRecipe = null; renderEscandallo(); return; }
     const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${escapeHtml(escandalloFolder==='__none__'?'Sin categoría':escandalloFolder)}</button>`;
-    box.innerHTML = recBackBtn + `<div class="grid grid-compact">${renderEscandalloCard(sel)}</div>`;
+    box.innerHTML = recBackBtn + renderEscandalloFull(sel);
   } else {
     // Dentro de la carpeta, sin plato seleccionado: solo nombres clicables.
     box.innerHTML = backBtn + `<div class="table-wrap"><table><tbody>${visibleRecipes.map(r => `
@@ -5613,6 +5613,59 @@ function renderEscandalloLineLabel(line){
   }
   const ing = getIngredient(line.ingredientId);
   return ing ? {name: ing.name, unit: ing.unit} : null;
+}
+
+function renderEscandalloFull(r){
+    const breakdown = recipeCostBreakdown(r);
+    const cost = breakdown.total;
+    const pct = recipeFoodCostPct(r);
+    const margin = (r.price||0) - cost;
+    const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
+    const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
+    const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? 'Sin PVP' : `${pct.toFixed(1)}% FC`;
+
+    const lines = (r.ingredients||[]).map(line => {
+      const label = renderEscandalloLineLabel(line);
+      if(!label) return '';
+      const lineCost = recipeIngredientCost(line);
+      const merma = line.merma||0;
+      const pctOfTotal = cost > 0 ? ((lineCost/cost)*100).toFixed(1) : '0.0';
+      return `<tr><td><strong>${escapeHtml(label.name)}</strong></td><td>${fmtNum(line.qty)} ${escapeHtml(label.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td><td style="color:var(--muted)">${pctOfTotal}%</td></tr>`;
+    }).join('');
+
+    return `
+      <div class="card" style="max-width:100%">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:12px;color:var(--muted);font-weight:400">(Elaboración base)</span>':''}</h3>
+          <span class="badge badge-${pctClass}">${pctText}</span>
+        </div>
+        <div class="grid grid-4" style="margin-bottom:14px">
+          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
+          ${r.isBase ? `
+          <div class="kpi"><div class="label">Rendimiento</div><div class="value" style="font-size:18px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
+          <div class="kpi"><div class="label">Coste/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(perUnit)}</div></div>
+          ` : `
+          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:18px;color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</div></div>
+          <div class="kpi"><div class="label">Food Cost</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
+          `}
+        </div>
+        ${r.comensales || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+          ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
+          ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+        </div>` : ''}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th><th>% del total</th></tr></thead>
+            <tbody>${lines || '<tr><td colspan="5"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="actions-cell" style="margin-top:10px">
+          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
+        </div>
+      </div>
+    `;
 }
 
 function renderEscandalloCard(r){
