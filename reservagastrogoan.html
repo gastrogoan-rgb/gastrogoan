@@ -484,8 +484,17 @@ function getTurnosForDate(dateStr){
   const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
-  if(d.t1i && d.t1f && d.t1f > d.t1i) turnos.push({abre:d.t1i, cierra:d.t1f});
-  if(d.t2i && d.t2f && d.t2f > d.t2i) turnos.push({abre:d.t2i, cierra:d.t2f});
+  const add = (ini, fin) => { if(ini && fin && fin > ini) turnos.push({abre:ini, cierra:fin}); };
+  // Formato nuevo: {modo:'seguido'|'turnos', seguido:{ini,fin}, turnos:[{ini,fin}]}
+  if(d.modo === 'seguido' && d.seguido){
+    add(d.seguido.ini, d.seguido.fin);
+  } else if(Array.isArray(d.turnos)){
+    d.turnos.forEach(t => t && add(t.ini, t.fin));
+  } else {
+    // Formato antiguo: {t1i,t1f,t2i,t2f}
+    add(d.t1i, d.t1f);
+    add(d.t2i, d.t2f);
+  }
   return turnos;
 }
 
