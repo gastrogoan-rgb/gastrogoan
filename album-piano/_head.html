@@ -29,8 +29,8 @@
   --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,'Times New Roman',serif;
   --sans:'Inter','Segoe UI',-apple-system,system-ui,Roboto,sans-serif;
 }
-html{font-size:14.5px}
-body{font-family:var(--sans);color:var(--ink);line-height:1.62;background:#b8b1a3;}
+html{font-size:13.3px}
+body{font-family:var(--sans);color:var(--ink);line-height:1.48;background:#b8b1a3;}
 h1,h2,h3,h4,h5{font-family:var(--serif);font-weight:700;line-height:1.18;color:var(--ink)}
 p{margin:.42em 0}
 b,strong{font-weight:700;color:var(--ink)}
@@ -40,12 +40,12 @@ em{font-style:italic}
 /* ---------- HOJAS ---------- */
 .page{                 /* hoja de tamaño fijo (portada / preliminares) */
   width:210mm;height:297mm;margin:12px auto;background-color:var(--paper);
-  padding:24mm 22mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
-  page-break-after:always;overflow:hidden;
+  padding:20mm 20mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
+  break-before:page;overflow:hidden;
 }
 .sheet{                /* día: fluye y puede ocupar más de una hoja al imprimir */
   width:210mm;min-height:297mm;margin:12px auto;background-color:var(--paper);
-  padding:20mm 22mm 24mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
+  padding:13mm 20mm 12mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
   break-before:page;overflow:hidden;
 }
 /* Sello T-CLAS en la esquina de cada hoja (menos la portada/contraportada) */
@@ -139,18 +139,18 @@ em{font-style:italic}
    CABECERA DE DÍA
    ============================================================ */
 .s1{--stage:var(--green)} .s2{--stage:var(--blue)} .s3{--stage:var(--wine)}
-.day-head{border-top:3px solid var(--stage);padding-top:12px;margin-bottom:14px}
+.day-head{border-top:3px solid var(--stage);padding-top:9px;margin-bottom:10px}
 .day-head .row1{display:flex;justify-content:space-between;align-items:baseline}
 .day-head .stage-lbl{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:3px;
   text-transform:uppercase;color:var(--stage)}
 .day-head .sess{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:13px}
-.day-head h2{font-size:33px;margin:5px 0 1px;letter-spacing:-.4px}
+.day-head h2{font-size:29px;margin:4px 0 1px;letter-spacing:-.4px}
 .day-head .composer{font-family:var(--serif);font-style:italic;font-size:16px;color:var(--ink-2)}
 
 /* ficha técnica */
 .specs{display:flex;flex-wrap:wrap;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:5px;
   background:#fff;overflow:hidden}
-.specs .sp{flex:1 1 0;min-width:96px;padding:8px 12px;border-right:1px solid var(--line)}
+.specs .sp{flex:1 1 0;min-width:96px;padding:6px 11px;border-right:1px solid var(--line)}
 .specs .sp:last-child{border-right:0}
 .specs .sp .k{font-family:var(--sans);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
 .specs .sp .v{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);margin-top:1px}
@@ -159,14 +159,15 @@ em{font-style:italic}
 /* ============================================================
    SECCIONES Y PANELES
    ============================================================ */
-.sec{margin:16px 0 4px;break-inside:avoid-page}
-.sec-h{display:flex;align-items:center;gap:11px;margin-bottom:7px}
+.sec{margin:11px 0 3px}
+.sec-h{break-after:avoid}        /* el título no se queda solo al pie */
+.sec-h{display:flex;align-items:center;gap:11px;margin-bottom:5px}
 .sec-h .rn{font-family:var(--serif);font-weight:700;font-size:13px;color:#fff;background:var(--stage);
   width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .sec-h h3{font-size:19px;letter-spacing:-.2px}
 .sec-h .rule{flex:1;margin:0 0 0 4px}
 
-.panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:13px 16px;margin:9px 0;break-inside:avoid}
+.panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:9px 13px;margin:6px 0;break-inside:avoid}
 .panel p:first-child{margin-top:0}.panel p:last-child{margin-bottom:0}
 .panel h4{font-size:14.5px;margin-bottom:5px}
 .panel--soft{background:var(--paper-2);border-color:var(--line)}
@@ -186,7 +187,7 @@ em{font-style:italic}
 
 /* pasos de estudio */
 .steps{counter-reset:st;margin:6px 0}
-.step{position:relative;padding:9px 14px 9px 42px;margin:7px 0;background:#fff;border:1px solid var(--line);
+.step{position:relative;padding:7px 13px 7px 42px;margin:5px 0;background:#fff;border:1px solid var(--line);
   border-radius:5px;break-inside:avoid}
 .step:before{counter-increment:st;content:counter(st);position:absolute;left:0;top:0;bottom:0;width:32px;
   background:var(--stage);color:#fff;font-family:var(--serif);font-weight:700;font-size:15px;
@@ -214,8 +215,8 @@ em{font-style:italic}
 /* teclado 1 octava (Do–Si). Resaltar blanca: clase hl + opcional <span class="fg">N</span> y <span class="nn">Do</span>.
    Negras left fijo: 31/67/139/175/211 = Do# Re# Fa# Sol# La#. */
 .kbd{position:relative;display:inline-flex;background:var(--ink);padding:7px 7px 0;border-radius:5px;
-  box-shadow:0 3px 0 #18160f;margin:30px 0 6px}
-.kbd .wk{position:relative;width:34px;height:118px;background:#fffef9;border:1px solid #cfc6b2;border-radius:0 0 4px 4px;
+  box-shadow:0 3px 0 #18160f;margin:24px 0 5px}
+.kbd .wk{position:relative;width:34px;height:104px;background:#fffef9;border:1px solid #cfc6b2;border-radius:0 0 4px 4px;
   margin-right:2px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:6px}
 .kbd .wk:last-child{margin-right:0}
 .kbd .wk.hl{background:linear-gradient(#fff,var(--gold-soft));box-shadow:inset 0 -6px 0 var(--gold)}
@@ -278,8 +279,10 @@ em{font-style:italic}
   body{background:#fff}
   .page,.sheet{margin:0;box-shadow:none;width:auto}
   .page{height:auto;min-height:auto}
+  .sheet{min-height:0}
+  .page:first-child{break-before:auto}   /* sin hoja en blanco inicial */
   @page{size:A4;margin:0}
-  .sec,.panel,.hard,.step,.specs,.kbd{break-inside:avoid}
+  .panel,.hard,.step,.specs,.kbd,.scale,.rhythm,.day-head{break-inside:avoid}
 }
 </style>
 </head>
