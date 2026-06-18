@@ -6138,6 +6138,10 @@ function openFichaModal(id, recipeId){
 function updateFichaProduccion(value){
   syncFichaModalFields();
   fichaModalState.produccion = Math.max(1, parseFloat(value)||1);
+  if(fichaModalState.id){
+    const ficha = getFicha(fichaModalState.id);
+    if(ficha){ ficha.produccion = fichaModalState.produccion; saveDB(); }
+  }
   renderFichaModal();
 }
 
@@ -6195,7 +6199,7 @@ function renderFichaModal(){
       </div>
       <div class="field">
         <label>Producción (raciones a elaborar)</label>
-        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" onchange="updateFichaProduccion(this.value)" ${roAttr}>
+        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" onchange="updateFichaProduccion(this.value)">
       </div>
       <div class="field">
         <label>Tiempo de elaboración (min)</label>
@@ -10944,6 +10948,8 @@ const SHIFT_TYPES = {
   T: {label:'Tarde', bg:'#FEF9C3', tx:'#854D0E'},
   P: {label:'Partido', bg:'#DCFCE7', tx:'#166534'},
   D: {label:'Descanso', bg:'#F3F4F6', tx:'#6B7280'},
+  V: {label:'Vacaciones', bg:'#FFF7ED', tx:'#9A3412'},
+  B: {label:'Baja', bg:'#FEE2E2', tx:'#991B1B'},
   C: {label:'Otro', bg:'#EDE9FE', tx:'#5B21B6'}
 };
 
@@ -11199,6 +11205,8 @@ function openTurnoModal(id, employeeId, fecha){
   const state = t ? {...t} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
   const empOptions = emps.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
+  const noHorario = ['D','V','B'].includes(state.tipo);
+  const isPartido = state.tipo === 'P';
 
   openModal(`
     <div class="modal-header">
@@ -11215,19 +11223,36 @@ function openTurnoModal(id, employeeId, fecha){
         <input type="date" id="turno-fecha" value="${state.fecha}">
       </div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Tipo de turno</label>
-        <select id="turno-tipo">${tipoOptions}</select>
+    <div class="field">
+      <label>Tipo de turno</label>
+      <select id="turno-tipo" onchange="turnoTipoChanged()">${tipoOptions}</select>
+    </div>
+    <div id="turno-horarios" style="display:${noHorario?'none':'block'}">
+      <div class="field-row">
+        <div class="field">
+          <label>${isPartido?'Entrada (mañana)':'Entrada'}</label>
+          <input type="time" id="turno-entrada" value="${state.entrada}">
+        </div>
+        <div class="field">
+          <label>${isPartido?'Salida (mañana)':'Salida'}</label>
+          <input type="time" id="turno-salida" value="${state.salida}">
+        </div>
       </div>
-      <div class="field">
-        <label>Entrada</label>
-        <input type="time" id="turno-entrada" value="${state.entrada}">
+      <div id="turno-partido" style="display:${isPartido?'block':'none'}">
+        <div class="field-row">
+          <div class="field">
+            <label>Entrada (tarde)</label>
+            <input type="time" id="turno-entrada2" value="${state.entrada2||'16:00'}">
+          </div>
+          <div class="field">
+            <label>Salida (tarde)</label>
+            <input type="time" id="turno-salida2" value="${state.salida2||'23:00'}">
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label>Salida</label>
-        <input type="time" id="turno-salida" value="${state.salida}">
-      </div>
+    </div>
+    <div id="turno-descanso-msg" style="display:${noHorario?'block':'none'};background:#F3F4F6;border-radius:8px;padding:12px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:10px">
+      Este día no tiene horario asignado.
     </div>
     <div class="field">
       <label>Notas</label>
@@ -11241,13 +11266,27 @@ function openTurnoModal(id, employeeId, fecha){
   `);
 }
 
+function turnoTipoChanged(){
+  const tipo = document.getElementById('turno-tipo').value;
+  const noHorario = ['D','V','B'].includes(tipo);
+  const isPartido = tipo === 'P';
+  document.getElementById('turno-horarios').style.display = noHorario ? 'none' : 'block';
+  document.getElementById('turno-partido').style.display = isPartido ? 'block' : 'none';
+  document.getElementById('turno-descanso-msg').style.display = noHorario ? 'block' : 'none';
+}
+
 function saveTurno(id){
+  const tipo = document.getElementById('turno-tipo').value;
+  const noHorario = ['D','V','B'].includes(tipo);
+  const isPartido = tipo === 'P';
   const data = {
     employeeId: parseInt(document.getElementById('turno-employee').value),
     fecha: document.getElementById('turno-fecha').value,
-    tipo: document.getElementById('turno-tipo').value,
-    entrada: document.getElementById('turno-entrada').value,
-    salida: document.getElementById('turno-salida').value,
+    tipo,
+    entrada: noHorario ? '' : document.getElementById('turno-entrada').value,
+    salida: noHorario ? '' : document.getElementById('turno-salida').value,
+    entrada2: isPartido ? document.getElementById('turno-entrada2').value : '',
+    salida2: isPartido ? document.getElementById('turno-salida2').value : '',
     notas: document.getElementById('turno-notas').value.trim()
   };
   if(!DB.turnos) DB.turnos = [];
