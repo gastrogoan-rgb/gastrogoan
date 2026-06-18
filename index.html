@@ -7688,8 +7688,6 @@ function renderTPV(){
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
       ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> Pedido Express</button>` : ''}
-      ${tiposServicio.takeaway !== false ? `<button class="btn" onclick="openNewTakeawayModal()"><i class="ti ti-shopping-bag"></i> Take Away</button>` : ''}
-      ${tiposServicio.delivery !== false ? `<button class="btn" onclick="openNewDeliveryModal()"><i class="ti ti-moped"></i> Delivery</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
