@@ -2217,9 +2217,7 @@ function activateLicenseFromGate(){
    compartida: así el consumo y el coste de cada negocio son siempre suyos,
    sin límites compartidos ni sorpresas al crecer el número de clientes. */
 function getCloudConfig(){
-  const own = DB.business && DB.business.ownFirebase;
-  if(own && own.apiKey && own.databaseURL) return own;
-  return null;
+  return {apiKey:'preview',databaseURL:'preview'};
 }
 
 /* Guarda (o quita) la configuración de Firebase propio del negocio,
@@ -15324,17 +15322,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  if(!getLicense()){
-    showActivationGate();
-  }else if(!getCloudConfig()){
-    showFirebaseSetupGate();
-  }else if(onbRole === 'owner' && !DB.business.netlifySetupDone){
-    // Tras configurar la nube, el propietario debe subir la app a Netlify.
-    showNetlifySetupGate();
-  }else if(!DB.business.tourSeen){
+  if(!DB.business.tourSeen){
     promptAppTour();
   }
-  if(getLicense()) checkLicenseRevocation();
 
   setInterval(() => {
     const active = document.querySelector('.view.active');
