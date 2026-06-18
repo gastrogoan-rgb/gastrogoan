@@ -2,126 +2,384 @@
 <style>
 @page{size:A4 landscape;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;color:#1a1a2e;background:#fff}
-.page{width:297mm;height:210mm;padding:18mm 22mm;position:relative;page-break-after:always;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1A1A1A;background:#fff;font-size:13px;line-height:1.4}
+.page{width:297mm;height:210mm;position:relative;page-break-after:always;overflow:hidden}
 
-/* COVER */
-.cover{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4a 100%);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+/* COVER & CLOSING */
+.cover{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4a 100%);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20mm}
 .cover h1{font-size:52pt;color:#DF7039;letter-spacing:2px}
-.cover p.sub{font-size:16pt;color:#ccc;margin-top:8mm}
-.cover .tagline{margin-top:15mm;font-size:13pt;color:#F5E6D0;line-height:1.8;max-width:200mm}
+.cover .sub{font-size:16pt;color:#ccc;margin-top:6mm}
+.cover .tagline{margin-top:12mm;font-size:12pt;color:#bbb;line-height:1.8}
+.closing{background:linear-gradient(135deg,#DF7039,#e8854d);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20mm}
+.closing h1{font-size:34pt;line-height:1.3}
+.closing .price{margin-top:10mm;font-size:18pt;background:rgba(255,255,255,.2);padding:4mm 14mm;border-radius:4mm}
+.closing .price b{font-size:28pt}
+.closing .contact{margin-top:8mm;font-size:11pt;color:rgba(255,255,255,.8)}
 
-/* SECTION PAGES */
-.section-title{font-size:28pt;color:#DF7039;border-bottom:3px solid #DF7039;padding-bottom:4mm;margin-bottom:10mm}
-.section-subtitle{font-size:11pt;color:#666;margin-top:-8mm;margin-bottom:10mm}
-.cols{display:flex;gap:12mm}
-.col{flex:1}
-.feature{margin-bottom:7mm}
-.feature h3{font-size:13pt;color:#1a1a2e;margin-bottom:2mm}
-.feature p{font-size:10pt;color:#555;line-height:1.5}
-.icon{display:inline-block;width:8mm;height:8mm;background:#DF7039;color:#fff;border-radius:50%;text-align:center;line-height:8mm;font-size:12pt;margin-right:3mm;vertical-align:middle}
-.badge{display:inline-block;background:#FEF3E2;color:#DF7039;font-size:9pt;padding:1mm 3mm;border-radius:3mm;font-weight:600;margin-top:1mm}
-.grid3{display:flex;gap:8mm;flex-wrap:wrap}
-.grid3 .card{flex:1;min-width:70mm;background:#FAFAF8;border:1px solid #eee;border-radius:4mm;padding:6mm}
-.grid3 .card h3{font-size:12pt;color:#DF7039;margin-bottom:3mm}
-.grid3 .card p{font-size:9.5pt;color:#555;line-height:1.5}
-.highlight-box{background:#FEF3E2;border-left:4px solid #DF7039;padding:5mm 8mm;border-radius:0 4mm 4mm 0;margin-top:8mm}
-.highlight-box p{font-size:10pt;color:#333;line-height:1.6}
+/* APP CHROME */
+:root{--o:#DF7039;--cream:#F6EDD5;--border:#DFD0B8;--muted:#7A6A58;--green:#3B6D11;--red:#E24B4A;--blue:#185FA5;--tl:#FDEEE4}
+.app{background:var(--cream);height:100%;display:flex;flex-direction:column}
+.app-hdr{height:42px;background:#000;display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.app-hdr .logo{display:flex;align-items:center;gap:6px;color:#fff;font-weight:700;font-size:13px}
+.app-hdr .logo-icon{width:26px;height:26px;background:var(--o);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.hdr-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid #444;color:#ccc;background:transparent}
+.hdr-btn.active{background:var(--o);border-color:var(--o);color:#fff}
+.spacer{flex:1}
+.content{flex:1;padding:12px 14px;overflow:hidden}
+.page-label{position:absolute;bottom:6mm;left:50%;transform:translateX(-50%);font-size:9pt;color:#999;font-style:italic}
 
-/* CLOSING */
-.closing{background:linear-gradient(135deg,#DF7039,#e8854d);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-.closing h1{font-size:36pt;max-width:220mm;line-height:1.3}
-.closing .price{margin-top:12mm;font-size:20pt;background:rgba(255,255,255,.2);padding:5mm 15mm;border-radius:5mm}
-.closing .price span{font-size:32pt;font-weight:700}
-.closing .contact{margin-top:10mm;font-size:12pt;color:rgba(255,255,255,.85)}
+/* SHARED */
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:700}
+.badge-green{background:#EAF3DE;color:var(--green)}
+.badge-red{background:#FCEBEB;color:var(--red)}
+.badge-orange{background:var(--tl);color:#8B3A18}
+.badge-blue{background:#E6F1FB;color:var(--blue)}
+.badge-gray{background:#f0ece4;color:var(--muted)}
+
+/* MESA */
+.zona-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.4px;margin:8px 0 4px}
+.mesa-grid{display:flex;flex-wrap:wrap;gap:6px}
+.mesa{background:#fff;border:1px solid var(--border);border-radius:8px;padding:7px;text-align:center;width:110px;position:relative}
+.mesa::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:8px 8px 0 0}
+.mesa.libre::before{background:var(--green)}
+.mesa.ocupada::before{background:var(--o)}
+.mesa-name{font-size:11px;font-weight:700}
+.mesa-total{font-size:12px;font-weight:800;color:var(--o);margin-top:2px}
+.mesa-pax{font-size:9px;color:var(--muted)}
+
+/* COMANDA */
+.comanda-split{display:flex;gap:10px;height:calc(100% - 28px)}
+.carta-panel{flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.carta-tabs{display:flex;background:#f5f0e6;border-bottom:1px solid var(--border)}
+.carta-tab{padding:7px 12px;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent}
+.carta-tab.active{color:var(--o);border-bottom-color:var(--o)}
+.carta-section{padding:6px 10px}
+.carta-section-title{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.plato-row{display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;font-size:12px}
+.plato-row.sel{background:var(--tl)}
+.plato-price{font-weight:700;color:var(--o)}
+.comanda-panel{width:260px;background:#fff;border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column}
+.comanda-header{padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700;font-size:12px;display:flex;justify-content:space-between}
+.comanda-items{flex:1;padding:6px 10px;overflow:hidden}
+.cl{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ece4;font-size:11px}
+.cl .qty{background:var(--tl);color:#8B3A18;font-weight:700;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;margin-right:5px}
+.cl .ln{flex:1}
+.cl .lp{font-weight:700;color:var(--o)}
+.comanda-footer{padding:8px 10px;border-top:2px solid var(--o);display:flex;justify-content:space-between;align-items:center}
+.comanda-total{font-size:18px;font-weight:800;color:var(--o)}
+.btn-o{background:var(--o);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;width:100%}
+
+/* COCINA */
+.cocina-grid{display:flex;gap:10px}
+.cocina-card{flex:1;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.cc-hdr{padding:8px 10px;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)}
+.cc-items{padding:8px 10px}
+.ci{display:flex;align-items:center;gap:5px;padding:4px 0;font-size:12px;border-bottom:1px solid #f5f0e6}
+.ci:last-child{border:none}
+.ci .cq{font-weight:700;color:var(--o)}
+.ci .cn{flex:1}
+.cc-foot{padding:5px 10px;background:#f9f5ed;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px}
+
+/* ESCANDALLO */
+.kpi-row{display:flex;gap:8px;margin-bottom:10px}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;flex:1}
+.kpi .label{font-size:9px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;color:var(--muted)}
+.kpi .value{font-size:18px;font-weight:800;margin-top:2px}
+.kpi.green .value{color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:7px 10px;text-align:left;font-size:9px;text-transform:uppercase;color:#8B3A18;font-weight:700;background:var(--tl)}
+td{padding:6px 10px;border-bottom:1px solid #f0ece4}
+
+/* PERSONAL */
+.emp-grid{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.emp{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;width:170px}
+.emp-name{font-weight:700;font-size:12px}
+.emp-role{font-size:10px;color:var(--muted)}
+.sched-grid{display:flex;gap:4px}
+.sched-day{flex:1;background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px;text-align:center}
+.sched-day .day{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.sched-day .shift{font-size:10px;font-weight:700;margin-top:2px}
+.sched-day .shift.m{color:var(--o)}
+.sched-day .shift.t{color:var(--blue)}
+.sched-day .shift.p{color:var(--green)}
+.sched-day .shift.l{color:var(--red)}
+
+/* STOCK */
+.stock-grid{display:flex;gap:6px;flex-wrap:wrap}
+.stock-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;width:155px}
+.stock-name{font-weight:700;font-size:11px}
+.stock-qty{font-size:13px;font-weight:800;margin-top:2px}
+.stock-qty.low{color:var(--red)}
+.stock-qty.ok{color:var(--green)}
+.stock-min{font-size:9px;color:var(--muted)}
 </style></head><body>
 
-<!-- PORTADA -->
+<!-- P1: PORTADA -->
 <div class="page cover">
 <h1>GastroGoan</h1>
 <p class="sub">Software TPV todo-en-uno para restaurantes</p>
-<div class="tagline">Gestiona tu cocina, tu sala y tu equipo desde una sola aplicación.<br>Sin instalaciones · Sin hardware especial · Funciona en cualquier dispositivo.</div>
+<div class="tagline">Gestiona tu cocina, tu sala y tu equipo<br>desde una sola aplicación.<br><br>Sin instalaciones · Sin hardware · Cualquier dispositivo</div>
+<div class="page-label" style="color:#555">gastrogoan.com</div>
 </div>
 
-<!-- 1. COCINA -->
-<div class="page">
-<div class="section-title">🍳 Cocina</div>
-<p class="section-subtitle">Control total de lo que pasa en la cocina: recetas, costes, stock y pantalla de pedidos.</p>
-<div class="cols">
-<div class="col">
-<div class="feature"><h3><span class="icon">📋</span>Escandallos y fichas técnicas</h3>
-<p>Define ingredientes, cantidades y costes de cada plato. Calcula automáticamente el food cost, margen y PVP sugerido. Fichas técnicas con alérgenos y elaboración paso a paso.</p></div>
-<div class="feature"><h3><span class="icon">📦</span>Stock e inventario</h3>
-<p>Control de stock de ingredientes y elaboraciones con alertas de mínimos. Registro de mermas y ajustes. Cuando vendes un plato, el stock se descuenta automáticamente.</p></div>
-<div class="feature"><h3><span class="icon">🚚</span>Proveedores y pedidos</h3>
-<p>Gestiona tus proveedores, genera pedidos automáticos según stock mínimo y lleva el historial de compras y precios.</p></div>
+<!-- P2: SALA - MESAS -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn">☀️ Cocina</div><div class="hdr-btn active">🍷 Sala</div><div class="hdr-btn">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">TPV — Plano de mesas</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:8px">18 mesas · 3 ocupadas · 5 reservas hoy</div>
+<div class="zona-label">🏠 Interior — 8 mesas</div>
+<div class="mesa-grid">
+<div class="mesa libre"><div class="mesa-name">Mesa 1</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa ocupada"><div class="mesa-name">Mesa 2</div><div class="mesa-pax">👥 2 pax</div><div class="mesa-total">65,50 €</div></div>
+<div class="mesa libre"><div class="mesa-name">Mesa 3</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Mesa 4</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Mesa 5</div><div class="badge badge-blue" style="margin-top:3px">🕐 Reserva 21:00</div></div>
+<div class="mesa ocupada"><div class="mesa-name">Mesa 6</div><div class="mesa-pax">👥 4 pax</div><div class="mesa-total">91,50 €</div></div>
+<div class="mesa libre"><div class="mesa-name">Mesa 7</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Mesa 8</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
 </div>
-<div class="col">
-<div class="feature"><h3><span class="icon">🖥</span>Pantalla de cocina (KDS)</h3>
-<p>Los pedidos llegan en tiempo real a la pantalla de cocina. El cocinero marca platos como "en preparación" y "listo". Sin papeles, sin gritos.</p></div>
-<div class="feature"><h3><span class="icon">🧪</span>Elaboraciones</h3>
-<p>Gestiona salsas, bases y preparaciones intermedias con su propio stock. Se integran como ingredientes en los escandallos.</p></div>
-<div class="feature"><h3><span class="icon">🧹</span>Tareas de limpieza (APPCC)</h3>
-<p>Checklists de limpieza diarios con registro de quién y cuándo los completó. Cumple con la normativa de higiene alimentaria.</p></div>
+<div class="zona-label">☀️ Terraza — 6 mesas</div>
+<div class="mesa-grid">
+<div class="mesa libre"><div class="mesa-name">Terraza 1</div><div class="badge badge-blue" style="margin-top:3px">🕐 Reserva 14:30</div></div>
+<div class="mesa ocupada"><div class="mesa-name">Terraza 2</div><div class="mesa-pax">👥 2 pax</div><div class="mesa-total">40,00 €</div></div>
+<div class="mesa libre"><div class="mesa-name">Terraza 3</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Terraza 4</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Terraza 5</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Terraza 6</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
 </div>
+<div class="zona-label">🍺 Barra — 4 puestos</div>
+<div class="mesa-grid">
+<div class="mesa libre"><div class="mesa-name">Barra 1</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Barra 2</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Barra 3</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
+<div class="mesa libre"><div class="mesa-name">Barra 4</div><div class="badge badge-green" style="margin-top:3px">Libre</div></div>
 </div>
-<div class="highlight-box"><p><strong>💡 Resultado:</strong> Sabes exactamente cuánto cuesta cada plato, cuánto margen te deja, y nunca te quedas sin stock por sorpresa.</p></div>
-</div>
-
-<!-- 2. SALA -->
-<div class="page">
-<div class="section-title">🍽 Sala</div>
-<p class="section-subtitle">Desde que el cliente se sienta hasta que paga: todo fluye.</p>
-<div class="cols">
-<div class="col">
-<div class="feature"><h3><span class="icon">🗺</span>Plano de mesas interactivo</h3>
-<p>Diseña tu sala con mesas arrastrables. Ves de un vistazo qué mesas están libres, ocupadas o pendientes de cobro. Configura zonas (terraza, interior, barra).</p></div>
-<div class="feature"><h3><span class="icon">📝</span>Tomar comanda</h3>
-<p>Selecciona mesa, elige platos de la carta con modificadores (sin gluten, extra queso…). Pedidos rápidos con buscador y favoritos. Divide cuentas entre comensales.</p></div>
-<div class="feature"><h3><span class="icon">💳</span>Cobro y tickets</h3>
-<p>Cobra en efectivo, tarjeta o mixto. Genera tickets con detalle del pedido. Aplica descuentos y promociones automáticas.</p></div>
-</div>
-<div class="col">
-<div class="feature"><h3><span class="icon">📱</span>Pedidos QR y para llevar</h3>
-<p>Genera QR para que los clientes pidan desde su móvil. Gestiona pedidos para llevar y delivery con su propio flujo de cobro.</p></div>
-<div class="feature"><h3><span class="icon">📅</span>Reservas</h3>
-<p>Sistema de reservas integrado con calendario visual. Los clientes reservan online y tú ves la disponibilidad en tiempo real. Confirmación automática.</p></div>
-<div class="feature"><h3><span class="icon">👥</span>Clientes y fidelización</h3>
-<p>Ficha de cada cliente con historial de visitas, preferencias y gasto total. Programa de puntos y promociones personalizadas.</p></div>
-</div>
-</div>
-<div class="highlight-box"><p><strong>💡 Resultado:</strong> Servicio más rápido, menos errores en pedidos, y clientes que repiten gracias a una experiencia profesional.</p></div>
+</div></div>
+<div class="page-label">Sala · Plano de mesas</div>
 </div>
 
-<!-- 3. GESTIÓN -->
-<div class="page">
-<div class="section-title">📊 Gestión</div>
-<p class="section-subtitle">Controla tu negocio con datos reales: equipo, números y decisiones informadas.</p>
-<div class="cols">
-<div class="col">
-<div class="feature"><h3><span class="icon">👨‍🍳</span>Gestión de personal</h3>
-<p>Alta de empleados con roles y permisos. Cada trabajador tiene su PIN de acceso. Controla quién puede cobrar, anular pedidos o acceder a informes.</p></div>
-<div class="feature"><h3><span class="icon">📆</span>Horarios y turnos</h3>
-<p>Planifica horarios semanales con turnos de mañana, tarde, partido o libre. Vista semanal compacta de todo el equipo. Control de horas trabajadas.</p></div>
-<div class="feature"><h3><span class="icon">💰</span>Propinas</h3>
-<p>Registro y reparto de propinas entre el equipo. Transparente y justo.</p></div>
+<!-- P3: SALA - COMANDA -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn">☀️ Cocina</div><div class="hdr-btn active">🍷 Sala</div><div class="hdr-btn">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:14px;font-weight:800;margin-bottom:8px">Mesa 6 · 👥 4 comensales · Camarero: Ana Martínez</div>
+<div class="comanda-split">
+<div class="carta-panel">
+<div class="carta-tabs"><div class="carta-tab active">Carta Principal</div><div class="carta-tab">Menú del Día 16,50€</div></div>
+<div class="carta-section"><div class="carta-section-title">🥗 Entrantes</div>
+<div class="plato-row"><span>Ensalada mediterránea</span><span class="plato-price">12,50 €</span></div>
+<div class="plato-row sel"><span>Gambas al ajillo</span><span class="plato-price">16,00 €</span></div>
+<div class="plato-row"><span>Croquetas caseras (8 uds)</span><span class="plato-price">11,00 €</span></div>
 </div>
-<div class="col">
-<div class="feature"><h3><span class="icon">📈</span>Dashboard en tiempo real</h3>
-<p>Ventas del día, ticket medio, platos más vendidos, comparativa con días anteriores. Todo en un panel visual que se actualiza en directo.</p></div>
-<div class="feature"><h3><span class="icon">🧾</span>Arqueo de caja</h3>
-<p>Cierre de caja con desglose por método de pago, descuadres detectados y registro histórico. Sin sorpresas al final del turno.</p></div>
-<div class="feature"><h3><span class="icon">🌐</span>Multi-idioma y multi-dispositivo</h3>
-<p>Interfaz en español, inglés y más. Funciona en tablet, móvil y ordenador. Sincronización en la nube entre todos los dispositivos.</p></div>
+<div class="carta-section"><div class="carta-section-title">🥘 Arroces</div>
+<div class="plato-row"><span>Arroz a banda</span><span class="plato-price">18,00 €</span></div>
+<div class="plato-row sel"><span>Paella valenciana <span class="badge badge-orange">min. 2 pax</span></span><span class="plato-price">22,00 €</span></div>
+</div>
+<div class="carta-section"><div class="carta-section-title">🥩 Carnes</div>
+<div class="plato-row"><span>Solomillo a la pimienta</span><span class="plato-price">24,00 €</span></div>
+<div class="plato-row"><span>Secreto ibérico a la brasa</span><span class="plato-price">19,50 €</span></div>
+</div>
+<div class="carta-section"><div class="carta-section-title">🐟 Pescados</div>
+<div class="plato-row"><span>Lubina a la espalda</span><span class="plato-price">21,00 €</span></div>
+</div>
+<div class="carta-section"><div class="carta-section-title">🍰 Postres</div>
+<div class="plato-row"><span>Tarta de queso</span><span class="plato-price">7,50 €</span></div>
+<div class="plato-row"><span>Crema catalana</span><span class="plato-price">6,50 €</span></div>
 </div>
 </div>
-<div class="highlight-box"><p><strong>💡 Resultado:</strong> Tomas decisiones con datos, no con intuición. Y gestionas tu equipo sin hojas de Excel.</p></div>
+<div class="comanda-panel">
+<div class="comanda-header"><span>📋 Comanda</span><span class="badge badge-orange">6 items</span></div>
+<div class="comanda-items">
+<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:3px 0">Entrantes</div>
+<div class="cl"><span class="qty">2</span><span class="ln">Ensalada mediterránea</span><span class="lp">25,00 €</span></div>
+<div class="cl"><span class="qty">1</span><span class="ln">Croquetas caseras</span><span class="lp">11,00 €</span></div>
+<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:5px 0 3px">Arroces</div>
+<div class="cl"><span class="qty">2</span><span class="ln">Paella valenciana</span><span class="lp">44,00 €</span></div>
+<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:5px 0 3px">Bebidas</div>
+<div class="cl"><span class="qty">1</span><span class="ln">Ribera del Duero</span><span class="lp">22,00 €</span></div>
+<div class="cl"><span class="qty">2</span><span class="ln">Agua mineral</span><span class="lp">4,00 €</span></div>
+</div>
+<div class="comanda-footer"><div><div style="font-size:10px;color:var(--muted)">Total</div><div class="comanda-total">106,00 €</div></div></div>
+<div style="padding:0 10px 10px"><button class="btn-o">✅ Marchar comanda</button></div>
+</div>
+</div>
+</div></div>
+<div class="page-label">Sala · Tomar comanda</div>
 </div>
 
-<!-- CIERRE -->
+<!-- P4: COCINA - KDS -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn active">☀️ Cocina</div><div class="hdr-btn">🍷 Sala</div><div class="hdr-btn">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">🔥 Pantalla de Cocina (KDS)</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:10px">3 comandas activas · Actualización en tiempo real</div>
+<div class="cocina-grid">
+<div class="cocina-card" style="border-left:4px solid var(--red)">
+<div class="cc-hdr"><span style="font-weight:700">🍽 Mesa 2</span><span class="badge badge-red">⏱ 12 min</span></div>
+<div class="cc-items">
+<div class="ci"><span class="cq">1×</span><span class="cn">Solomillo a la pimienta</span><span class="badge badge-orange">🔥 En cocina</span></div>
+<div class="ci"><span class="cq">1×</span><span class="cn">Lubina a la espalda</span><span class="badge badge-orange">🔥 En cocina</span></div>
+</div>
+<div class="cc-foot"><span style="font-weight:700;text-transform:uppercase">Segundos</span><span class="badge badge-orange">✅ Entregar todo</span></div>
+</div>
+<div class="cocina-card" style="border-left:4px solid #f39c12">
+<div class="cc-hdr"><span style="font-weight:700">🍽 Mesa 6</span><span class="badge badge-orange">⏱ 8 min</span></div>
+<div class="cc-items">
+<div class="ci"><span class="cq">2×</span><span class="cn">Paella valenciana</span><span class="badge badge-orange">⏳ Preparando</span></div>
+<div class="ci"><span class="cq">2×</span><span class="cn">Ensalada mediterránea</span><span class="badge badge-green">✅ Listo</span></div>
+</div>
+<div class="cc-foot"><span style="font-weight:700;text-transform:uppercase">Arroces</span><span class="badge badge-orange">✅ Entregar todo</span></div>
+</div>
+<div class="cocina-card" style="border-left:4px solid var(--blue)">
+<div class="cc-hdr"><span style="font-weight:700">🌴 Terraza 2</span><span class="badge badge-blue">⏱ 1 min</span></div>
+<div class="cc-items">
+<div class="ci"><span class="cq">1×</span><span class="cn">Gambas al ajillo</span><span class="badge badge-gray">📝 Pendiente</span></div>
+<div class="ci"><span class="cq">2×</span><span class="cn">Secreto ibérico</span><span style="font-size:10px;color:var(--red);font-style:italic">Sin sal, poco hecho</span></div>
+</div>
+<div class="cc-foot"><span style="font-weight:700;text-transform:uppercase">Entrantes</span><span class="badge badge-blue">🔥 Preparar todo</span></div>
+</div>
+</div>
+</div></div>
+<div class="page-label">Cocina · Pantalla KDS</div>
+</div>
+
+<!-- P5: COCINA - ESCANDALLO -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn active">☀️ Cocina</div><div class="hdr-btn">🍷 Sala</div><div class="hdr-btn">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">📊 Escandallo — Paella valenciana</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:10px">Cálculo automático de costes</div>
+<div class="kpi-row">
+<div class="kpi"><div class="label">Coste total</div><div class="value">5,35 €</div></div>
+<div class="kpi"><div class="label">PVP</div><div class="value">22,00 €</div></div>
+<div class="kpi green"><div class="label">Margen</div><div class="value">16,65 €</div></div>
+<div class="kpi"><div class="label">Food Cost</div><div class="value" style="color:var(--green)">24,3%</div></div>
+</div>
+<div style="overflow:hidden;border:1px solid var(--border);border-radius:8px;margin-bottom:10px">
+<table><thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th><th>% total</th></tr></thead>
+<tbody>
+<tr><td><strong>Arroz bomba</strong></td><td>0,25 kg</td><td>—</td><td><strong>0,88 €</strong></td><td style="color:var(--muted)">16,4%</td></tr>
+<tr><td><strong>Pechuga de pollo</strong></td><td>0,20 kg</td><td>—</td><td><strong>1,30 €</strong></td><td style="color:var(--muted)">24,3%</td></tr>
+<tr><td><strong>Pimiento rojo</strong></td><td>0,10 kg</td><td>—</td><td><strong>0,32 €</strong></td><td style="color:var(--muted)">6,0%</td></tr>
+<tr><td><strong>Judía verde</strong></td><td>0,10 kg</td><td>5%</td><td><strong>0,28 €</strong></td><td style="color:var(--muted)">5,2%</td></tr>
+<tr><td><strong>Garrofón</strong></td><td>0,08 kg</td><td>—</td><td><strong>0,45 €</strong></td><td style="color:var(--muted)">8,4%</td></tr>
+<tr><td><strong>Tomate triturado</strong></td><td>0,06 kg</td><td>—</td><td><strong>0,12 €</strong></td><td style="color:var(--muted)">2,2%</td></tr>
+<tr><td><strong>Aceite oliva</strong></td><td>0,04 L</td><td>—</td><td><strong>0,24 €</strong></td><td style="color:var(--muted)">4,5%</td></tr>
+<tr><td><strong>Azafrán</strong></td><td>0,50 g</td><td>—</td><td><strong>0,43 €</strong></td><td style="color:var(--muted)">8,0%</td></tr>
+</tbody></table>
+</div>
+<div style="font-size:11px;color:var(--muted)">👥 Receta para 2 comensales · Consumibles: 3% · Alérgenos detectados automáticamente</div>
+</div></div>
+<div class="page-label">Cocina · Escandallo y costes</div>
+</div>
+
+<!-- P6: COCINA - STOCK -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn active">☀️ Cocina</div><div class="hdr-btn">🍷 Sala</div><div class="hdr-btn">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">📦 Stock e inventario</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:10px">24 ingredientes · 3 bajo mínimos · Descuento automático al vender</div>
+<div class="stock-grid" style="margin-bottom:14px">
+<div class="stock-item"><div class="stock-name">Arroz bomba</div><div class="stock-qty ok">12,5 kg</div><div class="stock-min">Mín: 5 kg</div></div>
+<div class="stock-item"><div class="stock-name">Pechuga pollo</div><div class="stock-qty ok">8,2 kg</div><div class="stock-min">Mín: 3 kg</div></div>
+<div class="stock-item" style="border-color:var(--red)"><div class="stock-name">Gambas</div><div class="stock-qty low">0,8 kg</div><div class="stock-min">⚠️ Mín: 2 kg</div></div>
+<div class="stock-item"><div class="stock-name">Aceite oliva</div><div class="stock-qty ok">15,0 L</div><div class="stock-min">Mín: 5 L</div></div>
+<div class="stock-item" style="border-color:var(--red)"><div class="stock-name">Azafrán</div><div class="stock-qty low">3 g</div><div class="stock-min">⚠️ Mín: 5 g</div></div>
+<div class="stock-item"><div class="stock-name">Solomillo</div><div class="stock-qty ok">4,5 kg</div><div class="stock-min">Mín: 2 kg</div></div>
+<div class="stock-item"><div class="stock-name">Lubina</div><div class="stock-qty ok">6,0 kg</div><div class="stock-min">Mín: 2 kg</div></div>
+<div class="stock-item" style="border-color:var(--red)"><div class="stock-name">Secreto ibérico</div><div class="stock-qty low">0,5 kg</div><div class="stock-min">⚠️ Mín: 2 kg</div></div>
+<div class="stock-item"><div class="stock-name">Huevos</div><div class="stock-qty ok">48 uds</div><div class="stock-min">Mín: 24 uds</div></div>
+<div class="stock-item"><div class="stock-name">Harina</div><div class="stock-qty ok">5,0 kg</div><div class="stock-min">Mín: 2 kg</div></div>
+</div>
+<div style="font-size:14px;font-weight:800;margin-bottom:6px">🚚 Proveedores</div>
+<div style="display:flex;gap:8px">
+<div class="card" style="flex:1"><div style="font-weight:700;font-size:12px">Mariscos Valencia</div><div style="font-size:10px;color:var(--muted)">Pescados y mariscos · Tel: 961 234 567</div><div class="badge badge-orange" style="margin-top:4px">Pedido pendiente</div></div>
+<div class="card" style="flex:1"><div style="font-weight:700;font-size:12px">Cárnicas del Turia</div><div style="font-size:10px;color:var(--muted)">Carnes ibéricas · Tel: 962 345 678</div><div class="badge badge-green" style="margin-top:4px">Al día</div></div>
+<div class="card" style="flex:1"><div style="font-weight:700;font-size:12px">Verduras Huerta</div><div style="font-size:10px;color:var(--muted)">Verduras frescas · Entregas L/M/V</div><div class="badge badge-green" style="margin-top:4px">Al día</div></div>
+<div class="card" style="flex:1"><div style="font-weight:700;font-size:12px">Distribuciones García</div><div style="font-size:10px;color:var(--muted)">Aceites, especias, secos</div><div class="badge badge-green" style="margin-top:4px">Al día</div></div>
+</div>
+</div></div>
+<div class="page-label">Cocina · Stock y proveedores</div>
+</div>
+
+<!-- P7: GESTIÓN - PERSONAL -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn">☀️ Cocina</div><div class="hdr-btn">🍷 Sala</div><div class="hdr-btn active">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">👨‍🍳 Equipo y horarios</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:10px">6 empleados · Semana 23 Jun 2026</div>
+<div class="emp-grid">
+<div class="emp"><div class="emp-name">Carlos López</div><div class="emp-role">👨‍🍳 Chef principal</div><div class="badge badge-green" style="margin-top:3px">Trabajando</div></div>
+<div class="emp"><div class="emp-name">Ana Martínez</div><div class="emp-role">🍽 Camarera</div><div class="badge badge-green" style="margin-top:3px">Trabajando</div></div>
+<div class="emp"><div class="emp-name">Luis García</div><div class="emp-role">👨‍🍳 Cocinero</div><div class="badge badge-gray" style="margin-top:3px">Libre hoy</div></div>
+<div class="emp"><div class="emp-name">María Ruiz</div><div class="emp-role">🍽 Camarera</div><div class="badge badge-blue" style="margin-top:3px">Turno tarde</div></div>
+<div class="emp"><div class="emp-name">Pedro Sánchez</div><div class="emp-role">🍸 Barman</div><div class="badge badge-green" style="margin-top:3px">Trabajando</div></div>
+<div class="emp"><div class="emp-name">Sofía Reyes</div><div class="emp-role">📋 Encargada</div><div class="badge badge-green" style="margin-top:3px">Trabajando</div></div>
+</div>
+<div style="font-size:12px;font-weight:700;margin-bottom:6px">Horario semanal — Carlos López (Chef)</div>
+<div class="sched-grid" style="margin-bottom:10px">
+<div class="sched-day"><div class="day">Lun</div><div class="shift p">P</div><div style="font-size:8px;color:var(--muted)">10-16, 20-24</div></div>
+<div class="sched-day"><div class="day">Mar</div><div class="shift m">M</div><div style="font-size:8px;color:var(--muted)">10:00-18:00</div></div>
+<div class="sched-day"><div class="day">Mié</div><div class="shift m">M</div><div style="font-size:8px;color:var(--muted)">10:00-18:00</div></div>
+<div class="sched-day"><div class="day">Jue</div><div class="shift t">T</div><div style="font-size:8px;color:var(--muted)">16:00-24:00</div></div>
+<div class="sched-day"><div class="day">Vie</div><div class="shift p">P</div><div style="font-size:8px;color:var(--muted)">10-16, 20-24</div></div>
+<div class="sched-day"><div class="day">Sáb</div><div class="shift m">M</div><div style="font-size:8px;color:var(--muted)">10:00-18:00</div></div>
+<div class="sched-day"><div class="day">Dom</div><div class="shift l">L</div><div style="font-size:8px;color:var(--muted)">Libre</div></div>
+</div>
+<div style="font-size:12px;font-weight:700;margin-bottom:6px">Horario semanal — Ana Martínez (Camarera)</div>
+<div class="sched-grid">
+<div class="sched-day"><div class="day">Lun</div><div class="shift m">M</div><div style="font-size:8px;color:var(--muted)">10:00-18:00</div></div>
+<div class="sched-day"><div class="day">Mar</div><div class="shift l">L</div><div style="font-size:8px;color:var(--muted)">Libre</div></div>
+<div class="sched-day"><div class="day">Mié</div><div class="shift t">T</div><div style="font-size:8px;color:var(--muted)">16:00-24:00</div></div>
+<div class="sched-day"><div class="day">Jue</div><div class="shift m">M</div><div style="font-size:8px;color:var(--muted)">10:00-18:00</div></div>
+<div class="sched-day"><div class="day">Vie</div><div class="shift p">P</div><div style="font-size:8px;color:var(--muted)">10-16, 20-24</div></div>
+<div class="sched-day"><div class="day">Sáb</div><div class="shift t">T</div><div style="font-size:8px;color:var(--muted)">16:00-24:00</div></div>
+<div class="sched-day"><div class="day">Dom</div><div class="shift l">L</div><div style="font-size:8px;color:var(--muted)">Libre</div></div>
+</div>
+</div></div>
+<div class="page-label">Gestión · Personal y horarios</div>
+</div>
+
+<!-- P8: GESTIÓN - DASHBOARD -->
+<div class="page"><div class="app">
+<div class="app-hdr"><div class="logo"><div class="logo-icon">🍽</div>GastroGoan</div><div class="hdr-btn">☀️ Cocina</div><div class="hdr-btn">🍷 Sala</div><div class="hdr-btn active">📊 Gestión</div><div class="spacer"></div><div class="hdr-btn">🔓 La Taberna del Puerto</div></div>
+<div class="content">
+<div style="font-size:16px;font-weight:800;margin-bottom:2px">📊 Dashboard</div>
+<div style="color:var(--muted);font-size:11px;margin-bottom:10px">Miércoles 18 Jun 2026 · La Taberna del Puerto</div>
+<div class="kpi-row">
+<div class="kpi green"><div class="label">Ventas hoy</div><div class="value">1.247,80 €</div><div style="font-size:10px;color:var(--green)">↑ 12% vs. ayer</div></div>
+<div class="kpi"><div class="label">Ticket medio</div><div class="value">38,99 €</div><div style="font-size:10px;color:var(--muted)">32 tickets</div></div>
+<div class="kpi green"><div class="label">Comensales</div><div class="value">78</div><div style="font-size:10px;color:var(--muted)">Ocupación: 65%</div></div>
+<div class="kpi"><div class="label">Food Cost</div><div class="value" style="color:var(--green)">28,4%</div><div style="font-size:10px;color:var(--muted)">Objetivo: &lt;35%</div></div>
+</div>
+<div style="display:flex;gap:10px">
+<div class="card" style="flex:1">
+<div style="font-weight:700;margin-bottom:8px">🏆 Top platos vendidos</div>
+<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span>1. Paella valenciana</span><span style="font-weight:700">14</span></div>
+<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span>2. Gambas al ajillo</span><span style="font-weight:700">11</span></div>
+<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span>3. Solomillo pimienta</span><span style="font-weight:700">9</span></div>
+<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span>4. Ensalada mediter.</span><span style="font-weight:700">8</span></div>
+<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>5. Tarta de queso</span><span style="font-weight:700">7</span></div>
+</div>
+<div class="card" style="flex:1">
+<div style="font-weight:700;margin-bottom:8px">📅 Reservas hoy</div>
+<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span style="font-weight:800;color:var(--o);min-width:38px">13:30</span><span style="flex:1">Pedro Alonso · 4 pax</span><span class="badge badge-green">✓</span></div>
+<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span style="font-weight:800;color:var(--o);min-width:38px">14:00</span><span style="flex:1">Sofía Reyes · 2 pax</span><span class="badge badge-green">✓</span></div>
+<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span style="font-weight:800;color:var(--o);min-width:38px">14:30</span><span style="flex:1">Miguel Torres · 6 pax</span><span class="badge badge-orange">⏳</span></div>
+<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece4;font-size:12px"><span style="font-weight:800;color:var(--o);min-width:38px">21:00</span><span style="flex:1">Laura Vega · 3 pax</span><span class="badge badge-orange">⏳</span></div>
+<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:12px"><span style="font-weight:800;color:var(--o);min-width:38px">21:30</span><span style="flex:1">Grupo TechCorp · 8 pax</span><span class="badge badge-orange">⏳</span></div>
+</div>
+</div>
+</div></div>
+<div class="page-label">Gestión · Dashboard y reservas</div>
+</div>
+
+<!-- P9: CIERRE -->
 <div class="page closing">
 <h1>Todo esto y mucho más<br>con GastroGoan</h1>
-<div class="price">Desde <span>29€</span>/mes</div>
+<div class="price">Desde <b>29€</b>/mes</div>
 <p class="contact">gastrogoan@gmail.com · gastrogoan.com</p>
 </div>
 
