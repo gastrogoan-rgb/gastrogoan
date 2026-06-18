@@ -155,6 +155,124 @@ function escapeHtml(str){
 const LANGS = {es:'ES', en:'EN', ca:'CA'};
 let currentLang = localStorage.getItem('gastrogoan_lang') || 'es';
 
+const I18N = {
+  es: {
+    'tab.mesa':'📱 Pedir en mesa','tab.mesa.qr':'📱 Tu pedido','tab.reserva':'🍽️ Reservar mesa','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
+    'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva',
+    'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
+    'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
+    'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
+    'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
+    'order.mesa.select':'¿En qué mesa estás? *','order.mesa.select.placeholder':'Selecciona tu mesa…',
+    'order.nombre':'Nombre (opcional)','order.notas':'Notas (alergias, observaciones...)','order.notas.placeholder':'Opcional',
+    'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
+    'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
+    'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
+    'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.',
+    'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
+    'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
+    'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
+    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta',
+    'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).',
+    'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
+    'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
+    'error.horario.reservas':'reservas','error.horario.pedidos':'pedidos',
+    'error.aforo.completo':'Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad.',
+    'error.aforo.parcial':'Lo sentimos, para ese turno solo quedan %d plaza(s) disponible(s). Por favor reduce el número de personas, elige otro horario o llama al restaurante.',
+    'error.carrito.vacio':'Añade al menos un plato a tu pedido.','error.mesa.select':'Selecciona tu mesa.','error.mesa.manual':'Indica el número de tu mesa.',
+    'error.pedido.min':'El pedido mínimo es de %s. Añade más platos para continuar.',
+    'error.envio':'No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.',
+    'error.zona':'Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.',
+    'error.antelacion':'Con la antelación mínima de %d minutos, lo antes que puedes elegir hoy es a las %s.',
+    'error.conexion':'No se ha podido conectar con el restaurante','error.carga':'No se ha podido cargar la información del restaurante','error.enlace':'Enlace no válido o incompleto',
+    'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
+    'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.',
+    'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
+    'success.otra':'Hacer otra solicitud',
+    'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
+    'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
+    'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver'
+  },
+  en: {
+    'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
+    'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request',
+    'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
+    'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
+    'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
+    'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
+    'order.mesa.select':'Which table are you at? *','order.mesa.select.placeholder':'Select your table…',
+    'order.nombre':'Name (optional)','order.notas':'Notes (allergies, comments...)','order.notas.placeholder':'Optional',
+    'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
+    'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
+    'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
+    'cart.min':'Minimum order: %s. Add %s more to continue.',
+    'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
+    'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
+    'no.services':'This restaurant has no online services available at the moment.',
+    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card',
+    'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, date and time).',
+    'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
+    'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
+    'error.horario.reservas':'bookings','error.horario.pedidos':'orders',
+    'error.aforo.completo':'Sorry, that slot is fully booked. Please choose another time or call the restaurant.',
+    'error.aforo.parcial':'Sorry, only %d seat(s) left for that slot. Please reduce the number of people, choose another time or call the restaurant.',
+    'error.carrito.vacio':'Add at least one dish to your order.','error.mesa.select':'Select your table.','error.mesa.manual':'Enter your table number.',
+    'error.pedido.min':'Minimum order is %s. Add more dishes to continue.',
+    'error.envio':'Could not send. Check your connection and try again.',
+    'error.zona':'Sorry, your address is outside the delivery area.',
+    'error.antelacion':'With a minimum lead time of %d minutes, the earliest you can choose today is %s.',
+    'error.conexion':'Could not connect to the restaurant','error.carga':'Could not load restaurant information','error.enlace':'Invalid or incomplete link',
+    'error.enlace.sub':'Ask the restaurant for a valid link.',
+    'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.',
+    'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
+    'success.otra':'Make another request',
+    'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
+    'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
+    'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back'
+  },
+  ca: {
+    'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
+    'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva',
+    'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
+    'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
+    'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
+    'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
+    'order.mesa.select':'A quina taula ets? *','order.mesa.select.placeholder':'Selecciona la teva taula…',
+    'order.nombre':'Nom (opcional)','order.notas':'Notes (al·lèrgies, observacions...)','order.notas.placeholder':'Opcional',
+    'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
+    'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
+    'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
+    'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.',
+    'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
+    'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
+    'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
+    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta',
+    'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, data i hora).',
+    'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
+    'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
+    'error.horario.reservas':'reserves','error.horario.pedidos':'comandes',
+    'error.aforo.completo':'Ho sentim, aquest torn ja és complet. Si us plau tria un altre horari o truca al restaurant.',
+    'error.aforo.parcial':'Ho sentim, per a aquest torn només queden %d plaça/es disponible/s. Si us plau redueix el nombre de persones, tria un altre horari o truca al restaurant.',
+    'error.carrito.vacio':'Afegeix almenys un plat a la comanda.','error.mesa.select':'Selecciona la teva taula.','error.mesa.manual':'Indica el número de la teva taula.',
+    'error.pedido.min':'Comanda mínima de %s. Afegeix més plats per continuar.',
+    'error.envio':'No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar.',
+    'error.zona':'Ho sentim, la teva adreça està fora de la zona d\'entrega del restaurant.',
+    'error.antelacion':'Amb una antelació mínima de %d minuts, el més aviat que pots triar avui és a les %s.',
+    'error.conexion':'No s\'ha pogut connectar amb el restaurant','error.carga':'No s\'ha pogut carregar la informació del restaurant','error.enlace':'Enllaç no vàlid o incomplet',
+    'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
+    'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.',
+    'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
+    'success.otra':'Fer una altra sol·licitud',
+    'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
+    'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
+    'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar'
+  }
+};
+function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
+
 function setLang(lang){
   currentLang = lang;
   localStorage.setItem('gastrogoan_lang', lang);
@@ -211,7 +329,7 @@ function showError(msg){
     <div class="error-box">
       <div class="icon">⚠️</div>
       <h2>${escapeHtml(msg)}</h2>
-      <p style="font-size:13px;color:#888">Pide al restaurante que te envíe un enlace válido.</p>
+      <p style="font-size:13px;color:#888">${t('error.enlace.sub')}</p>
     </div>
   `;
 }
@@ -219,7 +337,7 @@ function showError(msg){
 function init(){
   publicId = getPublicIdFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
-  if(!publicId){ showError('Enlace no válido o incompleto'); return; }
+  if(!publicId){ showError(t('error.enlace')); return; }
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
@@ -227,7 +345,8 @@ function init(){
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
-        <h2>¡Pago realizado! Tu pedido se está preparando.</h2>
+        <h2>${t('pago.ok.title')}</h2>
+        <p style="font-size:13px;color:#888">${t('pago.ok.msg')}</p>
       </div>
     `;
     return;
@@ -236,8 +355,8 @@ function init(){
     document.getElementById('app').innerHTML = `
       <div class="error-box">
         <div class="icon">⚠️</div>
-        <h2>El pago no se ha completado</h2>
-        <p style="font-size:13px;color:#888">Tu pedido no se ha enviado. Vuelve atrás e inténtalo de nuevo.</p>
+        <h2>${t('pago.ko.title')}</h2>
+        <p style="font-size:13px;color:#888">${t('pago.ko.msg')}</p>
       </div>
     `;
     return;
@@ -251,18 +370,18 @@ function init(){
     // por el SDK de Firebase.
     firebase.auth().signInAnonymously().then(() => loadBusinessInfo()).catch(e => {
       console.error(e);
-      showError('No se ha podido conectar con el restaurante');
+      showError(t('error.conexion'));
     });
   }catch(e){
     console.error(e);
-    showError('No se ha podido conectar con el restaurante');
+    showError(t('error.conexion'));
   }
 }
 
 function loadBusinessInfo(){
   db.ref('gastrogoan/public/' + publicId + '/info').once('value').then(snap => {
     const val = snap.val();
-    if(!val){ showError('No se ha podido cargar la información del restaurante'); return; }
+    if(!val){ showError(t('error.carga')); return; }
     DB = {
       business: val.business || {},
       cartas: val.cartas || [],
@@ -275,7 +394,7 @@ function loadBusinessInfo(){
     checkRedsysConfigured();
   }).catch(e => {
     console.error(e);
-    showError('No se ha podido conectar con el restaurante');
+    showError(t('error.conexion'));
   });
 }
 
@@ -312,13 +431,13 @@ function getActiveCartas(){
 function renderApp(){
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const tabs = [];
-  if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? '📱 Tu pedido' : '📱 Pedir en mesa'});
-  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label:'🍽️ Reservar mesa'});
-  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label:'🥡 Take Away'});
-  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label:'🛵 Delivery'});
+  if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? t('tab.mesa.qr') : t('tab.mesa')});
+  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label: t('tab.reserva')});
+  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label: t('tab.takeaway')});
+  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label: t('tab.delivery')});
 
   if(!tabs.length){
-    document.getElementById('app').innerHTML = `<div class="empty">Este negocio no tiene servicios disponibles online en este momento.</div>`;
+    document.getElementById('app').innerHTML = `<div class="empty">${t('no.services')}</div>`;
     return;
   }
 
@@ -349,7 +468,12 @@ function renderTabContent(){
 }
 
 /* ============ HORARIOS ============ */
-const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const DIAS_SEMANA_I18N = {
+  es:['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+  en:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+  ca:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge']
+};
+function getDiasSemana(){ return DIAS_SEMANA_I18N[currentLang] || DIAS_SEMANA_I18N.es; }
 
 // Devuelve los turnos (franjas horarias) del día de la semana correspondiente
 // a dateStr, o null si el negocio no ha configurado horario (sin restricción).
@@ -391,14 +515,14 @@ function formatTurnos(turnos){
 
 function nombreDia(dateStr){
   const jsDay = new Date(dateStr + 'T00:00:00').getDay();
-  return DIAS_SEMANA[(jsDay + 6) % 7];
+  return getDiasSemana()[(jsDay + 6) % 7];
 }
 
 function horarioHintHtml(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return '';
-  if(!turnos.length) return `<p style="font-size:13px;color:#c0392b;margin-top:-8px">El restaurante está cerrado el ${nombreDia(dateStr).toLowerCase()}. Elige otra fecha.</p>`;
-  return `<p style="font-size:13px;color:#888;margin-top:-8px">Horario el ${nombreDia(dateStr).toLowerCase()}: ${formatTurnos(turnos)}.</p>`;
+  if(!turnos.length) return `<p style="font-size:13px;color:#c0392b;margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}</p>`;
+  return `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.horario').replace('%s', nombreDia(dateStr).toLowerCase()).replace('%s', formatTurnos(turnos))}</p>`;
 }
 
 function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
@@ -433,7 +557,7 @@ function applyLeadTime(dateInputId, timeInputId, hintBoxId){
   if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
   if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
 
-  const hint = `<p style="font-size:13px;color:#888;margin-top:-8px">Para hoy, lo antes que puedes elegir es a las ${minTime} (antelación mínima de ${leadTimeMin} min).</p>`;
+  const hint = `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.antelacion').replace('%s', minTime).replace('%d', leadTimeMin)}</p>`;
   hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
 }
 
@@ -476,35 +600,35 @@ function renderReservaForm(){
   const box = document.getElementById('tab-content');
   box.innerHTML = `
     <div class="card">
-      <h2>Reservar mesa</h2>
+      <h2>${t('reserva.title')}</h2>
       <div class="field">
-        <label>Nombre *</label>
-        <input type="text" id="r-name" placeholder="Tu nombre">
+        <label>${t('nombre')}</label>
+        <input type="text" id="r-name">
       </div>
       <div class="field">
-        <label>Teléfono *</label>
+        <label>${t('telefono')}</label>
         <input type="tel" id="r-phone" placeholder="600 000 000">
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Fecha *</label>
+          <label>${t('fecha')}</label>
           <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint')">
         </div>
         <div class="field">
-          <label>Hora *</label>
+          <label>${t('hora')}</label>
           <input type="time" id="r-time" value="20:00">
         </div>
       </div>
       <div id="r-hour-hint"></div>
       <div class="field">
-        <label>Número de personas *</label>
+        <label>${t('personas')}</label>
         <input type="number" id="r-people" value="2" min="1" max="50">
       </div>
       <div class="field">
-        <label>Notas (alergias, peticiones especiales...)</label>
-        <textarea id="r-notes" placeholder="Opcional"></textarea>
+        <label>${t('notas')}</label>
+        <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
       </div>
-      <button class="btn btn-primary" onclick="submitReserva()">Enviar solicitud de reserva</button>
+      <button class="btn btn-primary" onclick="submitReserva()">${t('reserva.submit')}</button>
     </div>
   `;
   updateTimeInputRange('r-date','r-time','r-hour-hint');
@@ -519,26 +643,26 @@ function submitReserva(){
   const notes = document.getElementById('r-notes').value.trim();
 
   if(!clientName || !clientPhone || !date || !time){
-    alert('Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).');
+    alert(t('error.campos.reserva'));
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
-    alert(`El restaurante está cerrado el ${nombreDia(date).toLowerCase()}. Por favor elige otra fecha.`);
+    alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
-    alert(`El restaurante solo acepta reservas el ${nombreDia(date).toLowerCase()} en este horario: ${formatTurnos(turnos)}. Por favor elige otra hora.`);
+    alert(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     return;
   }
 
   const disponible = getAforoDisponible(date, time);
   if(disponible !== null && people > disponible){
     if(disponible <= 0){
-      alert('Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad.');
+      alert(t('error.aforo.completo'));
     }else{
-      alert(`Lo sentimos, para ese turno solo quedan ${disponible} plaza${disponible===1?'':'s'} disponible${disponible===1?'':'s'}. Por favor reduce el número de personas, elige otro horario o llama al restaurante.`);
+      alert(t('error.aforo.parcial').replace('%d', disponible));
     }
     return;
   }
@@ -547,7 +671,7 @@ function submitReserva(){
     type:'reserva', clientName, clientPhone, date, time, people, notes,
     createdAt: new Date().toISOString()
   };
-  sendRequest(req, 'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.');
+  sendRequest(req, t('reserva.ok'));
 }
 
 /* ============ MENÚ (carrito compartido) ============ */
@@ -583,7 +707,7 @@ function renderOrderForm(){
   const cartas = getActiveCartasConPlatos();
 
   if(!cartas.length){
-    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.</div></div>`;
+    box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty')}</div></div>`;
     return;
   }
 
@@ -595,52 +719,51 @@ function renderOrderForm(){
 
   box.innerHTML = `
     <div class="card">
-      <h2>${isDelivery ? 'Pedido a domicilio' : 'Pedido para recoger'}</h2>
+      <h2>${isDelivery ? t('order.delivery.title') : t('order.takeaway.title')}</h2>
       ${menuHtml}
     </div>
     <div class="card" id="cart-summary"></div>
     <div class="card">
-      <h2>Tus datos</h2>
       <div class="field">
-        <label>Nombre *</label>
-        <input type="text" id="o-name" placeholder="Tu nombre">
+        <label>${t('nombre')}</label>
+        <input type="text" id="o-name">
       </div>
       <div class="field">
-        <label>Teléfono *</label>
+        <label>${t('telefono')}</label>
         <input type="tel" id="o-phone" placeholder="600 000 000">
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Fecha *</label>
+          <label>${t('fecha')}</label>
           <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint')">
         </div>
         <div class="field">
-          <label>Hora *</label>
+          <label>${t('hora')}</label>
           <input type="time" id="o-time" value="20:00">
         </div>
       </div>
       <div id="o-hour-hint"></div>
       ${isDelivery ? `
       <div class="field">
-        <label>Dirección de entrega *</label>
-        <input type="text" id="o-address" placeholder="Calle, número, piso...">
+        <label>${t('direccion')}</label>
+        <input type="text" id="o-address">
       </div>` : ''}
       ${zoneRestricted ? `
       <div class="field">
-        <label>Código postal *</label>
+        <label>${t('cp')}</label>
         <input type="text" id="o-cp" placeholder="28001">
       </div>` : ''}
       <div class="field">
-        <label>Notas (alergias, observaciones...)</label>
-        <textarea id="o-notes" placeholder="Opcional"></textarea>
+        <label>${t('order.notas')}</label>
+        <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
       </div>
       ${redsysConfigured ? `
       <div class="field">
-        <label>Forma de pago</label>
-        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> Pagar al ${isDelivery?'recibir':'recoger'}</label>` : ''}
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:auto"> Pagar ahora con tarjeta</label>
+        <label>${t('pago')}</label>
+        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:auto"> ${t('pago.tarjeta')}</label>
       </div>` : ''}
-      <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">Enviar pedido</button>
+      <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
     </div>
   `;
   renderCartSummary();
@@ -673,7 +796,7 @@ function renderCartSummary(){
   if(!box) return;
   const submitBtn = document.getElementById('o-submit');
   if(!cart.length){
-    box.innerHTML = `<div class="empty">Tu carrito está vacío. Añade platos arriba.</div>`;
+    box.innerHTML = `<div class="empty">${t('cart.empty')}</div>`;
     if(submitBtn) submitBtn.disabled = true;
     return;
   }
@@ -685,16 +808,16 @@ function renderCartSummary(){
   const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
   if(submitBtn) submitBtn.disabled = bajoMinimo;
   box.innerHTML = `
-    <h2>Tu pedido</h2>
+    <h2>${t('cart.title')}</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
-    ${deliveryFee > 0 ? `<div class="cart-line"><span>Coste de envío</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
-    <div class="cart-total"><span>Total</span><span>${fmtMoney(total)}</span></div>
-    ${bajoMinimo ? `<p style="font-size:13px;color:#c0392b;margin-top:8px">Pedido mínimo: ${fmtMoney(pedidoMinimo)}. Añade ${fmtMoney(pedidoMinimo - subtotal)} más para poder continuar.</p>` : ''}
+    ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
+    <div class="cart-total"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
+    ${bajoMinimo ? `<p style="font-size:13px;color:#c0392b;margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
   `;
 }
 
 async function submitOrder(){
-  if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
+  if(!cart.length){ alert(t('error.carrito.vacio')); return; }
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
   const date = document.getElementById('o-date').value;
@@ -707,24 +830,24 @@ async function submitOrder(){
   const codigoPostal = zoneRestricted ? document.getElementById('o-cp').value.trim() : '';
 
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
-    alert('Por favor completa los campos obligatorios.');
+    alert(t('error.campos'));
     return;
   }
 
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const pedidoMinimo = p.pedidoMinimo || 0;
   if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
-    alert(`El pedido mínimo es de ${fmtMoney(pedidoMinimo)}. Añade más platos para continuar.`);
+    alert(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
-    alert(`El restaurante está cerrado el ${nombreDia(date).toLowerCase()}. Por favor elige otra fecha.`);
+    alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
-    alert(`El restaurante solo acepta pedidos el ${nombreDia(date).toLowerCase()} en este horario: ${formatTurnos(turnos)}. Por favor elige otra hora.`);
+    alert(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     return;
   }
 
@@ -733,7 +856,7 @@ async function submitOrder(){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
-      alert(`Con la antelación mínima de ${leadTimeMin} minutos, lo antes que puedes elegir hoy es a las ${minTime}.`);
+      alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
       return;
     }
   }
@@ -741,7 +864,7 @@ async function submitOrder(){
   if(zoneRestricted){
     const enZona = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
     if(!enZona){
-      alert('Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.');
+      alert(t('error.zona'));
       return;
     }
   }
@@ -759,11 +882,11 @@ async function submitOrder(){
 
   const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
   if(pagoTarjeta){
-    payWithCard(req, total, isDelivery ? 'Pedido a domicilio' : 'Pedido para recoger');
+    payWithCard(req, total, isDelivery ? t('order.delivery.title') : t('order.takeaway.title'));
     return;
   }
 
-  sendRequest(req, 'Pedido enviado. El restaurante lo confirmará en breve.');
+  sendRequest(req, t('order.ok'));
 }
 
 /* ============ PAGO CON TARJETA (TPV virtual / Redsys) ============
@@ -788,7 +911,7 @@ function payWithCard(req, amount, description){
     });
   }).then(r => r.json()).then(data => {
     if(!data || !data.url || data.error){
-      alert('No se ha podido iniciar el pago con tarjeta. ' + (data && data.error ? data.error : ''));
+      alert(t('error.pago') + ' ' + (data && data.error ? data.error : ''));
       return;
     }
     const form = document.createElement('form');
@@ -803,7 +926,7 @@ function payWithCard(req, amount, description){
     form.submit();
   }).catch(e => {
     console.error(e);
-    alert('No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.');
+    alert(t('error.pago.conexion'));
   });
 }
 
@@ -813,28 +936,28 @@ function renderMesaOrderForm(){
   const cartas = getActiveCartasConPlatos();
 
   if(!cartas.length){
-    box.innerHTML = `<div class="card"><div class="empty">La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.</div></div>`;
+    box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty.mesa')}</div></div>`;
     return;
   }
 
   const tables = DB.tables || [];
-  const currentTable = tableIdFromUrl ? tables.find(t => String(t.id) === String(tableIdFromUrl)) : null;
+  const currentTable = tableIdFromUrl ? tables.find(tb => String(tb.id) === String(tableIdFromUrl)) : null;
 
   const menuHtml = buildMenuHtml(cartas);
 
   box.innerHTML = `
     <div class="card">
-      <h2>Pedir desde tu mesa</h2>
+      <h2>${t('order.mesa.title')}</h2>
       ${currentTable
-        ? `<p style="font-size:13px;color:#888;margin-top:-6px">Tu mesa: <strong>${escapeHtml(currentTable.name)}</strong>. Tu pedido se enviará directamente a cocina.</p>`
+        ? `<p style="font-size:13px;color:#888;margin-top:-6px">${t('order.mesa.info').replace('%s', escapeHtml(currentTable.name))}</p>`
         : tableIdFromUrl
-          ? `<p style="font-size:13px;color:var(--red);margin-top:-6px">No se ha reconocido tu mesa. Indica el número a continuación.</p>
-             <div class="field"><label>¿En qué mesa estás? *</label><input type="text" id="m-table-manual" placeholder="Número de mesa"></div>`
+          ? `<p style="font-size:13px;color:var(--red);margin-top:-6px">${t('order.mesa.unknown')}</p>
+             <div class="field"><label>${t('order.mesa.select')}</label><input type="text" id="m-table-manual"></div>`
           : `<div class="field">
-               <label>¿En qué mesa estás? *</label>
+               <label>${t('order.mesa.select')}</label>
                <select id="m-table">
-                 <option value="">Selecciona tu mesa…</option>
-                 ${tables.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+                 <option value="">${t('order.mesa.select.placeholder')}</option>
+                 ${tables.map(tb => `<option value="${tb.id}">${escapeHtml(tb.name)}</option>`).join('')}
                </select>
              </div>`}
       ${menuHtml}
@@ -842,37 +965,37 @@ function renderMesaOrderForm(){
     <div class="card" id="cart-summary"></div>
     <div class="card">
       <div class="field">
-        <label>Nombre (opcional)</label>
-        <input type="text" id="m-name" placeholder="Tu nombre">
+        <label>${t('order.nombre')}</label>
+        <input type="text" id="m-name">
       </div>
       <div class="field">
-        <label>Notas (alergias, observaciones...)</label>
-        <textarea id="m-notes" placeholder="Opcional"></textarea>
+        <label>${t('order.notas')}</label>
+        <textarea id="m-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
       </div>
-      <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">Enviar pedido a cocina</button>
+      <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">${t('order.submit.mesa')}</button>
     </div>
   `;
   renderCartSummary();
 }
 
 function submitMesaOrder(){
-  if(!cart.length){ alert('Añade al menos un plato a tu pedido.'); return; }
+  if(!cart.length){ alert(t('error.carrito.vacio')); return; }
 
   const tables = DB.tables || [];
   let tableId = null;
   if(tableIdFromUrl){
-    const currentTable = tables.find(t => String(t.id) === String(tableIdFromUrl));
+    const currentTable = tables.find(tb => String(tb.id) === String(tableIdFromUrl));
     if(currentTable){
       tableId = currentTable.id;
     }else{
       const manual = document.getElementById('m-table-manual');
-      if(!manual || !manual.value.trim()){ alert('Indica el número de tu mesa.'); return; }
+      if(!manual || !manual.value.trim()){ alert(t('error.mesa.manual')); return; }
       tableId = manual.value.trim();
     }
   }else{
     const sel = document.getElementById('m-table');
-    if(!sel || !sel.value){ alert('Selecciona tu mesa.'); return; }
-    tableId = tables.find(t => String(t.id) === sel.value).id;
+    if(!sel || !sel.value){ alert(t('error.mesa.select')); return; }
+    tableId = tables.find(tb => String(tb.id) === sel.value).id;
   }
 
   const clienteNombre = document.getElementById('m-name').value.trim();
@@ -884,7 +1007,7 @@ function submitMesaOrder(){
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
-  sendRequest(req, 'Pedido enviado a cocina. ¡Gracias!');
+  sendRequest(req, t('order.ok.mesa'));
 }
 
 /* ============ ENVÍO ============ */
@@ -894,12 +1017,12 @@ function sendRequest(req, successMsg){
       <div class="success">
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
-        <button class="btn" style="margin-top:16px" onclick="location.reload()">Hacer otra solicitud</button>
+        <button class="btn" style="margin-top:16px" onclick="location.reload()">${t('success.otra')}</button>
       </div>
     `;
   }).catch(e => {
     console.error(e);
-    alert('No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.');
+    alert(t('error.envio'));
   });
 }
 
