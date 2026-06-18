@@ -13683,9 +13683,9 @@ function renderTramoFields(prefix, tramo, label){
   return `
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
       <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
-      <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto">
+      <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
       <span style="color:var(--muted);font-size:12px">a</span>
-      <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto">
+      <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
     </div>
   `;
 }
@@ -13725,12 +13725,14 @@ function toggleHorarioDia(i){
   const open = document.getElementById(`mn-hor-${i}-abierto`).checked;
   document.getElementById(`mn-hor-${i}-turnos`).style.display = open ? 'block' : 'none';
   document.getElementById(`mn-hor-${i}-modo`).style.display = open ? 'inline-block' : 'none';
+  saveBusiness(true);
 }
 
 function toggleHorarioModo(i){
   const seguido = document.getElementById(`mn-hor-${i}-modo`).value === 'seguido';
   document.getElementById(`mn-hor-${i}-seguido-box`).style.display = seguido ? 'block' : 'none';
   document.getElementById(`mn-hor-${i}-turnos-box`).style.display = seguido ? 'none' : 'block';
+  saveBusiness(true);
 }
 
 function readTramoFromForm(prefix){
@@ -13804,54 +13806,54 @@ function renderMiNegocio(){
       </div>
       <div class="field">
         <label>Nombre del establecimiento *</label>
-        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="Ej. Restaurante GastroGoan">
+        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="Ej. Restaurante GastroGoan" onchange="saveBusiness(true)">
       </div>
       <div class="field-row">
         <div class="field">
           <label>Tipo de negocio</label>
-          <select id="mn-tipo">
+          <select id="mn-tipo" onchange="saveBusiness(true)">
             ${BUSINESS_TIPOS.map(t=>`<option ${b.tipo===t?'selected':''}>${t}</option>`).join('')}
           </select>
         </div>
         <div class="field">
           <label>Año de apertura</label>
-          <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020">
+          <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020" onchange="saveBusiness(true)">
         </div>
       </div>
       <div class="field">
         <label>Propietario</label>
-        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo">
+        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo" onchange="saveBusiness(true)">
       </div>
 
       <h4><i class="ti ti-notes"></i> Descripción</h4>
       <div class="field">
         <label>Descripción / Concepto</label>
-        <textarea id="business-description" placeholder="Breve descripción del negocio...">${escapeHtml(b.description||'')}</textarea>
+        <textarea id="business-description" placeholder="Breve descripción del negocio..." onchange="saveBusiness(true)">${escapeHtml(b.description||'')}</textarea>
       </div>
 
       <h4><i class="ti ti-address-book"></i> Contacto</h4>
       <div class="field">
         <label>Dirección</label>
-        <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad">
+        <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad" onchange="saveBusiness(true)">
       </div>
       <div class="field-row">
         <div class="field">
           <label>Teléfono</label>
-          <input type="text" id="business-phone" value="${escapeHtml(b.phone||'')}" placeholder="Ej. 900 000 000">
+          <input type="text" id="business-phone" value="${escapeHtml(b.phone||'')}" placeholder="Ej. 900 000 000" onchange="saveBusiness(true)">
         </div>
         <div class="field">
           <label>Email</label>
-          <input type="email" id="business-email" value="${escapeHtml(b.email||'')}" placeholder="contacto@negocio.com">
+          <input type="email" id="business-email" value="${escapeHtml(b.email||'')}" placeholder="contacto@negocio.com" onchange="saveBusiness(true)">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Web</label>
-          <input type="url" id="mn-web" value="${escapeHtml(b.web||'')}" placeholder="www.milocal.com">
+          <input type="url" id="mn-web" value="${escapeHtml(b.web||'')}" placeholder="www.milocal.com" onchange="saveBusiness(true)">
         </div>
         <div class="field">
           <label>CIF/NIF</label>
-          <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678">
+          <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678" onchange="saveBusiness(true)">
         </div>
       </div>
 
@@ -13859,11 +13861,11 @@ function renderMiNegocio(){
       <div class="field-row">
         <div class="field">
           <label>Instagram</label>
-          <input type="text" id="mn-ig" value="${escapeHtml(b.ig||'')}" placeholder="@milocal">
+          <input type="text" id="mn-ig" value="${escapeHtml(b.ig||'')}" placeholder="@milocal" onchange="saveBusiness(true)">
         </div>
         <div class="field">
           <label>Facebook</label>
-          <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal">
+          <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal" onchange="saveBusiness(true)">
         </div>
       </div>
 
@@ -13874,21 +13876,21 @@ function renderMiNegocio(){
       <h3><i class="ti ti-layout-grid"></i> Operativa</h3>
       <div class="field">
         <label>Aforo (plazas por turno)</label>
-        <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40">
+        <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Mesas de interior</label>
-          <input type="number" id="mn-mesas-interior" value="${escapeHtml(b.mesasInterior!=null?b.mesasInterior:(b.mesasInt||''))}" placeholder="8">
+          <input type="number" id="mn-mesas-interior" value="${escapeHtml(b.mesasInterior!=null?b.mesasInterior:(b.mesasInt||''))}" placeholder="8" onchange="saveBusiness(true)">
         </div>
         <div class="field">
           <label>Mesas de exterior/terraza</label>
-          <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4">
+          <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4" onchange="saveBusiness(true)">
         </div>
         <div class="field">
           <label>Mesas/taburetes de barra</label>
-          <input type="number" id="mn-mesas-barra" value="${escapeHtml(b.mesasBarra||'')}" placeholder="3">
+          <input type="number" id="mn-mesas-barra" value="${escapeHtml(b.mesasBarra||'')}" placeholder="3" onchange="saveBusiness(true)">
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Estas cantidades son las mesas que verás organizadas por zonas (Interior, Terraza, Barra) en el plano de mesas del TPV.</p>
@@ -14209,37 +14211,39 @@ function toggleTipoServicio(tipo, checked){
   showToast(`Servicio ${checked?'activado':'desactivado'}`);
 }
 
-function saveBusiness(){
+function saveBusiness(silent){
+  const el = id => document.getElementById(id);
+  if(!el('business-name')) return;
   DB.business = {
     ...DB.business,
-    name: document.getElementById('business-name').value.trim(),
-    address: document.getElementById('business-address').value.trim(),
-    phone: document.getElementById('business-phone').value.trim(),
-    email: document.getElementById('business-email').value.trim(),
+    name: el('business-name').value.trim(),
+    address: el('business-address').value.trim(),
+    phone: el('business-phone').value.trim(),
+    email: el('business-email').value.trim(),
     horario: readHorarioFromForm(),
-    description: document.getElementById('business-description').value.trim(),
-    tipo: document.getElementById('mn-tipo').value,
-    anyo: document.getElementById('mn-anyo').value.trim(),
-    web: document.getElementById('mn-web').value.trim(),
-    cif: document.getElementById('mn-cif').value.trim(),
-    prop: document.getElementById('mn-prop').value.trim(),
-    mesasInterior: document.getElementById('mn-mesas-interior').value.trim(),
-    mesasTerraza: document.getElementById('mn-mesas-terraza').value.trim(),
-    mesasBarra: document.getElementById('mn-mesas-barra').value.trim(),
-    aforo: document.getElementById('mn-aforo').value.trim(),
-    ig: document.getElementById('mn-ig').value.trim(),
-    fb: document.getElementById('mn-fb').value.trim(),
+    description: el('business-description').value.trim(),
+    tipo: el('mn-tipo').value,
+    anyo: el('mn-anyo').value.trim(),
+    web: el('mn-web').value.trim(),
+    cif: el('mn-cif').value.trim(),
+    prop: el('mn-prop').value.trim(),
+    mesasInterior: el('mn-mesas-interior').value.trim(),
+    mesasTerraza: el('mn-mesas-terraza').value.trim(),
+    mesasBarra: el('mn-mesas-barra').value.trim(),
+    aforo: el('mn-aforo').value.trim(),
+    ig: el('mn-ig').value.trim(),
+    fb: el('mn-fb').value.trim(),
     tiposServicio: {
-      mesa: document.getElementById('mn-serv-mesa').checked,
-      takeaway: document.getElementById('mn-serv-takeaway').checked,
-      delivery: document.getElementById('mn-serv-delivery').checked,
+      mesa: el('mn-serv-mesa').checked,
+      takeaway: el('mn-serv-takeaway').checked,
+      delivery: el('mn-serv-delivery').checked,
     },
   };
   saveDB();
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
-  showToast('Datos del negocio guardados');
+  if(!silent) showToast('Datos del negocio guardados');
 }
 
 /* ============================================================
