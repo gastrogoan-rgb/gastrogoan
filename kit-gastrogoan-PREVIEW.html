@@ -2280,8 +2280,8 @@ function refreshAfterRemoteChange(){
 
 // Botón "Actualizar" de la cabecera: vuelve a leer los datos guardados
 // (por si otro dispositivo los cambió) y refresca la pantalla actual.
-function manualRefresh(){
-  DB = loadDB();
+async function manualRefresh(){
+  DB = await loadDB();
   refreshAfterRemoteChange();
   const icon = document.getElementById('refresh-icon');
   if(icon){
@@ -8842,7 +8842,11 @@ function changeOrderItemQty(orderId, idx, delta){
 }
 function removeOrderItem(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
+  if(!order || !order.items[idx]) return;
+  const line = order.items[idx];
+  if((line.marchada||0) > 0 && line.estado !== 'entregado'){
+    if(!confirm(`"${line.name}" ya está en cocina. ¿Anular este plato?`)) return;
+  }
   order.items.splice(idx,1);
   saveDB();
   renderTableOrderModal(orderId);
@@ -9235,11 +9239,16 @@ function finalizeSplitOrder(orderId){
 
 function discountStockForOrder(order){
   order.items.forEach(line => {
-    const r = line.recipeId ? getRecipe(line.recipeId) : null;
-    if(!r) return;
-    (r.ingredients||[]).forEach(ri => {
-      const s = getStockEntry(ri.ingredientId);
-      s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+    const recetas = [];
+    if(line.recipeId) recetas.push(line.recipeId);
+    else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
+    recetas.forEach(recipeId => {
+      const r = getRecipe(recipeId);
+      if(!r) return;
+      (r.ingredients||[]).forEach(ri => {
+        const s = getStockEntry(ri.ingredientId);
+        s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+      });
     });
   });
 }
@@ -11365,13 +11374,13 @@ function hoursBetween(t1, t2){
   return diff/60;
 }
 function turnoHours(t){
-  if(t.tipo==='D') return 0;
+  if(['D','V','B'].includes(t.tipo)) return 0;
   let h = hoursBetween(t.entrada, t.salida);
   if(t.tipo==='P' && t.entrada2 && t.salida2) h += hoursBetween(t.entrada2, t.salida2);
   return h;
 }
 function turnoHorarioLabel(t){
-  if(t.tipo==='D') return '—';
+  if(['D','V','B'].includes(t.tipo)) return '—';
   let s = `${t.entrada}-${t.salida}`;
   if(t.tipo==='P' && t.entrada2 && t.salida2) s += ` / ${t.entrada2}-${t.salida2}`;
   return s;
@@ -13237,8 +13246,9 @@ function setReservationStatus(id, status){
     }
   }
 
+  const yaConfirmada = r.status === 'confirmada';
   r.status = status;
-  if(status === 'confirmada'){
+  if(status === 'confirmada' && !yaConfirmada){
     let cid = r.clientId;
     if(!cid && r.clientPhone){
       const match = DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === r.clientPhone.replace(/\D/g,''));
