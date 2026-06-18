@@ -15454,6 +15454,264 @@ function goManualChapter(i){
    ============================================================ */
 window.addEventListener('DOMContentLoaded', async () => {
   await dbReadyPromise;
+
+  // ===== DEMO DATA — precarga datos de ejemplo para la demo interactiva =====
+  if(!DB.business.demoLoaded){
+    DB.business.demoLoaded = true;
+    DB.business.name = 'La Taberna del Puerto';
+    DB.business.address = 'Calle del Mar, 15 · Valencia';
+    DB.business.phone = '961 234 567';
+    DB.business.email = 'info@latabernadelpuerto.es';
+    DB.business.description = 'Cocina mediterránea con producto fresco de lonja. Especialidad en arroces y pescados.';
+    DB.business.tipo = 'Restaurante';
+    DB.business.anyo = '2019';
+    DB.business.cif = 'B12345678';
+    DB.business.aforo = '60';
+    DB.business.mesasInterior = '8';
+    DB.business.mesasTerraza = '6';
+    DB.business.tourSeen = true;
+    DB.business.netlifySetupDone = true;
+    DB.business.ticket = {pie:'¡Gracias por visitarnos!', mostrarDireccion:true, mostrarTelefono:true, mostrarNif:true, mostrarWeb:false, ivaPct:10};
+
+    // Ingredientes
+    const ingCats = ['Pescados','Carnes','Verduras','Lácteos','Especias','Bebidas'];
+    DB.ingredientCategories = ingCats;
+    DB.ingredients = [
+      {id:1,name:'Lubina fresca',unit:'kg',price:18.50,area:'cocina',category:'Pescados'},
+      {id:2,name:'Gambas rojas',unit:'kg',price:32.00,area:'cocina',category:'Pescados'},
+      {id:3,name:'Mejillones',unit:'kg',price:4.50,area:'cocina',category:'Pescados'},
+      {id:4,name:'Calamar',unit:'kg',price:12.00,area:'cocina',category:'Pescados'},
+      {id:5,name:'Solomillo de ternera',unit:'kg',price:24.00,area:'cocina',category:'Carnes'},
+      {id:6,name:'Secreto ibérico',unit:'kg',price:16.00,area:'cocina',category:'Carnes'},
+      {id:7,name:'Pechuga de pollo',unit:'kg',price:6.50,area:'cocina',category:'Carnes'},
+      {id:8,name:'Tomate RAF',unit:'kg',price:5.80,area:'cocina',category:'Verduras'},
+      {id:9,name:'Pimiento rojo',unit:'kg',price:3.20,area:'cocina',category:'Verduras'},
+      {id:10,name:'Cebolla',unit:'kg',price:1.50,area:'cocina',category:'Verduras'},
+      {id:11,name:'Patata',unit:'kg',price:1.80,area:'cocina',category:'Verduras'},
+      {id:12,name:'Ajo',unit:'kg',price:6.00,area:'cocina',category:'Verduras'},
+      {id:13,name:'Arroz bomba',unit:'kg',price:3.50,area:'cocina',category:'Verduras'},
+      {id:14,name:'Nata 35%',unit:'L',price:3.80,area:'cocina',category:'Lácteos'},
+      {id:15,name:'Queso manchego',unit:'kg',price:14.00,area:'cocina',category:'Lácteos'},
+      {id:16,name:'Azafrán',unit:'g',price:0.85,area:'cocina',category:'Especias'},
+      {id:17,name:'Pimentón de la Vera',unit:'kg',price:22.00,area:'cocina',category:'Especias'},
+      {id:18,name:'Aceite de oliva virgen',unit:'L',price:8.50,area:'cocina',category:'Verduras'},
+      {id:19,name:'Cerveza Estrella',unit:'ud',price:0.65,area:'sala',category:'Bebidas'},
+      {id:20,name:'Vino tinto Ribera',unit:'bot',price:6.80,area:'sala',category:'Bebidas'},
+      {id:21,name:'Coca-Cola',unit:'ud',price:0.45,area:'sala',category:'Bebidas'},
+      {id:22,name:'Agua mineral',unit:'ud',price:0.25,area:'sala',category:'Bebidas'},
+      {id:23,name:'Café mezcla',unit:'kg',price:12.00,area:'sala',category:'Bebidas'},
+      {id:24,name:'Limón',unit:'kg',price:2.50,area:'sala',category:'Verduras'},
+    ];
+
+    // Stock
+    DB.stock = {};
+    DB.ingredients.forEach(ing => {
+      DB.stock[ing.id] = {qty: Math.round(Math.random()*20+5), min: 3};
+    });
+    DB.stock[16] = {qty:2, min:5}; // Azafrán bajo mínimo
+    DB.stock[2] = {qty:1.5, min:3}; // Gambas bajo mínimo
+
+    // Recetas (escandallos)
+    DB.recipeCategories = ['Entrantes','Arroces','Carnes','Pescados','Postres'];
+    DB.recipes = [
+      {id:101, name:'Ensalada mediterránea', price:12.50, area:'cocina', category:'Entrantes', comensales:1, consumiblesPct:5,
+        ingredients:[{type:'ing',ingredientId:8,qty:0.15,merma:5},{type:'ing',ingredientId:15,qty:0.04},{type:'ing',ingredientId:18,qty:0.03}]},
+      {id:102, name:'Gambas al ajillo', price:16.00, area:'cocina', category:'Entrantes', comensales:1, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:2,qty:0.2,merma:15},{type:'ing',ingredientId:12,qty:0.02},{type:'ing',ingredientId:18,qty:0.05}]},
+      {id:103, name:'Croquetas caseras (8 uds)', price:11.00, area:'cocina', category:'Entrantes', comensales:1, consumiblesPct:5,
+        ingredients:[{type:'ing',ingredientId:7,qty:0.12},{type:'ing',ingredientId:14,qty:0.1},{type:'ing',ingredientId:10,qty:0.05}]},
+      {id:104, name:'Arroz a banda', price:18.00, area:'cocina', category:'Arroces', comensales:1, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:13,qty:0.12},{type:'ing',ingredientId:4,qty:0.15,merma:10},{type:'ing',ingredientId:9,qty:0.05},{type:'ing',ingredientId:16,qty:0.3}]},
+      {id:105, name:'Paella valenciana', price:22.00, area:'cocina', category:'Arroces', comensales:2, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:13,qty:0.25},{type:'ing',ingredientId:7,qty:0.2},{type:'ing',ingredientId:9,qty:0.1},{type:'ing',ingredientId:11,qty:0.08},{type:'ing',ingredientId:16,qty:0.5}]},
+      {id:106, name:'Solomillo a la pimienta', price:24.00, area:'cocina', category:'Carnes', comensales:1, consumiblesPct:5,
+        ingredients:[{type:'ing',ingredientId:5,qty:0.25,merma:8},{type:'ing',ingredientId:14,qty:0.05},{type:'ing',ingredientId:11,qty:0.1}]},
+      {id:107, name:'Secreto ibérico a la brasa', price:19.50, area:'cocina', category:'Carnes', comensales:1, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:6,qty:0.22,merma:5},{type:'ing',ingredientId:9,qty:0.08}]},
+      {id:108, name:'Lubina a la espalda', price:21.00, area:'cocina', category:'Pescados', comensales:1, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:1,qty:0.35,merma:30},{type:'ing',ingredientId:12,qty:0.015},{type:'ing',ingredientId:18,qty:0.04}]},
+      {id:109, name:'Tarta de queso', price:7.50, area:'cocina', category:'Postres', comensales:1, consumiblesPct:5,
+        ingredients:[{type:'ing',ingredientId:15,qty:0.08},{type:'ing',ingredientId:14,qty:0.06}]},
+      {id:110, name:'Crema catalana', price:6.50, area:'cocina', category:'Postres', comensales:1, consumiblesPct:3,
+        ingredients:[{type:'ing',ingredientId:14,qty:0.1}]},
+    ];
+
+    // Carta
+    DB.cartas = [{
+      id:201, nombre:'Carta Principal', area:'cocina', horario: defaultItemHorario(),
+      secciones:[
+        {id:301,nombre:'Entrantes',platos:[
+          {id:401,recipeId:101,nombre:'Ensalada mediterránea',precio:12.50,disponible:true},
+          {id:402,recipeId:102,nombre:'Gambas al ajillo',precio:16.00,disponible:true},
+          {id:403,recipeId:103,nombre:'Croquetas caseras (8 uds)',precio:11.00,disponible:true},
+        ]},
+        {id:302,nombre:'Arroces',platos:[
+          {id:404,recipeId:104,nombre:'Arroz a banda',precio:18.00,disponible:true},
+          {id:405,recipeId:105,nombre:'Paella valenciana',precio:22.00,disponible:true},
+        ]},
+        {id:303,nombre:'Carnes',platos:[
+          {id:406,recipeId:106,nombre:'Solomillo a la pimienta',precio:24.00,disponible:true},
+          {id:407,recipeId:107,nombre:'Secreto ibérico a la brasa',precio:19.50,disponible:true},
+        ]},
+        {id:304,nombre:'Pescados',platos:[
+          {id:408,recipeId:108,nombre:'Lubina a la espalda',precio:21.00,disponible:true},
+        ]},
+        {id:305,nombre:'Postres',platos:[
+          {id:409,recipeId:109,nombre:'Tarta de queso',precio:7.50,disponible:true},
+          {id:410,recipeId:110,nombre:'Crema catalana',precio:6.50,disponible:true},
+        ]},
+      ]
+    }];
+    DB.activeCartaIds = [201];
+
+    // Carta de bebidas (sala)
+    DB.cartas.push({
+      id:202, nombre:'Carta de Bebidas', area:'sala', horario: defaultItemHorario(),
+      secciones:[
+        {id:310,nombre:'Cervezas',platos:[
+          {id:420,nombre:'Caña',precio:2.50,disponible:true},
+          {id:421,nombre:'Jarra',precio:4.50,disponible:true},
+        ]},
+        {id:311,nombre:'Vinos',platos:[
+          {id:422,nombre:'Copa Ribera del Duero',precio:5.00,disponible:true},
+          {id:423,nombre:'Copa Albariño',precio:4.50,disponible:true},
+          {id:424,nombre:'Botella Ribera del Duero',precio:22.00,disponible:true},
+        ]},
+        {id:312,nombre:'Refrescos',platos:[
+          {id:425,nombre:'Coca-Cola',precio:2.80,disponible:true},
+          {id:426,nombre:'Agua mineral',precio:2.00,disponible:true},
+          {id:427,nombre:'Zumo natural naranja',precio:3.50,disponible:true},
+        ]},
+        {id:313,nombre:'Cafés',platos:[
+          {id:428,nombre:'Café solo',precio:1.50,disponible:true},
+          {id:429,nombre:'Cortado',precio:1.70,disponible:true},
+          {id:430,nombre:'Café con leche',precio:2.00,disponible:true},
+        ]},
+      ]
+    });
+
+    // Menú del día
+    DB.menus = [{
+      id:250, nombre:'Menú del Día', precio:16.50, area:'cocina', horario: defaultItemHorario(),
+      grupos:[
+        {id:260, nombre:'Primer plato', opciones:[
+          {id:270, nombre:'Ensalada mediterránea', recipeId:101, suplemento:0},
+          {id:271, nombre:'Croquetas caseras', recipeId:103, suplemento:0},
+          {id:272, nombre:'Crema de verduras', suplemento:0},
+        ]},
+        {id:261, nombre:'Segundo plato', opciones:[
+          {id:273, nombre:'Secreto ibérico', recipeId:107, suplemento:0},
+          {id:274, nombre:'Arroz a banda', recipeId:104, suplemento:2},
+          {id:275, nombre:'Lubina a la espalda', recipeId:108, suplemento:3},
+        ]},
+        {id:262, nombre:'Postre', opciones:[
+          {id:276, nombre:'Tarta de queso', recipeId:109, suplemento:0},
+          {id:277, nombre:'Crema catalana', recipeId:110, suplemento:0},
+          {id:278, nombre:'Fruta del tiempo', suplemento:0},
+        ]},
+      ]
+    }];
+    DB.activeMenuIds = [250];
+
+    // Mesas
+    DB.tables = [];
+    for(let i=1;i<=8;i++) DB.tables.push({id:500+i, name:'Mesa '+i, zona:'interior'});
+    for(let i=1;i<=6;i++) DB.tables.push({id:510+i, name:'Terraza '+i, zona:'terraza'});
+    for(let i=1;i<=4;i++) DB.tables.push({id:520+i, name:'Barra '+i, zona:'barra'});
+
+    // Empleados
+    DB.employees = [
+      {id:601, name:'Carlos García', rol:'cocina', color:'#e74c3c', pin:'1111'},
+      {id:602, name:'María López', rol:'cocina', color:'#3498db', pin:'2222'},
+      {id:603, name:'Pablo Ruiz', rol:'sala', color:'#2ecc71', pin:'3333'},
+      {id:604, name:'Ana Martínez', rol:'sala', color:'#9b59b6', pin:'4444'},
+      {id:605, name:'Jorge Navarro', rol:'cocina', color:'#f39c12', pin:'5555'},
+      {id:606, name:'Lucía Sánchez', rol:'sala', color:'#1abc9c', pin:'6666'},
+    ];
+
+    // Clientes
+    DB.clients = [
+      {id:701, name:'Pedro Alonso', phone:'600111222', email:'pedro@email.com', points:8, allergies:'Gluten', notes:'Prefiere mesa tranquila'},
+      {id:702, name:'Sofía Reyes', phone:'600333444', email:'sofia@email.com', points:12, allergies:'', notes:'Habitual del fin de semana'},
+      {id:703, name:'Miguel Torres', phone:'600555666', email:'miguel@email.com', points:5, allergies:'Lactosa', notes:''},
+      {id:704, name:'Laura Vega', phone:'600777888', email:'laura@email.com', points:3, allergies:'', notes:'Celebró cumpleaños aquí'},
+      {id:705, name:'Iker Blanco', phone:'600999000', email:'', points:15, allergies:'Frutos secos', notes:'Cliente VIP'},
+    ];
+
+    // Reservas de hoy
+    const hoy = new Date().toISOString().slice(0,10);
+    DB.reservations = [
+      {id:801, date:hoy, time:'13:30', name:'Pedro Alonso', phone:'600111222', pax:4, tableId:501, status:'confirmed', notes:'Celebración aniversario', source:'app'},
+      {id:802, date:hoy, time:'14:00', name:'Sofía Reyes', phone:'600333444', pax:2, tableId:503, status:'confirmed', notes:'', source:'web'},
+      {id:803, date:hoy, time:'14:30', name:'Miguel Torres', phone:'600555666', pax:6, tableId:511, status:'pending', notes:'Mesa en terraza', source:'phone'},
+      {id:804, date:hoy, time:'21:00', name:'Laura Vega', phone:'600777888', pax:3, tableId:505, status:'pending', notes:'', source:'app'},
+      {id:805, date:hoy, time:'21:30', name:'Grupo empresa TechCorp', phone:'600123456', pax:8, status:'pending', notes:'Cena de empresa, 2 vegetarianos', source:'phone'},
+    ];
+
+    // Pedidos activos (mesas ocupadas)
+    const now = new Date().toISOString();
+    DB.tpvOrders = [
+      {id:901, tableId:502, status:'abierta', camarero:603, pax:2, createdAt:now, items:[
+        {platoId:402, nombre:'Gambas al ajillo', precio:16.00, qty:1, tanda:'Entrantes', estado:'servido', marchada:1},
+        {platoId:406, nombre:'Solomillo a la pimienta', precio:24.00, qty:1, tanda:'Segundos', estado:'encocina', marchada:1},
+        {platoId:408, nombre:'Lubina a la espalda', precio:21.00, qty:1, tanda:'Segundos', estado:'encocina', marchada:1},
+        {platoId:420, nombre:'Caña', precio:2.50, qty:2, tanda:'Bebidas', estado:'servido', marchada:2},
+      ]},
+      {id:902, tableId:506, status:'abierta', camarero:604, pax:4, createdAt:now, items:[
+        {platoId:401, nombre:'Ensalada mediterránea', precio:12.50, qty:2, tanda:'Entrantes', estado:'servido', marchada:2},
+        {platoId:403, nombre:'Croquetas caseras (8 uds)', precio:11.00, qty:1, tanda:'Entrantes', estado:'servido', marchada:1},
+        {platoId:405, nombre:'Paella valenciana', precio:22.00, qty:2, tanda:'Arroces', estado:'preparando', marchada:2},
+        {platoId:424, nombre:'Botella Ribera del Duero', precio:22.00, qty:1, tanda:'Bebidas', estado:'servido', marchada:1},
+        {platoId:426, nombre:'Agua mineral', precio:2.00, qty:2, tanda:'Bebidas', estado:'servido', marchada:2},
+      ]},
+      {id:903, tableId:512, status:'abierta', camarero:606, pax:2, createdAt:now, items:[
+        {platoId:102, nombre:'Gambas al ajillo', precio:16.00, qty:1, tanda:'Entrantes', estado:'pendiente'},
+        {platoId:107, nombre:'Secreto ibérico a la brasa', precio:19.50, qty:2, tanda:'Segundos', estado:'pendiente'},
+        {platoId:421, nombre:'Jarra', precio:4.50, qty:1, tanda:'Bebidas', estado:'pendiente'},
+      ]},
+    ];
+
+    // Ventas de hoy (cerradas)
+    DB.sales = [
+      {id:951, date:hoy, total:48.50, items:3, paymentMethod:'Tarjeta', tableId:504, closedAt:now},
+      {id:952, date:hoy, total:35.00, items:2, paymentMethod:'Efectivo', tableId:521, closedAt:now},
+      {id:953, date:hoy, total:72.80, items:5, paymentMethod:'Tarjeta', tableId:507, closedAt:now},
+    ];
+
+    // Proveedores
+    DB.providers = [
+      {id:1001, nombre:'Lonja del Puerto', tel:'961000111', email:'lonja@email.com', contacto:'Antonio', pago:'Transferencia 30d', notas:'Martes y viernes'},
+      {id:1002, nombre:'Carnes Selectas Levante', tel:'961000222', email:'carnes@email.com', contacto:'Rosa', pago:'Contado', notas:'Lunes a viernes'},
+      {id:1003, nombre:'Distribuciones Horta', tel:'961000333', email:'horta@email.com', contacto:'Manuel', pago:'Transferencia 15d', notas:'Verdura de temporada'},
+      {id:1004, nombre:'Bodegas La Mancha', tel:'961000444', email:'bodegas@email.com', contacto:'Luis', pago:'Domiciliación', notas:'Pedido mínimo 200€'},
+    ];
+
+    // Elaboraciones
+    DB.elaboraciones = [
+      {id:1101, name:'Caldo de pescado', unit:'L', qty:8, min:3, recipeId:null, area:'cocina'},
+      {id:1102, name:'Sofrito base', unit:'kg', qty:4, min:2, recipeId:null, area:'cocina'},
+      {id:1103, name:'Alioli casero', unit:'kg', qty:1.5, min:1, recipeId:null, area:'cocina'},
+    ];
+
+    // Fichas técnicas
+    DB.fichas = [
+      {id:1201, recipeId:101, text:'1. Lavar y cortar tomate RAF en gajos\\n2. Laminar queso manchego fino\\n3. Aliñar con AOVE, sal y orégano\\n4. Emplatar con hojas de albahaca', produccion:30},
+      {id:1202, recipeId:105, text:'1. Sofreír pollo troceado con aceite\\n2. Añadir judía verde y garrofón\\n3. Incorporar tomate rallado y pimentón\\n4. Cubrir con caldo y cocer 10min\\n5. Añadir arroz bomba, azafrán y romero\\n6. Cocción 18-20min a fuego vivo\\n7. Reposar 5min tapada', produccion:12},
+    ];
+
+    // Tareas limpieza
+    DB.limpieza.tareas = [
+      {id:1301, area:'Cocina', producto:'Plancha y fogones'},
+      {id:1302, area:'Cocina', producto:'Cámaras frigoríficas'},
+      {id:1303, area:'Sala', producto:'Mesas y sillas'},
+      {id:1304, area:'Baños', producto:'Sanitarios y suelo'},
+    ];
+
+    DB.nextId = 2000;
+    saveDB();
+  }
+  // ===== FIN DEMO DATA =====
+
   renderHeader();
   initCloud();
   syncPublicMirror();
