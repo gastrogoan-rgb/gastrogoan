@@ -2,8 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Kit de Gestión Hostelera · GastroGoan</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiR2FzdHJvR29hbiIsInNob3J0X25hbWUiOiJHYXN0cm9Hb2FuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJzdGFydF91cmwiOiIuLyIsImJhY2tncm91bmRfY29sb3IiOiIjRjZFREQ1IiwidGhlbWVfY29sb3IiOiIjMDAwMDAwIn0=">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -35,7 +40,8 @@
   --radius:12px;
   --header-h:60px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5}
+html{height:100%;overflow:hidden;overscroll-behavior:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100%;font-size:15px;line-height:1.5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 
 /* ===== Header ===== */
 .app-header{
@@ -45,6 +51,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   background:var(--dark);
   position:sticky;top:0;z-index:50;
   gap:12px;
+  flex-shrink:0;
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
 }
 .app-header #lock-btn{margin-left:auto}
 body:not(.edit-unlocked) .owner-only{display:none !important}
@@ -61,7 +70,7 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .menu-toggle{display:none}
 
 /* ===== Layout ===== */
-.content{padding:22px;max-width:1400px;width:100%;margin:0 auto;min-width:0}
+.content{padding:22px;max-width:1400px;width:100%;margin:0 auto;min-width:0;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
 .view{display:none}
 .view.active{display:block}
@@ -72,7 +81,7 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .btn-back{margin-bottom:16px}
 
 /* ===== Home (selección de área) ===== */
-#view-home.active{display:flex;flex-direction:column;min-height:calc(100vh - var(--header-h) - 44px)}
+#view-home.active{display:flex;flex-direction:column;min-height:100%}
 .home-hero{
   background:linear-gradient(135deg,var(--dark) 0%,#1A1A1A 100%);
   padding:48px 28px 36px;text-align:center;
@@ -412,71 +421,77 @@ td.wrap{white-space:normal}
 
 /* Responsive */
 @media (max-width: 880px){
-  .content{padding:14px}
-  .home-hero{margin:-14px -14px 0}
+  .content{padding:12px}
+  .home-hero{margin:-12px -12px 0}
   .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
 }
 
 @media (max-width: 600px){
   /* Header */
-  .app-header{padding:0 10px;gap:8px}
+  .app-header{padding:0 8px;gap:6px}
   .app-logo-sub{display:none}
   .app-logo-text{font-size:14px}
-  .app-logo-icon{width:32px;height:32px;font-size:16px}
+  .app-logo-icon{width:30px;height:30px;font-size:15px}
   #cloud-btn span,#sync-badge{font-size:10px}
-  .app-header .btn{padding:6px 10px;font-size:12px}
+  .app-header .btn{padding:5px 8px;font-size:11px}
   .app-header .btn i{margin:0}
+  .app-header .btn span{display:none}
 
   /* Layout */
-  .content{padding:10px}
-  .home-hero{padding:32px 16px 24px;border-radius:0 0 16px 16px}
-  .home-hero h1{font-size:21px}
-  .home-hero p{font-size:13px}
-  .view-title{font-size:18px}
-  .view-subtitle{font-size:13px;margin-bottom:12px}
+  .content{padding:8px}
+  .home-hero{padding:28px 14px 20px;border-radius:0 0 14px 14px;margin:-8px -8px 0}
+  .home-hero h1{font-size:20px}
+  .home-hero p{font-size:12px}
+  .view-title{font-size:17px}
+  .view-subtitle{font-size:12px;margin-bottom:10px}
 
   /* Cards / KPIs */
-  .card{padding:12px;margin-bottom:12px}
-  .kpi{padding:12px}
-  .kpi .value{font-size:19px}
-  .grid{gap:10px}
-  .folder-grid{gap:12px;padding:18px 0 4px}
-  .folder-card{padding:18px;min-height:170px}
-  .folder-card h2{font-size:20px}
-  .module-card{padding:16px}
+  .card{padding:10px;margin-bottom:10px}
+  .kpi{padding:10px}
+  .kpi .value{font-size:18px}
+  .grid{gap:8px}
+  .folder-grid{gap:10px;padding:14px 0 4px}
+  .folder-card{padding:16px;min-height:150px}
+  .folder-card h2{font-size:18px}
+  .module-card{padding:14px}
 
   /* Buttons & toolbars */
-  .btn{padding:8px 12px;font-size:13px}
-  .toolbar{gap:8px}
-  .toolbar .left{gap:8px}
+  .btn{padding:7px 10px;font-size:12px}
+  .toolbar{gap:6px;flex-wrap:wrap}
+  .toolbar .left{gap:6px}
 
   /* Forms */
-  .field-row{grid-template-columns:1fr;gap:8px}
-  .field input,.field select,.field textarea{font-size:15px;padding:10px}
+  .field-row{grid-template-columns:1fr;gap:6px}
+  .field input,.field select,.field textarea{font-size:16px;padding:10px}
 
   /* Tables — allow horizontal scroll, tighten spacing */
-  table{font-size:12px}
-  th,td{padding:8px 8px}
-  .ge-grid th,.ge-grid td{padding:6px 8px;font-size:12px}
-  .ge-grid th:first-child{min-width:120px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -8px;padding:0 8px}
+  table{font-size:11px}
+  th,td{padding:6px 6px}
+  .ge-grid th,.ge-grid td{padding:5px 6px;font-size:11px}
+  .ge-grid th:first-child{min-width:100px}
 
   /* Modal */
   .modal-overlay{padding:0;align-items:flex-end}
   .modal{
-    max-width:100%;width:100%;max-height:95vh;border-radius:16px 16px 0 0;
-    padding:14px;
+    max-width:100%;width:100%;max-height:100vh;border-radius:16px 16px 0 0;
+    padding:12px;
   }
   .modal.modal-order{height:100vh;max-height:100vh;border-radius:0}
-  .modal-header h3{font-size:15px}
+  .modal-header h3{font-size:14px}
   .modal-footer{flex-wrap:wrap}
-  .modal-footer .btn{flex:1;justify-content:center;min-width:120px}
+  .modal-footer .btn{flex:1;justify-content:center;min-width:100px}
 
   /* Manual */
-  .manual-detail{padding:14px}
+  .manual-detail{padding:12px}
 
   /* Misc */
-  .badge{font-size:10.5px;padding:3px 7px}
+  .badge{font-size:10px;padding:2px 6px}
   .te-row{grid-template-columns:1fr 46px 60px 60px 60px 46px;font-size:11px;gap:4px;padding:9px 10px}
+
+  /* Tabs on mobile - horizontal scroll */
+  .ge-tab-row{gap:0;-webkit-overflow-scrolling:touch}
+  .ge-tab{padding:8px 14px;font-size:12px}
 }
 
 /* Splash de bienvenida */
