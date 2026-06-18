@@ -150,7 +150,7 @@ em{font-style:italic}
 /* ficha técnica */
 .specs{display:flex;flex-wrap:wrap;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:5px;
   background:#fff;overflow:hidden}
-.specs .sp{flex:1 1 0;min-width:96px;padding:6px 11px;border-right:1px solid var(--line)}
+.specs .sp{flex:1 1 0;min-width:0;padding:6px 9px;border-right:1px solid var(--line);overflow:hidden}
 .specs .sp:last-child{border-right:0}
 .specs .sp .k{font-family:var(--sans);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
 .specs .sp .v{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);margin-top:1px}
@@ -164,7 +164,7 @@ em{font-style:italic}
 .sec-h{display:flex;align-items:center;gap:11px;margin-bottom:5px}
 .sec-h .rn{font-family:var(--serif);font-weight:700;font-size:13px;color:#fff;background:var(--stage);
   width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.sec-h h3{font-size:19px;letter-spacing:-.2px}
+.sec-h h3{font-size:19px;letter-spacing:-.2px;flex:0 0 auto;white-space:nowrap}
 .sec-h .rule{flex:1;margin:0 0 0 4px}
 
 .panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:9px 13px;margin:6px 0;break-inside:avoid}
@@ -276,13 +276,19 @@ em{font-style:italic}
 .foot .stage-tag{font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--stage)}
 
 @media print{
+  @page{size:A4;margin:0}
   body{background:#fff}
   .page,.sheet{margin:0;box-shadow:none;width:auto}
-  .page{height:auto;min-height:auto}
-  .sheet{min-height:0}
-  .page:first-child{break-before:auto}   /* sin hoja en blanco inicial */
-  @page{size:A4;margin:0}
-  .panel,.hard,.step,.specs,.kbd,.scale,.rhythm,.day-head{break-inside:avoid}
+  /* preliminares: cada una en su hoja, sin dobles saltos ni hoja final en blanco */
+  .page{height:auto;min-height:0;break-before:auto;break-after:page}
+  .page.cover{height:297mm}                 /* portada/contraportada a hoja completa */
+  .page:first-child{break-before:auto}
+  .page:last-child{break-before:page;break-after:auto}
+  /* sesiones: flujo continuo (sin huecos en blanco), cada día separado por su cabecera */
+  .sheet{min-height:0;break-before:auto}
+  /* nada se parte por la mitad */
+  .panel,.hard,.step,.specs,.kbd,.scale,.rhythm,.day-head,.two,.fingers{break-inside:avoid}
+  .sec-h{break-after:avoid}
 }
 </style>
 </head>
