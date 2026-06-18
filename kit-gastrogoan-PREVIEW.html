@@ -8746,7 +8746,8 @@ function addOrderItem(orderId, secId, platoId){
   const tanda = sec ? sec.nombre : '';
   order.tandas = order.tandas || [];
   if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
-  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !l.marchada && !(l.notas) && (l.tanda||'') === tanda);
+  const autoSend = order.tipo === 'takeaway' || (tanda||'') === ((order.tandas||[])[0]||'');
+  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !(l.notas) && (l.tanda||'') === tanda && l.estado !== 'entregado' && (!l.marchada || autoSend));
   let line;
   if(existing){ existing.qty += 1; line = existing; }
   else{ line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
@@ -8808,7 +8809,8 @@ function confirmAddOrderItem(orderId, secId, platoId){
   if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
   const modKey = selectedMods.map(m=>m.id).sort().join(',');
   const normMods = (m) => JSON.stringify(m && m.length ? m.map(x=>x.nombre).sort() : []);
-  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && !l.marchada && normMods(l.modificadores) === normMods(selectedMods));
+  const autoSend = order.tipo === 'takeaway' || (tanda||'') === ((order.tandas||[])[0]||'');
+  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && l.estado !== 'entregado' && (!l.marchada || autoSend) && normMods(l.modificadores) === normMods(selectedMods));
   let line;
   if(existing){
     existing.qty += 1;
