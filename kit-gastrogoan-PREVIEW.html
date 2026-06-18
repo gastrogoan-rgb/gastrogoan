@@ -4135,6 +4135,9 @@ function openHelpContactEmail(){
 const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
 const CHAT_CHANNEL_LABELS = {general:'General', cocina:'Cocina', sala:'Sala'};
 let currentChatChannel = 'general';
+function visibleChatChannels(){
+  return ['general', currentArea()];
+}
 let chatOwnerVerified = false;
 let chatPinPrevValue = '';
 
@@ -4152,14 +4155,24 @@ function getChatAuthorName(val){
 function populateChatAuthorSelect(){
   const sel = document.getElementById('chat-author-sel');
   const current = getChatAuthor();
-  const cocinaOpts = DB.employees.filter(e => (e.area||'cocina')==='cocina').map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
-  const salaOpts = DB.employees.filter(e => e.area==='sala').map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  const area = currentArea();
+  const areaEmps = DB.employees.filter(e => (e.area||'cocina')===area);
+  const opts = areaEmps.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   sel.innerHTML = `<option value="owner">Jefe/a</option>`
-    + (cocinaOpts ? `<optgroup label="Cocina">${cocinaOpts}</optgroup>` : '')
-    + (salaOpts ? `<optgroup label="Sala">${salaOpts}</optgroup>` : '');
-  const valid = current==='owner' ? chatOwnerVerified : DB.employees.some(e => String(e.id)===String(current));
-  sel.value = valid ? current : (DB.employees[0] ? String(DB.employees[0].id) : 'owner');
+    + (opts ? `<optgroup label="${area==='sala'?'Sala':'Cocina'}">${opts}</optgroup>` : '');
+  const valid = current==='owner' ? chatOwnerVerified : areaEmps.some(e => String(e.id)===String(current));
+  sel.value = valid ? current : (areaEmps[0] ? String(areaEmps[0].id) : 'owner');
   if(sel.value !== current) setChatAuthor(sel.value);
+}
+function applyChatAreaRestrictions(){
+  const area = currentArea();
+  const cocinaBtn = document.getElementById('chat-tab-btn-cocina');
+  const salaBtn = document.getElementById('chat-tab-btn-sala');
+  if(cocinaBtn) cocinaBtn.style.display = area==='cocina' ? '' : 'none';
+  if(salaBtn) salaBtn.style.display = area==='sala' ? '' : 'none';
+  if(!visibleChatChannels().includes(currentChatChannel)){
+    switchChatTab('general');
+  }
 }
 function onChatAuthorChange(sel){
   const val = sel.value;
@@ -4207,6 +4220,7 @@ function toggleChatPanel(){
   const opening = !panel.classList.contains('active');
   panel.classList.toggle('active');
   if(opening){
+    applyChatAreaRestrictions();
     populateChatAuthorSelect();
     renderChatMessages();
     markChatRead(currentChatChannel);
@@ -4256,7 +4270,7 @@ function updateChatBadge(){
   const badge = document.getElementById('chat-badge');
   if(!badge) return;
   let unread = 0;
-  CHAT_CHANNELS.forEach(c => {
+  visibleChatChannels().forEach(c => {
     const lastRead = localStorage.getItem('chatLastRead_'+c);
     const count = (DB.chatMessages||[]).filter(m => m.channel===c && (!lastRead || m.ts > lastRead)).length;
     unread += count;
