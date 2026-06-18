@@ -25,7 +25,7 @@
   --mid:#1A1A1A;
 
   /* Acento = amarillo GastroGoan (uso controlado) */
-  --amber:#C8821A;--amber-l:#FDEEE4;--amber-dark:#6B3A10;
+  --amber:#C8821A;--amber-l:#FEF3E2;--amber-dark:#6B3A10;
 
   /* Semánticos (sin cambio — universales) */
   --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#042C53;
@@ -458,7 +458,7 @@ td.wrap{white-space:normal}
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
-  .module-card::before{height:0;width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
+  .module-card::before{width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
   .module-icon{font-size:24px;margin-bottom:0;flex-shrink:0}
   .module-card h3{font-size:14px;margin-bottom:2px}
   .module-card p{font-size:11px;margin-bottom:4px}
@@ -528,7 +528,7 @@ td.wrap{white-space:normal}
   .actions-cell .btn{padding:4px 6px;font-size:10px}
 
   /* FORZAR ancho 100% en todo — nada puede desbordar la pantalla */
-  *{max-width:100vw}
+  body,body *:not(.toast):not([class*="dropdown"]):not([class*="tooltip"]){max-width:100vw}
   .content{max-width:100% !important;padding:10px !important;width:100% !important}
   .folder-grid{max-width:100% !important;grid-template-columns:1fr !important;gap:10px !important;padding:12px 0 !important}
   .home-hero{margin:-10px -10px 0 !important;border-radius:0 0 12px 12px !important}
@@ -5344,20 +5344,21 @@ function deleteElaboracion(id){
 }
 
 function updateElaboracionMin(id, value){
-  getElaboracion(id).min = parseFloat(value) || 0;
+  const e = getElaboracion(id); if(!e) return;
+  e.min = parseFloat(value) || 0;
   saveDB();
   renderStock();
 }
 
 function adjustElaboracion(id, delta){
-  const e = getElaboracion(id);
+  const e = getElaboracion(id); if(!e) return;
   e.qty = Math.max(0, (e.qty||0) + delta);
   saveDB();
   renderStock();
 }
 
 function setElaboracionQty(id){
-  const e = getElaboracion(id);
+  const e = getElaboracion(id); if(!e) return;
   openModal(`
     <div class="modal-header">
       <h3>Ajustar stock</h3>
@@ -5375,7 +5376,7 @@ function setElaboracionQty(id){
   setTimeout(()=>document.getElementById('elaboracion-qty-value')?.focus(), 50);
 }
 function confirmSetElaboracionQty(id){
-  const e = getElaboracion(id);
+  const e = getElaboracion(id); if(!e){ closeModal(); return; }
   const val = document.getElementById('elaboracion-qty-value').value;
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
@@ -11555,6 +11556,7 @@ function saveTurno(id){
   if(!DB.turnos) DB.turnos = [];
   if(id){
     const t = DB.turnos.find(x => x.id===id);
+    if(!t){ showToast('Turno no encontrado'); return; }
     Object.assign(t, data);
   } else {
     DB.turnos.push({id: genId(), ...data});
@@ -11652,7 +11654,7 @@ function openBulkTurnoModal(employeeId){
 }
 
 function bulkTipoOptions(selected){
-  return ['M','T','C'].map(k => `<option value="${k}"${k===selected?' selected':''}>${k} - ${SHIFT_TYPES[k].label}</option>`).join('');
+  return ['M','T','P','C'].map(k => `<option value="${k}"${k===selected?' selected':''}>${k} - ${SHIFT_TYPES[k].label}</option>`).join('');
 }
 
 function renderBulkCalendar(){
@@ -12905,10 +12907,6 @@ function saveClient(id){
   showToast('Cliente guardado');
 }
 
-function adjustClientVisit(id){
-  registerClientVisit(id);
-  renderClientes();
-}
 
 // Suma un punto de fidelidad a un cliente (p.ej. al confirmar su llegada desde una reserva,
 // para que el contador se rellene solo sin tener que hacerlo a mano en Clientes).
