@@ -427,60 +427,85 @@ td.wrap{white-space:normal}
 }
 
 @media (max-width: 600px){
-  /* Header */
-  .app-header{padding:0 8px;gap:6px}
+  /* Header — compact single row, icon-only buttons */
+  :root{--header-h:44px}
+  .app-header{padding:0 6px;gap:3px;height:var(--header-h)}
   .app-logo-sub{display:none}
-  .app-logo-text{font-size:14px}
-  .app-logo-icon{width:30px;height:30px;font-size:15px}
-  #cloud-btn span,#sync-badge{font-size:10px}
-  .app-header .btn{padding:5px 8px;font-size:11px}
-  .app-header .btn i{margin:0}
-  .app-header .btn span{display:none}
+  .app-logo-text{font-size:12px}
+  .app-logo-icon{width:26px;height:26px;font-size:13px;border-radius:6px}
+  .app-header .hdr-text{display:none}
+  .app-header .btn{padding:4px 7px;font-size:10px;min-height:28px;margin-right:0 !important}
+  .app-header .btn i{margin:0;font-size:15px}
+  #sync-badge{font-size:9px;padding:2px 6px;margin-right:2px !important}
+  #lang-select{padding:3px 2px;font-size:10px;width:auto;min-width:40px;margin-right:0 !important;border-radius:6px}
 
   /* Layout */
-  .content{padding:8px}
-  .home-hero{padding:28px 14px 20px;border-radius:0 0 14px 14px;margin:-8px -8px 0}
-  .home-hero h1{font-size:20px}
+  .content{padding:10px}
+  .home-hero{padding:20px 14px 16px;border-radius:0 0 14px 14px;margin:-10px -10px 0}
+  .home-hero .hero-badge{font-size:11px;padding:4px 10px;margin-bottom:10px}
+  .home-hero h1{font-size:19px}
   .home-hero p{font-size:12px}
   .view-title{font-size:17px}
   .view-subtitle{font-size:12px;margin-bottom:10px}
 
+  /* Carpetas principales (Cocina/Sala/Gestión) — vertical en móvil */
+  .folder-grid{grid-template-columns:1fr !important;gap:10px;padding:12px 0 4px;max-width:100%}
+  .folder-card{padding:18px 16px;min-height:auto;flex-direction:row;gap:14px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
+  .folder-icon{font-size:36px}
+  .folder-card h2{font-size:18px}
+  .folder-btn{padding:8px 16px;font-size:12px}
+
+  /* Subcarpetas (módulos) — vertical en móvil */
+  .grid-3{grid-template-columns:1fr !important}
+  .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
+  .module-card::before{height:0;width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
+  .module-icon{font-size:24px;margin-bottom:0;flex-shrink:0}
+  .module-card h3{font-size:14px;margin-bottom:2px}
+  .module-card p{font-size:11px;margin-bottom:4px}
+  .module-open{font-size:12px}
+  .folder-top{flex-wrap:wrap;gap:8px}
+  .folder-top-title{font-size:18px}
+
   /* Cards / KPIs */
-  .card{padding:10px;margin-bottom:10px}
+  .card{padding:10px;margin-bottom:10px;border-radius:10px}
+  .card h3{font-size:14px}
   .kpi{padding:10px}
   .kpi .value{font-size:18px}
+  .kpi .label{font-size:10px}
   .grid{gap:8px}
-  .folder-grid{gap:10px;padding:14px 0 4px}
-  .folder-card{padding:16px;min-height:150px}
-  .folder-card h2{font-size:18px}
-  .module-card{padding:14px}
+  .grid-2{grid-template-columns:1fr}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-mesas{grid-template-columns:repeat(3,1fr);gap:6px}
 
   /* Buttons & toolbars */
-  .btn{padding:7px 10px;font-size:12px}
+  .btn{padding:7px 10px;font-size:12px;border-radius:8px}
+  .btn-sm{padding:5px 8px;font-size:11px}
   .toolbar{gap:6px;flex-wrap:wrap}
   .toolbar .left{gap:6px}
 
   /* Forms */
   .field-row{grid-template-columns:1fr;gap:6px}
-  .field input,.field select,.field textarea{font-size:16px;padding:10px}
+  .field input,.field select,.field textarea{font-size:16px;padding:10px;border-radius:8px}
+  .field label{font-size:12px}
 
   /* Tables — allow horizontal scroll, tighten spacing */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -8px;padding:0 8px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
   table{font-size:11px}
   th,td{padding:6px 6px}
   .ge-grid th,.ge-grid td{padding:5px 6px;font-size:11px}
   .ge-grid th:first-child{min-width:100px}
 
-  /* Modal */
+  /* Modal — fullscreen en móvil */
   .modal-overlay{padding:0;align-items:flex-end}
   .modal{
-    max-width:100%;width:100%;max-height:100vh;border-radius:16px 16px 0 0;
+    max-width:100%;width:100%;max-height:100vh;border-radius:14px 14px 0 0;
     padding:12px;
   }
-  .modal.modal-order{height:100vh;max-height:100vh;border-radius:0}
+  .modal.modal-order{height:100vh;max-height:100vh;border-radius:0;padding:10px}
+  .modal-header{padding-bottom:8px}
   .modal-header h3{font-size:14px}
-  .modal-footer{flex-wrap:wrap}
-  .modal-footer .btn{flex:1;justify-content:center;min-width:100px}
+  .modal-footer{flex-wrap:wrap;gap:6px}
+  .modal-footer .btn{flex:1;justify-content:center;min-width:90px}
 
   /* Manual */
   .manual-detail{padding:12px}
@@ -489,9 +514,18 @@ td.wrap{white-space:normal}
   .badge{font-size:10px;padding:2px 6px}
   .te-row{grid-template-columns:1fr 46px 60px 60px 60px 46px;font-size:11px;gap:4px;padding:9px 10px}
 
-  /* Tabs on mobile - horizontal scroll */
+  /* Tabs on mobile — horizontal scroll sin desbordar */
   .ge-tab-row{gap:0;-webkit-overflow-scrolling:touch}
-  .ge-tab{padding:8px 14px;font-size:12px}
+  .ge-tab{padding:7px 12px;font-size:11px}
+
+  /* Stock tabs */
+  .stock-tabs .btn{font-size:11px;padding:6px 8px}
+
+  /* Comanda panel en móvil */
+  .list-row{padding:6px 0}
+  .list-row .list-row-name{font-size:12px}
+  .actions-cell{gap:4px}
+  .actions-cell .btn{padding:4px 6px;font-size:10px}
 }
 
 /* Splash de bienvenida */
@@ -565,16 +599,16 @@ td.wrap{white-space:normal}
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
-  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:8px"><i class="ti ti-refresh" id="refresh-icon"></i> Actualizar</button>
+  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text"> Actualizar</span></button>
   <select id="lang-select" onchange="setLang(this.value)" style="margin-right:8px;border-radius:8px;border:1px solid var(--border);padding:6px 8px;font-size:13px;background:#fff">
     <option value="es">🇪🇸 Castellano</option>
     <option value="ca">🏴 Català</option>
     <option value="en">🇬🇧 English</option>
   </select>
-  <button class="btn btn-sm" id="business-switch-btn" onclick="showBusinessSelectScreen()" style="margin-right:8px" title="Cambiar de negocio"><i class="ti ti-building-store"></i> Negocios</button>
-  <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:8px"><i class="ti ti-cloud"></i> Nube</button>
-  <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:8px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i> Archivar datos</button>
-  <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i> Bloquear</button>
+  <button class="btn btn-sm" id="business-switch-btn" onclick="showBusinessSelectScreen()" style="margin-right:4px" title="Cambiar de negocio"><i class="ti ti-building-store"></i><span class="hdr-text"> Negocios</span></button>
+  <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:4px"><i class="ti ti-cloud"></i><span class="hdr-text"> Nube</span></button>
+  <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:4px;background:#C0392B;color:#fff;border:none"><i class="ti ti-archive"></i><span class="hdr-text"> Archivar</span></button>
+  <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none"><i class="ti ti-lock"></i></button>
 </header>
 
   <!-- Content -->
