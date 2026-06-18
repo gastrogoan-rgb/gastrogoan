@@ -14621,8 +14621,9 @@ function openOwnCourierModal(title, c){
       <input type="text" id="oc-f-nombre" value="${escapeHtml(c.nombre)}" placeholder="Ej. Juan">
     </div>
     <div class="field">
-      <label>Teléfono (WhatsApp)</label>
-      <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="Ej. 600 000 000">
+      <label>Teléfono con prefijo del país (WhatsApp)</label>
+      <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="Ej. +34 600 000 000">
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Incluye el prefijo del país (ej. <strong>+34</strong> en España). Sin él, el botón de WhatsApp no funciona.</div>
     </div>
     <input type="hidden" id="oc-f-id" value="${c.id||''}">
     <div class="modal-footer">
@@ -14635,6 +14636,8 @@ function saveOwnCourier(){
   const nombre = document.getElementById('oc-f-nombre').value.trim();
   const telefono = document.getElementById('oc-f-telefono').value.trim();
   if(!nombre){ showToast('El nombre es obligatorio'); return; }
+  if(!telefono){ showToast('El teléfono es obligatorio'); return; }
+  if(telefono.replace(/[^0-9]/g,'').length < 10){ showToast('Incluye el prefijo del país (ej. +34 600 000 000)'); return; }
   if(!DB.business.ownCouriers) DB.business.ownCouriers = [];
   const idVal = document.getElementById('oc-f-id').value;
   if(idVal){
