@@ -1,0 +1,128 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<style>
+@page{size:A4 landscape;margin:0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1a1a2e;background:#fff}
+.page{width:297mm;height:210mm;padding:18mm 22mm;position:relative;page-break-after:always;overflow:hidden}
+
+/* COVER */
+.cover{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4a 100%);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.cover h1{font-size:52pt;color:#DF7039;letter-spacing:2px}
+.cover p.sub{font-size:16pt;color:#ccc;margin-top:8mm}
+.cover .tagline{margin-top:15mm;font-size:13pt;color:#F5E6D0;line-height:1.8;max-width:200mm}
+
+/* SECTION PAGES */
+.section-title{font-size:28pt;color:#DF7039;border-bottom:3px solid #DF7039;padding-bottom:4mm;margin-bottom:10mm}
+.section-subtitle{font-size:11pt;color:#666;margin-top:-8mm;margin-bottom:10mm}
+.cols{display:flex;gap:12mm}
+.col{flex:1}
+.feature{margin-bottom:7mm}
+.feature h3{font-size:13pt;color:#1a1a2e;margin-bottom:2mm}
+.feature p{font-size:10pt;color:#555;line-height:1.5}
+.icon{display:inline-block;width:8mm;height:8mm;background:#DF7039;color:#fff;border-radius:50%;text-align:center;line-height:8mm;font-size:12pt;margin-right:3mm;vertical-align:middle}
+.badge{display:inline-block;background:#FEF3E2;color:#DF7039;font-size:9pt;padding:1mm 3mm;border-radius:3mm;font-weight:600;margin-top:1mm}
+.grid3{display:flex;gap:8mm;flex-wrap:wrap}
+.grid3 .card{flex:1;min-width:70mm;background:#FAFAF8;border:1px solid #eee;border-radius:4mm;padding:6mm}
+.grid3 .card h3{font-size:12pt;color:#DF7039;margin-bottom:3mm}
+.grid3 .card p{font-size:9.5pt;color:#555;line-height:1.5}
+.highlight-box{background:#FEF3E2;border-left:4px solid #DF7039;padding:5mm 8mm;border-radius:0 4mm 4mm 0;margin-top:8mm}
+.highlight-box p{font-size:10pt;color:#333;line-height:1.6}
+
+/* CLOSING */
+.closing{background:linear-gradient(135deg,#DF7039,#e8854d);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.closing h1{font-size:36pt;max-width:220mm;line-height:1.3}
+.closing .price{margin-top:12mm;font-size:20pt;background:rgba(255,255,255,.2);padding:5mm 15mm;border-radius:5mm}
+.closing .price span{font-size:32pt;font-weight:700}
+.closing .contact{margin-top:10mm;font-size:12pt;color:rgba(255,255,255,.85)}
+</style></head><body>
+
+<!-- PORTADA -->
+<div class="page cover">
+<h1>GastroGoan</h1>
+<p class="sub">Software TPV todo-en-uno para restaurantes</p>
+<div class="tagline">Gestiona tu cocina, tu sala y tu equipo desde una sola aplicación.<br>Sin instalaciones · Sin hardware especial · Funciona en cualquier dispositivo.</div>
+</div>
+
+<!-- 1. COCINA -->
+<div class="page">
+<div class="section-title">🍳 Cocina</div>
+<p class="section-subtitle">Control total de lo que pasa en la cocina: recetas, costes, stock y pantalla de pedidos.</p>
+<div class="cols">
+<div class="col">
+<div class="feature"><h3><span class="icon">📋</span>Escandallos y fichas técnicas</h3>
+<p>Define ingredientes, cantidades y costes de cada plato. Calcula automáticamente el food cost, margen y PVP sugerido. Fichas técnicas con alérgenos y elaboración paso a paso.</p></div>
+<div class="feature"><h3><span class="icon">📦</span>Stock e inventario</h3>
+<p>Control de stock de ingredientes y elaboraciones con alertas de mínimos. Registro de mermas y ajustes. Cuando vendes un plato, el stock se descuenta automáticamente.</p></div>
+<div class="feature"><h3><span class="icon">🚚</span>Proveedores y pedidos</h3>
+<p>Gestiona tus proveedores, genera pedidos automáticos según stock mínimo y lleva el historial de compras y precios.</p></div>
+</div>
+<div class="col">
+<div class="feature"><h3><span class="icon">🖥</span>Pantalla de cocina (KDS)</h3>
+<p>Los pedidos llegan en tiempo real a la pantalla de cocina. El cocinero marca platos como "en preparación" y "listo". Sin papeles, sin gritos.</p></div>
+<div class="feature"><h3><span class="icon">🧪</span>Elaboraciones</h3>
+<p>Gestiona salsas, bases y preparaciones intermedias con su propio stock. Se integran como ingredientes en los escandallos.</p></div>
+<div class="feature"><h3><span class="icon">🧹</span>Tareas de limpieza (APPCC)</h3>
+<p>Checklists de limpieza diarios con registro de quién y cuándo los completó. Cumple con la normativa de higiene alimentaria.</p></div>
+</div>
+</div>
+<div class="highlight-box"><p><strong>💡 Resultado:</strong> Sabes exactamente cuánto cuesta cada plato, cuánto margen te deja, y nunca te quedas sin stock por sorpresa.</p></div>
+</div>
+
+<!-- 2. SALA -->
+<div class="page">
+<div class="section-title">🍽 Sala</div>
+<p class="section-subtitle">Desde que el cliente se sienta hasta que paga: todo fluye.</p>
+<div class="cols">
+<div class="col">
+<div class="feature"><h3><span class="icon">🗺</span>Plano de mesas interactivo</h3>
+<p>Diseña tu sala con mesas arrastrables. Ves de un vistazo qué mesas están libres, ocupadas o pendientes de cobro. Configura zonas (terraza, interior, barra).</p></div>
+<div class="feature"><h3><span class="icon">📝</span>Tomar comanda</h3>
+<p>Selecciona mesa, elige platos de la carta con modificadores (sin gluten, extra queso…). Pedidos rápidos con buscador y favoritos. Divide cuentas entre comensales.</p></div>
+<div class="feature"><h3><span class="icon">💳</span>Cobro y tickets</h3>
+<p>Cobra en efectivo, tarjeta o mixto. Genera tickets con detalle del pedido. Aplica descuentos y promociones automáticas.</p></div>
+</div>
+<div class="col">
+<div class="feature"><h3><span class="icon">📱</span>Pedidos QR y para llevar</h3>
+<p>Genera QR para que los clientes pidan desde su móvil. Gestiona pedidos para llevar y delivery con su propio flujo de cobro.</p></div>
+<div class="feature"><h3><span class="icon">📅</span>Reservas</h3>
+<p>Sistema de reservas integrado con calendario visual. Los clientes reservan online y tú ves la disponibilidad en tiempo real. Confirmación automática.</p></div>
+<div class="feature"><h3><span class="icon">👥</span>Clientes y fidelización</h3>
+<p>Ficha de cada cliente con historial de visitas, preferencias y gasto total. Programa de puntos y promociones personalizadas.</p></div>
+</div>
+</div>
+<div class="highlight-box"><p><strong>💡 Resultado:</strong> Servicio más rápido, menos errores en pedidos, y clientes que repiten gracias a una experiencia profesional.</p></div>
+</div>
+
+<!-- 3. GESTIÓN -->
+<div class="page">
+<div class="section-title">📊 Gestión</div>
+<p class="section-subtitle">Controla tu negocio con datos reales: equipo, números y decisiones informadas.</p>
+<div class="cols">
+<div class="col">
+<div class="feature"><h3><span class="icon">👨‍🍳</span>Gestión de personal</h3>
+<p>Alta de empleados con roles y permisos. Cada trabajador tiene su PIN de acceso. Controla quién puede cobrar, anular pedidos o acceder a informes.</p></div>
+<div class="feature"><h3><span class="icon">📆</span>Horarios y turnos</h3>
+<p>Planifica horarios semanales con turnos de mañana, tarde, partido o libre. Vista semanal compacta de todo el equipo. Control de horas trabajadas.</p></div>
+<div class="feature"><h3><span class="icon">💰</span>Propinas</h3>
+<p>Registro y reparto de propinas entre el equipo. Transparente y justo.</p></div>
+</div>
+<div class="col">
+<div class="feature"><h3><span class="icon">📈</span>Dashboard en tiempo real</h3>
+<p>Ventas del día, ticket medio, platos más vendidos, comparativa con días anteriores. Todo en un panel visual que se actualiza en directo.</p></div>
+<div class="feature"><h3><span class="icon">🧾</span>Arqueo de caja</h3>
+<p>Cierre de caja con desglose por método de pago, descuadres detectados y registro histórico. Sin sorpresas al final del turno.</p></div>
+<div class="feature"><h3><span class="icon">🌐</span>Multi-idioma y multi-dispositivo</h3>
+<p>Interfaz en español, inglés y más. Funciona en tablet, móvil y ordenador. Sincronización en la nube entre todos los dispositivos.</p></div>
+</div>
+</div>
+<div class="highlight-box"><p><strong>💡 Resultado:</strong> Tomas decisiones con datos, no con intuición. Y gestionas tu equipo sin hojas de Excel.</p></div>
+</div>
+
+<!-- CIERRE -->
+<div class="page closing">
+<h1>Todo esto y mucho más<br>con GastroGoan</h1>
+<div class="price">Desde <span>29€</span>/mes</div>
+<p class="contact">gastrogoan@gmail.com · gastrogoan.com</p>
+</div>
+
+</body></html>
