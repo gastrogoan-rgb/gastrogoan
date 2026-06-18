@@ -7016,6 +7016,7 @@ function renderMenuGrupos(){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
+          <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> Extras${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:14px">Sin opciones en este grupo.</div>`}
@@ -7116,6 +7117,55 @@ function removeMenuOpcion(grupoId, opcionId){
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   g.opciones = g.opciones.filter(o=>o.id!==opcionId);
   renderMenuGrupos();
+}
+
+function openMenuOpcionModsModal(grupoId, opcionId){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  if(!g) return;
+  const o = g.opciones.find(x=>x.id===opcionId);
+  if(!o) return;
+  if(!o.modificadores) o.modificadores = [];
+  const mods = o.modificadores;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(o.nombre)}"</h3>
+      <button class="modal-close" onclick="closeModal();renderMenuGrupos()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales (ej. "Extra queso" +1€). Se podrán añadir al tomar la comanda.</p>
+    <div id="menu-opcion-mods-list">
+      ${mods.length ? mods.map(m => `
+        <div class="ge-item">
+          <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(m.precio||0)}</span>
+          <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
+        </div>
+      `).join('') : `<div class="empty" style="padding:10px">Sin extras configurados.</div>`}
+    </div>
+    <div class="field-row" style="margin-top:10px">
+      <input type="text" id="new-menu-mod-nombre" placeholder="Nombre del extra" style="flex:1">
+      <input type="number" id="new-menu-mod-precio" placeholder="Precio" step="0.01" min="0" style="width:90px">
+      <button class="btn btn-sm" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i></button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);
+}
+
+function addMenuOpcionMod(grupoId, opcionId){
+  const nombre = document.getElementById('new-menu-mod-nombre').value.trim();
+  if(!nombre){ showToast('Escribe un nombre para el extra'); return; }
+  const precio = parseFloat(document.getElementById('new-menu-mod-precio').value) || 0;
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  if(!o.modificadores) o.modificadores = [];
+  o.modificadores.push({id: genId(), nombre, precio});
+  openMenuOpcionModsModal(grupoId, opcionId);
+}
+
+function removeMenuOpcionMod(grupoId, opcionId, modId){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g.opciones.find(x=>x.id===opcionId);
+  o.modificadores = (o.modificadores||[]).filter(m=>m.id!==modId);
+  openMenuOpcionModsModal(grupoId, opcionId);
 }
 
 /* ============================================================
@@ -7751,9 +7801,17 @@ function openMenuConfigModal(orderId, menuId){
         <div style="display:flex;flex-direction:column;gap:6px">
           ${(g.opciones||[]).map((o,i) => `
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
               ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
             </label>
+            ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
+              ${o.modificadores.map(mod => `
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                  <input type="checkbox" class="menu-mod-${g.id}" data-opcion="${o.id}" data-mod-id="${mod.id}" style="width:auto">
+                  ${escapeHtml(tItem(mod))}${mod.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(mod.precio)}</span>` : ''}
+                </label>
+              `).join('')}
+            </div>` : ''}
           `).join('')}
         </div>
       </div>
@@ -7765,28 +7823,55 @@ function openMenuConfigModal(orderId, menuId){
   `);
 }
 
+function toggleMenuExtras(grupoId){
+  const selected = document.querySelector(`input[name="menu-grupo-${grupoId}"]:checked`);
+  if(!selected) return;
+  const selId = selected.value;
+  document.querySelectorAll(`[class^="menu-extras-${grupoId}-"]`).forEach(el => el.style.display = 'none');
+  const extrasDiv = document.querySelector(`.menu-extras-${grupoId}-${selId}`);
+  if(extrasDiv) extrasDiv.style.display = 'block';
+  document.querySelectorAll(`.menu-mod-${grupoId}`).forEach(el => {
+    if(el.dataset.opcion !== selId) el.checked = false;
+  });
+}
+
 function confirmAddMenuToOrder(orderId, menuId){
   const order = DB.tpvOrders.find(o=>o.id===orderId);
   const m = DB.menus.find(x=>x.id===menuId);
   if(!order || !m) return;
   let suplementoTotal = 0;
+  let extrasTotal = 0;
   const selections = (m.grupos||[]).map(g => {
     const selectedId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
     const o = (g.opciones||[]).find(x=>x.id===selectedId) || g.opciones[0];
     suplementoTotal += o.suplemento||0;
-    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0};
+    const selectedMods = [...document.querySelectorAll(`.menu-mod-${g.id}:checked`)]
+      .filter(el => parseInt(el.dataset.opcion) === o.id)
+      .map(el => (o.modificadores||[]).find(mod => mod.id === parseInt(el.dataset.modId)))
+      .filter(Boolean);
+    const modExtra = selectedMods.reduce((s,mod) => s + (mod.precio||0), 0);
+    extrasTotal += modExtra;
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
   });
-  const price = m.precio + suplementoTotal;
-  const notas = selections.map(s=>`${s.grupoNombre}: ${s.opcionNombre}${s.suplemento?` (+${fmtMoney(s.suplemento)})`:''}`).join(' · ');
+  const price = m.precio + suplementoTotal + extrasTotal;
+  const notas = selections.map(s => {
+    let txt = `${s.grupoNombre}: ${s.opcionNombre}`;
+    if(s.suplemento) txt += ` (+${fmtMoney(s.suplemento)})`;
+    if(s.modificadores.length) txt += ` [${s.modificadores.map(mod => mod.nombre + (mod.precio ? ' +' + fmtMoney(mod.precio) : '')).join(', ')}]`;
+    return txt;
+  }).join(' · ');
 
   if(m.desglosarPases){
     order.tandas = order.tandas || [];
     selections.forEach((s, i) => {
       if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
+      const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
+      const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
       const line = {
         menuId: m.id, recipeId: s.recipeId, platoId: null,
-        name: s.opcionNombre, price: (i===0 ? m.precio : 0) + s.suplemento,
-        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`
+        name: lineName, price: (i===0 ? m.precio : 0) + s.suplemento + modExtra,
+        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
+        modificadores: s.modificadores
       };
       order.items.push(line);
       autoSendTakeawayLine(order, line);
