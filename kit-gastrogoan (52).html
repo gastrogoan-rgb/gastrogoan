@@ -8518,12 +8518,20 @@ function confirmAddOrderItem(orderId, secId, platoId){
   const tanda = sec ? sec.nombre : '';
   order.tandas = order.tandas || [];
   if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
-  const line = {
-    platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
-    notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
-  };
-  if(isSeccionBebida(secId)) line.bebida = true;
-  order.items.push(line);
+  const modKey = selectedMods.map(m=>m.id).sort().join(',');
+  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && !l.marchada && ((l.modificadores||[]).map(m=>m.nombre).sort().join(',')) === (selectedMods.map(m=>m.nombre).sort().join(',')));
+  let line;
+  if(existing){
+    existing.qty += 1;
+    line = existing;
+  } else {
+    line = {
+      platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
+      notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
+    };
+    if(isSeccionBebida(secId)) line.bebida = true;
+    order.items.push(line);
+  }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   saveDB();
