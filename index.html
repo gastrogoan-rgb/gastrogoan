@@ -14266,7 +14266,7 @@ function renderMesasConfigList(){
           <option value="terraza" ${t.zona==='terraza'?'selected':''}>Terraza</option>
           <option value="barra" ${t.zona==='barra'?'selected':''}>Barra</option>
         </select>
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" ${ocupada?'disabled':''} title="${ocupada?'Mesa ocupada':'Eliminar mesa'}"><i class="ti ti-trash"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" title="Eliminar mesa"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });
@@ -14296,8 +14296,15 @@ function addTableManual(zona){
   renderMesasConfigList();
 }
 function deleteTableFromConfig(id){
-  if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
-  if(!confirm('¿Eliminar esta mesa?')) return;
+  const order = getOpenOrderForTable(id);
+  if(order){
+    if(!confirm('Esta mesa tiene un pedido abierto. ¿Eliminarla igualmente? El pedido se cerrará.')){
+      return;
+    }
+    order.status = 'pagada';
+  } else {
+    if(!confirm('¿Eliminar esta mesa?')) return;
+  }
   DB.tables = DB.tables.filter(t => t.id !== id);
   saveDB();
   renderMesasConfigList();
