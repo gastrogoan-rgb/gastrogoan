@@ -7489,6 +7489,8 @@ function renderTPV(){
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
       ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> Pedido Express</button>` : ''}
+      ${tiposServicio.takeaway !== false ? `<button class="btn" onclick="openNewTakeawayModal()"><i class="ti ti-shopping-bag"></i> Take Away</button>` : ''}
+      ${tiposServicio.delivery !== false ? `<button class="btn" onclick="openNewDeliveryModal()"><i class="ti ti-moped"></i> Delivery</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
@@ -7669,6 +7671,90 @@ function confirmNewToGoOrder(){
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
   const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
   const order = {id: genId(), tableId: null, tipo:'takeaway', express:true, clienteNombre, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+function openNewTakeawayModal(){
+  const platforms = (DB.business?.deliveryPlatforms||[]);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-shopping-bag"></i> Nuevo Take Away</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del cliente</label>
+      <input type="text" id="togo-ta-nombre" placeholder="Nombre">
+    </div>
+    <div class="field">
+      <label>Teléfono (opcional)</label>
+      <input type="text" id="togo-ta-phone" placeholder="Teléfono">
+    </div>
+    ${renderCamareroFieldHtml('togo-ta-camarero')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewTakeaway()"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewTakeaway(){
+  const camareroSel = document.getElementById('togo-ta-camarero');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-ta-nombre').value.trim();
+  const clientePhone = document.getElementById('togo-ta-phone').value.trim();
+  const order = {id: genId(), tableId: null, tipo:'takeaway', clienteNombre, clientePhone, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+function openNewDeliveryModal(){
+  const platforms = (DB.business?.deliveryPlatforms||[]);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-moped"></i> Nuevo Delivery</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>Nombre del cliente</label>
+      <input type="text" id="togo-del-nombre" placeholder="Nombre">
+    </div>
+    <div class="field">
+      <label>Teléfono</label>
+      <input type="text" id="togo-del-phone" placeholder="Teléfono">
+    </div>
+    <div class="field">
+      <label>Dirección de entrega</label>
+      <input type="text" id="togo-del-address" placeholder="Calle, número, piso...">
+    </div>
+    ${platforms.length ? `
+    <div class="field">
+      <label>Plataforma (opcional)</label>
+      <select id="togo-del-plataforma">
+        <option value="">— Pedido directo —</option>
+        ${platforms.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+    ${renderCamareroFieldHtml('togo-del-camarero')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmNewDelivery()"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewDelivery(){
+  const camareroSel = document.getElementById('togo-del-camarero');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-del-nombre').value.trim();
+  const clientePhone = document.getElementById('togo-del-phone').value.trim();
+  const clienteAddress = document.getElementById('togo-del-address').value.trim();
+  const plataformaEl = document.getElementById('togo-del-plataforma');
+  const plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
+  const costeEnvio = parseFloat(DB.business?.pedidosConfig?.deliveryFee) || 0;
+  const order = {id: genId(), tableId: null, tipo:'delivery', clienteNombre, clientePhone, clienteAddress, plataformaId, costeEnvio, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
