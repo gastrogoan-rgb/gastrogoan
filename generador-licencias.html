@@ -100,11 +100,21 @@ const LOG_KEY = 'gg_lic_sales_v1';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
 
+function genTenantId(){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = '';
+  for(let i = 0; i < 20; i++) id += A[Math.floor(Math.random() * 32)];
+  return id;
+}
+function formatTenant(t){
+  return t.slice(0,4)+'-'+t.slice(4,8)+'-'+t.slice(8,12)+'-'+t.slice(12,16)+'-'+t.slice(16,20);
+}
 function gen(){
   const raw = document.getElementById('name').value.trim();
   const name = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if(!name){ alert('Escribe el nombre del restaurante'); return; }
-  const key = name + '-' + ggLicSig(name);
+  const tenant = genTenantId();
+  const key = name + '-' + ggLicSig(name) + '-' + formatTenant(tenant);
   document.getElementById('key').textContent = key;
   document.getElementById('out').style.display = 'block';
   const msg = 'Tu clave de licencia de GastroGoan 🍽\n\n' + key + '\n\nPégala en la pantalla de activación al abrir la app por primera vez.';
