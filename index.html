@@ -9936,9 +9936,10 @@ function finalizeCharge(orderId){
   const total = orderTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
   discountStockForOrder(order);
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', metodoPago, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
+  if(order.clientId) registerClientVisit(order.clientId);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
   saveDB();
@@ -10173,11 +10174,12 @@ function finalizeSplitOrder(orderId){
   const sale = {
     id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
-    clienteNombre: order.clienteNombre||'', metodoPago: metodos.length===1?metodos[0]:'Dividido',
+    clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago: metodos.length===1?metodos[0]:'Dividido',
     pagos, items: order.items.map(l=>({...l}))
   };
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
+  if(order.clientId) registerClientVisit(order.clientId);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
   delete order.splitMode;
