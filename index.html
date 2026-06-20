@@ -972,12 +972,6 @@ td.wrap{white-space:normal}
             <p style="font-size:13px;color:var(--muted);margin:2px 0 8px">Activa los días en que se ofrece este menú. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activo dentro de ese rango.</p>
             <div id="menu-horario"></div>
           </div>
-          <div class="field">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
-              <input type="checkbox" id="menu-f-desglosar" style="width:auto">
-              Desglosar cada pase en cocina <span style="color:var(--muted)">(ideal para menús degustación: cada grupo se envía como un plato independiente con su propio estado)</span>
-            </label>
-          </div>
           <div class="toolbar">
             <div class="left"></div>
             <button class="owner-only btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> <span data-i18n="title.newGroup">Nuevo Grupo</span></button>
@@ -8077,7 +8071,7 @@ function renderMenuList(){
 }
 
 function newMenu(){
-  menuEdit = {id: genId(), nombre:'', precio:0, horario: defaultItemHorario(), grupos:[], desglosarPases:false, area: currentArea()};
+  menuEdit = {id: genId(), nombre:'', precio:0, horario: defaultItemHorario(), grupos:[], desglosarPases:true, area: currentArea()};
   renderMenu();
 }
 function openMenu(id){
@@ -8116,7 +8110,7 @@ function saveMenu(){
   menuEdit.horario = readScheduleFromForm('menu');
   delete menuEdit.turno;
   delete menuEdit.dias;
-  menuEdit.desglosarPases = document.getElementById('menu-f-desglosar').checked;
+  menuEdit.desglosarPases = true;
   const idx = DB.menus.findIndex(m=>m.id===menuEdit.id);
   if(idx>=0) DB.menus[idx] = menuEdit;
   else DB.menus.push(menuEdit);
@@ -8131,7 +8125,6 @@ function saveMenu(){
 function renderMenuEditor(){
   document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
   document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
-  document.getElementById('menu-f-desglosar').checked = !!menuEdit.desglosarPases;
   document.getElementById('menu-horario').innerHTML = renderScheduleRows('menu', menuEdit.horario);
   renderMenuGrupos();
 }
@@ -9084,26 +9077,20 @@ function confirmAddMenuToOrder(orderId, menuId){
     return txt;
   }).join(' · ');
 
-  if(m.desglosarPases){
-    order.tandas = order.tandas || [];
-    selections.forEach((s, i) => {
-      if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
-      const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
-      const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
-      const line = {
-        menuId: m.id, recipeId: s.recipeId, platoId: null,
-        name: lineName, price: (i===0 ? m.precio : 0) + s.suplemento + modExtra,
-        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
-        modificadores: s.modificadores
-      };
-      order.items.push(line);
-      autoSendTakeawayLine(order, line);
-    });
-  }else{
-    const line = {menuId: m.id, recipeId:null, platoId:null, name: m.nombre, price, qty:1, tanda:'', notas, menuSelections: selections};
+  order.tandas = order.tandas || [];
+  selections.forEach((s, i) => {
+    if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
+    const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
+    const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
+    const line = {
+      menuId: m.id, recipeId: s.recipeId, platoId: null,
+      name: lineName, price: (i===0 ? m.precio : 0) + s.suplemento + modExtra,
+      qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
+      modificadores: s.modificadores
+    };
     order.items.push(line);
     autoSendTakeawayLine(order, line);
-  }
+  });
   saveDB();
   renderTableOrderModal(orderId);
 }
