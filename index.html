@@ -1518,6 +1518,7 @@ async function addSucursal(parentSlotId){
   const snap = {
     ...def,
     business: JSON.parse(JSON.stringify(src.business || def.business)),
+    license: null,
     ingredients: JSON.parse(JSON.stringify(src.ingredients || [])),
     ingredientCategories: JSON.parse(JSON.stringify(src.ingredientCategories || [])),
     recipes: JSON.parse(JSON.stringify(src.recipes || [])),
