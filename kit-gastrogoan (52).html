@@ -1695,7 +1695,8 @@ function hideBusinessSelectScreen(){
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
     hideBusinessSelectScreen();
-    if(!DB.business.netlifySetupDone) showNetlifySetupGate();
+    const done = getLicense() && getCloudConfig();
+    if(!DB.business.netlifySetupDone && !done) showNetlifySetupGate();
     else if(!getCloudConfig()) showFirebaseSetupGate();
     else if(!getLicense()) showActivationGate();
     return;
@@ -15528,7 +15529,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  if(onbRole === 'owner' && !DB.business.netlifySetupDone){
+  const alreadySetUp = getLicense() && getCloudConfig();
+  if(onbRole === 'owner' && !DB.business.netlifySetupDone && !alreadySetUp){
     showNetlifySetupGate();
   }else if(!getCloudConfig()){
     showFirebaseSetupGate();
