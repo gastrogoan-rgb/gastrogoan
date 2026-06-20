@@ -1664,7 +1664,7 @@ function pickParentForSucursal(){
   const allSlots = getBusinessSlots();
   // Candidatos: negocios raíz (independientes o ya con sucursales)
   const roots = allSlots.filter(s => !s.parentId);
-  if(roots.length === 0){ showToast('No hay ningún negocio base sobre el que crear una sucursal.'); return; }
+  if(roots.length === 0){ showToast(t('msg.noBranchBase')); return; }
   if(roots.length === 1){ addSucursal(roots[0].id); return; }
   // Mostrar modal de selección
   const optsHtml = roots.map(r => `
@@ -2019,7 +2019,7 @@ const FIREBASE_RULES_JSON = `{
 }`;
 
 function copyFirebaseRules(){
-  navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast('Reglas copiadas')).catch(() => {
+  navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast(t('msg.rulesCopied'))).catch(() => {
     alert('No se pudo copiar automáticamente. Selecciona el texto manualmente y cópialo (Ctrl+C / Cmd+C).');
   });
 }
@@ -2219,7 +2219,7 @@ function activateLicenseFromGate(){
   saveDB();
   updateActiveSlotName(parsed.name);
   hideActivationGate();
-  showToast('Licencia activada: ' + parsed.name);
+  showToast(t('msg.licenseActivated') + ': ' + parsed.name);
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
@@ -2304,7 +2304,7 @@ async function manualRefresh(){
     icon.classList.remove('spin');
     requestAnimationFrame(() => icon.classList.add('spin'));
   }
-  showToast('Datos actualizados');
+  showToast(t('msg.dataUpdated'));
 }
 
 /* Sube al espacio público (de solo lectura para los clientes) la
@@ -2729,7 +2729,7 @@ async function savePedidosConfig(){
     const radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
     p.radiusKm = radiusKm;
     if(radiusKm > 0 && b.address){
-      showToast('Calculando ubicación de tu negocio...');
+      showToast(t('msg.calculatingLocation'));
       try{
         const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(b.address));
         const data = await res.json();
@@ -2737,10 +2737,10 @@ async function savePedidosConfig(){
           p.lat = parseFloat(data[0].lat);
           p.lng = parseFloat(data[0].lon);
         }else{
-          showToast('No se ha podido localizar tu dirección. Revisa que sea correcta y vuelve a guardar.');
+          showToast(t('msg.locationError'));
         }
       }catch(e){
-        showToast('No se pudo calcular la ubicación (revisa tu conexión)');
+        showToast(t('msg.locationNetError'));
       }
     }else if(radiusKm === 0){
       p.lat = null; p.lng = null;
@@ -2750,7 +2750,7 @@ async function savePedidosConfig(){
   b.pedidos = p;
   saveDB();
   renderMiNegocio();
-  showToast('Configuración de pedidos guardada');
+  showToast(t('msg.orderConfigSaved'));
 }
 
 /* ============================================================
@@ -2815,8 +2815,8 @@ async function saveRedsysConfig(){
   const terminal = document.getElementById('rs-terminal').value.trim();
   const claveSecreta = document.getElementById('rs-clave').value.trim();
   const ambiente = document.getElementById('rs-real').checked ? 'real' : 'test';
-  if(!fuc || !terminal){ showToast('Indica el código de comercio (FUC) y el terminal'); return; }
-  if(!claveSecreta){ showToast('Indica la clave secreta'); return; }
+  if(!fuc || !terminal){ showToast(t('msg.fillMerchantCode')); return; }
+  if(!claveSecreta){ showToast(t('msg.fillSecretKey')); return; }
   try{
     const res = await fetch(`${REDSYS_WORKER_URL}/config`, {
       method: 'POST',
@@ -2826,10 +2826,10 @@ async function saveRedsysConfig(){
     const data = await res.json();
     if(!res.ok || data.error){ showToast(data.error || 'Error al guardar'); return; }
     document.getElementById('rs-clave').value = '';
-    showToast('Configuración de pago guardada');
+    showToast(t('msg.payConfigSaved'));
     loadRedsysCardStatus();
   }catch(e){
-    showToast('No se pudo guardar (revisa tu conexión)');
+    showToast(t('msg.payConfigError'));
   }
 }
 
@@ -2837,7 +2837,7 @@ function copyPublicLinkFrom(elId){
   const el = document.getElementById(elId);
   el.select();
   try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
-  showToast('Enlace copiado');
+  showToast(t('msg.linkCopied'));
 }
 
 /* Formulario para introducir los datos del proyecto Firebase propio del
@@ -3563,6 +3563,106 @@ const I18N = {
     'msg.confirmDeleteTableWithOrder': 'Esta mesa tiene un pedido abierto. ¿Eliminarla igualmente? El pedido se cerrará.',
     'msg.confirmDeleteCourier': '¿Eliminar este repartidor?',
     'msg.confirmDeletePlatform': '¿Eliminar esta plataforma?',
+    'msg.noBranchBase': 'No hay ningún negocio base sobre el que crear una sucursal.',
+    'msg.dataUpdated': 'Datos actualizados',
+    'msg.calculatingLocation': 'Calculando ubicación de tu negocio...',
+    'msg.locationError': 'No se ha podido localizar tu dirección. Revisa que sea correcta y vuelve a guardar.',
+    'msg.locationNetError': 'No se pudo calcular la ubicación (revisa tu conexión)',
+    'msg.orderConfigSaved': 'Configuración de pedidos guardada',
+    'msg.fillMerchantCode': 'Indica el código de comercio (FUC) y el terminal',
+    'msg.fillSecretKey': 'Indica la clave secreta',
+    'msg.payConfigSaved': 'Configuración de pago guardada',
+    'msg.payConfigError': 'No se pudo guardar (revisa tu conexión)',
+    'msg.linkCopied': 'Enlace copiado',
+    'msg.bossAccessGranted': 'Acceso como Jefe/a concedido',
+    'msg.nameRequired': 'El nombre es obligatorio',
+    'msg.ingredientSaved': 'Ingrediente guardado',
+    'msg.ingredientDeleted': 'Ingrediente eliminado',
+    'msg.invalidQty': 'Cantidad no válida',
+    'msg.elaborationSaved': 'Elaboración guardada',
+    'msg.elaborationDeleted': 'Elaboración eliminada',
+    'msg.selectIngredientQty': 'Selecciona ingrediente y cantidad válida',
+    'msg.cartaDeleted': 'Carta eliminada',
+    'msg.cartaNameRequired': 'Ponle un nombre a la carta',
+    'msg.cartaSaved': 'Carta guardada',
+    'msg.sectionNameRequired': 'Escribe un nombre para la sección',
+    'msg.invalidPrice': 'Precio no válido',
+    'msg.extraNameRequired': 'Escribe un nombre para el extra',
+    'msg.menuDeleted': 'Menú eliminado',
+    'msg.menuNameRequired': 'Ponle un nombre al menú',
+    'msg.menuNeedsGroup': 'Añade al menos un grupo (Primero, Segundo...)',
+    'msg.menuSaved': 'Menú guardado',
+    'msg.groupNameRequired': 'Escribe un nombre para el grupo',
+    'msg.dishNameRequired': 'Escribe el nombre del plato',
+    'msg.selectDish': 'Selecciona un plato',
+    'msg.orderAccepted': 'Pedido aceptado',
+    'msg.orderRejected': 'Pedido rechazado',
+    'msg.selectReservation': 'Selecciona una reserva',
+    'msg.indicatePax': 'Indica el número de personas',
+    'msg.noNewDishes': 'No hay platos nuevos que marchar',
+    'msg.courseSent': 'Vale marchado',
+    'msg.dishSentToKitchen': 'Plato marchado a cocina',
+    'msg.orderSentToKitchen': 'Comanda marchada a cocina',
+    'msg.finishSplitFirst': 'Termina o cancela la división de cuenta en curso antes de cambiar de pestaña',
+    'msg.invalidEmail': 'Email no válido',
+    'msg.openingEmail': 'Abriendo tu programa de correo...',
+    'msg.cashCloseDone': 'Cierre de caja registrado',
+    'msg.supplierSaved': 'Proveedor guardado',
+    'msg.receptionSaved': 'Recepción guardada',
+    'msg.addIngredientsFirst': 'Añade ingredientes en Mega Lista primero',
+    'msg.suggestedQty': 'Cantidades sugeridas según déficit de stock',
+    'msg.selectSupplier': 'Selecciona un proveedor',
+    'msg.addAtLeastOneItem': 'Añade al menos un artículo con cantidad',
+    'msg.orderSent': 'Pedido enviado',
+    'msg.conceptRequired': 'El concepto es obligatorio',
+    'msg.enterAmount': 'Introduce el importe',
+    'msg.expenseSaved': 'Gasto guardado',
+    'msg.purchaseSaved': 'Compra guardada',
+    'msg.descRequired': 'La descripción es obligatoria',
+    'msg.investmentSaved': 'Inversión guardada',
+    'msg.reportDownloaded': 'Informe contable descargado',
+    'msg.enterAccountantEmail': 'Indica el email del gestor',
+    'msg.csvDownloaded': 'CSV descargado, adjúntalo en el correo abierto',
+    'msg.addEmployeesFirst': 'Añade primero empleados en la pestaña Personal',
+    'msg.shiftNotFound': 'Turno no encontrado',
+    'msg.shiftSaved': 'Turno guardado',
+    'msg.checkDates': 'Revisa las fechas del periodo',
+    'msg.pinResetDone': 'PIN restablecido a 1234',
+    'msg.employeeSaved': 'Empleado guardado',
+    'msg.pinMustBe4': 'El PIN debe tener 4 dígitos',
+    'msg.pinsDontMatch': 'Los PIN no coinciden',
+    'msg.pinNotDefault': 'Elige un PIN distinto al de por defecto (1234)',
+    'msg.alreadyClockedIn': 'Ya tienes una entrada sin cerrar',
+    'msg.noClockedIn': 'No hay ninguna entrada abierta',
+    'msg.writeAreaTask': 'Escribe un área o tarea',
+    'msg.writeEquipName': 'Escribe un nombre para el equipo',
+    'msg.techSheetNotFound': 'No se encontró la ficha técnica de este plato',
+    'msg.clientSaved': 'Cliente guardado',
+    'msg.loyaltyPrize': '¡${name} ha llegado a 10 puntos! Dale su premio de fidelidad',
+    'msg.loyaltyPoint': '+1 punto de fidelidad para ${name}',
+    'msg.indicateReward': 'Indica qué premio se va a entregar',
+    'msg.rewardDelivered': 'Premio entregado: ${reward}',
+    'msg.noPhone': 'Este cliente no tiene teléfono guardado',
+    'msg.noEmail': 'Este cliente no tiene email guardado',
+    'msg.indicateClient': 'Indica un cliente o un nombre',
+    'msg.reservationSaved': 'Reserva guardada',
+    'msg.indicateTitle': 'Indica un título',
+    'msg.promoNotFound': 'Promo no encontrada',
+    'msg.actionSaved': 'Acción guardada',
+    'msg.backupDownloaded': 'Copia de seguridad descargada',
+    'msg.chooseDate': 'Elige una fecha',
+    'msg.noDataToArchive': 'No hay datos para archivar antes de esa fecha',
+    'msg.dataArchived': 'Datos antiguos archivados',
+    'msg.logoUpdated': 'Logo actualizado',
+    'msg.tablesSynced': 'Mesas sincronizadas con el TPV',
+    'msg.keepOneService': 'Debe quedar al menos un tipo de servicio activo',
+    'msg.businessSaved': 'Datos del negocio guardados',
+    'msg.phoneRequired': 'El teléfono es obligatorio',
+    'msg.includePrefix': 'Incluye el prefijo del país (ej. +34 600 000 000)',
+    'msg.courierSaved': 'Repartidor guardado',
+    'msg.enterCommission': 'Introduce la comisión',
+    'msg.platformSaved': 'Plataforma guardada',
+    'msg.ticketConfigSaved': 'Configuración del ticket guardada',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -3839,6 +3939,106 @@ const I18N = {
     'msg.confirmDeleteTableWithOrder': 'Aquesta taula té una comanda oberta. Eliminar-la igualment? La comanda es tancarà.',
     'msg.confirmDeleteCourier': 'Eliminar aquest repartidor?',
     'msg.confirmDeletePlatform': 'Eliminar aquesta plataforma?',
+    'msg.noBranchBase': 'No hi ha cap negoci base sobre el qual crear una sucursal.',
+    'msg.dataUpdated': 'Dades actualitzades',
+    'msg.calculatingLocation': 'Calculant ubicació del teu negoci...',
+    'msg.locationError': 'No s\'ha pogut localitzar la teva adreça. Revisa que sigui correcta i torna a desar.',
+    'msg.locationNetError': 'No s\'ha pogut calcular la ubicació (revisa la connexió)',
+    'msg.orderConfigSaved': 'Configuració de comandes desada',
+    'msg.fillMerchantCode': 'Indica el codi de comerç (FUC) i el terminal',
+    'msg.fillSecretKey': 'Indica la clau secreta',
+    'msg.payConfigSaved': 'Configuració de pagament desada',
+    'msg.payConfigError': 'No s\'ha pogut desar (revisa la connexió)',
+    'msg.linkCopied': 'Enllaç copiat',
+    'msg.bossAccessGranted': 'Accés com a Cap concedit',
+    'msg.nameRequired': 'El nom és obligatori',
+    'msg.ingredientSaved': 'Ingredient desat',
+    'msg.ingredientDeleted': 'Ingredient eliminat',
+    'msg.invalidQty': 'Quantitat no vàlida',
+    'msg.elaborationSaved': 'Elaboració desada',
+    'msg.elaborationDeleted': 'Elaboració eliminada',
+    'msg.selectIngredientQty': 'Selecciona ingredient i quantitat vàlida',
+    'msg.cartaDeleted': 'Carta eliminada',
+    'msg.cartaNameRequired': 'Posa un nom a la carta',
+    'msg.cartaSaved': 'Carta desada',
+    'msg.sectionNameRequired': 'Escriu un nom per a la secció',
+    'msg.invalidPrice': 'Preu no vàlid',
+    'msg.extraNameRequired': 'Escriu un nom per a l\'extra',
+    'msg.menuDeleted': 'Menú eliminat',
+    'msg.menuNameRequired': 'Posa un nom al menú',
+    'msg.menuNeedsGroup': 'Afegeix almenys un grup (Primer, Segon...)',
+    'msg.menuSaved': 'Menú desat',
+    'msg.groupNameRequired': 'Escriu un nom per al grup',
+    'msg.dishNameRequired': 'Escriu el nom del plat',
+    'msg.selectDish': 'Selecciona un plat',
+    'msg.orderAccepted': 'Comanda acceptada',
+    'msg.orderRejected': 'Comanda rebutjada',
+    'msg.selectReservation': 'Selecciona una reserva',
+    'msg.indicatePax': 'Indica el nombre de persones',
+    'msg.noNewDishes': 'No hi ha plats nous per enviar',
+    'msg.courseSent': 'Torn enviat',
+    'msg.dishSentToKitchen': 'Plat enviat a cuina',
+    'msg.orderSentToKitchen': 'Comanda enviada a cuina',
+    'msg.finishSplitFirst': 'Acaba o cancel·la la divisió de compte en curs abans de canviar de pestanya',
+    'msg.invalidEmail': 'Email no vàlid',
+    'msg.openingEmail': 'Obrint el programa de correu...',
+    'msg.cashCloseDone': 'Tancament de caixa registrat',
+    'msg.supplierSaved': 'Proveïdor desat',
+    'msg.receptionSaved': 'Recepció desada',
+    'msg.addIngredientsFirst': 'Afegeix ingredients a Mega Llista primer',
+    'msg.suggestedQty': 'Quantitats suggerides segons dèficit d\'estoc',
+    'msg.selectSupplier': 'Selecciona un proveïdor',
+    'msg.addAtLeastOneItem': 'Afegeix almenys un article amb quantitat',
+    'msg.orderSent': 'Comanda enviada',
+    'msg.conceptRequired': 'El concepte és obligatori',
+    'msg.enterAmount': 'Introdueix l\'import',
+    'msg.expenseSaved': 'Despesa desada',
+    'msg.purchaseSaved': 'Compra desada',
+    'msg.descRequired': 'La descripció és obligatòria',
+    'msg.investmentSaved': 'Inversió desada',
+    'msg.reportDownloaded': 'Informe comptable descarregat',
+    'msg.enterAccountantEmail': 'Indica l\'email del gestor',
+    'msg.csvDownloaded': 'CSV descarregat, adjunta\'l al correu obert',
+    'msg.addEmployeesFirst': 'Afegeix primer empleats a la pestanya Personal',
+    'msg.shiftNotFound': 'Torn no trobat',
+    'msg.shiftSaved': 'Torn desat',
+    'msg.checkDates': 'Revisa les dates del període',
+    'msg.pinResetDone': 'PIN restablert a 1234',
+    'msg.employeeSaved': 'Empleat desat',
+    'msg.pinMustBe4': 'El PIN ha de tenir 4 dígits',
+    'msg.pinsDontMatch': 'Els PIN no coincideixen',
+    'msg.pinNotDefault': 'Tria un PIN diferent al de per defecte (1234)',
+    'msg.alreadyClockedIn': 'Ja tens una entrada sense tancar',
+    'msg.noClockedIn': 'No hi ha cap entrada oberta',
+    'msg.writeAreaTask': 'Escriu una àrea o tasca',
+    'msg.writeEquipName': 'Escriu un nom per a l\'equip',
+    'msg.techSheetNotFound': 'No s\'ha trobat la fitxa tècnica d\'aquest plat',
+    'msg.clientSaved': 'Client desat',
+    'msg.loyaltyPrize': '${name} ha arribat a 10 punts! Dona-li el seu premi de fidelitat',
+    'msg.loyaltyPoint': '+1 punt de fidelitat per a ${name}',
+    'msg.indicateReward': 'Indica quin premi es lliurarà',
+    'msg.rewardDelivered': 'Premi lliurat: ${reward}',
+    'msg.noPhone': 'Aquest client no té telèfon desat',
+    'msg.noEmail': 'Aquest client no té email desat',
+    'msg.indicateClient': 'Indica un client o un nom',
+    'msg.reservationSaved': 'Reserva desada',
+    'msg.indicateTitle': 'Indica un títol',
+    'msg.promoNotFound': 'Promo no trobada',
+    'msg.actionSaved': 'Acció desada',
+    'msg.backupDownloaded': 'Còpia de seguretat descarregada',
+    'msg.chooseDate': 'Tria una data',
+    'msg.noDataToArchive': 'No hi ha dades per arxivar abans d\'aquesta data',
+    'msg.dataArchived': 'Dades antigues arxivades',
+    'msg.logoUpdated': 'Logo actualitzat',
+    'msg.tablesSynced': 'Taules sincronitzades amb el TPV',
+    'msg.keepOneService': 'Ha de quedar almenys un tipus de servei actiu',
+    'msg.businessSaved': 'Dades del negoci desades',
+    'msg.phoneRequired': 'El telèfon és obligatori',
+    'msg.includePrefix': 'Inclou el prefix del país (ex. +34 600 000 000)',
+    'msg.courierSaved': 'Repartidor desat',
+    'msg.enterCommission': 'Introdueix la comissió',
+    'msg.platformSaved': 'Plataforma desada',
+    'msg.ticketConfigSaved': 'Configuració del tiquet desada',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4115,6 +4315,106 @@ const I18N = {
     'msg.confirmDeleteTableWithOrder': 'This table has an open order. Delete it anyway? The order will be closed.',
     'msg.confirmDeleteCourier': 'Delete this courier?',
     'msg.confirmDeletePlatform': 'Delete this platform?',
+    'msg.noBranchBase': 'There is no base business to create a branch from.',
+    'msg.dataUpdated': 'Data updated',
+    'msg.calculatingLocation': 'Calculating your business location...',
+    'msg.locationError': 'Could not locate your address. Check it is correct and save again.',
+    'msg.locationNetError': 'Could not calculate location (check your connection)',
+    'msg.orderConfigSaved': 'Order settings saved',
+    'msg.fillMerchantCode': 'Enter the merchant code (FUC) and terminal',
+    'msg.fillSecretKey': 'Enter the secret key',
+    'msg.payConfigSaved': 'Payment settings saved',
+    'msg.payConfigError': 'Could not save (check your connection)',
+    'msg.linkCopied': 'Link copied',
+    'msg.bossAccessGranted': 'Manager access granted',
+    'msg.nameRequired': 'Name is required',
+    'msg.ingredientSaved': 'Ingredient saved',
+    'msg.ingredientDeleted': 'Ingredient deleted',
+    'msg.invalidQty': 'Invalid quantity',
+    'msg.elaborationSaved': 'Preparation saved',
+    'msg.elaborationDeleted': 'Preparation deleted',
+    'msg.selectIngredientQty': 'Select an ingredient and valid quantity',
+    'msg.cartaDeleted': 'Menu deleted',
+    'msg.cartaNameRequired': 'Give the menu a name',
+    'msg.cartaSaved': 'Menu saved',
+    'msg.sectionNameRequired': 'Write a section name',
+    'msg.invalidPrice': 'Invalid price',
+    'msg.extraNameRequired': 'Write a name for the extra',
+    'msg.menuDeleted': 'Combo menu deleted',
+    'msg.menuNameRequired': 'Give the combo menu a name',
+    'msg.menuNeedsGroup': 'Add at least one group (Starter, Main...)',
+    'msg.menuSaved': 'Combo menu saved',
+    'msg.groupNameRequired': 'Write a group name',
+    'msg.dishNameRequired': 'Write the dish name',
+    'msg.selectDish': 'Select a dish',
+    'msg.orderAccepted': 'Order accepted',
+    'msg.orderRejected': 'Order rejected',
+    'msg.selectReservation': 'Select a reservation',
+    'msg.indicatePax': 'Enter the number of guests',
+    'msg.noNewDishes': 'No new dishes to send',
+    'msg.courseSent': 'Course sent',
+    'msg.dishSentToKitchen': 'Dish sent to kitchen',
+    'msg.orderSentToKitchen': 'Order sent to kitchen',
+    'msg.finishSplitFirst': 'Finish or cancel the current bill split before switching tabs',
+    'msg.invalidEmail': 'Invalid email',
+    'msg.openingEmail': 'Opening your email client...',
+    'msg.cashCloseDone': 'Cash register closure recorded',
+    'msg.supplierSaved': 'Supplier saved',
+    'msg.receptionSaved': 'Reception saved',
+    'msg.addIngredientsFirst': 'Add ingredients in Master List first',
+    'msg.suggestedQty': 'Quantities suggested based on stock deficit',
+    'msg.selectSupplier': 'Select a supplier',
+    'msg.addAtLeastOneItem': 'Add at least one item with quantity',
+    'msg.orderSent': 'Order sent',
+    'msg.conceptRequired': 'Concept is required',
+    'msg.enterAmount': 'Enter the amount',
+    'msg.expenseSaved': 'Expense saved',
+    'msg.purchaseSaved': 'Purchase saved',
+    'msg.descRequired': 'Description is required',
+    'msg.investmentSaved': 'Investment saved',
+    'msg.reportDownloaded': 'Accounting report downloaded',
+    'msg.enterAccountantEmail': 'Enter the accountant\'s email',
+    'msg.csvDownloaded': 'CSV downloaded, attach it to the opened email',
+    'msg.addEmployeesFirst': 'Add employees in the Staff tab first',
+    'msg.shiftNotFound': 'Shift not found',
+    'msg.shiftSaved': 'Shift saved',
+    'msg.checkDates': 'Check the period dates',
+    'msg.pinResetDone': 'PIN reset to 1234',
+    'msg.employeeSaved': 'Employee saved',
+    'msg.pinMustBe4': 'PIN must be 4 digits',
+    'msg.pinsDontMatch': 'PINs do not match',
+    'msg.pinNotDefault': 'Choose a PIN different from the default (1234)',
+    'msg.alreadyClockedIn': 'You already have an open clock-in',
+    'msg.noClockedIn': 'There is no open clock-in',
+    'msg.writeAreaTask': 'Write an area or task',
+    'msg.writeEquipName': 'Write a name for the equipment',
+    'msg.techSheetNotFound': 'Technical sheet not found for this dish',
+    'msg.clientSaved': 'Customer saved',
+    'msg.loyaltyPrize': '${name} has reached 10 points! Give them their loyalty reward',
+    'msg.loyaltyPoint': '+1 loyalty point for ${name}',
+    'msg.indicateReward': 'Indicate what reward will be given',
+    'msg.rewardDelivered': 'Reward delivered: ${reward}',
+    'msg.noPhone': 'This customer has no phone saved',
+    'msg.noEmail': 'This customer has no email saved',
+    'msg.indicateClient': 'Enter a customer or a name',
+    'msg.reservationSaved': 'Reservation saved',
+    'msg.indicateTitle': 'Enter a title',
+    'msg.promoNotFound': 'Promotion not found',
+    'msg.actionSaved': 'Action saved',
+    'msg.backupDownloaded': 'Backup downloaded',
+    'msg.chooseDate': 'Choose a date',
+    'msg.noDataToArchive': 'No data to archive before that date',
+    'msg.dataArchived': 'Old data archived',
+    'msg.logoUpdated': 'Logo updated',
+    'msg.tablesSynced': 'Tables synced with POS',
+    'msg.keepOneService': 'At least one service type must remain active',
+    'msg.businessSaved': 'Business data saved',
+    'msg.phoneRequired': 'Phone is required',
+    'msg.includePrefix': 'Include the country prefix (e.g. +34 600 000 000)',
+    'msg.courierSaved': 'Courier saved',
+    'msg.enterCommission': 'Enter the commission',
+    'msg.platformSaved': 'Platform saved',
+    'msg.ticketConfigSaved': 'Ticket settings saved',
   }
 };
 function getLang(){
@@ -4720,7 +5020,7 @@ function confirmChatOwnerPin(){
   chatOwnerVerified = true;
   setChatAuthor('owner');
   closeModal();
-  showToast('Acceso como Jefe/a concedido');
+  showToast(t('msg.bossAccessGranted'));
   if(sel) sel.value = 'owner';
 }
 function toggleChatPanel(){
@@ -5562,7 +5862,7 @@ function confirmNewIngredientCategory(id){
 
 function saveIngredient(id){
   const name = document.getElementById('ing-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const category = document.getElementById('ing-category').value;
   const unit = document.getElementById('ing-unit').value;
   const supplier = document.getElementById('ing-supplier').value.trim();
@@ -5583,7 +5883,7 @@ function saveIngredient(id){
   saveDB();
   closeModal();
   renderMegalista();
-  showToast('Ingrediente guardado');
+  showToast(t('msg.ingredientSaved'));
 }
 
 function deleteIngredient(id){
@@ -5595,7 +5895,7 @@ function deleteIngredient(id){
   });
   saveDB();
   renderMegalista();
-  showToast('Ingrediente eliminado');
+  showToast(t('msg.ingredientDeleted'));
 }
 
 /* ============================================================
@@ -5868,7 +6168,7 @@ function confirmSetStockQty(ingredientId){
   const s = getStockEntry(ingredientId);
   const val = document.getElementById('stock-qty-value').value;
   const num = parseFloat(val);
-  if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
+  if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
   s.qty = num;
   saveDB();
   closeModal();
@@ -5914,7 +6214,7 @@ function openElaboracionModal(id){
 
 function saveElaboracion(id){
   const name = document.getElementById('elab-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const unit = document.getElementById('elab-unit').value;
   const qty = parseFloat(document.getElementById('elab-qty').value) || 0;
   const min = parseFloat(document.getElementById('elab-min').value) || 0;
@@ -5927,7 +6227,7 @@ function saveElaboracion(id){
   saveDB();
   closeModal();
   renderStock();
-  showToast('Elaboración guardada');
+  showToast(t('msg.elaborationSaved'));
 }
 
 function deleteElaboracion(id){
@@ -5935,7 +6235,7 @@ function deleteElaboracion(id){
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.id !== id);
   saveDB();
   renderStock();
-  showToast('Elaboración eliminada');
+  showToast(t('msg.elaborationDeleted'));
 }
 
 function updateElaboracionMin(id, value){
@@ -5974,7 +6274,7 @@ function confirmSetElaboracionQty(id){
   const e = getElaboracion(id); if(!e){ closeModal(); return; }
   const val = document.getElementById('elaboracion-qty-value').value;
   const num = parseFloat(val);
-  if(isNaN(num) || num < 0){ showToast('Cantidad no válida'); return; }
+  if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
   e.qty = num;
   saveDB();
   closeModal();
@@ -6500,7 +6800,7 @@ function addRecipeLine(id){
   const qty = parseFloat(document.getElementById('recipe-add-qty').value) || 0;
   const [type, refIdStr] = raw.split(':');
   const refId = parseInt(refIdStr);
-  if(!refId || qty <= 0){ showToast('Selecciona ingrediente y cantidad válida'); return; }
+  if(!refId || qty <= 0){ showToast(t('msg.selectIngredientQty')); return; }
   if(type === 'base'){
     const existing = recipeModalLines.find(l => l.type === 'base' && l.baseRecipeId === refId);
     if(existing){ existing.qty += qty; }
@@ -6592,7 +6892,7 @@ function currentRecipeFormState(id){
 
 function saveRecipe(id){
   const name = document.getElementById('recipe-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const price = parseFloat(document.getElementById('recipe-price').value) || 0;
   const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
   const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
@@ -6990,7 +7290,7 @@ function saveFicha(){
   syncFichaModalFields();
   const f = fichaModalState;
   const name = (f.name||'').trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const data = {
     name,
     recipeId: f.recipeId || '',
@@ -7326,11 +7626,11 @@ function deleteCarta(id){
   DB.activeCartaIds = (DB.activeCartaIds||[]).filter(cid=>cid!==id);
   saveDB();
   renderCarta();
-  showToast('Carta eliminada');
+  showToast(t('msg.cartaDeleted'));
 }
 function saveCarta(){
   const nombre = document.getElementById('carta-f-nombre').value.trim();
-  if(!nombre){ showToast('Ponle un nombre a la carta'); return; }
+  if(!nombre){ showToast(t('msg.cartaNameRequired')); return; }
   cartaEdit.nombre = nombre.toUpperCase();
   // Asegura el área: una carta editada en Sala es de bebidas, en Cocina de comida.
   if(!cartaEdit.area) cartaEdit.area = currentArea();
@@ -7345,7 +7645,7 @@ function saveCarta(){
   cartaEdit = null;
   updateAutoActiveCarta(true);
   renderCarta();
-  showToast('Carta guardada');
+  showToast(t('msg.cartaSaved'));
 }
 
 function renderCartaEditor(){
@@ -7403,7 +7703,7 @@ function newCartaSection(){
 }
 function confirmNewCartaSection(){
   const nombre = document.getElementById('new-carta-section-name').value;
-  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para la sección'); return; }
+  if(!nombre || !nombre.trim()){ showToast(t('msg.sectionNameRequired')); return; }
   cartaEdit.secciones.push({id: genId(), nombre: nombre.trim().toUpperCase(), platos:[]});
   closeModal();
   renderCartaSecciones();
@@ -7451,7 +7751,7 @@ function confirmAddCartaPlato(secId){
   if(!nombre || !nombre.trim()){ showToast(`Escribe un nombre para la ${itemNoun()}`); return; }
   const precioStr = document.getElementById('new-carta-plato-precio').value;
   const precio = parseFloat((precioStr||'').replace(',','.'));
-  if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
+  if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true, modificadores:[]});
   closeModal();
@@ -7499,7 +7799,7 @@ function renderPlatoModsModalHtml(secId, platoId){
 }
 function addPlatoMod(secId, platoId){
   const nombre = (document.getElementById('new-mod-nombre').value||'').trim();
-  if(!nombre){ showToast('Escribe un nombre para el extra'); return; }
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
   const precioStr = document.getElementById('new-mod-precio').value;
   const precio = parseFloat((precioStr||'0').replace(',','.')) || 0;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
@@ -7676,15 +7976,15 @@ function deleteMenu(id){
   DB.activeMenuIds = (DB.activeMenuIds||[]).filter(mid=>mid!==id);
   saveDB();
   renderMenu();
-  showToast('Menú eliminado');
+  showToast(t('msg.menuDeleted'));
 }
 function saveMenu(){
   const nombre = document.getElementById('menu-f-nombre').value.trim();
-  if(!nombre){ showToast('Ponle un nombre al menú'); return; }
+  if(!nombre){ showToast(t('msg.menuNameRequired')); return; }
   const precioStr = document.getElementById('menu-f-precio').value;
   const precio = parseFloat((precioStr||'').replace(',','.'));
-  if(isNaN(precio) || precio < 0){ showToast('Precio no válido'); return; }
-  if(!menuEdit.grupos.length){ showToast('Añade al menos un grupo (Primero, Segundo...)'); return; }
+  if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
+  if(!menuEdit.grupos.length){ showToast(t('msg.menuNeedsGroup')); return; }
   for(const g of menuEdit.grupos){
     if(!g.opciones.length){ showToast(`El grupo "${g.nombre}" necesita al menos una opción`); return; }
   }
@@ -7702,7 +8002,7 @@ function saveMenu(){
   menuEdit = null;
   updateAutoActiveMenu(true);
   renderMenu();
-  showToast('Menú guardado');
+  showToast(t('msg.menuSaved'));
 }
 
 function renderMenuEditor(){
@@ -7868,7 +8168,7 @@ function openMenuOpcionModsModal(grupoId, opcionId){
 
 function addMenuOpcionMod(grupoId, opcionId){
   const nombre = document.getElementById('new-menu-mod-nombre').value.trim();
-  if(!nombre){ showToast('Escribe un nombre para el extra'); return; }
+  if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
   const precio = parseFloat(document.getElementById('new-menu-mod-precio').value) || 0;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g.opciones.find(x=>x.id===opcionId);
@@ -8224,7 +8524,7 @@ function acceptOnlineOrder(orderId){
   }
   saveDB();
   renderTPV();
-  showToast('Pedido aceptado');
+  showToast(t('msg.orderAccepted'));
 }
 
 function rejectOnlineOrder(orderId){
@@ -8232,7 +8532,7 @@ function rejectOnlineOrder(orderId){
   DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
   saveDB();
   renderTPV();
-  showToast('Pedido rechazado');
+  showToast(t('msg.orderRejected'));
 }
 
 // Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
@@ -8334,7 +8634,7 @@ function confirmOpenTableOrder(tableId){
   if(tipo === 'reserva'){
     const resId = parseInt(document.getElementById('new-order-reserva-sel').value);
     const r = DB.reservations.find(x=>x.id===resId);
-    if(!r){ showToast('Selecciona una reserva'); return; }
+    if(!r){ showToast(t('msg.selectReservation')); return; }
     pax = r.people;
     clientId = r.clientId;
     const client = DB.clients.find(c=>c.id===r.clientId);
@@ -8344,7 +8644,7 @@ function confirmOpenTableOrder(tableId){
     if(!r.tableId) r.tableId = tableId;
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
-    if(pax <= 0){ showToast('Indica el número de personas'); return; }
+    if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
   }
   const camareroSel = document.getElementById('new-order-camarero-sel');
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
@@ -8774,13 +9074,13 @@ function marcharValeCompleto(orderId){
     });
   }
 
-  if(!fired.length){ showToast('No hay platos nuevos que marchar'); return; }
+  if(!fired.length){ showToast(t('msg.noNewDishes')); return; }
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
-  showToast('Vale marchado');
+  showToast(t('msg.courseSent'));
 }
 
 // Marcha un solo plato (línea) a cocina, sin esperar al resto del grupo.
@@ -8788,7 +9088,7 @@ function marcharLine(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const line = (order.items||[])[idx];
-  if(!line || line.qty <= (line.marchada||0)){ showToast('No hay unidades nuevas que marchar'); return; }
+  if(!line || line.qty <= (line.marchada||0)){ showToast(t('msg.noNewDishes')); return; }
   const fired = [{qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: line.bebida}];
   line.estado = 'cocina';
   line.enviadoAt = new Date().toISOString();
@@ -8798,7 +9098,7 @@ function marcharLine(orderId, idx){
   if(typeof flushCloudSync === 'function') flushCloudSync();
   printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
-  showToast('Plato marchado a cocina');
+  showToast(t('msg.dishSentToKitchen'));
 }
 
 function renderTableOrderModal(orderId){
@@ -8991,7 +9291,7 @@ function marcharComanda(orderId, tanda){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const pending = orderPendingKitchenLines(order, tanda);
-  if(!pending.length){ showToast('No hay platos nuevos que marchar'); return; }
+  if(!pending.length){ showToast(t('msg.noNewDishes')); return; }
 
   const ahora = new Date().toISOString();
   const fired = [];
@@ -9008,7 +9308,7 @@ function marcharComanda(orderId, tanda){
   if(typeof flushCloudSync === 'function') flushCloudSync();
   printMarchadasIfEnabled(order, fired);
   renderTableOrderModal(order.id);
-  showToast('Comanda marchada a cocina');
+  showToast(t('msg.orderSentToKitchen'));
 }
 
 // Si la impresión de comandas está activada, imprime un vale de cocina (platos)
@@ -9437,7 +9737,7 @@ function openPaymentModal(orderId){
 function setPaymentTab(orderId, tab){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(order && order.splitPayments && order.splitPayments.some(p=>p.paid) && order.splitMode !== tab){
-    showToast('Termina o cancela la división de cuenta en curso antes de cambiar de pestaña');
+    showToast(t('msg.finishSplitFirst'));
     return;
   }
   paymentTab = tab;
@@ -9865,11 +10165,11 @@ function sendTicketByEmail(saleId){
   if(!sale) return;
   const email = (prompt('Email del cliente para enviarle el ticket:', '')||'').trim();
   if(!email) return;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Email no válido'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast(t('msg.invalidEmail')); return; }
   const subject = `Ticket de tu compra en ${DB.business.name || 'GastroGoan'}`;
   const body = buildTicketText(sale);
   window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  showToast('Abriendo tu programa de correo...');
+  showToast(t('msg.openingEmail'));
 }
 
 // Tras registrar un cobro, deja elegir qué hacer con el ticket.
@@ -10013,7 +10313,7 @@ function performCashClosure(){
   closeModal();
   renderTPV();
   printCashClosure(closure);
-  showToast('Cierre de caja registrado');
+  showToast(t('msg.cashCloseDone'));
 }
 
 function printCashClosure(closure){
@@ -10151,7 +10451,7 @@ function openProviderModal(id){
 
 function saveProvider(id){
   const nombre = document.getElementById('prov-nombre').value.trim();
-  if(!nombre){ showToast('El nombre es obligatorio'); return; }
+  if(!nombre){ showToast(t('msg.nameRequired')); return; }
   const data = {
     nombre,
     contacto: document.getElementById('prov-contacto').value.trim(),
@@ -10174,7 +10474,7 @@ function saveProvider(id){
   saveDB();
   closeModal();
   renderProveedores();
-  showToast('Proveedor guardado');
+  showToast(t('msg.supplierSaved'));
 }
 
 function deleteProvider(id){
@@ -10416,7 +10716,7 @@ function savePedidoRecepcion(){
     obs: document.getElementById('rec-obs').value.trim()
   };
   saveDB();
-  showToast('Recepción guardada');
+  showToast(t('msg.receptionSaved'));
 }
 
 function setPedidoComprobacion(value){
@@ -10519,7 +10819,7 @@ let orderModalSearch = '';
 let orderFormInline = false; // true cuando el formulario se muestra en la pestaña (no en modal)
 
 function openOrderModal(){
-  if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast('Añade ingredientes en Mega Lista primero'); return; }
+  if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast(t('msg.addIngredientsFirst')); return; }
   orderModalSupplier = '';
   orderModalLines = [];
   orderModalSearch = '';
@@ -10711,7 +11011,7 @@ function sugerirPorDeficit(){
     line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
   });
   refreshOrderForm();
-  showToast('Cantidades sugeridas según déficit de stock');
+  showToast(t('msg.suggestedQty'));
 }
 
 function updateOrderLineQty(ingredientId, value){
@@ -10723,10 +11023,10 @@ function updateOrderLineQty(ingredientId, value){
 // Crea (o reutiliza) el pedido a partir del formulario del modal "Nuevo Pedido".
 // Devuelve el pedido creado, o null si los datos no son válidos.
 function buildNewPedido(){
-  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return null; }
+  if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return null; }
   const date = document.getElementById('order-date').value || todayStr();
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
-  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return null; }
+  if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return null; }
   const order = {id: genId(), supplier: orderModalSupplier, date, estado:'ENVIADO', items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
   DB.purchaseOrders.push(order);
   saveDB();
@@ -10734,9 +11034,9 @@ function buildNewPedido(){
 }
 
 function printPedidoBorrador(){
-  if(!orderModalSupplier){ showToast('Selecciona un proveedor'); return; }
+  if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return; }
   const items = orderModalLines.filter(l => l.cantidad > 0);
-  if(!items.length){ showToast('Añade al menos un artículo con cantidad'); return; }
+  if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return; }
   const date = document.getElementById('order-date').value || todayStr();
   const txt = pedidoTexto({supplier: orderModalSupplier, date, items, notas:''});
   const win = window.open('', '_blank', 'width=400,height=500');
@@ -10758,7 +11058,7 @@ function sendNewPedido(method){
   renderPedidos();
   if(method === 'whatsapp') sendPedidoWhatsapp(order);
   else sendPedidoEmail(order);
-  showToast('Pedido enviado');
+  showToast(t('msg.orderSent'));
 }
 
 function deleteOrder(id){
@@ -11021,8 +11321,8 @@ const GE = (function(){
   function saveGF(){
     const nombre = document.getElementById('gf-f-nombre').value.trim();
     const importe = parseFloat(document.getElementById('gf-f-importe').value);
-    if(!nombre){ showToast('El concepto es obligatorio'); return; }
-    if(isNaN(importe) || importe<0){ showToast('Introduce el importe'); return; }
+    if(!nombre){ showToast(t('msg.conceptRequired')); return; }
+    if(isNaN(importe) || importe<0){ showToast(t('msg.enterAmount')); return; }
     const data = {
       nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
       categoria:document.getElementById('gf-f-cat').value,
@@ -11055,7 +11355,7 @@ const GE = (function(){
     saveDB();
     closeModal();
     renderFijos();
-    showToast('Gasto guardado');
+    showToast(t('msg.expenseSaved'));
   }
   function deleteGF(id){
     if(!confirm(t('msg.confirmDeleteGeneric'))) return;
@@ -11136,7 +11436,7 @@ const GE = (function(){
   }
   function saveGV(){
     const imp = parseFloat(document.getElementById('gv-f-imp').value);
-    if(isNaN(imp) || imp<=0){ showToast('Introduce el importe'); return; }
+    if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
     variables().push({
       id: genId(), mes: activeMonth, año: currentYear,
       categoria: document.getElementById('gv-f-cat').value,
@@ -11147,7 +11447,7 @@ const GE = (function(){
     saveDB();
     closeModal();
     renderVariables();
-    showToast('Compra guardada');
+    showToast(t('msg.purchaseSaved'));
   }
   function deleteGV(id){
     if(!confirm(t('msg.confirmDeleteGeneric'))) return;
@@ -11368,8 +11668,8 @@ const GE = (function(){
   function saveCapex(){
     const desc = document.getElementById('cx-f-desc').value.trim();
     const imp = parseFloat(document.getElementById('cx-f-imp').value);
-    if(!desc){ showToast('La descripción es obligatoria'); return; }
-    if(isNaN(imp) || imp<=0){ showToast('Introduce el importe'); return; }
+    if(!desc){ showToast(t('msg.descRequired')); return; }
+    if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
     const financiado = document.getElementById('cx-f-financiado').checked;
     const data = {
       descripcion: desc.toUpperCase(), importe: imp,
@@ -11388,7 +11688,7 @@ const GE = (function(){
     saveDB();
     closeModal();
     renderCapex();
-    showToast('Inversión guardada');
+    showToast(t('msg.investmentSaved'));
   }
   function deleteCapex(id){
     if(!confirm(t('msg.confirmDeleteInvestment'))) return;
@@ -11823,14 +12123,14 @@ const GE = (function(){
     const report = buildMonthReport(mes, año);
     downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
     closeModal();
-    showToast('Informe contable descargado');
+    showToast(t('msg.reportDownloaded'));
   }
 
   function emailMonth(){
     const mes = parseInt(document.getElementById('exp-mes').value);
     const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
     const email = document.getElementById('exp-email').value.trim();
-    if(!email){ showToast('Indica el email del gestor'); return; }
+    if(!email){ showToast(t('msg.enterAccountantEmail')); return; }
 
     const b = DB.business || {};
     b.gestorEmail = email;
@@ -11860,7 +12160,7 @@ const GE = (function(){
     downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
     window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     closeModal();
-    showToast('CSV descargado, adjúntalo en el correo abierto');
+    showToast(t('msg.csvDownloaded'));
   }
 
   return {init, tab, newGF, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, newGV, saveGV, deleteGV, deleteGVGroup, calcPE, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
@@ -12128,7 +12428,7 @@ function renderHorariosSemana(){
 
 function openTurnoModal(id, employeeId, fecha){
   const emps = areaEmployees();
-  if(!emps.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
   let t = id ? (DB.turnos||[]).find(x => x.id===id) : null;
   const state = t ? {...t} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
   const empOptions = emps.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
@@ -12220,7 +12520,7 @@ function saveTurno(id){
   if(!DB.turnos) DB.turnos = [];
   if(id){
     const t = DB.turnos.find(x => x.id===id);
-    if(!t){ showToast('Turno no encontrado'); return; }
+    if(!t){ showToast(t('msg.shiftNotFound')); return; }
     Object.assign(t, data);
   } else {
     DB.turnos.push({id: genId(), ...data});
@@ -12228,7 +12528,7 @@ function saveTurno(id){
   saveDB();
   closeModal();
   renderHorariosTab();
-  showToast('Turno guardado');
+  showToast(t('msg.shiftSaved'));
 }
 
 function deleteTurno(id){
@@ -12276,7 +12576,7 @@ function renderHorariosPersonal(){
 }
 
 function openBulkTurnoModal(employeeId){
-  if(!DB.employees.length){ showToast('Añade primero empleados en la pestaña Personal'); return; }
+  if(!DB.employees.length){ showToast(t('msg.addEmployeesFirst')); return; }
   const empOptions = DB.employees.map(e => `<option value="${e.id}"${e.id===(employeeId||DB.employees[0].id)?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const today = new Date();
   const end = new Date(today); end.setDate(today.getDate()+6);
@@ -12389,7 +12689,7 @@ function applyBulkTurno(){
   const employeeId = parseInt(document.getElementById('bulk-employee').value);
   const notas = document.getElementById('bulk-notas').value.trim();
   const cards = document.querySelectorAll('.bulk-day-card');
-  if(!cards.length){ showToast('Revisa las fechas del periodo'); return; }
+  if(!cards.length){ showToast(t('msg.checkDates')); return; }
 
   if(!DB.turnos) DB.turnos = [];
   let count = 0;
@@ -12482,13 +12782,13 @@ function resetEmployeePin(id){
   e.pin = '1234';
   e.pinChanged = false;
   saveDB();
-  showToast('PIN restablecido a 1234');
+  showToast(t('msg.pinResetDone'));
   openEmployeeModal(id);
 }
 
 function saveEmployee(id){
   const name = document.getElementById('emp-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const rol = document.getElementById('emp-rol').value.trim();
   const color = document.getElementById('emp-color').value;
   const phone = document.getElementById('emp-phone').value.trim();
@@ -12507,7 +12807,7 @@ function saveEmployee(id){
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-horarios') renderHorarios();
   else if(active && active.id === 'view-distribucion') renderDistribucion();
-  showToast('Empleado guardado');
+  showToast(t('msg.employeeSaved'));
 }
 
 function deleteEmployee(id){
@@ -12651,7 +12951,7 @@ function confirmFichaje(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
   const pin = document.getElementById('fichaje-pin').value.trim();
-  if(pin !== (e.pin || '1234')){ showToast('PIN incorrecto'); return; }
+  if(pin !== (e.pin || '1234')){ showToast(t('msg.pinIncorrect')); return; }
   if(!e.pinChanged){
     openNewPinModal(employeeId, action);
     return;
@@ -12687,9 +12987,9 @@ function confirmNewPin(employeeId, action){
   if(!e) return;
   const p1 = document.getElementById('new-pin-1').value.trim();
   const p2 = document.getElementById('new-pin-2').value.trim();
-  if(!/^\d{4}$/.test(p1)){ showToast('El PIN debe tener 4 dígitos'); return; }
-  if(p1 !== p2){ showToast('Los PIN no coinciden'); return; }
-  if(p1 === '1234'){ showToast('Elige un PIN distinto al de por defecto (1234)'); return; }
+  if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
+  if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
+  if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
   e.pin = p1;
   e.pinChanged = true;
   saveDB();
@@ -12699,11 +12999,11 @@ function confirmNewPin(employeeId, action){
 function doFichaje(employeeId, action){
   const now = new Date().toISOString();
   if(action === 'entrada'){
-    if(getOpenFichaje(employeeId)){ showToast('Ya tienes una entrada sin cerrar'); closeModal(); renderHorariosTab(); return; }
+    if(getOpenFichaje(employeeId)){ showToast(t('msg.alreadyClockedIn')); closeModal(); renderHorariosTab(); return; }
     DB.fichajes.push({id: genId(), employeeId, fecha: todayStr(), entrada: now, salida: null});
   }else{
     const open = getOpenFichaje(employeeId);
-    if(!open){ showToast('No hay ninguna entrada abierta'); closeModal(); renderHorariosTab(); return; }
+    if(!open){ showToast(t('msg.noClockedIn')); closeModal(); renderHorariosTab(); return; }
     open.salida = now;
     open.propinas = parseFloat(document.getElementById('fichaje-propinas')?.value || '0') || 0;
   }
@@ -12939,7 +13239,7 @@ function openLimpiezaTareaMesModal(id){
 }
 function confirmLimpiezaTareaMes(id){
   const area = document.getElementById('new-limpieza-area').value;
-  if(!area || !area.trim()){ showToast('Escribe un área o tarea'); return; }
+  if(!area || !area.trim()){ showToast(t('msg.writeAreaTask')); return; }
   const producto = document.getElementById('new-limpieza-producto').value || '';
   let dia = parseInt(document.getElementById('new-limpieza-diames').value) || 1;
   dia = Math.min(31, Math.max(1, dia));
@@ -13054,7 +13354,7 @@ function addMantenimientoEquipo(){
 }
 function confirmAddMantenimientoEquipo(){
   const nombre = document.getElementById('new-mantenimiento-equipo').value;
-  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el equipo'); return; }
+  if(!nombre || !nombre.trim()){ showToast(t('msg.writeEquipName')); return; }
   DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:''});
   saveDB();
   closeModal();
@@ -13108,7 +13408,7 @@ function getPromosForEmployeeDay(empId, dayIdx){
 
 function goToFichaForDish(name){
   const r = DB.recipes.find(rec => rec.name === name && (rec.area||'cocina') === currentArea());
-  if(!r){ showToast('No se encontró la ficha técnica de este plato'); return; }
+  if(!r){ showToast(t('msg.techSheetNotFound')); return; }
   const ficha = DB.fichas.find(f => f.recipeId === r.id);
   if(ficha) openFichaModal(ficha.id);
   else openFichaModal(null, r.id);
@@ -13549,7 +13849,7 @@ function openClientModal(id){
 
 function saveClient(id){
   const name = document.getElementById('client-name').value.trim();
-  if(!name){ showToast('El nombre es obligatorio'); return; }
+  if(!name){ showToast(t('msg.nameRequired')); return; }
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
   const cp = document.getElementById('client-cp').value.trim();
@@ -13568,7 +13868,7 @@ function saveClient(id){
   saveDB();
   closeModal();
   renderClientes();
-  showToast('Cliente guardado');
+  showToast(t('msg.clientSaved'));
 }
 
 
@@ -13580,8 +13880,8 @@ function registerClientVisit(id){
   c.points = Math.min((c.points||0) + 1, 10);
   c.ultimoContacto = todayStr();
   saveDB();
-  if(c.points >= 10) showToast('¡' + c.name + ' ha llegado a 10 puntos! Dale su premio de fidelidad');
-  else showToast('+1 punto de fidelidad para ' + c.name);
+  if(c.points >= 10) showToast(t('msg.loyaltyPrize').replace('${name}', c.name));
+  else showToast(t('msg.loyaltyPoint').replace('${name}', c.name));
 }
 
 function clientFavoriteItem(c){
@@ -13635,13 +13935,13 @@ function confirmClientReward(id){
   if(!c) return;
   const sel = document.getElementById('reward-select').value;
   const reward = sel === '__custom__' ? document.getElementById('reward-custom').value.trim() : sel;
-  if(!reward){ showToast('Indica qué premio se va a entregar'); return; }
+  if(!reward){ showToast(t('msg.indicateReward')); return; }
   c.points = 0;
   if(!Array.isArray(c.rewardsHistory)) c.rewardsHistory = [];
   c.rewardsHistory.push({fecha: todayStr(), premio: reward});
   saveDB();
   renderClientes();
-  showToast('Premio entregado: ' + reward);
+  showToast(t('msg.rewardDelivered').replace('${reward}', reward));
   openRewardNotifyModal(id, reward);
 }
 
@@ -13677,7 +13977,7 @@ function openRewardNotifyModal(id, reward){
 
 function sendRewardWhatsapp(id){
   const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.phone){ showToast('Este cliente no tiene teléfono guardado'); return; }
+  if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
   const tel = c.phone.replace(/\D/g,'');
   const txt = encodeURIComponent(document.getElementById('reward-notify-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
@@ -13685,7 +13985,7 @@ function sendRewardWhatsapp(id){
 
 function sendRewardEmail(id){
   const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.email){ showToast('Este cliente no tiene email guardado'); return; }
+  if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
   const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
   const subject = encodeURIComponent('¡Tienes un premio en ' + bizName + '!');
   const body = encodeURIComponent(document.getElementById('reward-notify-text').value);
@@ -14106,7 +14406,7 @@ function saveReservation(id){
   const tableId = tableIdVal ? parseInt(tableIdVal) : null;
   const notes = document.getElementById('reservation-notes').value.trim();
 
-  if(!clientId && !clientName){ showToast('Indica un cliente o un nombre'); return; }
+  if(!clientId && !clientName){ showToast(t('msg.indicateClient')); return; }
 
   // No permitir reservar la misma mesa dos veces con menos de 1h30 de diferencia.
   if(tableId){
@@ -14143,7 +14443,7 @@ function saveReservation(id){
   saveDB();
   closeModal();
   renderReservas();
-  showToast('Reserva guardada');
+  showToast(t('msg.reservationSaved'));
 }
 
 function toggleReservaLlegada(id){
@@ -14416,7 +14716,7 @@ function openClientMessageModal(clientId, templateKey){
 
 function sendPromoClientWhatsapp(id){
   const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.phone){ showToast('Este cliente no tiene teléfono guardado'); return; }
+  if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
   const tel = c.phone.replace(/\D/g,'');
   const txt = encodeURIComponent(document.getElementById('promo-msg-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
@@ -14424,7 +14724,7 @@ function sendPromoClientWhatsapp(id){
 
 function sendPromoClientEmail(id, subject){
   const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.email){ showToast('Este cliente no tiene email guardado'); return; }
+  if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
   const body = encodeURIComponent(document.getElementById('promo-msg-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+encodeURIComponent(subject)+'&body='+body;
 }
@@ -14472,11 +14772,11 @@ function savePromo(id){
   const responsableIdRaw = document.getElementById('promo-responsable').value;
   const responsableId = responsableIdRaw ? parseInt(responsableIdRaw) : null;
 
-  if(!titulo){ showToast('Indica un título'); return; }
+  if(!titulo){ showToast(t('msg.indicateTitle')); return; }
 
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
-    if(!promo){ showToast('Promo no encontrada'); return; }
+    if(!promo){ showToast(t('msg.promoNotFound')); return; }
     Object.assign(promo, {fecha, titulo, descripcion, responsableId});
   }else{
     DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId});
@@ -14484,7 +14784,7 @@ function savePromo(id){
   saveDB();
   closeModal();
   renderPromocion();
-  showToast('Acción guardada');
+  showToast(t('msg.actionSaved'));
 }
 
 function deletePromo(id){
@@ -14946,17 +15246,17 @@ function downloadJSON(obj, filename){
 
 function downloadFullBackup(){
   downloadJSON(DB, `gastrogoan-backup-${todayStr()}.json`);
-  showToast('Copia de seguridad descargada');
+  showToast(t('msg.backupDownloaded'));
 }
 
 function archiveOldData(){
   const before = document.getElementById('mn-archive-before').value;
-  if(!before){ showToast('Elige una fecha'); return; }
+  if(!before){ showToast(t('msg.chooseDate')); return; }
   const sales = DB.sales.filter(s => s.date && s.date < before);
   const reservations = DB.reservations.filter(r => r.date && r.date < before && (r.status==='completada'||r.status==='cancelada'));
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
   const total = sales.length + reservations.length + cashClosures.length;
-  if(total === 0){ showToast('No hay datos para archivar antes de esa fecha'); return; }
+  if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
   if(!confirm(`Se descargará un archivo con ${sales.length} ventas, ${reservations.length} reservas y ${cashClosures.length} cierres de caja anteriores a ${before}, y se eliminarán de la app (dejarán de aparecer en los informes de esos meses).\n\nGuarda bien el archivo descargado. ¿Continuar?`)) return;
   downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
@@ -14965,7 +15265,7 @@ function archiveOldData(){
   saveDB();
   checkArchiveReminder();
   renderMiNegocio();
-  showToast('Datos antiguos archivados');
+  showToast(t('msg.dataArchived'));
 }
 
 function handleLogoUpload(input){
@@ -14977,7 +15277,7 @@ function handleLogoUpload(input){
     saveDB();
     renderMiNegocio();
     renderHeader();
-    showToast('Logo actualizado');
+    showToast(t('msg.logoUpdated'));
   };
   reader.readAsDataURL(file);
 }
@@ -15021,7 +15321,7 @@ function syncMesasConfig(){
     DB.tables.push({id: genId(), name: `Barra ${i}`, zona:'barra'});
   }
   saveDB();
-  showToast('Mesas sincronizadas con el TPV');
+  showToast(t('msg.tablesSynced'));
 }
 
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
@@ -15035,7 +15335,7 @@ function toggleTipoServicio(tipo, checked){
     [tipo]: checked
   };
   if(!nuevo.mesa && !nuevo.takeaway && !nuevo.delivery){
-    showToast('Debe quedar al menos un tipo de servicio activo');
+    showToast(t('msg.keepOneService'));
     const el = document.getElementById('mn-serv-'+tipo);
     if(el) el.checked = true;
     return;
@@ -15082,7 +15382,7 @@ function saveBusiness(silent){
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
-  if(!silent) showToast('Datos del negocio guardados');
+  if(!silent) showToast(t('msg.businessSaved'));
 }
 
 /* ============================================================
@@ -15158,9 +15458,9 @@ function openOwnCourierModal(title, c){
 function saveOwnCourier(){
   const nombre = document.getElementById('oc-f-nombre').value.trim();
   const telefono = document.getElementById('oc-f-telefono').value.trim();
-  if(!nombre){ showToast('El nombre es obligatorio'); return; }
-  if(!telefono){ showToast('El teléfono es obligatorio'); return; }
-  if(telefono.replace(/[^0-9]/g,'').length < 10){ showToast('Incluye el prefijo del país (ej. +34 600 000 000)'); return; }
+  if(!nombre){ showToast(t('msg.nameRequired')); return; }
+  if(!telefono){ showToast(t('msg.phoneRequired')); return; }
+  if(telefono.replace(/[^0-9]/g,'').length < 10){ showToast(t('msg.includePrefix')); return; }
   if(!DB.business.ownCouriers) DB.business.ownCouriers = [];
   const idVal = document.getElementById('oc-f-id').value;
   if(idVal){
@@ -15172,7 +15472,7 @@ function saveOwnCourier(){
   saveDB();
   closeModal();
   renderMiNegocio();
-  showToast('Repartidor guardado');
+  showToast(t('msg.courierSaved'));
 }
 function deleteOwnCourier(id){
   if(!confirm(t('msg.confirmDeleteCourier'))) return;
@@ -15213,8 +15513,8 @@ function saveDeliveryPlatform(){
   const nombre = document.getElementById('dp-f-nombre').value.trim();
   const comisionPct = parseFloat(document.getElementById('dp-f-comision').value);
   const ivaPct = parseFloat(document.getElementById('dp-f-iva').value);
-  if(!nombre){ showToast('El nombre es obligatorio'); return; }
-  if(isNaN(comisionPct) || comisionPct<0){ showToast('Introduce la comisión'); return; }
+  if(!nombre){ showToast(t('msg.nameRequired')); return; }
+  if(isNaN(comisionPct) || comisionPct<0){ showToast(t('msg.enterCommission')); return; }
   if(!DB.business.deliveryPlatforms) DB.business.deliveryPlatforms = [];
   const idVal = document.getElementById('dp-f-id').value;
   const data = {nombre, comisionPct, ivaPct: isNaN(ivaPct)?0:ivaPct};
@@ -15227,7 +15527,7 @@ function saveDeliveryPlatform(){
   saveDB();
   closeModal();
   renderMiNegocio();
-  showToast('Plataforma guardada');
+  showToast(t('msg.platformSaved'));
 }
 function deleteDeliveryPlatform(id){
   if(!confirm(t('msg.confirmDeletePlatform'))) return;
@@ -15350,19 +15650,19 @@ function saveTicketConfig(){
     ivaPct: parseFloat(document.getElementById('tk-iva').value) || 0
   };
   saveDB();
-  showToast('Configuración del ticket guardada');
+  showToast(t('msg.ticketConfigSaved'));
 }
 
 function changeOwnerPin(){
   const n1 = document.getElementById('mn-pin-new').value;
   const n2 = document.getElementById('mn-pin-new2').value;
-  if(!/^\d{4}$/.test(n1)){ showToast('El PIN debe tener 4 dígitos'); return; }
-  if(n1 !== n2){ showToast('Los PIN no coinciden'); return; }
+  if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pinMustBe4')); return; }
+  if(n1 !== n2){ showToast(t('msg.pinsDontMatch')); return; }
   DB.business.pin = n1;
   DB.business.pinSet = true;
   saveDB();
   renderMiNegocio();
-  showToast('PIN actualizado');
+  showToast(t('msg.pinUpdated'));
 }
 
 /* ============================================================
