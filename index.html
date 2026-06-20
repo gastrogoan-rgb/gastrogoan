@@ -2244,7 +2244,7 @@ function saveOwnFirebaseConfig(){
   const databaseURL = document.getElementById('own-fb-dburl').value.trim();
   if(!apiKey && !databaseURL){
     if(!DB.business.ownFirebase) return;
-    if(!confirm('¿Quitar tu Firebase propio y volver a usar la nube compartida de GastroGoan?')) return;
+    if(!confirm(t('msg.confirmRemoveFirebase'))) return;
     delete DB.business.ownFirebase;
     saveDB();
     location.reload();
@@ -3554,6 +3554,15 @@ const I18N = {
     'ph.categoryDish': 'Ej. Carnes, Pescados, Postres...', 'ph.sectionName': 'Ej. ENTRANTES',
     'role.owner': 'Soy el/la dueño/a', 'role.employee': 'Soy empleado/a',
     'role.whoAreYou': '¿Quién eres?',
+    'msg.confirmRemoveFirebase': '¿Quitar tu Firebase propio y volver a usar la nube compartida de GastroGoan?',
+    'msg.confirmRejectOrder': '¿Rechazar este pedido online?',
+    'msg.confirmDeleteGeneric': '¿Eliminar?',
+    'msg.confirmDeletePurchases': '¿Eliminar estas compras de pedidos recibidos?',
+    'msg.confirmDeleteInvestment': '¿Eliminar esta inversión?',
+    'msg.confirmResetPin': '¿Restablecer el PIN de ${name} a 1234? Deberá crear uno nuevo al fichar.',
+    'msg.confirmDeleteTableWithOrder': 'Esta mesa tiene un pedido abierto. ¿Eliminarla igualmente? El pedido se cerrará.',
+    'msg.confirmDeleteCourier': '¿Eliminar este repartidor?',
+    'msg.confirmDeletePlatform': '¿Eliminar esta plataforma?',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -3821,6 +3830,15 @@ const I18N = {
     'ph.categoryDish': 'Ex. Carns, Peixos, Postres...', 'ph.sectionName': 'Ex. ENTRANTS',
     'role.owner': 'Sóc el/la propietari/a', 'role.employee': 'Sóc empleat/da',
     'role.whoAreYou': 'Qui ets?',
+    'msg.confirmRemoveFirebase': 'Treure el teu Firebase propi i tornar a usar el núvol compartit de GastroGoan?',
+    'msg.confirmRejectOrder': 'Rebutjar aquesta comanda en línia?',
+    'msg.confirmDeleteGeneric': 'Eliminar?',
+    'msg.confirmDeletePurchases': 'Eliminar aquestes compres de comandes rebudes?',
+    'msg.confirmDeleteInvestment': 'Eliminar aquesta inversió?',
+    'msg.confirmResetPin': 'Restablir el PIN de ${name} a 1234? Haurà de crear-ne un de nou en fitxar.',
+    'msg.confirmDeleteTableWithOrder': 'Aquesta taula té una comanda oberta. Eliminar-la igualment? La comanda es tancarà.',
+    'msg.confirmDeleteCourier': 'Eliminar aquest repartidor?',
+    'msg.confirmDeletePlatform': 'Eliminar aquesta plataforma?',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4088,6 +4106,15 @@ const I18N = {
     'ph.categoryDish': 'e.g. Meats, Fish, Desserts...', 'ph.sectionName': 'e.g. STARTERS',
     'role.owner': 'I\'m the owner', 'role.employee': 'I\'m an employee',
     'role.whoAreYou': 'Who are you?',
+    'msg.confirmRemoveFirebase': 'Remove your own Firebase and go back to GastroGoan shared cloud?',
+    'msg.confirmRejectOrder': 'Reject this online order?',
+    'msg.confirmDeleteGeneric': 'Delete?',
+    'msg.confirmDeletePurchases': 'Delete these purchases from received orders?',
+    'msg.confirmDeleteInvestment': 'Delete this investment?',
+    'msg.confirmResetPin': 'Reset ${name}\'s PIN to 1234? They will need to create a new one when clocking in.',
+    'msg.confirmDeleteTableWithOrder': 'This table has an open order. Delete it anyway? The order will be closed.',
+    'msg.confirmDeleteCourier': 'Delete this courier?',
+    'msg.confirmDeletePlatform': 'Delete this platform?',
   }
 };
 function getLang(){
@@ -8201,7 +8228,7 @@ function acceptOnlineOrder(orderId){
 }
 
 function rejectOnlineOrder(orderId){
-  if(!confirm('¿Rechazar este pedido online?')) return;
+  if(!confirm(t('msg.confirmRejectOrder'))) return;
   DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
   saveDB();
   renderTPV();
@@ -11031,7 +11058,7 @@ const GE = (function(){
     showToast('Gasto guardado');
   }
   function deleteGF(id){
-    if(!confirm('¿Eliminar?')) return;
+    if(!confirm(t('msg.confirmDeleteGeneric'))) return;
     ge().fijos = fijos().filter(g=>g.id!==id);
     saveDB();
     renderFijos();
@@ -11123,13 +11150,13 @@ const GE = (function(){
     showToast('Compra guardada');
   }
   function deleteGV(id){
-    if(!confirm('¿Eliminar?')) return;
+    if(!confirm(t('msg.confirmDeleteGeneric'))) return;
     ge().variables = variables().filter(v=>v.id!==id);
     saveDB();
     renderVariables();
   }
   function deleteGVGroup(idsStr){
-    if(!confirm('¿Eliminar estas compras de pedidos recibidos?')) return;
+    if(!confirm(t('msg.confirmDeletePurchases'))) return;
     const ids = idsStr.split(',').map(s=>parseInt(s));
     ge().variables = variables().filter(v=>!ids.includes(v.id));
     saveDB();
@@ -11364,7 +11391,7 @@ const GE = (function(){
     showToast('Inversión guardada');
   }
   function deleteCapex(id){
-    if(!confirm('¿Eliminar esta inversión?')) return;
+    if(!confirm(t('msg.confirmDeleteInvestment'))) return;
     ge().capex = capex().filter(c=>c.id!==id);
     saveDB();
     renderCapex();
@@ -12451,7 +12478,7 @@ function openEmployeeModal(id){
 function resetEmployeePin(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  if(!confirm('¿Restablecer el PIN de ' + e.name + ' a 1234? Deberá crear uno nuevo al fichar.')) return;
+  if(!confirm(t('msg.confirmResetPin').replace('${name}', e.name))) return;
   e.pin = '1234';
   e.pinChanged = false;
   saveDB();
@@ -14808,12 +14835,12 @@ function addTableManual(zona){
 function deleteTableFromConfig(id){
   const order = getOpenOrderForTable(id);
   if(order){
-    if(!confirm('Esta mesa tiene un pedido abierto. ¿Eliminarla igualmente? El pedido se cerrará.')){
+    if(!confirm(t('msg.confirmDeleteTableWithOrder'))){
       return;
     }
     order.status = 'pagada';
   } else {
-    if(!confirm('¿Eliminar esta mesa?')) return;
+    if(!confirm(t('msg.confirmDeleteTable'))) return;
   }
   DB.tables = DB.tables.filter(t => t.id !== id);
   saveDB();
@@ -15148,7 +15175,7 @@ function saveOwnCourier(){
   showToast('Repartidor guardado');
 }
 function deleteOwnCourier(id){
-  if(!confirm('¿Eliminar este repartidor?')) return;
+  if(!confirm(t('msg.confirmDeleteCourier'))) return;
   DB.business.ownCouriers = (DB.business.ownCouriers||[]).filter(c=>c.id!==id);
   saveDB();
   renderMiNegocio();
@@ -15203,7 +15230,7 @@ function saveDeliveryPlatform(){
   showToast('Plataforma guardada');
 }
 function deleteDeliveryPlatform(id){
-  if(!confirm('¿Eliminar esta plataforma?')) return;
+  if(!confirm(t('msg.confirmDeletePlatform'))) return;
   DB.business.deliveryPlatforms = (DB.business.deliveryPlatforms||[]).filter(p=>p.id!==id);
   saveDB();
   renderMiNegocio();
