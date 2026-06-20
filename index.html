@@ -1695,7 +1695,9 @@ function hideBusinessSelectScreen(){
 function enterBusiness(slotId){
   if(slotId === ACTIVE_SLOT){
     hideBusinessSelectScreen();
-    if(!getLicense()) showActivationGate();
+    if(!DB.business.netlifySetupDone) showNetlifySetupGate();
+    else if(!getCloudConfig()) showFirebaseSetupGate();
+    else if(!getLicense()) showActivationGate();
     return;
   }
   switchToBusiness(slotId);
@@ -1928,7 +1930,7 @@ function showActivationGate(){
       ${showBackBtn ? `<button onclick="backToBusinessSelectorFromGate()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Activa tu copia para empezar</p>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Paso 3 de 3 — Activa tu licencia</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">¿Quién eres?</label>
         <div style="display:flex;gap:10px;margin-bottom:18px">
@@ -2124,7 +2126,7 @@ function showFirebaseSetupGate(){
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
         <h2 style="margin-bottom:4px">Configura tu nube</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Último paso para terminar de activar GastroGoan (≈10 minutos, una sola vez)</p>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Paso 2 de 3 — Conecta tu nube (≈10 minutos, una sola vez)</p>
       </div>
       ${bodyHtml}
     </div>`;
@@ -2170,7 +2172,7 @@ function showNetlifySetupGate(){
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
         <h2 style="margin-bottom:4px">Sube tu app a internet</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Para que tus clientes puedan reservar y pedir por QR (≈5 minutos, una sola vez)</p>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Paso 1 de 3 — Sube tu app a internet (≈5 minutos, una sola vez)</p>
       </div>
       ${hostedBox}
       <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
@@ -2191,12 +2193,15 @@ function confirmNetlifyDone(){
   DB.business.netlifySetupDone = true;
   saveDB();
   hideNetlifySetupGate();
-  if(!DB.business.tourSeen) promptAppTour();
+  if(!getCloudConfig()) showFirebaseSetupGate();
+  else if(!getLicense()) showActivationGate();
+  else if(!DB.business.tourSeen) promptAppTour();
 }
 function postponeNetlify(){
-  // No marca como hecho: volverá a aparecer la próxima vez que abra la app.
   hideNetlifySetupGate();
-  if(!DB.business.tourSeen) promptAppTour();
+  if(!getCloudConfig()) showFirebaseSetupGate();
+  else if(!getLicense()) showActivationGate();
+  else if(!DB.business.tourSeen) promptAppTour();
 }
 
 function activateLicenseFromGate(){
@@ -2215,10 +2220,10 @@ function activateLicenseFromGate(){
   updateActiveSlotName(parsed.name);
   hideActivationGate();
   showToast('Licencia activada: ' + parsed.name);
-  if(!getCloudConfig()) showFirebaseSetupGate();
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
+  if(!DB.business.tourSeen) promptAppTour();
 }
 
 /* Cada negocio usa su PROPIO proyecto Firebase (gratuito, de Google),
@@ -15523,13 +15528,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  if(!getLicense()){
-    showActivationGate();
+  if(onbRole === 'owner' && !DB.business.netlifySetupDone){
+    showNetlifySetupGate();
   }else if(!getCloudConfig()){
     showFirebaseSetupGate();
-  }else if(onbRole === 'owner' && !DB.business.netlifySetupDone){
-    // Tras configurar la nube, el propietario debe subir la app a Netlify.
-    showNetlifySetupGate();
+  }else if(!getLicense()){
+    showActivationGate();
   }else if(!DB.business.tourSeen){
     promptAppTour();
   }
