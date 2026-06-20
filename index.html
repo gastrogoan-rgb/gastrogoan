@@ -2020,7 +2020,7 @@ const FIREBASE_RULES_JSON = `{
 
 function copyFirebaseRules(){
   navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast(t('msg.rulesCopied'))).catch(() => {
-    alert('No se pudo copiar automáticamente. Selecciona el texto manualmente y cópialo (Ctrl+C / Cmd+C).');
+    alert(t('msg.copyFailed'));
   });
 }
 
@@ -2251,16 +2251,16 @@ function saveOwnFirebaseConfig(){
     return;
   }
   if(!apiKey || !databaseURL){
-    alert('Rellena los dos campos (clave de API y URL de la base de datos), o déjalos ambos vacíos para usar la nube compartida.');
+    alert(t('msg.fillBothFields'));
     return;
   }
   if(!/^https:\/\/[^\s]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/.test(databaseURL)){
-    alert('La URL de la base de datos no parece válida. Debe empezar por https:// y terminar en .firebaseio.com o .firebasedatabase.app (la encuentras en Realtime Database de tu proyecto Firebase).');
+    alert(t('msg.invalidDbUrl'));
     return;
   }
   DB.business.ownFirebase = { apiKey, databaseURL };
   saveDB();
-  alert('Configuración guardada. La app se recargará para conectar con tu propio Firebase.');
+  alert(t('msg.firebaseSaved'));
   location.reload();
 }
 
@@ -3663,6 +3663,10 @@ const I18N = {
     'msg.enterCommission': 'Introduce la comisión',
     'msg.platformSaved': 'Plataforma guardada',
     'msg.ticketConfigSaved': 'Configuración del ticket guardada',
+    'msg.copyFailed': 'No se pudo copiar automáticamente. Selecciona el texto manualmente y cópialo (Ctrl+C / Cmd+C).',
+    'msg.fillBothFields': 'Rellena los dos campos (clave de API y URL de la base de datos), o déjalos ambos vacíos para usar la nube compartida.',
+    'msg.invalidDbUrl': 'La URL de la base de datos no parece válida. Debe empezar por https:// y terminar en .firebaseio.com o .firebasedatabase.app (la encuentras en Realtime Database de tu proyecto Firebase).',
+    'msg.firebaseSaved': 'Configuración guardada. La app se recargará para conectar con tu propio Firebase.',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -4039,6 +4043,10 @@ const I18N = {
     'msg.enterCommission': 'Introdueix la comissió',
     'msg.platformSaved': 'Plataforma desada',
     'msg.ticketConfigSaved': 'Configuració del tiquet desada',
+    'msg.copyFailed': 'No s\'ha pogut copiar automàticament. Selecciona el text manualment i copia\'l (Ctrl+C / Cmd+C).',
+    'msg.fillBothFields': 'Omple els dos camps (clau d\'API i URL de la base de dades), o deixa\'ls buits per usar el núvol compartit.',
+    'msg.invalidDbUrl': 'La URL de la base de dades no sembla vàlida. Ha de començar per https:// i acabar en .firebaseio.com o .firebasedatabase.app.',
+    'msg.firebaseSaved': 'Configuració desada. L\'app es recarregarà per connectar amb el teu Firebase.',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4415,6 +4423,10 @@ const I18N = {
     'msg.enterCommission': 'Enter the commission',
     'msg.platformSaved': 'Platform saved',
     'msg.ticketConfigSaved': 'Ticket settings saved',
+    'msg.copyFailed': 'Could not copy automatically. Select the text manually and copy it (Ctrl+C / Cmd+C).',
+    'msg.fillBothFields': 'Fill in both fields (API key and database URL), or leave both empty to use the shared cloud.',
+    'msg.invalidDbUrl': 'The database URL does not look valid. It must start with https:// and end in .firebaseio.com or .firebasedatabase.app.',
+    'msg.firebaseSaved': 'Settings saved. The app will reload to connect with your Firebase.',
   }
 };
 function getLang(){
@@ -8059,7 +8071,7 @@ function newMenuGrupo(){
 }
 function confirmNewMenuGrupo(){
   const nombre = document.getElementById('new-menu-grupo-name').value;
-  if(!nombre || !nombre.trim()){ showToast('Escribe un nombre para el grupo'); return; }
+  if(!nombre || !nombre.trim()){ showToast(t('msg.groupNameRequired')); return; }
   menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[]});
   closeModal();
   renderMenuGrupos();
@@ -8118,12 +8130,12 @@ function confirmAddMenuOpcion(grupoId){
   const tipo = document.getElementById('new-menu-opcion-tipo').value;
   if(tipo === 'manual'){
     const nombre = document.getElementById('new-menu-opcion-nombre').value.trim();
-    if(!nombre){ showToast('Escribe el nombre del plato'); return; }
+    if(!nombre){ showToast(t('msg.dishNameRequired')); return; }
     g.opciones.push({id: genId(), recipeId: null, nombre, suplemento});
   } else {
     const recipeId = parseInt(document.getElementById('new-menu-opcion-recipe').value);
     const r = getRecipe(recipeId);
-    if(!r){ showToast('Selecciona un plato'); return; }
+    if(!r){ showToast(t('msg.selectDish')); return; }
     g.opciones.push({id: genId(), recipeId: r.id, nombre: r.name, suplemento});
   }
   closeModal();
