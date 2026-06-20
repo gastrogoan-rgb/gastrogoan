@@ -8138,8 +8138,9 @@ function renderMenuGrupos(){
   box.innerHTML = menuEdit.grupos.map(g => `
     <div class="ge-section">
       <div class="ge-sec-head">
-        <h4>${escapeHtml(g.nombre)}</h4>
+        <h4>${escapeHtml(g.nombre)}${g.bebida ? ' <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> Sala</span>' : ''}</h4>
         <div class="actions-cell">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> Bebidas (sala)</label>
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> Opción</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -8176,7 +8177,7 @@ function newMenuGrupo(){
 function confirmNewMenuGrupo(){
   const nombre = document.getElementById('new-menu-grupo-name').value;
   if(!nombre || !nombre.trim()){ showToast(t('msg.groupNameRequired')); return; }
-  menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[]});
+  menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[], bebida: false});
   closeModal();
   renderMenuGrupos();
 }
@@ -8186,8 +8187,16 @@ function removeMenuGrupo(grupoId){
   renderMenuGrupos();
 }
 
+function toggleGrupoBebida(grupoId, checked){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  if(g){ g.bebida = checked; g.opciones = []; }
+  renderMenuGrupos();
+}
+
 function addMenuOpcion(grupoId){
-  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  const opcionArea = (g && g.bebida) ? 'sala' : currentArea();
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === opcionArea);
   openModal(`
     <div class="modal-header">
       <h3>${t('title.newOption')}</h3>
@@ -9082,12 +9091,14 @@ function confirmAddMenuToOrder(orderId, menuId){
     if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
     const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
     const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
+    const grupo = m.grupos.find(g => g.nombre === s.grupoNombre);
     const line = {
       menuId: m.id, recipeId: s.recipeId, platoId: null,
       name: lineName, price: (i===0 ? m.precio : 0) + s.suplemento + modExtra,
       qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
       modificadores: s.modificadores
     };
+    if(grupo && grupo.bebida) line.bebida = true;
     order.items.push(line);
     autoSendTakeawayLine(order, line);
   });
