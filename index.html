@@ -6240,8 +6240,8 @@ function renderEscandalloFull(r){
           </table>
         </div>
         <div class="actions-cell" style="margin-top:10px">
-          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       </div>
     `;
@@ -6731,8 +6731,8 @@ function renderFichas(){
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
         <h3 style="justify-content:space-between"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       </div>
     `).join('') + `</div>`;
@@ -6767,10 +6767,10 @@ function renderFichaCard(r){
       </h3>
       ${ficha ? `
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> Imprimir</button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> Eliminar ficha</button>
+          <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
-      ` : `<div style="font-size:12px;color:var(--muted)">Crear ficha técnica</div>`}
+      ` : `<div style="font-size:12px;color:var(--muted)">${t('title.newTechSheet')}</div>`}
     </div>
   `;
 }
@@ -7514,7 +7514,7 @@ function importFromEscandallo(secId){
       }).join('')}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmImportEsc(${secId==null?'null':secId})">${t('common.import')}</button>
     </div>
   `);
@@ -7747,7 +7747,7 @@ function addMenuOpcion(grupoId){
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
   openModal(`
     <div class="modal-header">
-      <h3>Nueva opción</h3>
+      <h3>${t('title.newOption')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
@@ -10294,7 +10294,7 @@ function renderPedidoDetail(){
       </div>
 
       <div class="field">
-        <label>Notas</label>
+        <label>${t('common.notes')}</label>
         <textarea id="pedido-notas" rows="2" onchange="updatePedidoNotas(this.value)">${escapeHtml(o.notas||'')}</textarea>
       </div>
 
@@ -10355,7 +10355,7 @@ function renderPedidoDetail(){
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
-        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> Eliminar</button>
+        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
       </div>
     </div>
   `;
