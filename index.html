@@ -426,6 +426,65 @@ td.wrap{white-space:normal}
   .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
 }
 
+@media (max-width: 800px){
+  /* Header — intermediate sizing for tablets */
+  .app-header{padding:0 8px;gap:4px}
+  .app-logo-sub{display:none}
+  .app-logo-text{font-size:13px}
+  .app-header .hdr-text{display:none}
+  .app-header .btn{padding:5px 8px;font-size:11px}
+  #lang-select{font-size:11px;padding:4px 4px;min-width:44px}
+
+  /* Layout */
+  .content{padding:14px}
+  .home-hero{padding:32px 20px 24px;margin:-14px -14px 0}
+  .home-hero h1{font-size:24px}
+  .view-title{font-size:19px}
+
+  /* Carpetas — 2 columnas en tablet portrait, centradas */
+  .folder-grid{grid-template-columns:repeat(auto-fit,minmax(200px,260px));gap:14px;padding:20px 0 6px;justify-content:center}
+  .folder-card{padding:28px 20px;min-height:200px}
+  .folder-card h2{font-size:20px}
+
+  /* Módulos — 2 columnas */
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .module-card{padding:14px}
+
+  /* Grids */
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-4{grid-template-columns:repeat(3,1fr)}
+  .grid-mesas{grid-template-columns:repeat(4,1fr);gap:8px}
+  .grid-compact{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+
+  /* KPIs — max 4 columnas */
+  .ge-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .te-kpis{grid-template-columns:repeat(4,1fr)}
+
+  /* Tables */
+  .ge-grid th:first-child{min-width:110px}
+  .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
+
+  /* Manual sidebar */
+  .manual-wrap{grid-template-columns:180px 1fr}
+
+  /* Modals — cap width */
+  .modal.modal-xl{max-width:95%}
+  .modal.modal-order{max-width:98%;width:98%}
+
+  /* Forms */
+  .ge-input-row input{width:90px}
+
+  /* Tabs */
+  .ge-tab-row{-webkit-overflow-scrolling:touch}
+  .ge-tab{padding:8px 14px;font-size:12px}
+
+  /* Cards */
+  .card{padding:12px}
+
+  /* Search */
+  .search-input{max-width:220px}
+}
+
 @media (max-width: 600px){
   /* Header — compact single row, icon-only buttons */
   :root{--header-h:44px}
