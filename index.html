@@ -6443,7 +6443,7 @@ function filterRecipeIngredientResults(id){
   const baseLimited = baseMatches.slice(0, 15);
   const ingLimited = ingMatches.slice(0, 30);
   if(!baseLimited.length && !ingLimited.length){
-    results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">Sin resultados</div>`;
+    results.innerHTML = `<div style="padding:8px 10px;font-size:13px;color:var(--muted)">${t('common.noResults')}</div>`;
   } else {
     const renderItem = m => `
       <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
@@ -7413,7 +7413,7 @@ function addCartaPlato(secId){
       <input type="number" id="new-carta-plato-precio" step="0.01" min="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId})">Añadir</button>
     </div>
   `);
@@ -7465,7 +7465,7 @@ function renderPlatoModsModalHtml(secId, platoId){
       <input type="number" id="new-mod-precio" step="0.01" min="0" value="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cerrar</button>
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
       <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> Añadir extra</button>
     </div>
   `;
@@ -7724,7 +7724,7 @@ function newMenuGrupo(){
       <input type="text" id="new-menu-grupo-name" placeholder="Ej. Primero, Segundo, Postre, Bebida...">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewMenuGrupo()">Añadir</button>
     </div>
   `);
@@ -7772,7 +7772,7 @@ function addMenuOpcion(grupoId){
       <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">Añadir</button>
     </div>
   `);
