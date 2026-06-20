@@ -613,7 +613,7 @@ td.wrap{white-space:normal}
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
-  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text"> Actualizar</span></button>
+  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text" data-i18n="common.update"> Actualizar</span></button>
   <select id="lang-select" onchange="setLang(this.value)" style="margin-right:8px;border-radius:8px;border:1px solid var(--border);padding:6px 8px;font-size:13px;background:#fff">
     <option value="es">🇪🇸 Castellano</option>
     <option value="ca">🏴 Català</option>
@@ -641,7 +641,7 @@ td.wrap{white-space:normal}
     <!-- ========== FOLDER (módulos de un área) ========== -->
     <section class="view" id="view-folder">
       <div class="folder-top">
-        <button class="btn btn-sm btn-back" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> Inicio</button>
+        <button class="btn btn-sm btn-back" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.home">Inicio</span></button>
         <div class="folder-top-title" id="folder-title"></div>
         <button class="btn btn-sm folder-edit-toggle" id="folder-edit-toggle" onclick="toggleEditMode()" style="display:none"></button>
       </div>
@@ -651,46 +651,46 @@ td.wrap{white-space:normal}
 
     <!-- ========== DASHBOARD ========== -->
     <section class="view" id="view-dashboard">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Panel de Control</div>
       <div class="view-subtitle">Resumen general de tu negocio</div>
 
       <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-trending-up"></i> Comparación de ventas del año</h3>
+        <h3 data-i18n="title.salesComparison"><i class="ti ti-trending-up"></i> Comparación de ventas del año</h3>
         <div id="dashboard-trend-ventas"></div>
       </div>
 
       <div class="grid grid-3" id="dashboard-gastos-kpis" style="margin:16px 0"></div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-receipt-2"></i> Comparación de gastos del año</h3>
+        <h3 data-i18n="title.expenseComparison"><i class="ti ti-receipt-2"></i> Comparación de gastos del año</h3>
         <div id="dashboard-trend-gastos"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
+        <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
         <div id="dashboard-resultado"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-chart-line"></i> Comparación del resultado mensual del año</h3>
+        <h3 data-i18n="title.monthlyResultComparison"><i class="ti ti-chart-line"></i> Comparación del resultado mensual del año</h3>
         <div id="dashboard-trend-resultado"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-chart-pie"></i> Análisis de ventas (últimos 30 días)</h3>
+        <h3 data-i18n="title.salesAnalysis"><i class="ti ti-chart-pie"></i> Análisis de ventas (últimos 30 días)</h3>
         <div id="dashboard-sales-analysis"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-scale"></i> Punto de equilibrio</h3>
+        <h3 data-i18n="title.breakEven"><i class="ti ti-scale"></i> Punto de equilibrio</h3>
         <div id="dashboard-breakeven"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
-        <h3><i class="ti ti-toolsKitchen"></i> Análisis de Platos</h3>
+        <h3 data-i18n="title.dishAnalysis"><i class="ti ti-toolsKitchen"></i> Análisis de Platos</h3>
         <div class="month-sel" id="platos-period-sel"></div>
         <div class="ge-kpi-grid" id="platos-kpis"></div>
         <div class="vis-section" style="margin-bottom:14px">
@@ -722,7 +722,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== MEGA LISTA ========== -->
     <section class="view" id="view-megalista">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Mega Lista</div>
       <div class="view-subtitle">Gestión de ingredientes y proveedores</div>
 
@@ -759,7 +759,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== PROVEEDORES ========== -->
     <section class="view" id="view-proveedores">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Proveedores</div>
       <div class="view-subtitle">Contactos y condiciones de compra</div>
 
@@ -773,7 +773,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== ESCANDALLO ========== -->
     <section class="view" id="view-escandallo">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Escandallo</div>
       <div class="view-subtitle">Cálculo automático de costes de platos</div>
 
@@ -799,7 +799,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== FICHAS TÉCNICAS ========== -->
     <section class="view" id="view-fichas">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Fichas Técnicas</div>
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
       <div class="toolbar">
@@ -820,7 +820,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== OFERTA GASTRONÓMICA ========== -->
     <section class="view" id="view-carta">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Oferta Gastronómica</div>
       <div class="view-subtitle">Gestiona tus cartas y menús · Vincula con Escandallo</div>
 
@@ -837,7 +837,7 @@ td.wrap{white-space:normal}
         <div id="carta-list-view">
           <div class="toolbar">
             <div class="left"></div>
-            <button class="owner-only btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> Nueva Carta</button>
+            <button class="owner-only btn btn-primary" onclick="newCarta()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSection">Nueva Carta</span></button>
           </div>
           <div class="grid grid-2" id="carta-stats" style="margin-bottom:14px"></div>
           <div id="carta-list"></div>
@@ -848,19 +848,19 @@ td.wrap{white-space:normal}
           <div class="toolbar">
             <div class="left">
               <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> Cartas</button>
-              <input type="text" id="carta-f-nombre" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
+              <input type="text" id="carta-f-nombre" data-i18n-ph="ph.cartaName" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
             </div>
-            <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> Guardar</button>
+            <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> <span data-i18n="common.save">Guardar</span></button>
           </div>
           <div class="field">
-            <label>Días y horario en que está activa esta carta</label>
+            <label data-i18n="label.daysAndSchedule">Días y horario en que está activa esta carta</label>
             <p style="font-size:13px;color:var(--muted);margin:2px 0 8px">Activa los días en que se ofrece esta carta. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activa dentro de ese rango.</p>
             <div id="carta-horario"></div>
           </div>
           <div class="toolbar">
             <div class="left"></div>
-            <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> Importar del Escandallo</button>
-            <button class="owner-only btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> Nueva Sección</button>
+            <button class="btn btn-sm" onclick="importFromEscandallo(null)"><i class="ti ti-download"></i> <span data-i18n="btn.importFromCosting">Importar del Escandallo</span></button>
+            <button class="owner-only btn btn-sm btn-primary" onclick="newCartaSection()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSection">Nueva Sección</span></button>
           </div>
           <div id="carta-secciones"></div>
         </div>
@@ -872,7 +872,7 @@ td.wrap{white-space:normal}
         <div id="menu-list-view">
           <div class="toolbar">
             <div class="left"></div>
-            <button class="owner-only btn btn-primary" onclick="newMenu()"><i class="ti ti-plus"></i> Nuevo Menú</button>
+            <button class="owner-only btn btn-primary" onclick="newMenu()"><i class="ti ti-plus"></i> <span data-i18n="label.menuName">Nuevo Menú</span></button>
           </div>
           <div class="grid grid-2" id="menu-stats" style="margin-bottom:14px"></div>
           <div id="menu-list"></div>
@@ -883,18 +883,18 @@ td.wrap{white-space:normal}
           <div class="toolbar">
             <div class="left">
               <button class="btn btn-sm" onclick="backToMenuList()"><i class="ti ti-arrow-left"></i> Menús</button>
-              <input type="text" id="menu-f-nombre" placeholder="Nombre del menú... Ej. Menú del día" style="font-size:15px;font-weight:700;min-width:220px">
+              <input type="text" id="menu-f-nombre" data-i18n-ph="ph.menuName" placeholder="Nombre del menú... Ej. Menú del día" style="font-size:15px;font-weight:700;min-width:220px">
             </div>
-            <button class="btn btn-primary" onclick="saveMenu()"><i class="ti ti-device-floppy"></i> Guardar</button>
+            <button class="btn btn-primary" onclick="saveMenu()"><i class="ti ti-device-floppy"></i> <span data-i18n="common.save">Guardar</span></button>
           </div>
           <div class="field-row">
             <div class="field">
-              <label>Precio base (€)</label>
+              <label data-i18n="label.basePrice">Precio base (€)</label>
               <input type="number" id="menu-f-precio" step="0.01" min="0">
             </div>
           </div>
           <div class="field">
-            <label>Días y horario en que está activo este menú</label>
+            <label data-i18n="label.daysAndScheduleMenu">Días y horario en que está activo este menú</label>
             <p style="font-size:13px;color:var(--muted);margin:2px 0 8px">Activa los días en que se ofrece este menú. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activo dentro de ese rango.</p>
             <div id="menu-horario"></div>
           </div>
@@ -906,7 +906,7 @@ td.wrap{white-space:normal}
           </div>
           <div class="toolbar">
             <div class="left"></div>
-            <button class="owner-only btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> Nuevo Grupo</button>
+            <button class="owner-only btn btn-sm btn-primary" onclick="newMenuGrupo()"><i class="ti ti-plus"></i> <span data-i18n="title.newGroup">Nuevo Grupo</span></button>
           </div>
           <div id="menu-grupos"></div>
         </div>
@@ -915,7 +915,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== TPV ========== -->
     <section class="view" id="view-tpv">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">TPV</div>
       <div class="view-subtitle">Comandas, mesas y tickets</div>
       <div id="tpv-content"></div>
@@ -923,7 +923,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== COMANDAS COCINA ========== -->
     <section class="view" id="view-comandascocina">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Comandas Cocina</div>
       <div class="view-subtitle">Pedidos en tiempo real desde sala</div>
       <div id="comandascocina-content"></div>
@@ -931,7 +931,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== STOCK ========== -->
     <section class="view" id="view-stock">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Stock</div>
       <div class="view-subtitle">Inventario con alertas de mínimos</div>
 
@@ -961,7 +961,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== PEDIDOS ========== -->
     <section class="view" id="view-pedidos">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Pedidos</div>
       <div class="view-subtitle">Gestión de compras a proveedores</div>
 
@@ -977,7 +977,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== GESTIÓN ECONÓMICA ========== -->
     <section class="view" id="view-economia">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Gestión Económica</div>
       <div class="view-subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
@@ -1159,7 +1159,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== HORARIOS ========== -->
     <section class="view" id="view-horarios">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Horario del Personal</div>
       <div class="view-subtitle">Turnos del personal</div>
       <div id="horarios-content"></div>
@@ -1167,7 +1167,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== PLAN DE LIMPIEZA ========== -->
     <section class="view" id="view-limpieza">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Plan de Limpieza</div>
       <div class="view-subtitle">APPCC e higiene alimentaria</div>
       <div id="limpieza-content"></div>
@@ -1175,7 +1175,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== DISTRIBUCIÓN DEL TRABAJO ========== -->
     <section class="view" id="view-distribucion">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Distribución del Trabajo</div>
       <div class="view-subtitle">Tareas asignadas por empleado y día</div>
       <div id="distribucion-content"></div>
@@ -1183,7 +1183,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== CLIENTES ========== -->
     <section class="view" id="view-clientes">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Clientes</div>
       <div class="view-subtitle">Fichas de cliente y fidelización</div>
       <div class="toolbar">
@@ -1204,7 +1204,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== RESERVAS ========== -->
     <section class="view" id="view-reservas">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Reservas</div>
       <div class="view-subtitle">Reservas de mesas vinculadas al TPV</div>
       <nav class="ge-tab-row">
@@ -1218,7 +1218,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== PROMOCIÓN ========== -->
     <section class="view" id="view-promocion">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Promoción</div>
       <div class="view-subtitle">Calendario de marketing y promoción del negocio</div>
       <nav class="ge-tab-row">
@@ -1232,7 +1232,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== MI NEGOCIO ========== -->
     <section class="view" id="view-minegocio">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Mi Negocio</div>
       <div class="view-subtitle">Datos generales del establecimiento</div>
       <div id="minegocio-content"></div>
@@ -1240,7 +1240,7 @@ td.wrap{white-space:normal}
 
     <!-- ========== MANUAL DE USO ========== -->
     <section class="view" id="view-manual">
-      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> Volver</button>
+      <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Manual de Uso</div>
       <div class="view-subtitle">Guía rápida de cada módulo</div>
 
@@ -3509,6 +3509,8 @@ const I18N = {
     'msg.confirmDeleteElaboration': '¿Eliminar esta elaboración del stock?',
     'msg.confirmDeleteDish': '¿Eliminar este plato?',
     'msg.confirmDeleteTechSheet': '¿Eliminar esta ficha técnica?',
+    'msg.dishSaved': 'Plato guardado', 'msg.dishDeleted': 'Plato eliminado',
+    'msg.techSheetSaved': 'Ficha técnica guardada', 'msg.techSheetDeleted': 'Ficha eliminada',
     'msg.confirmDeleteCarta': '¿Eliminar esta carta?',
     'msg.confirmDeleteSection': '¿Eliminar esta sección y todos sus platos?',
     'msg.confirmDeleteMenu': '¿Eliminar este menú?',
@@ -3525,6 +3527,9 @@ const I18N = {
     'msg.confirmDeletePromotion': '¿Eliminar esta acción de promoción?',
     'msg.confirmCancelSplit': 'Ya se ha cobrado alguna parte. ¿Seguro que quieres cancelar la división?',
     'msg.needSupplier': 'Necesitas un proveedor',
+    'msg.needSupplierDesc': 'Antes de añadir ingredientes, da de alta al menos un proveedor con sus datos de contacto.',
+    'btn.newSupplier': 'Nuevo Proveedor',
+    'label.minStock': 'Mínimo',
     'empty.ingredients': 'No hay ingredientes. Añade el primero.',
     'empty.stock': 'No hay ingredientes en stock.',
     'empty.elaborations': 'No hay elaboraciones en stock.',
@@ -3771,6 +3776,8 @@ const I18N = {
     'msg.confirmDeleteElaboration': 'Eliminar aquesta elaboració de l\'estoc?',
     'msg.confirmDeleteDish': 'Eliminar aquest plat?',
     'msg.confirmDeleteTechSheet': 'Eliminar aquesta fitxa tècnica?',
+    'msg.dishSaved': 'Plat desat', 'msg.dishDeleted': 'Plat eliminat',
+    'msg.techSheetSaved': 'Fitxa tècnica desada', 'msg.techSheetDeleted': 'Fitxa eliminada',
     'msg.confirmDeleteCarta': 'Eliminar aquesta carta?',
     'msg.confirmDeleteSection': 'Eliminar aquesta secció i tots els seus plats?',
     'msg.confirmDeleteMenu': 'Eliminar aquest menú?',
@@ -3787,6 +3794,9 @@ const I18N = {
     'msg.confirmDeletePromotion': 'Eliminar aquesta acció de promoció?',
     'msg.confirmCancelSplit': 'Ja s\'ha cobrat alguna part. Segur que vols cancel·lar la divisió?',
     'msg.needSupplier': 'Necessites un proveïdor',
+    'msg.needSupplierDesc': "Abans d'afegir ingredients, dona d'alta almenys un proveïdor amb les seves dades de contacte.",
+    'btn.newSupplier': 'Nou Proveïdor',
+    'label.minStock': 'Mínim',
     'empty.ingredients': 'No hi ha ingredients. Afegeix el primer.',
     'empty.stock': 'No hi ha ingredients en estoc.',
     'empty.elaborations': 'No hi ha elaboracions en estoc.',
@@ -3927,6 +3937,157 @@ const I18N = {
     'help.contact.title': 'Bigger questions?',
     'help.contact.desc': 'If the assistant didn\'t solve your issue, write to us directly and we\'ll get back to you as soon as possible.',
     'help.contact.button': 'Email support',
+    'common.save': 'Save', 'common.cancel': 'Cancel', 'common.delete': 'Delete',
+    'common.close': 'Close', 'common.back': 'Back', 'common.add': 'Add',
+    'common.search': 'Search', 'common.accept': 'Accept', 'common.confirm': 'Confirm',
+    'common.name': 'Name', 'common.phone': 'Phone', 'common.email': 'Email',
+    'common.notes': 'Notes', 'common.date': 'Date', 'common.time': 'Time',
+    'common.price': 'Price', 'common.qty': 'Quantity', 'common.unit': 'Unit',
+    'common.category': 'Category', 'common.supplier': 'Supplier',
+    'common.yes': 'Yes', 'common.no': 'No', 'common.or': 'or',
+    'common.new': 'New', 'common.import': 'Import', 'common.export': 'Export',
+    'common.print': 'Print', 'common.copy': 'Copy', 'common.unlock': 'Unlock',
+    'common.continue': 'Continue', 'common.update': 'Refresh',
+    'common.noResults': 'No results', 'common.loading': 'Loading...',
+    'common.required': 'Required', 'common.optional': 'Optional',
+    'common.today': 'Today', 'common.yesterday': 'Yesterday', 'common.week': 'Week',
+    'common.month': 'Month', 'common.year': 'Year', 'common.total': 'Total',
+    'common.subtotal': 'Subtotal', 'common.discount': 'Discount',
+    'common.all': 'All', 'common.none': 'None',
+    'common.chef': 'Manager',
+    'btn.newTable': 'New table', 'btn.expressOrder': 'Express Order',
+    'btn.cashClose': 'Close register', 'btn.charge': 'Charge',
+    'btn.sendToKitchen': 'Send to kitchen', 'btn.addDish': 'Add dish',
+    'btn.newSection': 'New Section', 'btn.importFromCosting': 'Import from Costing',
+    'btn.newCategory': 'New category', 'btn.adjustStock': 'Adjust stock',
+    'btn.saveAndConnect': 'Save and connect', 'btn.copyLink': 'Copy link',
+    'btn.activateApp': 'Activate GastroGoan', 'btn.alreadyUploaded': 'Already uploaded — Continue',
+    'btn.createTablesAuto': 'Create tables automatically',
+    'btn.newIndependent': 'New independent', 'btn.openBranch': 'Open branch',
+    'btn.confirmCharge': 'Confirm charge', 'btn.confirmClose': 'Confirm closure',
+    'btn.cancelSplit': 'Cancel split', 'btn.backToOrders': 'Back to orders',
+    'btn.saveReception': 'Save reception',
+    'label.licenseKey': 'License key',
+    'label.accessPin': 'Access PIN', 'label.newPin': 'New PIN (4 digits)',
+    'label.repeatPin': 'Repeat new PIN', 'label.currentPin': 'Current PIN',
+    'label.dishName': 'Dish name', 'label.salePrice': 'Sale price (€)',
+    'label.diners': 'Diners', 'label.consumables': 'Consumables (%)',
+    'label.purchasePrice': 'Purchase price (€)', 'label.stockQty': 'New stock quantity',
+    'label.yield': 'Yield (quantity this recipe produces)',
+    'label.ingredients': 'Ingredients', 'label.preparation': 'Preparation steps',
+    'label.plating': 'Plating / presentation', 'label.allergens': 'Allergens',
+    'label.production': 'Production (portions to prepare)',
+    'label.prepTime': 'Prep time (min)', 'label.servingTemp': 'Serving temperature',
+    'label.linkToCosting': 'Link to Costing',
+    'label.menuName': 'Menu name', 'label.basePrice': 'Base price (€)',
+    'label.cartaName': 'Menu name',
+    'label.daysAndSchedule': 'Days and hours this menu is active',
+    'label.daysAndScheduleMenu': 'Days and hours this combo is active',
+    'label.waiter': 'Waiter taking the order',
+    'label.clientType': 'Customer type', 'label.selectReservation': 'Select reservation',
+    'label.clientName': 'Customer name', 'label.clientNameOpt': 'Customer name (optional)',
+    'label.phoneOpt': 'Phone (optional)',
+    'label.fixedCosts': 'Total fixed costs', 'label.avgTicket': 'Average ticket (€/cover)',
+    'label.coversMonth': 'Covers per month', 'label.openDaysMonth': 'Open days/month',
+    'label.targetFoodCost': 'Target food cost (%)',
+    'label.minOrder': 'Minimum order (€)', 'label.deliveryCost': 'Delivery cost (€)',
+    'label.postalCodes': 'Delivery postal codes',
+    'label.deliveryRadius': 'Delivery radius (km from your address)',
+    'label.merchantCode': 'Merchant code (FUC)', 'label.terminal': 'Terminal',
+    'label.secretKey': 'Secret key (Signature)',
+    'title.editMode': 'Edit mode',
+    'title.editModeDesc': 'Enter the access PIN to enable editing in this section.',
+    'title.configAccess': 'Set up your Management access',
+    'title.configAccessDesc': 'This section is for the owner only. Enter the current PIN (default <strong>1234</strong>) and create a new one.',
+    'title.protectedAccess': 'Protected access',
+    'title.bossAccess': 'Manager access',
+    'title.uploadApp': 'Upload your app to the internet',
+    'title.configCloud': 'Set up your cloud',
+    'title.cashClose': 'Cash register closure', 'title.cashHistory': 'Closure history',
+    'title.chargeOrder': 'Charge', 'title.chargeRegistered': 'Charge registered',
+    'title.openTable': 'Open table', 'title.expressOrder': 'Express Order',
+    'title.newTakeaway': 'New Take Away', 'title.newDelivery': 'New Delivery',
+    'title.newIngredient': 'New Ingredient', 'title.editIngredient': 'Edit Ingredient',
+    'title.newElaboration': 'New Preparation', 'title.editElaboration': 'Edit Preparation',
+    'title.newDish': 'New Dish', 'title.editDish': 'Edit Dish',
+    'title.newTechSheet': 'New Technical Sheet', 'title.editTechSheet': 'Edit Technical Sheet',
+    'title.viewTechSheet': 'View Technical Sheet',
+    'title.newSupplier': 'New Supplier', 'title.editSupplier': 'Edit Supplier',
+    'title.newSection': 'New section', 'title.newDishManual': 'New drink/manual dish',
+    'title.newGroup': 'New group', 'title.newOption': 'New option',
+    'title.extras': 'Extras', 'title.importFromCosting': 'Import from Costing',
+    'title.qrSelfOrder': 'QR self-order',
+    'title.onlineOrders': 'Takeaway / delivery orders',
+    'title.onlinePayment': 'Online card payment (virtual POS)',
+    'title.cloud': 'Cloud — Device synchronization',
+    'title.configCloudBtn': 'Set up cloud',
+    'title.salesComparison': 'Yearly sales comparison',
+    'title.expenseComparison': 'Yearly expense comparison',
+    'title.monthlyPL': 'Monthly result (P&L)',
+    'title.monthlyResultComparison': 'Monthly result comparison for the year',
+    'title.salesAnalysis': 'Sales analysis (last 30 days)',
+    'title.breakEven': 'Break-even point',
+    'title.dishAnalysis': 'Dish Analysis',
+    'msg.pinIncorrect': 'Incorrect PIN',
+    'msg.editModeOn': 'Edit mode enabled', 'msg.editModeLocked': 'Edit mode locked',
+    'msg.pinUpdated': 'PIN updated',
+    'msg.pin4digits': 'New PIN must be 4 digits',
+    'msg.pinNoMatch': 'PINs do not match',
+    'msg.licenseActivated': 'License activated',
+    'msg.invalidLicense': 'Invalid key. Check you copied the whole key, with the dashes, exactly as your seller sent it.',
+    'msg.cloudConnected': 'Cloud connected', 'msg.cloudOffline': 'Offline', 'msg.cloudError': 'Cloud error',
+    'msg.rulesCopied': 'Rules copied',
+    'msg.savedOk': 'Saved', 'msg.saveError': 'Error saving',
+    'msg.deleteConfirm': 'Delete?',
+    'msg.confirmDeleteIngredient': 'Delete this ingredient? It will also be removed from recipes and stock.',
+    'msg.confirmDeleteElaboration': 'Delete this preparation from stock?',
+    'msg.confirmDeleteDish': 'Delete this dish?',
+    'msg.confirmDeleteTechSheet': 'Delete this technical sheet?',
+    'msg.dishSaved': 'Dish saved', 'msg.dishDeleted': 'Dish deleted',
+    'msg.techSheetSaved': 'Technical sheet saved', 'msg.techSheetDeleted': 'Technical sheet deleted',
+    'msg.confirmDeleteCarta': 'Delete this menu?',
+    'msg.confirmDeleteSection': 'Delete this section and all its dishes?',
+    'msg.confirmDeleteMenu': 'Delete this combo menu?',
+    'msg.confirmDeleteGroup': 'Delete this group and all its options?',
+    'msg.confirmDeleteTable': 'Delete this table?',
+    'msg.tableBusy': 'Cannot delete an occupied table',
+    'msg.confirmDeleteSupplier': 'Delete this supplier?',
+    'msg.confirmDeleteOrder': 'Delete this order?',
+    'msg.confirmDeleteShift': 'Delete this shift?',
+    'msg.confirmDeleteEmployee': 'Delete this employee?',
+    'msg.confirmDeleteTask': 'Delete this task?',
+    'msg.confirmDeleteClient': 'Delete this customer?',
+    'msg.confirmDeleteReservation': 'Delete this reservation?',
+    'msg.confirmDeletePromotion': 'Delete this promotion action?',
+    'msg.confirmCancelSplit': 'Some parts have already been charged. Are you sure you want to cancel the split?',
+    'msg.needSupplier': 'You need a supplier',
+    'msg.needSupplierDesc': 'Before adding ingredients, please register at least one supplier with their contact details.',
+    'btn.newSupplier': 'New Supplier',
+    'label.minStock': 'Minimum',
+    'empty.ingredients': 'No ingredients yet. Add the first one.',
+    'empty.stock': 'No ingredients in stock.',
+    'empty.elaborations': 'No preparations in stock.',
+    'empty.dishes': 'No dishes yet. Create a costing first.',
+    'empty.techSheets': 'No technical sheets yet.',
+    'empty.cartas': 'No menus yet. Create your first menu and import dishes from Costing.',
+    'empty.sections': 'No sections. Create a section or import dishes from Costing.',
+    'empty.menus': 'No combo menus yet. Create a fixed-price menu with dish groups to choose from.',
+    'empty.groups': 'No groups. Create groups like "Starter", "Main", "Dessert", "Drink"...',
+    'empty.suppliers': 'No suppliers yet. Add the first one.',
+    'empty.sales': 'No sales in this period.',
+    'empty.employees': 'No employees in this area. Add them in the Staff tab.',
+    'empty.clients': 'No registered customers.',
+    'empty.tables': 'No tables yet. Use "Create tables automatically" or the add button.',
+    'empty.costingHint': 'Link sold dishes to Costing recipes to see their profitability.',
+    'ph.searchIngredient': 'Search ingredient...', 'ph.searchDish': 'Search dish...',
+    'ph.searchTechSheet': 'Search technical sheet...', 'ph.searchStock': 'Search stock...',
+    'ph.searchClient': 'Search customer...', 'ph.writeMessage': 'Write a message...',
+    'ph.cartaName': 'Menu name...', 'ph.menuName': 'Menu name... e.g. Daily menu',
+    'ph.ingredientName': 'e.g. Cherry Tomato', 'ph.categoryName': 'e.g. Bakery, Sauces, Spices...',
+    'ph.elaborationName': 'e.g. Chicken broth', 'ph.dishName': 'e.g. Whisky Sirloin',
+    'ph.categoryDish': 'e.g. Meats, Fish, Desserts...', 'ph.sectionName': 'e.g. STARTERS',
+    'role.owner': 'I\'m the owner', 'role.employee': 'I\'m an employee',
+    'role.whoAreYou': 'Who are you?',
   }
 };
 function getLang(){
@@ -3942,6 +4103,19 @@ function t(key){
   const dict = I18N[lang] || I18N.es;
   if(dict[key] !== undefined) return dict[key];
   return I18N.es[key] !== undefined ? I18N.es[key] : key;
+}
+
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if(val !== key) el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    const val = t(key);
+    if(val !== key) el.placeholder = val;
+  });
 }
 
 /* ============== Tour virtual de bienvenida ==============
@@ -4453,9 +4627,9 @@ function setChatAuthor(val){
   localStorage.setItem('chatAuthor', val);
 }
 function getChatAuthorName(val){
-  if(val === 'owner') return 'Jefe/a';
+  if(val === 'owner') return t('common.chef');
   const e = DB.employees.find(x => String(x.id) === String(val));
-  return e ? e.name : 'Jefe/a';
+  return e ? e.name : t('common.chef');
 }
 function populateChatAuthorSelect(){
   const sel = document.getElementById('chat-author-sel');
@@ -4464,7 +4638,7 @@ function populateChatAuthorSelect(){
   const area = currentArea();
   const areaEmps = DB.employees.filter(e => (e.area||'cocina')===area);
   const opts = areaEmps.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
-  sel.innerHTML = `<option value="owner">Jefe/a</option>`
+  sel.innerHTML = `<option value="owner">${t('common.chef')}</option>`
     + (opts ? `<optgroup label="${area==='sala'?'Sala':'Cocina'}">${opts}</optgroup>` : '');
   const valid = current==='owner' ? chatOwnerVerified : areaEmps.some(e => String(e.id)===String(current));
   sel.value = valid ? current : (areaEmps[0] ? String(areaEmps[0].id) : 'owner');
@@ -4493,17 +4667,17 @@ function requestChatOwnerPin(sel){
   chatPinPrevValue = getChatAuthor();
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> Acceso como Jefe/a</h3>
+      <h3><i class="ti ti-lock"></i> ${t('title.bossAccess')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">Introduce el PIN de acceso del negocio para escribir en el chat como Jefe/a.</p>
     <div class="field">
-      <label>PIN de acceso</label>
+      <label>${t('label.accessPin')}</label>
       <input type="password" id="chat-owner-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmChatOwnerPin()">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmChatOwnerPin()">Desbloquear</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmChatOwnerPin()">${t('common.unlock')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('chat-owner-pin-input')?.focus(), 50);
@@ -4512,7 +4686,7 @@ function confirmChatOwnerPin(){
   const val = document.getElementById('chat-owner-pin-input').value;
   const sel = document.getElementById('chat-author-sel');
   if(val !== DB.business.pin){
-    showToast('PIN incorrecto');
+    showToast(t('msg.pinIncorrect'));
     if(sel) sel.value = chatPinPrevValue || getChatAuthor();
     return;
   }
@@ -4680,17 +4854,17 @@ function requestEditPin(){
   const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> Modo edición</h3>
+      <h3><i class="ti ti-lock"></i> ${t('title.editMode')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">Introduce el PIN de acceso para activar la edición en esta sección.</p>
+    <p style="font-size:13px;color:var(--muted)">${t('title.editModeDesc')}</p>
     <div class="field">
-      <label>PIN de acceso</label>
+      <label>${t('label.accessPin')}</label>
       <input type="password" id="edit-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyEditPin()">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="verifyEditPin()">Desbloquear</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="verifyEditPin()">${t('common.unlock')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('edit-pin-input')?.focus(), 50);
@@ -4699,20 +4873,20 @@ function requestEditPin(){
 function verifyEditPin(){
   const val = document.getElementById('edit-pin-input').value;
   if(val !== DB.business.pin){
-    showToast('PIN incorrecto');
+    showToast(t('msg.pinIncorrect'));
     return;
   }
   editUnlocked = true;
   document.body.classList.add('edit-unlocked');
   closeModal();
-  showToast('Modo edición activado');
+  showToast(t('msg.editModeOn'));
   renderFolder();
 }
 
 function toggleEditMode(){
   if(editUnlocked){
     lockEditMode();
-    showToast('Modo edición bloqueado');
+    showToast(t('msg.editModeLocked'));
     renderFolder();
   } else {
     requestEditPin();
@@ -4754,39 +4928,39 @@ function requestOwnerPin(targetView){
   if(!DB.business.pinSet){
     openModal(`
       <div class="modal-header">
-        <h3><i class="ti ti-lock"></i> Configura tu acceso a Gestión</h3>
+        <h3><i class="ti ti-lock"></i> ${t('title.configAccess')}</h3>
       </div>
-      <p style="font-size:13px;color:var(--muted)">Esta sección es solo para el propietario. Introduce el PIN actual (por defecto <strong>1234</strong>) y crea uno nuevo.</p>
+      <p style="font-size:13px;color:var(--muted)">${t('title.configAccessDesc')}</p>
       <div class="field">
-        <label>PIN actual</label>
+        <label>${t('label.currentPin')}</label>
         <input type="password" id="owner-pin-input" ${pinInputAttrs}>
       </div>
       <div class="field">
-        <label>Nuevo PIN (4 dígitos)</label>
+        <label>${t('label.newPin')}</label>
         <input type="password" id="owner-pin-new" ${pinInputAttrs}>
       </div>
       <div class="field">
-        <label>Repite el nuevo PIN</label>
+        <label>${t('label.repeatPin')}</label>
         <input type="password" id="owner-pin-new2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Continuar</button>
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">${t('common.continue')}</button>
       </div>
     `);
   } else {
     openModal(`
       <div class="modal-header">
-        <h3><i class="ti ti-lock"></i> Acceso protegido</h3>
+        <h3><i class="ti ti-lock"></i> ${t('title.protectedAccess')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <div class="field">
-        <label>Introduce el PIN de acceso</label>
+        <label>${t('label.accessPin')}</label>
         <input type="password" id="owner-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">Desbloquear</button>
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">${t('common.unlock')}</button>
       </div>
     `);
   }
@@ -4796,18 +4970,18 @@ function requestOwnerPin(targetView){
 function verifyOwnerPin(targetView){
   const val = document.getElementById('owner-pin-input').value;
   if(val !== DB.business.pin){
-    showToast('PIN incorrecto');
+    showToast(t('msg.pinIncorrect'));
     return;
   }
   if(!DB.business.pinSet){
     const n1 = document.getElementById('owner-pin-new').value;
     const n2 = document.getElementById('owner-pin-new2').value;
-    if(!/^\d{4}$/.test(n1)){ showToast('El nuevo PIN debe tener 4 dígitos'); return; }
-    if(n1 !== n2){ showToast('Los PIN no coinciden'); return; }
+    if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pin4digits')); return; }
+    if(n1 !== n2){ showToast(t('msg.pinNoMatch')); return; }
     DB.business.pin = n1;
     DB.business.pinSet = true;
     saveDB();
-    showToast('PIN actualizado');
+    showToast(t('msg.pinUpdated'));
   }
   ownerUnlocked = true;
   document.getElementById('lock-btn').style.display = '';
@@ -5197,7 +5371,7 @@ function renderMegalista(){
 
   const tbody = document.getElementById('megalista-tbody');
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>No hay ingredientes. Añade el primero.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`;
     return;
   }
 
@@ -5222,13 +5396,13 @@ function openIngredientModal(id, overrideState){
   if(!areaProviders.length){
     openModal(`
       <div class="modal-header">
-        <h3>Necesitas un proveedor</h3>
+        <h3>${t('msg.needSupplier')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:13.5px;line-height:1.6">Antes de añadir ingredientes, da de alta al menos un proveedor con sus datos de contacto.</p>
+      <p style="font-size:13.5px;line-height:1.6">${t('msg.needSupplierDesc')}</p>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> Nuevo Proveedor</button>
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="closeModal();openProviderModal()"><i class="ti ti-building-factory-2"></i> ${t('btn.newSupplier')}</button>
       </div>
     `);
     return;
@@ -5242,24 +5416,24 @@ function openIngredientModal(id, overrideState){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Nuevo'} Ingrediente</h3>
+      <h3>${id ? t('title.editIngredient') : t('title.newIngredient')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre</label>
-      <input type="text" id="ing-name" value="${escapeHtml(ing.name)}" placeholder="Ej. Tomate Pera">
+      <label>${t('common.name')}</label>
+      <input type="text" id="ing-name" value="${escapeHtml(ing.name)}" placeholder="${t('ph.ingredientName')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Categoría</label>
+        <label>${t('common.category')}</label>
         <select id="ing-category" onchange="onIngredientCategoryChange(${id||'null'})">
           ${CATEGORIES.map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
           ${DB.ingredientCategories.map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
-          <option value="__new__">+ Nueva categoría...</option>
+          <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
       </div>
       <div class="field">
-        <label>Unidad</label>
+        <label>${t('common.unit')}</label>
         <select id="ing-unit" onchange="updateIngPackPrice()">
           ${UNITS.map(u=>`<option value="${u}" ${ing.unit===u?'selected':''}>${u}</option>`).join('')}
         </select>
@@ -5267,7 +5441,7 @@ function openIngredientModal(id, overrideState){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Proveedor</label>
+        <label>${t('common.supplier')}</label>
         <select id="ing-supplier">
           ${areaProviders.map(p=>`<option value="${escapeHtml(p.nombre)}" ${ing.supplier===p.nombre?'selected':''}>${escapeHtml(p.nombre)}</option>`).join('')}
         </select>
@@ -5279,7 +5453,7 @@ function openIngredientModal(id, overrideState){
         <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
       </div>
       <div class="field">
-        <label>Precio de la compra (€)</label>
+        <label>${t('label.purchasePrice')}</label>
         <input type="number" id="ing-pack-price" value="${ing.packPrice!=null?ing.packPrice:ing.price}" step="0.01" min="0" oninput="updateIngPackPrice()">
       </div>
     </div>
@@ -5290,8 +5464,8 @@ function openIngredientModal(id, overrideState){
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveIngredient(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveIngredient(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
 }
@@ -5323,16 +5497,16 @@ function onIngredientCategoryChange(id){
     ingredientFormStateBeforeCategory = currentIngredientFormState(id);
     openModal(`
       <div class="modal-header">
-        <h3>Nueva categoría</h3>
+        <h3>${t('btn.newCategory')}</h3>
         <button class="modal-close" onclick="cancelNewIngredientCategory(${id||'null'})">&times;</button>
       </div>
       <div class="field">
-        <label>Nombre de la categoría</label>
-        <input type="text" id="new-ingredient-category-name" placeholder="Ej. Panadería, Salsas, Especias...">
+        <label>${t('ph.categoryName')}</label>
+        <input type="text" id="new-ingredient-category-name" placeholder="${t('ph.categoryName')}">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="cancelNewIngredientCategory(${id||'null'})">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmNewIngredientCategory(${id||'null'})">Añadir</button>
+        <button class="btn" onclick="cancelNewIngredientCategory(${id||'null'})">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmNewIngredientCategory(${id||'null'})">${t('common.save')}</button>
       </div>
     `);
     setTimeout(()=>document.getElementById('new-ingredient-category-name')?.focus(), 50);
@@ -5386,7 +5560,7 @@ function saveIngredient(id){
 }
 
 function deleteIngredient(id){
-  if(!confirm('¿Eliminar este ingrediente? Se eliminará también de recetas y stock.')) return;
+  if(!confirm(t('msg.confirmDeleteIngredient'))) return;
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
@@ -5480,7 +5654,7 @@ function renderStock(){
   });
 
   if(!items.length){
-    groupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>No hay ingredientes en stock.</div>`;
+    groupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.stock')}</div>`;
   } else if(searching){
     // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
     groupsWrap.innerHTML = cats.map(cat => `
@@ -5550,7 +5724,7 @@ function renderStock(){
   /* Elaboraciones — misma navegación carpetas que ingredientes */
   const elabGroupsWrap = document.getElementById('stock-elab-groups');
   if(!elabs.length){
-    elabGroupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>No hay elaboraciones en stock.</div>`;
+    elabGroupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.elaborations')}</div>`;
   } else {
     const elabByCat = {};
     elabs.forEach(e => {
@@ -5649,16 +5823,16 @@ function setStockQty(ingredientId){
   const s = getStockEntry(ingredientId);
   openModal(`
     <div class="modal-header">
-      <h3>Ajustar stock</h3>
+      <h3>${t('btn.adjustStock')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nueva cantidad en stock</label>
+      <label>${t('label.stockQty')}</label>
       <input type="number" id="stock-qty-value" value="${s.qty}" step="0.01" min="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmSetStockQty(${ingredientId})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmSetStockQty(${ingredientId})">${t('common.save')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('stock-qty-value')?.focus(), 50);
@@ -5681,32 +5855,32 @@ function openElaboracionModal(id){
   const e = id ? getElaboracion(id) : {id:null, name:'', unit:'L', qty:0, min:0};
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Nueva'} Elaboración</h3>
+      <h3>${id ? t('title.editElaboration') : t('title.newElaboration')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre</label>
-      <input type="text" id="elab-name" value="${escapeHtml(e.name)}" placeholder="Ej. Caldo de pollo">
+      <label>${t('common.name')}</label>
+      <input type="text" id="elab-name" value="${escapeHtml(e.name)}" placeholder="${t('ph.elaborationName')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Unidad</label>
+        <label>${t('common.unit')}</label>
         <select id="elab-unit">
           ${['L','ml','kg','g','ud'].map(u => `<option value="${u}"${u===e.unit?' selected':''}>${u}</option>`).join('')}
         </select>
       </div>
       <div class="field">
-        <label>Stock actual</label>
+        <label>${t('label.stockQty')}</label>
         <input type="number" id="elab-qty" value="${e.qty||0}" step="0.01" min="0">
       </div>
       <div class="field">
-        <label>Mínimo</label>
+        <label>${t('label.minStock')}</label>
         <input type="number" id="elab-min" value="${e.min||0}" step="0.01" min="0">
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveElaboracion(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveElaboracion(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
 }
@@ -5730,7 +5904,7 @@ function saveElaboracion(id){
 }
 
 function deleteElaboracion(id){
-  if(!confirm('¿Eliminar esta elaboración del stock?')) return;
+  if(!confirm(t('msg.confirmDeleteElaboration'))) return;
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.id !== id);
   saveDB();
   renderStock();
@@ -5755,16 +5929,16 @@ function setElaboracionQty(id){
   const e = getElaboracion(id); if(!e) return;
   openModal(`
     <div class="modal-header">
-      <h3>Ajustar stock</h3>
+      <h3>${t('btn.adjustStock')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nueva cantidad en stock</label>
+      <label>${t('label.stockQty')}</label>
       <input type="number" id="elaboracion-qty-value" value="${e.qty||0}" step="0.01" min="0">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmSetElaboracionQty(${id})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmSetElaboracionQty(${id})">${t('common.save')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('elaboracion-qty-value')?.focus(), 50);
@@ -5908,7 +6082,7 @@ function renderEscandallo(){
   const noun = itemNoun();
 
   document.querySelector('#view-escandallo .view-subtitle').textContent = `Cálculo automático de costes de ${noun}s`;
-  document.getElementById('escandallo-search').placeholder = `Buscar ${noun}...`;
+  document.getElementById('escandallo-search').placeholder = t('ph.searchDish');
   const newRecipeBtn = document.querySelector('#view-escandallo button[onclick="openRecipeModal()"]');
   if(newRecipeBtn) newRecipeBtn.innerHTML = noun==='bebida' ? `<i class="ti ti-plus"></i> Nueva Bebida` : `<i class="ti ti-plus"></i> Nuevo Plato`;
 
@@ -5916,7 +6090,7 @@ function renderEscandallo(){
   document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>No hay ${noun}s. Crea el primer escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${t('empty.dishes')}</div>`;
     return;
   }
 
@@ -5935,8 +6109,8 @@ function renderEscandallo(){
   }
 
   if(!recipes.length){
-    const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
-    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
@@ -5947,7 +6121,7 @@ function renderEscandallo(){
   const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
 
   if(!visibleRecipes.length){
-    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
@@ -6157,34 +6331,34 @@ function renderRecipeModal(id, r){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Nuevo'} ${r.isBase ? 'Elaboración' : 'Plato'}</h3>
+      <h3>${id ? t('title.editDish') : t('title.newDish')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Nombre del plato</label>
-        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="Ej. Solomillo al Whisky">
+        <label>${t('label.dishName')}</label>
+        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${t('ph.dishName')}">
       </div>
       <div class="field">
-        <label>Precio de venta (PVP €)</label>
+        <label>${t('label.salePrice')}</label>
         <input type="number" id="recipe-price" value="${r.price||0}" step="0.01" min="0">
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Comensales</label>
+        <label>${t('label.diners')}</label>
         <input type="number" id="recipe-comensales" value="${r.comensales||2}" step="1" min="1">
       </div>
       <div class="field">
-        <label>Consumibles (%)</label>
+        <label>${t('label.consumables')}</label>
         <input type="number" id="recipe-consumibles" value="${r.consumiblesPct!=null?r.consumiblesPct:5}" step="0.5" min="0" max="99" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
       </div>
       <div class="field">
-        <label>Categoría</label>
+        <label>${t('common.category')}</label>
         <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
           <option value="">Sin categoría</option>
           ${DB.recipeCategories.map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
-          <option value="__new__">+ Nueva categoría...</option>
+          <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
       </div>
     </div>
@@ -6198,11 +6372,11 @@ function renderRecipeModal(id, r){
     ${r.isBase ? `
     <div class="field-row">
       <div class="field">
-        <label>Rendimiento (cantidad que produce esta receta)</label>
+        <label>${t('label.yield')}</label>
         <input type="number" id="recipe-base-yield" value="${r.baseYield!=null?r.baseYield:1}" step="0.01" min="0.01" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
       </div>
       <div class="field">
-        <label>Unidad</label>
+        <label>${t('common.unit')}</label>
         <select id="recipe-base-unit" onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
           ${BASE_UNITS.map(u=>`<option value="${u}" ${(r.baseUnit||'L')===u?'selected':''}>${u}</option>`).join('')}
         </select>
@@ -6211,7 +6385,7 @@ function renderRecipeModal(id, r){
     ` : ''}
 
     <div class="field">
-      <label>Ingredientes</label>
+      <label>${t('label.ingredients')}</label>
       <div class="table-wrap" style="margin-bottom:8px">
         <table>
           <thead><tr><th>Ingrediente</th><th>Cantidad neta</th><th>Ud</th><th>Merma %</th><th>Coste</th><th></th></tr></thead>
@@ -6247,8 +6421,8 @@ function renderRecipeModal(id, r){
     ` : ''}
 
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveRecipe(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveRecipe(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
 }
@@ -6332,16 +6506,16 @@ function onRecipeCategoryChange(id){
     recipeFormStateBeforeCategory = currentRecipeFormState(id);
     openModal(`
       <div class="modal-header">
-        <h3>Nueva categoría</h3>
+        <h3>${t('btn.newCategory')}</h3>
         <button class="modal-close" onclick="cancelNewRecipeCategory(${id||'null'})">&times;</button>
       </div>
       <div class="field">
-        <label>Nombre de la categoría</label>
-        <input type="text" id="new-recipe-category-name" placeholder="Ej. Carnes, Pescados, Postres...">
+        <label>${t('common.name')}</label>
+        <input type="text" id="new-recipe-category-name" placeholder="${t('ph.categoryDish')}">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="cancelNewRecipeCategory(${id||'null'})">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmNewRecipeCategory(${id||'null'})">Añadir</button>
+        <button class="btn" onclick="cancelNewRecipeCategory(${id||'null'})">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmNewRecipeCategory(${id||'null'})">${t('common.add')}</button>
       </div>
     `);
     setTimeout(()=>document.getElementById('new-recipe-category-name')?.focus(), 50);
@@ -6428,7 +6602,7 @@ function saveRecipe(id){
   saveDB();
   closeModal();
   renderEscandallo();
-  showToast(isBase ? 'Elaboración guardada' : 'Plato guardado');
+  showToast(t('msg.dishSaved'));
 }
 
 // Mantiene sincronizada la entrada de Stock > Elaboraciones con los platos
@@ -6445,7 +6619,7 @@ function syncElaboracionForRecipe(recipeId, isBase, name, unit){
 }
 
 function deleteRecipe(id){
-  if(!confirm('¿Eliminar este plato?')) return;
+  if(!confirm(t('msg.confirmDeleteDish'))) return;
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
   DB.cartas.forEach(c => {
@@ -6455,7 +6629,7 @@ function deleteRecipe(id){
   });
   saveDB();
   renderEscandallo();
-  showToast('Plato eliminado');
+  showToast(t('msg.dishDeleted'));
 }
 
 /* ============================================================
@@ -6503,7 +6677,7 @@ function renderFichas(){
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>No hay platos. Crea primero un escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${t('empty.dishes')}</div>`;
     return;
   }
 
@@ -6523,14 +6697,14 @@ function renderFichas(){
     return;
   }
 
-  const backBtn = (!searching && fichasFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
+  const backBtn = (!searching && fichasFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToFichaFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
 
   const visibleRecipes = (!searching && fichasFolder !== null)
     ? recipes.filter(r => (r.category || '__none__') === fichasFolder)
     : recipes;
 
   if(!visibleRecipes.length){
-    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>Sin resultados.</div>`;
+    box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
@@ -6691,62 +6865,62 @@ function renderFichaModal(){
 
   openModal(`
     <div class="modal-header">
-      <h3>${f.id ? (ro?'Ver':'Editar') : 'Nueva'} Ficha Técnica</h3>
+      <h3>${f.id ? (ro?t('title.viewTechSheet'):t('title.editTechSheet')) : t('title.newTechSheet')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Nombre del plato</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="Ej. Solomillo al Whisky" ${lockedAttr}>
+        <label>${t('label.dishName')}</label>
+        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${t('ph.dishName')}" ${lockedAttr}>
       </div>
       <div class="field">
-        <label>Vincular a Escandallo</label>
+        <label>${t('label.linkToCosting')}</label>
         <select id="ficha-recipe" ${lockedAttr}>${recipeOptions}</select>
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Comensales (escandallo)</label>
+        <label>${t('label.diners')}</label>
         <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
       </div>
       <div class="field">
-        <label>Producción (raciones a elaborar)</label>
+        <label>${t('label.production')}</label>
         <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" onchange="updateFichaProduccion(this.value)">
       </div>
       <div class="field">
-        <label>Tiempo de elaboración (min)</label>
+        <label>${t('label.prepTime')}</label>
         <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>
       </div>
       <div class="field">
-        <label>Temperatura de servicio</label>
+        <label>${t('label.servingTemp')}</label>
         <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(t=>`<option value="${t}"${t===f.temp?' selected':''}>${t}</option>`).join('')}</select>
       </div>
     </div>
 
     <div class="field">
-      <label>Ingredientes (cantidades para ${fmtNum(produccion)} ración${produccion==1?'':'es'})</label>
+      <label>${t('label.ingredients')}</label>
       <div id="ficha-ingredients" class="ingredients-grid">${ingredientsHtml}</div>
     </div>
 
     <div class="field">
-      <label>Modo de elaboración (pasos)</label>
+      <label>${t('label.preparation')}</label>
       <div id="ficha-steps">${stepsHtml}</div>
       <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> Añadir paso</button>
     </div>
 
     <div class="field">
-      <label>Presentación / emplatado</label>
+      <label>${t('label.plating')}</label>
       <textarea id="ficha-presentation" placeholder="Notas de presentación..." ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
     </div>
 
     <div class="field">
-      <label>Alérgenos</label>
+      <label>${t('label.allergens')}</label>
       <div class="alg-grid">${allergenHtml}</div>
     </div>
 
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
-      <button class="owner-only btn btn-primary" onclick="saveFicha()">Guardar</button>
+      <button class="btn" onclick="closeModal()">${ro?t('common.close'):t('common.cancel')}</button>
+      <button class="owner-only btn btn-primary" onclick="saveFicha()">${t('common.save')}</button>
     </div>
   `, {xl:true});
 }
@@ -6813,15 +6987,15 @@ function saveFicha(){
   saveDB();
   closeModal();
   renderFichas();
-  showToast('Ficha técnica guardada');
+  showToast(t('msg.techSheetSaved'));
 }
 
 function deleteFicha(id){
-  if(!confirm('¿Eliminar esta ficha técnica?')) return;
+  if(!confirm(t('msg.confirmDeleteTechSheet'))) return;
   DB.fichas = DB.fichas.filter(f => f.id !== id);
   saveDB();
   renderFichas();
-  showToast('Ficha eliminada');
+  showToast(t('msg.techSheetDeleted'));
 }
 
 function printFicha(id){
@@ -6999,7 +7173,7 @@ function renderCartaList(){
   `;
   const box = document.getElementById('carta-list');
   if(!cartas.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-book-off"></i>Sin cartas aún. Crea tu primera carta e importa platos del Escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-book-off"></i>${t('empty.cartas')}</div>`;
     return;
   }
   box.innerHTML = `
@@ -7120,7 +7294,7 @@ function backToCartaList(){
   renderCarta();
 }
 function deleteCarta(id){
-  if(!confirm('¿Eliminar esta carta?')) return;
+  if(!confirm(t('msg.confirmDeleteCarta'))) return;
   DB.cartas = DB.cartas.filter(c=>c.id!==id);
   DB.activeCartaIds = (DB.activeCartaIds||[]).filter(cid=>cid!==id);
   saveDB();
@@ -7157,7 +7331,7 @@ function renderCartaSecciones(){
   const box = document.getElementById('carta-secciones');
   const noun = itemNoun();
   if(!cartaEdit.secciones.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin secciones. Crea una sección o importa ${noun}s del Escandallo.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
   }
   box.innerHTML = cartaEdit.secciones.map(sec => `
@@ -7186,15 +7360,15 @@ function renderCartaSecciones(){
 function newCartaSection(){
   openModal(`
     <div class="modal-header">
-      <h3>Nueva sección</h3>
+      <h3>${t('title.newSection')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre de la sección</label>
+      <label>${t('ph.sectionName')}</label>
       <input type="text" id="new-carta-section-name" placeholder="Ej. ENTRANTES">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewCartaSection()">Añadir</button>
     </div>
   `);
@@ -7208,7 +7382,7 @@ function confirmNewCartaSection(){
   renderCartaSecciones();
 }
 function removeCartaSection(secId){
-  if(!confirm('¿Eliminar esta sección y todos sus platos?')) return;
+  if(!confirm(t('msg.confirmDeleteSection'))) return;
   cartaEdit.secciones = cartaEdit.secciones.filter(s=>s.id!==secId);
   renderCartaSecciones();
 }
@@ -7227,11 +7401,11 @@ function addCartaPlato(secId){
   const noun = itemNoun();
   openModal(`
     <div class="modal-header">
-      <h3>Nueva ${noun} manual</h3>
+      <h3>${t('title.newDishManual')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre de la ${noun}</label>
+      <label>${t('label.cartaName')}</label>
       <input type="text" id="new-carta-plato-nombre" placeholder="${noun==='bebida'?'Ej. Agua mineral':'Ej. Ensalada de la casa'}">
     </div>
     <div class="field">
@@ -7269,7 +7443,7 @@ function renderPlatoModsModalHtml(secId, platoId){
   const noun = itemNoun();
   return `
     <div class="modal-header">
-      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(tItem(p))}"</h3>
+      <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(tItem(p))}"</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para esta ${noun} (ej. "${noun==='bebida'?'Con hielo' : 'Extra queso'}" +1€). Se podrán añadir al tomar la comanda.</p>
@@ -7321,7 +7495,7 @@ function importFromEscandallo(secId){
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
     <div class="modal-header">
-      <h3>Importar del Escandallo</h3>
+      <h3>${t('title.importFromCosting')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field" style="margin-bottom:8px">
@@ -7341,7 +7515,7 @@ function importFromEscandallo(secId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmImportEsc(${secId==null?'null':secId})">Importar</button>
+      <button class="btn btn-primary" onclick="confirmImportEsc(${secId==null?'null':secId})">${t('common.import')}</button>
     </div>
   `);
 }
@@ -7425,7 +7599,7 @@ function renderMenuList(){
   `;
   const box = document.getElementById('menu-list');
   if(!menus.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>Sin menús aún. Crea un menú con precio cerrado y grupos de platos a elegir.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>${t('empty.menus')}</div>`;
     return;
   }
   box.innerHTML = `
@@ -7470,7 +7644,7 @@ function backToMenuList(){
   renderMenu();
 }
 function deleteMenu(id){
-  if(!confirm('¿Eliminar este menú?')) return;
+  if(!confirm(t('msg.confirmDeleteMenu'))) return;
   DB.menus = DB.menus.filter(m=>m.id!==id);
   DB.activeMenuIds = (DB.activeMenuIds||[]).filter(mid=>mid!==id);
   saveDB();
@@ -7515,7 +7689,7 @@ function renderMenuEditor(){
 function renderMenuGrupos(){
   const box = document.getElementById('menu-grupos');
   if(!menuEdit.grupos.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>Sin grupos. Crea grupos como "Primero", "Segundo", "Postre", "Bebida"...</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>${t('empty.groups')}</div>`;
     return;
   }
   box.innerHTML = menuEdit.grupos.map(g => `
@@ -7542,11 +7716,11 @@ function renderMenuGrupos(){
 function newMenuGrupo(){
   openModal(`
     <div class="modal-header">
-      <h3>Nuevo grupo</h3>
+      <h3>${t('title.newGroup')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del grupo</label>
+      <label>${t('ph.sectionName')}</label>
       <input type="text" id="new-menu-grupo-name" placeholder="Ej. Primero, Segundo, Postre, Bebida...">
     </div>
     <div class="modal-footer">
@@ -7564,7 +7738,7 @@ function confirmNewMenuGrupo(){
   renderMenuGrupos();
 }
 function removeMenuGrupo(grupoId){
-  if(!confirm('¿Eliminar este grupo y todas sus opciones?')) return;
+  if(!confirm(t('msg.confirmDeleteGroup'))) return;
   menuEdit.grupos = menuEdit.grupos.filter(g=>g.id!==grupoId);
   renderMenuGrupos();
 }
@@ -7643,7 +7817,7 @@ function openMenuOpcionModsModal(grupoId, opcionId){
   const mods = o.modificadores;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-adjustments"></i> Extras de "${escapeHtml(o.nombre)}"</h3>
+      <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(o.nombre)}"</h3>
       <button class="modal-close" onclick="closeModal();renderMenuGrupos()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales (ej. "Extra queso" +1€). Se podrán añadir al tomar la comanda.</p>
@@ -7898,7 +8072,7 @@ function renderTpvMesas(tiposServicio){
   if(!sortedTables.length){
     return `
       <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
-      <div class="grid grid-4"><div class="empty">No hay mesas configuradas. Ve a Mi Negocio → Operativa, indica cuántas mesas tienes y pulsa "Sincronizar mesas con TPV".</div></div>
+      <div class="grid grid-4"><div class="empty">${t('empty.tables')}</div></div>
     `;
   }
 
@@ -7996,9 +8170,9 @@ function renderTPV(){
     ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
-      <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> Historial de arqueos</button>
-      <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> Cerrar caja</button>
-      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> Pedido Express</button>` : ''}
+      <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
+      <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
+      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
@@ -8041,7 +8215,7 @@ function renderCamareroFieldHtml(selectId, selectedId){
   if(!camareros.length) return '';
   return `
     <div class="field">
-      <label>Camarero/a que toma la nota</label>
+      <label>${t('label.waiter')}</label>
       <select id="${selectId}">
         <option value="">Sin asignar</option>
         ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
@@ -8051,8 +8225,8 @@ function renderCamareroFieldHtml(selectId, selectedId){
 }
 
 function deleteTable(id){
-  if(getOpenOrderForTable(id)){ showToast('No se puede eliminar una mesa ocupada'); return; }
-  if(!confirm('¿Eliminar esta mesa?')) return;
+  if(getOpenOrderForTable(id)){ showToast(t('msg.tableBusy')); return; }
+  if(!confirm(t('msg.confirmDeleteTable'))) return;
   DB.tables = DB.tables.filter(t => t.id !== id);
   saveDB();
   renderTPV();
@@ -8089,18 +8263,18 @@ function openNewOrderPaxModal(tableId){
   const pendingReservas = getTodayPendingReservations();
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-users"></i> Abrir mesa${table?` — ${escapeHtml(table.name)}`:''}</h3>
+      <h3><i class="ti ti-users"></i> ${t('title.openTable')}${table?` — ${escapeHtml(table.name)}`:''}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Tipo de cliente</label>
+      <label>${t('label.clientType')}</label>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> Cliente de paso</label>
         <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
       </div>
     </div>
     <div class="field" id="new-order-reserva-field" style="display:none">
-      <label>Selecciona la reserva</label>
+      <label>${t('label.selectReservation')}</label>
       <select id="new-order-reserva-sel">
         ${pendingReservas.map(r=>{
           const client = DB.clients.find(c=>c.id===r.clientId);
@@ -8115,8 +8289,8 @@ function openNewOrderPaxModal(tableId){
     </div>
     ${renderCamareroFieldHtml('new-order-camarero-sel')}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">Abrir mesa</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
     </div>
   `);
 }
@@ -8159,16 +8333,16 @@ function confirmOpenTableOrder(tableId){
 function openNewToGoOrderModal(){
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-bolt"></i> Pedido Express</h3>
+      <h3><i class="ti ti-bolt"></i> ${t('title.expressOrder')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del cliente (opcional)</label>
+      <label>${t('label.clientNameOpt')}</label>
       <input type="text" id="togo-cliente-nombre" placeholder="Nombre">
     </div>
     ${renderCamareroFieldHtml('togo-camarero-sel')}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> Crear pedido</button>
     </div>
   `);
@@ -8188,20 +8362,20 @@ function openNewTakeawayModal(){
   const platforms = (DB.business?.deliveryPlatforms||[]);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-shopping-bag"></i> Nuevo Take Away</h3>
+      <h3><i class="ti ti-shopping-bag"></i> ${t('title.newTakeaway')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del cliente</label>
+      <label>${t('label.clientName')}</label>
       <input type="text" id="togo-ta-nombre" placeholder="Nombre">
     </div>
     <div class="field">
-      <label>Teléfono (opcional)</label>
+      <label>${t('label.phoneOpt')}</label>
       <input type="text" id="togo-ta-phone" placeholder="Teléfono">
     </div>
     ${renderCamareroFieldHtml('togo-ta-camarero')}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewTakeaway()"><i class="ti ti-check"></i> Crear pedido</button>
     </div>
   `);
@@ -8222,11 +8396,11 @@ function openNewDeliveryModal(){
   const platforms = (DB.business?.deliveryPlatforms||[]);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-moped"></i> Nuevo Delivery</h3>
+      <h3><i class="ti ti-moped"></i> ${t('title.newDelivery')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del cliente</label>
+      <label>${t('label.clientName')}</label>
       <input type="text" id="togo-del-nombre" placeholder="Nombre">
     </div>
     <div class="field">
@@ -8247,7 +8421,7 @@ function openNewDeliveryModal(){
     </div>` : ''}
     ${renderCamareroFieldHtml('togo-del-camarero')}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewDelivery()"><i class="ti ti-check"></i> Crear pedido</button>
     </div>
   `);
@@ -8416,7 +8590,7 @@ function openMenuConfigModal(orderId, menuId){
       </div>
     `).join('')}
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
     </div>
   `);
@@ -8652,7 +8826,7 @@ function renderTableOrderModal(orderId){
   // Estado del servicio y botones de acción
   const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
   const actionButtons = allDelivered && order.items.length
-    ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button>`
+    ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`
     : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button></div>`;
 
   openModal(`
@@ -8765,8 +8939,8 @@ function openSetCamareroModal(orderId){
     </div>
     ${renderCamareroFieldHtml('set-camarero-sel', order.camareroId)}
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmSetCamarero(${orderId})"><i class="ti ti-check"></i> Guardar</button>
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmSetCamarero(${orderId})"><i class="ti ti-check"></i> ${t('common.save')}</button>
     </div>
   `);
 }
@@ -9110,7 +9284,7 @@ function openAddItemModal(orderId, secId, platoId){
       <textarea id="add-item-notas" rows="2" placeholder="Ej. sin cebolla, poco hecho..."></textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmAddOrderItem(${orderId}, ${secId}, ${platoId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
     </div>
   `);
@@ -9207,8 +9381,8 @@ function openLineNotesModal(orderId, idx){
       <textarea id="line-notas-input" rows="3" placeholder="Ej. sin cebolla, poco hecho...">${escapeHtml(line.notas||'')}</textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmLineNotes(${orderId}, ${idx})"><i class="ti ti-check"></i> Guardar</button>
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmLineNotes(${orderId}, ${idx})"><i class="ti ti-check"></i> ${t('common.save')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('line-notas-input')?.focus(), 50);
@@ -9254,7 +9428,7 @@ function renderPaymentModal(orderId){
   ];
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-cash"></i> Cobrar</h3>
+      <h3><i class="ti ti-cash"></i> ${t('title.chargeOrder')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="kpi" style="margin-bottom:12px">
@@ -9269,7 +9443,7 @@ function renderPaymentModal(orderId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
-      ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> Confirmar cobro</button>` : ''}
+      ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>` : ''}
     </div>
   `);
 }
@@ -9462,7 +9636,7 @@ function renderSplitPartsList(order){
       </table>
     </div>
     <div class="modal-footer" style="padding:0;border:none">
-      <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> Cancelar división</button>
+      <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> ${t('btn.cancelSplit')}</button>
       ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> Finalizar cobro</button>` : ''}
     </div>
   `;
@@ -9471,7 +9645,7 @@ function renderSplitPartsList(order){
 function cancelSplit(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(order.splitPayments && order.splitPayments.some(p=>p.paid)){
-    if(!confirm('Ya se ha cobrado alguna parte. ¿Seguro que quieres cancelar la división? Se perderá ese registro.')) return;
+    if(!confirm(t('msg.confirmCancelSplit'))) return;
   }
   delete order.splitMode;
   delete order.splitPayments;
@@ -9511,7 +9685,7 @@ function openSplitPartPayment(orderId, partId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderPaymentModal(${order.id})">Volver</button>
-      <button class="btn btn-primary" onclick="confirmSplitPartPayment(${order.id}, ${part.id})"><i class="ti ti-check"></i> Confirmar cobro</button>
+      <button class="btn btn-primary" onclick="confirmSplitPartPayment(${order.id}, ${part.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>
     </div>
   `);
 }
@@ -9535,7 +9709,7 @@ function confirmSplitPartPayment(orderId, partId){
   part.paid = true;
   part.metodoPago = document.getElementById('split-part-method').value;
   saveDB();
-  showToast(escapeHtml(part.label) + ': cobro registrado');
+  showToast(escapeHtml(part.label) + ': ' + t('title.chargeRegistered'));
   renderPaymentModal(orderId);
 }
 
@@ -9873,7 +10047,7 @@ function renderProveedores(){
   const box = document.getElementById('proveedores-list');
   const providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
   if(!providers.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>No hay proveedores. Añade el primero.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>${t('empty.suppliers')}</div>`;
     return;
   }
   box.innerHTML = providers.map(p => `
@@ -9910,10 +10084,10 @@ function openProviderModal(id){
   const diasEntrega = getProviderDiasEntrega(p);
   openModal(`
     <div class="modal-header">
-      <h3>${id?'Editar':'Nuevo'} Proveedor</h3>
+      <h3>${id?t('title.editSupplier'):t('title.newSupplier')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="field"><label>Nombre</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="Ej. Makro"></div>
+    <div class="field"><label>${t('common.name')}</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="Ej. Makro"></div>
     <div class="field-row">
       <div class="field"><label>Persona de contacto</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
       <div class="field"><label>Forma de pago</label>
@@ -9923,8 +10097,8 @@ function openProviderModal(id){
       </div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Teléfono</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
-      <div class="field"><label>Email</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
+      <div class="field"><label>${t('common.phone')}</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
+      <div class="field"><label>${t('common.email')}</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
     </div>
     <div class="field">
       <label>Días de entrega habituales</label>
@@ -9940,10 +10114,10 @@ function openProviderModal(id){
     <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
-    <div class="field"><label>Notas</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
+    <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveProvider(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveProvider(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
 }
@@ -9977,7 +10151,7 @@ function saveProvider(id){
 }
 
 function deleteProvider(id){
-  if(!confirm('¿Eliminar este proveedor?')) return;
+  if(!confirm(t('msg.confirmDeleteSupplier'))) return;
   DB.providers = DB.providers.filter(p=>p.id!==id);
   saveDB();
   renderProveedores();
@@ -10109,7 +10283,7 @@ function renderPedidoDetail(){
   }).join('');
 
   box.innerHTML = `
-    <button class="btn btn-sm" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> Volver a pedidos</button>
+    <button class="btn btn-sm" onclick="backToPedidoList()"><i class="ti ti-arrow-left"></i> ${t('btn.backToOrders')}</button>
     <div class="card" style="margin-top:10px">
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
@@ -10171,7 +10345,7 @@ function renderPedidoDetail(){
           <label>Observaciones</label>
           <textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea>
         </div>
-        <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> Guardar recepción</button>
+        <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> ${t('btn.saveReception')}</button>
       </div>
       ` : ''}
 
@@ -10561,7 +10735,7 @@ function sendNewPedido(method){
 }
 
 function deleteOrder(id){
-  if(!confirm('¿Eliminar este pedido?')) return;
+  if(!confirm(t('msg.confirmDeleteOrder'))) return;
   DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
   if(pedidoDetailId === id) pedidoDetailId = null;
   saveDB();
@@ -10928,8 +11102,8 @@ const GE = (function(){
         <div class="field"><label>Fecha</label><input type="date" id="gv-f-fecha" value="${fecha}"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="GE.saveGV()">Guardar</button>
+        <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+        <button class="btn btn-primary" onclick="GE.saveGV()">${t("common.save")}</button>
       </div>
     `);
   }
@@ -11159,8 +11333,8 @@ const GE = (function(){
         <div class="field"><label>Nº de cuotas</label><input type="number" id="cx-f-numcuotas" min="1" step="1" value="${c.cuotas||''}"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="GE.saveCapex()">Guardar</button>
+        <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+        <button class="btn btn-primary" onclick="GE.saveCapex()">${t("common.save")}</button>
       </div>
     `);
   }
@@ -11520,7 +11694,7 @@ const GE = (function(){
         <small style="color:var(--muted)">Se recordará para próximas exportaciones. Al pulsar "Enviar al gestor" se abrirá tu programa de correo con un mensaje preparado: descarga primero el CSV y adjúntalo antes de enviarlo.</small>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
         <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> Descargar CSV</button>
         <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> Enviar al gestor</button>
       </div>
@@ -11751,7 +11925,7 @@ function renderHorariosDia(){
 
   const emps = areaEmployees();
   if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
     return;
   }
 
@@ -11870,7 +12044,7 @@ function renderHorariosSemana(){
 
   const emps = areaEmployees();
   if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
     return;
   }
 
@@ -11986,9 +12160,9 @@ function openTurnoModal(id, employeeId, fecha){
       <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="Notas del turno...">
     </div>
     <div class="modal-footer">
-      ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">Eliminar</button>` : ''}
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">Guardar</button>
+      ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveTurno(${state.id||'null'})">${t("common.save")}</button>
     </div>
   `);
 }
@@ -12031,7 +12205,7 @@ function saveTurno(id){
 }
 
 function deleteTurno(id){
-  if(!confirm('¿Eliminar este turno?')) return;
+  if(!confirm(t('msg.confirmDeleteShift'))) return;
   DB.turnos = (DB.turnos||[]).filter(t => t.id!==id);
   saveDB();
   closeModal();
@@ -12070,7 +12244,7 @@ function renderHorariosPersonal(){
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
       </div>
     </div>
-    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añade el primero.</div>`}
+    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
   `;
 }
 
@@ -12109,7 +12283,7 @@ function openBulkTurnoModal(employeeId){
     </div>
     <p style="font-size:12px;color:var(--muted)">Si ya había un turno asignado ese día a este empleado, se sustituirá.</p>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="applyBulkTurno()">Aplicar</button>
     </div>
   `);
@@ -12267,9 +12441,9 @@ function openEmployeeModal(id){
       <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> Restablecer PIN a 1234</button>
     </div>` : ''}
     <div class="modal-footer">
-      ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">Eliminar</button>` : ''}
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">Guardar</button>
+      ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
 }
@@ -12310,7 +12484,7 @@ function saveEmployee(id){
 }
 
 function deleteEmployee(id){
-  if(!confirm('¿Eliminar este empleado?')) return;
+  if(!confirm(t('msg.confirmDeleteEmployee'))) return;
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
@@ -12355,7 +12529,7 @@ function renderHorariosFichar(){
   if(!box) return;
   const emps = areaEmployees();
   if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos en la pestaña Personal.</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
     return;
   }
   const weekDates = getWeekDates(0).map(d=>dateStr(d));
@@ -12439,7 +12613,7 @@ function openFichajeModal(employeeId, action){
       <input type="number" id="fichaje-propinas" min="0" step="0.01" placeholder="0.00">
     </div>` : ''}
     <div class="modal-footer">
-      <button class="btn" onclick="renderHorariosTab();closeModal()">Cancelar</button>
+      <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</button>
     </div>
   `);
@@ -12475,7 +12649,7 @@ function openNewPinModal(employeeId, action){
       <input type="password" id="new-pin-2" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderHorariosTab();closeModal()">Cancelar</button>
+      <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmNewPin(${employeeId}, '${action}')">Guardar y fichar</button>
     </div>
   `);
@@ -12622,7 +12796,7 @@ function printManosProtocolo(){
 }
 
 function deleteLimpiezaTarea(id){
-  if(!confirm('¿Eliminar esta tarea?')) return;
+  if(!confirm(t('msg.confirmDeleteTask'))) return;
   DB.limpieza.tareas = DB.limpieza.tareas.filter(t => t.id!==id);
   saveDB();
   renderLimpiezaTab();
@@ -12729,8 +12903,8 @@ function openLimpiezaTareaMesModal(id){
       </div>
     </div>
     <div class="modal-footer">
-      ${t ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${t.id});closeModal()">Eliminar</button>` : ''}
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      ${t ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${t.id});closeModal()">${t("common.delete")}</button>` : ''}
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${t?t.id:'null'})">${t?'Guardar':'Añadir'}</button>
     </div>
   `);
@@ -12800,7 +12974,7 @@ function addLimpiezaLogEntry(key){
   renderLimpiezaLog(key);
 }
 function deleteLimpiezaLogEntry(key, id){
-  if(!confirm('¿Eliminar este registro?')) return;
+  if(!confirm(t('msg.confirmDeleteShift'))) return;
   DB.limpieza[key] = DB.limpieza[key].filter(e => e.id!==id);
   saveDB();
   renderLimpiezaLog(key);
@@ -12845,7 +13019,7 @@ function addMantenimientoEquipo(){
       <input type="text" id="new-mantenimiento-equipo" placeholder="Ej. Cámara frigorífica, Horno, Freidora...">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmAddMantenimientoEquipo()">Añadir</button>
     </div>
   `);
@@ -12865,7 +13039,7 @@ function updateMantenimientoEquipo(id, field, val){
   saveDB();
 }
 function deleteMantenimientoEquipo(id){
-  if(!confirm('¿Eliminar este equipo?')) return;
+  if(!confirm(t('msg.confirmDeleteShift'))) return;
   DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
   saveDB();
   renderLimpiezaMantenimiento();
@@ -12934,7 +13108,7 @@ function renderDistribucion(){
   if(!areaEmployees().length){
     box.innerHTML = `
       <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
-      <div class="empty"><i class="ti ti-users"></i>No hay empleados en esta área. Añádelos para asignarles tareas.</div>
+      <div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>
     `;
     return;
   }
@@ -13194,7 +13368,7 @@ function renderClientes(){
   const tbody = document.getElementById('clientes-tbody');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-address-book"></i>No hay clientes registrados.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
     return;
   }
 
@@ -13340,8 +13514,8 @@ function openClientModal(id){
       </div>
     </div>` : ''}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveClient(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveClient(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
 }
@@ -13423,7 +13597,7 @@ function openRewardModal(id){
     </div>
     <p style="font-size:12px;color:var(--muted)">Al confirmar, el contador de ${escapeHtml(c.name)} se reiniciará a 0 y empezará una nueva ronda hacia su próximo premio.</p>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmClientReward(${id})"><i class="ti ti-gift"></i> Entregar premio y reiniciar</button>
     </div>
   `);
@@ -13492,7 +13666,7 @@ function sendRewardEmail(id){
 }
 
 function deleteClient(id){
-  if(!confirm('¿Eliminar este cliente?')) return;
+  if(!confirm(t('msg.confirmDeleteClient'))) return;
   DB.clients = DB.clients.filter(c=>c.id!==id);
   DB.reservations = DB.reservations.filter(r=>r.clientId!==id);
   saveDB();
@@ -13888,8 +14062,8 @@ function openReservationModal(id){
       <textarea id="reservation-notes" placeholder="Notas de la reserva...">${escapeHtml(r.notes||'')}</textarea>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveReservation(${id||'null'})">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
+      <button class="btn btn-primary" onclick="saveReservation(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
 }
@@ -13954,7 +14128,7 @@ function toggleReservaLlegada(id){
 }
 
 function deleteReservation(id){
-  if(!confirm('¿Eliminar esta reserva?')) return;
+  if(!confirm(t('msg.confirmDeleteReservation'))) return;
   DB.reservations = DB.reservations.filter(r=>r.id!==id);
   saveDB();
   renderReservas();
@@ -14259,7 +14433,7 @@ function openPromoModal(id, fecha){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
-      ${ro ? '' : `<button class="btn btn-primary" onclick="savePromo(${id||'null'})">Guardar</button>`}
+      ${ro ? '' : `<button class="btn btn-primary" onclick="savePromo(${id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
 }
@@ -14287,7 +14461,7 @@ function savePromo(id){
 }
 
 function deletePromo(id){
-  if(!confirm('¿Eliminar esta acción de promoción?')) return;
+  if(!confirm(t('msg.confirmDeletePromotion'))) return;
   DB.promos = DB.promos.filter(p=>p.id!==id);
   saveDB();
   renderPromocion();
@@ -15819,6 +15993,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const initial = (location.hash || '#home').replace('#','');
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
+  applyI18n();
   const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   const alreadySetUp = getLicense() && getCloudConfig();
   if(onbRole === 'owner' && !DB.business.netlifySetupDone && !alreadySetUp){
