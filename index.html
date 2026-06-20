@@ -836,6 +836,13 @@ td.wrap{white-space:normal}
       <div class="view-title">Escandallo</div>
       <div class="view-subtitle">Cálculo automático de costes de platos</div>
 
+      <div class="toolbar" style="margin-bottom:4px">
+        <div class="left">
+          <button class="btn btn-sm" id="escandallo-tab-platos" onclick="setEscandalloTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
+          <button class="btn btn-sm" id="escandallo-tab-elaboraciones" onclick="setEscandalloTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
+        </div>
+      </div>
+
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="escandallo-search" placeholder="Buscar plato..." oninput="renderEscandallo()">
@@ -847,7 +854,7 @@ td.wrap{white-space:normal}
             <button class="btn btn-sm" id="escandallo-view-list" onclick="setEscandalloView('list')"><i class="ti ti-list"></i></button>
           </div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px" id="escandallo-new-btns">
           <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> Nueva Elaboración</button>
           <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
         </div>
@@ -861,6 +868,14 @@ td.wrap{white-space:normal}
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
       <div class="view-title">Fichas Técnicas</div>
       <div class="view-subtitle">Elaboración estándar y alérgenos</div>
+
+      <div class="toolbar" style="margin-bottom:4px">
+        <div class="left">
+          <button class="btn btn-sm" id="fichas-tab-platos" onclick="setFichasTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
+          <button class="btn btn-sm" id="fichas-tab-elaboraciones" onclick="setFichasTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
+        </div>
+      </div>
+
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="fichas-search" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
@@ -3604,8 +3619,11 @@ const I18N = {
     'empty.clients': 'No hay clientes registrados.',
     'empty.tables': 'No hay mesas todavía. Usa "Crear mesas automáticamente" o el botón de añadir.',
     'empty.costingHint': 'Vincula los platos vendidos a recetas del Escandallo para ver su rentabilidad.',
-    'ph.searchIngredient': 'Buscar ingrediente...', 'ph.searchDish': 'Buscar plato...',
+    'ph.searchIngredient': 'Buscar ingrediente...', 'ph.searchDish': 'Buscar plato...', 'ph.searchElaboration': 'Buscar elaboración...',
     'ph.searchTechSheet': 'Buscar ficha técnica...', 'ph.searchStock': 'Buscar en stock...',
+    'tab.dishes': 'Platos', 'tab.elaborations': 'Elaboraciones', 'tab.newDish': 'Nuevo Plato', 'tab.newElaboration': 'Nueva Elaboración',
+    'tab.elaborationSubtitle': 'Bases, caldos, salsas y masas para usar en platos',
+    'empty.elaborations': 'No hay elaboraciones todavía. Crea caldos, salsas o masas base.',
     'ph.searchClient': 'Buscar cliente...', 'ph.writeMessage': 'Escribe un mensaje...',
     'ph.cartaName': 'Nombre de la carta...', 'ph.menuName': 'Nombre del menú... Ej. Menú del día',
     'ph.ingredientName': 'Ej. Tomate Pera', 'ph.categoryName': 'Ej. Panadería, Salsas, Especias...',
@@ -3984,8 +4002,11 @@ const I18N = {
     'empty.clients': 'No hi ha clients registrats.',
     'empty.tables': 'No hi ha taules encara. Usa "Crear taules automàticament" o el botó d\'afegir.',
     'empty.costingHint': 'Vincula els plats venuts a receptes de l\'Escandall per veure la seva rendibilitat.',
-    'ph.searchIngredient': 'Cercar ingredient...', 'ph.searchDish': 'Cercar plat...',
+    'ph.searchIngredient': 'Cercar ingredient...', 'ph.searchDish': 'Cercar plat...', 'ph.searchElaboration': 'Cercar elaboració...',
     'ph.searchTechSheet': 'Cercar fitxa tècnica...', 'ph.searchStock': 'Cercar en estoc...',
+    'tab.dishes': 'Plats', 'tab.elaborations': 'Elaboracions', 'tab.newDish': 'Nou Plat', 'tab.newElaboration': 'Nova Elaboració',
+    'tab.elaborationSubtitle': 'Bases, brous, salses i masses per usar en plats',
+    'empty.elaborations': 'No hi ha elaboracions encara. Crea brous, salses o masses base.',
     'ph.searchClient': 'Cercar client...', 'ph.writeMessage': 'Escriu un missatge...',
     'ph.cartaName': 'Nom de la carta...', 'ph.menuName': 'Nom del menú... Ex. Menú del dia',
     'ph.ingredientName': 'Ex. Tomàquet Pera', 'ph.categoryName': 'Ex. Fleca, Salses, Espècies...',
@@ -4364,8 +4385,11 @@ const I18N = {
     'empty.clients': 'No registered customers.',
     'empty.tables': 'No tables yet. Use "Create tables automatically" or the add button.',
     'empty.costingHint': 'Link sold dishes to Costing recipes to see their profitability.',
-    'ph.searchIngredient': 'Search ingredient...', 'ph.searchDish': 'Search dish...',
+    'ph.searchIngredient': 'Search ingredient...', 'ph.searchDish': 'Search dish...', 'ph.searchElaboration': 'Search elaboration...',
     'ph.searchTechSheet': 'Search technical sheet...', 'ph.searchStock': 'Search stock...',
+    'tab.dishes': 'Dishes', 'tab.elaborations': 'Elaborations', 'tab.newDish': 'New Dish', 'tab.newElaboration': 'New Elaboration',
+    'tab.elaborationSubtitle': 'Stocks, sauces, doughs and bases for use in dishes',
+    'empty.elaborations': 'No elaborations yet. Create stocks, sauces or base doughs.',
     'ph.searchClient': 'Search customer...', 'ph.writeMessage': 'Write a message...',
     'ph.cartaName': 'Menu name...', 'ph.menuName': 'Menu name... e.g. Daily menu',
     'ph.ingredientName': 'e.g. Cherry Tomato', 'ph.categoryName': 'e.g. Bakery, Sauces, Spices...',
@@ -6421,8 +6445,15 @@ function groupRecipesByCategory(recipes){
 }
 
 let escandalloView = 'grid'; // 'grid' | 'list'
+let escandalloTab = 'platos'; // 'platos' | 'elaboraciones'
 function setEscandalloView(mode){
   escandalloView = mode;
+  renderEscandallo();
+}
+function setEscandalloTab(tab){
+  escandalloTab = tab;
+  escandalloFolder = null;
+  escandalloRecipe = null;
   renderEscandallo();
 }
 
@@ -6470,7 +6501,8 @@ function renderEscandallo(){
   populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
   const cat = document.getElementById('escandallo-filter-cat').value;
-  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const isElab = escandalloTab === 'elaboraciones';
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && (isElab ? !!r.isBase : !r.isBase));
   const recipes = areaRecipes.filter(r => {
     const matchSearch = !search || r.name.toLowerCase().includes(search);
     const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
@@ -6479,16 +6511,26 @@ function renderEscandallo(){
   const box = document.getElementById('escandallo-list');
   const noun = itemNoun();
 
-  document.querySelector('#view-escandallo .view-subtitle').textContent = `Cálculo automático de costes de ${noun}s`;
-  document.getElementById('escandallo-search').placeholder = t('ph.searchDish');
-  const newRecipeBtn = document.querySelector('#view-escandallo button[onclick="openRecipeModal()"]');
-  if(newRecipeBtn) newRecipeBtn.innerHTML = noun==='bebida' ? `<i class="ti ti-plus"></i> Nueva Bebida` : `<i class="ti ti-plus"></i> Nuevo Plato`;
+  document.getElementById('escandallo-tab-platos').classList.toggle('active', !isElab);
+  document.getElementById('escandallo-tab-elaboraciones').classList.toggle('active', isElab);
+
+  const newBtns = document.getElementById('escandallo-new-btns');
+  if(newBtns){
+    if(isElab){
+      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${t('tab.newElaboration')}</button>`;
+    } else {
+      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${noun==='bebida' ? 'Nueva Bebida' : t('tab.newDish')}</button>`;
+    }
+  }
+
+  document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : `Cálculo automático de costes de ${noun}s`;
+  document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
 
   document.getElementById('escandallo-view-grid').classList.toggle('active', escandalloView==='grid');
   document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations') : t('empty.dishes')}</div>`;
     return;
   }
 
@@ -7041,8 +7083,14 @@ let fichaModalState = null;
 function getFicha(id){ return DB.fichas.find(f => f.id === id); }
 
 let fichasView = 'grid'; // 'grid' | 'list'
+let fichasTab = 'platos'; // 'platos' | 'elaboraciones'
 function setFichasView(mode){
   fichasView = mode;
+  renderFichas();
+}
+function setFichasTab(tab){
+  fichasTab = tab;
+  fichasFolder = null;
   renderFichas();
 }
 
@@ -7062,7 +7110,8 @@ function renderFichas(){
   populateRecipeCategoryFilter('fichas-filter-cat');
   const search = document.getElementById('fichas-search').value.toLowerCase();
   const cat = document.getElementById('fichas-filter-cat').value;
-  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const isElab = fichasTab === 'elaboraciones';
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && (isElab ? !!r.isBase : !r.isBase));
   const recipes = areaRecipes.filter(r => {
     const matchSearch = !search || r.name.toLowerCase().includes(search);
     const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
@@ -7071,11 +7120,14 @@ function renderFichas(){
   const box = document.getElementById('fichas-list');
   let html = '';
 
+  document.getElementById('fichas-tab-platos').classList.toggle('active', !isElab);
+  document.getElementById('fichas-tab-elaboraciones').classList.toggle('active', isElab);
+
   document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations') : t('empty.dishes')}</div>`;
     return;
   }
 
@@ -7888,7 +7940,7 @@ function removePlatoMod(secId, platoId, modId){
 }
 
 function importFromEscandallo(secId){
-  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
   if(!areaRecipes.length){ showToast(`No hay ${itemNoun()}s en el Escandallo`); return; }
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
