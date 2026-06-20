@@ -2493,21 +2493,46 @@ function initPublicRequestsListener(){
   }).catch(e => console.error('Error escuchando pedidos públicos', e));
 }
 
+function buildSucursalesList(){
+  const slots = getBusinessSlots();
+  const thisSlot = slots.find(s => s.id === ACTIVE_SLOT);
+  if(!thisSlot) return null;
+  const parentId = thisSlot.parentId || ACTIVE_SLOT;
+  const siblings = slots.filter(s => s.id === parentId || s.parentId === parentId);
+  if(siblings.length <= 1) return null;
+  const list = [];
+  for(const s of siblings){
+    try{
+      const raw = localStorage.getItem(slotLicenseKey(s.id));
+      if(!raw) continue;
+      const lic = JSON.parse(raw);
+      const parsed = validateLicenseKey(lic.key);
+      if(!parsed) continue;
+      const pid = ggLicHash(parsed.tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
+      list.push({name: s.name, publicId: pid});
+    }catch(e){}
+  }
+  return list.length > 1 ? list : null;
+}
+
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
   const publicId = getPublicId();
   if(!publicId) return;
   try{
+    const sucursales = buildSucursalesList();
     getPlatformFirebaseApp().then(app => {
       if(!app) return;
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set({
+      const data = {
         business: DB.business,
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         reservasResumen: getReservasResumenForSync(),
         tables: DB.tables.map(t => ({id: t.id, name: t.name}))
-      }).catch(()=>{});
+      };
+      if(sucursales) data.sucursales = sucursales;
+      app.database().ref('gastrogoan/public/' + publicId + '/info').set(data).catch(()=>{});
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
     console.error('Error publicando el espejo público', e);
