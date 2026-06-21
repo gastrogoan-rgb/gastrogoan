@@ -2090,7 +2090,7 @@ function updateLicenseFieldForRole(role){
   if(role === 'employee'){
     label.innerHTML = '🔑 Clave de licencia del restaurante';
     helpBox.style.display = 'block';
-    helpBox.innerHTML = 'Pide esta clave a tu jefe/a: es la <strong>misma clave</strong> que él/ella usa (no es una clave distinta para ti). Cópiala tal cual, con todos los guiones, y pégala aquí abajo.';
+    helpBox.innerHTML = t('msg.employeeLicenseHelp');
     ownerNote.style.display = 'none';
   }else{
     label.innerHTML = '🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio quien te vendió GastroGoan)</span>';
@@ -2960,10 +2960,10 @@ async function loadRedsysCardStatus(){
       document.getElementById('rs-terminal').value = data.terminal || '';
       document.getElementById('rs-real').checked = data.ambiente === 'real';
     }else{
-      el.innerHTML = 'Aún no has configurado el pago con tarjeta.';
+      el.innerHTML = t('msg.cardPaymentNotConfigured');
     }
   }catch(e){
-    el.innerHTML = 'No se pudo comprobar la configuración (revisa tu conexión).';
+    el.innerHTML = t('msg.cardPaymentCheckFailed');
   }
 }
 
@@ -3707,6 +3707,9 @@ const I18N = {
     'tab.dishes': 'Platos', 'tab.elaborations': 'Elaboraciones', 'tab.newDish': 'Nuevo Plato', 'tab.newElaboration': 'Nueva Elaboración',
     'tab.elaborationSubtitle': 'Bases, caldos, salsas y masas para usar en platos',
     'empty.elaborations': 'No hay elaboraciones todavía. Crea caldos, salsas o masas base.',
+    'msg.cardPaymentNotConfigured': 'Aún no has configurado el pago con tarjeta.',
+    'msg.cardPaymentCheckFailed': 'No se pudo comprobar la configuración (revisa tu conexión).',
+    'msg.employeeLicenseHelp': 'Pide esta clave a tu jefe/a: es la <strong>misma clave</strong> que él/ella usa (no es una clave distinta para ti). Cópiala tal cual, con todos los guiones, y pégala aquí abajo.',
     'ph.searchClient': 'Buscar cliente...', 'ph.writeMessage': 'Escribe un mensaje...',
     'ph.cartaName': 'Nombre de la carta...', 'ph.menuName': 'Nombre del menú... Ej. Menú del día',
     'ph.ingredientName': 'Ej. Tomate Pera', 'ph.categoryName': 'Ej. Panadería, Salsas, Especias...',
@@ -4090,6 +4093,9 @@ const I18N = {
     'tab.dishes': 'Plats', 'tab.elaborations': 'Elaboracions', 'tab.newDish': 'Nou Plat', 'tab.newElaboration': 'Nova Elaboració',
     'tab.elaborationSubtitle': 'Bases, brous, salses i masses per usar en plats',
     'empty.elaborations': 'No hi ha elaboracions encara. Crea brous, salses o masses base.',
+    'msg.cardPaymentNotConfigured': 'Encara no has configurat el pagament amb targeta.',
+    'msg.cardPaymentCheckFailed': 'No s\'ha pogut comprovar la configuració (revisa la connexió).',
+    'msg.employeeLicenseHelp': 'Demana aquesta clau al teu cap: és la <strong>mateixa clau</strong> que ell/ella fa servir (no és una clau diferent per a tu). Copia-la tal qual, amb tots els guions, i enganxa-la aquí sota.',
     'ph.searchClient': 'Cercar client...', 'ph.writeMessage': 'Escriu un missatge...',
     'ph.cartaName': 'Nom de la carta...', 'ph.menuName': 'Nom del menú... Ex. Menú del dia',
     'ph.ingredientName': 'Ex. Tomàquet Pera', 'ph.categoryName': 'Ex. Fleca, Salses, Espècies...',
@@ -4473,6 +4479,9 @@ const I18N = {
     'tab.dishes': 'Dishes', 'tab.elaborations': 'Elaborations', 'tab.newDish': 'New Dish', 'tab.newElaboration': 'New Elaboration',
     'tab.elaborationSubtitle': 'Stocks, sauces, doughs and bases for use in dishes',
     'empty.elaborations': 'No elaborations yet. Create stocks, sauces or base doughs.',
+    'msg.cardPaymentNotConfigured': 'Card payment has not been configured yet.',
+    'msg.cardPaymentCheckFailed': 'Could not check configuration (check your connection).',
+    'msg.employeeLicenseHelp': 'Ask your manager for this key: it\'s the <strong>same key</strong> they use (not a different one for you). Copy it as-is, with all dashes, and paste it below.',
     'ph.searchClient': 'Search customer...', 'ph.writeMessage': 'Write a message...',
     'ph.cartaName': 'Menu name...', 'ph.menuName': 'Menu name... e.g. Daily menu',
     'ph.ingredientName': 'e.g. Cherry Tomato', 'ph.categoryName': 'e.g. Bakery, Sauces, Spices...',
@@ -7378,7 +7387,7 @@ function renderFichaModal(){
 
   const baseComensales = f.baseComensales || f.comensales || 1;
   const produccion = f.produccion || baseComensales;
-  const factor = baseComensales ? (produccion / baseComensales) : 1;
+  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
   const ingredientLines = getFichaIngredientLines(f);
   const ingredientsHtml = ingredientLines.map(l => `
     <div class="ingredient-pill">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</div>
@@ -7539,7 +7548,7 @@ function printFicha(id){
     : 'Ninguno';
   const baseComensales = f.baseComensales || f.comensales || 1;
   const produccion = f.produccion || baseComensales;
-  const factor = baseComensales ? (produccion / baseComensales) : 1;
+  const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
   const ingredientLines = getFichaIngredientLines(f);
   const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
@@ -9157,7 +9166,8 @@ function confirmAddMenuToOrder(orderId, menuId){
   let extrasTotal = 0;
   const selections = (m.grupos||[]).map(g => {
     const selectedId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
-    const o = (g.opciones||[]).find(x=>x.id===selectedId) || g.opciones[0];
+    const o = (g.opciones||[]).find(x=>x.id===selectedId) || (g.opciones||[])[0];
+    if(!o) return {grupoNombre: g.nombre, opcionNombre:'', recipeId:null, suplemento:0, modificadores:[]};
     suplementoTotal += o.suplemento||0;
     const selectedMods = [...document.querySelectorAll(`.menu-mod-${g.id}:checked`)]
       .filter(el => parseInt(el.dataset.opcion) === o.id)
@@ -10033,9 +10043,9 @@ function finalizeCharge(orderId){
   if(!order || !order.items.length) return;
   const total = orderTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
-  discountStockForOrder(order);
   const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
+  discountStockForOrder(order);
   DB.sales.push(sale);
   if(order.clientId) registerClientVisit(order.clientId);
   order.status = 'pagada';
@@ -10407,7 +10417,7 @@ function openTicketDeliveryModal(saleId){
       <button class="btn" onclick="closeModal();renderTPV()"><i class="ti ti-x"></i> No imprimir</button>
       <button class="btn" onclick="sendTicketByEmail(${saleId})"><i class="ti ti-mail"></i> Enviar por email</button>
       <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> Factura</button>
-      <button class="btn btn-primary" onclick="printTicket(DB.sales.find(s=>s.id===${saleId}))"><i class="ti ti-printer"></i> Imprimir ticket</button>
+      <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> Imprimir ticket</button>
     </div>
   `);
 }
@@ -10580,7 +10590,7 @@ function openCashClosureHistory(){
               <td>${fmtDateTime(new Date(c.hasta))}</td>
               <td>${fmtMoney(c.total)}</td>
               <td>${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
-              <td><button class="btn btn-sm btn-icon" onclick="printCashClosure(DB.cashClosures.find(x=>x.id===${c.id}))"><i class="ti ti-printer"></i></button></td>
+              <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -10913,7 +10923,7 @@ function renderPedidoDetail(){
 
 function updatePedidoItem(idx, field, value){
   const o = getPurchaseOrder(pedidoDetailId);
-  if(!o) return;
+  if(!o || idx < 0 || idx >= (o.items||[]).length) return;
   o.items[idx][field] = parseFloat(value) || 0;
   saveDB();
 }
@@ -15494,6 +15504,7 @@ function archiveOldData(){
 function handleLogoUpload(input){
   const file = input.files[0];
   if(!file) return;
+  if(file.size > 2 * 1024 * 1024){ showToast('Imagen demasiado grande (máx. 2 MB)'); return; }
   const reader = new FileReader();
   reader.onload = e => {
     DB.business.logo = e.target.result;
