@@ -1,0 +1,2015 @@
+/* ============================================================
+   TPV — Comandas, mesas y tickets
+   ============================================================ */
+const KITCHEN_STATES = {
+  cocina:     {label:'En espera',      icon:'ti-clock',        cls:'badge-amber'},
+  preparando: {label:'En preparación', icon:'ti-flame',        cls:'badge-blue'},
+  entregado:  {label:'Entregado',      icon:'ti-circle-check', cls:'badge-green'}
+};
+function kitchenStatusBadge(line){
+  const st = KITCHEN_STATES[line.estado];
+  if(!st || line.estado === 'entregado') return '';
+  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${st.label}</span>`;
+}
+function getActiveCartas(){
+  const ids = DB.activeCartaIds||[];
+  return DB.cartas.filter(c=>ids.includes(c.id));
+}
+function toggleActiveCarta(id, checked){
+  id = parseInt(id);
+  if(!Array.isArray(DB.activeCartaIds)) DB.activeCartaIds = [];
+  if(checked){
+    if(!DB.activeCartaIds.includes(id)) DB.activeCartaIds.push(id);
+  }else{
+    DB.activeCartaIds = DB.activeCartaIds.filter(cid=>cid!==id);
+  }
+  saveDB();
+  renderTPV();
+}
+
+function setCartaAuto(checked){
+  DB.business.cartaAuto = checked;
+  saveDB();
+  if(checked){ updateAutoActiveCarta(true); updateAutoActiveMenu(true); }
+  else renderTPV();
+}
+
+// Comprueba si una carta debería estar activa ahora mismo, según el horario
+// semanal propio configurado en su editor (días + franjas horarias opcionales).
+function cartaIsActiveNow(c, now){
+  const jsDay = now.getDay();
+  const dayIdx = (jsDay + 6) % 7; // 0=lunes..6=domingo
+  const horario = migrateItemHorario(c);
+  const day = horario[dayIdx];
+  if(!day || day.activo === false) return false;
+  const franjas = day.franjas && day.franjas.length ? day.franjas : [{desde:'', hasta:''}];
+  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  return franjas.some(f => {
+    if(!f.desde || !f.hasta) return true; // sin franja concreta: activa todo el día
+    // Franja que cruza medianoche (ej. 20:00-02:00)
+    if(f.hasta < f.desde) return time >= f.desde || time <= f.hasta;
+    return time >= f.desde && time <= f.hasta;
+  });
+}
+
+// Todas las cartas que deberían estar activas ahora mismo (puede haber varias
+// a la vez, p.ej. la carta de comida y la de bebidas), según el horario propio
+// configurado en cada carta.
+function computeAutoActiveCartaIds(){
+  if(!DB.cartas || !DB.cartas.length) return [];
+  const now = new Date();
+  return DB.cartas.filter(c => cartaIsActiveNow(c, now)).map(c=>c.id);
+}
+
+// Si el cambio automático está activado, ajusta las cartas activas del TPV
+// según lo programado. force=true vuelve a calcular aunque ya hubiera activas.
+function updateAutoActiveCarta(force){
+  if(!DB.business || DB.business.cartaAuto === false) return;
+  const autoIds = computeAutoActiveCartaIds();
+  if(!autoIds.length) return;
+  const current = DB.activeCartaIds||[];
+  const changed = force || autoIds.length !== current.length || autoIds.some(id=>!current.includes(id));
+  if(changed){
+    DB.activeCartaIds = autoIds;
+    saveDB();
+    if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
+  }
+}
+const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
+let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
+let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
+let tpvSelectedCartaId = null; // id de la carta/menú seleccionada en las pestañas de la comanda
+
+// Emoji por defecto para una sección de carta sin icono propio asignado
+function guessSeccionEmoji(nombre){
+  const n = (nombre||'').toLowerCase();
+  if(/bebida|refresco|cerveza|vino|cava|cocktail|copa|cafe|café|infusi|licor/.test(n)) return '🥤';
+  if(/entrante|aperitivo|tapa|ensalada/.test(n)) return '🥗';
+  if(/primero|sopa|crema|arroz|pasta/.test(n)) return '🥣';
+  if(/segundo|carne|pescado|principal/.test(n)) return '🍖';
+  if(/postre|dulce/.test(n)) return '🍰';
+  if(/pizza/.test(n)) return '🍕';
+  if(/pan|bocadillo|sandwich/.test(n)) return '🥖';
+  return '🍽️';
+}
+
+function getOpenOrderForTable(tableId){
+  return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
+}
+
+function renderTpvCartaSelector(){
+  const activeCartas = getActiveCartas();
+  const activeIds = DB.activeCartaIds||[];
+  const cartaAuto = DB.business.cartaAuto !== false;
+  const totalPlatos = activeCartas.reduce((s,c)=>s+(c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
+  return `
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <i class="ti ti-book-2"></i>
+      <span style="font-weight:600;font-size:14px">Cartas activas:</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
+        ${DB.cartas.length ? DB.cartas.map(c=>`
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
+            ${escapeHtml(tItem(c))}
+          </label>
+        `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
+        Cambio automático según horario
+      </label>
+      <span style="font-size:12px;color:var(--muted)">
+        ${activeCartas.length ? totalPlatos + ' platos disponibles' : 'Selecciona al menos una carta para tomar comandas'}
+      </span>
+    </div>
+  `;
+}
+
+function renderTpvMenuSelector(){
+  if(!DB.menus.length) return '';
+  const activeIds = DB.activeMenuIds||[];
+  const cartaAuto = DB.business.cartaAuto !== false;
+  return `
+    <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <i class="ti ti-list-details"></i>
+      <span style="font-weight:600;font-size:14px">Menús activos:</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
+        ${DB.menus.map(m=>`
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="checkbox" ${activeIds.includes(m.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveMenu(${m.id}, this.checked)">
+            ${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderTpvKpis(){
+  const todaySalesArr = DB.sales.filter(s => s.date === todayStr());
+  const todayTotal = todaySalesArr.reduce((sum,s)=>sum+s.total,0);
+  const ticketCount = todaySalesArr.length;
+  const avgTicket = ticketCount ? todayTotal/ticketCount : 0;
+
+  const comandasEnCocina = DB.tpvOrders
+    .filter(o => o.status !== 'pagada' && !o.cerrada)
+    .reduce((s,o) => s + ((o.items||[]).some(l => l.estado === 'cocina' || l.estado === 'preparando') ? 1 : 0), 0);
+
+  return `
+    <div class="grid grid-4" style="margin-bottom:14px">
+      <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
+      <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
+      <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label">👨‍🍳 En cocina</div><div class="value">${comandasEnCocina}</div></div>
+    </div>
+  `;
+}
+
+const ZONA_LABELS = {interior:'Interior', terraza:'Terraza', barra:'Barra'};
+const ZONA_ICONS = {interior:'ti-home', terraza:'ti-sun', barra:'ti-glass-cocktail'};
+
+function renderMesaCard(t){
+  const order = getOpenOrderForTable(t.id);
+  const total = order ? orderTotal(order) : 0;
+  const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
+  const displayName = t.zona ? (t.name||'').replace(/\s*\([^)]*\)\s*$/, '') : t.name;
+
+  let badge = '<span class="badge badge-green">Libre</span>';
+  let phaseInfo = '';
+  if(order){
+    badge = '<span class="badge badge-amber">Ocupada</span>';
+    // Mostrar fase del servicio
+    const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
+    const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
+    if(allDelivered) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-green" style="font-size:8px">✅ Servido</span></div>';
+    else {
+      const preparing = foodItems.filter(l => l.estado === 'preparando');
+      const inKitchen = foodItems.filter(l => l.estado === 'cocina');
+      const pending = (order.items||[]).filter(l => !l.bebida && l.qty > (l.marchada||0));
+      if(preparing.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-blue" style="font-size:8px">🔥 En cocina</span></div>';
+      else if(inKitchen.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-amber" style="font-size:8px">⏳ Marchado</span></div>';
+      else if(pending.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-gray" style="font-size:8px">📝 Tomando nota</span></div>';
+    }
+  }
+
+  return `
+    <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${t.id})" title="${escapeHtml(t.name)}">
+      <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''} title="Eliminar mesa"><i class="ti ti-trash"></i></button>
+      <div class="mesa-name"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(displayName)}</div>
+      ${badge}
+      ${phaseInfo}
+      ${hayNuevos ? '<div style="margin-top:3px"><span class="badge badge-amber"><i class="ti ti-bell-ringing"></i></span></div>' : ''}
+      ${order && order.pagado ? '<div style="margin-top:3px"><span class="badge badge-green"><i class="ti ti-credit-card"></i></span></div>' : ''}
+      ${order && order.pax ? `<div style="margin-top:3px;color:var(--muted)">👥 ${order.pax}</div>` : ''}
+      ${order ? `<div class="mesa-total">${fmtMoney(total)}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderTpvMesas(tiposServicio){
+  if(!tiposServicio.mesa) return '';
+  const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
+  if(!sortedTables.length){
+    return `
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <div class="grid grid-4"><div class="empty">${t('empty.tables')}</div></div>
+    `;
+  }
+
+  // Si hay mesas con zona asignada (interior/terraza/barra), las agrupamos en
+  // secciones; las mesas sin zona (creadas manualmente) van en un grupo aparte.
+  const hasZonas = sortedTables.some(t => t.zona);
+  if(!hasZonas){
+    return `
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <div class="grid grid-mesas">${sortedTables.map(renderMesaCard).join('')}</div>
+    `;
+  }
+
+  const zonas = ['interior','terraza','barra'];
+  let html = '';
+  zonas.forEach(z => {
+    const tables = sortedTables.filter(t => t.zona === z);
+    if(!tables.length) return;
+    html += `
+      <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${ZONA_LABELS[z]}</h3>
+      <div class="grid grid-mesas">${tables.map(renderMesaCard).join('')}</div>
+    `;
+  });
+  const sinZona = sortedTables.filter(t => !t.zona);
+  if(sinZona.length){
+    html += `
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Otras mesas</h3>
+      <div class="grid grid-mesas">${sinZona.map(renderMesaCard).join('')}</div>
+    `;
+  }
+  return html;
+}
+
+function renderTpvToGo(tiposServicio){
+  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && (!o.date || o.date <= todayStr()));
+  if(!toGoOrders.length) return '';
+  return `
+    <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">Estos pedidos llegan automáticamente desde la web de Pedidos y Reservas.</p>
+    <div class="grid grid-4">
+      ${toGoOrders.map(o => {
+        const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
+        return `
+        <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
+          <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
+          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':o.express?'Pedido Express':'Para recoger'}</span> ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
+          ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
+          <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
+        </div>
+      `}).join('')}
+    </div>
+  `;
+}
+
+function renderTpvPendingOnline(){
+  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (!o.date || o.date <= todayStr()));
+  if(!pendingOnline.length) return '';
+  return `
+    <h3 style="margin-top:16px"><i class="ti ti-bell-ringing"></i> Pedidos online pendientes</h3>
+    <div class="grid grid-4">
+      ${pendingOnline.map(o => `
+        <div class="card" style="border:2px solid var(--brand-orange)">
+          <h3 style="justify-content:space-between;font-size:14px">
+            <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
+            <span class="badge badge-amber">Nuevo</span>
+          </h3>
+          ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
+          ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> Programado para las ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
+          ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>` : ''}
+          <div style="margin:8px 0;font-size:13px">
+            ${(o.items||[]).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}
+          </div>
+          ${o.notas ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ti-note"></i> ${escapeHtml(o.notas)}</div>` : ''}
+          <div style="font-weight:700;font-size:18px;margin-bottom:8px">${fmtMoney(orderTotal(o))}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-primary" style="flex:1" onclick="acceptOnlineOrder(${o.id})"><i class="ti ti-check"></i> Aceptar</button>
+            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineOrder(${o.id})"><i class="ti ti-x"></i> Rechazar</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderTPV(){
+  migrateCartas();
+  const box = document.getElementById('tpv-content');
+  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+
+  box.innerHTML = `
+    ${renderTpvCartaSelector()}
+    ${renderTpvMenuSelector()}
+    ${renderTpvKpis()}
+    <div class="toolbar">
+      <div class="left"></div>
+      <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
+      <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
+      ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
+    </div>
+    ${renderTpvPendingOnline()}
+    ${renderTpvToGo(tiposServicio)}
+    ${renderTpvMesas(tiposServicio)}
+  `;
+}
+
+function acceptOnlineOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.status = 'abierta';
+  if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
+    const ahora = new Date().toISOString();
+    (order.items||[]).forEach(l => {
+      if(!l.estado){
+        l.estado = 'cocina';
+        l.enviadoAt = ahora;
+        l.marchada = l.qty;
+      }
+    });
+    order.cerrada = false;
+  }
+  saveDB();
+  renderTPV();
+  showToast(t('msg.orderAccepted'));
+}
+
+function rejectOnlineOrder(orderId){
+  if(!confirm(t('msg.confirmRejectOrder'))) return;
+  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
+  saveDB();
+  renderTPV();
+  showToast(t('msg.orderRejected'));
+}
+
+// Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
+function renderCamareroFieldHtml(selectId, selectedId){
+  // Solo empleados del área sala que sean camareros
+  const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
+  if(!camareros.length) return '';
+  return `
+    <div class="field">
+      <label>${t('label.waiter')}</label>
+      <select id="${selectId}">
+        <option value="">Sin asignar</option>
+        ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
+function deleteTable(id){
+  if(getOpenOrderForTable(id)){ showToast(t('msg.tableBusy')); return; }
+  if(!confirm(t('msg.confirmDeleteTable'))) return;
+  DB.tables = DB.tables.filter(t => t.id !== id);
+  saveDB();
+  renderTPV();
+}
+
+function orderTotal(order){
+  return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
+}
+
+// Etiqueta del pedido para TPV, cocina y ticket: los tickets rápidos de mostrador se llaman "Pedido Express".
+function togoOrderLabel(order){
+  if(order.express) return 'Pedido Express';
+  return order.tipo==='delivery' ? 'Delivery' : 'Take Away';
+}
+
+function openTableOrder(tableId, orderId){
+  if(orderId){
+    renderTableOrderModal(orderId);
+    return;
+  }
+  const order = getOpenOrderForTable(tableId);
+  if(order){ renderTableOrderModal(order.id); return; }
+  openNewOrderPaxModal(tableId);
+}
+
+function getTodayPendingReservations(){
+  const today = todayStr();
+  return DB.reservations.filter(r => r.date === today && r.status === 'confirmada' && !r.llegada)
+    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+}
+
+function openNewOrderPaxModal(tableId){
+  const table = DB.tables.find(t=>t.id===tableId);
+  const pendingReservas = getTodayPendingReservations();
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-users"></i> ${t('title.openTable')}${table?` — ${escapeHtml(table.name)}`:''}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.clientType')}</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> Cliente de paso</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
+      </div>
+    </div>
+    <div class="field" id="new-order-reserva-field" style="display:none">
+      <label>${t('label.selectReservation')}</label>
+      <select id="new-order-reserva-sel">
+        ${pendingReservas.map(r=>{
+          const client = DB.clients.find(c=>c.id===r.clientId);
+          const name = client ? client.name : (r.clientName||'—');
+          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} pers.</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div class="field" id="new-order-pax-field">
+      <label>¿Cuántas personas?</label>
+      <input type="number" id="new-order-pax" min="1" value="2">
+    </div>
+    ${renderCamareroFieldHtml('new-order-camarero-sel')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
+    </div>
+  `);
+}
+
+function toggleNewOrderReservaField(){
+  const isReserva = document.querySelector('input[name="new-order-tipo-cliente"]:checked').value === 'reserva';
+  document.getElementById('new-order-reserva-field').style.display = isReserva ? '' : 'none';
+  document.getElementById('new-order-pax-field').style.display = isReserva ? 'none' : '';
+}
+
+function confirmOpenTableOrder(tableId){
+  const tipo = document.querySelector('input[name="new-order-tipo-cliente"]:checked')?.value || 'paso';
+  let pax, clienteNombre = '', clientId = null, reservationId = null;
+  if(tipo === 'reserva'){
+    const resId = parseInt(document.getElementById('new-order-reserva-sel').value);
+    const r = DB.reservations.find(x=>x.id===resId);
+    if(!r){ showToast(t('msg.selectReservation')); return; }
+    pax = r.people;
+    clientId = r.clientId;
+    const client = DB.clients.find(c=>c.id===r.clientId);
+    clienteNombre = client ? client.name : (r.clientName||'');
+    reservationId = r.id;
+    r.llegada = true;
+    if(!r.tableId) r.tableId = tableId;
+  }else{
+    pax = parseInt(document.getElementById('new-order-pax').value) || 0;
+    if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
+  }
+  const camareroSel = document.getElementById('new-order-camarero-sel');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+// Permite abrir desde el TPV un ticket rápido "para llevar" (cliente que pide en el local para recoger).
+// Los platos de este tipo de pedido pasan a cocina automáticamente al añadirlos, sin necesidad de "Marchar".
+function openNewToGoOrderModal(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-bolt"></i> ${t('title.expressOrder')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.clientNameOpt')}</label>
+      <input type="text" id="togo-cliente-nombre" placeholder="Nombre">
+    </div>
+    ${renderCamareroFieldHtml('togo-camarero-sel')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewToGoOrder(){
+  const camareroSel = document.getElementById('togo-camarero-sel');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
+  const order = {id: genId(), tableId: null, tipo:'takeaway', express:true, clienteNombre, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+function openNewTakeawayModal(){
+  const platforms = (DB.business?.deliveryPlatforms||[]);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-shopping-bag"></i> ${t('title.newTakeaway')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.clientName')}</label>
+      <input type="text" id="togo-ta-nombre" placeholder="Nombre">
+    </div>
+    <div class="field">
+      <label>${t('label.phoneOpt')}</label>
+      <input type="text" id="togo-ta-phone" placeholder="Teléfono">
+    </div>
+    ${renderCamareroFieldHtml('togo-ta-camarero')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmNewTakeaway()"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewTakeaway(){
+  const camareroSel = document.getElementById('togo-ta-camarero');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-ta-nombre').value.trim();
+  const clientePhone = document.getElementById('togo-ta-phone').value.trim();
+  const order = {id: genId(), tableId: null, tipo:'takeaway', clienteNombre, clientePhone, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+function openNewDeliveryModal(){
+  const platforms = (DB.business?.deliveryPlatforms||[]);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-moped"></i> ${t('title.newDelivery')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.clientName')}</label>
+      <input type="text" id="togo-del-nombre" placeholder="Nombre">
+    </div>
+    <div class="field">
+      <label>Teléfono</label>
+      <input type="text" id="togo-del-phone" placeholder="Teléfono">
+    </div>
+    <div class="field">
+      <label>Dirección de entrega</label>
+      <input type="text" id="togo-del-address" placeholder="Calle, número, piso...">
+    </div>
+    ${platforms.length ? `
+    <div class="field">
+      <label>Plataforma (opcional)</label>
+      <select id="togo-del-plataforma">
+        <option value="">— Pedido directo —</option>
+        ${platforms.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+    ${renderCamareroFieldHtml('togo-del-camarero')}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmNewDelivery()"><i class="ti ti-check"></i> Crear pedido</button>
+    </div>
+  `);
+}
+
+function confirmNewDelivery(){
+  const camareroSel = document.getElementById('togo-del-camarero');
+  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  const clienteNombre = document.getElementById('togo-del-nombre').value.trim();
+  const clientePhone = document.getElementById('togo-del-phone').value.trim();
+  const clienteAddress = document.getElementById('togo-del-address').value.trim();
+  const plataformaEl = document.getElementById('togo-del-plataforma');
+  const plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
+  const costeEnvio = parseFloat(DB.business?.pedidosConfig?.deliveryFee) || 0;
+  const order = {id: genId(), tableId: null, tipo:'delivery', clienteNombre, clientePhone, clienteAddress, plataformaId, costeEnvio, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
+  saveDB();
+  renderTableOrderModal(order.id);
+}
+
+// Una carta es de bebidas si se creó en el área de Sala (campo area==='sala').
+// Para cartas antiguas sin ese campo, se mantiene la detección por nombre
+// (p.ej. "Bebidas", "Carta de Bebidas"). El resto se consideran de comida.
+function isBebidaCarta(c){
+  if(c && c.area) return c.area === 'sala';
+  return /bebida/i.test(c.nombre||'');
+}
+
+function renderMenusComboHtml(order){
+  const activeMenus = getActiveMenus();
+  if(!activeMenus.length) return '';
+  return `
+    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:0 0 6px"><i class="ti ti-list-details"></i> Menús</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      ${activeMenus.map(m => `<button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${m.id})">${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</button>`).join('')}
+    </div>
+  `;
+}
+
+// Cartas de comida activas (todas las activas que no son de bebidas).
+function getActiveComidaCartas(){
+  return getActiveCartas().filter(c => !isBebidaCarta(c));
+}
+
+// Guarda en la comanda qué carta de comida se usará, cuando hay varias activas
+// a la vez y hace falta elegir una.
+function setOrderCarta(orderId, cartaId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.cartaElegidaId = cartaId;
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+// Devuelve las "carpetas" del menú para una comanda: una por cada sección de
+// carta con platos disponibles, ordenadas con las cartas de bebida primero.
+// Si hay varias cartas de comida activas a la vez, solo se usa la elegida
+// para esta comanda (ver setOrderCarta).
+function getOrderMenuFolders(order){
+  const activeCartas = getActiveCartas();
+  const bebidaCartas = activeCartas.filter(isBebidaCarta);
+  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  if(comidaCartas.length > 1){
+    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
+    if(elegida) comidaCartas = [elegida];
+  }
+  const folders = [];
+  [...bebidaCartas, ...comidaCartas].forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
+      if(platos.length) folders.push({cartaId: c.id, secId: sec.id, nombre: sec.nombre, i18n: sec.i18n, icono: sec.icono || guessSeccionEmoji(sec.nombre), platos});
+    });
+  });
+  return folders;
+}
+
+function findCartaSeccion(secId){
+  for(const c of getActiveCartas()){
+    const sec = (c.secciones||[]).find(s=>s.id===secId);
+    if(sec) return sec;
+  }
+  return null;
+}
+function isSeccionBebida(secId){
+  for(const c of (DB.cartas||[])){
+    if((c.secciones||[]).some(s=>s.id===secId)) return isBebidaCarta(c);
+  }
+  return false;
+}
+
+function openTpvMenuFolder(orderId, cartaId, secId){
+  tpvMenuOrderId = orderId;
+  tpvMenuFolder = {cartaId, secId};
+  renderTableOrderModal(orderId);
+}
+
+function closeTpvMenuFolder(orderId){
+  tpvMenuFolder = null;
+  renderTableOrderModal(orderId);
+}
+
+function renderOrderMenuHtml(order){
+  const menusHtml = renderMenusComboHtml(order);
+
+  const comidaCartas = getActiveComidaCartas();
+  if(comidaCartas.length > 1 && !comidaCartas.some(c => c.id === order.cartaElegidaId)){
+    return menusHtml + `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Hay varias cartas activas a esta hora. Elige cuál usar para esta comanda:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(tItem(c))}</button>`).join('')}
+      </div>
+    `;
+  }
+
+  const folders = getOrderMenuFolders(order);
+  if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+
+  if(tpvMenuOrderId !== order.id){ tpvMenuOrderId = order.id; tpvMenuFolder = null; }
+
+  const folder = tpvMenuFolder ? folders.find(f => f.cartaId===tpvMenuFolder.cartaId && f.secId===tpvMenuFolder.secId) : null;
+  if(folder){
+    return menusHtml + `
+      <div style="margin-bottom:8px">
+        <button class="btn btn-sm" onclick="closeTpvMenuFolder(${order.id})"><i class="ti ti-arrow-left"></i> ${folder.icono} ${escapeHtml(tItem(folder))}</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${folder.platos.map(p => `<button class="btn" onclick="addOrderItem(${order.id}, ${folder.secId}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+      </div>
+    `;
+  }
+
+  return menusHtml + `
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${folders.map(f => `<button class="btn" style="min-width:88px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px" onclick="openTpvMenuFolder(${order.id}, ${f.cartaId}, ${f.secId})"><span style="font-size:26px">${f.icono}</span><span style="font-size:12px;font-weight:700">${escapeHtml(f.nombre)}</span></button>`).join('')}
+    </div>
+  `;
+}
+
+function openMenuConfigModal(orderId, menuId){
+  const m = DB.menus.find(x=>x.id===menuId);
+  if(!m) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-list-details"></i> ${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${(m.grupos||[]).map(g => `
+      <div class="field">
+        <label>${escapeHtml(tItem(g))}</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(g.opciones||[]).map((o,i) => `
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
+              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
+            </label>
+            ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
+              ${o.modificadores.map(mod => `
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                  <input type="checkbox" class="menu-mod-${g.id}" data-opcion="${o.id}" data-mod-id="${mod.id}" style="width:auto">
+                  ${escapeHtml(tItem(mod))}${mod.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(mod.precio)}</span>` : ''}
+                </label>
+              `).join('')}
+            </div>` : ''}
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+    </div>
+  `);
+}
+
+function toggleMenuExtras(grupoId){
+  const selected = document.querySelector(`input[name="menu-grupo-${grupoId}"]:checked`);
+  if(!selected) return;
+  const selId = selected.value;
+  document.querySelectorAll(`[class^="menu-extras-${grupoId}-"]`).forEach(el => el.style.display = 'none');
+  const extrasDiv = document.querySelector(`.menu-extras-${grupoId}-${selId}`);
+  if(extrasDiv) extrasDiv.style.display = 'block';
+  document.querySelectorAll(`.menu-mod-${grupoId}`).forEach(el => {
+    if(el.dataset.opcion !== selId) el.checked = false;
+  });
+}
+
+function confirmAddMenuToOrder(orderId, menuId){
+  const order = DB.tpvOrders.find(o=>o.id===orderId);
+  const m = DB.menus.find(x=>x.id===menuId);
+  if(!order || !m) return;
+  let suplementoTotal = 0;
+  let extrasTotal = 0;
+  const selections = (m.grupos||[]).map(g => {
+    const selectedId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
+    const o = (g.opciones||[]).find(x=>x.id===selectedId) || (g.opciones||[])[0];
+    if(!o) return {grupoNombre: g.nombre, opcionNombre:'', recipeId:null, suplemento:0, modificadores:[]};
+    suplementoTotal += o.suplemento||0;
+    const selectedMods = [...document.querySelectorAll(`.menu-mod-${g.id}:checked`)]
+      .filter(el => parseInt(el.dataset.opcion) === o.id)
+      .map(el => (o.modificadores||[]).find(mod => mod.id === parseInt(el.dataset.modId)))
+      .filter(Boolean);
+    const modExtra = selectedMods.reduce((s,mod) => s + (mod.precio||0), 0);
+    extrasTotal += modExtra;
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
+  });
+  const price = m.precio + suplementoTotal + extrasTotal;
+  const notas = selections.map(s => {
+    let txt = `${s.grupoNombre}: ${s.opcionNombre}`;
+    if(s.suplemento) txt += ` (+${fmtMoney(s.suplemento)})`;
+    if(s.modificadores.length) txt += ` [${s.modificadores.map(mod => mod.nombre + (mod.precio ? ' +' + fmtMoney(mod.precio) : '')).join(', ')}]`;
+    return txt;
+  }).join(' · ');
+
+  order.tandas = order.tandas || [];
+  selections.forEach((s, i) => {
+    if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
+    const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
+    const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
+    const grupo = m.grupos.find(g => g.nombre === s.grupoNombre);
+    const linePrice = (i===0 ? m.precio : 0) + s.suplemento + modExtra;
+    const isBebida = !!(grupo && grupo.bebida);
+    const existing = order.items.find(l =>
+      l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
+      !l.estado && (l.marchada||0) === 0
+    );
+    if(existing){
+      existing.qty += 1;
+      if(i===0) existing.price += m.precio;
+    } else {
+      const line = {
+        menuId: m.id, recipeId: s.recipeId, platoId: null,
+        name: lineName, price: linePrice,
+        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
+        modificadores: s.modificadores
+      };
+      if(isBebida) line.bebida = true;
+      order.items.push(line);
+      autoSendTakeawayLine(order, line);
+    }
+  });
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function groupOrderItemsByTanda(order){
+  const groups = {};
+  (order.items||[]).forEach((line, idx) => {
+    const key = line.tanda || '';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push({line, idx});
+  });
+  return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
+}
+
+function renderOrderLinesHtml(order){
+  const groups = groupOrderItemsByTanda(order);
+  if(!groups.length) return `<div class="empty" style="padding:10px">Comanda vacía</div>`;
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${groups.map(g => {
+    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
+    const enviados = g.items.map(({line}) => line.enviadoAt).filter(Boolean);
+    const elapsedBadge = enviados.length ? urgencyBadge(minutesSince(enviados.sort()[0])) : '';
+    return `
+    <div class="card card-compact">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+        <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
+        ${elapsedBadge}
+      </div>
+      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button></div>` : ''}
+      ${g.items.map(({line, idx}) => `
+        <div class="list-row">
+          <div class="list-row-name">
+            <span>${line.qty} × ${escapeHtml(line.name)}</span>${kitchenStatusBadge(line)}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
+            ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+            <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
+            <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
+            ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" title="Marchar este plato a cocina" style="color:var(--brand-orange)" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
+            ${line.estado === 'entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  }).join('')}</div>`;
+}
+
+// Botón principal: marcha el primer grupo (tanda) con platos pendientes (p.ej. "Entrantes"
+// primero). Los siguientes grupos (segundos, postres...) se marchan con su propio botón
+// dentro de cada tarjeta cuando el cliente esté listo.
+function renderOrderMarcharButtons(order){
+  if(order.tipo === 'takeaway') return '';
+  const groups = groupOrderItemsByTanda(order);
+  const hasPending = groups.some(g => orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0) > 0);
+  if(!hasPending) return '';
+
+  // "Marchar vale": marcha todas las bebidas + el primer grupo de comida pendiente
+  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> Marchar vale</button>`;
+}
+
+// Marcha automáticamente: todas las bebidas + el primer grupo de comida con platos pendientes.
+function marcharValeCompleto(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const ahora = new Date().toISOString();
+  const fired = [];
+
+  // 1. Marchar todas las bebidas pendientes
+  (order.items||[]).forEach(l => {
+    if(l.bebida && l.qty > (l.marchada||0)){
+      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: true});
+      l.estado = 'cocina';
+      l.enviadoAt = ahora;
+      l.marchada = l.qty;
+    }
+  });
+
+  // 2. Marchar el primer grupo de comida (tanda) con platos pendientes
+  const groups = groupOrderItemsByTanda(order);
+  const firstPendingFood = groups.find(g => g.items.some(({line}) => !line.bebida && line.qty > (line.marchada||0)));
+  if(firstPendingFood){
+    firstPendingFood.items.forEach(({line}) => {
+      if(!line.bebida && line.qty > (line.marchada||0)){
+        fired.push({qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: false});
+        line.estado = 'cocina';
+        line.enviadoAt = ahora;
+        line.marchada = line.qty;
+      }
+    });
+  }
+
+  if(!fired.length){ showToast(t('msg.noNewDishes')); return; }
+  order.cerrada = false;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
+  renderTableOrderModal(order.id);
+  showToast(t('msg.courseSent'));
+}
+
+// Marcha un solo plato (línea) a cocina, sin esperar al resto del grupo.
+function marcharLine(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const line = (order.items||[])[idx];
+  if(!line || line.qty <= (line.marchada||0)){ showToast(t('msg.noNewDishes')); return; }
+  const fired = [{qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: line.bebida}];
+  line.estado = 'cocina';
+  line.enviadoAt = new Date().toISOString();
+  line.marchada = line.qty;
+  order.cerrada = false;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
+  renderTableOrderModal(order.id);
+  showToast(t('msg.dishSentToKitchen'));
+}
+
+function renderTableOrderModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+    : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+  const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
+  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
+  const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
+  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="Cambiar camarero/a"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : 'Asignar camarero/a'}</span>` : '';
+
+  const total = orderTotal(order);
+  if(order.items.some(l => l.nuevo)){
+    order.items.forEach(l => delete l.nuevo);
+    saveDB();
+  }
+
+  // Todas las cartas+menús activos, sala primero, luego comida
+  const activeCartas = getActiveCartas();
+  const bebidaCartas = activeCartas.filter(isBebidaCarta);
+  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  if(comidaCartas.length > 1){
+    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
+    if(elegida) comidaCartas = [elegida];
+  }
+  const allCartas = [...bebidaCartas, ...comidaCartas];
+  const activeMenus = getActiveMenus ? getActiveMenus() : (DB.menus||[]);
+
+  // Autoseleccionar la primera carta si no hay selección
+  if(!tpvSelectedCartaId || !allCartas.some(c=>c.id===tpvSelectedCartaId) && !activeMenus.some(m=>m.id===tpvSelectedCartaId)){
+    tpvSelectedCartaId = allCartas.length ? allCartas[0].id : (activeMenus.length ? activeMenus[0].id : null);
+  }
+
+  // Pestañas de cartas/menús
+  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(tItem(c))}</button>`).join('');
+  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
+
+  // Contenido del selector según la pestaña seleccionada
+  let selectorHtml = '';
+  const selectedMenu = activeMenus.find(m=>m.id===tpvSelectedCartaId);
+  const selectedCarta = allCartas.find(c=>c.id===tpvSelectedCartaId);
+  if(selectedMenu){
+    selectorHtml = renderMenuSelectorInline(order, selectedMenu);
+  } else if(selectedCarta){
+    selectorHtml = renderCartaSelectorInline(order, selectedCarta);
+  }
+
+  // Comanda (lado derecho): items agrupados por sección con estado de marchar
+  const comandaHtml = renderOrderComandaPanel(order);
+
+  // Estado del servicio y botones de acción
+  const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
+  const actionButtons = allDelivered && order.items.length
+    ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`
+    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button></div>`;
+
+  openModal(`
+    <div class="modal-header" style="flex-wrap:wrap;gap:6px">
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
+      <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
+    </div>
+    <!-- Pestañas de cartas/menús -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      ${cartaTabs}${menuTabs}
+    </div>
+    <!-- Layout a dos columnas (se apilan en móvil): selector + comanda -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;min-height:50vh;max-height:70vh">
+      <div style="flex:1 1 300px;min-width:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px">
+        ${selectorHtml}
+      </div>
+      <div style="flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--brand-cream)">
+        ${comandaHtml}
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      ${actionButtons}
+    </div>
+  `, {order:true});
+}
+
+// Selector de platos dentro de una carta concreta (secciones + platos visibles).
+function renderCartaSelectorInline(order, carta){
+  const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
+  if(!secciones.length) return `<div class="empty" style="padding:10px">No hay platos disponibles en esta carta.</div>`;
+  return secciones.map(sec => {
+    const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
+    const icono = sec.icono || guessSeccionEmoji(sec.nombre);
+    return `
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(sec))}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Selector de menú (combo con grupos y opciones).
+function renderMenuSelectorInline(order, menu){
+  return `
+    <div style="margin-bottom:8px"><strong>${escapeHtml(tItem(menu))}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
+    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> Añadir ${escapeHtml(tItem(menu))} al pedido</button>
+  `;
+}
+
+// Panel de comanda: los ítems del pedido con estado, agrupados por sección (tanda),
+// ordenados como se fueron añadiendo (arriba lo primero, abajo lo último).
+function renderOrderComandaPanel(order){
+  const groups = groupOrderItemsByTanda(order);
+  if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>Comanda vacía<br><span style="font-size:12px;color:var(--muted)">Selecciona platos de la carta</span></div>`;
+  const total = orderTotal(order);
+  let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Comanda</span><span>${fmtMoney(total)}</span></div>`;
+  html += groups.map(g => {
+    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
+    const allInGroup = g.items;
+    const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
+    const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
+    let statusBadge = '';
+    if(allDelivered) statusBadge = '<span class="badge badge-green" style="font-size:10px">✅ Recogido</span>';
+    else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = '<span class="badge badge-green" style="font-size:10px">🍽️ Listo para recoger</span>';
+    else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = '<span class="badge badge-blue" style="font-size:10px">🔥 En preparación</span>';
+    else if(allFired) statusBadge = '<span class="badge badge-amber" style="font-size:10px">⏳ Marchado</span>';
+
+    return `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
+        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${statusBadge}
+          ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar</button>` : ''}
+        </div>
+      </div>
+      ${allInGroup.map(({line, idx}) => {
+        let lineStatus = '';
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
+        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+        return `
+        <div style="display:flex;align-items:center;gap:4px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}</span>
+          <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+          <button class="btn btn-sm btn-icon" style="width:22px;height:22px;min-height:auto;font-size:10px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+          <button class="btn btn-sm btn-icon" style="width:22px;height:22px;min-height:auto;font-size:10px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-sm btn-icon" style="width:22px;height:22px;min-height:auto;font-size:10px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
+          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:22px;height:22px;min-height:auto;font-size:10px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+        </div>
+        ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      `;}).join('')}
+    </div>
+    `;
+  }).join('');
+  return html;
+}
+
+// Permite anotar o cambiar qué camarero/a ha tomado o atiende esta comanda.
+function openSetCamareroModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-user"></i> Camarero/a</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${renderCamareroFieldHtml('set-camarero-sel', order.camareroId)}
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmSetCamarero(${orderId})"><i class="ti ti-check"></i> ${t('common.save')}</button>
+    </div>
+  `);
+}
+function confirmSetCamarero(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const sel = document.getElementById('set-camarero-sel');
+  order.camareroId = sel && sel.value ? parseInt(sel.value) : null;
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function orderPendingKitchenLines(order, tanda){
+  return (order.items||[])
+    .filter(l => tanda === undefined || (l.tanda||'') === (tanda||''))
+    .map(l => ({name: l.name, qty: l.qty - (l.marchada||0), notas: l.notas||'', tanda: l.tanda||''}))
+    .filter(l => l.qty > 0);
+}
+
+function marcharComanda(orderId, tanda){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const pending = orderPendingKitchenLines(order, tanda);
+  if(!pending.length){ showToast(t('msg.noNewDishes')); return; }
+
+  const ahora = new Date().toISOString();
+  const fired = [];
+  (order.items||[]).forEach(l => {
+    if((tanda === undefined || (l.tanda||'') === (tanda||'')) && l.qty > (l.marchada||0)){
+      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: l.bebida});
+      l.estado = 'cocina';
+      l.enviadoAt = ahora;
+      l.marchada = l.qty;
+    }
+  });
+  order.cerrada = false;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  printMarchadasIfEnabled(order, fired);
+  renderTableOrderModal(order.id);
+  showToast(t('msg.orderSentToKitchen'));
+}
+
+// Si la impresión de comandas está activada, imprime un vale de cocina (platos)
+// y otro de sala/barra (bebidas) con las líneas recién marchadas.
+function printMarchadasIfEnabled(order, firedLines){
+  if(!comandaPrintEnabled() || !firedLines || !firedLines.length) return;
+  const table = order.tableId ? DB.tables.find(t=>t.id===order.tableId) : null;
+  const titulo = table ? table.name : togoOrderLabel(order);
+  const comida = firedLines.filter(l => !l.bebida && l.qty > 0);
+  const bebida = firedLines.filter(l => l.bebida && l.qty > 0);
+  if(comida.length) printComandaTicket('COCINA', titulo, comida);
+  if(bebida.length) printComandaTicket('SALA / BARRA', titulo, bebida);
+}
+
+/* ============================================================
+   COMANDAS COCINA — Pantalla en tiempo real para cocina
+   ============================================================ */
+let comandasCocinaTab = 'activas';
+function setComandasCocinaTab(tab){
+  comandasCocinaTab = tab;
+  renderComandasCocina();
+}
+
+// Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
+function checkComandaCierre(order){
+  const food = (order.items||[]).filter(l => !l.bebida);
+  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado');
+}
+
+function setLineEstado(orderId, idx, estado){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const line = (order.items||[])[idx];
+  if(!line) return;
+  line.estado = estado;
+  if(estado === 'preparando') line.preparandoAt = new Date().toISOString();
+  if(estado === 'entregado') line.entregadoAt = new Date().toISOString();
+  checkComandaCierre(order);
+  saveDB();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+}
+
+function comandaOrderTitle(order){
+  const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
+  if(table) return `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`;
+  return `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
+}
+
+function timeAgo(iso){
+  if(!iso) return '';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return mins < 1 ? 'ahora' : `hace ${mins} min`;
+}
+
+function minutesSince(iso){
+  if(!iso) return 0;
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+}
+
+// Badge de urgencia: amarillo a partir de 5 min, naranja a partir de 10, rojo a partir de 15
+function urgencyBadge(mins){
+  if(mins >= 15) return `<span class="badge badge-red"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  if(mins >= 10) return `<span class="badge" style="background:#ffe0c2;color:#b35900"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  if(mins >= 5) return `<span class="badge badge-amber"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
+}
+
+// Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> entregado
+function cycleLineEstado(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  if(line.estado === 'cocina') setLineEstado(orderId, idx, 'preparando');
+  else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
+}
+
+// Click sobre el nombre de un grupo (tanda) en cocina: avanza el estado de todos sus platos a la vez
+function cycleGroupEstado(orderId, tanda){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  let changed = false;
+  (order.items||[]).forEach(line => {
+    if((line.tanda||'') === tanda){
+      if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
+      else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
+    }
+  });
+  if(!changed) return;
+  checkComandaCierre(order);
+  saveDB();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+}
+
+function renderComandasCocina(){
+  const box = document.getElementById('comandascocina-content');
+  if(!box) return;
+
+  const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
+
+  const tabsHtml = `
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
+    </div>
+  `;
+
+  if(comandasCocinaTab === 'cerradas'){
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayMs = todayStart.getTime();
+    const closed = allOrders
+      .filter(o => o.cerrada)
+      .map(order => {
+        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
+        const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
+        return {order, lines, maxMs};
+      })
+      .filter(({lines, maxMs}) => lines.length && maxMs >= todayMs)
+      .sort((a,b) => b.maxMs - a.maxMs);
+
+    if(!closed.length){
+      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-history"></i>No hay comandas cerradas todavía.</div>`;
+      return;
+    }
+
+    box.innerHTML = tabsHtml + `<div class="grid grid-3">${closed.map(({order, lines, maxMs}) => `
+      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+          <span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregada</span>
+        </div>
+        ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
+        ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
+      </div>
+    `).join('')}</div>`;
+    return;
+  }
+
+  allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
+
+  const tickets = allOrders
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))
+    .map(order => {
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
+      return {order, allLines};
+    });
+
+  tickets.sort((a,b) => {
+    const envA = a.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const envB = b.allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const ta = envA.length ? Math.min(...envA) : Date.now();
+    const tb = envB.length ? Math.min(...envB) : Date.now();
+    return ta - tb;
+  });
+
+  if(!tickets.length){
+    box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>No hay comandas pendientes. Cuando sala marche un pedido aparecerá aquí al instante.</div>`;
+    return;
+  }
+
+  box.innerHTML = tabsHtml + `<div class="grid grid-3">${tickets.map(({order, allLines}) => {
+    const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
+    const groups = tandaOrder.map(t => ({
+      tanda: t,
+      lines: allLines.filter(({line}) => (line.tanda||'') === t)
+    })).filter(g => g.lines.length);
+
+    const envTimes = allLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+    const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
+    const mins = minutesSince(new Date(minMs).toISOString());
+
+    return `
+    <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+        ${urgencyBadge(mins)}
+      </div>
+      ${groups.map(g => {
+        const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
+        const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
+        const allEntregado = g.lines.every(({line}) => line.estado === 'entregado');
+        let groupBtn = '';
+        if(allEntregado) groupBtn = `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Todo entregado</span>`;
+        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> Preparar todo</button>`;
+        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> Entregar todo</button>`;
+        return `
+        <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
+            ${groupBtn}
+          </div>
+          ${g.lines.map(({line, idx}) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
+              <div style="flex:1;min-width:0">
+                <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+                ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+              </div>
+              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> Sin marchar</span>`
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> En espera</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparando</button>`
+              : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>`}
+            </div>
+          `).join('')}
+        </div>
+      `;}).join('')}
+    </div>
+    `;
+  }).join('')}</div>`;
+}
+
+function findCartaPlato(secId, platoId){
+  for(const c of getActiveCartas()){
+    const sec = (c.secciones||[]).find(s=>s.id===secId);
+    if(sec){ const p = (sec.platos||[]).find(x=>x.id===platoId); if(p) return p; }
+  }
+  return null;
+}
+// Para los pedidos "para llevar" (tickets rápidos), los platos pasan a cocina automáticamente
+// al añadirlos o aumentar su cantidad, sin necesidad de pulsar "Marchar".
+function autoSendTakeawayLine(order, line){
+  if(order.tipo !== 'takeaway' || !line) return;
+  line.estado = 'cocina';
+  line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  line.marchada = line.qty;
+  order.cerrada = false;
+}
+
+// El primer grupo de platos (primer tanda añadida a la comanda) se marcha a
+// cocina automáticamente. Los siguientes grupos se marchan manualmente.
+function autoSendFirstCourse(order, line, tanda){
+  if(!line || order.tipo === 'takeaway') return;
+  const firstTanda = (order.tandas||[])[0];
+  if(firstTanda === undefined || (tanda||'') !== (firstTanda||'')) return;
+  line.estado = 'cocina';
+  line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  line.marchada = line.qty;
+  order.cerrada = false;
+}
+
+function addOrderItem(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const p = findCartaPlato(secId, platoId);
+  if(!order || !p) return;
+  if((p.modificadores||[]).length){
+    openAddItemModal(orderId, secId, platoId);
+    return;
+  }
+  const sec = findCartaSeccion(secId);
+  const tanda = sec ? sec.nombre : '';
+  order.tandas = order.tandas || [];
+  if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
+  // ¿Esta unidad se marchará automáticamente? (takeaway o primera tanda)
+  const autoSend = order.tipo === 'takeaway' || (tanda||'') === ((order.tandas||[])[0]||'');
+  // Agrupar en una línea existente del mismo plato (x2, x3...). Si la línea ya
+  // está marchada, solo agrupamos cuando esta adición también se marcha sola,
+  // para no fusionarla con platos que aún están pendientes de marchar a mano.
+  const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !(l.notas) && (l.tanda||'') === tanda && l.estado !== 'entregado' && (!l.marchada || autoSend));
+  let line;
+  if(existing){ existing.qty += 1; line = existing; }
+  else{ line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
+  autoSendTakeawayLine(order, line);
+  autoSendFirstCourse(order, line, tanda);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(orderId);
+}
+
+/* ============== Extras y notas al añadir un plato a la comanda ============== */
+function openAddItemModal(orderId, secId, platoId){
+  const p = findCartaPlato(secId, platoId);
+  if(!p) return;
+  const mods = p.modificadores || [];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(tItem(p))} · ${fmtMoney(p.precio)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    ${mods.length ? `
+      <div class="field">
+        <label>Extras</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${mods.map(m => `
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" class="add-item-mod" value="${m.id}" style="width:auto">
+              ${escapeHtml(tItem(m))}${m.precio ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(m.precio)}</span>` : ''}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+    <div class="field">
+      <label>Notas / comentarios (opcional)</label>
+      <textarea id="add-item-notas" rows="2" placeholder="Ej. sin cebolla, poco hecho..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmAddOrderItem(${orderId}, ${secId}, ${platoId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('add-item-notas')?.focus(), 50);
+}
+function confirmAddOrderItem(orderId, secId, platoId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const p = findCartaPlato(secId, platoId);
+  if(!order || !p) return;
+  const mods = p.modificadores || [];
+  const selectedMods = [...document.querySelectorAll('.add-item-mod:checked')]
+    .map(el => mods.find(m => m.id === parseInt(el.value)))
+    .filter(Boolean);
+  const notas = (document.getElementById('add-item-notas')?.value || '').trim();
+  const extra = selectedMods.reduce((s,m)=>s+(m.precio||0), 0);
+  const name = selectedMods.length ? `${p.nombre} (${selectedMods.map(m=>m.nombre).join(', ')})` : p.nombre;
+  const sec = findCartaSeccion(secId);
+  const tanda = sec ? sec.nombre : '';
+  order.tandas = order.tandas || [];
+  if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
+  const modKey = selectedMods.map(m=>m.id).sort().join(',');
+  const normMods = (m) => JSON.stringify(m && m.length ? m.map(x=>x.nombre).sort() : []);
+  const autoSend = order.tipo === 'takeaway' || (tanda||'') === ((order.tandas||[])[0]||'');
+  const existing = order.items.find(l => l.platoId === platoId && (l.tanda||'') === tanda && (l.notas||'') === notas && l.estado !== 'entregado' && (!l.marchada || autoSend) && normMods(l.modificadores) === normMods(selectedMods));
+  let line;
+  if(existing){
+    existing.qty += 1;
+    line = existing;
+  } else {
+    line = {
+      platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
+      notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
+    };
+    if(isSeccionBebida(secId)) line.bebida = true;
+    order.items.push(line);
+  }
+  autoSendTakeawayLine(order, line);
+  autoSendFirstCourse(order, line, tanda);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(orderId);
+}
+function changeOrderItemQty(orderId, idx, delta){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items[idx]) return;
+  const line = order.items[idx];
+  line.qty += delta;
+  if(line.qty <= 0) order.items.splice(idx,1);
+  else {
+    if(line.marchada > line.qty) line.marchada = line.qty;
+    autoSendTakeawayLine(order, line);
+  }
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+function removeOrderItem(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items[idx]) return;
+  const line = order.items[idx];
+  // Si el plato ya se ha marchado a cocina, pedir confirmación para evitar
+  // anular por error comida que se está preparando.
+  if((line.marchada||0) > 0 && line.estado !== 'entregado'){
+    if(!confirm(`"${line.name}" ya está en cocina. ¿Anular este plato?`)) return;
+  }
+  order.items.splice(idx,1);
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+// Momentos de servicio típicos para poder marchar la comanda por tandas
+// (primeros, segundos...) independientemente de la sección de la carta.
+const COURSE_OPTIONS = ['Bebidas','Entrantes','Primeros','Segundos','Terceros','Postres','Cafés y copas'];
+
+function openLineNotesModal(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  const options = [...new Set([...COURSE_OPTIONS, ...(order.tandas||[]), line.tanda||''])].filter(t=>t!=='');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-note"></i> ${escapeHtml(line.name)}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <div class="field">
+      <label>Momento de servicio (tanda)</label>
+      <select id="line-tanda-input">
+        <option value="">Sin tanda / plato único</option>
+        ${options.map(t => `<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+      </select>
+      <small style="color:var(--muted)">Elige cuándo se debe servir este plato (al ritmo del cliente: primeros, segundos, postres...).</small>
+    </div>
+    <div class="field">
+      <label>Notas / comentarios para cocina</label>
+      <textarea id="line-notas-input" rows="3" placeholder="Ej. sin cebolla, poco hecho...">${escapeHtml(line.notas||'')}</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmLineNotes(${orderId}, ${idx})"><i class="ti ti-check"></i> ${t('common.save')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('line-notas-input')?.focus(), 50);
+}
+function confirmLineNotes(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  line.notas = (document.getElementById('line-notas-input').value||'').trim();
+  const tanda = document.getElementById('line-tanda-input').value;
+  line.tanda = tanda;
+  order.tandas = order.tandas || [];
+  if(tanda && !order.tandas.includes(tanda)) order.tandas.push(tanda);
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
+function openPaymentModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
+  paymentTab = order.splitMode || 'full';
+  renderPaymentModal(orderId);
+}
+
+function setPaymentTab(orderId, tab){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(order && order.splitPayments && order.splitPayments.some(p=>p.paid) && order.splitMode !== tab){
+    showToast(t('msg.finishSplitFirst'));
+    return;
+  }
+  paymentTab = tab;
+  renderPaymentModal(orderId);
+}
+
+function renderPaymentModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
+  const total = orderTotal(order);
+  const tabs = [
+    {id:'full', label:'Cuenta completa', icon:'ti-receipt'},
+    {id:'equal', label:'Dividir a partes iguales', icon:'ti-users-group'},
+    {id:'items', label:'Por comensal (platos)', icon:'ti-friends'}
+  ];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash"></i> ${t('title.chargeOrder')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">Total de la cuenta</div>
+      <div class="value">${fmtMoney(total)}</div>
+    </div>
+    <div class="tabs" style="margin-bottom:12px">
+      ${tabs.map(t => `<div class="tab${paymentTab===t.id?' active':''}" onclick="setPaymentTab(${order.id}, '${t.id}')"><i class="ti ${t.icon}"></i> ${t.label}</div>`).join('')}
+    </div>
+    <div id="payment-tab-body">
+      ${paymentTab === 'equal' ? renderEqualSplitTab(order) : paymentTab === 'items' ? renderItemsSplitTab(order) : renderFullPaymentTab(order, total)}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
+      ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>` : ''}
+    </div>
+  `);
+}
+
+/* ------------------ Pestaña: cuenta completa ------------------ */
+function renderFullPaymentTab(order, total){
+  return `
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="payment-method" onchange="togglePaymentCash()">
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" id="payment-cash-field">
+      <label>Importe entregado (€)</label>
+      <input type="number" id="payment-cash" step="0.01" min="0" value="${total.toFixed(2)}" oninput="updatePaymentChange(${total})">
+    </div>
+    <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
+      <div class="label">Cambio</div>
+      <div class="value" id="payment-change">${fmtMoney(0)}</div>
+    </div>
+  `;
+}
+
+function togglePaymentCash(){
+  const method = document.getElementById('payment-method').value;
+  const isCash = method === 'Efectivo';
+  document.getElementById('payment-cash-field').style.display = isCash ? '' : 'none';
+  document.getElementById('payment-change-kpi').style.display = isCash ? '' : 'none';
+}
+
+function updatePaymentChange(total){
+  const cash = parseFloat(document.getElementById('payment-cash').value) || 0;
+  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, cash - total));
+}
+
+function finalizeCharge(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length) return;
+  const total = orderTotal(order);
+  const metodoPago = document.getElementById('payment-method').value;
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
+  applyDeliveryCommission(order, sale);
+  discountStockForOrder(order);
+  DB.sales.push(sale);
+  if(order.clientId) registerClientVisit(order.clientId);
+  order.status = 'pagada';
+  order.closedAt = new Date().toISOString();
+  saveDB();
+  renderTPV();
+  openTicketDeliveryModal(sale.id);
+}
+
+/* ------------------ Pestaña: dividir a partes iguales ------------------ */
+function renderEqualSplitTab(order){
+  if(!order.splitPayments || order.splitMode !== 'equal'){
+    return `
+      <div class="field">
+        <label>¿Entre cuántas personas se divide la cuenta?</label>
+        <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
+      </div>
+      <div class="modal-footer" style="padding:0;border:none">
+        <button class="btn btn-primary" onclick="generateEqualSplit(${order.id})"><i class="ti ti-divide"></i> Dividir cuenta</button>
+      </div>
+    `;
+  }
+  return renderSplitPartsList(order);
+}
+
+function generateEqualSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-equal-n').value) || 2));
+  const total = orderTotal(order);
+  order.splitMode = 'equal';
+  order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
+    id: i+1, label: 'Persona ' + (i+1), amount, paid:false, metodoPago:null
+  }));
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+// Reparte el total en `n` partes en céntimos, sin perder ni un céntimo por redondeo
+function makeEqualParts(total, n){
+  const totalCents = Math.round(total * 100);
+  const base = Math.floor(totalCents / n);
+  const remainder = totalCents - base * n;
+  return Array.from({length:n}, (_,i) => (base + (i < remainder ? 1 : 0)) / 100);
+}
+
+/* ------------------ Pestaña: por comensal (platos, unidad a unidad) ------------------ */
+function renderItemsSplitTab(order){
+  if(!order.splitPayments || order.splitMode !== 'items'){
+    const n = order.splitItemsN || 2;
+    let assignments = order.itemAssignments;
+    if(!assignments || assignments.length !== order.items.length || order.items.some((l,idx)=>!assignments[idx] || assignments[idx].length !== l.qty)){
+      assignments = order.items.map(l => Array.from({length:l.qty}, ()=>1));
+    }
+    return `
+      <div class="field">
+        <label>Nº de comensales</label>
+        <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" oninput="updateItemsSplitDiners(${order.id})">
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Asigna cada unidad al comensal que la ha consumido (si hay 3 ensaladas, cada una puede ir a un comensal distinto):</p>
+      <div id="split-items-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        ${order.items.map((line,idx) => `
+          <div class="card card-compact">
+            <div style="font-weight:700;margin-bottom:6px">${escapeHtml(line.name)} <span style="color:var(--muted);font-weight:400">(${fmtMoney(line.price)}/ud.)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${Array.from({length:line.qty}, (_,u) => `
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="font-size:11px;color:var(--muted)">Ud. ${u+1}</span>
+                  <select id="split-item-assign-${idx}-${u}" data-idx="${idx}" data-unit="${u}">
+                    ${Array.from({length:n}, (_,i)=>i+1).map(p => `<option value="${p}"${assignments[idx][u]===p?' selected':''}>Comensal ${p}</option>`).join('')}
+                  </select>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="modal-footer" style="padding:0;border:none">
+        <button class="btn btn-primary" onclick="generateItemsSplit(${order.id})"><i class="ti ti-divide"></i> Calcular división</button>
+      </div>
+    `;
+  }
+  return renderSplitPartsList(order);
+}
+
+// Cuando cambia el nº de comensales, regenera las opciones de los desplegables
+// conservando la asignación de cada unidad siempre que siga siendo válida.
+function updateItemsSplitDiners(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-items-n').value) || 2));
+  order.itemAssignments = order.items.map((line,idx) => Array.from({length:line.qty}, (_,u) => {
+    const sel = document.getElementById(`split-item-assign-${idx}-${u}`);
+    const current = sel ? parseInt(sel.value) : 1;
+    return Math.min(current || 1, n);
+  }));
+  order.splitItemsN = n;
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+function generateItemsSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-items-n').value) || 2));
+  const assignments = order.items.map((line,idx) => Array.from({length:line.qty}, (_,u) => {
+    const sel = document.getElementById(`split-item-assign-${idx}-${u}`);
+    return Math.min(Math.max(1, sel ? parseInt(sel.value) : 1), n);
+  }));
+  order.itemAssignments = assignments;
+  order.splitItemsN = n;
+  order.splitMode = 'items';
+  order.splitPayments = Array.from({length:n}, (_,i) => {
+    const personIdx = i+1;
+    let amount = 0;
+    const itemNames = [];
+    order.items.forEach((line, idx) => {
+      const units = assignments[idx].filter(p=>p===personIdx).length;
+      if(units > 0){
+        amount += line.price * units;
+        itemNames.push(units === line.qty ? line.name : `${units} x ${line.name}`);
+      }
+    });
+    return {
+      id: personIdx, label: 'Comensal ' + personIdx, amount,
+      itemNames, paid:false, metodoPago:null
+    };
+  });
+  saveDB();
+  renderPaymentModal(orderId);
+}
+
+/* ------------------ Lista de partes y cobro individual ------------------ */
+function renderSplitPartsList(order){
+  const allPaid = order.splitPayments.every(p=>p.paid);
+  return `
+    <div class="table-wrap" style="margin-bottom:10px">
+      <table>
+        <thead><tr><th>Quién paga</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${order.splitPayments.map(p => `
+            <tr>
+              <td>${escapeHtml(p.label)}${p.itemNames && p.itemNames.length ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(p.itemNames.join(', '))}</div>` : ''}</td>
+              <td>${fmtMoney(p.amount)}</td>
+              <td>${p.paid ? `<span class="badge badge-green"><i class="ti ti-check"></i> Pagado${p.metodoPago ? ' · '+escapeHtml(p.metodoPago) : ''}</span>` : `<span class="badge">Pendiente</span>`}</td>
+              <td>${p.paid ? '' : `<button class="btn btn-primary" onclick="openSplitPartPayment(${order.id}, ${p.id})"><i class="ti ti-cash"></i> Cobrar</button>`}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="padding:0;border:none">
+      <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> ${t('btn.cancelSplit')}</button>
+      ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> Finalizar cobro</button>` : ''}
+    </div>
+  `;
+}
+
+function cancelSplit(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(order.splitPayments && order.splitPayments.some(p=>p.paid)){
+    if(!confirm(t('msg.confirmCancelSplit'))) return;
+  }
+  delete order.splitMode;
+  delete order.splitPayments;
+  delete order.itemAssignments;
+  delete order.splitItemsN;
+  saveDB();
+  paymentTab = 'full';
+  renderPaymentModal(orderId);
+}
+
+function openSplitPartPayment(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order.splitPayments.find(p=>p.id===partId);
+  if(!part) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash"></i> Cobrar — ${escapeHtml(part.label)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">Importe</div>
+      <div class="value">${fmtMoney(part.amount)}</div>
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field" id="split-part-cash-field">
+      <label>Importe entregado (€)</label>
+      <input type="number" id="split-part-cash" step="0.01" min="0" value="${part.amount.toFixed(2)}" oninput="updateSplitPartChange(${part.amount})">
+    </div>
+    <div class="kpi" id="split-part-change-kpi" style="margin-bottom:12px">
+      <div class="label">Cambio</div>
+      <div class="value" id="split-part-change">${fmtMoney(0)}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderPaymentModal(${order.id})">Volver</button>
+      <button class="btn btn-primary" onclick="confirmSplitPartPayment(${order.id}, ${part.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>
+    </div>
+  `);
+}
+
+function toggleSplitPartCash(amount){
+  const method = document.getElementById('split-part-method').value;
+  const isCash = method === 'Efectivo';
+  document.getElementById('split-part-cash-field').style.display = isCash ? '' : 'none';
+  document.getElementById('split-part-change-kpi').style.display = isCash ? '' : 'none';
+}
+
+function updateSplitPartChange(amount){
+  const cash = parseFloat(document.getElementById('split-part-cash').value) || 0;
+  document.getElementById('split-part-change').textContent = fmtMoney(Math.max(0, cash - amount));
+}
+
+function confirmSplitPartPayment(orderId, partId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const part = order.splitPayments.find(p=>p.id===partId);
+  if(!part) return;
+  part.paid = true;
+  part.metodoPago = document.getElementById('split-part-method').value;
+  saveDB();
+  showToast(escapeHtml(part.label) + ': ' + t('title.chargeRegistered'));
+  renderPaymentModal(orderId);
+}
+
+function finalizeSplitOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.items.length || !order.splitPayments || !order.splitPayments.every(p=>p.paid)) return;
+  const total = orderTotal(order);
+  discountStockForOrder(order);
+  const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
+  const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
+  const sale = {
+    id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
+    tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
+    clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago: metodos.length===1?metodos[0]:'Dividido',
+    pagos, items: order.items.map(l=>({...l}))
+  };
+  applyDeliveryCommission(order, sale);
+  DB.sales.push(sale);
+  if(order.clientId) registerClientVisit(order.clientId);
+  order.status = 'pagada';
+  order.closedAt = new Date().toISOString();
+  delete order.splitMode;
+  delete order.splitPayments;
+  delete order.itemAssignments;
+  delete order.splitItemsN;
+  saveDB();
+  renderTPV();
+  openTicketDeliveryModal(sale.id);
+}
+
+function discountStockForOrder(order){
+  order.items.forEach(line => {
+    // Una línea normal descuenta su propia receta; un menú sin desglosar
+    // descuenta las recetas de cada opción elegida (menuSelections).
+    const recetas = [];
+    if(line.recipeId) recetas.push(line.recipeId);
+    else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
+    recetas.forEach(recipeId => {
+      const r = getRecipe(recipeId);
+      if(!r) return;
+      (r.ingredients||[]).forEach(ri => {
+        const s = getStockEntry(ri.ingredientId);
+        s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+      });
+    });
+  });
+}
+
+// Si el pedido es de delivery y ha llegado a través de una app (Glovo, Uber Eats...)
+// calcula y guarda en la venta la comisión que esa app cobra (comisión% + IVA sobre la
+// comisión), para que se descuente automáticamente como gasto en Gestión Económica.
+function applyDeliveryCommission(order, sale){
+  if(order.tipo !== 'delivery' || !order.plataformaId) return;
+  const plat = (DB.business.deliveryPlatforms||[]).find(p => p.id === order.plataformaId);
+  if(!plat) return;
+  const comisionPct = parseFloat(plat.comisionPct) || 0;
+  const ivaPct = parseFloat(plat.ivaPct) || 0;
+  const comision = sale.total * (comisionPct/100) * (1 + ivaPct/100);
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct};
+  sale.comisionPlataforma = Math.round(comision * 100) / 100;
+}
+
+/* ------------------ Ticket: contenido, impresión, email y factura ------------------ */
+function buildTicketHeaderLines(){
+  const b = DB.business || {};
+  const t = b.ticket || {};
+  const lines = [b.name || 'GastroGoan'];
+  if(t.mostrarDireccion !== false && b.address) lines.push(b.address);
+  if(t.mostrarTelefono !== false && b.phone) lines.push('Tel: ' + b.phone);
+  if(t.mostrarWeb && b.web) lines.push(b.web);
+  if(t.mostrarNif !== false && b.cif) lines.push('NIF/CIF: ' + b.cif);
+  return lines;
+}
+
+function buildTicketText(sale, opts={}){
+  const t = (DB.business && DB.business.ticket) || {};
+  const lines = [...buildTicketHeaderLines()];
+  if(opts.factura) lines.push('FACTURA SIMPLIFICADA Nº ' + sale.facturaNum);
+  lines.push(sale.date);
+  lines.push(`${sale.tipo==='mesa'?'Mesa':sale.express?'Pedido Express':sale.tipo==='delivery'?'Delivery':'Take Away'}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
+  lines.push('------------------------------');
+  sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
+  lines.push('------------------------------');
+  if(opts.factura){
+    const ivaPct = t.ivaPct != null ? t.ivaPct : 10;
+    const base = sale.total / (1 + ivaPct/100);
+    const iva = sale.total - base;
+    lines.push(`Base imponible: ${fmtMoney(base)}`);
+    lines.push(`IVA (${ivaPct}%): ${fmtMoney(iva)}`);
+  }
+  lines.push(`TOTAL: ${fmtMoney(sale.total)}`);
+  if(sale.pagos && sale.pagos.length > 1){
+    sale.pagos.forEach(p => lines.push(`${p.label}: ${fmtMoney(p.amount)} (${p.metodoPago||''})`));
+  }else{
+    lines.push(`Pago: ${sale.metodoPago||''}`);
+  }
+  lines.push('');
+  lines.push(t.pie || '¡Gracias por su visita!');
+  return lines.join('\n');
+}
+
+function printTicket(sale, opts={}){
+  const text = buildTicketText(sale, opts);
+  const win = window.open('', '_blank', 'width=320,height=520');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}</body></html>`);
+  win.document.close();
+  win.print();
+}
+
+// Asigna un número de factura secuencial (solo la primera vez) e imprime
+// una factura simplificada con desglose de IVA según la configuración del ticket.
+function printInvoice(saleId){
+  const sale = DB.sales.find(s => s.id === saleId);
+  if(!sale) return;
+  if(!sale.facturaNum){
+    DB.business.facturaCounter = (DB.business.facturaCounter||0) + 1;
+    const year = (sale.date || todayStr()).slice(0,4);
+    sale.facturaNum = `${year}-${String(DB.business.facturaCounter).padStart(5,'0')}`;
+    saveDB();
+  }
+  printTicket(sale, {factura:true});
+}
+
+// Abre el cliente de correo del usuario con el ticket en el cuerpo del mensaje.
+function sendTicketByEmail(saleId){
+  const sale = DB.sales.find(s => s.id === saleId);
+  if(!sale) return;
+  const email = (prompt('Email del cliente para enviarle el ticket:', '')||'').trim();
+  if(!email) return;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast(t('msg.invalidEmail')); return; }
+  const subject = `Ticket de tu compra en ${DB.business.name || 'GastroGoan'}`;
+  const body = buildTicketText(sale);
+  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  showToast(t('msg.openingEmail'));
+}
+
+// Tras registrar un cobro, deja elegir qué hacer con el ticket.
+function openTicketDeliveryModal(saleId){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-receipt"></i> Cobro registrado</h3>
+      <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">¿Qué quieres hacer con el ticket?</p>
+    <div class="modal-footer" style="flex-wrap:wrap">
+      <button class="btn" onclick="closeModal();renderTPV()"><i class="ti ti-x"></i> No imprimir</button>
+      <button class="btn" onclick="sendTicketByEmail(${saleId})"><i class="ti ti-mail"></i> Enviar por email</button>
+      <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> Factura</button>
+      <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> Imprimir ticket</button>
+    </div>
+  `);
+}
+
