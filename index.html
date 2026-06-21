@@ -432,8 +432,10 @@ td.wrap{white-space:normal}
   .app-logo-sub{display:none}
   .app-logo-text{font-size:13px}
   .app-header .hdr-text{display:none}
-  .app-header .btn{padding:5px 8px;font-size:11px}
+  .app-header .btn{padding:5px 8px;font-size:11px;min-height:32px}
+  .app-header .btn i{font-size:16px}
   #lang-select{font-size:11px;padding:4px 4px;min-width:44px}
+  #sync-badge{font-size:10px;padding:3px 8px;margin-right:4px !important}
 
   /* Layout */
   .content{padding:14px}
@@ -483,6 +485,30 @@ td.wrap{white-space:normal}
 
   /* Search */
   .search-input{max-width:220px}
+
+  /* Toolbars — wrap nicely */
+  .toolbar{flex-wrap:wrap;gap:8px}
+  .toolbar .left{flex-wrap:wrap;gap:6px}
+  .toolbar .btn{font-size:12px}
+
+  /* Action buttons in lists/cards */
+  .actions-cell{gap:4px;flex-wrap:wrap}
+  .actions-cell .btn{font-size:11px;padding:5px 8px}
+  .btn-icon{min-width:32px;min-height:32px;padding:4px}
+
+  /* View toggle buttons */
+  .view-toggle{gap:2px}
+  .view-toggle .btn{padding:5px 8px}
+
+  /* Escandallo/Fichas tabs */
+  .ge-sec-head{flex-wrap:wrap;gap:6px;padding:10px 12px}
+  .ge-sec-head .actions-cell{flex-wrap:wrap}
+
+  /* List rows */
+  .list-row{flex-wrap:wrap;gap:6px;padding:8px 0}
+
+  /* Badges */
+  .badge{font-size:10px;padding:2px 6px}
 }
 
 @media (max-width: 600px){
