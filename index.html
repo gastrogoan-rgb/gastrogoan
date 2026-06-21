@@ -2408,6 +2408,50 @@ function withDefaults(def, data){
   return data;
 }
 
+function mergeArraysById(local, remote){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  if(remote.length === 0) return local;
+  if(local.length === 0) return remote;
+  const hasIds = remote[0] && typeof remote[0] === 'object' && 'id' in remote[0];
+  if(!hasIds) return remote;
+  const remoteMap = new Map();
+  remote.forEach(item => remoteMap.set(item.id, item));
+  const merged = [];
+  const seen = new Set();
+  local.forEach(item => {
+    if(item && item.id != null){
+      seen.add(item.id);
+      merged.push(remoteMap.has(item.id) ? remoteMap.get(item.id) : item);
+    } else {
+      merged.push(item);
+    }
+  });
+  remote.forEach(item => {
+    if(item && item.id != null && !seen.has(item.id)) merged.push(item);
+  });
+  return merged;
+}
+
+const MERGEABLE_ARRAYS = new Set([
+  'ingredients','recipes','fichas','menuItems','cartas','menus',
+  'purchaseOrders','providers','tables','tpvOrders','sales',
+  'cashClosures','employees','turnos','fichajes','promos',
+  'cleaningTasks','clients','chatMessages','reservations',
+  'ingredientCategories','recipeCategories','elaboraciones'
+]);
+
+/* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
+function hashPin(pin){
+  const salt = 'GG2024$p';
+  let h = 0x811c9dc5;
+  const s = salt + pin + salt;
+  for(let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return 'H:' + (h >>> 0).toString(36);
+}
+
 function updateSyncBadge(state){
   const el = document.getElementById('sync-badge');
   if(!el) return;
@@ -2634,12 +2678,15 @@ function initCloud(){
    incremental posterior. */
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
-  const merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
+  let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
+  if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
+    merged = mergeArraysById(DB[key], merged);
+  }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
   const json = JSON.stringify(merged);
-  if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return; // eco de un cambio propio
+  if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
   lastSyncedSnapshot[key] = json;
   DB[key] = merged;
   idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
@@ -5199,7 +5246,9 @@ function requestChatOwnerPin(sel){
 function confirmChatOwnerPin(){
   const val = document.getElementById('chat-owner-pin-input').value;
   const sel = document.getElementById('chat-author-sel');
-  if(val !== DB.business.pin){
+  const bp = DB.business.pin;
+  const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  if(!bMatch){
     showToast(t('msg.pinIncorrect'));
     if(sel) sel.value = chatPinPrevValue || getChatAuthor();
     return;
@@ -5386,7 +5435,9 @@ function requestEditPin(){
 
 function verifyEditPin(){
   const val = document.getElementById('edit-pin-input').value;
-  if(val !== DB.business.pin){
+  const bp = DB.business.pin;
+  const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  if(!bMatch){
     showToast(t('msg.pinIncorrect'));
     return;
   }
@@ -5483,7 +5534,9 @@ function requestOwnerPin(targetView){
 
 function verifyOwnerPin(targetView){
   const val = document.getElementById('owner-pin-input').value;
-  if(val !== DB.business.pin){
+  const bp = DB.business.pin;
+  const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  if(!bMatch){
     showToast(t('msg.pinIncorrect'));
     return;
   }
@@ -5492,7 +5545,7 @@ function verifyOwnerPin(targetView){
     const n2 = document.getElementById('owner-pin-new2').value;
     if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pin4digits')); return; }
     if(n1 !== n2){ showToast(t('msg.pinNoMatch')); return; }
-    DB.business.pin = n1;
+    DB.business.pin = hashPin(n1);
     DB.business.pinSet = true;
     saveDB();
     showToast(t('msg.pinUpdated'));
@@ -13014,6 +13067,7 @@ function resetEmployeePin(id){
   if(!confirm(t('msg.confirmResetPin').replace('${name}', e.name))) return;
   e.pin = '1234';
   e.pinChanged = false;
+  // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
   saveDB();
   showToast(t('msg.pinResetDone'));
   openEmployeeModal(id);
@@ -13184,7 +13238,9 @@ function confirmFichaje(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
   const pin = document.getElementById('fichaje-pin').value.trim();
-  if(pin !== (e.pin || '1234')){ showToast(t('msg.pinIncorrect')); return; }
+  const storedPin = e.pin || '1234';
+  const match = storedPin.startsWith('H:') ? hashPin(pin) === storedPin : pin === storedPin;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
   if(!e.pinChanged){
     openNewPinModal(employeeId, action);
     return;
@@ -13223,7 +13279,7 @@ function confirmNewPin(employeeId, action){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
-  e.pin = p1;
+  e.pin = hashPin(p1);
   e.pinChanged = true;
   saveDB();
   doFichaje(employeeId, action);
