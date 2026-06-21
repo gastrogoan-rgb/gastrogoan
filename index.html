@@ -9144,15 +9144,26 @@ function confirmAddMenuToOrder(orderId, menuId){
     const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
     const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
     const grupo = m.grupos.find(g => g.nombre === s.grupoNombre);
-    const line = {
-      menuId: m.id, recipeId: s.recipeId, platoId: null,
-      name: lineName, price: (i===0 ? m.precio : 0) + s.suplemento + modExtra,
-      qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
-      modificadores: s.modificadores
-    };
-    if(grupo && grupo.bebida) line.bebida = true;
-    order.items.push(line);
-    autoSendTakeawayLine(order, line);
+    const linePrice = (i===0 ? m.precio : 0) + s.suplemento + modExtra;
+    const isBebida = !!(grupo && grupo.bebida);
+    const existing = order.items.find(l =>
+      l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
+      !l.estado && (l.marchada||0) === 0
+    );
+    if(existing){
+      existing.qty += 1;
+      if(i===0) existing.price += m.precio;
+    } else {
+      const line = {
+        menuId: m.id, recipeId: s.recipeId, platoId: null,
+        name: lineName, price: linePrice,
+        qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
+        modificadores: s.modificadores
+      };
+      if(isBebida) line.bebida = true;
+      order.items.push(line);
+      autoSendTakeawayLine(order, line);
+    }
   });
   saveDB();
   renderTableOrderModal(orderId);
