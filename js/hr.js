@@ -327,13 +327,15 @@ const GE = (function(){
   function renderVariables(){
     document.getElementById('gv-months').innerHTML = MESES.map((m,i)=>`
       <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonth(${i})">${m}</div>`).join('');
-    const mes = activeMonth, tvMes = totalVariablesMes(mes), fac = facturacionMes(mes);
-    const fcPct = fac>0 ? (tvMes/fac*100) : 0;
+    const mes = activeMonth, tvMes = totalVariablesMes(mes), tvNeto = totalVariablesNetoMes(mes), ivaSop = tvMes - tvNeto;
+    const facNeta = facturacionNetaMes(mes), fac = facturacionMes(mes);
+    const fcPct = facNeta>0 ? (tvNeto/facNeta*100) : 0;
     document.getElementById('gv-sec-title').textContent = `Compras — ${MESES[mes]} ${currentYear}`;
     document.getElementById('gv-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Total compras mes</div><div class="val">${fmtMoney(tvMes)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Facturación mes <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(fac)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${fac>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: ${config().foodCostObj||35}%</div></div>`;
+      <div class="ge-kpi"><div class="lbl">Coste real (sin IVA)</div><div class="val">${fmtMoney(tvNeto)}</div></div>
+      <div class="ge-kpi"><div class="lbl">IVA soportado</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Facturación neta <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: ${config().foodCostObj||35}%</div></div>`;
     const items = variablesMes(mes);
     const list = document.getElementById('gv-list');
     const empty = document.getElementById('gv-empty');
@@ -349,24 +351,33 @@ const GE = (function(){
         autoItems.forEach(v=>{ (byProv[v.proveedor||'—'] = byProv[v.proveedor||'—']||[]).push(v); });
         const autoHtml = Object.entries(byProv).map(([prov,vs])=>{
           const total = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
+          const totalBase = vs.reduce((s,v)=>{ const p=v.iva!=null?parseFloat(v.iva):ivaComprasPct(); return s+parseFloat(v.importe||0)/(1+p/100); },0);
+          const totalIva = total - totalBase;
           const ids = vs.map(v=>v.id).join(',');
-          return `<div class="ge-item">
-            <span style="flex:1;font-size:14px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedidos recibidos</span></span>
+          return `<div class="ge-item" style="flex-wrap:wrap">
+            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedidos recibidos</span></span>
+            <span style="font-size:11px;color:var(--muted);margin-right:4px">Base ${fmtMoney(totalBase)} + IVA ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
             <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGVGroup('${ids}')"><i class="ti ti-trash"></i></button>
           </div>`;
         }).join('');
-        const manualHtml = manualItems.map(v=>`<div class="ge-item">
-          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}${v.iva!=null?` <span style="font-size:10px;color:var(--muted)">IVA ${v.iva}%</span>`:''}</span>
-          <span style="font-size:12px;color:var(--muted);margin-right:8px">${escapeHtml(v.fecha||'')}</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(v.importe||0))}</span>
+        const manualHtml = manualItems.map(v=>{
+          const imp = parseFloat(v.importe||0);
+          const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
+          const base = imp / (1 + pct/100);
+          const ivaAmt = imp - base;
+          return `<div class="ge-item" style="flex-wrap:wrap">
+          <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
+          <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
+          <span style="font-size:11px;color:var(--muted);margin-right:4px">Base ${fmtMoney(base)} + IVA ${pct}% (${fmtMoney(ivaAmt)})</span>
+          <span style="font-family:monospace;font-weight:700">${fmtMoney(imp)}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
-        </div>`).join('');
+        </div>`; }).join('');
         return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>${autoHtml}${manualHtml}`;
       }).join('');
     }
     document.getElementById('gv-total-lbl').textContent = `TOTAL VARIABLES ${MESES[mes].toUpperCase()}`;
-    document.getElementById('gv-total-val').textContent = fmtMoney(tvMes);
+    document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ IVA ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
   }
   function setMonth(m){ activeMonth = m; renderVariables(); }
   function newGV(){
