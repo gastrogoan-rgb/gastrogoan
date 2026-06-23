@@ -8,6 +8,8 @@ const GE = (function(){
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
+  const IVA_OPTIONS = [{v:21,l:'21% (General)'},{v:10,l:'10% (Reducido)'},{v:4,l:'4% (Superreducido)'},{v:0,l:'0% (Exento)'}];
+  function ivaSelect(id, val){ return `<select id="${id}">${IVA_OPTIONS.map(o=>`<option value="${o.v}" ${parseFloat(val)===o.v?'selected':''}>${o.l}</option>`).join('')}</select>`; }
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
   let cdrYear = new Date().getFullYear();
   let distPctLoaded = false;
@@ -61,12 +63,23 @@ const GE = (function(){
   function ivaComprasPct(){
     return config().ivaComprasPct!=null ? parseFloat(config().ivaComprasPct) : 10;
   }
-  // Coste de compras sin IVA: el IVA pagado a proveedores es deducible (no es coste real).
   function totalVariablesNetoMes(mes, año=currentYear){
-    return totalVariablesMes(mes,año) / (1 + ivaComprasPct()/100);
+    const items = variablesMes(mes,año);
+    return items.reduce((s,v) => {
+      const pct = v.iva != null ? parseFloat(v.iva) : ivaComprasPct();
+      return s + parseFloat(v.importe||0) / (1 + pct/100);
+    }, 0);
   }
   function ivaSoportadoComprasMes(mes, año=currentYear){
     return totalVariablesMes(mes,año) - totalVariablesNetoMes(mes,año);
+  }
+  function ivaSoportadoFijosMes(){
+    return fijos().reduce((s,g) => {
+      const pct = g.iva != null ? parseFloat(g.iva) : 0;
+      if(pct === 0) return s;
+      const mensual = gfMonthlyImporte(g);
+      return s + mensual - mensual / (1 + pct/100);
+    }, 0);
   }
   // IVA soportado en inversiones CAPEX compradas ese mes (deducible en el periodo de la compra).
   function ivaSoportadoCapexMes(mes, año=currentYear){
@@ -79,7 +92,7 @@ const GE = (function(){
   // IVA neto a liquidar con Hacienda (modelo 303): repercutido en ventas menos soportado en compras e inversiones.
   // Si es negativo, Hacienda te lo debe a ti (a tu favor).
   function ivaLiquidarMes(mes, año=currentYear){
-    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año);
+    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes();
   }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
   // sobre las ventas del mes que llegaron por esas plataformas.
@@ -163,6 +176,7 @@ const GE = (function(){
       const mensual = gfMonthlyImporte(g);
       const detalles = [];
       if(g.diaPago) detalles.push(`día ${g.diaPago}`);
+      if(g.iva != null && g.categoria !== 'PERSONAL') detalles.push(`IVA ${g.iva}%`);
       if(periodoMeses>1) detalles.push(`cada ${periodoMeses} meses · ${fmtMoney(parseFloat(g.importe||0))}/pago`);
       if(g.autoCalc) detalles.push(`Neto ${fmtMoney(parseFloat(g.sueldoNeto||0))} + retenciones = Bruto ${fmtMoney(g.sueldoBruto||0)} + SS Empresa ${fmtMoney(g.ssEmpresa||0)}`);
       return `
@@ -229,6 +243,7 @@ const GE = (function(){
           ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
         </select>
       </div>
+      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>Tipo de IVA</label>${ivaSelect('gf-f-iva', g.iva!=null?g.iva:21)}</div>` : ''}
       <div class="field">
         <label>Comentario (opcional)</label>
         <textarea id="gf-f-notas" rows="2" placeholder="Notas internas sobre este gasto...">${escapeHtml(g.notas||'')}</textarea>
@@ -270,7 +285,8 @@ const GE = (function(){
       nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
       categoria:document.getElementById('gf-f-cat').value,
       periodicidadMeses: parseInt(document.getElementById('gf-f-periodo').value)||1,
-      notas: document.getElementById('gf-f-notas').value.trim()
+      notas: document.getElementById('gf-f-notas').value.trim(),
+      iva: document.getElementById('gf-f-iva') ? parseFloat(document.getElementById('gf-f-iva').value) : 0
     };
     const autocalcEl = document.getElementById('gf-f-autocalc');
     if(autocalcEl && autocalcEl.checked){
@@ -341,7 +357,7 @@ const GE = (function(){
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>`<div class="ge-item">
-          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}</span>
+          <span style="flex:1;font-size:14px">${escapeHtml(v.proveedor||'—')}${v.iva!=null?` <span style="font-size:10px;color:var(--muted)">IVA ${v.iva}%</span>`:''}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:8px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(v.importe||0))}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
@@ -369,7 +385,10 @@ const GE = (function(){
       </div>
       <div class="field-row">
         <div class="field"><label>Importe (€)</label><input type="number" id="gv-f-imp" min="0" step="0.01"></div>
-        <div class="field"><label>Fecha</label><input type="date" id="gv-f-fecha" value="${fecha}"></div>
+        <div class="field"><label>Tipo de IVA</label>${ivaSelect('gv-f-iva', 10)}</div>
+      </div>
+      <div class="field">
+        <label>Fecha</label><input type="date" id="gv-f-fecha" value="${fecha}">
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
@@ -385,6 +404,7 @@ const GE = (function(){
       categoria: document.getElementById('gv-f-cat').value,
       proveedor: document.getElementById('gv-f-prov').value.trim().toUpperCase() || 'SIN PROVEEDOR',
       importe: imp,
+      iva: parseFloat(document.getElementById('gv-f-iva').value),
       fecha: document.getElementById('gv-f-fecha').value
     });
     saveDB();

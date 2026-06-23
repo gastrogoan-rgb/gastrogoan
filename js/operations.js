@@ -561,7 +561,7 @@ function registerPedidoComoGastoVariable(o){
     DB.ge.variables.push({
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
-      fecha, pedidoId: o.id, auto: true
+      iva: 10, fecha, pedidoId: o.id, auto: true
     });
   });
   o.gvCreated = true;
