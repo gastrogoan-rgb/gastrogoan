@@ -202,6 +202,7 @@ function renderProveedores(){
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(p.pago)}</span>` : ''}
+      ${p.iva!=null ? `<span class="badge badge-gray">IVA ${p.iva}%</span>` : ''}
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
     </div>
   `).join('');
@@ -250,6 +251,14 @@ function openProviderModal(id){
     <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
+    <div class="field"><label>Tipo de IVA habitual</label>
+      <select id="prov-iva">
+        <option value="21" ${(p.iva==null||parseFloat(p.iva)===21)?'selected':''}>21% (General)</option>
+        <option value="10" ${parseFloat(p.iva)===10?'selected':''}>10% (Reducido)</option>
+        <option value="4" ${parseFloat(p.iva)===4?'selected':''}>4% (Superreducido)</option>
+        <option value="0" ${parseFloat(p.iva)===0?'selected':''}>0% (Exento)</option>
+      </select>
+    </div>
     <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
@@ -269,6 +278,7 @@ function saveProvider(id){
     email: document.getElementById('prov-email').value.trim(),
     dir: document.getElementById('prov-dir').value.trim(),
     iban: document.getElementById('prov-iban').value.trim(),
+    iva: parseFloat(document.getElementById('prov-iva').value),
     diasEntrega: WEEK_DAYS.filter((_,i)=>document.getElementById(`prov-dia-entrega-${i}`).checked),
     horaEntrega: document.getElementById('prov-hora-entrega').value,
     notas: document.getElementById('prov-notas').value.trim()
@@ -557,11 +567,13 @@ function registerPedidoComoGastoVariable(o){
   if(!Object.keys(byCat).length){ o.gvCreated = true; return; }
   const fecha = todayStr();
   const d = new Date(fecha);
+  const prov = getProviderByName(o.supplier);
+  const provIva = prov && prov.iva != null ? prov.iva : 10;
   Object.entries(byCat).forEach(([cat, importe]) => {
     DB.ge.variables.push({
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
-      iva: 10, fecha, pedidoId: o.id, auto: true
+      iva: provIva, fecha, pedidoId: o.id, auto: true
     });
   });
   o.gvCreated = true;

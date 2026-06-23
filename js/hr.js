@@ -22,7 +22,7 @@ const GE = (function(){
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
 
-  function proveedores(){ return [...new Set(DB.ingredients.map(i=>i.supplier).filter(Boolean))]; }
+  function proveedores(){ return [...new Set([...DB.ingredients.map(i=>i.supplier), ...(DB.providers||[]).map(p=>p.nombre)].filter(Boolean))]; }
 
   function init(){ tab('fijos'); }
   function tab(t){
@@ -380,7 +380,7 @@ const GE = (function(){
       </div>
       <div class="field">
         <label>Proveedor</label>
-        <input type="text" id="gv-f-prov" list="gv-prov-list">
+        <input type="text" id="gv-f-prov" list="gv-prov-list" onchange="var p=getProviderByName(this.value);if(p&&p.iva!=null){document.getElementById('gv-f-iva').value=p.iva}">
         <datalist id="gv-prov-list">${provs}</datalist>
       </div>
       <div class="field-row">
