@@ -2292,12 +2292,17 @@ function renderHeader(){
 }
 
 function syncMesasConfig(){
-  const interior = parseInt(document.getElementById('mn-mesas-interior').value) || 0;
-  const terraza = parseInt(document.getElementById('mn-mesas-terraza').value) || 0;
-  const barra = parseInt(document.getElementById('mn-mesas-barra').value) || 0;
-  const interiorActuales = DB.tables.filter(t=>!t.zona || t.zona==='interior').length;
-  const terrazaActuales = DB.tables.filter(t=>t.zona==='terraza').length;
-  const barraActuales = DB.tables.filter(t=>t.zona==='barra').length;
+  const intEl = document.getElementById('mn-mesas-interior');
+  const terEl = document.getElementById('mn-mesas-terraza');
+  const barEl = document.getElementById('mn-mesas-barra');
+  if(!intEl || !terEl || !barEl) return;
+  const interior = parseInt(intEl.value) || 0;
+  const terraza = parseInt(terEl.value) || 0;
+  const barra = parseInt(barEl.value) || 0;
+  if(interior + terraza + barra === 0){ showToast('Indica primero cuántas mesas quieres'); return; }
+  const interiorActuales = DB.tables.filter(m=>!m.zona || m.zona==='interior').length;
+  const terrazaActuales = DB.tables.filter(m=>m.zona==='terraza').length;
+  const barraActuales = DB.tables.filter(m=>m.zona==='barra').length;
   for(let i = interiorActuales + 1; i <= interior; i++){
     DB.tables.push({id: genId(), name: `Mesa ${i} (Interior)`, zona:'interior'});
   }
@@ -2307,7 +2312,9 @@ function syncMesasConfig(){
   for(let i = barraActuales + 1; i <= barra; i++){
     DB.tables.push({id: genId(), name: `Barra ${i}`, zona:'barra'});
   }
+  saveBusiness(true);
   saveDB();
+  renderMesasConfigList();
   showToast(t('msg.tablesSynced'));
 }
 
