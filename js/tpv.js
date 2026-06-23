@@ -790,7 +790,6 @@ function confirmAddMenuToOrder(orderId, menuId){
     );
     if(existing){
       existing.qty += 1;
-      if(i===0) existing.price += m.precio;
     } else {
       const line = {
         menuId: m.id, recipeId: s.recipeId, platoId: null,
