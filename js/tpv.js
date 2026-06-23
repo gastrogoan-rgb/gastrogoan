@@ -833,7 +833,7 @@ function renderOrderLinesHtml(order){
       ${g.items.map(({line, idx}) => `
         <div class="list-row">
           <div class="list-row-name">
-            <span>${line.qty} × ${escapeHtml(line.name)}</span>${kitchenStatusBadge(line)}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
+            <span>${line.qty} × ${escapeHtml(line.name)}</span>${line.estado && line.estado !== 'entregado' ? `<span class="badge ${KITCHEN_STATES[line.estado]?.cls||''}" style="cursor:pointer" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ${KITCHEN_STATES[line.estado]?.icon||''}"></i> ${KITCHEN_STATES[line.estado]?.label||''}</span>` : line.estado === 'entregado' ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>` : ''}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
             ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
