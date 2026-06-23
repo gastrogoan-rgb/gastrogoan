@@ -1189,10 +1189,10 @@ function renderHorariosDia(){
   const turnos = (DB.turnos||[]).filter(t => t.fecha === date);
 
   const rows = emps.map(emp => {
-    const t = turnos.find(x => x.employeeId===emp.id);
-    if(t){
-      const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
-      const hh = turnoHours(t);
+    const turno = turnos.find(x => x.employeeId===emp.id);
+    if(turno){
+      const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
+      const hh = turnoHours(turno);
       return `
         <tr>
           <td>
@@ -1201,13 +1201,13 @@ function renderHorariosDia(){
               <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
             </span>
           </td>
-          <td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px">${t.tipo} - ${tipo.label}</span></td>
-          <td>${escapeHtml(turnoHorarioLabel(t))}</td>
+          <td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;font-size:12px">${turno.tipo} - ${tipo.label}</span></td>
+          <td>${escapeHtml(turnoHorarioLabel(turno))}</td>
           <td>${hh>0?hh.toFixed(1)+'h':'—'}</td>
-          <td class="wrap">${escapeHtml(t.notas||'—')}</td>
+          <td class="wrap">${escapeHtml(turno.notas||'—')}</td>
           <td class="actions-cell">
-            <button class="owner-only btn btn-sm btn-icon" onclick="openTurnoModal(${t.id})"><i class="ti ti-edit"></i></button>
-            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${t.id})"><i class="ti ti-trash"></i></button>
+            <button class="owner-only btn btn-sm btn-icon" onclick="openTurnoModal(${turno.id})"><i class="ti ti-edit"></i></button>
+            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteTurno(${turno.id})"><i class="ti ti-trash"></i></button>
           </td>
         </tr>
       `;
@@ -1312,12 +1312,12 @@ function renderHorariosSemana(){
   const rows = emps.map(emp => {
     let totalH = 0;
     const cells = dateStrs.map(ds => {
-      const t = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
-      if(t){
-        const tipo = SHIFT_TYPES[t.tipo] || SHIFT_TYPES.C;
-        const hh = turnoHours(t);
+      const turno = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
+      if(turno){
+        const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
+        const hh = turnoHours(turno);
         if(hh > 0) totalH += hh;
-        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${t.id})">${t.tipo}${t.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(turnoHorarioLabel(t))}</span>`:''}</span></td>`;
+        return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${turno.id})">${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
       return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="if(editUnlocked) openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
     }).join('');
@@ -1358,8 +1358,8 @@ function renderHorariosSemana(){
 function openTurnoModal(id, employeeId, fecha){
   const emps = areaEmployees();
   if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
-  let t = id ? (DB.turnos||[]).find(x => x.id===id) : null;
-  const state = t ? {...t} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
+  let turno = id ? (DB.turnos||[]).find(x => x.id===id) : null;
+  const state = turno ? {...turno} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
   const empOptions = emps.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
   const noHorario = ['D','V','B'].includes(state.tipo);
@@ -1448,9 +1448,9 @@ function saveTurno(id){
   };
   if(!DB.turnos) DB.turnos = [];
   if(id){
-    const t = DB.turnos.find(x => x.id===id);
-    if(!t){ showToast(t('msg.shiftNotFound')); return; }
-    Object.assign(t, data);
+    const turno = DB.turnos.find(x => x.id===id);
+    if(!turno){ showToast(t('msg.shiftNotFound')); return; }
+    Object.assign(turno, data);
   } else {
     DB.turnos.push({id: genId(), ...data});
   }

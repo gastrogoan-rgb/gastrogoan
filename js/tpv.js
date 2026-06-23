@@ -1925,17 +1925,17 @@ function applyDeliveryCommission(order, sale){
 /* ------------------ Ticket: contenido, impresión, email y factura ------------------ */
 function buildTicketHeaderLines(){
   const b = DB.business || {};
-  const t = b.ticket || {};
+  const tc = b.ticket || {};
   const lines = [b.name || 'GastroGoan'];
-  if(t.mostrarDireccion !== false && b.address) lines.push(b.address);
-  if(t.mostrarTelefono !== false && b.phone) lines.push('Tel: ' + b.phone);
-  if(t.mostrarWeb && b.web) lines.push(b.web);
-  if(t.mostrarNif !== false && b.cif) lines.push('NIF/CIF: ' + b.cif);
+  if(tc.mostrarDireccion !== false && b.address) lines.push(b.address);
+  if(tc.mostrarTelefono !== false && b.phone) lines.push('Tel: ' + b.phone);
+  if(tc.mostrarWeb && b.web) lines.push(b.web);
+  if(tc.mostrarNif !== false && b.cif) lines.push('NIF/CIF: ' + b.cif);
   return lines;
 }
 
 function buildTicketText(sale, opts={}){
-  const t = (DB.business && DB.business.ticket) || {};
+  const tc = (DB.business && DB.business.ticket) || {};
   const lines = [...buildTicketHeaderLines()];
   if(opts.factura) lines.push('FACTURA SIMPLIFICADA Nº ' + sale.facturaNum);
   lines.push(sale.date);
@@ -1944,7 +1944,7 @@ function buildTicketText(sale, opts={}){
   sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
   lines.push('------------------------------');
   if(opts.factura){
-    const ivaPct = t.ivaPct != null ? t.ivaPct : 10;
+    const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
     const base = sale.total / (1 + ivaPct/100);
     const iva = sale.total - base;
     lines.push(`Base imponible: ${fmtMoney(base)}`);
@@ -1957,7 +1957,7 @@ function buildTicketText(sale, opts={}){
     lines.push(`Pago: ${sale.metodoPago||''}`);
   }
   lines.push('');
-  lines.push(t.pie || '¡Gracias por su visita!');
+  lines.push(tc.pie || '¡Gracias por su visita!');
   return lines.join('\n');
 }
 

@@ -20,8 +20,8 @@ function getSalesForClosure(){
   return DB.sales.filter(s => {
     if(s.date !== today) return false;
     if(!s.createdAt) return !lastClosure;
-    const t = new Date(s.createdAt);
-    return t > desde && t <= hasta;
+    const dt = new Date(s.createdAt);
+    return dt > desde && dt <= hasta;
   });
 }
 

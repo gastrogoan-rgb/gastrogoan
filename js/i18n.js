@@ -102,11 +102,11 @@ function tItem(item){
   return item.nombre || '';
 }
 function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const toastEl = document.getElementById('toast');
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+  showToast._t = setTimeout(()=>toastEl.classList.remove('show'), 2200);
 }
 function getIngredient(id){
   return DB.ingredients.find(i => i.id === id);

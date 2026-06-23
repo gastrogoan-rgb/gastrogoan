@@ -1394,17 +1394,17 @@ function renderTableQrCard(){
 }
 
 function showTableQr(tableId){
-  const t = DB.tables.find(x => x.id === tableId);
+  const tbl = DB.tables.find(x => x.id === tableId);
   const link = getPublicClientLink();
-  if(!t || !link) return;
-  const tLink = `${link}&mesa=${t.id}`;
+  if(!tbl || !link) return;
+  const tLink = `${link}&mesa=${tbl.id}`;
   const tQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(tLink);
   openModal(`
-    <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(t.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(tbl.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div style="text-align:center">
-      <img src="${tQr}" alt="QR ${escapeHtml(t.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
-      <p style="font-size:13px;color:var(--muted);margin:10px 0">Tus clientes escanean este código para pedir desde <strong>${escapeHtml(t.name)}</strong>.</p>
-      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(t.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
+      <img src="${tQr}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
+      <p style="font-size:13px;color:var(--muted);margin:10px 0">Tus clientes escanean este código para pedir desde <strong>${escapeHtml(tbl.name)}</strong>.</p>
+      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(tbl.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
     </div>
   `);
 }

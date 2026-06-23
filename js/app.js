@@ -185,26 +185,25 @@ function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
 }
 
 function openLimpiezaTareaMesModal(id){
-  const t = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
-  // El responsable de la tarea solo puede ser empleado del área actual (cocina/sala).
-  const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${t&&t.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
+  const tarea = id ? DB.limpieza.tareas.find(x=>x.id===id) : null;
+  const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${tarea&&tarea.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   openModal(`
     <div class="modal-header">
-      <h3>${t?'Editar':'Nueva'} tarea de limpieza mensual</h3>
+      <h3>${tarea?'Editar':'Nueva'} tarea de limpieza mensual</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
       <label>Área o tarea de limpieza</label>
-      <input type="text" id="new-limpieza-area" value="${t?escapeHtml(t.area):''}" placeholder="Ej. Campana extractora, Cámara frigorífica...">
+      <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="Ej. Campana extractora, Cámara frigorífica...">
     </div>
     <div class="field">
       <label>Producto limpiador (opcional)</label>
-      <input type="text" id="new-limpieza-producto" value="${t?escapeHtml(t.producto||''):''}" placeholder="Ej. Desengrasante">
+      <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="Ej. Desengrasante">
     </div>
     <div class="field-row">
       <div class="field">
         <label>Día del mes</label>
-        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${t?t.diaMes:1}">
+        <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea?tarea.diaMes:1}">
       </div>
       <div class="field">
         <label>Responsable</label>
@@ -215,9 +214,9 @@ function openLimpiezaTareaMesModal(id){
       </div>
     </div>
     <div class="modal-footer">
-      ${t ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${t.id});closeModal()">${t("common.delete")}</button>` : ''}
+      ${tarea ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${t?t.id:'null'})">${t?'Guardar':'Añadir'}</button>
+      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})">${tarea?'Guardar':'Añadir'}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
@@ -231,8 +230,8 @@ function confirmLimpiezaTareaMes(id){
   const responsableVal = document.getElementById('new-limpieza-responsable').value;
   const responsableId = responsableVal ? parseInt(responsableVal) : null;
   if(id){
-    const t = DB.limpieza.tareas.find(x=>x.id===id);
-    Object.assign(t, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
+    const tarea = DB.limpieza.tareas.find(x=>x.id===id);
+    Object.assign(tarea, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
   } else {
     DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId});
   }
@@ -648,8 +647,8 @@ function printDistribucion(empId){
       <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
     if(d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
     WEEK_DAYS.forEach((label, idx) => {
-      const t = d.produccion[idx] || [];
-      if(t.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${t.map(escapeHtml).join(' · ')}</div>`;
+      const tasks = d.produccion[idx] || [];
+      if(tasks.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${tasks.map(escapeHtml).join(' · ')}</div>`;
     });
     html += `</div>`;
   });
@@ -1054,9 +1053,9 @@ function setReservationStatus(id, status){
     if(turnoIdx !== null && aforo){
       const yaReservado = getReservedPeopleForTurno(r.date, turnoIdx, id);
       const turnos = getTurnosForDate(r.date);
-      const t = turnos[turnoIdx];
+      const turno = turnos[turnoIdx];
       if(yaReservado + r.people > aforo){
-        const ok = confirm(`Atención: el turno de ${t.abre}-${t.cierra} del ${r.date} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + r.people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        const ok = confirm(`Atención: el turno de ${turno.abre}-${turno.cierra} del ${r.date} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + r.people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
         if(!ok) return;
       }
     }
@@ -1412,9 +1411,9 @@ function saveReservation(id){
     if(turnoIdx !== null && aforo){
       const yaReservado = getReservedPeopleForTurno(date, turnoIdx, id);
       const turnos = getTurnosForDate(date);
-      const t = turnos[turnoIdx];
+      const turno = turnos[turnoIdx];
       if(yaReservado + people > aforo){
-        const ok = confirm(`Atención: el turno de ${t.abre}-${t.cierra} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        const ok = confirm(`Atención: el turno de ${turno.abre}-${turno.cierra} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
         if(!ok) return;
       }
     }
@@ -2096,15 +2095,15 @@ function renderMesasConfigList(){
 }
 
 function updateTableName(id, val){
-  const t = DB.tables.find(x => x.id === id);
-  if(!t) return;
-  t.name = (val||'').trim() || t.name;
+  const tbl = DB.tables.find(x => x.id === id);
+  if(!tbl) return;
+  tbl.name = (val||'').trim() || tbl.name;
   saveDB();
 }
 function updateTableZona(id, val){
-  const t = DB.tables.find(x => x.id === id);
-  if(!t) return;
-  t.zona = val;
+  const tbl = DB.tables.find(x => x.id === id);
+  if(!tbl) return;
+  tbl.zona = val;
   saveDB();
   renderMesasConfigList();
 }
@@ -2526,32 +2525,32 @@ function deleteDeliveryPlatform(id){
    CONFIGURACIÓN DEL TICKET
    ============================================================ */
 function renderTicketConfigCard(){
-  const t = (DB.business && DB.business.ticket) || defaultData().business.ticket;
+  const tc = (DB.business && DB.business.ticket) || defaultData().business.ticket;
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-receipt"></i> Configuración del ticket</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Personaliza qué información aparece en el ticket que se entrega a los clientes al cobrar.</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-direccion" ${t.mostrarDireccion!==false?'checked':''} style="width:18px;height:18px"> Mostrar dirección
+          <input type="checkbox" id="tk-direccion" ${tc.mostrarDireccion!==false?'checked':''} style="width:18px;height:18px"> Mostrar dirección
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-telefono" ${t.mostrarTelefono!==false?'checked':''} style="width:18px;height:18px"> Mostrar teléfono
+          <input type="checkbox" id="tk-telefono" ${tc.mostrarTelefono!==false?'checked':''} style="width:18px;height:18px"> Mostrar teléfono
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-web" ${t.mostrarWeb?'checked':''} style="width:18px;height:18px"> Mostrar web
+          <input type="checkbox" id="tk-web" ${tc.mostrarWeb?'checked':''} style="width:18px;height:18px"> Mostrar web
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-nif" ${t.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> Mostrar CIF/NIF (necesario para emitir facturas)
+          <input type="checkbox" id="tk-nif" ${tc.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> Mostrar CIF/NIF (necesario para emitir facturas)
         </label>
       </div>
       <div class="field">
         <label>Mensaje final del ticket</label>
-        <textarea id="tk-pie" placeholder="Ej. ¡Gracias por su visita! Síguenos en @milocal">${escapeHtml(t.pie||'')}</textarea>
+        <textarea id="tk-pie" placeholder="Ej. ¡Gracias por su visita! Síguenos en @milocal">${escapeHtml(tc.pie||'')}</textarea>
       </div>
       <div class="field">
         <label>% de IVA a aplicar en las facturas</label>
-        <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${t.ivaPct!=null?t.ivaPct:10}" style="max-width:120px">
+        <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}" style="max-width:120px">
         <small style="color:var(--muted)">Se usa para desglosar base imponible e IVA cuando el cliente pide factura. Por defecto, el 10% de hostelería.</small>
       </div>
       <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
