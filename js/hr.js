@@ -1493,6 +1493,10 @@ function renderHorariosPersonal(){
     </div>
   `).join('');
 
+  const gfPersonal = (DB.ge && DB.ge.fijos || []).filter(g => g.categoria === 'PERSONAL' && g.nombre);
+  const existingNames = new Set(DB.employees.map(e => e.name.trim().toLowerCase()));
+  const suggestions = gfPersonal.filter(g => !existingNames.has(g.nombre.trim().toLowerCase()));
+
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
@@ -1500,6 +1504,13 @@ function renderHorariosPersonal(){
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
       </div>
     </div>
+    ${suggestions.length ? `
+    <div class="card" style="margin-bottom:12px">
+      <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)"><i class="ti ti-users-plus"></i> Personal en Gastos Fijos — haz clic para añadir</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${suggestions.map(g => `<button class="btn btn-sm" onclick="openEmployeeModal(null,'${escapeJsAttr(g.nombre)}')" style="font-weight:600"><i class="ti ti-plus"></i> ${escapeHtml(g.nombre)}</button>`).join('')}
+      </div>
+    </div>` : ''}
     ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
   `;
 }
@@ -1658,8 +1669,8 @@ function applyBulkTurno(){
   showToast(`${count} turno${count!==1?'s':''} asignado${count!==1?'s':''}`);
 }
 
-function openEmployeeModal(id){
-  const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
+function openEmployeeModal(id, prefillName){
+  const e = id ? DB.employees.find(x => x.id===id) : {name: prefillName||'', rol:'', color:'#DF7039', area: currentArea()};
   openModal(`
     <div class="modal-header">
       <h3>${id ? 'Editar' : 'Nuevo'} Empleado</h3>
