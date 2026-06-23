@@ -1961,6 +1961,7 @@ function buildTicketText(sale, opts={}){
 function printTicket(sale, opts={}){
   const text = buildTicketText(sale, opts);
   const win = window.open('', '_blank', 'width=320,height=520');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}</body></html>`);
   win.document.close();
   win.print();

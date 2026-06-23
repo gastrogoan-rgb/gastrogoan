@@ -16,7 +16,7 @@ function geTotalVariablesMes(year, month){
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
 function geTotalVariablesNetoMes(year, month){
-  const ivaDefault = (DB.business?.ticket?.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
 }
 function salesTotalForRange(startDate, endDate){
@@ -32,7 +32,7 @@ function daysInMonth(year, month){
 }
 // Gastos variables (compras) registrados con fecha concreta dentro del rango (sin IVA)
 function geVariablesTotalForRange(startDate, endDate){
-  const ivaDefault = (DB.business?.ticket?.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
   return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
 }
 // Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA)
