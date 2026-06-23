@@ -1942,13 +1942,11 @@ function buildTicketText(sale, opts={}){
   lines.push('------------------------------');
   sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
   lines.push('------------------------------');
-  if(opts.factura){
-    const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
-    const base = sale.total / (1 + ivaPct/100);
-    const iva = sale.total - base;
-    lines.push(`Base imponible: ${fmtMoney(base)}`);
-    lines.push(`IVA (${ivaPct}%): ${fmtMoney(iva)}`);
-  }
+  const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
+  const base = sale.total / (1 + ivaPct/100);
+  const iva = sale.total - base;
+  lines.push(`Base imponible: ${fmtMoney(base)}`);
+  lines.push(`IVA (${ivaPct}%): ${fmtMoney(iva)}`);
   lines.push(`TOTAL: ${fmtMoney(sale.total)}`);
   if(sale.pagos && sale.pagos.length > 1){
     sale.pagos.forEach(p => lines.push(`${p.label}: ${fmtMoney(p.amount)} (${p.metodoPago||''})`));
