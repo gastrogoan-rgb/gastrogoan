@@ -5,7 +5,7 @@
 const GE = (function(){
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const TABS = ['fijos','variables','cdr','resultado','tesoreria','pe','capex'];
-  const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
+  const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
   const IVA_OPTIONS = [{v:21,l:'21% (General)'},{v:10,l:'10% (Reducido)'},{v:4,l:'4% (Superreducido)'},{v:0,l:'0% (Exento)'}];
