@@ -67,6 +67,7 @@ function renderLimpiezaManos(){
           </div>
         `).join('')}
         <button class="owner-only btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
+        <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> Restablecer por defecto</button>
       </div>
       <div>
         <div class="card">
@@ -89,6 +90,7 @@ function renderLimpiezaManos(){
     </div>
   `;
 }
+function resetManosPasos(){ DB.limpieza.manosPasos = [...LIMPIEZA_DEFAULT_MANOS]; saveDB(); renderLimpiezaManos(); showToast('Pasos restablecidos'); }
 function updateManosPaso(i, val){ DB.limpieza.manosPasos[i] = val; saveDB(); }
 function addManosPaso(){ DB.limpieza.manosPasos.push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
 function removeManosPaso(i){
