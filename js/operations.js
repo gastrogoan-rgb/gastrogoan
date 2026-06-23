@@ -438,6 +438,24 @@ function renderPedidoDetail(){
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
         ${itemsHtml || '<div class="empty" style="padding:10px">Sin items</div>'}
       </div>
+      ${(()=>{
+        const prov = getProviderByName(o.supplier);
+        const ivaPct = prov && prov.iva != null ? prov.iva : 10;
+        let totalBruto = 0;
+        (o.items||[]).forEach(line => {
+          const ing = getIngredient(line.ingredientId);
+          const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
+          totalBruto += qty * (ing ? (ing.price||0) : 0);
+        });
+        const base = totalBruto / (1 + ivaPct/100);
+        const iva = totalBruto - base;
+        return totalBruto > 0 ? `
+        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
+          <div><span style="color:var(--muted)">Base imponible:</span> <strong>${fmtMoney(base)}</strong></div>
+          <div><span style="color:var(--muted)">IVA ${ivaPct}%:</span> <strong>${fmtMoney(iva)}</strong></div>
+          <div><span style="color:var(--muted)">Total:</span> <strong style="color:var(--teal)">${fmtMoney(totalBruto)}</strong></div>
+        </div>` : '';
+      })()}
 
       <div class="field">
         <label>${t('common.notes')}</label>
