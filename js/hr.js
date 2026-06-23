@@ -922,7 +922,7 @@ const GE = (function(){
     renderPlatosRentabilidadTable('platos-menos-rentables', conReceta.slice().sort((a,b)=>a.margin-b.margin).slice(0,10));
 
     const soldRecipeIds = new Set(items.filter(i=>i.recipeId).map(i=>i.recipeId));
-    const sinVentas = DB.recipes.filter(r => !soldRecipeIds.has(r.id));
+    const sinVentas = DB.recipes.filter(r => !r.isBase && !soldRecipeIds.has(r.id));
     document.getElementById('platos-sin-ventas').innerHTML = sinVentas.length
       ? `<div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">${sinVentas.map(r=>`<span class="badge badge-gray">${escapeHtml(r.name)}</span>`).join('')}</div>`
       : `<div class="empty" style="padding:12px 16px">Todos los platos del Escandallo se han vendido en este periodo. 🎉</div>`;
