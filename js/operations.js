@@ -127,6 +127,7 @@ function performCashClosure(){
 
 function printCashClosure(closure){
   const win = window.open('', '_blank', 'width=320,height=520');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   const diffLine = closure.efectivoContado === null ? '' :
     `Efectivo contado: ${fmtMoney(closure.efectivoContado)}\nDiferencia: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?' (caja exacta)':closure.diferencia>0?' (sobra)':' (falta)'}\n`;
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Arqueo de caja</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
@@ -328,8 +329,8 @@ function pedidoSuppliers(){
 }
 
 let pedidosTab = 'crear';
-function setPedidosTab(t){
-  pedidosTab = t;
+function setPedidosTab(tab){
+  pedidosTab = tab;
   pedidoDetailId = null;
   if(t === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
   renderPedidos();
@@ -647,6 +648,7 @@ function printPedido(){
   if(!o) return;
   const txt = pedidoTexto(o);
   const win = window.open('', '_blank', 'width=400,height=500');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
   win.document.close();
   win.print();
@@ -879,6 +881,7 @@ function printPedidoBorrador(){
   const date = document.getElementById('order-date').value || todayStr();
   const txt = pedidoTexto({supplier: orderModalSupplier, date, items, notas:''});
   const win = window.open('', '_blank', 'width=400,height=500');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
   win.document.close();
   win.print();

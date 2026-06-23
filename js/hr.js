@@ -25,16 +25,16 @@ const GE = (function(){
   function proveedores(){ return [...new Set([...DB.ingredients.map(i=>i.supplier), ...(DB.providers||[]).map(p=>p.nombre)].filter(Boolean))]; }
 
   function init(){ tab('fijos'); }
-  function tab(t){
-    document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===t));
+  function tab(name){
+    document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
-    document.getElementById('ge-'+t).classList.add('active');
-    if(t==='fijos') renderFijos();
-    if(t==='variables') renderVariables();
-    if(t==='cdr') renderCDR();
-    if(t==='pe') renderPE();
-    if(t==='capex') renderCapex();
-    if(t==='resultado') renderResultado();
+    document.getElementById('ge-'+name).classList.add('active');
+    if(name==='fijos') renderFijos();
+    if(name==='variables') renderVariables();
+    if(name==='cdr') renderCDR();
+    if(name==='pe') renderPE();
+    if(name==='capex') renderCapex();
+    if(name==='resultado') renderResultado();
     if(t==='tesoreria') renderTesoreria();
   }
 
@@ -696,7 +696,6 @@ const GE = (function(){
     // (Resultado, Cuenta de Resultados, Panel, Tesorería) muestren el mismo número
     // sin doble cómputo (antes restaba además la amortización CAPEX).
     const resAntesImp = m => resultadoAntesImpMes(m);
-    const ivaCPct = ivaComprasPct();
 
     const conceptos = [
       {lbl:'Facturación (TPV, IVA incl.)', fn:m=>facturacionMes(m), bold:true},

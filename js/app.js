@@ -40,7 +40,7 @@ function renderLimpieza(){
   `;
   renderLimpiezaTab();
 }
-function setLimpiezaTab(t){ limpiezaTab = t; renderLimpieza(); }
+function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); }
 function renderLimpiezaTab(){
   switch(limpiezaTab){
     case 'manos': renderLimpiezaManos(); break;
@@ -103,6 +103,7 @@ function printManosProtocolo(){
   const pasos = DB.limpieza.manosPasos;
   const html = `<h2>Protocolo de lavado de manos</h2><ol>${pasos.map(p=>`<li style="margin-bottom:8px">${escapeHtml(p)}</li>`).join('')}</ol>`;
   const w = window.open('', '_blank', 'width=500,height=600');
+  if(!w){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Protocolo de lavado de manos</title><style>body{font-family:Arial,sans-serif;padding:24px;font-size:14px}</style></head><body>${html}</body></html>`);
   w.document.close();
   w.focus();
@@ -655,6 +656,7 @@ function printDistribucion(empId){
     html += `</div>`;
   });
   const w = window.open('', '_blank', 'width=620,height=700');
+  if(!w){ showToast('Permite las ventanas emergentes para imprimir'); return; }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Distribución del trabajo</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
   w.document.close();
 }
