@@ -39,9 +39,13 @@ const GE = (function(){
   }
 
   /* -- Helpers -- */
+  function gfMonthlyNeto(g){ const m=gfMonthlyImporte(g); const p=g.iva!=null?parseFloat(g.iva):0; return m/(1+p/100); }
   function totalFijos(){ return fijos().reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalFijosNeto(){ return fijos().reduce((s,g)=>s+gfMonthlyNeto(g),0); }
   function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalPersonalNeto(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyNeto(g),0); }
   function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyNeto(g),0); }
   function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function totalVariablesMes(mes, año=currentYear){ return variablesMes(mes,año).reduce((s,v)=>s+parseFloat(v.importe||0),0); }
   function facturacionMes(mes, año=currentYear){
@@ -111,7 +115,7 @@ const GE = (function(){
   }
   // Resultado antes de impuestos: facturación neta de IVA menos todos los gastos (compras sin IVA, ya que ese IVA es deducible).
   function resultadoAntesImpMes(mes, año=currentYear){
-    return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - totalFijos() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
+    return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - totalFijosNeto() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
   }
   // Resultado Neto: lo que realmente te llevas, después de IVA e impuesto sobre beneficios.
   function resultadoMes(mes, año=currentYear){
@@ -124,11 +128,13 @@ const GE = (function(){
   function renderFijos(){
     const personal = fijos().filter(g=>g.categoria==='PERSONAL');
     const generales = fijos().filter(g=>g.categoria==='FIJOS');
-    const tp = totalPersonal(), tg = totalGF(), tot = tp+tg;
+    const tpN = totalPersonalNeto(), tgN = totalGFNeto(), totN = tpN+tgN;
+    const ivFijos = totalFijos() - totalFijosNeto();
     document.getElementById('gf-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Personal mensual</div><div class="val">${fmtMoney(tp)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Gastos fijos generales</div><div class="val">${fmtMoney(tg)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Total mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(tot)}</div></div>`;
+      <div class="ge-kpi"><div class="lbl">Personal (sin IVA)</div><div class="val">${fmtMoney(tpN)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Gastos fijos (sin IVA)</div><div class="val">${fmtMoney(tgN)}</div></div>
+      <div class="ge-kpi"><div class="lbl">IVA soportado fijos</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
+      <div class="ge-kpi"><div class="lbl">Coste real mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
     renderGFList('gf-personal', personal);
     const gfNames = new Set(personal.map(g => g.nombre.trim().toLowerCase()));
     const empSuggestions = DB.employees.filter(e => !gfNames.has(e.name.trim().toLowerCase()));
@@ -141,16 +147,16 @@ const GE = (function(){
         </div>`);
     }
     renderGFList('gf-fijos', generales);
-    document.getElementById('gf-total-val').textContent = fmtMoney(tot);
+    document.getElementById('gf-total-val').innerHTML = `${fmtMoney(totN)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ IVA ${fmtMoney(ivFijos)} = ${fmtMoney(totalFijos())}</span>`;
 
-    const fac12 = MESES.map((_,i)=>facturacionMes(i)).reduce((s,v)=>s+v,0)/12;
+    const facNeta12 = MESES.map((_,i)=>facturacionNetaMes(i)).reduce((s,v)=>s+v,0)/12;
     const visEl = document.getElementById('gf-dist-visual');
     const visContent = document.getElementById('gf-visual-content');
-    if(fac12 > 0){
+    if(facNeta12 > 0){
       visEl.style.display = 'block';
       const items = [
-        {lbl:'Personal', v:tp, pct:tp/fac12*100, color:'var(--blue)'},
-        {lbl:'Gastos Fijos', v:tg, pct:tg/fac12*100, color:'var(--purple)'},
+        {lbl:'Personal (sin IVA)', v:tpN, pct:tpN/facNeta12*100, color:'var(--blue)'},
+        {lbl:'Gastos Fijos (sin IVA)', v:tgN, pct:tgN/facNeta12*100, color:'var(--purple)'},
       ];
       visContent.innerHTML = items.map(it=>`
         <div style="margin-bottom:10px">
@@ -176,7 +182,8 @@ const GE = (function(){
       const mensual = gfMonthlyImporte(g);
       const detalles = [];
       if(g.diaPago) detalles.push(`día ${g.diaPago}`);
-      if(g.iva != null && g.categoria !== 'PERSONAL') detalles.push(`IVA ${g.iva}%`);
+      const gIva = g.iva!=null ? parseFloat(g.iva) : 0;
+      if(gIva > 0){ const neto=mensual/(1+gIva/100); detalles.push(`Base ${fmtMoney(neto)} + IVA ${gIva}% (${fmtMoney(mensual-neto)})`); }
       if(periodoMeses>1) detalles.push(`cada ${periodoMeses} meses · ${fmtMoney(parseFloat(g.importe||0))}/pago`);
       if(g.autoCalc) detalles.push(`Neto ${fmtMoney(parseFloat(g.sueldoNeto||0))} + retenciones = Bruto ${fmtMoney(g.sueldoBruto||0)} + SS Empresa ${fmtMoney(g.ssEmpresa||0)}`);
       return `
@@ -442,15 +449,15 @@ const GE = (function(){
   function renderCDR(){
     const yearSel = document.getElementById('cdr-year');
     if(yearSel) yearSel.textContent = cdrYear;
-    const tf = totalFijos();
+    const tfN = totalFijosNeto();
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     const rows = [
       {lbl:'Facturación (TPV, IVA incl.)', vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
       {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, vals:MESES.map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
       {lbl:'Facturación neta', vals:MESES.map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
-      {lbl:`Gastos Variables (sin IVA, ${ivaComprasPct()}%)`, vals:MESES.map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
-      {lbl:'Gastos Fijos', vals:MESES.map(()=>-tf), auto:true},
+      {lbl:'Gastos Variables (sin IVA)', vals:MESES.map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
+      {lbl:'Gastos Fijos (sin IVA)', vals:MESES.map(()=>-tfN), auto:true},
       {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
       {lbl:'Cuotas inversión financiada', vals:MESES.map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
       {lbl:'Resultado Antes de Impuestos', vals:MESES.map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
@@ -491,7 +498,7 @@ const GE = (function(){
 
   /* -- PUNTO DE EQUILIBRIO -- */
   function renderPE(){
-    const tf = totalFijos();
+    const tf = totalFijosNeto();
     document.getElementById('pe-fijos').value = tf.toFixed(2);
     document.getElementById('pe-ticket').value = config().ticketMedio || '';
     document.getElementById('pe-cubiertos').value = config().cubiertosActuales || '';
@@ -679,7 +686,7 @@ const GE = (function(){
     if(pctIvaComprasEl) pctIvaComprasEl.value = ivaComprasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
 
-    const tf = totalFijos();
+    const tf = totalFijosNeto();
     const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
@@ -695,10 +702,10 @@ const GE = (function(){
       {lbl:'Facturación (TPV, IVA incl.)', fn:m=>facturacionMes(m), bold:true},
       {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, fn:m=>ivaVentasMes(m), auto:true},
       {lbl:'Ventas Netas', fn:m=>facturacionNetaMes(m), highlight:true, bold:true},
-      {lbl:`Coste de Ventas (MP, sin IVA, ${ivaCPct}%)`, fn:m=>totalVariablesNetoMes(m)},
+      {lbl:'Coste de Ventas (sin IVA)', fn:m=>totalVariablesNetoMes(m)},
       {lbl:'Margen Bruto', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m), highlight:true, bold:true},
       {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
-      {lbl:'Gastos Explotación', fn:()=>tf},
+      {lbl:'Gastos Explotación (sin IVA)', fn:()=>tf},
       {lbl:'EBITDA Operativo', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
       {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
       {lbl:'Resultado Antes Impuestos', fn:resAntesImp, isResult:true, bold:true},
@@ -746,8 +753,8 @@ const GE = (function(){
     const ivaLiquidar = ivaLiquidarMes(activeMonth);
 
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
-    const realPerKpi = totalPersonal();
-    const realGFKpi = totalGF();
+    const realPerKpi = totalPersonalNeto();
+    const realGFKpi = totalGFNeto();
     const realMPKpi = totalVariablesNetoMes(activeMonth);
     const cuotasCapexKpi = capexCuotaMes(activeMonth);
     const realBenKpi = facNeta - realPerKpi - realGFKpi - realMPKpi - cuotasCapexKpi;
@@ -762,15 +769,15 @@ const GE = (function(){
       <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">Reserva Impuestos (IRPF/IS, ${(pctImp*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(taxReserve)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda (sobre beneficio)</div></div>
       <div class="kpi-mini" style="border-color:var(--green)"><div class="l">Beneficio neto disponible</div><div class="v" style="color:${netoDisponible>=0?'var(--green)':'var(--red)'}">${fmtMoney(netoDisponible)}</div><div style="font-size:11px;color:var(--muted)">Tras reservar IVA e impuestos</div></div>`;
 
-    const realPer = totalPersonal();
-    const realGF = totalGF();
+    const realPer = totalPersonalNeto();
+    const realGF = totalGFNeto();
     const realMP = totalVariablesNetoMes(activeMonth);
     const realOG = capexCuotaMes(activeMonth);
     const realBen = facNeta - realPer - realGF - realMP - realOG;
 
     const rows = [
-      {lbl:'Personal (nóminas + SS)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
-      {lbl:'Gastos Fijos Generales', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
+      {lbl:'Personal (sin IVA)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
+      {lbl:'Gastos Fijos (sin IVA)', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
       {lbl:'Gastos Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
       {lbl:'Otros Gastos (cuotas financiación)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:'Beneficio estimado', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
@@ -1032,29 +1039,35 @@ const GE = (function(){
     rows.push([]);
 
     rows.push(['GASTOS FIJOS MENSUALES (recurrentes)']);
-    rows.push(['Concepto','Categoría','Día de pago','Periodicidad','Importe mensual equiv. (€)']);
-    let sumFijos = 0;
+    rows.push(['Concepto','Categoría','Día de pago','Periodicidad','Base (€)','IVA %','IVA (€)','Total (€)']);
+    let sumFijos = 0, sumFijosBase = 0, sumFijosIva = 0;
     fijos().forEach(g => {
       const imp = gfMonthlyImporte(g);
-      sumFijos += imp;
+      const pct = g.iva!=null ? parseFloat(g.iva) : 0;
+      const base = imp / (1 + pct/100);
+      const ivaAmt = imp - base;
+      sumFijos += imp; sumFijosBase += base; sumFijosIva += ivaAmt;
       const periodo = (parseInt(g.periodicidadMeses)||1)===1 ? 'Mensual' : `Cada ${g.periodicidadMeses} meses`;
-      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, imp]);
+      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, base, pct, ivaAmt, imp]);
     });
     if(!fijos().length) rows.push(['Sin gastos fijos registrados.']);
-    rows.push(['','','TOTAL', sumFijos]);
+    rows.push(['','','','TOTAL', sumFijosBase, '', sumFijosIva, sumFijos]);
     rows.push([]);
 
     rows.push(['GASTOS VARIABLES DEL MES']);
-    rows.push(['Fecha','Categoría','Proveedor','Importe (€)']);
-    let sumVar = 0;
+    rows.push(['Fecha','Categoría','Proveedor','Base (€)','IVA %','IVA (€)','Total (€)']);
+    let sumVar = 0, sumVarBase = 0, sumVarIva = 0;
     const variablesDelMes = variablesMes(mes, año).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
     variablesDelMes.forEach(v => {
       const imp = parseFloat(v.importe||0);
-      sumVar += imp;
-      rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', imp]);
+      const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
+      const base = imp / (1 + pct/100);
+      const ivaAmt = imp - base;
+      sumVar += imp; sumVarBase += base; sumVarIva += ivaAmt;
+      rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', base, pct, ivaAmt, imp]);
     });
     if(!variablesDelMes.length) rows.push(['Sin gastos variables registrados este mes.']);
-    rows.push(['','','TOTAL', sumVar]);
+    rows.push(['','','TOTAL', sumVarBase, '', sumVarIva, sumVar]);
     rows.push([]);
 
     const capexMes = capex().filter(c => (c.fecha||'').startsWith(mesStr));
@@ -1074,21 +1087,23 @@ const GE = (function(){
     rows.push([]);
 
     const comisiones = comisionesMes(mes);
-    const resultado = sumTotal - sumVar - sumFijos - comisiones;
+    const resultado = sumBase - sumVarBase - sumFijosBase - comisiones;
+    const totalIvaSoportado = sumVarIva + sumFijosIva + sumCapexIva;
     rows.push(['RESUMEN DEL MES']);
     rows.push(['Concepto','Importe (€)']);
     rows.push(['Total facturación (con IVA)', sumTotal]);
     rows.push(['Base imponible ventas', sumBase]);
     rows.push(['IVA repercutido (ventas)', sumIva]);
     rows.push(['Comisiones plataformas de delivery', comisiones]);
-    rows.push(['Total gastos variables', sumVar]);
-    rows.push(['Total gastos fijos', sumFijos]);
-    rows.push(['Total inversiones - CAPEX (base)', sumCapexBase]);
-    rows.push(['IVA soportado (CAPEX)', sumCapexIva]);
+    rows.push(['Gastos variables (base sin IVA)', sumVarBase]);
+    rows.push(['Gastos fijos (base sin IVA)', sumFijosBase]);
+    rows.push(['Inversiones CAPEX (base)', sumCapexBase]);
+    rows.push(['Total IVA soportado (variables + fijos + CAPEX)', totalIvaSoportado]);
+    rows.push(['IVA a liquidar (repercutido - soportado)', sumIva - totalIvaSoportado]);
     rows.push(['Resultado del mes (antes de impuestos)', resultado]);
 
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos, sumVar, comisiones, resultado};
+    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado};
   }
 
   function exportMonth(){

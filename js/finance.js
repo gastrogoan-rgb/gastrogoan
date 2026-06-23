@@ -4,6 +4,9 @@
 function geTotalFijos(){
   return (DB.ge.fijos||[]).reduce((s,g)=>s+gfMonthlyImporte(g),0);
 }
+function geTotalFijosNeto(){
+  return (DB.ge.fijos||[]).reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m/(1+p/100);},0);
+}
 // Importe mensual equivalente de un gasto fijo: si se paga cada X meses (trimestral, anual...),
 // se reparte el importe entre esos meses para poder sumarlo junto a los gastos mensuales.
 function gfMonthlyImporte(g){
@@ -11,6 +14,10 @@ function gfMonthlyImporte(g){
 }
 function geTotalVariablesMes(year, month){
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+}
+function geTotalVariablesNetoMes(year, month){
+  const ivaDefault = (DB.business?.ticket?.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
 }
 function salesTotalForRange(startDate, endDate){
   return DB.sales.filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);
@@ -23,13 +30,14 @@ function salesTotalForMonth(year, month){
 function daysInMonth(year, month){
   return new Date(year, month+1, 0).getDate();
 }
-// Gastos variables (compras) registrados con fecha concreta dentro del rango
+// Gastos variables (compras) registrados con fecha concreta dentro del rango (sin IVA)
 function geVariablesTotalForRange(startDate, endDate){
-  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
+  const ivaDefault = (DB.business?.ticket?.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
 }
-// Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana"
+// Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA)
 function geFijosForRange(startDate, endDate){
-  const fijosMonth = geTotalFijos();
+  const fijosMonth = geTotalFijosNeto();
   if(!fijosMonth) return 0;
   let total = 0;
   let d = new Date(startDate+'T00:00:00');
@@ -86,8 +94,8 @@ function renderDashboard(){
   const year = today.getFullYear();
   const month = today.getMonth();
   const facturacion = salesTotalForMonth(year, month);
-  const variables = geTotalVariablesMes(year, month);
-  const fijos = geTotalFijos();
+  const variables = geTotalVariablesNetoMes(year, month);
+  const fijos = geTotalFijosNeto();
   const resultado = facturacion - variables - fijos;
 
   // Comparación de ventas del año (12 meses)
@@ -98,8 +106,8 @@ function renderDashboard(){
     const d = new Date(year, month - i, 1);
     const y = d.getFullYear(), m = d.getMonth();
     const sales = salesTotalForMonth(y, m);
-    const variablesM = geTotalVariablesMes(y, m);
-    const fijosM = geTotalFijos();
+    const variablesM = geTotalVariablesNetoMes(y, m);
+    const fijosM = geTotalFijosNeto();
     const label = MONTH_NAMES[m].slice(0,3);
     ventasTrend.push({label, value: sales});
     gastosTrend.push({label, value: variablesM + fijosM});
@@ -126,8 +134,8 @@ function renderDashboard(){
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
       <div class="kpi"><div class="label">Facturación (mes)</div><div class="value">${fmtMoney(facturacion)}</div></div>
-      <div class="kpi"><div class="label">Gastos variables</div><div class="value">${fmtMoney(variables)}</div></div>
-      <div class="kpi"><div class="label">Gastos fijos</div><div class="value">${fmtMoney(fijos)}</div></div>
+      <div class="kpi"><div class="label">Gastos variables (sin IVA)</div><div class="value">${fmtMoney(variables)}</div></div>
+      <div class="kpi"><div class="label">Gastos fijos (sin IVA)</div><div class="value">${fmtMoney(fijos)}</div></div>
       <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">Resultado</div><div class="value">${fmtMoney(resultado)}</div></div>
     </div>
     <div style="margin-top:8px;font-size:13px;color:var(--muted)">
