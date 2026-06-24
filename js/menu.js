@@ -203,7 +203,7 @@ function renderScheduleRows(prefix, horario){
             <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:2px 4px;font-size:12px;width:58px;min-height:28px">
             <span style="color:var(--muted);font-size:11px">-</span>
             <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:2px 4px;font-size:12px;width:58px;min-height:28px">
-            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:2px 4px;min-height:auto" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar"><i class="ti ti-x" style="font-size:10px"></i></button>` : ''}
+            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:2px 4px;min-height:24px;min-width:24px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar"><i class="ti ti-x" style="font-size:13px"></i></button>` : ''}
           </div>
         `).join('')}
         ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:2px 6px;font-size:11px;margin-top:2px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}

@@ -128,11 +128,11 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
 
-.mesa-card{padding:8px 22px 8px 8px;margin-bottom:0;font-size:11px}
+.mesa-card{padding:8px 28px 8px 8px;margin-bottom:0;font-size:11px}
 .mesa-card .mesa-name{font-size:12.5px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mesa-card .badge{font-size:9.5px;padding:2px 6px;gap:2px}
 .mesa-card .mesa-total{margin-top:4px;font-weight:700;font-size:13px}
-.mesa-card .mesa-del{position:absolute;top:4px;right:4px;width:16px;height:16px;font-size:10px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;opacity:.55}
+.mesa-card .mesa-del{position:absolute;top:4px;right:4px;width:24px;height:24px;font-size:14px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;opacity:.55;border-radius:6px}
 .mesa-card .mesa-del:hover{opacity:1}
 
 .view-toggle{display:flex;gap:4px}
@@ -161,8 +161,9 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .btn-danger{background:var(--red);border-color:var(--red);color:#fff}
 .btn-sm{padding:7px 12px;min-height:36px;font-size:13px;border-radius:8px}
 .btn-icon{padding:7px 9px;min-height:auto;min-width:38px}
-.btn-icon i{font-size:16px}
+.btn-icon i{font-size:16px;line-height:1}
 .btn i{flex-shrink:0}
+.ti{display:inline-flex;align-items:center;justify-content:center;min-width:1em;min-height:1em}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
 .toolbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1}
 
