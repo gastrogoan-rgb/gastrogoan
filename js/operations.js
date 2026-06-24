@@ -380,13 +380,14 @@ function renderPedidoList(){
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     const comp = PEDIDO_COMPROBACION[o.comprobacion];
     return `
-      <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
+      <div class="card" style="cursor:pointer;position:relative" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between">
           <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
           <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} producto${itemCount!==1?'s':''} · ${withQty} con cantidad</div>
         ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
+        ${o.estado==='RECIBIDO' ? `<button class="btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="Eliminar pedido"><i class="ti ti-trash"></i></button>` : ''}
       </div>
     `;
   }).join('');
@@ -520,7 +521,7 @@ function renderPedidoDetail(){
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
-        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
+        <button class="${o.estado==='RECIBIDO' ? '' : 'owner-only '}btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
       </div>
     </div>
   `;
