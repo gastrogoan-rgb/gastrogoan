@@ -120,6 +120,14 @@ server.listen(0, '127.0.0.1', async () => {
     } catch(e) { console.log(`${v.name} error:`, e.message); }
   }
 
+  // Comandas Sala tab
+  try {
+    await page.evaluate(() => { navigate('comandascocina'); setComandasCocinaTab('sala'); });
+    await new Promise(r => setTimeout(r, 400));
+    await page.screenshot({ path: `${scratchpad}/mobile-comandas-sala.png`, fullPage: false });
+    console.log('Screenshot: comandas-sala');
+  } catch(e) { console.log('comandas-sala error:', e.message); }
+
   // Open comanda modal
   try {
     await page.evaluate(() => renderTableOrderModal(500));

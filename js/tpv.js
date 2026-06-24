@@ -1155,8 +1155,8 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const marchados = (order.items||[]).filter(l => l.estado);
-  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado');
+  const food = (order.items||[]).filter(l => !l.bebida);
+  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado');
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -1201,6 +1201,25 @@ function urgencyBadge(mins){
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
 
+function entregarTodasBebidas(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  let changed = false;
+  order.items.forEach(line => {
+    if(line.bebida && line.estado && line.estado !== 'entregado'){
+      line.estado = 'entregado';
+      line.entregadoAt = new Date().toISOString();
+      changed = true;
+    }
+  });
+  if(!changed) return;
+  checkComandaCierre(order);
+  saveDB();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+}
+
 // Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> entregado
 function cycleLineEstado(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -1239,7 +1258,8 @@ function renderComandasCocina(){
 
   const tabsHtml = `
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Cocina</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='sala' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('sala')"><i class="ti ti-glass-full"></i> Sala / Barra</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
     </div>
   `;
@@ -1250,7 +1270,7 @@ function renderComandasCocina(){
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).filter(l => l.estado);
+        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
         const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
@@ -1277,10 +1297,53 @@ function renderComandasCocina(){
 
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
+  if(comandasCocinaTab === 'sala'){
+    const salaTickets = allOrders
+      .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && l.bebida))
+      .map(order => {
+        const drinkLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.bebida && line.estado);
+        return {order, drinkLines};
+      });
+
+    if(!salaTickets.length){
+      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-glass-full"></i>No hay bebidas pendientes.</div>`;
+      return;
+    }
+
+    box.innerHTML = tabsHtml + `<div class="grid grid-3">${salaTickets.map(({order, drinkLines}) => {
+      const envTimes = drinkLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
+      const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
+      const mins = minutesSince(new Date(minMs).toISOString());
+      const allEntregado = drinkLines.every(({line}) => line.estado === 'entregado');
+
+      return `
+      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+          ${allEntregado ? '<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>' : urgencyBadge(mins)}
+        </div>
+        ${!allEntregado ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="entregarTodasBebidas(${order.id})"><i class="ti ti-glass-full"></i> Entregar todas</button></div>` : ''}
+        ${drinkLines.map(({line, idx}) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
+            <div style="flex:1;min-width:0">
+              <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
+              ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+            </div>
+            ${line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> Pendiente</button>`
+            : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-glass-full"></i> Sirviendo</button>`
+            : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>`}
+          </div>
+        `).join('')}
+      </div>
+      `;
+    }).join('')}</div>`;
+    return;
+  }
+
   const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))
     .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado);
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
       return {order, allLines};
     });
 
