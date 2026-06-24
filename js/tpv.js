@@ -1155,8 +1155,8 @@ function setComandasCocinaTab(tab){
 
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
-  const food = (order.items||[]).filter(l => !l.bebida);
-  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado');
+  const marchados = (order.items||[]).filter(l => l.estado);
+  order.cerrada = marchados.length > 0 && marchados.every(l => l.estado === 'entregado');
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -1250,7 +1250,7 @@ function renderComandasCocina(){
     const closed = allOrders
       .filter(o => o.cerrada)
       .map(order => {
-        const lines = (order.items||[]).filter(l => l.estado && !l.bebida);
+        const lines = (order.items||[]).filter(l => l.estado);
         const maxMs = Math.max(0, ...lines.map(l => l.entregadoAt ? new Date(l.entregadoAt).getTime() : 0));
         return {order, lines, maxMs};
       })
@@ -1278,9 +1278,9 @@ function renderComandasCocina(){
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
 
   const tickets = allOrders
-    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))
+    .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado))
     .map(order => {
-      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.bebida);
+      const allLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.estado);
       return {order, allLines};
     });
 
