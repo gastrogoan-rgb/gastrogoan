@@ -1,6 +1,17 @@
 /* ============================================================
    TPV — Comandas, mesas y tickets
    ============================================================ */
+let _lastPurgeDate = '';
+function purgePaidOrders(){
+  const now = new Date();
+  const today = todayStr();
+  if(now.getHours() < 6 || _lastPurgeDate === today) return;
+  const before = DB.tpvOrders.length;
+  DB.tpvOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
+  if(DB.tpvOrders.length < before){ saveDB(); }
+  _lastPurgeDate = today;
+}
+
 const KITCHEN_STATES = {
   cocina:     {label:'En espera',      icon:'ti-clock',        cls:'badge-amber'},
   preparando: {label:'En preparación', icon:'ti-flame',        cls:'badge-blue'},

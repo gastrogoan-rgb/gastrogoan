@@ -3337,7 +3337,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   updateAutoActiveCarta();
   updateAutoActiveMenu();
-  setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); }, 60000);
+  setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders(); }, 60000);
 
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
