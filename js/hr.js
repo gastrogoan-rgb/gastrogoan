@@ -752,17 +752,21 @@ const GE = (function(){
     const ivaLiquidar = ivaLiquidarMes(activeMonth);
 
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
-    const realBenKpi = resultadoAntesImpMes(activeMonth);
-    const taxReserve = realBenKpi>0 ? realBenKpi*pctImp : 0;
-    const netoDisponible = realBenKpi - taxReserve;
+    const ivaVentas = facBruta - facNeta;
+    const totalGastos = totalFijosNeto() + totalVariablesNetoMes(activeMonth) + comisionesMes(activeMonth) + capexCuotaMes(activeMonth);
+    const beneficioBruto = facNeta - totalGastos;
+    const taxReserve = beneficioBruto>0 ? beneficioBruto*pctImp : 0;
+    const netoDisponible = beneficioBruto - taxReserve;
+    const ivaLabel = ivaLiquidar>=0 ? 'IVA a liquidar (modelo 303)' : 'IVA a tu favor (modelo 303)';
 
-    const ivaLabel = ivaLiquidar>=0 ? 'IVA a pagar (modelo 303)' : 'IVA a tu favor (modelo 303)';
     document.getElementById('te-kpis').innerHTML = `
-      <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Desde TPV</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${ivaLabel}</div><div class="v" style="color:${ivaLiquidar>=0?'var(--amber-dark)':'var(--green)'}">${fmtMoney(Math.abs(ivaLiquidar))}</div><div style="font-size:11px;color:var(--muted)">IVA repercutido - IVA soportado</div></div>
-      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base distribución</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">Reserva Impuestos (IRPF/IS, ${(pctImp*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(taxReserve)}</div><div style="font-size:11px;color:var(--muted)">→ Hacienda (sobre beneficio)</div></div>
-      <div class="kpi-mini" style="border-color:var(--green)"><div class="l">Beneficio neto disponible</div><div class="v" style="color:${netoDisponible>=0?'var(--green)':'var(--red)'}">${fmtMoney(netoDisponible)}</div><div style="font-size:11px;color:var(--muted)">Tras reservar IVA e impuestos</div></div>`;
+      <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Ventas con IVA</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">− IVA repercutido</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${fmtMoney(facBruta)} − ${fmtMoney(ivaVentas)} = ${fmtMoney(facNeta)}</div></div>
+      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Ingresos sin IVA</div></div>
+      <div class="kpi-mini" style="border-color:var(--red)"><div class="l">− Total gastos</div><div class="v" style="color:var(--red)">${fmtMoney(totalGastos)}</div><div style="font-size:11px;color:var(--muted)">${fmtMoney(facNeta)} − ${fmtMoney(totalGastos)} = ${fmtMoney(beneficioBruto)}</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">− Impuestos (${(pctImp*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(taxReserve)}</div><div style="font-size:11px;color:var(--muted)">${beneficioBruto>0?`${(pctImp*100).toFixed(0)}% sobre beneficio`:'Sin beneficio, sin impuesto'}</div></div>
+      <div class="kpi-mini" style="border-color:var(--green)"><div class="l">= Beneficio neto</div><div class="v" style="color:${netoDisponible>=0?'var(--green)':'var(--red)'}">${fmtMoney(netoDisponible)}</div><div style="font-size:11px;color:var(--muted)">Lo que queda para ti</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${ivaLabel}</div><div class="v" style="color:${ivaLiquidar>=0?'var(--amber-dark)':'var(--green)'}">${fmtMoney(Math.abs(ivaLiquidar))}</div><div style="font-size:11px;color:var(--muted)">IVA cobrado − IVA pagado</div></div>`;
 
     const realPer = totalPersonalNeto();
     const realGF = totalGFNeto();
