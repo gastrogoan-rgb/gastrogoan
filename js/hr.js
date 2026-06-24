@@ -784,10 +784,14 @@ const GE = (function(){
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
       const diff = r.real - r.obj;
-      const ok = r.isBen ? (r.real>=0) : (Math.abs(diff)/Math.max(r.obj,1) < 0.1);
-      const warn = !r.isBen && diff > r.obj*0.1;
-      const estado = r.isBen ? (r.real>=0?'✅':'❌') : (ok?'✅':warn?'⚠️':'❌');
-      const diffColor = r.isBen ? (r.real>=0?'var(--green)':'var(--red)') : (diff<=0?'var(--green)':'var(--red)');
+      const absDiff = Math.abs(diff);
+      const pctDev = Math.abs(diff)/Math.max(r.obj,1);
+      const ok = pctDev < 0.1;
+      const isGood = r.isBen ? diff >= 0 : diff <= 0;
+      const estado = !r.real ? '—' : (ok ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
+      const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
+      const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
+      const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
       const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
       const barColor = barPct>110?'var(--red)':barPct>90?'var(--green)':'var(--amber)';
       return `<div class="te-row">
@@ -795,7 +799,7 @@ const GE = (function(){
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
         <span style="text-align:right;font-family:monospace">${fmtMoney(r.obj)}</span>
         <span style="text-align:right;font-family:monospace;font-weight:700">${r.real?fmtMoney(r.real):'—'}</span>
-        <span style="text-align:right;font-family:monospace;color:${diffColor}">${r.real?(diff>0?'+':'')+fmtMoney(diff):'—'}</span>
+        <span style="text-align:right;font-family:monospace;font-weight:700;color:${diffColor}">${diffText}</span>
         <span style="text-align:center;font-size:16px">${estado}</span>
       </div>
       <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
