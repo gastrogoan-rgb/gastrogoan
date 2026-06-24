@@ -94,12 +94,13 @@ server.listen(0, '127.0.0.1', async () => {
 
     // Variable expenses
     const m = month;
+    const y = new Date().getFullYear();
     DB.ge.variables = [
-      {id:20, concepto:'MATERIA PRIMA', cat:'MATERIA PRIMA', mes: Array(12).fill(0).map((_,i) => i===m ? 3200 : 0), iva: Array(12).fill(10)},
-      {id:21, concepto:'BEBIDAS', cat:'BEBIDAS', mes: Array(12).fill(0).map((_,i) => i===m ? 1800 : 0), iva: Array(12).fill(21)},
-      {id:22, concepto:'CAFÉ/INFUSIONES', cat:'CAFÉ/INFUSIONES', mes: Array(12).fill(0).map((_,i) => i===m ? 400 : 0), iva: Array(12).fill(21)},
-      {id:23, concepto:'PACKAGING', cat:'PACKAGING', mes: Array(12).fill(0).map((_,i) => i===m ? 250 : 0), iva: Array(12).fill(21)},
-      {id:24, concepto:'LIMPIEZA', cat:'LIMPIEZA', mes: Array(12).fill(0).map((_,i) => i===m ? 180 : 0), iva: Array(12).fill(21)},
+      {id:20, concepto:'MATERIA PRIMA', categoria:'MATERIA PRIMA', proveedor:'PROVEEDOR1', mes:m, año:y, importe:3200, iva:10},
+      {id:21, concepto:'BEBIDAS', categoria:'BEBIDAS', proveedor:'PROVEEDOR2', mes:m, año:y, importe:1800, iva:21},
+      {id:22, concepto:'CAFÉ/INFUSIONES', categoria:'CAFÉ/INFUSIONES', proveedor:'PROVEEDOR3', mes:m, año:y, importe:400, iva:21},
+      {id:23, concepto:'PACKAGING', categoria:'PACKAGING', proveedor:'PROVEEDOR1', mes:m, año:y, importe:250, iva:21},
+      {id:24, concepto:'LIMPIEZA', categoria:'LIMPIEZA', proveedor:'PROVEEDOR1', mes:m, año:y, importe:180, iva:21},
     ];
 
     // Distribution percentages
