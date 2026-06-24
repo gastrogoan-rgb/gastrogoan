@@ -752,11 +752,7 @@ const GE = (function(){
     const ivaLiquidar = ivaLiquidarMes(activeMonth);
 
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
-    const realPerKpi = totalPersonalNeto();
-    const realGFKpi = totalGFNeto();
-    const realMPKpi = totalVariablesNetoMes(activeMonth);
-    const cuotasCapexKpi = capexCuotaMes(activeMonth);
-    const realBenKpi = facNeta - realPerKpi - realGFKpi - realMPKpi - cuotasCapexKpi;
+    const realBenKpi = resultadoAntesImpMes(activeMonth);
     const taxReserve = realBenKpi>0 ? realBenKpi*pctImp : 0;
     const netoDisponible = realBenKpi - taxReserve;
 
@@ -771,14 +767,15 @@ const GE = (function(){
     const realPer = totalPersonalNeto();
     const realGF = totalGFNeto();
     const realMP = totalVariablesNetoMes(activeMonth);
-    const realOG = capexCuotaMes(activeMonth);
+    const realComisiones = comisionesMes(activeMonth);
+    const realOG = capexCuotaMes(activeMonth) + realComisiones;
     const realBen = facNeta - realPer - realGF - realMP - realOG;
 
     const rows = [
       {lbl:'Personal (sin IVA)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
       {lbl:'Gastos Fijos (sin IVA)', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
       {lbl:'Gastos Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
-      {lbl:'Otros Gastos (cuotas financiación)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
+      {lbl:'Otros Gastos (CAPEX + comisiones)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
       {lbl:'Beneficio estimado', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
     ];
 
