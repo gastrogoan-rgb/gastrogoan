@@ -751,22 +751,12 @@ const GE = (function(){
     const facNeta = facturacionNetaMes(activeMonth);
     const ivaLiquidar = ivaLiquidarMes(activeMonth);
 
-    const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     const ivaVentas = facBruta - facNeta;
-    const totalGastos = totalFijosNeto() + totalVariablesNetoMes(activeMonth) + comisionesMes(activeMonth) + capexCuotaMes(activeMonth);
-    const beneficioBruto = facNeta - totalGastos;
-    const taxReserve = beneficioBruto>0 ? beneficioBruto*pctImp : 0;
-    const netoDisponible = beneficioBruto - taxReserve;
-    const ivaLabel = ivaLiquidar>=0 ? 'IVA a liquidar (modelo 303)' : 'IVA a tu favor (modelo 303)';
 
     document.getElementById('te-kpis').innerHTML = `
       <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Ventas con IVA</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">− IVA repercutido</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${fmtMoney(facBruta)} − ${fmtMoney(ivaVentas)} = ${fmtMoney(facNeta)}</div></div>
-      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Ingresos sin IVA</div></div>
-      <div class="kpi-mini" style="border-color:var(--red)"><div class="l">− Total gastos</div><div class="v" style="color:var(--red)">${fmtMoney(totalGastos)}</div><div style="font-size:11px;color:var(--muted)">${fmtMoney(facNeta)} − ${fmtMoney(totalGastos)} = ${fmtMoney(beneficioBruto)}</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">− Impuestos (${(pctImp*100).toFixed(0)}%)</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(taxReserve)}</div><div style="font-size:11px;color:var(--muted)">${beneficioBruto>0?`${(pctImp*100).toFixed(0)}% sobre beneficio`:'Sin beneficio, sin impuesto'}</div></div>
-      <div class="kpi-mini" style="border-color:var(--green)"><div class="l">= Beneficio neto</div><div class="v" style="color:${netoDisponible>=0?'var(--green)':'var(--red)'}">${fmtMoney(netoDisponible)}</div><div style="font-size:11px;color:var(--muted)">Lo que queda para ti</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${ivaLabel}</div><div class="v" style="color:${ivaLiquidar>=0?'var(--amber-dark)':'var(--green)'}">${fmtMoney(Math.abs(ivaLiquidar))}</div><div style="font-size:11px;color:var(--muted)">IVA cobrado − IVA pagado</div></div>`;
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">IVA repercutido</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">IVA incluido en ventas</div></div>
+      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base para distribuir</div></div>`;
 
     const realPer = totalPersonalNeto();
     const realGF = totalGFNeto();
@@ -774,22 +764,33 @@ const GE = (function(){
     const realComisiones = comisionesMes(activeMonth);
     const realOG = capexCuotaMes(activeMonth) + realComisiones;
     const realBen = facNeta - realPer - realGF - realMP - realOG;
+    const ivaReserva = ivaLiquidar >= 0 ? ivaLiquidar : 0;
 
     const rows = [
       {lbl:'Personal (sin IVA)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
       {lbl:'Gastos Fijos (sin IVA)', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
       {lbl:'Gastos Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
       {lbl:'Otros Gastos (CAPEX + comisiones)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
-      {lbl:'Beneficio estimado', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
+      {lbl:'Beneficio / Ahorro', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
+      {lbl:'Reserva IVA (modelo 303)', obj:null, real:ivaReserva, color:'var(--amber)', isIva:true},
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
+      if(r.isIva){
+        return `<div class="te-row" style="border-top:2px solid var(--border);padding-top:10px;margin-top:6px">
+          <span style="font-size:14px;font-weight:600">${r.lbl}</span>
+          <span></span>
+          <span></span>
+          <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
+          <span style="text-align:right;font-size:11px;color:var(--muted)">Apartar cada mes</span>
+          <span style="text-align:center;font-size:16px">💰</span>
+        </div>`;
+      }
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
-      const pctDev = Math.abs(diff)/Math.max(r.obj,1);
-      const ok = pctDev < 0.1;
+      const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
       const isGood = r.isBen ? diff >= 0 : diff <= 0;
-      const estado = !r.real ? '—' : (ok ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
+      const estado = !r.real ? '—' : (pctDev < 0.1 ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
