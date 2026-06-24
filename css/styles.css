@@ -411,6 +411,42 @@ td.wrap{white-space:normal}
 .spin{animation:spin .6s linear}
 
 /* Responsive */
+@media (max-width: 1024px){
+  /* Buttons — ensure text + icons always visible */
+  .btn{padding:10px 16px;min-height:42px;font-size:14px}
+  .btn-sm{padding:6px 10px;min-height:34px;font-size:12px}
+  .btn-icon{min-width:36px;min-height:36px;padding:6px}
+  .btn-icon i{font-size:16px}
+
+  /* Tables — reduce padding so columns fit */
+  th,td{padding:10px 10px;font-size:13px}
+
+  /* Financial tables */
+  .ge-grid th:first-child{min-width:130px}
+  .ge-grid th{font-size:10.5px;padding:6px 8px}
+  .ge-grid td{font-size:12px;padding:6px 8px}
+
+  /* Tabs — scrollable, smaller padding */
+  .ge-tab{padding:8px 14px;font-size:12.5px}
+
+  /* Action buttons */
+  .actions-cell .btn{font-size:13px;padding:8px 12px;min-height:40px}
+  .actions-cell .btn i{font-size:15px}
+
+  /* Toolbar buttons */
+  .toolbar .btn{font-size:13px;min-height:40px}
+
+  /* List rows */
+  .list-row .list-row-name{font-size:13px}
+
+  /* KPIs */
+  .ge-kpi .val{font-size:20px}
+  .ge-kpi .lbl{font-size:10.5px}
+
+  /* Treasury rows */
+  .te-row{font-size:12.5px}
+}
+
 @media (max-width: 880px){
   .content{padding:12px}
   .home-hero{margin:-12px -12px 0}
@@ -423,8 +459,8 @@ td.wrap{white-space:normal}
   .app-logo-sub{display:none}
   .app-logo-text{font-size:13px}
   .app-header .hdr-text{display:none}
-  .app-header .btn{padding:6px 10px;font-size:12px;min-height:36px}
-  .app-header .btn i{font-size:17px}
+  .app-header .btn{padding:6px 8px;font-size:12px;min-height:36px;min-width:36px;justify-content:center}
+  .app-header .btn i{font-size:18px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px}
   #lang-select{font-size:11px;padding:4px 4px;min-width:44px}
   #sync-badge{font-size:10px;padding:3px 8px;margin-right:4px !important}
 
@@ -453,9 +489,19 @@ td.wrap{white-space:normal}
   .ge-kpi-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
   .te-kpis{grid-template-columns:repeat(4,1fr)}
 
-  /* Tables */
-  .ge-grid th:first-child{min-width:110px}
+  /* Tables — tighter for tablet portrait */
+  th,td{padding:8px 8px;font-size:12px}
+  .ge-grid th:first-child{min-width:100px}
+  .ge-grid th{font-size:10px;padding:5px 6px}
+  .ge-grid td{font-size:11.5px;padding:5px 6px}
   .te-row{grid-template-columns:1fr 50px 70px 70px 70px 50px;font-size:12px}
+
+  /* Buttons — ensure content always visible */
+  .btn{padding:8px 12px;min-height:38px;font-size:13px}
+  .btn i{font-size:15px}
+  .btn-sm{padding:5px 8px;min-height:32px;font-size:12px}
+  .btn-icon{min-width:36px;min-height:36px;padding:5px}
+  .btn-icon i{font-size:16px}
 
   /* Manual sidebar */
   .manual-wrap{grid-template-columns:180px 1fr}
@@ -534,8 +580,8 @@ td.wrap{white-space:normal}
   .app-logo-text{font-size:12px}
   .app-logo-icon{width:26px;height:26px;font-size:13px;border-radius:6px}
   .app-header .hdr-text{display:none}
-  .app-header .btn{padding:4px 7px;font-size:10px;min-height:28px;margin-right:0 !important}
-  .app-header .btn i{margin:0;font-size:15px}
+  .app-header .btn{padding:4px 6px;font-size:10px;min-height:32px;min-width:32px;margin-right:0 !important;justify-content:center}
+  .app-header .btn i{margin:0;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
   #sync-badge{font-size:9px;padding:2px 6px;margin-right:2px !important}
   #lang-select{padding:3px 2px;font-size:10px;width:auto;min-width:40px;margin-right:0 !important;border-radius:6px}
 
