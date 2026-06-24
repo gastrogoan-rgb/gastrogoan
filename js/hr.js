@@ -1092,7 +1092,7 @@ const GE = (function(){
     rows.push([]);
 
     const comisiones = comisionesMes(mes);
-    const resultado = sumBase - sumVarBase - sumFijosBase - comisiones;
+    const resultado = sumBase - sumVarBase - sumFijosBase - comisiones - capexCuotaMes(mes);
     const totalIvaSoportado = sumVarIva + sumFijosIva + sumCapexIva;
     rows.push(['RESUMEN DEL MES']);
     rows.push(['Concepto','Importe (€)']);

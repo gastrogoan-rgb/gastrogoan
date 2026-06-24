@@ -332,7 +332,7 @@ let pedidosTab = 'crear';
 function setPedidosTab(tab){
   pedidosTab = tab;
   pedidoDetailId = null;
-  if(t === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
+  if(tab === 'crear'){ orderModalSupplier = ''; orderModalLines = []; orderModalSearch = ''; }
   renderPedidos();
 }
 function updatePedidosTabsUI(){
@@ -602,6 +602,7 @@ function registerPedidoComoGastoVariable(o){
 function changePedidoEstado(estado){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
+  if(o.estado === estado) return;
   o.estado = estado;
   if(estado === 'RECIBIDO'){
     (o.items||[]).forEach(line => {

@@ -2228,8 +2228,8 @@ function refreshAfterRemoteChange(){
 
 // Botón "Actualizar" de la cabecera: vuelve a leer los datos guardados
 // (por si otro dispositivo los cambió) y refresca la pantalla actual.
-function manualRefresh(){
-  DB = loadDB();
+async function manualRefresh(){
+  DB = await loadDB();
   refreshAfterRemoteChange();
   const icon = document.getElementById('refresh-icon');
   if(icon){
@@ -13616,7 +13616,7 @@ function renderMiNegocio(){
         <label>Logo del establecimiento</label>
         <div style="display:flex;align-items:center;gap:12px">
           <div id="mn-logo-preview" style="width:64px;height:64px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff">
-            ${b.logo ? `<img src="${b.logo}" style="width:100%;height:100%;object-fit:contain">` : `<i class="ti ti-photo" style="color:var(--muted)"></i>`}
+            ${b.logo ? `<img src="${escapeHtml(b.logo)}" style="width:100%;height:100%;object-fit:contain">` : `<i class="ti ti-photo" style="color:var(--muted)"></i>`}
           </div>
           <div>
             <input type="file" id="mn-logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
@@ -13979,7 +13979,7 @@ function removeLogo(){
 function renderHeader(){
   const b = DB.business || {};
   const icon = document.getElementById('app-logo-icon');
-  icon.innerHTML = b.logo ? `<img src="${b.logo}" alt="Logo">` : `<i class="ti ti-tools-kitchen-2"></i>`;
+  icon.innerHTML = b.logo ? `<img src="${escapeHtml(b.logo)}" alt="Logo">` : `<i class="ti ti-tools-kitchen-2"></i>`;
   const text = document.getElementById('app-logo-text');
   if(b.name){
     text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · Kit de Gestión</span>`;

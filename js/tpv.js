@@ -1222,25 +1222,6 @@ function urgencyBadge(mins){
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
 
-function entregarTodasBebidas(orderId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  let changed = false;
-  order.items.forEach(line => {
-    if(line.bebida && line.estado && line.estado !== 'entregado'){
-      line.estado = 'entregado';
-      line.entregadoAt = new Date().toISOString();
-      changed = true;
-    }
-  });
-  if(!changed) return;
-  checkComandaCierre(order);
-  saveDB();
-  const active = document.querySelector('.view.active');
-  if(active && active.id === 'view-comandascocina') renderComandasCocina();
-  else if(active && active.id === 'view-tpv') renderTPV();
-}
-
 // Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> entregado
 function cycleLineEstado(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
