@@ -1,9 +1,9 @@
 /* ============================================================
    PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
-const LIMPIEZA_TABS = ['manos','mes','temperaturas','alergenos','plagas','mantenimiento'];
+const LIMPIEZA_TABS = ['manos','protocolo','mes','temperaturas','alergenos','plagas','mantenimiento'];
 const LIMPIEZA_TAB_LABELS = {
-  manos: '🧼 Higiene de Manos', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
+  manos: '🧼 Higiene de Manos', protocolo: '🚪 Apertura / Cierre', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
   alergenos: '⚠️ Alérgenos', plagas: '🐜 Plagas', mantenimiento: '🔧 Mantenimiento'
 };
 const LIMPIEZA_LOG_CONFIG = {
@@ -12,6 +12,8 @@ const LIMPIEZA_LOG_CONFIG = {
   plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labels:['Fecha','Área','Hallazgos','Acción tomada','Próxima revisión']}
 };
 const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
+const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
+const LIMPIEZA_DEFAULT_CIERRE = ['Limpiar y desinfectar todas las superficies','Barrer y fregar suelos','Vaciar cubos de basura','Verificar que todo el equipamiento está apagado','Cerrar cámaras y comprobar temperaturas','Activar alarma y cerrar con llave'];
 
 let limpiezaTab = 'manos';
 let limpiezaMonthOffset = 0;
@@ -27,6 +29,8 @@ function ensureLimpiezaData(){
   if(!l.alergenos) l.alergenos = [];
   if(!l.plagas) l.plagas = [];
   if(!l.mantenimiento) l.mantenimiento = [];
+  if(!l.aperturaPasos) l.aperturaPasos = [...LIMPIEZA_DEFAULT_APERTURA];
+  if(!l.cierrePasos) l.cierrePasos = [...LIMPIEZA_DEFAULT_CIERRE];
 }
 
 function renderLimpieza(){
@@ -44,6 +48,7 @@ function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); }
 function renderLimpiezaTab(){
   switch(limpiezaTab){
     case 'manos': renderLimpiezaManos(); break;
+    case 'protocolo': renderLimpiezaProtocolo(); break;
     case 'mes': renderLimpiezaMes(); break;
     case 'temperaturas': renderLimpiezaLog('temperaturas'); break;
     case 'alergenos': renderLimpiezaLog('alergenos'); break;
@@ -98,6 +103,46 @@ function removeManosPaso(i){
   DB.limpieza.manosPasos.splice(i,1);
   saveDB();
   renderLimpiezaManos();
+}
+function renderLimpiezaProtocolo(){
+  const box = document.getElementById('limpieza-tab-content');
+  const ap = DB.limpieza.aperturaPasos;
+  const ci = DB.limpieza.cierrePasos;
+  const renderBlock = (title, icon, pasos, type) => `
+    <div class="card">
+      <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
+      ${pasos.map((p,i) => `
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div class="step-num">${i+1}</div>
+          <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+        </div>
+      `).join('')}
+      <button class="owner-only btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> Añadir paso</button>
+      <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> Restablecer</button>
+    </div>`;
+  box.innerHTML = `<div class="grid grid-2">${renderBlock('Protocolo de Apertura','sunrise',ap,'apertura')}${renderBlock('Protocolo de Cierre','sunset',ci,'cierre')}</div>`;
+}
+function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
+function updateProtocoloPaso(type,i,val){ DB.limpieza[_protocoloKey(type)][i] = val; saveDB(); }
+function addProtocoloPaso(type){ DB.limpieza[_protocoloKey(type)].push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
+function removeProtocoloPaso(type,i){
+  const key = _protocoloKey(type);
+  if(DB.limpieza[key].length<=1) return;
+  DB.limpieza[key].splice(i,1);
+  saveDB();
+  renderLimpiezaProtocolo();
+}
+function resetProtocoloPasos(type){
+  DB.limpieza[_protocoloKey(type)] = [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA : LIMPIEZA_DEFAULT_CIERRE)];
+  saveDB(); renderLimpiezaProtocolo(); showToast('Pasos restablecidos');
+}
+function printProtocolo(type){
+  const pasos = DB.limpieza[_protocoloKey(type)];
+  const title = type==='apertura' ? 'Protocolo de Apertura' : 'Protocolo de Cierre';
+  const w = window.open('','_blank');
+  w.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:40px}h2{margin-bottom:20px}ol li{padding:6px 0;font-size:16px}</style></head><body><h2>${title}</h2><ol>${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ol></body></html>`);
+  w.document.close(); w.print();
 }
 function printManosProtocolo(){
   const pasos = DB.limpieza.manosPasos;
