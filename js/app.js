@@ -1,7 +1,7 @@
 /* ============================================================
    PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
-const LIMPIEZA_TABS = ['manos','protocolo','mes','temperaturas','alergenos','plagas','mantenimiento'];
+const LIMPIEZA_TABS = ['protocolo','manos','mes','temperaturas','alergenos','plagas','mantenimiento'];
 const LIMPIEZA_TAB_LABELS = {
   manos: '🧼 Higiene de Manos', protocolo: '🚪 Apertura / Cierre', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
   alergenos: '⚠️ Alérgenos', plagas: '🐜 Plagas', mantenimiento: '🔧 Mantenimiento'
@@ -15,7 +15,7 @@ const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabó
 const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
 const LIMPIEZA_DEFAULT_CIERRE = ['Limpiar y desinfectar todas las superficies','Barrer y fregar suelos','Vaciar cubos de basura','Verificar que todo el equipamiento está apagado','Cerrar cámaras y comprobar temperaturas','Activar alarma y cerrar con llave'];
 
-let limpiezaTab = 'manos';
+let limpiezaTab = 'protocolo';
 let limpiezaMonthOffset = 0;
 
 function ensureLimpiezaData(){
