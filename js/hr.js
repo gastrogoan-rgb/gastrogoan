@@ -35,7 +35,7 @@ const GE = (function(){
     if(name==='pe') renderPE();
     if(name==='capex') renderCapex();
     if(name==='resultado') renderResultado();
-    if(t==='tesoreria') renderTesoreria();
+    if(name==='tesoreria') renderTesoreria();
   }
 
   /* -- Helpers -- */
