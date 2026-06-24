@@ -1060,13 +1060,13 @@ function renderOrderComandaPanel(order){
         else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
         else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
         return `
-        <div style="display:flex;align-items:center;gap:4px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)">
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}</span>
           <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
-          <button class="btn btn-sm btn-icon" style="width:28px;height:28px;min-height:auto;font-size:12px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm btn-icon" style="width:28px;height:28px;min-height:auto;font-size:12px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon" style="width:28px;height:28px;min-height:auto;font-size:12px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
-          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:28px;height:28px;min-height:auto;font-size:12px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+          <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+          <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
+          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         </div>
         ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
       `;}).join('')}
