@@ -819,6 +819,11 @@ function groupOrderItemsByTanda(order){
 function renderOrderLinesHtml(order){
   const groups = groupOrderItemsByTanda(order);
   if(!groups.length) return `<div class="empty" style="padding:10px">Comanda vacía</div>`;
+  groups.sort((a,b) => {
+    const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
+    const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
+    return aB - bB;
+  });
   return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${groups.map(g => {
     const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
     const enviados = g.items.map(({line}) => line.enviadoAt).filter(Boolean);
@@ -1032,6 +1037,11 @@ function renderMenuSelectorInline(order, menu){
 function renderOrderComandaPanel(order){
   const groups = groupOrderItemsByTanda(order);
   if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>Comanda vacía<br><span style="font-size:12px;color:var(--muted)">Selecciona platos de la carta</span></div>`;
+  groups.sort((a,b) => {
+    const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
+    const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
+    return aB - bB;
+  });
   const total = orderTotal(order);
   let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Comanda</span><span>${fmtMoney(total)}</span></div>`;
   html += groups.map(g => {
@@ -1258,8 +1268,7 @@ function renderComandasCocina(){
 
   const tabsHtml = `
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Cocina</button>
-      <button class="btn btn-sm ${comandasCocinaTab==='sala' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('sala')"><i class="ti ti-glass-full"></i> Sala / Barra</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
     </div>
   `;
@@ -1296,49 +1305,6 @@ function renderComandasCocina(){
   }
 
   allOrders.filter(o => !o.cerrada).forEach(o => checkComandaCierre(o));
-
-  if(comandasCocinaTab === 'sala'){
-    const salaTickets = allOrders
-      .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && l.bebida))
-      .map(order => {
-        const drinkLines = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => line.bebida && line.estado);
-        return {order, drinkLines};
-      });
-
-    if(!salaTickets.length){
-      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-glass-full"></i>No hay bebidas pendientes.</div>`;
-      return;
-    }
-
-    box.innerHTML = tabsHtml + `<div class="grid grid-3">${salaTickets.map(({order, drinkLines}) => {
-      const envTimes = drinkLines.filter(({line}) => line.enviadoAt).map(({line}) => new Date(line.enviadoAt).getTime());
-      const minMs = envTimes.length ? Math.min(...envTimes) : Date.now();
-      const mins = minutesSince(new Date(minMs).toISOString());
-      const allEntregado = drinkLines.every(({line}) => line.estado === 'entregado');
-
-      return `
-      <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-          <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
-          ${allEntregado ? '<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>' : urgencyBadge(mins)}
-        </div>
-        ${!allEntregado ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="entregarTodasBebidas(${order.id})"><i class="ti ti-glass-full"></i> Entregar todas</button></div>` : ''}
-        ${drinkLines.map(({line, idx}) => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
-            <div style="flex:1;min-width:0">
-              <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-              ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
-            </div>
-            ${line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> Pendiente</button>`
-            : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-glass-full"></i> Sirviendo</button>`
-            : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>`}
-          </div>
-        `).join('')}
-      </div>
-      `;
-    }).join('')}</div>`;
-    return;
-  }
 
   const tickets = allOrders
     .filter(o => !o.cerrada && (o.items||[]).some(l => l.estado && !l.bebida))

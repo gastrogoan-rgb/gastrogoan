@@ -120,20 +120,27 @@ server.listen(0, '127.0.0.1', async () => {
     } catch(e) { console.log(`${v.name} error:`, e.message); }
   }
 
-  // Comandas Sala tab
+  // Open comanda modal at tablet width
   try {
-    await page.evaluate(() => { navigate('comandascocina'); setComandasCocinaTab('sala'); });
-    await new Promise(r => setTimeout(r, 400));
-    await page.screenshot({ path: `${scratchpad}/mobile-comandas-sala.png`, fullPage: false });
-    console.log('Screenshot: comandas-sala');
-  } catch(e) { console.log('comandas-sala error:', e.message); }
-
-  // Open comanda modal
-  try {
-    await page.evaluate(() => renderTableOrderModal(500));
+    await page.setViewport({ width: 1024, height: 768 });
+    await page.evaluate(() => {
+      DB.activeCartaIds = DB.cartas.map(c => c.id);
+      saveDB();
+      navigate('tpv');
+    });
     await new Promise(r => setTimeout(r, 500));
-    await page.screenshot({ path: `${scratchpad}/mobile-comanda.png`, fullPage: true });
-    console.log('Screenshot: comanda modal');
+    page.on('console', msg => console.log('BROWSER:', msg.text()));
+    await page.evaluate(() => {
+      const order = DB.tpvOrders.find(o => o.id === 500);
+      console.log('ITEMS:', JSON.stringify(order.items.map(l => ({name:l.name, bebida:l.bebida, tanda:l.tanda}))));
+      openTableOrder(101);
+      const overlay = document.getElementById('modal-overlay');
+      if(overlay) { overlay.classList.remove('hide'); overlay.style.display = ''; }
+    });
+    await new Promise(r => setTimeout(r, 1500));
+    await page.screenshot({ path: `${scratchpad}/tablet-comanda-modal.png`, fullPage: false });
+    console.log('Screenshot: tablet comanda modal');
+    await page.setViewport({ width: 390, height: 844 });
   } catch(e) { console.log('comanda error:', e.message); }
 
   await browser.close();
