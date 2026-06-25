@@ -789,7 +789,7 @@ const GE = (function(){
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
       const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
-      const isGood = r.isBen ? diff >= 0 : diff <= 0;
+      const isGood = diff >= 0;
       const estado = !r.real ? '—' : (pctDev < 0.1 ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
