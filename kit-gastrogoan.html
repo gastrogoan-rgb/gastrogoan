@@ -2056,8 +2056,10 @@ function showFirebaseSetupGate(){
       </div>`;
   }
 
+  const showBackBtnFb = getBusinessSlots().length > 1;
   g.innerHTML = `
-    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
+    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
+      ${showBackBtnFb ? `<button onclick="hideFirebaseSetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
         <h2 style="margin-bottom:4px">Configura tu nube</h2>
@@ -2102,8 +2104,10 @@ function showNetlifySetupGate(){
     ? `<div style="background:#E9F8EF;border-left:4px solid #34C759;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
     : `<div style="background:#FDECEA;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ Ahora mismo estás abriendo la app <strong>desde un archivo local</strong>, no desde internet. Las reservas/pedidos por QR <strong>no funcionarán</strong> hasta que subas la app a Netlify y la abras desde su dirección pública.</div>`;
 
+  const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
-    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
+    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
+      ${showBackBtn ? `<button onclick="hideNetlifySetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
         <h2 style="margin-bottom:4px">Sube tu app a internet</h2>
