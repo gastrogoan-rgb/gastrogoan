@@ -7,8 +7,9 @@ mkdir -p dist
 
 echo "🔧 Construyendo index.html..."
 
-# Read CSS
-CSS=$(cat css/styles.css)
+# Read CSS (icons + app styles)
+CSS_ICONS=$(cat css/tabler-icons.min.css)
+CSS_APP=$(cat css/styles.css)
 
 # Read all JS in order
 JS=""
@@ -17,14 +18,15 @@ for f in js/core.js js/i18n.js js/ui.js js/finance.js js/recipes.js js/menu.js j
 $(cat $f)"
 done
 
-# Build: take index.html, replace CSS link with inline, replace JS scripts with inline
+# Build: take index.html, replace CSS links with inline, replace JS scripts with inline
 {
-  # Everything up to the CSS link
-  sed -n '1,/link rel="stylesheet" href="css\/styles.css"/p' index.html | head -n -1
+  # Everything up to the first CSS link (tabler-icons)
+  sed -n '1,/link rel="stylesheet" href="css\/tabler-icons.min.css"/p' index.html | head -n -1
 
-  # Inline CSS
+  # Inline both CSS files
   echo "<style>"
-  echo "$CSS"
+  echo "$CSS_ICONS"
+  echo "$CSS_APP"
   echo "</style>"
 
   # From </head> to before the JS script tags
