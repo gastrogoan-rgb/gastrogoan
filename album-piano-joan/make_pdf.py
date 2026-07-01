@@ -349,23 +349,23 @@ REP=[("Nivel I · Fundamentos",[("Himno de la Alegría","L. van Beethoven","Do m
     ("Sonatina en Sol mayor (4 manos)","M. Bazzoni","Sol mayor"),("Para Elisa (Für Elise)","L. van Beethoven","La menor")])]
 
 def index_flow():
-    out=[Spacer(0,4),Paragraph("<font size=8 color='#a8884e'><b>CONTENIDO</b></font>",P("S",8,10)),
-        Paragraph("<b>El repertorio del cuaderno</b>",P("FB",22,25,sa=4)),
-        HRFlowable(width="100%",thickness=2,color=GOLD,spaceAfter=8),
+    out=[Spacer(0,2),Paragraph("<font size=8 color='#a8884e'><b>CONTENIDO</b></font>",P("S",8,10)),
+        Paragraph("<b>El repertorio del cuaderno</b>",P("FB",19,22,sa=2)),
+        HRFlowable(width="100%",thickness=2,color=GOLD,spaceAfter=5),
         Paragraph("Estas son las obras que trabajaremos, ordenadas por dificultad (no por fechas): "
-                  "<b>cada alumno avanza a su propio ritmo</b>.",P("S",10,13,sa=8))]
+                  "<b>cada alumno avanza a su propio ritmo</b>.",P("S",9.2,12,sa=5))]
     for lvl,items in REP:
-        rows=[[Paragraph("<b><i>%s</i></b>"%esc(lvl),P("F",11,13,color=INK)),"",""]]
+        rows=[[Paragraph("<b><i>%s</i></b>"%esc(lvl),P("F",10.5,12,color=INK)),"",""]]
         for o,c,t in items:
-            rows.append([Paragraph("<b>%s</b>"%esc(o),P("S",9.3,12)),
-                Paragraph(esc(c),P("S",9,12,color=colors.HexColor("#4a463d"))),
-                Paragraph(esc(t),P("S",9,12,color=colors.HexColor("#4a463d")))])
+            rows.append([Paragraph("<b>%s</b>"%esc(o),P("S",8.6,10.5)),
+                Paragraph(esc(c),P("S",8.4,10.5,color=colors.HexColor("#4a463d"))),
+                Paragraph(esc(t),P("S",8.4,10.5,color=colors.HexColor("#4a463d")))])
         t=Table(rows,colWidths=[CW*0.46,CW*0.30,CW*0.24])
         ts=[("LINEBELOW",(0,0),(-1,0),1.2,INK),("SPAN",(0,0),(-1,0)),
             ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#f3eee2")),
-            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ("TOPPADDING",(0,0),(-1,-1),2.3),("BOTTOMPADDING",(0,0),(-1,-1),2.3),
             ("LEFTPADDING",(0,0),(-1,-1),6),("LINEBELOW",(0,1),(-1,-1),0.4,LINE),("VALIGN",(0,0),(-1,-1),"MIDDLE")]
-        t.setStyle(TableStyle(ts)); out.append(t); out.append(Spacer(0,7))
+        t.setStyle(TableStyle(ts)); out.append(t); out.append(Spacer(0,4))
     return out
 
 LOGO="/tmp/logo.png"
