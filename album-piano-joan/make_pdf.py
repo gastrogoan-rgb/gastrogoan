@@ -3,7 +3,7 @@
 """Crea un PDF A4 DESDE CERO con la informacion del HTML (no convierte el HTML).
 Lee partials/diaNN.html, extrae el contenido y lo maqueta con ReportLab,
 que pagina solo en hojas A4 (sin cortes ni huecos)."""
-import glob, os, re
+import glob, os, re, json
 from bs4 import BeautifulSoup, NavigableString, Tag
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -315,6 +315,76 @@ def incipit_for(title):
         if k in tl: return "incipit_%s.png"%v
     return None
 
+SCORES = json.load(open("scores/map.json")) if os.path.exists("scores/map.json") else {}
+
+def get_meta(path):
+    soup=BeautifulSoup(open(path,encoding="utf-8").read(),"html.parser")
+    sec=soup.find("section"); cls=sec.get("class") or []
+    stage=next((c for c in cls if c in ("s1","s2","s3")),"s1")
+    h2=sec.select_one(".day-head h2").get_text(strip=True)
+    base=re.split(r"[·—]",h2)[0].strip()
+    ton=""
+    for sp in sec.select(".specs .sp"):
+        if sp.select_one(".k").get_text(strip=True)=="Tonalidad":
+            ton=sp.select_one(".v").get_text(strip=True)
+    return base, norm_key(ton), stage
+
+def score_img(path):
+    iw,ih=PILImage.open(path).size
+    fh=297*mm-30*mm
+    w=CW; h=w*ih/iw
+    if h>fh: h=fh; w=h*iw/ih
+    return RLImage(path,width=w,height=h)
+
+def piece_cover(base, key, stage):
+    col=STG[stage]; m=SCORES.get(base)
+    out=[Spacer(0,26),HRFlowable(width="100%",thickness=3,color=col,spaceAfter=6,lineCap="round")]
+    out.append(Paragraph("<b>%s</b>"%esc(STGNAME[stage]),P("S",9,12,color=col)))
+    out.append(Paragraph("<b>%s</b>"%esc(base),P("FB",30,34,color=INK,sa=5)))
+    out.append(Paragraph("Partitura · sesiones de estudio · taller de práctica",P("F",13,16,color=MUT,sa=12)))
+    if m and os.path.exists(m["qr"]):
+        note=Paragraph("<b>♪ Escucha la pieza</b><br/>Escanea este código con la cámara del móvil "
+              "para oír una versión de referencia. Escuchar la obra antes de tocarla ayuda muchísimo.",P("S",9.5,13))
+        t=Table([[RLImage(m["qr"],width=30*mm,height=30*mm),note]],colWidths=[38*mm,CW-38*mm])
+        t.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("LEFTPADDING",(1,0),(1,0),8),
+            ("BOX",(0,0),(-1,-1),0.6,LINE),("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#faf7f0")),
+            ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),("LEFTPADDING",(0,0),(0,0),8)]))
+        out.append(t)
+    out.append(Spacer(0,12))
+    intro=("A continuación tienes <b>la partitura</b> de la pieza y, después, las <b>sesiones de estudio</b> "
+        "para aprenderla paso a paso. Al final encontrarás un <b>taller de práctica al piano</b> con "
+        "ejercicios técnicos en su tonalidad.")
+    if not (m and m["pages"]):
+        intro=("Para esta pieza, trabaja con tu partitura original. Después tienes las <b>sesiones de estudio</b> "
+            "y, al final, un <b>taller de práctica al piano</b>.")
+    out.append(Paragraph("<i>%s</i>"%intro,P("F",11,15,color=colors.HexColor("#4a463d"))))
+    return out
+
+def workshop(base, key, stage):
+    col=STG[stage]
+    out=[Spacer(0,4),HRFlowable(width="100%",thickness=2.6,color=col,spaceAfter=3,lineCap="round")]
+    out.append(Paragraph("<b>%s · Taller de práctica</b>"%esc(STGNAME[stage]),P("S",8,10,color=col)))
+    out.append(Paragraph("<b>Taller de práctica al piano · %s</b>"%esc(base),P("FB",18,21,sa=3)))
+    out.append(Paragraph("<i>Ejercicios reales para preparar los dedos y la técnica de esta obra. "
+        "Tócalos despacio como calentamiento antes de cada sesión, en la tonalidad de la pieza.</i>",
+        P("F",10.5,14,color=colors.HexColor("#4a463d"),sa=6)))
+    n=1
+    if key and os.path.exists("notation/scale_%s.png"%key):
+        out.append(Paragraph("<b>%d · Escala y arpegio de la tonalidad</b> — sube y baja despacio con la digitación escrita bajo cada nota; primero la mano derecha, luego la izquierda."%n,P("S",9.5,13,sa=2))); n+=1
+        out+=staff("scale_%s.png"%key)
+    if key and os.path.exists("notation/five_%s.png"%key):
+        out.append(Paragraph("<b>%d · Patrón de cinco dedos</b> — un dedo por tecla, sonido parejo y mano relajada; busca igualdad, no velocidad."%n,P("S",9.5,13,sa=2))); n+=1
+        out+=staff("five_%s.png"%key)
+    box=[Paragraph("<b>Cómo usar este taller</b>",P("SB",9.5,12,color=col)),
+         Paragraph("Dedica 5 minutos a estos ejercicios como calentamiento. Cuando la escala y el patrón salgan "
+         "fluidos en esta tonalidad, los dedos estarán listos para los <b>pasajes exigentes</b> que se señalan "
+         "en cada sesión. Sube el metrónomo solo cuando salga limpio tres veces seguidas.",P("S",9,12.5))]
+    t=Table([[box]],colWidths=[CW])
+    t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#f3eee2")),("BOX",(0,0),(-1,-1),0.6,LINE),
+        ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
+    out.append(Spacer(0,4)); out.append(t)
+    return out
+
 def day_flowables(path):
     soup=BeautifulSoup(open(path,encoding="utf-8").read(),"html.parser")
     sec=soup.find("section")
@@ -444,9 +514,20 @@ def build():
     from reportlab.platypus.doctemplate import NextPageTemplate
     story.append(NextPageTemplate("main")); story.append(PageBreak())  # pagina 1 = portada
     story+=index_flow()
-    for f in sorted(glob.glob("partials/dia*.html")):
-        story.append(PageBreak())          # cada sesión empieza en hoja nueva
-        story+=day_flowables(f)
+    files=sorted(glob.glob("partials/dia*.html"))
+    groups=[]
+    for f in files:
+        base,key,stage=get_meta(f)
+        if groups and groups[-1]["base"]==base: groups[-1]["files"].append(f)
+        else: groups.append({"base":base,"key":key,"stage":stage,"files":[f]})
+    for g in groups:
+        m=SCORES.get(g["base"])
+        story.append(PageBreak()); story+=piece_cover(g["base"],g["key"],g["stage"])   # portada+QR
+        for p in (m["pages"] if m else []):
+            story.append(PageBreak()); story.append(score_img(p))                       # partitura
+        for f in g["files"]:
+            story.append(PageBreak()); story+=day_flowables(f)                          # sesiones
+        story.append(PageBreak()); story+=workshop(g["base"],g["key"],g["stage"])       # taller
     doc.build(story)
     print("PDF creado:",doc.page,"paginas")
 

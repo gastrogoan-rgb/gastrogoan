@@ -57,4 +57,22 @@ K:{K}
 {mel}"""
     print("incipit", name, render(abc, f"incipit_{name}.png", scale=40))
 
+# ---- Patrón de cinco dedos (sube y baja) por tonalidad, con digitación ----
+FIVE = {
+ "C":  ("C","C D E F G F E D C"),
+ "G":  ("G","G A B c d c B A G"),
+ "F":  ("F","F G A B c B A G F"),
+ "Am": ("Am","A B c d e d c B A"),
+ "E":  ("E","E F G A B A G F E"),
+ "Fm": ("Fm","F G A B c B A G F"),
+}
+for key,(K,mel) in FIVE.items():
+    abc=f"""X:1
+M:C
+L:1/4
+K:{K}
+{mel} |]
+w: 1 2 3 4 5 4 3 2 1"""
+    print("cinco", key, render(abc, f"five_{key}.png"))
+
 print("LISTO")

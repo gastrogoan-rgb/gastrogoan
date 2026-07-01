@@ -1,0 +1,291 @@
+{
+ "Himno de la Alegría": {
+  "slug": "himno_de_la_alegria",
+  "pages": [
+   "scores/img/himno_de_la_alegria_1.png"
+  ],
+  "qr": "scores/qr/himno_de_la_alegria.png",
+  "yt": "Himno de la Alegría Beethoven piano tutorial",
+  "url": "https://www.youtube.com/results?search_query=Himno%20de%20la%20Alegr%C3%ADa%20Beethoven%20piano%20tutorial"
+ },
+ "Yankee Doodle": {
+  "slug": "yankee_doodle",
+  "pages": [
+   "scores/img/yankee_doodle_1.png"
+  ],
+  "qr": "scores/qr/yankee_doodle.png",
+  "yt": "Yankee Doodle piano",
+  "url": "https://www.youtube.com/results?search_query=Yankee%20Doodle%20piano"
+ },
+ "Alouette": {
+  "slug": "alouette",
+  "pages": [
+   "scores/img/alouette_1.png"
+  ],
+  "qr": "scores/qr/alouette.png",
+  "yt": "Alouette piano",
+  "url": "https://www.youtube.com/results?search_query=Alouette%20piano"
+ },
+ "Top Gun (Anthem)": {
+  "slug": "top_gun_anthem",
+  "pages": [
+   "scores/img/top_gun_anthem_1.png"
+  ],
+  "qr": "scores/qr/top_gun_anthem.png",
+  "yt": "Top Gun Anthem piano",
+  "url": "https://www.youtube.com/results?search_query=Top%20Gun%20Anthem%20piano"
+ },
+ "Tetris (Korobéiniki)": {
+  "slug": "tetris_korobeiniki",
+  "pages": [
+   "scores/img/tetris_korobeiniki_1.png",
+   "scores/img/tetris_korobeiniki_2.png",
+   "scores/img/tetris_korobeiniki_3.png"
+  ],
+  "qr": "scores/qr/tetris_korobeiniki.png",
+  "yt": "Tetris theme Korobeiniki piano",
+  "url": "https://www.youtube.com/results?search_query=Tetris%20theme%20Korobeiniki%20piano"
+ },
+ "Oh, When the Saints": {
+  "slug": "oh_when_the_saints",
+  "pages": [
+   "scores/img/oh_when_the_saints_1.png"
+  ],
+  "qr": "scores/qr/oh_when_the_saints.png",
+  "yt": "When the Saints Go Marching In piano",
+  "url": "https://www.youtube.com/results?search_query=When%20the%20Saints%20Go%20Marching%20In%20piano"
+ },
+ "La Pantera Rosa": {
+  "slug": "la_pantera_rosa",
+  "pages": [
+   "scores/img/la_pantera_rosa_1.png"
+  ],
+  "qr": "scores/qr/la_pantera_rosa.png",
+  "yt": "Pink Panther theme piano",
+  "url": "https://www.youtube.com/results?search_query=Pink%20Panther%20theme%20piano"
+ },
+ "El Submarino Amarillo": {
+  "slug": "el_submarino_amarillo",
+  "pages": [
+   "scores/img/el_submarino_amarillo_1.png"
+  ],
+  "qr": "scores/qr/el_submarino_amarillo.png",
+  "yt": "Yellow Submarine piano",
+  "url": "https://www.youtube.com/results?search_query=Yellow%20Submarine%20piano"
+ },
+ "Ejercicios a cuatro manos": {
+  "slug": "ejercicios_a_cuatro_manos",
+  "pages": [
+   "scores/img/ejercicios_a_cuatro_manos_1.png",
+   "scores/img/ejercicios_a_cuatro_manos_2.png"
+  ],
+  "qr": "scores/qr/ejercicios_a_cuatro_manos.png",
+  "yt": "Le Couppey ABC du piano",
+  "url": "https://www.youtube.com/results?search_query=Le%20Couppey%20ABC%20du%20piano"
+ },
+ "Jingle Bells": {
+  "slug": "jingle_bells",
+  "pages": [
+   "scores/img/jingle_bells_1.png",
+   "scores/img/jingle_bells_2.png",
+   "scores/img/jingle_bells_3.png",
+   "scores/img/jingle_bells_4.png"
+  ],
+  "qr": "scores/qr/jingle_bells.png",
+  "yt": "Jingle Bells piano",
+  "url": "https://www.youtube.com/results?search_query=Jingle%20Bells%20piano"
+ },
+ "We Wish You a Merry Christmas": {
+  "slug": "we_wish_you_a_merry_christmas",
+  "pages": [
+   "scores/img/we_wish_you_a_merry_christmas_1.png",
+   "scores/img/we_wish_you_a_merry_christmas_2.png"
+  ],
+  "qr": "scores/qr/we_wish_you_a_merry_christmas.png",
+  "yt": "We Wish You a Merry Christmas piano",
+  "url": "https://www.youtube.com/results?search_query=We%20Wish%20You%20a%20Merry%20Christmas%20piano"
+ },
+ "Trouble": {
+  "slug": "trouble",
+  "pages": [
+   "scores/img/trouble_1.png",
+   "scores/img/trouble_2.png",
+   "scores/img/trouble_3.png",
+   "scores/img/trouble_4.png"
+  ],
+  "qr": "scores/qr/trouble.png",
+  "yt": "Coldplay Trouble piano",
+  "url": "https://www.youtube.com/results?search_query=Coldplay%20Trouble%20piano"
+ },
+ "Eye of the Tiger": {
+  "slug": "eye_of_the_tiger",
+  "pages": [
+   "scores/img/eye_of_the_tiger_1.png"
+  ],
+  "qr": "scores/qr/eye_of_the_tiger.png",
+  "yt": "Eye of the Tiger piano",
+  "url": "https://www.youtube.com/results?search_query=Eye%20of%20the%20Tiger%20piano"
+ },
+ "The Beginner": {
+  "slug": "the_beginner",
+  "pages": [
+   "scores/img/the_beginner_1.png"
+  ],
+  "qr": "scores/qr/the_beginner.png",
+  "yt": "Gurlitt The Beginner piano duet",
+  "url": "https://www.youtube.com/results?search_query=Gurlitt%20The%20Beginner%20piano%20duet"
+ },
+ "Sonatina en La menor": {
+  "slug": "sonatina_en_la_menor",
+  "pages": [
+   "scores/img/sonatina_en_la_menor_1.png",
+   "scores/img/sonatina_en_la_menor_2.png"
+  ],
+  "qr": "scores/qr/sonatina_en_la_menor.png",
+  "yt": "Sonatina A minor piano four hands",
+  "url": "https://www.youtube.com/results?search_query=Sonatina%20A%20minor%20piano%20four%20hands"
+ },
+ "Heart and Soul": {
+  "slug": "heart_and_soul",
+  "pages": [
+   "scores/img/heart_and_soul_1.png"
+  ],
+  "qr": "scores/qr/heart_and_soul.png",
+  "yt": "Heart and Soul piano",
+  "url": "https://www.youtube.com/results?search_query=Heart%20and%20Soul%20piano"
+ },
+ "Greensleeves": {
+  "slug": "greensleeves",
+  "pages": [
+   "scores/img/greensleeves_1.png",
+   "scores/img/greensleeves_2.png"
+  ],
+  "qr": "scores/qr/greensleeves.png",
+  "yt": "Greensleeves piano",
+  "url": "https://www.youtube.com/results?search_query=Greensleeves%20piano"
+ },
+ "Morning Song": {
+  "slug": "morning_song",
+  "pages": [
+   "scores/img/morning_song_1.png"
+  ],
+  "qr": "scores/qr/morning_song.png",
+  "yt": "Grieg Morning Mood piano",
+  "url": "https://www.youtube.com/results?search_query=Grieg%20Morning%20Mood%20piano"
+ },
+ "Shallow": {
+  "slug": "shallow",
+  "pages": [
+   "scores/img/shallow_1.png",
+   "scores/img/shallow_2.png",
+   "scores/img/shallow_3.png"
+  ],
+  "qr": "scores/qr/shallow.png",
+  "yt": "Shallow Lady Gaga piano",
+  "url": "https://www.youtube.com/results?search_query=Shallow%20Lady%20Gaga%20piano"
+ },
+ "Lovely": {
+  "slug": "lovely",
+  "pages": [
+   "scores/img/lovely_1.png",
+   "scores/img/lovely_2.png"
+  ],
+  "qr": "scores/qr/lovely.png",
+  "yt": "Lovely Billie Eilish Khalid piano",
+  "url": "https://www.youtube.com/results?search_query=Lovely%20Billie%20Eilish%20Khalid%20piano"
+ },
+ "My Heart Will Go On": {
+  "slug": "my_heart_will_go_on",
+  "pages": [
+   "scores/img/my_heart_will_go_on_1.png"
+  ],
+  "qr": "scores/qr/my_heart_will_go_on.png",
+  "yt": "My Heart Will Go On Titanic piano",
+  "url": "https://www.youtube.com/results?search_query=My%20Heart%20Will%20Go%20On%20Titanic%20piano"
+ },
+ "Boig per tu": {
+  "slug": "boig_per_tu",
+  "pages": [],
+  "qr": "scores/qr/boig_per_tu.png",
+  "yt": "Boig per tu Sau piano",
+  "url": "https://www.youtube.com/results?search_query=Boig%20per%20tu%20Sau%20piano"
+ },
+ "Perfect": {
+  "slug": "perfect",
+  "pages": [
+   "scores/img/perfect_1.png",
+   "scores/img/perfect_2.png"
+  ],
+  "qr": "scores/qr/perfect.png",
+  "yt": "Ed Sheeran Perfect piano",
+  "url": "https://www.youtube.com/results?search_query=Ed%20Sheeran%20Perfect%20piano"
+ },
+ "Believer": {
+  "slug": "believer",
+  "pages": [
+   "scores/img/believer_1.png",
+   "scores/img/believer_2.png"
+  ],
+  "qr": "scores/qr/believer.png",
+  "yt": "Believer Imagine Dragons piano",
+  "url": "https://www.youtube.com/results?search_query=Believer%20Imagine%20Dragons%20piano"
+ },
+ "El Golpe (The Entertainer)": {
+  "slug": "el_golpe_the_entertainer",
+  "pages": [
+   "scores/img/el_golpe_the_entertainer_1.png",
+   "scores/img/el_golpe_the_entertainer_2.png"
+  ],
+  "qr": "scores/qr/el_golpe_the_entertainer.png",
+  "yt": "The Entertainer Scott Joplin piano",
+  "url": "https://www.youtube.com/results?search_query=The%20Entertainer%20Scott%20Joplin%20piano"
+ },
+ "Primavera de Vivaldi": {
+  "slug": "primavera_de_vivaldi",
+  "pages": [
+   "scores/img/primavera_de_vivaldi_1.png"
+  ],
+  "qr": "scores/qr/primavera_de_vivaldi.png",
+  "yt": "Vivaldi Spring La Primavera piano",
+  "url": "https://www.youtube.com/results?search_query=Vivaldi%20Spring%20La%20Primavera%20piano"
+ },
+ "Romance": {
+  "slug": "romance",
+  "pages": [
+   "scores/img/romance_1.png",
+   "scores/img/romance_2.png"
+  ],
+  "qr": "scores/qr/romance.png",
+  "yt": "Diabelli Romance piano four hands",
+  "url": "https://www.youtube.com/results?search_query=Diabelli%20Romance%20piano%20four%20hands"
+ },
+ "Scherzo": {
+  "slug": "scherzo",
+  "pages": [
+   "scores/img/scherzo_1.png",
+   "scores/img/scherzo_2.png"
+  ],
+  "qr": "scores/qr/scherzo.png",
+  "yt": "Diabelli Scherzo piano four hands",
+  "url": "https://www.youtube.com/results?search_query=Diabelli%20Scherzo%20piano%20four%20hands"
+ },
+ "Sonatina en Sol mayor": {
+  "slug": "sonatina_en_sol_mayor",
+  "pages": [
+   "scores/img/sonatina_en_sol_mayor_1.png",
+   "scores/img/sonatina_en_sol_mayor_2.png"
+  ],
+  "qr": "scores/qr/sonatina_en_sol_mayor.png",
+  "yt": "Sonatina G major piano four hands",
+  "url": "https://www.youtube.com/results?search_query=Sonatina%20G%20major%20piano%20four%20hands"
+ },
+ "Para Elisa": {
+  "slug": "para_elisa",
+  "pages": [
+   "scores/img/para_elisa_1.png"
+  ],
+  "qr": "scores/qr/para_elisa.png",
+  "yt": "Für Elise Beethoven piano",
+  "url": "https://www.youtube.com/results?search_query=F%C3%BCr%20Elise%20Beethoven%20piano"
+ }
+}
