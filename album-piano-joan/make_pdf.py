@@ -11,9 +11,10 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph,
-    Spacer, Table, TableStyle, Flowable, KeepTogether, PageBreak)
+    Spacer, Table, TableStyle, Flowable, KeepTogether, PageBreak, Image as RLImage)
 from reportlab.platypus.flowables import HRFlowable
 from reportlab.lib.styles import ParagraphStyle
+from PIL import Image as PILImage
 
 D="/usr/share/fonts/truetype/dejavu/"
 pdfmetrics.registerFont(TTFont("S", D+"DejaVuSans.ttf"))
@@ -284,6 +285,36 @@ def specs_flow(specs,stage):
         ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]))
     return t
 
+def staff(fname, label=None, maxw=CW*0.98, ref=1400.0):
+    path="notation/"+fname
+    if not os.path.exists(path): return []
+    iw,ih=PILImage.open(path).size
+    w=iw*(150*mm)/ref
+    if w>maxw: w=maxw
+    h=w*ih/iw
+    out=[]
+    if label: out.append(Paragraph("♪ <b>%s</b>"%esc(label),P("SB",8.5,11,color=GOLD,sb=3,sa=2)))
+    out.append(RLImage(path,width=w,height=h)); out.append(Spacer(0,2))
+    return out
+
+def norm_key(t):
+    t=(t or "").lower()
+    if "la menor" in t: return "Am"
+    if "fa menor" in t: return "Fm"
+    if "mi mayor" in t: return "E"
+    if "do mayor" in t: return "C"
+    if "fa mayor" in t: return "F"
+    if "sol mayor" in t: return "G"
+    return None
+
+_INCIP={"himno de la alegr":"ode","para elisa":"furelise","jingle bells":"jingle",
+        "yankee doodle":"yankee","tetris":"tetris"}
+def incipit_for(title):
+    tl=(title or "").lower()
+    for k,v in _INCIP.items():
+        if k in tl: return "incipit_%s.png"%v
+    return None
+
 def day_flowables(path):
     soup=BeautifulSoup(open(path,encoding="utf-8").read(),"html.parser")
     sec=soup.find("section")
@@ -307,11 +338,18 @@ def day_flowables(path):
     if comp: head.append(Paragraph("<i>%s</i>"%inline(comp),P("F",10.5,13,color=colors.HexColor("#4a463d"),sa=4)))
     head.append(specs_flow(specs,stage))
     flow=[Spacer(0,5),KeepTogether(head),Spacer(0,4)]
+    ttl=title.get_text(strip=True)
+    specd={k:v for k,v in specs}
+    inc=incipit_for(ttl)
+    if inc: flow += staff(inc, "El tema · primeros compases")
     for s in sec.select(".sec"):
         roman=s.select_one(".rn"); h3=s.select_one(".sec-h h3")
-        flow.append(sec_heading(roman.get_text(strip=True) if roman else "",
-                    h3.get_text(strip=True) if h3 else "",stage))
+        rtxt=roman.get_text(strip=True) if roman else ""
+        flow.append(sec_heading(rtxt, h3.get_text(strip=True) if h3 else "",stage))
         flow.append(Spacer(0,2))
+        if rtxt=="III":
+            kk=norm_key(specd.get("Tonalidad",""))
+            if kk: flow += staff("scale_%s.png"%kk, "Escala y arpegio de la tonalidad · calentamiento")
         for ch in s.children:
             if not isinstance(ch,Tag): continue
             ccls=ch.get("class") or []
