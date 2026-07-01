@@ -332,18 +332,21 @@ def day_flowables(path):
 
 # ---------- portada / indice / contraportada ----------
 REP=[("Nivel I · Fundamentos",[("Himno de la Alegría","L. van Beethoven","Do mayor"),
-    ("El Submarino Amarillo","Lennon / McCartney","Sol mayor"),("Oh, When the Saints","Tradicional","Do mayor"),
-    ("We Wish You a Merry Christmas","Tradicional","Sol mayor"),("Ejercicios a cuatro manos","F. Le Couppey","Do mayor"),
+    ("Yankee Doodle","Tradicional","Do mayor"),("Alouette","Tradicional","Do mayor"),
+    ("Top Gun (Anthem)","H. Faltermeyer","Do mayor"),("Tetris (Korobéiniki)","Tradicional ruso","La menor"),
+    ("Oh, When the Saints","Tradicional","Sol mayor"),("La Pantera Rosa","H. Mancini","La menor"),
+    ("El Submarino Amarillo","Lennon / McCartney","Sol mayor"),("Ejercicios a cuatro manos","F. Le Couppey","Do mayor")]),
+ ("Nivel II · Desarrollo",[("Jingle Bells","J. Pierpont","Sol mayor"),("We Wish You a Merry Christmas","Tradicional","Sol mayor"),
+    ("Trouble (cifrado)","Coldplay","Sol mayor"),("Eye of the Tiger","Survivor","Do mayor"),
     ("The Beginner (4 manos)","C. Gurlitt","Do mayor"),("Sonatina en La menor (4 manos)","M. Bazzoni","La menor"),
-    ("Over the Rainbow (cifrado)","H. Arlen","Do mayor")]),
- ("Nivel II · Desarrollo",[("The Scientist","Coldplay","Do mayor"),("Titanic (My Heart Will Go On)","J. Horner","Fa mayor"),
-    ("The Sound of Silence","Simon & Garfunkel","Fa mayor"),("One Moment in Time (cifrado)","Hammond / Bettis","Do mayor"),
-    ("Heart and Soul","H. Carmichael","Fa mayor"),("La Primavera","A. Vivaldi","Mi mayor"),("Perfect","Ed Sheeran","Sol mayor"),
-    ("Scherzo (4 manos)","A. Diabelli","Do mayor"),("Romance (4 manos)","A. Diabelli","Fa mayor"),
-    ("Sonatina en Sol mayor (4 manos)","M. Bazzoni","Sol mayor")]),
- ("Nivel III · Maestría",[("Gladiator (Now We Are Free)","H. Zimmer","Re mayor"),("7 Years","Lukas Graham","Sol menor"),
-    ("El Golpe (The Entertainer)","S. Joplin","Do mayor"),("Believer","Imagine Dragons","Fa / Si mayor"),
-    ("Penélope (cifrado)","J. M. Serrat","Sol menor → La mayor")])]
+    ("Heart and Soul","H. Carmichael","Do mayor"),("Greensleeves","Tradicional inglés","La menor"),
+    ("Morning Song","E. Grieg","Mi mayor"),("Shallow (cifrado)","Lady Gaga / B. Cooper","Sol mayor"),
+    ("Lovely (cifrado)","Billie Eilish / Khalid","Sol mayor"),("Titanic (My Heart Will Go On)","J. Horner","Fa mayor"),
+    ("Boig per tu (cifrado)","Sau","Sol mayor / Mi menor")]),
+ ("Nivel III · Maestría",[("Perfect","Ed Sheeran","Sol mayor"),("Believer","Imagine Dragons","Fa menor"),
+    ("El Golpe (The Entertainer)","S. Joplin","Do mayor"),("La Primavera","A. Vivaldi","Mi mayor"),
+    ("Romance (4 manos)","A. Diabelli","Sol mayor"),("Scherzo (4 manos)","A. Diabelli","Sol mayor"),
+    ("Sonatina en Sol mayor (4 manos)","M. Bazzoni","Sol mayor"),("Para Elisa (Für Elise)","L. van Beethoven","La menor")])]
 
 def index_flow():
     out=[Spacer(0,4),Paragraph("<font size=8 color='#a8884e'><b>CONTENIDO</b></font>",P("S",8,10)),
