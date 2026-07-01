@@ -284,8 +284,8 @@ em{font-style:italic}
   .page.cover{height:297mm}                 /* portada/contraportada a hoja completa */
   .page:first-child{break-before:auto}
   .page:last-child{break-before:page;break-after:auto}
-  /* sesiones: flujo continuo (sin huecos en blanco), cada día separado por su cabecera */
-  .sheet{min-height:0;break-before:auto}
+  /* cada sesión empieza en una hoja nueva */
+  .sheet{min-height:0;break-before:page}
   /* nada se parte por la mitad */
   .panel,.hard,.step,.specs,.kbd,.scale,.rhythm,.day-head,.two,.fingers{break-inside:avoid}
   .sec-h{break-after:avoid}

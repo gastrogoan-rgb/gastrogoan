@@ -405,8 +405,9 @@ def build():
     story=[]
     from reportlab.platypus.doctemplate import NextPageTemplate
     story.append(NextPageTemplate("main")); story.append(PageBreak())  # pagina 1 = portada
-    story+=index_flow(); story.append(PageBreak())
+    story+=index_flow()
     for f in sorted(glob.glob("partials/dia*.html")):
+        story.append(PageBreak())          # cada sesión empieza en hoja nueva
         story+=day_flowables(f)
     doc.build(story)
     print("PDF creado:",doc.page,"paginas")
