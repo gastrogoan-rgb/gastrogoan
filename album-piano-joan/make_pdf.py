@@ -363,25 +363,158 @@ def piece_cover(base, key, stage):
     out.append(Paragraph("<i>%s</i>"%intro,P("F",11,15,color=colors.HexColor("#4a463d"))))
     return out
 
+# ---- Ejercicios de taller PROPIOS de cada pieza (según su reto técnico real) ----
+# clave = título base de la obra (h2 hasta el primer · o —)
+WORKSHOPS = {
+ "Himno de la Alegría":[
+   ("Grados conjuntos parejos","toca el tema Mi-Mi-Fa-Sol / Sol-Fa-Mi-Re muy lento; como todo se mueve por notas vecinas, busca que cada nota pese <b>exactamente igual</b> que la anterior, sin bultos."),
+   ("El descenso central","aísla la bajada de la frase central y repítela cinco veces seguidas vigilando que <b>no se acelere</b> al bajar; el descenso debe sonar tan medido como la subida."),
+   ("Manos juntas a bloque","añade la izquierda con un acorde por compás (Do–Sol–Do) y comprueba que cae justo con la primera nota de la melodía.")],
+ "Yankee Doodle":[
+   ("Pulso de marcha","toca la melodía marcando con el pie el <b>1</b> y el <b>3</b> del 4/4; debe sentirse el paso firme de una marcha, sin correr."),
+   ("Tocar y cantar","canta la letra mientras tocas solo la mano derecha; coordinar voz y dedos afianza el fraseo y te obliga a respetar el pulso."),
+   ("Pregunta y respuesta","toca los dos primeros compases fuertes (la pregunta) y los dos siguientes suaves (la respuesta), como un diálogo.")],
+ "Alouette":[
+   ("Los dos tempos A y B","toca la sección A viva y la B más calmada; ensaya el cambio parando un segundo entre ellas hasta interiorizar los <b>dos caracteres</b>."),
+   ("Motivo eco","repite cada motivo de dos compases primero fuerte y luego como un eco suave, para trabajar el contraste dinámico."),
+   ("La vuelta a A","enlaza el final de B con el regreso de A sin frenar, para que la forma A–B–A quede redonda.")],
+ "Top Gun (Anthem)":[
+   ("Acordes en bloque sincronizados","ataca las quintas abiertas (Do–Sol) con las dos manos <b>a la vez</b>; las notas deben sonar juntas, nunca arpegiadas una tras otra."),
+   ("Sonido épico sostenido","mantén cada acorde cuatro tiempos con sonido pleno y firme, <b>sin endurecer</b> el brazo; el carácter es potente pero no aporreado."),
+   ("Enlace de acordes","pasa de un acorde al siguiente moviendo la mano lo mínimo, mirando adónde va antes de saltar.")],
+ "Tetris (Korobéiniki)":[
+   ("Ostinato de la izquierda","repite el patrón grave La–Mi en bucle contando en voz alta, hasta que la mano lo haga sola <b>sin mirarse</b>: es el motor de la pieza."),
+   ("Saltos de registro a ciegas","practica solo el salto de la izquierda de una octava a otra sin mirar el teclado, tocando y volviendo; primero lento, luego a tempo."),
+   ("Melodía ágil","toca el tema de la derecha en La menor buscando notas ligeras y bien articuladas, con el pulso del ostinato en la cabeza.")],
+ "Oh, When the Saints":[
+   ("Contar la anacrusa","di «…2-3-4» sin tocar y entra en el «1»; repítelo hasta que arrancar <b>antes</b> del tiempo fuerte te salga natural."),
+   ("Enlace I–IV–V","encadena solo con la izquierda Sol–Do–Re–Sol, un acorde por compás, cambiando <b>a tiempo</b> sin frenar la mano."),
+   ("Melodía con Fa#","toca la melodía en Sol mayor recordando pisar el Fa# cada vez que aparezca, hasta que salga sin dudar.")],
+ "La Pantera Rosa":[
+   ("Escala cromática felina","sube y baja medio tono a medio tono con digitación 1-3-1-3, buscando notas iguales y <b>reptantes</b>, como los pasos del gato."),
+   ("Saltos de octava staccato","salta la misma nota de una octava a otra en staccato, ligero y sin mirar; el salto debe ser limpio y felino."),
+   ("El motivo con silencios","toca el famoso motivo respetando los silencios; lo que <b>no</b> suena es tan importante como lo que suena.")],
+ "El Submarino Amarillo":[
+   ("Dos articulaciones a la vez","la derecha liga (legato) mientras la izquierda pica (staccato) en el mismo compás; empieza <b>muy lento</b> hasta que cada mano mantenga su toque."),
+   ("Cada mano su carácter","practica primero por separado —MD ligada, MI cortada— y luego júntalas sin que una contagie a la otra."),
+   ("Acompañamiento firme","toca solo la izquierda staccato marcando un pulso alegre y regular, como el latido del submarino.")],
+ "Ejercicios a cuatro manos":[
+   ("Entrada sincronizada","cuenta «1-2-3-4» con la profesora antes de empezar y entrad juntos <b>exactamente</b> en el «1»."),
+   ("Tocar escuchando","toca tu parte oyendo la de la profesora para encajar el pulso; la música a cuatro manos se hace con los oídos, no solo con los dedos."),
+   ("Ceder y sostener","practica mantener tu tempo estable aunque la otra parte tenga notas más rápidas: cada uno sostiene su capa.")],
+ "Jingle Bells":[
+   ("El acorde en tres posiciones","toca Sol–Si–Re, luego Si–Re–Sol, luego Re–Sol–Si: el <b>mismo</b> acorde en fundamental y sus dos inversiones, con el mínimo movimiento de mano."),
+   ("Cambios rápidos por inversión","alterna dos acordes cercanos eligiendo la inversión que menos desplaza la mano; sube el tempo poco a poco."),
+   ("Melodía repetida","toca la melodía «Si-Si-Si» pareja y a tempo vivo, sin que las repeticiones se aceleren.")],
+ "We Wish You a Merry Christmas":[
+   ("Pulso de vals","toca bajo en el «1» y acorde en «2» y «3» (bajo-acorde-acorde), sintiendo el <b>balanceo ternario</b> del 3/4."),
+   ("La séptima que tira","forma A7 (La-Do#-Mi-Sol) y resuélvelo bajando a Re; escucha cómo la séptima «pide» resolver: ese imán es el motor del estribillo."),
+   ("Melodía en oleadas","toca la melodía que repite el arranque cada vez más arriba, respetando el vaivén del vals.")],
+ "Trouble":[
+   ("Leer el cifrado de memoria","mira los símbolos (G, Em, Am, C) y forma cada acorde con la izquierda <b>sin partitura</b>, de memoria, hasta reconocerlos al instante."),
+   ("El giro que ensombrece","practica lento el cambio Sol→Am y Do→Fa, el momento en que la armonía se vuelve más oscura."),
+   ("Acorde y melodía","sostén el acorde con la izquierda mientras la derecha canta encima, sin que el acorde tape la melodía.")],
+ "Eye of the Tiger":[
+   ("Power chords deslizantes","toca Do–Sol (quinta sin tercera), seco y contundente, y desliza la <b>misma forma</b> a Sib–Fa y Lab–Mib sin cambiar la mano."),
+   ("La síncopa del riff","marca el pulso con el pie y ataca las notas justo <b>después</b> del tiempo (a contratiempo); repite el riff hasta que la síncopa salga sola."),
+   ("Escala menor con tres bemoles","repasa la escala de Do menor (Mib, Lab, Sib) para tener la mano dentro de la tonalidad del riff.")],
+ "The Beginner":[
+   ("La apoyatura ligera","toca la notita de adorno <b>muy rápida</b> y ligera justo antes de la nota principal, dejando todo el peso en la nota destino, no en el adorno."),
+   ("Encajar con el Secondo","cuenta el vals «1-2-3» con la profesora para que cada apoyatura caiga exactamente en su sitio."),
+   ("Vals a tres","toca tu melodía sintiendo el balanceo del 3/4, sin acentuar de más los tiempos débiles.")],
+ "Sonatina en La menor":[
+   ("Tónica y dominante","alterna el acorde de La menor (reposo) y el de Mi (tensión), escuchando cómo Mi <b>pide volver</b> a La; es el eje de la pieza."),
+   ("El giro a Do mayor","aísla el pasaje donde la música pasa al relativo mayor Do y siente cómo el color se vuelve más luminoso."),
+   ("Sincronía con la profesora","cuenta la entrada y toca tu parte encajando con el segundo piano, mirando que las manos se correspondan.")],
+ "Heart and Soul":[
+   ("El bucle de cuatro acordes","repite Do–Lam–Fa–Sol en bucle con la izquierda hasta memorizarlo <b>sin pensar</b>: es la base de toda la canción."),
+   ("Swing y síncopa","toca la melodía atrasando ligeramente las notas débiles para darle balanceo; marca el pulso firme con el pie por debajo."),
+   ("Manos independientes","mantén el bucle constante en la izquierda mientras la derecha juega con las síncopas encima.")],
+ "Greensleeves":[
+   ("Vals melancólico","bajo en el «1», acorde en «2-3»; siente el balanceo triste del 3/4 en La menor."),
+   ("El paso Am → E","practica ir de La menor a Mi mayor (con su Sol#), la tensión que da color a la melodía y pide resolver."),
+   ("Pedal por acorde","pisa el pedal justo <b>después</b> de cada acorde y cámbialo al siguiente, para ligar sin emborronar el sonido."),
+   ("Crecer al forte","reserva volumen para la sección en forte creciendo poco a poco, sin estallar de golpe.")],
+ "Morning Song":[
+   ("Las cuatro teclas negras","localiza Fa#-Do#-Sol#-Re# sin mirar, diciendo su nombre: son la <b>armadura</b> de Mi mayor y hay que sentirlas bajo los dedos."),
+   ("Dobles notas de sexta","toca dos notas a distancia de sexta a la vez (Mi + Do#) y deslízalas manteniendo la distancia; ambas deben sonar <b>exactamente juntas</b>."),
+   ("Frase que amanece","toca la melodía creciendo desde el silencio como la luz del amanecer, en frases suaves y unidas.")],
+ "Shallow":[
+   ("Arpegio quebrado","desgrana el acompañamiento (Sol–Re–Si–Re) nota a nota, no de golpe; busca que las notas suenen <b>regulares</b> como un goteo."),
+   ("Entradas adelantadas","practica entrar <b>antes</b> del tiempo (anticipación) contando bien, para no descuadrarte con el acompañamiento."),
+   ("Crescendo hacia el ff","haz crecer el volumen por escalones hasta el estribillo denso, guardando fuerza para el clímax final.")],
+ "Lovely":[
+   ("Arpegio en espejo","las dos manos abren y cierran el arpegio a la vez, como un <b>espejo</b>; busca que suban y bajen simétricas y parejas."),
+   ("Melodía sobre arpegio","la derecha canta legato mientras la izquierda mantiene el arpegio constante por debajo: independencia total entre capas."),
+   ("Color a Mi menor","aísla el giro al relativo menor y cambia el carácter a más íntimo sin cambiar el tempo.")],
+ "My Heart Will Go On":[
+   ("Legato profundo","hunde cada tecla hasta el fondo y <b>no la sueltes</b> hasta pulsar la siguiente, transfiriendo el peso del brazo de dedo a dedo."),
+   ("Frase por arcos","toca cada frase como un arco —crece hacia el centro y se apaga al final— respirando entre una frase y la siguiente."),
+   ("Pedal sincopado","cambia el pedal justo <b>después</b> de bajar cada acorde (bajas, luego pedal) para un legato limpio sin barullo."),
+   ("Sostener el tempo lento","con notas tan largas, cuenta los tiempos en voz alta para no acortarlas ni acelerar.")],
+ "Boig per tu":[
+   ("Acordes en bloque cálidos","toca los acordes de la balada juntos y sostenidos, <b>sin arpegiar</b>, buscando un sonido cálido y lleno."),
+   ("Sostenidos de paso","localiza las notas alteradas de paso y tócalas con naturalidad dentro de la línea, sin que rompan el legato."),
+   ("Balada legato","enlaza los acordes moviéndote lo justo, manteniendo el canto por encima siempre unido.")],
+ "Perfect":[
+   ("Sentir el 6/8","cuenta «1-2-3 / 4-5-6» agrupando en <b>dos pulsos</b>; es un balanceo mecido, no una marcha de seis golpes iguales."),
+   ("Arpegio regular","desgrana el arpegio de acompañamiento con notas parejas; aquí la <b>regularidad</b> importa más que la velocidad."),
+   ("Enlace del bajo Re/Fa# → Sol","practica el bajo que sube de Re a Sol pasando por Fa#, sin que se note el salto.")],
+ "Believer":[
+   ("Ostinato como un latido","repite el patrón grave sin variar el pulso, <b>constante y mecánico</b> como un latido; es la columna de la canción."),
+   ("Tresillos iguales","divide cada tiempo en tres partes iguales (di «tri-pe-te»); palméalo antes de tocarlo para que las tres notas suenen parejas."),
+   ("Tres contra dos","una mano hace tres notas mientras la otra hace dos en el mismo tiempo; practícalo <b>muy lento</b> hasta que encajen solos."),
+   ("Escala menor con cuatro bemoles","repasa Fa menor (Sib, Mib, Lab, Reb) para tener la mano en la tonalidad.")],
+ "El Golpe (The Entertainer)":[
+   ("La izquierda reloj","la mano izquierda marca bajo-acorde-bajo-acorde como un <b>metrónomo</b> firme, sin acelerar jamás: es la base del ragtime."),
+   ("Síncopa contra staccato","la derecha sincopada (a contratiempo) sobre la izquierda regular y picada; júntalas <b>muy lento</b> hasta que engranen."),
+   ("El cambio a Fa mayor","localiza dónde la música pasa a Fa mayor (aparece el Sib) y practica ese enlace aparte.")],
+ "Primavera de Vivaldi":[
+   ("Staccato veloz de muñeca","toca el tema con notas cortas y ligeras rebotando la muñeca; sube el tempo <b>solo</b> cuando salga limpio."),
+   ("Acordes en bloque con eco","ataca los acordes juntos y contrastados: uno fuerte y su repetición como un eco suave."),
+   ("La modulación a Si mayor","aísla el pasaje donde aparece La# y la música cambia de color hacia Si mayor.")],
+ "Romance":[
+   ("Frase cantábile","toca la melodía como si tuviera <b>letra</b>, ligada y sin huecos entre notas, respirando al final de cada frase."),
+   ("Crescendo escalonado","reparte el crescendo en cuatro escalones (p · mp · mf · f), sin adelantar el volumen para que quede recorrido hasta el clímax."),
+   ("Del mf al pp","aligera el peso del brazo compás a compás hasta que el final sea un <b>murmullo</b>, manteniendo el legato."),
+   ("Color a Mi menor","siente cómo la parte central se ensombrece al girar al relativo menor, cambiando el carácter, no el tempo.")],
+ "Scherzo":[
+   ("Staccato de muñeca","pulsa y suelta al instante, notas secas y ligeras como gotas: es la <b>broma</b> del scherzo, nunca aporreada."),
+   ("Las tres negras del Trío","localiza Mib-Lab-Sib sin mirar, la armadura del Trío; sube la escala de Mi bemol apoyando cada bemol."),
+   ("Tresillos iguales","palmea «tri-pe-te» y toca los tresillos con las tres notas <b>exactamente iguales</b>, sin cojear."),
+   ("La transición Sol → Mib","practica el enlace del Scherzo al Trío (y la vuelta con el D.C.) muy lento, reubicando la mano sobre las negras.")],
+ "Sonatina en Sol mayor":[
+   ("Bajo-acorde","toca el bajo grave y luego el acorde staccato (bajo-acorde-acorde): ese patrón es el <b>motor</b> del acompañamiento."),
+   ("Correspondencia con la profesora","cuenta tus blancas largas en voz alta para que caigan <b>exactas</b> sobre los acordes cortos del otro piano."),
+   ("El acorde de Sol y su bajo","ataca Sol-Si-Re en bloque staccato tres veces marcando entre medias el bajo Sol grave.")],
+ "Para Elisa":[
+   ("Alternancia Mi–Re#","repite Mi-Re#-Mi-Re# con los dedos 2-1, <b>ligero y sin acento</b>; ese temblor es el gesto de apertura de la pieza."),
+   ("Arpegios de la izquierda","desgrana La-Mi-La (arpegio) suave y regular como acompañamiento, con la mano relajada."),
+   ("Corcheas continuas","toca corcheas seguidas con las dos manos manteniendo el pulso parejo del 3/8, <b>sin acelerar</b> al enlazar los compases."),
+   ("La forma A–B–A","ensaya el regreso del tema tras la sección B, controlando que el tempo vuelva igual que al principio.")],
+}
+DEFAULT_WS=[("Escala de la tonalidad","sube y baja la escala despacio, con sonido parejo y la digitación correcta."),
+   ("Manos separadas","estudia cada mano por separado antes de juntarlas, muy lento."),
+   ("Pasajes exigentes","aísla los compases señalados como difíciles y repítelos en bucle hasta que salgan limpios.")]
+
 def workshop(base, key, stage):
     col=STG[stage]
     out=[Spacer(0,4),HRFlowable(width="100%",thickness=2.6,color=col,spaceAfter=3,lineCap="round")]
     out.append(Paragraph("<b>%s · Taller de práctica</b>"%esc(STGNAME[stage]),P("S",8,10,color=col)))
     out.append(Paragraph("<b>Taller de práctica al piano · %s</b>"%esc(base),P("FB",18,21,sa=3)))
-    out.append(Paragraph("<i>Ejercicios reales para preparar los dedos y la técnica de esta obra. "
+    out.append(Paragraph("<i>Ejercicios pensados <b>para esta obra en concreto</b>: atacan sus dificultades reales. "
         "Tócalos despacio como calentamiento antes de cada sesión, en la tonalidad de la pieza.</i>",
         P("F",10.5,14,color=colors.HexColor("#4a463d"),sa=6)))
     n=1
     if key and os.path.exists("notation/scale_%s.png"%key):
-        out.append(Paragraph("<b>%d · Escala y arpegio de la tonalidad</b> — sube y baja despacio con la digitación escrita bajo cada nota; primero la mano derecha, luego la izquierda."%n,P("S",9.5,13,sa=2))); n+=1
+        out.append(Paragraph("<b>%d · Escala y arpegio de la tonalidad</b> — el cimiento: sube y baja despacio con la digitación escrita bajo cada nota; primero la mano derecha, luego la izquierda."%n,P("S",9.5,13,sa=2))); n+=1
         out+=staff("scale_%s.png"%key)
-    if key and os.path.exists("notation/five_%s.png"%key):
-        out.append(Paragraph("<b>%d · Patrón de cinco dedos</b> — un dedo por tecla, sonido parejo y mano relajada; busca igualdad, no velocidad."%n,P("S",9.5,13,sa=2))); n+=1
-        out+=staff("five_%s.png"%key)
+    for title,desc in WORKSHOPS.get(base,DEFAULT_WS):
+        out.append(Paragraph("<b>%d · %s</b> — %s"%(n,esc(title),desc),P("S",9.5,13,sa=3))); n+=1
     box=[Paragraph("<b>Cómo usar este taller</b>",P("SB",9.5,12,color=col)),
-         Paragraph("Dedica 5 minutos a estos ejercicios como calentamiento. Cuando la escala y el patrón salgan "
-         "fluidos en esta tonalidad, los dedos estarán listos para los <b>pasajes exigentes</b> que se señalan "
-         "en cada sesión. Sube el metrónomo solo cuando salga limpio tres veces seguidas.",P("S",9,12.5))]
+         Paragraph("Dedica unos minutos a estos ejercicios antes de tocar la pieza. Están hechos a la medida de "
+         "<b>sus</b> dificultades: cuando salgan fluidos, los pasajes exigentes de cada sesión te resultarán mucho "
+         "más fáciles. Sube el metrónomo solo cuando algo salga limpio tres veces seguidas.",P("S",9,12.5))]
     t=Table([[box]],colWidths=[CW])
     t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#f3eee2")),("BOX",(0,0),(-1,-1),0.6,LINE),
         ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
