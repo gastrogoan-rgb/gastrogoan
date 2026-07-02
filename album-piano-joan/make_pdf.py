@@ -622,6 +622,8 @@ DEFAULT_DR=[("Escala en las dos direcciones","sube y baja la escala de la tonali
 TAGCOL={"Ritmo":"#b5762b","Manos":"#6b7f52","Dinámica":"#8a6d3b","Memoria":"#7a5c86","Juego":"#b5762b",
    "Reto":"#a23b2e","Oído":"#3d6b7a","Velocidad":"#a23b2e","Carácter":"#8a6d3b","Pedal":"#6b7f52"}
 
+EXJSON=json.load(open("exercises.json",encoding="utf-8")) if os.path.exists("exercises.json") else {}
+
 def workshop(base, key, stage):
     col=STG[stage]; chex="#%s"%col.hexval()[2:]
     out=[Spacer(0,4),HRFlowable(width="100%",thickness=2.6,color=col,spaceAfter=3,lineCap="round")]
@@ -639,17 +641,22 @@ def workshop(base, key, stage):
             "<b>%d</b>&nbsp;&nbsp;<font color='%s'><b>%s</b></font>&nbsp; <b>%s</b> — %s"
             %(n,tc,esc(tag).upper(),esc(title),desc),
             P("S",9.6,13.4,sa=5))); n+=1
-    # --- Ejercicios de piano complementarios ---
-    out.append(Spacer(0,3))
-    out.append(HRFlowable(width="100%",thickness=0.8,color=LINE,spaceAfter=4))
-    out.append(Paragraph("<font color='%s'><b>EJERCICIOS AL PIANO · técnica complementaria</b></font>"
-        %chex,P("SB",10,13,sa=1)))
-    out.append(Paragraph("<i>Trabajan lo <b>contrario</b> de lo que más aparece en la partitura (si la pieza sube, "
-        "aquí se baja; si es ligada, aquí se pica…) para que la mano crezca por igual.</i>",
-        P("F",9.3,12.4,color=colors.HexColor("#4a463d"),sa=4)))
-    for title,desc in DRILLS.get(base,DEFAULT_DR):
-        out.append(Paragraph("<font color='%s'><b>♪</b></font>&nbsp; <b>%s</b> — %s"
-            %(chex,esc(title),desc),P("S",9.5,13,sa=4)))
+    # --- Ejercicios en pentagrama, propios de la partitura ---
+    exs=EXJSON.get(base,[])
+    if exs:
+        out.append(Spacer(0,4))
+        out.append(HRFlowable(width="100%",thickness=0.8,color=LINE,spaceAfter=5))
+        out.append(Paragraph("<font color='%s'><b>EJERCICIOS AL PIANO · para tu partitura</b></font>"
+            %chex,P("SB",10.5,13,sa=1)))
+        out.append(Paragraph("<i>Ejercicios <b>en pentagrama</b>, cada uno distinto, para practicar cosas que salen "
+            "en <b>esta</b> pieza (su ritmo, sus acordes, sus giros). Léelos y tócalos despacio.</i>",
+            P("F",9.3,12.4,color=colors.HexColor("#4a463d"),sa=5)))
+        for e in exs:
+            blk=[Paragraph("<font color='%s'><b>♪ %s</b></font>"%(chex,esc(e["title"])),P("SB",9.6,12.4,sb=2)),
+                 Paragraph("<i>%s</i>"%esc(e["instr"]),P("F",8.8,11.6,color=colors.HexColor("#4a463d"),sa=1))]
+            blk+=staff("ex_%s.png"%e["id"])
+            out.append(KeepTogether(blk))
+            out.append(Spacer(0,3))
     box=[Paragraph("<b>La idea</b>",P("SB",9.5,12,color=col)),
          Paragraph("Estas actividades son distintas entre sí a propósito: unas trabajan el ritmo, otras las manos, "
          "otras el oído o la memoria, y algunas son puro juego. No hace falta hacerlas todas cada día —ve rotando. "
