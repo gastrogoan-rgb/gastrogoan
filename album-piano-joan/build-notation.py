@@ -31,6 +31,7 @@ SCALES = {
  "Am": ("Am","A B c d e f g a","A c e a","1 2 3 1 2 3 4 5 1 2 3 5"),
  "E":  ("E","E F G A B c d e","E G B e","1 2 3 1 2 3 4 5 1 2 3 5"),
  "Fm": ("Fm","F G A B c d e f","F A c f","1 2 3 4 1 2 3 4 1 2 3 5"),
+ "Eb": ("Eb","E F G A B c d e","E G B e","3 1 2 3 4 1 2 3 1 2 3 5"),
 }
 for key,(K,sc,arp,fing) in SCALES.items():
     abc=f"""X:1
@@ -65,6 +66,7 @@ FIVE = {
  "Am": ("Am","A B c d e d c B A"),
  "E":  ("E","E F G A B A G F E"),
  "Fm": ("Fm","F G A B c B A G F"),
+ "Eb": ("Eb","E F G A B A G F E"),
 }
 for key,(K,mel) in FIVE.items():
     abc=f"""X:1

@@ -301,6 +301,7 @@ def norm_key(t):
     t=(t or "").lower()
     if "la menor" in t: return "Am"
     if "fa menor" in t: return "Fm"
+    if "mi bemol" in t: return "Eb"
     if "mi mayor" in t: return "E"
     if "do mayor" in t: return "C"
     if "fa mayor" in t: return "F"
