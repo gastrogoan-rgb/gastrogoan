@@ -792,9 +792,12 @@ def draw_cover(c,doc):
     c.drawCentredString(w/2,h-40*mm,"M É T O D O   D E   P I A N O   T - C L A S")
     if os.path.exists(LOGO):
         s=78*mm; c.drawImage(LOGO,(w-s)/2,h-150*mm,s,s,mask='auto')
-    c.setFillColor(INK); c.setFont("FB",40); c.drawCentredString(w/2,h-178*mm,"El Cuaderno del Pianista")
+    c.setFillColor(INK)
+    _title="El Cuaderno del Pianista"; _maxw=w-64*mm; _fs=40
+    while _fs>20 and c.stringWidth(_title,"FB",_fs)>_maxw: _fs-=0.5
+    c.setFont("FB",_fs); c.drawCentredString(w/2,h-178*mm,_title)
     c.setFillColor(colors.HexColor("#4a463d")); c.setFont("F",16)
-    c.drawCentredString(w/2,h-190*mm,"Cuarenta y cuatro sesiones de estudio progresivo")
+    c.drawCentredString(w/2,h-190*mm,"Cuarenta y una sesiones de estudio progresivo")
     c.setStrokeColor(GOLD); c.setLineWidth(1.4); c.line(60*mm,55*mm,w-60*mm,55*mm)
     c.setFillColor(colors.HexColor("#4a463d")); c.setFont("F",13)
     c.drawCentredString(w/2,44*mm,"Curso de Piano · Material de estudio para el alumno")
