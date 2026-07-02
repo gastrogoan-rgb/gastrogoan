@@ -522,11 +522,108 @@ DEFAULT_WS=[("Manos","Manos separadas","estudia cada mano por separado, muy lent
    ("Reto","Pasajes difíciles","aísla los compases marcados como exigentes y repítelos en bucle hasta que salgan limpios."),
    ("Ritmo","Con metrónomo","toca despacio con metrónomo y sube el tempo solo cuando salga sin fallo.")]
 
+# ---- Ejercicios de piano COMPLEMENTARIOS: entrenan lo contrario a lo que domina en la pieza ----
+# (si la obra sube mucho -> bajar; si es legato -> staccato; si es acordes -> arpegios; etc.)
+DRILLS = {
+ "Himno de la Alegría":[
+   ("Escala descendente","el tema sube por grados; entrena la bajada: Do-Si-La-Sol-Fa-Mi-Re-Do a negras, pareja y sin acelerar."),
+   ("Saltos de tercera","suelta la mano del movimiento por notas vecinas saltando de tercera: Do-Mi, Re-Fa, Mi-Sol, Fa-La…")],
+ "Yankee Doodle":[
+   ("Bajada en espejo","la melodía sube; equilíbrala bajando Sol-Fa-Mi-Re-Do a negras, con sonido parejo."),
+   ("Notas repetidas con cambio de dedo","Do-Do-Do con dedos 3-2-1, ágil y ligero, para las notas repetidas del tema.")],
+ "Alouette":[
+   ("Escala ida y vuelta","sube y baja la escala de Do sin pararte en la cima; la vuelta debe sonar igual de medida que la ida."),
+   ("Staccato de contraste","toca la melodía picada además de ligada, para dominar las dos articulaciones.")],
+ "Top Gun (Anthem)":[
+   ("Acordes rotos","la pieza es todo bloques; desgrana cada acorde nota a nota (Do-Mi-Sol) para conocerlo por dentro."),
+   ("Encadenar bajando","enlaza los acordes descendiendo del agudo al grave, no solo subiendo.")],
+ "Tetris (Korobéiniki)":[
+   ("La menor descendente","el tema asciende; compénsalo bajando La-Sol-Fa-Mi-Re-Do-Si-La parejo."),
+   ("Ostinato invertido","toca el patrón de la izquierda de agudo a grave, al revés de como suena.")],
+ "Oh, When the Saints":[
+   ("Melodía al revés","el arranque sube (Sol-Si-Do-Re); tócalo bajando (Re-Do-Si-Sol) como un reflejo."),
+   ("Acordes descendentes","encadena V-IV-I bajando (Re-Do-Sol), no solo I-IV-V subiendo.")],
+ "La Pantera Rosa":[
+   ("Cromática descendente","baja medio tono a medio tono (Do-Si-Sib-La-Lab…), la cromática al revés."),
+   ("Notas tenidas","sostén notas largas para contrastar con las notas cortas y saltarinas del tema.")],
+ "El Submarino Amarillo":[
+   ("Invierte las articulaciones","ahora MD staccato y MI legato, justo lo contrario de la pieza."),
+   ("Legato en la izquierda","liga una escala descendente solo con la mano izquierda, que también aprenda a cantar.")],
+ "Ejercicios a cuatro manos":[
+   ("Movimiento contrario","una mano sube la escala y la otra la baja a la vez, partiendo del centro."),
+   ("Unísono descendente","las dos manos bajan por grados a la vez, exactamente juntas.")],
+ "Jingle Bells":[
+   ("Arpegios descendentes","desgrana los acordes de agudo a grave (Re-Si-Sol) además de subiendo."),
+   ("Escala de Sol descendente","baja Sol-Fa#-Mi-Re-Do-Si-La-Sol para equilibrar los ascensos del tema.")],
+ "We Wish You a Merry Christmas":[
+   ("Oleada descendente","la melodía sube en oleadas; tócala bajando en espejo, frase a frase."),
+   ("Resolver hacia abajo","practica las séptimas resolviendo grave: D7→Sol, B7→Mi, con el bajo descendiendo.")],
+ "Trouble":[
+   ("Arpegios bajando","desgrana cada acorde (G, Em, Am, C) de agudo a grave."),
+   ("Bajo descendente","encadena las fundamentales de los acordes en línea que baja por el teclado.")],
+ "Eye of the Tiger":[
+   ("Power chord ascendente","el riff baja (Do-Sib-Lab); tócalo subiendo (Lab-Sib-Do) con la misma forma de quinta."),
+   ("Ritmo recto","toca el riff a tiempo, sin síncopa; luego recupera el contratiempo y notarás mejor su fuerza.")],
+ "The Beginner":[
+   ("Apoyatura desde arriba","el adorno cae desde abajo; prueba desde arriba (Fa→Mi) para dominar las dos."),
+   ("Escala de Do en 3/4","baja la escala en tiempos de vals, ligera, para soltar la mano.")],
+ "Sonatina en La menor":[
+   ("Menor melódica descendente","baja la escala de La menor con Sol y Fa naturales, el color del descenso menor."),
+   ("Arpegios bajando","desgrana La menor y Mi de agudo a grave, al revés de la exposición.")],
+ "Heart and Soul":[
+   ("Bucle al revés","toca el círculo de acordes en orden inverso (Sol-Fa-Lam-Do) para conocerlo por los dos lados."),
+   ("Melodía descendente","improvisa una línea que baje sobre el bucle, para equilibrar las subidas.")],
+ "Greensleeves":[
+   ("La menor descendente en 3/4","baja la escala en tiempos de vals, ligada y triste."),
+   ("Arpegios bajando","desgrana Am y E de agudo a grave, en vez de subir hacia la melodía.")],
+ "Morning Song":[
+   ("Sextas descendentes","desliza las dobles notas de sexta hacia abajo (Do#+La, Si+Sol#…), no solo subiendo."),
+   ("Mi mayor descendente","baja la escala con sus cuatro sostenidos, notas parejas.")],
+ "Shallow":[
+   ("Arpegio descendente","el acompañamiento sube; tócalo bajando (Re-Si-Sol-Re) como reflejo."),
+   ("Decrescendo","practica bajar el volumen poco a poco, lo contrario del gran crescendo de la pieza.")],
+ "Lovely":[
+   ("Arpegio solo descendente","desgrana el arpegio hacia abajo en las dos manos, sin la subida."),
+   ("Movimiento contrario","una mano sube el arpegio mientras la otra lo baja a la vez.")],
+ "My Heart Will Go On":[
+   ("Legato descendente","liga una escala bajando con el mismo peso de brazo del tema."),
+   ("Staccato ligero","toca picado y corto como contraste al legato profundo de la obra.")],
+ "Boig per tu":[
+   ("Acordes arpegiados bajando","la balada es en bloques; desgrana cada acorde de agudo a grave."),
+   ("Bajo descendente","enlaza las fundamentales de los acordes en una línea que desciende.")],
+ "Perfect":[
+   ("Arpegio descendente en 6/8","baja Sol-Re-Si-Sol manteniendo el balanceo de dos pulsos."),
+   ("Escala de Sol bajando","desciende en grupos de tres notas, parejo, sin acelerar.")],
+ "Believer":[
+   ("Tresillos descendentes","toca tresillos bajando la escala de Fa menor, tres notas iguales por tiempo."),
+   ("Ostinato agudo","lleva el patrón grave a la mano derecha, invirtiendo los registros.")],
+ "El Golpe (The Entertainer)":[
+   ("Do descendente en staccato","baja la escala de Do picada y ligera, lo opuesto a los ascensos sincopados."),
+   ("Bajo-acorde que baja","desplaza la izquierda bajando por el teclado, bajo y acorde, en vez de saltar arriba.")],
+ "Primavera de Vivaldi":[
+   ("Mi mayor descendente staccato","baja la escala picada con sus cuatro sostenidos, ágil y ligera."),
+   ("Acordes desplegados bajando","desgrana los acordes de agudo a grave como contraste a los bloques.")],
+ "Romance":[
+   ("Frase descendente cantábile","liga una bajada con las mismas dinámicas, para que el descenso también cante."),
+   ("Diminuendo subiendo","apaga el sonido mientras subes: el contraste del crescendo de la pieza.")],
+ "Scherzo":[
+   ("Mi bemol descendente","baja la escala del Trío con sus tres bemoles (Sib-Lab-Mib), parejo."),
+   ("Legato de contraste","liga una frase larga frente al staccato saltarín que domina el scherzo.")],
+ "Sonatina en Sol mayor":[
+   ("Sol descendente en blancas","baja la escala en notas largas, contando los dos tiempos de cada una."),
+   ("Acorde-bajo invertido","toca primero el acorde y luego el bajo, al revés del patrón bajo-acorde.")],
+ "Para Elisa":[
+   ("Arpegio descendente","el acompañamiento sube (La-Mi-La); tócalo bajando (Mi-Do-La) como reflejo."),
+   ("Cromática Mi-Fa","practica el semitono hacia arriba (Mi-Fa), el contrario del Mi-Re# de la pieza.")],
+}
+DEFAULT_DR=[("Escala en las dos direcciones","sube y baja la escala de la tonalidad sin pararte en la cima."),
+   ("Manos en movimiento contrario","una mano sube y la otra baja a la vez, partiendo del centro.")]
+
 TAGCOL={"Ritmo":"#b5762b","Manos":"#6b7f52","Dinámica":"#8a6d3b","Memoria":"#7a5c86","Juego":"#b5762b",
    "Reto":"#a23b2e","Oído":"#3d6b7a","Velocidad":"#a23b2e","Carácter":"#8a6d3b","Pedal":"#6b7f52"}
 
 def workshop(base, key, stage):
-    col=STG[stage]
+    col=STG[stage]; chex="#%s"%col.hexval()[2:]
     out=[Spacer(0,4),HRFlowable(width="100%",thickness=2.6,color=col,spaceAfter=3,lineCap="round")]
     out.append(Paragraph("<b>%s · Taller de práctica</b>"%esc(STGNAME[stage]),P("S",8,10,color=col)))
     out.append(Paragraph("<b>Taller de práctica al piano · %s</b>"%esc(base),P("FB",18,21,sa=3)))
@@ -542,6 +639,17 @@ def workshop(base, key, stage):
             "<b>%d</b>&nbsp;&nbsp;<font color='%s'><b>%s</b></font>&nbsp; <b>%s</b> — %s"
             %(n,tc,esc(tag).upper(),esc(title),desc),
             P("S",9.6,13.4,sa=5))); n+=1
+    # --- Ejercicios de piano complementarios ---
+    out.append(Spacer(0,3))
+    out.append(HRFlowable(width="100%",thickness=0.8,color=LINE,spaceAfter=4))
+    out.append(Paragraph("<font color='%s'><b>EJERCICIOS AL PIANO · técnica complementaria</b></font>"
+        %chex,P("SB",10,13,sa=1)))
+    out.append(Paragraph("<i>Trabajan lo <b>contrario</b> de lo que más aparece en la partitura (si la pieza sube, "
+        "aquí se baja; si es ligada, aquí se pica…) para que la mano crezca por igual.</i>",
+        P("F",9.3,12.4,color=colors.HexColor("#4a463d"),sa=4)))
+    for title,desc in DRILLS.get(base,DEFAULT_DR):
+        out.append(Paragraph("<font color='%s'><b>♪</b></font>&nbsp; <b>%s</b> — %s"
+            %(chex,esc(title),desc),P("S",9.5,13,sa=4)))
     box=[Paragraph("<b>La idea</b>",P("SB",9.5,12,color=col)),
          Paragraph("Estas actividades son distintas entre sí a propósito: unas trabajan el ritmo, otras las manos, "
          "otras el oído o la memoria, y algunas son puro juego. No hace falta hacerlas todas cada día —ve rotando. "
