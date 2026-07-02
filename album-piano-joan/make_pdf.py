@@ -648,15 +648,21 @@ def workshop(base, key, stage):
         out.append(HRFlowable(width="100%",thickness=0.8,color=LINE,spaceAfter=5))
         out.append(Paragraph("<font color='%s'><b>EJERCICIOS AL PIANO · para tu partitura</b></font>"
             %chex,P("SB",10.5,13,sa=1)))
-        out.append(Paragraph("<i>Ejercicios <b>en pentagrama</b>, cada uno distinto, para practicar cosas que salen "
-            "en <b>esta</b> pieza (su ritmo, sus acordes, sus giros). Léelos y tócalos despacio.</i>",
+        out.append(Paragraph("<i>Cuatro ejercicios <b>en pentagrama</b>, de <b>dificultad progresiva</b> "
+            "(<font name='S' color='#a8884e'>★</font> fácil → <font name='S' color='#a8884e'>★★★★</font> avanzado), para practicar cosas que "
+            "salen en <b>esta</b> pieza: su ritmo, sus acordes, sus giros. Empieza por el <font name='S' color='#a8884e'>★</font> y sube cuando salga limpio.</i>",
             P("F",9.3,12.4,color=colors.HexColor("#4a463d"),sa=5)))
         for e in exs:
-            blk=[Paragraph("<font color='%s'><b>♪ %s</b></font>"%(chex,esc(e["title"])),P("SB",9.6,12.4,sb=2)),
-                 Paragraph("<i>%s</i>"%esc(e["instr"]),P("F",8.8,11.6,color=colors.HexColor("#4a463d"),sa=1))]
+            lv=int(e.get("level",2)); stars="★"*lv+"☆"*(4-lv)
+            ttl=Table([[Paragraph("<font color='%s'><b>♪ %s</b></font>"%(chex,esc(e["title"])),P("SB",9.8,12.6)),
+                Paragraph("<font color='#a8884e'>%s</font>"%stars,P("S",9.5,12,align=2))]],
+                colWidths=[CW*0.72,CW*0.28])
+            ttl.setStyle(TableStyle([("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+                ("TOPPADDING",(0,0),(-1,-1),1),("BOTTOMPADDING",(0,0),(-1,-1),0),("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
+            blk=[ttl, Paragraph("<i>%s</i>"%esc(e["instr"]),P("F",8.8,11.6,color=colors.HexColor("#4a463d"),sa=1))]
             blk+=staff("ex_%s.png"%e["id"])
             out.append(KeepTogether(blk))
-            out.append(Spacer(0,3))
+            out.append(Spacer(0,4))
     box=[Paragraph("<b>La idea</b>",P("SB",9.5,12,color=col)),
          Paragraph("Estas actividades son distintas entre sí a propósito: unas trabajan el ritmo, otras las manos, "
          "otras el oído o la memoria, y algunas son puro juego. No hace falta hacerlas todas cada día —ve rotando. "
