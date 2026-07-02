@@ -205,7 +205,9 @@
  },
  "Boig per tu": {
   "slug": "boig_per_tu",
-  "pages": [],
+  "pages": [
+   "scores/img/boig_per_tu_1.png"
+  ],
   "qr": "scores/qr/boig_per_tu.png",
   "yt": "Boig per tu Sau piano",
   "url": "https://www.youtube.com/results?search_query=Boig%20per%20tu%20Sau%20piano"

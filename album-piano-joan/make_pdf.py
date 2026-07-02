@@ -450,7 +450,7 @@ REP=[("Nivel I · Fundamentos",[("Himno de la Alegría","L. van Beethoven","Do m
     ("Heart and Soul","H. Carmichael","Do mayor"),("Greensleeves","Tradicional inglés","La menor"),
     ("Morning Song","E. Grieg","Mi mayor"),("Shallow (cifrado)","Lady Gaga / B. Cooper","Sol mayor"),
     ("Lovely (cifrado)","Billie Eilish / Khalid","Sol mayor"),("Titanic (My Heart Will Go On)","J. Horner","Fa mayor"),
-    ("Boig per tu (cifrado)","Sau","Sol mayor / Mi menor")]),
+    ("Boig per tu","Sau (arr. Pilar Sanz)","Do mayor / La menor")]),
  ("Nivel III · Maestría",[("Perfect","Ed Sheeran","Sol mayor"),("Believer","Imagine Dragons","Fa menor"),
     ("El Golpe (The Entertainer)","S. Joplin","Do mayor"),("La Primavera","A. Vivaldi","Mi mayor"),
     ("Romance (4 manos)","A. Diabelli","Sol mayor"),("Scherzo (4 manos)","A. Diabelli","Sol mayor"),
