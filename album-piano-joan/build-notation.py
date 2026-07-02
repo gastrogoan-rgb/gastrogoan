@@ -32,6 +32,7 @@ SCALES = {
  "E":  ("E","E F G A B c d e","E G B e","1 2 3 1 2 3 4 5 1 2 3 5"),
  "Fm": ("Fm","F G A B c d e f","F A c f","1 2 3 4 1 2 3 4 1 2 3 5"),
  "Eb": ("Eb","E F G A B c d e","E G B e","3 1 2 3 4 1 2 3 1 2 3 5"),
+ "Cm": ("Cm","C D E F G A B c","C E G c","1 2 3 1 2 3 4 5 1 2 3 5"),
 }
 for key,(K,sc,arp,fing) in SCALES.items():
     abc=f"""X:1
@@ -48,7 +49,7 @@ INCIPITS = {
  "furelise":("Am","e ^d e ^d e B d c | A2 z2 |]"),                    # Para Elisa
  "jingle":  ("G","B B B2 | B B B2 | B d G A | B4 |]"),                # Jingle Bells
  "yankee":  ("C","C C D E | C E D2 |]"),                              # Yankee Doodle
- "tetris":  ("Em","e2 B c | d2 c B | A2 A c | e2 d c | B4 |]"),       # Tetris (Korobéiniki)
+ "tetris":  ("Am","e2 B c | d2 c B | A2 A c | e2 d c | B4 |]"),       # Tetris (Korobéiniki) en La menor
 }
 for name,(K,mel) in INCIPITS.items():
     abc=f"""X:1
@@ -67,6 +68,7 @@ FIVE = {
  "E":  ("E","E F G A B A G F E"),
  "Fm": ("Fm","F G A B c B A G F"),
  "Eb": ("Eb","E F G A B A G F E"),
+ "Cm": ("Cm","C D E F G F E D C"),
 }
 for key,(K,mel) in FIVE.items():
     abc=f"""X:1

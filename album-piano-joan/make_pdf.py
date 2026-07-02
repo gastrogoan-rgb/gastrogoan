@@ -265,8 +265,9 @@ def sec_heading(roman,h3,stage):
     col=STG.get(stage,INK)
     circ=Paragraph("<b>%s</b>"%esc(roman),P("FB",9.5,12,color=colors.white,align=1))
     ht=Paragraph("<b>%s</b>"%esc(h3),P("FB",13,15,color=INK))
-    t=Table([[circ,ht]],colWidths=[9*mm,CW-9*mm])
+    t=Table([[circ,ht]],colWidths=[10*mm,CW-10*mm])
     t.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("BACKGROUND",(0,0),(0,0),col),
+        ("LEFTPADDING",(0,0),(0,0),1),("RIGHTPADDING",(0,0),(0,0),1),("ALIGN",(0,0),(0,0),"CENTER"),
         ("LEFTPADDING",(1,0),(1,0),7),("TOPPADDING",(0,0),(-1,-1),2),("BOTTOMPADDING",(0,0),(-1,-1),2),
         ("ROUNDEDCORNERS",[2,2,2,2])]))
     t.keepWithNext=True
@@ -302,6 +303,7 @@ def norm_key(t):
     if "la menor" in t: return "Am"
     if "fa menor" in t: return "Fm"
     if "mi bemol" in t: return "Eb"
+    if "do menor" in t: return "Cm"
     if "mi mayor" in t: return "E"
     if "do mayor" in t: return "C"
     if "fa mayor" in t: return "F"
