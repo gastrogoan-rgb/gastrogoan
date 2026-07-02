@@ -340,14 +340,14 @@ def score_img(path):
     return RLImage(path,width=w,height=h)
 
 def piece_cover(base, key, stage):
-    col=STG[stage]; m=SCORES.get(base)
+    col=STG[stage]; chex="#%s"%col.hexval()[2:]; m=SCORES.get(base)
     out=[Spacer(0,26),HRFlowable(width="100%",thickness=3,color=col,spaceAfter=6,lineCap="round")]
     out.append(Paragraph("<b>%s</b>"%esc(STGNAME[stage]),P("S",9,12,color=col)))
     out.append(Paragraph("<b>%s</b>"%esc(base),P("FB",30,34,color=INK,sa=5)))
     out.append(Paragraph("Partitura · sesiones de estudio · taller de práctica",P("F",13,16,color=MUT,sa=12)))
     if m and os.path.exists(m["qr"]):
-        note=Paragraph("<b>♪ Escucha la pieza</b><br/>Escanea este código con la cámara del móvil "
-              "para oír una versión de referencia. Escuchar la obra antes de tocarla ayuda muchísimo.",P("S",9.5,13))
+        note=Paragraph("<b>♪ Escucha la pieza al piano</b><br/>Escanea este código con la cámara del móvil "
+              "para ver y oír esta pieza <b>tocada al piano</b>. Escucharla antes de tocarla ayuda muchísimo.",P("S",9.5,13))
         t=Table([[RLImage(m["qr"],width=30*mm,height=30*mm),note]],colWidths=[38*mm,CW-38*mm])
         t.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("LEFTPADDING",(1,0),(1,0),8),
             ("BOX",(0,0),(-1,-1),0.6,LINE),("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#faf7f0")),
@@ -361,6 +361,23 @@ def piece_cover(base, key, stage):
         intro=("Para esta pieza, trabaja con tu partitura original. Después tienes las <b>sesiones de estudio</b> "
             "y, al final, un <b>taller de práctica al piano</b>.")
     out.append(Paragraph("<i>%s</i>"%intro,P("F",11,15,color=colors.HexColor("#4a463d"))))
+    # ---- Zona de anotaciones (aprovecha el espacio de la hoja del QR) ----
+    out.append(Spacer(0,20))
+    out.append(HRFlowable(width="100%",thickness=0.8,color=LINE,spaceAfter=7))
+    out.append(Paragraph("<font color='%s'><b>MIS ANOTACIONES SOBRE LA PIEZA</b></font>"%chex,P("SB",11,14,sa=1)))
+    out.append(Paragraph("<i>Apunta aquí lo que necesites recordar: digitaciones, pasajes difíciles, dinámicas, "
+        "objetivos de tempo o lo que corrija la profesora.</i>",P("F",9.5,12.5,color=MUT,sa=8)))
+    labels=["Fecha de inicio","Tempo objetivo   ♩ =","Nivel alcanzado   ★"]
+    lab=[Paragraph("<font color='#827b6c'>%s</font>"%esc(x),P("S",8,10)) for x in labels]
+    fld=Table([lab],colWidths=[CW/3.0]*3,rowHeights=[26])
+    fld.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("LINEBELOW",(0,0),(-1,-1),0.7,col),
+        ("LEFTPADDING",(0,0),(-1,-1),2),("RIGHTPADDING",(0,0),(-1,-1),10),("TOPPADDING",(0,0),(-1,-1),1)]))
+    out.append(fld); out.append(Spacer(0,16))
+    nlines=13
+    rl=Table([[""] for _ in range(nlines)],colWidths=[CW],rowHeights=[21]*nlines)
+    rl.setStyle(TableStyle([("LINEBELOW",(0,0),(-1,-1),0.5,LINE),
+        ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0)]))
+    out.append(rl)
     return out
 
 # ---- Taller de práctica: MENÚ DE ACTIVIDADES VARIADAS propio de cada pieza ----

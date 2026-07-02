@@ -41,6 +41,20 @@ M = {
  "Para Elisa": ("Para Elisa.pdf","Für Elise Beethoven piano"),
 }
 
+# ID de vídeo de YouTube (versión al piano) por pieza -> el QR abre el vídeo directamente
+VID={
+ "Himno de la Alegría":"i4bfhW7uLmc","Yankee Doodle":"YDkrvSnZ9YQ","Alouette":"1lUi3ke3YBo",
+ "Top Gun (Anthem)":"krBX-d31YlQ","Tetris (Korobéiniki)":"B_pZ810jHho","Oh, When the Saints":"49fetoWKcAA",
+ "La Pantera Rosa":"tKIczCGGrJw","El Submarino Amarillo":"xdX-gS8Bvjg","Ejercicios a cuatro manos":"DYCAcctpHAw",
+ "Jingle Bells":"OH1OzqqMnkQ","We Wish You a Merry Christmas":"eQs0i2yFO90","Trouble":"8lVTojsL_Xo",
+ "Eye of the Tiger":"fUJwyPgEYrk","The Beginner":"1savD0tM1Mc","Sonatina en La menor":"-1SOMp51Bp8",
+ "Heart and Soul":"0x-wNJKzlAs","Greensleeves":"ShVCxhHYB3I","Morning Song":"zp1OAvOkFrs",
+ "Shallow":"G5Jt1EcuMG4","Lovely":"bH0s16xd2Do","My Heart Will Go On":"prbzAG1zKV8",
+ "Boig per tu":"LOtSwsG8-VM","Perfect":"gvqT2Rft9dk","Believer":"tZvieGpvbFw",
+ "El Golpe (The Entertainer)":"dP8pwyYaa7g","Primavera de Vivaldi":"8sFtPajQ-XA","Romance":"oiMhrhbaCk0",
+ "Scherzo":"OD2Kl8J0Yt0","Sonatina en Sol mayor":"CE8eX1ZRjpw","Para Elisa":"q9bU12gXUyM",
+}
+
 def slug(s):
     s=unicodedata.normalize("NFKD",s).encode("ascii","ignore").decode()
     return re.sub(r"[^a-z0-9]+","_",s.lower()).strip("_")
@@ -57,7 +71,8 @@ for base,(fn,yt) in M.items():
         doc.close()
     else:
         print("  !! FALTA", fn)
-    url="https://www.youtube.com/results?search_query="+urllib.parse.quote(yt)
+    url=("https://www.youtube.com/watch?v="+VID[base]) if base in VID \
+        else ("https://www.youtube.com/results?search_query="+urllib.parse.quote(yt))
     qp=f"scores/qr/{sl}.png"
     qr=qrcode.QRCode(border=1,box_size=10); qr.add_data(url); qr.make()
     qr.make_image(fill_color="#1b2433",back_color="white").save(qp)
