@@ -3,360 +3,360 @@
   {
    "id": "himno1",
    "title": "Grados conjuntos ligados",
-   "instr": "La pieza se mueve por notas vecinas: liga cada nota con la siguiente, sin huecos."
+   "instr": "Estudio de legato por notas vecinas: liga cada grupo sin cortar el sonido. Sube y baja en oleadas."
   },
   {
    "id": "himno2",
-   "title": "Escala de Do ida y vuelta",
-   "instr": "Sube y baja sin pararte en la cima; la bajada tan medida como la subida."
+   "title": "Escala de Do a dos octavas",
+   "instr": "Sube dos octavas y baja; misma velocidad y peso en cada nota, ida y vuelta."
   }
  ],
  "Yankee Doodle": [
   {
    "id": "yankee1",
    "title": "Notas repetidas con cambio de dedo",
-   "instr": "Repite cada nota alternando dedos 3-2-1; ágil y ligero como el tema."
+   "instr": "Repite cada nota con dedos 3-2-1-3 subiendo por la escala; ágil y ligero."
   },
   {
    "id": "yankee2",
-   "title": "Saltos de quinta",
-   "instr": "Trabaja el salto Do-Sol de la melodía, sin mirar el teclado."
+   "title": "Saltos de quinta y octava",
+   "instr": "Trabaja los saltos abiertos sin mirar; que cada llegada sea limpia."
   }
  ],
  "Alouette": [
   {
    "id": "alou1",
-   "title": "Staccato ligero",
-   "instr": "Notas cortas y sueltas, con la muñeca; contrasta con el legato de la pieza."
+   "title": "Staccato de muñeca",
+   "instr": "Escala staccato subiendo y bajando; notas cortas, secas y parejas, con la muñeca suelta."
   },
   {
    "id": "alou2",
-   "title": "Legato y staccato juntos",
-   "instr": "Primer compás ligado, segundo picado: domina las dos articulaciones."
+   "title": "Legato y staccato alternando",
+   "instr": "Un compás ligado y el siguiente picado, subiendo por la escala: domina las dos articulaciones."
   }
  ],
  "Top Gun (Anthem)": [
   {
    "id": "topgun1",
    "title": "Acordes en bloque",
-   "instr": "Ataca las tres notas exactamente juntas, con sonido pleno y firme."
+   "instr": "Progresión I-IV-V-I; ataca las tres notas exactamente juntas, con sonido firme y sostenido."
   },
   {
    "id": "topgun2",
-   "title": "Desgrana el acorde",
-   "instr": "El mismo acorde roto nota a nota, para conocerlo por dentro."
+   "title": "Desgranar los acordes",
+   "instr": "Los acordes I-IV-V rotos, subiendo y bajando: conoce cada uno por dentro."
   }
  ],
  "Tetris (Korobéiniki)": [
   {
    "id": "tetris1",
    "title": "Ostinato de la izquierda",
-   "instr": "El patrón grave que sostiene la pieza; repítelo hasta que salga solo."
+   "instr": "El patrón grave que sostiene toda la pieza, moviendo la armonía; en clave de Fa."
   },
   {
    "id": "tetris2",
-   "title": "El tema en La menor",
-   "instr": "La melodía principal; articula cada nota con claridad."
+   "title": "El tema completo en La menor",
+   "instr": "La melodía principal de Korobéiniki; articula cada nota con claridad y buen pulso."
   }
  ],
  "Oh, When the Saints": [
   {
    "id": "saints1",
-   "title": "La anacrusa",
-   "instr": "Tres notas de impulso ANTES del compás fuerte; cuenta «…2-3-4» y cae en el «1»."
+   "title": "La anacrusa (tema de los Santos)",
+   "instr": "Arranca en anacrusa: las tres notas de impulso (Sol-Si-Do) caen ANTES del «1». Cuenta «…2-3-4»."
   },
   {
    "id": "saints2",
-   "title": "Acordes I-IV-V",
-   "instr": "Los tres pilares de Sol mayor encadenados a tiempo."
+   "title": "Acordes I-IV-V encadenados",
+   "instr": "Los tres pilares de Sol mayor en varias combinaciones; cambia a tiempo, en clave de Fa."
   }
  ],
  "La Pantera Rosa": [
   {
    "id": "panther1",
-   "title": "Cromatismo felino",
-   "instr": "Sube medio tono a medio tono, misterioso y ligero."
+   "title": "Escala cromática",
+   "instr": "Estudio cromático: sube medio tono a medio tono hasta el agudo y baja igual. Misterioso y parejo."
   },
   {
    "id": "panther2",
-   "title": "Salto de octava en staccato",
-   "instr": "La misma nota una octava arriba, corta y precisa."
+   "title": "Saltos de octava en staccato",
+   "instr": "Sube por la escala saltando octavas, corto y preciso; el gato que acecha y salta."
   }
  ],
  "El Submarino Amarillo": [
   {
    "id": "submarine1",
    "title": "Mano derecha legato",
-   "instr": "Notas unidas, sin cortar el sonido entre una y otra."
+   "instr": "Línea larga y ligada, sin cortar el sonido entre notas; el canto de la melodía."
   },
   {
    "id": "submarine2",
    "title": "Mano izquierda staccato",
-   "instr": "El acompañamiento picado y saltarin (en clave de Fa)."
+   "instr": "El acompañamiento picado y saltarín en clave de Fa; corto y con rebote de muñeca."
   }
  ],
  "Ejercicios a cuatro manos": [
   {
    "id": "fourhands1",
    "title": "Terceras paralelas",
-   "instr": "Dos notas a la vez a distancia de tercera; que suenen exactamente juntas."
+   "instr": "Dos notas a distancia de tercera a la vez, subiendo y bajando; deben sonar exactamente juntas."
   },
   {
    "id": "fourhands2",
-   "title": "Escala al unisono",
-   "instr": "Las dos manos la misma escala; sincronia perfecta."
+   "title": "Escala al unísono, dos octavas",
+   "instr": "Las dos manos la misma escala en octavas; sincronía perfecta arriba y abajo."
   }
  ],
  "Jingle Bells": [
   {
    "id": "jingle1",
-   "title": "El acorde y sus inversiones",
-   "instr": "El mismo acorde de Sol en tres posiciones, con el minimo movimiento."
+   "title": "El acorde de Sol y sus inversiones",
+   "instr": "Recorre el acorde en fundamental y sus dos inversiones, subiendo y bajando, con el mínimo movimiento."
   },
   {
    "id": "jingle2",
-   "title": "Notas repetidas del tema",
-   "instr": "«Si-Si-Si» parejo y a tempo, sin acelerar las repeticiones."
+   "title": "El tema completo",
+   "instr": "La estrofa de Jingle Bells; nota repetida pareja y el salto Re-Sol bien medido."
   }
  ],
  "We Wish You a Merry Christmas": [
   {
    "id": "wewish1",
    "title": "Bajo-acorde de vals",
-   "instr": "Bajo en el «1», acorde en «2-3»: el balanceo del vals."
+   "instr": "Acompañamiento completo de vals (bajo en «1», acorde en «2-3») sobre toda la vuelta armónica; clave de Fa."
   },
   {
    "id": "wewish2",
-   "title": "La séptima A7 → Re",
-   "instr": "Escucha la tension de A7 (con Do#) y como resuelve a Re."
+   "title": "Séptimas dominantes y su resolución",
+   "instr": "Cadena de acordes de séptima que resuelven; escucha cómo cada uno «tira» hacia el siguiente."
   }
  ],
  "Trouble": [
   {
    "id": "trouble1",
-   "title": "Arpegios de los acordes",
-   "instr": "Desgrana G y Em como acompañamiento fluido y regular."
+   "title": "Arpegios de los cuatro acordes",
+   "instr": "Desgrana G-Em-C-D como acompañamiento continuo y regular; que las notas fluyan igual."
   },
   {
    "id": "trouble2",
-   "title": "El giro Sol → Am",
-   "instr": "El cambio de acorde que ensombrece la armonia."
+   "title": "La vuelta de acordes",
+   "instr": "La progresión en bloques, con el giro a Am/F que ensombrece; cambia a tiempo."
   }
  ],
  "Eye of the Tiger": [
   {
    "id": "eye1",
-   "title": "Power chords",
-   "instr": "Quintas sin tercera, secas y contundentes, deslizando la misma forma."
+   "title": "Power chords deslizantes",
+   "instr": "Estudio de quintas (sin tercera) que se deslizan por la tonalidad; seco y contundente. Clave de Fa."
   },
   {
    "id": "eye2",
    "title": "Ritmo sincopado",
-   "instr": "Ataca las notas a contratiempo, justo DESPUES del pulso."
+   "instr": "Estudio de síncopa: ataca las notas justo DESPUÉS del pulso. Marca el tiempo con el pie."
   }
  ],
  "The Beginner": [
   {
    "id": "beginner1",
    "title": "Apoyaturas",
-   "instr": "La notita de adorno rapidisima antes de la nota buena, sin robarle tiempo."
+   "instr": "Estudio de la nota de adorno: la apoyatura rapidísima antes de cada nota principal, sin robarle tiempo."
   },
   {
    "id": "beginner2",
    "title": "Vals a tres tiempos",
-   "instr": "Bajo y acordes ligeros, sin pisar los tiempos debiles."
+   "instr": "Melodía de vals ligera; no pises los tiempos débiles, deja que el «2-3» flote."
   }
  ],
  "Sonatina en La menor": [
   {
    "id": "sonatina_a1",
-   "title": "Tonica y dominante",
-   "instr": "La menor (reposo) y Mi (tension, con Sol#) que pide volver."
+   "title": "Tónica y dominante",
+   "instr": "Alterna La menor (reposo) y Mi (tensión, con Sol#) y cierra la cadencia; escucha el imán de la dominante."
   },
   {
    "id": "sonatina_a2",
-   "title": "Arpegio menor",
-   "instr": "El acorde de La menor desgranado, subiendo y bajando."
+   "title": "Arpegio menor, dos octavas",
+   "instr": "El acorde de La menor desgranado subiendo y bajando dos octavas; parejo y relajado."
   }
  ],
  "Heart and Soul": [
   {
    "id": "heart1",
-   "title": "El bucle I-vi-IV-V",
-   "instr": "Los cuatro acordes que se repiten en toda la cancion."
+   "title": "El bucle de cuatro acordes",
+   "instr": "La vuelta I-vi-IV-V que se repite en toda la canción; memorízala en clave de Fa."
   },
   {
    "id": "heart2",
    "title": "Síncopa de la melodía",
-   "instr": "Notas que entran a contratiempo sobre el bucle."
+   "instr": "La melodía que entra a contratiempo sobre el bucle; ataca en los huecos, no en el pulso."
   }
  ],
  "Greensleeves": [
   {
    "id": "greensleeves1",
-   "title": "Vals en La menor",
-   "instr": "Bajo en «1», acorde en «2-3», con aire melancolico."
+   "title": "Vals melancólico",
+   "instr": "Acompañamiento de vals en La menor sobre la vuelta completa; bajo en «1», acorde en «2-3». Clave de Fa."
   },
   {
    "id": "greensleeves2",
-   "title": "El paso Am → E",
-   "instr": "De La menor a Mi mayor (con Sol#): la tension que da color."
+   "title": "El giro Am → E",
+   "instr": "Cadencia menor: de La menor a Mi mayor (con Sol#) y vuelta; la tensión que da color."
   }
  ],
  "Morning Song": [
   {
    "id": "morning1",
    "title": "Dobles notas de sexta",
-   "instr": "Dos notas a distancia de sexta a la vez; deslizalas parejas."
+   "instr": "Estudio de sextas: dos notas a la vez subiendo y bajando; ambas exactamente juntas."
   },
   {
    "id": "morning2",
-   "title": "Escala de Mi mayor",
-   "instr": "Cuatro sostenidos (Fa#-Do#-Sol#-Re#); memoriza donde caen."
+   "title": "Escala de Mi mayor, dos octavas",
+   "instr": "Cuatro sostenidos (Fa#-Do#-Sol#-Re#); sube dos octavas y baja sintiendo las teclas negras."
   }
  ],
  "Shallow": [
   {
    "id": "shallow1",
    "title": "Arpegio quebrado",
-   "instr": "El acompañamiento desgranado, como un goteo regular."
+   "instr": "Estudio de arpegios de acompañamiento subiendo por la vuelta; que suenen como un goteo regular."
   },
   {
    "id": "shallow2",
    "title": "Entradas anticipadas",
-   "instr": "La melodia entra ANTES del tiempo; cuenta bien para no descuadrarte."
+   "instr": "Estudio de anticipación: la melodía entra ANTES del tiempo (tras el silencio). Cuenta bien."
   }
  ],
  "Lovely": [
   {
    "id": "lovely1",
    "title": "Arpegio simétrico",
-   "instr": "Sube y baja el arpegio en espejo, parejo en las dos direcciones."
+   "instr": "Estudio de arpegios en espejo por varias tonalidades; sube y baja parejo, como reflejado."
   },
   {
    "id": "lovely2",
-   "title": "Melodía sostenida",
-   "instr": "Notas largas cantadas sobre el arpegio que no para."
+   "title": "Melodía sostenida sobre arpegio",
+   "instr": "Notas largas y cantadas que flotan sobre el arpegio; escucha la línea por encima."
   }
  ],
  "My Heart Will Go On": [
   {
    "id": "titanic1",
    "title": "Legato profundo",
-   "instr": "Notas largas unidas, hundiendo cada tecla hasta el fondo."
+   "instr": "Estudio de notas largas ligadas; hunde cada tecla hasta el fondo y no la sueltes hasta la siguiente."
   },
   {
    "id": "titanic2",
-   "title": "Escala de Fa (con Sib)",
-   "instr": "Un solo bemol; toca el Sib cada vez que aparezca el Si."
+   "title": "Escala de Fa (con Sib), dos octavas",
+   "instr": "Un solo bemol: toca el Sib cada vez que aparezca el Si. Sube dos octavas y baja."
   }
  ],
  "Boig per tu": [
   {
    "id": "boig1",
    "title": "Acordes en bloque",
-   "instr": "Todas las notas juntas y sostenidas, con sonido calido."
+   "instr": "La vuelta de acordes de la balada, todos juntos y sostenidos, con sonido cálido y lleno."
   },
   {
    "id": "boig2",
    "title": "Sostenidos de paso",
-   "instr": "Notas alteradas que conectan la linea con naturalidad."
+   "instr": "Estudio cromático: notas alteradas que conectan la melodía; tócalas con naturalidad dentro de la línea."
   }
  ],
  "Perfect": [
   {
    "id": "perfect1",
    "title": "Arpegio en 6/8",
-   "instr": "Desgrana el acorde en el vaiven mecido de 6/8."
+   "instr": "Estudio de arpegio en el vaivén mecido de 6/8, recorriendo los acordes; regular, no rápido."
   },
   {
    "id": "perfect2",
    "title": "Balanceo de 6/8",
-   "instr": "Agrupa en dos pulsos (1-2-3 / 4-5-6); no seis golpes iguales."
+   "instr": "Melodía en dos pulsos por compás (1-2-3 / 4-5-6); mécela, no la marches."
   }
  ],
  "Believer": [
   {
    "id": "believer1",
    "title": "Tresillos",
-   "instr": "Tres notas iguales por tiempo; di «tri-pe-te» al tocarlas."
+   "instr": "Estudio de tresillos subiendo y bajando (Fa menor, 4 bemoles); tres notas iguales por tiempo."
   },
   {
    "id": "believer2",
    "title": "Ostinato constante",
-   "instr": "El latido grave que no varia (cuatro bemoles: Fa menor)."
+   "instr": "El latido grave que no varía, moviéndose por la armonía; mecánico y firme. Clave de Fa."
   }
  ],
  "El Golpe (The Entertainer)": [
   {
    "id": "entertainer1",
    "title": "Síncopa de ragtime",
-   "instr": "La melodia se adelanta al pulso; ese «cojeo» es el sabor del ragtime."
+   "instr": "Estudio de síncopa: la melodía se adelanta al pulso; ese «cojeo» pícaro es el sabor del ragtime."
   },
   {
    "id": "entertainer2",
    "title": "Bajo-acorde (la izquierda reloj)",
-   "instr": "Grave y acorde alternos, firmes como un metronomo."
+   "instr": "Estudio de la izquierda: grave y acorde alternos, firmes como un metrónomo. Clave de Fa."
   }
  ],
  "Primavera de Vivaldi": [
   {
    "id": "spring1",
    "title": "Staccato veloz",
-   "instr": "Notas cortas y ligeras como pajaros (Mi mayor, cuatro sostenidos)."
+   "instr": "Estudio de staccato ágil (Mi mayor); notas cortas como pájaros, subiendo por los acordes."
   },
   {
    "id": "spring2",
    "title": "Acordes en bloque con eco",
-   "instr": "Uno fuerte y su repeticion suave, como pregunta y respuesta."
+   "instr": "Acorde fuerte y su repetición suave, como pregunta y respuesta; recorre la armonía."
   }
  ],
  "Romance": [
   {
    "id": "romance1",
    "title": "Frase cantábile",
-   "instr": "Liga la melodia como si tuviera letra, respirando al final."
+   "instr": "Estudio de legato cantábile: frases largas ligadas que respiran; canta con los dedos."
   },
   {
    "id": "romance2",
    "title": "Escala con matiz",
-   "instr": "Sube creciendo y baja apagando; la misma linea, dos dinamicas."
+   "instr": "Sube creciendo y baja apagando; la misma línea con dos dinámicas, para el fraseo."
   }
  ],
  "Scherzo": [
   {
    "id": "scherzo1",
    "title": "Staccato scherzando",
-   "instr": "La broma del scherzo: notas secas y saltarinas en 3/4."
+   "instr": "La broma del scherzo en 3/4: notas secas y saltarinas subiendo y bajando; muñeca ligera."
   },
   {
    "id": "scherzo2",
    "title": "Tresillos del Trío (Mi bemol)",
-   "instr": "Tres bemoles; tresillos iguales y suaves para el Trio."
+   "instr": "El Trío en Mi bemol (tres bemoles): tresillos iguales y suaves, subiendo por los acordes."
   }
  ],
  "Sonatina en Sol mayor": [
   {
    "id": "sonatina_g1",
    "title": "Melodía en blancas",
-   "instr": "Notas largas de dos tiempos; cuentalas para no acortarlas."
+   "instr": "Estudio de notas largas (blancas): cuéntalas enteras para que caigan sobre el acompañamiento."
   },
   {
    "id": "sonatina_g2",
    "title": "Bajo-acorde (el Secondo)",
-   "instr": "Bajo grave y acordes staccato: el motor del acompañamiento."
+   "instr": "Estudio del acompañamiento a cuatro manos: bajo grave y acordes staccato. Clave de Fa."
   }
  ],
  "Para Elisa": [
   {
    "id": "elisa1",
    "title": "Alternancia Mi–Re#",
-   "instr": "El temblor de apertura: alterna Mi y Re# ligero, sin acento."
+   "instr": "El temblor de apertura de Für Elise: alterna Mi y Re# ligero y sin acento, repetido en 3/8."
   },
   {
    "id": "elisa2",
    "title": "Arpegios de la izquierda",
-   "instr": "El acompañamiento desgranado en 3/8 (en clave de Fa)."
+   "instr": "El acompañamiento desgranado en 3/8 recorriendo La menor y Mi; en clave de Fa, suave y regular."
   }
  ]
 }
