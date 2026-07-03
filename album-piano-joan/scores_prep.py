@@ -3,6 +3,7 @@
 """Copia/rasteriza las partituras originales y genera los QR de audio."""
 import os, re, json, unicodedata, urllib.parse
 import fitz, qrcode
+from PIL import Image
 
 SRC="/root/.claude/uploads/bc0cc3c1-2a9a-5413-935b-f497ddaf5309/joan/JOAN ok/"
 os.makedirs("scores/img", exist_ok=True); os.makedirs("scores/qr", exist_ok=True)
@@ -67,7 +68,13 @@ for base,(fn,yt) in M.items():
         doc=fitz.open(path)
         for i,pg in enumerate(doc):
             p=f"scores/img/{sl}_{i+1}.png"
-            pg.get_pixmap(dpi=150).save(p); pages.append(p)
+            pix=pg.get_pixmap(dpi=150); pix.save(p)
+            # descarta paginas de partitura en blanco (evita hojas vacias en el PDF)
+            im=Image.open(p).convert("L"); h=im.histogram()
+            ink=sum(h[:230])/(im.width*im.height)*100
+            if ink<0.5:
+                os.remove(p); print("  (pagina en blanco omitida)", p); continue
+            pages.append(p)
         doc.close()
     else:
         print("  !! FALTA", fn)
