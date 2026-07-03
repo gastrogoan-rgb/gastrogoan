@@ -11,7 +11,7 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph,
-    Spacer, Table, TableStyle, Flowable, KeepTogether, PageBreak, Image as RLImage)
+    Spacer, Table, TableStyle, Flowable, KeepTogether, PageBreak, CondPageBreak, Image as RLImage)
 from reportlab.platypus.flowables import HRFlowable
 from reportlab.lib.styles import ParagraphStyle
 from PIL import Image as PILImage
@@ -836,7 +836,9 @@ def build():
             story.append(PageBreak()); story.append(score_img(p))                       # partitura
         for f in g["files"]:
             story.append(PageBreak()); story+=day_flowables(f)                          # sesiones
-        story.append(PageBreak()); story+=workshop(g["base"],g["key"],g["stage"])       # taller
+        # el taller sigue tras "Objetivos de la sesión" si hay sitio (evita hojas medio vacías);
+        # solo salta a hoja nueva si queda muy poco espacio
+        story.append(CondPageBreak(78*mm)); story+=workshop(g["base"],g["key"],g["stage"])  # taller
     doc.build(story)
     print("PDF creado:",doc.page,"paginas")
 
