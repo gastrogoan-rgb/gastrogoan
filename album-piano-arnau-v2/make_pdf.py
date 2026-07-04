@@ -535,9 +535,12 @@ WORKSHOPS = {
    ("Ritmo","Corcheas parejas","corcheas seguidas con las dos manos en 3/8, pulso igual, sin acelerar al enlazar."),
    ("Reto","La vuelta del tema","tras la sección B, recupera el tema con el tempo idéntico al del principio.")],
 }
-DEFAULT_WS=[("Manos","Manos separadas","estudia cada mano por separado, muy lento, antes de juntarlas."),
-   ("Reto","Pasajes difíciles","aísla los compases marcados como exigentes y repítelos en bucle hasta que salgan limpios."),
-   ("Ritmo","Con metrónomo","toca despacio con metrónomo y sube el tempo solo cuando salga sin fallo.")]
+DEFAULT_WS=[("Manos","Una mano cada vez","toca primero la mano derecha sola y después la izquierda, muy despacio."),
+   ("Juego","Cántala","canta la canción mientras la tocas: así te la aprendes mucho antes."),
+   ("Ritmo","Palmas primero","palmea el ritmo antes de tocarlo con los dedos.")]
+# menus infantiles propios de cada cancion (Arnau)
+if os.path.exists("workshops.json"):
+    WORKSHOPS={k:[tuple(x) for x in v] for k,v in json.load(open("workshops.json",encoding="utf-8")).items()}
 
 # ---- Ejercicios de piano COMPLEMENTARIOS: entrenan lo contrario a lo que domina en la pieza ----
 # (si la obra sube mucho -> bajar; si es legato -> staccato; si es acordes -> arpegios; etc.)

@@ -7,22 +7,22 @@
    "instr": "Sube y baja; un dedo por tecla (mira los números)."
   },
   {
+   "id": "baa_baa_black_sheep_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
    "id": "baa_baa_black_sheep_mel",
    "level": 2,
    "title": "La melodía (mano derecha)",
-   "instr": "El principio de la canción. Debajo tienes el nombre de cada nota."
-  },
-  {
-   "id": "baa_baa_black_sheep_cho",
-   "level": 2,
-   "title": "Los 3 acordes (mano izquierda)",
-   "instr": "Toca los tres acordes juntos, en clave de Fa."
+   "instr": "El principio de la canción. Debajo, el nombre de cada nota."
   },
   {
    "id": "baa_baa_black_sheep_rit",
    "level": 1,
    "title": "El ritmo (palméalo primero)",
-   "instr": "Da palmadas contando 1-2-3-4; luego tócalo en la nota DO."
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
   }
  ],
  "The Wheels on the Bus": [
@@ -30,25 +30,493 @@
    "id": "the_wheels_on_the_bus_pos",
    "level": 1,
    "title": "Posición de 5 dedos en DO",
-   "instr": "Calentamiento: sube y baja, un dedo por tecla."
-  },
-  {
-   "id": "the_wheels_on_the_bus_salto",
-   "level": 2,
-   "title": "El salto Do–Fa",
-   "instr": "Salta del pulgar (Do) al dedo 4 (Fa), ida y vuelta."
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
   },
   {
    "id": "the_wheels_on_the_bus_cho",
    "level": 2,
-   "title": "Los acordes DO y FA (mano izquierda)",
-   "instr": "Cambia entre los dos acordes, en clave de Fa."
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "the_wheels_on_the_bus_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
   },
   {
    "id": "the_wheels_on_the_bus_rit",
    "level": 1,
-   "title": "El ritmo de marcha",
-   "instr": "Palmea 1-2-3-4 firme; luego tócalo en DO."
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Little Miss Muffet": [
+  {
+   "id": "little_miss_muffet_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "little_miss_muffet_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "little_miss_muffet_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "little_miss_muffet_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Do Your Ears Hang Low?": [
+  {
+   "id": "do_your_ears_hang_low_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "do_your_ears_hang_low_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "do_your_ears_hang_low_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "do_your_ears_hang_low_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Oh, When the Saints": [
+  {
+   "id": "oh_when_the_saints_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "oh_when_the_saints_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "oh_when_the_saints_mel",
+   "level": 2,
+   "title": "La melodía (mano derecha)",
+   "instr": "El principio de la canción. Debajo, el nombre de cada nota."
+  },
+  {
+   "id": "oh_when_the_saints_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Rain, Rain, Go Away": [
+  {
+   "id": "rain_rain_go_away_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "rain_rain_go_away_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "rain_rain_go_away_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "rain_rain_go_away_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Chopsticks": [
+  {
+   "id": "chopsticks_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "chopsticks_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "chopsticks_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "chopsticks_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Clementine": [
+  {
+   "id": "clementine_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "clementine_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "clementine_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "clementine_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Jolly Old Saint Nicholas": [
+  {
+   "id": "jolly_old_saint_nicholas_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "jolly_old_saint_nicholas_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "jolly_old_saint_nicholas_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "jolly_old_saint_nicholas_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "We Wish You a Merry Christmas": [
+  {
+   "id": "we_wish_you_a_merry_christmas_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "we_wish_you_a_merry_christmas_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "we_wish_you_a_merry_christmas_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "we_wish_you_a_merry_christmas_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Aloha 'Oe": [
+  {
+   "id": "aloha_oe_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "aloha_oe_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "aloha_oe_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "aloha_oe_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Puff the Magic Dragon": [
+  {
+   "id": "puff_the_magic_dragon_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "puff_the_magic_dragon_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "puff_the_magic_dragon_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "puff_the_magic_dragon_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "My Bonnie Lies Over the Ocean": [
+  {
+   "id": "my_bonnie_lies_over_the_ocean_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "my_bonnie_lies_over_the_ocean_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "my_bonnie_lies_over_the_ocean_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "my_bonnie_lies_over_the_ocean_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Polly Put the Kettle On": [
+  {
+   "id": "polly_put_the_kettle_on_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en FA",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "polly_put_the_kettle_on_cho",
+   "level": 2,
+   "title": "Los acordes (FA, SIb y DO)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "polly_put_the_kettle_on_arp",
+   "level": 2,
+   "title": "El acorde de FA desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "polly_put_the_kettle_on_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "El Submarino Amarillo": [
+  {
+   "id": "el_submarino_amarillo_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en SOL",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "el_submarino_amarillo_cho",
+   "level": 2,
+   "title": "Los acordes (SOL, DO y RE)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "el_submarino_amarillo_arp",
+   "level": 2,
+   "title": "El acorde de SOL desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "el_submarino_amarillo_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Popeye el Marinero": [
+  {
+   "id": "popeye_el_marinero_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en SOL",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "popeye_el_marinero_cho",
+   "level": 2,
+   "title": "Los acordes (SOL, DO y RE)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "popeye_el_marinero_arp",
+   "level": 2,
+   "title": "El acorde de SOL desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "popeye_el_marinero_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "La Pantera Rosa": [
+  {
+   "id": "la_pantera_rosa_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en LA menor",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "la_pantera_rosa_cho",
+   "level": 2,
+   "title": "Los acordes (La menor y MI)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "la_pantera_rosa_arp",
+   "level": 2,
+   "title": "El acorde de LA menor desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "la_pantera_rosa_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Eso que tú me das": [
+  {
+   "id": "eso_que_tu_me_das_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "eso_que_tu_me_das_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "eso_que_tu_me_das_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "eso_que_tu_me_das_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Largo (Sinfonía del Nuevo Mundo)": [
+  {
+   "id": "largo_sinfonia_del_nuevo_mundo_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "largo_sinfonia_del_nuevo_mundo_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "largo_sinfonia_del_nuevo_mundo_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "largo_sinfonia_del_nuevo_mundo_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
+  }
+ ],
+ "Here We Go Round the Mulberry Bush": [
+  {
+   "id": "here_we_go_round_the_mulberry_bush_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "here_we_go_round_the_mulberry_bush_cho",
+   "level": 2,
+   "title": "Los acordes (DO, FA y SOL)",
+   "instr": "Toca los acordes con la mano izquierda, en clave de Fa."
+  },
+  {
+   "id": "here_we_go_round_the_mulberry_bush_arp",
+   "level": 2,
+   "title": "El acorde de DO desgranado",
+   "instr": "Toca las notas del acorde una a una, subiendo y bajando."
+  },
+  {
+   "id": "here_we_go_round_the_mulberry_bush_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando; luego tócalo en tu nota casa."
   }
  ]
 }

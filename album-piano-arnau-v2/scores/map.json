@@ -14,5 +14,154 @@
   ],
   "qr": "scores/qr/the_wheels_on_the_bus.png",
   "url": "https://www.youtube.com/watch?v=U_osX4AHUs0"
+ },
+ "Little Miss Muffet": {
+  "slug": "little_miss_muffet",
+  "pages": [
+   "scores/img/little_miss_muffet_1.png"
+  ],
+  "qr": "scores/qr/little_miss_muffet.png",
+  "url": "https://www.youtube.com/watch?v=UxRJKUSn_SM"
+ },
+ "Do Your Ears Hang Low?": {
+  "slug": "do_your_ears_hang_low",
+  "pages": [
+   "scores/img/do_your_ears_hang_low_1.png"
+  ],
+  "qr": "scores/qr/do_your_ears_hang_low.png",
+  "url": "https://www.youtube.com/watch?v=EsuiTHvocQo"
+ },
+ "Oh, When the Saints": {
+  "slug": "oh_when_the_saints",
+  "pages": [
+   "scores/img/oh_when_the_saints_1.png"
+  ],
+  "qr": "scores/qr/oh_when_the_saints.png",
+  "url": "https://www.youtube.com/watch?v=49fetoWKcAA"
+ },
+ "Rain, Rain, Go Away": {
+  "slug": "rain_rain_go_away",
+  "pages": [
+   "scores/img/rain_rain_go_away_1.png",
+   "scores/img/rain_rain_go_away_2.png",
+   "scores/img/rain_rain_go_away_3.png"
+  ],
+  "qr": "scores/qr/rain_rain_go_away.png",
+  "url": "https://www.youtube.com/watch?v=wHCIq28aqe8"
+ },
+ "Chopsticks": {
+  "slug": "chopsticks",
+  "pages": [
+   "scores/img/chopsticks_1.png"
+  ],
+  "qr": "scores/qr/chopsticks.png",
+  "url": "https://www.youtube.com/watch?v=zT2CXUKyyGM"
+ },
+ "Clementine": {
+  "slug": "clementine",
+  "pages": [
+   "scores/img/clementine_1.png"
+  ],
+  "qr": "scores/qr/clementine.png",
+  "url": "https://www.youtube.com/watch?v=UNZt8iVr3uY"
+ },
+ "Jolly Old Saint Nicholas": {
+  "slug": "jolly_old_saint_nicholas",
+  "pages": [
+   "scores/img/jolly_old_saint_nicholas_1.png"
+  ],
+  "qr": "scores/qr/jolly_old_saint_nicholas.png",
+  "url": "https://www.youtube.com/watch?v=15iuSPvHm8Y"
+ },
+ "We Wish You a Merry Christmas": {
+  "slug": "we_wish_you_a_merry_christmas",
+  "pages": [
+   "scores/img/we_wish_you_a_merry_christmas_1.png"
+  ],
+  "qr": "scores/qr/we_wish_you_a_merry_christmas.png",
+  "url": "https://www.youtube.com/watch?v=7QbBTPx7JKo"
+ },
+ "Aloha 'Oe": {
+  "slug": "aloha_oe",
+  "pages": [
+   "scores/img/aloha_oe_1.png",
+   "scores/img/aloha_oe_2.png"
+  ],
+  "qr": "scores/qr/aloha_oe.png",
+  "url": "https://www.youtube.com/watch?v=QIjv8ZEXXZM"
+ },
+ "Puff the Magic Dragon": {
+  "slug": "puff_the_magic_dragon",
+  "pages": [
+   "scores/img/puff_the_magic_dragon_1.png"
+  ],
+  "qr": "scores/qr/puff_the_magic_dragon.png",
+  "url": "https://www.youtube.com/watch?v=ytStrf6RQvA"
+ },
+ "My Bonnie Lies Over the Ocean": {
+  "slug": "my_bonnie_lies_over_the_ocean",
+  "pages": [
+   "scores/img/my_bonnie_lies_over_the_ocean_1.png"
+  ],
+  "qr": "scores/qr/my_bonnie_lies_over_the_ocean.png",
+  "url": "https://www.youtube.com/watch?v=oRT3Y-G8Wng"
+ },
+ "Polly Put the Kettle On": {
+  "slug": "polly_put_the_kettle_on",
+  "pages": [
+   "scores/img/polly_put_the_kettle_on_1.png"
+  ],
+  "qr": "scores/qr/polly_put_the_kettle_on.png",
+  "url": "https://www.youtube.com/watch?v=fUJynaPVatI"
+ },
+ "El Submarino Amarillo": {
+  "slug": "el_submarino_amarillo",
+  "pages": [
+   "scores/img/el_submarino_amarillo_1.png"
+  ],
+  "qr": "scores/qr/el_submarino_amarillo.png",
+  "url": "https://www.youtube.com/watch?v=xdX-gS8Bvjg"
+ },
+ "Popeye el Marinero": {
+  "slug": "popeye_el_marinero",
+  "pages": [
+   "scores/img/popeye_el_marinero_1.png"
+  ],
+  "qr": "scores/qr/popeye_el_marinero.png",
+  "url": "https://www.youtube.com/watch?v=lfem5crG96c"
+ },
+ "La Pantera Rosa": {
+  "slug": "la_pantera_rosa",
+  "pages": [
+   "scores/img/la_pantera_rosa_1.png"
+  ],
+  "qr": "scores/qr/la_pantera_rosa.png",
+  "url": "https://www.youtube.com/watch?v=tKIczCGGrJw"
+ },
+ "Eso que tú me das": {
+  "slug": "eso_que_tu_me_das",
+  "pages": [
+   "scores/img/eso_que_tu_me_das_1.png"
+  ],
+  "qr": "scores/qr/eso_que_tu_me_das.png",
+  "url": "https://www.youtube.com/watch?v=ppxdqeI5TM4"
+ },
+ "Largo (Sinfonía del Nuevo Mundo)": {
+  "slug": "largo_sinfonia_del_nuevo_mundo",
+  "pages": [
+   "scores/img/largo_sinfonia_del_nuevo_mundo_1.png"
+  ],
+  "qr": "scores/qr/largo_sinfonia_del_nuevo_mundo.png",
+  "url": "https://www.youtube.com/watch?v=fuW_In-5t-4"
+ },
+ "Here We Go Round the Mulberry Bush": {
+  "slug": "here_we_go_round_the_mulberry_bush",
+  "pages": [
+   "scores/img/here_we_go_round_the_mulberry_bush_1.png",
+   "scores/img/here_we_go_round_the_mulberry_bush_2.png",
+   "scores/img/here_we_go_round_the_mulberry_bush_3.png"
+  ],
+  "qr": "scores/qr/here_we_go_round_the_mulberry_bush.png",
+  "url": "https://www.youtube.com/watch?v=PyIpLrHRJ24"
  }
 }

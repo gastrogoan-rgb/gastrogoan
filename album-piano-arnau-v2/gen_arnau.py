@@ -145,7 +145,7 @@ def partial(idx,total,S):
 
 def build(SONGS):
     total=len(SONGS)
-    scoremap={}; exj={}
+    scoremap={}; exj={}; wkj={}
     for i,S in enumerate(SONGS,1):
         sl=slug(S["title"]); S["_slug"]=sl
         # partitura -> imagenes (descartando blancas)
@@ -170,11 +170,20 @@ def build(SONGS):
             eid=sl+"_"+e["k"]; render_ex(e["abc"],eid)
             exlist.append({"id":eid,"level":e["lvl"],"title":e["title"],"instr":e["instr"]})
         exj[S["title"]]=exlist
+        # menu de actividades infantil, propio de cada cancion
+        cnt={"4/4":"1-2-3-4","3/4":"1-2-3","2/4":"1-2","6/8":"1-2-3 / 4-5-6","C":"1-2-3-4"}.get(S["specs"]["comp"],"el pulso")
+        wkj[S["title"]]=[
+          ["Manos","Una mano cada vez","toca primero la mano derecha sola y después la izquierda, muy despacio."],
+          ["Juego","Cántala","canta la canción mientras la tocas: así te la aprendes mucho antes."],
+          ["Ritmo","Palmas primero",f"palmea el ritmo (cuenta {cnt}) antes de tocarlo con los dedos."],
+          ["Reto",S["hard"]["tt"],S["hard"]["reto"].rstrip(".").lower()+"; hazlo tú solo."],
+        ]
         # partial
         open(f"partials/dia{i:02d}.html","w",encoding="utf-8").write(partial(i,total,S))
         print("OK",i,S["title"],"·",len(pages),"pag partitura ·",len(exlist),"ejercicios")
     json.dump(scoremap,open("scores/map.json","w"),ensure_ascii=False,indent=1)
     json.dump(exj,open("exercises.json","w"),ensure_ascii=False,indent=1)
+    json.dump(wkj,open("workshops.json","w"),ensure_ascii=False,indent=1)
     # indice agrupado por nivel
     levels={"1":"Nivel 1 · Empiezo","2":"Nivel 2 · Avanzo","3":"Nivel 3 · Ya toco"}
     idx=[]
