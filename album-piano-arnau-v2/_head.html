@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Cuaderno del Pianista · Estudio progresivo de repertorio en 44 sesiones</title>
+<style>
+/* ============================================================
+   EL CUADERNO DEL PIANISTA · hoja de estilo editorial
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#23211c;          /* tinta principal, negro cálido */
+  --ink-2:#4a463d;        /* tinta secundaria */
+  --muted:#827b6c;        /* texto tenue */
+  --paper:#faf7f0;        /* marfil */
+  --paper-2:#f3eee2;      /* marfil más cálido */
+  --line:#ddd4c0;         /* filete */
+  --line-2:#cabfa3;
+  --gold:#a8884e;         /* dorado apagado */
+  --gold-soft:#f0e7d2;
+  --slate:#3d4f63;        /* azul pizarra (análisis/teoría) */
+  --slate-soft:#e9eef3;
+  --bord:#7a2e3a;         /* granate (pasajes difíciles) */
+  --bord-soft:#f6e8e8;
+  --green:#3c5d4a;        /* etapa fundamentos */
+  --blue:#33526e;         /* etapa desarrollo */
+  --wine:#7a2e3a;         /* etapa maestría */
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,'Times New Roman',serif;
+  --sans:'Inter','Segoe UI',-apple-system,system-ui,Roboto,sans-serif;
+}
+html{font-size:12.7px}
+body{font-family:var(--sans);color:var(--ink);line-height:1.45;background:#b8b1a3;}
+h1,h2,h3,h4,h5{font-family:var(--serif);font-weight:700;line-height:1.18;color:var(--ink)}
+p{margin:.42em 0}
+b,strong{font-weight:700;color:var(--ink)}
+small{color:var(--muted)}
+em{font-style:italic}
+
+/* ---------- HOJAS ---------- */
+.page{                 /* hoja de tamaño fijo (portada / preliminares) */
+  width:210mm;height:297mm;margin:12px auto;background-color:var(--paper);
+  padding:20mm 20mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
+  break-before:page;overflow:hidden;
+}
+.sheet{                /* día: fluye y puede ocupar más de una hoja al imprimir */
+  width:210mm;min-height:297mm;margin:12px auto;background-color:var(--paper);
+  padding:13mm 20mm 12mm;position:relative;box-shadow:0 6px 26px rgba(0,0,0,.22);
+  break-before:page;overflow:hidden;
+}
+/* Sello T-CLAS en la esquina de cada hoja (menos la portada/contraportada) */
+.sheet, .page:not(.cover){
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='47' fill='%23ffffff' stroke='%23222222' stroke-width='2'/><circle cx='50' cy='50' r='29' fill='%231b2433'/><text x='50' y='19' font-family='Arial,Helvetica,sans-serif' font-size='11' font-weight='bold' fill='%23222222' text-anchor='middle' letter-spacing='1'>T-CLAS</text><text x='50' y='68' font-family='Georgia,serif' font-size='44' fill='%23ffffff' text-anchor='middle'>𝄞</text></svg>");
+  background-repeat:no-repeat;
+  background-position:top 9mm right 12mm;
+  background-size:40px 40px;
+  background-origin:border-box;
+}
+/* Logo completo en portada y contraportada */
+.cover-logo{display:flex;justify-content:center;margin:6px 0}
+.cover-logo svg{width:208px;height:208px;display:block}
+.brand .bt{fill:#1a1a1a;font-family:var(--serif);font-weight:700}
+.brand .bb{fill:#1a1a1a;font-family:var(--sans);font-weight:700}
+.brand .clef-g{fill:#ffffff;font-family:var(--serif)}
+.eyebrow{font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--gold)}
+.rule{height:1px;background:var(--line);border:0;margin:10px 0}
+.rule.gold{height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
+
+/* ============================================================
+   PORTADA
+   ============================================================ */
+.cover{background:
+   radial-gradient(120% 80% at 50% -10%, #fffdf8 0%, var(--paper) 55%, var(--paper-2) 100%);
+   padding:0;}
+.cover-frame{position:absolute;inset:13mm;border:1px solid var(--gold);}
+.cover-frame:before{content:"";position:absolute;inset:3mm;border:1px solid var(--line-2)}
+.cover-inner{position:absolute;inset:13mm;display:flex;flex-direction:column;
+  align-items:center;justify-content:space-between;text-align:center;padding:16mm 16mm}
+.cover .clef{font-family:var(--serif);font-size:150px;line-height:.8;color:var(--gold);opacity:.9}
+.cover .top{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4mm}
+.cover .top .eyebrow{font-size:12px;letter-spacing:5px}
+.cover h1{font-size:62px;letter-spacing:-.5px;margin:6px 0 2px}
+.cover .subtitle{font-family:var(--serif);font-style:italic;font-size:23px;color:var(--ink-2)}
+.cover .mid{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.cover .summary{font-size:14px;color:var(--ink-2);max-width:78%;line-height:1.7}
+.cover .pillars{display:flex;gap:0;width:100%;justify-content:center;margin-top:4px}
+.cover .pillars span{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--gold);padding:0 16px;border-right:1px solid var(--line-2)}
+.cover .pillars span:last-child{border-right:0}
+.cover .bottom{width:100%}
+.cover .bottom .by{font-family:var(--serif);font-size:15px;color:var(--ink-2)}
+.cover .bottom .meta{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.cover-kbd{margin:2mm 0}
+
+/* teclado decorativo de portada */
+.kbd-strip{display:inline-flex;border:1px solid var(--ink);border-radius:3px;overflow:hidden;
+  box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.kbd-strip .w{width:18px;height:58px;background:#fffef9;border-right:1px solid #cfc6b2;position:relative}
+.kbd-strip .w:last-child{border-right:0}
+.kbd-strip .w.on{background:linear-gradient(#fff,var(--gold-soft))}
+.kbd-strip .b{width:11px;height:36px;background:var(--ink);margin:0 -5.5px;z-index:2;border-radius:0 0 2px 2px}
+
+/* ============================================================
+   PRELIMINARES (índice, guía, glosario)
+   ============================================================ */
+.lead{font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink-2)}
+.page-title{font-size:30px;margin:2px 0 2px}
+.page-head{margin-bottom:14px}
+.col2{column-count:2;column-gap:26px}
+.col2 p{margin:0 0 .6em}
+
+.toc{width:100%;border-collapse:collapse;font-size:12.5px}
+.toc th{font-family:var(--sans);text-transform:uppercase;letter-spacing:1.5px;font-size:9.5px;
+  color:var(--muted);text-align:left;border-bottom:1.5px solid var(--ink);padding:6px 8px}
+.toc td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.toc .n{font-family:var(--serif);font-weight:700;color:var(--gold);width:42px}
+.toc .pz{font-weight:600}
+.toc .stage{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.toc tr.h td{background:var(--paper-2);font-family:var(--serif);font-style:italic;color:var(--ink);font-size:13px}
+
+.guide-step{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.guide-step .gn{font-family:var(--serif);font-size:26px;color:var(--gold);width:38px;flex:0 0 auto;line-height:1}
+.guide-step h4{font-size:15px;margin-bottom:1px}
+.guide-step p{margin:0;font-size:13px;color:var(--ink-2)}
+
+.legend2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:8px}
+.legend2 .li{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);
+  border-radius:4px;padding:10px 12px;background:#fff}
+.legend2 .li .lk{font-family:var(--serif);font-style:italic;font-weight:700;color:var(--gold);font-size:13px;
+  flex:0 0 86px}
+.legend2 .li p{margin:0;font-size:12px;color:var(--ink-2)}
+
+.gloss2{columns:2;column-gap:26px}
+.gloss2 .g{break-inside:avoid;margin:0 0 9px}
+.gloss2 dt{font-family:var(--serif);font-weight:700;color:var(--slate);font-size:14px}
+.gloss2 dd{margin:0;font-size:12.5px;color:var(--ink-2)}
+
+/* ============================================================
+   CABECERA DE DÍA
+   ============================================================ */
+.s1{--stage:var(--green)} .s2{--stage:var(--blue)} .s3{--stage:var(--wine)}
+.day-head{border-top:3px solid var(--stage);padding-top:9px;margin-bottom:10px}
+.day-head .row1{display:flex;justify-content:space-between;align-items:baseline}
+.day-head .stage-lbl{font-family:var(--sans);font-weight:700;font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--stage)}
+.day-head .sess{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:13px}
+.day-head h2{font-size:29px;margin:4px 0 1px;letter-spacing:-.4px}
+.day-head .composer{font-family:var(--serif);font-style:italic;font-size:16px;color:var(--ink-2)}
+
+/* ficha técnica */
+.specs{display:flex;flex-wrap:wrap;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:5px;
+  background:#fff;overflow:hidden}
+.specs .sp{flex:1 1 0;min-width:0;padding:6px 9px;border-right:1px solid var(--line);overflow:hidden}
+.specs .sp:last-child{border-right:0}
+.specs .sp .k{font-family:var(--sans);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.specs .sp .v{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--ink);margin-top:1px}
+.specs .sp .v.diff{letter-spacing:1px;color:var(--stage)}
+
+/* ============================================================
+   SECCIONES Y PANELES
+   ============================================================ */
+.sec{margin:11px 0 3px}
+.sec-h{break-after:avoid}        /* el título no se queda solo al pie */
+.sec-h{display:flex;align-items:center;gap:11px;margin-bottom:5px}
+.sec-h .rn{font-family:var(--serif);font-weight:700;font-size:13px;color:#fff;background:var(--stage);
+  width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sec-h h3{font-size:19px;letter-spacing:-.2px;flex:0 0 auto;white-space:nowrap}
+.sec-h .rule{flex:1;margin:0 0 0 4px}
+
+.panel{border:1px solid var(--line);border-radius:6px;background:#fff;padding:9px 13px;margin:6px 0;break-inside:avoid}
+.panel p:first-child{margin-top:0}.panel p:last-child{margin-bottom:0}
+.panel h4{font-size:14.5px;margin-bottom:5px}
+.panel--soft{background:var(--paper-2);border-color:var(--line)}
+.panel--theory{background:var(--slate-soft);border-color:#c5d3df}
+.panel--theory h4{color:var(--slate)}
+.panel--gold{background:var(--gold-soft);border-color:#e2d2ac}
+.panel--gold h4{color:#7c6224}
+.panel--quote{border-left:3px solid var(--gold);background:transparent;border-radius:0;
+  font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-2)}
+
+.lede{font-family:var(--serif);font-size:15px;color:var(--ink-2);line-height:1.6}
+
+/* lista de definiciones inline (análisis) */
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:6px 0}
+.facts dt{font-weight:700;color:var(--slate)}
+.facts dd{margin:0;color:var(--ink-2)}
+
+/* pasos de estudio */
+.steps{counter-reset:st;margin:6px 0}
+.step{position:relative;padding:7px 13px 7px 42px;margin:5px 0;background:#fff;border:1px solid var(--line);
+  border-radius:5px;break-inside:avoid}
+.step:before{counter-increment:st;content:counter(st);position:absolute;left:0;top:0;bottom:0;width:32px;
+  background:var(--stage);color:#fff;font-family:var(--serif);font-weight:700;font-size:15px;
+  display:flex;align-items:center;justify-content:center}
+.step .st-t{font-weight:700}
+.step .bpm{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:12.5px}
+
+/* ---------- PASAJES DIFÍCILES (destacado) ---------- */
+.hard{border:1px solid var(--line-2);border-radius:6px;overflow:hidden;margin:9px 0;break-inside:avoid}
+.hard-top{display:flex;align-items:center;gap:10px;background:var(--bord);color:#fff;padding:7px 14px}
+.hard-top .cc{font-family:var(--serif);font-weight:700;font-size:14px;background:rgba(255,255,255,.16);
+  padding:1px 10px;border-radius:3px}
+.hard-top .tt{font-weight:700;font-size:13px;letter-spacing:.3px}
+.hard-top .gauge{margin-left:auto;display:flex;gap:3px}
+.hard-top .gauge i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35);display:block}
+.hard-top .gauge i.on{background:#fff}
+.hard-body{padding:10px 14px;background:var(--bord-soft)}
+.hard-body p{margin:.25em 0;font-size:13px}
+.hard-body .lab{font-family:var(--sans);font-weight:700;color:var(--bord);font-size:11px;
+  letter-spacing:1px;text-transform:uppercase}
+
+/* ============================================================
+   COMPONENTES MUSICALES
+   ============================================================ */
+/* teclado 1 octava (Do–Si). Resaltar blanca: clase hl + opcional <span class="fg">N</span> y <span class="nn">Do</span>.
+   Negras left fijo: 31/67/139/175/211 = Do# Re# Fa# Sol# La#. */
+.kbd{position:relative;display:inline-flex;background:var(--ink);padding:7px 7px 0;border-radius:5px;
+  box-shadow:0 3px 0 #18160f;margin:24px 0 5px}
+.kbd .wk{position:relative;width:34px;height:104px;background:#fffef9;border:1px solid #cfc6b2;border-radius:0 0 4px 4px;
+  margin-right:2px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:6px}
+.kbd .wk:last-child{margin-right:0}
+.kbd .wk.hl{background:linear-gradient(#fff,var(--gold-soft));box-shadow:inset 0 -6px 0 var(--gold)}
+.kbd .wk.hl2{background:linear-gradient(#fff,var(--slate-soft));box-shadow:inset 0 -6px 0 var(--slate)}
+.kbd .bk{position:absolute;top:7px;width:22px;height:72px;background:var(--ink);border-radius:0 0 3px 3px;z-index:3}
+.kbd .bk.hl{background:linear-gradient(#6a563a,var(--gold))}
+.kbd .nn{font-size:10px;font-weight:700;color:var(--muted);font-family:var(--sans)}
+.kbd .wk.hl .nn{color:#7c6224}
+.kbd .fg{position:absolute;top:-25px;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;
+  background:var(--stage,var(--ink));color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--sans)}
+.kbd-cap{font-size:11.5px;color:var(--muted);margin:2px 0 6px;font-style:italic;font-family:var(--serif)}
+
+/* escala con digitación */
+.scale{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.scale .sc{min-width:50px;text-align:center;border:1px solid var(--line);border-radius:5px;background:#fff;padding:6px 4px}
+.scale .sc .nt{font-family:var(--serif);font-weight:700;font-size:15px}
+.scale .sc .fn{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--slate);color:#fff;
+  font-size:11px;font-weight:700;align-items:center;justify-content:center;margin-top:3px;font-family:var(--sans)}
+.scale .sc small{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+
+/* acorde (apilado) */
+.chordbox{display:inline-flex;flex-direction:column-reverse;border:1px solid var(--line);border-radius:5px;
+  background:#fff;padding:5px;margin:2px 6px 2px 0;vertical-align:top;text-align:center;min-width:54px}
+.chordbox b{font-size:13px}.chordbox .sym{font-family:var(--serif);font-weight:700;color:var(--gold);font-size:14px;
+  border-top:1px solid var(--line);margin-top:3px;padding-top:2px}
+
+/* tira de ritmo */
+.rhythm{display:flex;flex-wrap:wrap;gap:5px;align-items:flex-end;background:#fff;border:1px solid var(--line);
+  border-radius:5px;padding:11px 13px;margin:8px 0}
+.rhythm .beat{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:32px}
+.rhythm .fig{font-size:27px;line-height:.8}
+.rhythm .syl{font-size:11px;font-weight:700;color:var(--slate);font-family:var(--sans)}
+.rhythm .bar{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+
+/* tabla de dedos */
+.fingers{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.fingers .fc{flex:1 1 0;min-width:58px;text-align:center;border:1px solid var(--line);border-radius:5px;padding:7px 4px;background:#fff}
+.fingers .fc .fn{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;
+  font-weight:700;align-items:center;justify-content:center;font-size:12px;font-family:var(--sans)}
+.fingers .fc .nt{font-family:var(--serif);font-weight:700;margin-top:4px;font-size:14px}
+
+/* checklist objetivos */
+.goals{list-style:none;margin:6px 0}
+.goals li{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.goals li:last-child{border-bottom:0}
+.goals .bx{flex:0 0 auto;width:16px;height:16px;border:1.5px solid var(--ink-2);border-radius:3px;margin-top:3px}
+.metro{display:inline-flex;align-items:center;gap:7px;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:20px;padding:4px 13px;font-size:12.5px;font-family:var(--serif);font-style:italic;color:var(--ink-2)}
+.metro b{font-style:normal;font-family:var(--sans);color:var(--ink)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.two .panel{margin:0}
+
+/* pie de página */
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:6px;
+  border-top:1px solid var(--line);font-size:10.5px;color:var(--muted);font-family:var(--sans)}
+.foot .stage-tag{font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--stage)}
+
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .page,.sheet{margin:0;box-shadow:none;width:auto}
+  /* preliminares: cada una en su hoja, sin dobles saltos ni hoja final en blanco */
+  .page{height:auto;min-height:0;break-before:auto;break-after:page}
+  .page.cover{height:297mm}                 /* portada/contraportada a hoja completa */
+  .page:first-child{break-before:auto}
+  .page:last-child{break-before:page;break-after:auto}
+  /* cada sesión empieza en una hoja nueva */
+  .sheet{min-height:0;break-before:page}
+  /* nada se parte por la mitad */
+  .panel,.hard,.step,.specs,.kbd,.scale,.rhythm,.day-head,.two,.fingers{break-inside:avoid}
+  .sec-h{break-after:avoid}
+}
+</style>
+</head>
+<body>

@@ -1,0 +1,54 @@
+{
+ "Baa Baa Black Sheep": [
+  {
+   "id": "baa_baa_black_sheep_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Sube y baja; un dedo por tecla (mira los números)."
+  },
+  {
+   "id": "baa_baa_black_sheep_mel",
+   "level": 2,
+   "title": "La melodía (mano derecha)",
+   "instr": "El principio de la canción. Debajo tienes el nombre de cada nota."
+  },
+  {
+   "id": "baa_baa_black_sheep_cho",
+   "level": 2,
+   "title": "Los 3 acordes (mano izquierda)",
+   "instr": "Toca los tres acordes juntos, en clave de Fa."
+  },
+  {
+   "id": "baa_baa_black_sheep_rit",
+   "level": 1,
+   "title": "El ritmo (palméalo primero)",
+   "instr": "Da palmadas contando 1-2-3-4; luego tócalo en la nota DO."
+  }
+ ],
+ "The Wheels on the Bus": [
+  {
+   "id": "the_wheels_on_the_bus_pos",
+   "level": 1,
+   "title": "Posición de 5 dedos en DO",
+   "instr": "Calentamiento: sube y baja, un dedo por tecla."
+  },
+  {
+   "id": "the_wheels_on_the_bus_salto",
+   "level": 2,
+   "title": "El salto Do–Fa",
+   "instr": "Salta del pulgar (Do) al dedo 4 (Fa), ida y vuelta."
+  },
+  {
+   "id": "the_wheels_on_the_bus_cho",
+   "level": 2,
+   "title": "Los acordes DO y FA (mano izquierda)",
+   "instr": "Cambia entre los dos acordes, en clave de Fa."
+  },
+  {
+   "id": "the_wheels_on_the_bus_rit",
+   "level": 1,
+   "title": "El ritmo de marcha",
+   "instr": "Palmea 1-2-3-4 firme; luego tócalo en DO."
+  }
+ ]
+}

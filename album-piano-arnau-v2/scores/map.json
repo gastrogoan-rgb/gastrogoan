@@ -1,0 +1,18 @@
+{
+ "Baa Baa Black Sheep": {
+  "slug": "baa_baa_black_sheep",
+  "pages": [
+   "scores/img/baa_baa_black_sheep_1.png"
+  ],
+  "qr": "scores/qr/baa_baa_black_sheep.png",
+  "url": "https://www.youtube.com/watch?v=69KUnCs_460"
+ },
+ "The Wheels on the Bus": {
+  "slug": "the_wheels_on_the_bus",
+  "pages": [
+   "scores/img/the_wheels_on_the_bus_1.png"
+  ],
+  "qr": "scores/qr/the_wheels_on_the_bus.png",
+  "url": "https://www.youtube.com/watch?v=U_osX4AHUs0"
+ }
+}
