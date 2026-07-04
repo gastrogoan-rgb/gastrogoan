@@ -676,25 +676,33 @@ class PracticeTracker(Flowable):
             c.setFillColor(MUT); c.setFont("SB",9); c.drawCentredString(cx,cy-15*mm,d)
         c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-64*mm,w-9*mm,h-64*mm)
         c.setFillColor(INK); c.setFont("SB",11.5); c.drawString(9*mm,h-74*mm,"¿Cómo me salió hoy? Rodea una carita:")
-        faces=[("bien",colors.HexColor("#5bb85b")),("regular",GOLD),("difícil",WINE)]
-        fx=9*mm
-        for lab,fc in faces:
+        faces=[("¡bien!","smile",colors.HexColor("#5bb85b")),("regular","flat",GOLD),("a practicar más","frown",WINE)]
+        fx=14*mm
+        for lab,kind,fc in faces:
+            cx=fx+6*mm; cy=h-85*mm
             c.setStrokeColor(fc); c.setLineWidth(2); c.setFillColor(colors.white)
-            c.circle(fx+5*mm,h-84*mm,6*mm,fill=1,stroke=1)
-            c.setFillColor(fc); c.circle(fx+3*mm,h-83*mm,0.9*mm,fill=1,stroke=0); c.circle(fx+7*mm,h-83*mm,0.9*mm,fill=1,stroke=0)
-            c.setStrokeColor(fc); c.setLineWidth(1.4)
-            if lab=="bien": c.arc(fx+2*mm,h-89*mm,fx+8*mm,h-83*mm,200,140)
-            elif lab=="regular": c.line(fx+2.5*mm,h-86*mm,fx+7.5*mm,h-86*mm)
-            else: c.arc(fx+2*mm,h-84*mm,fx+8*mm,h-78*mm,200,140)
-            c.setFillColor(MUT); c.setFont("S",8.5); c.drawCentredString(fx+5*mm,h-95*mm,lab)
-            fx+=30*mm
-        c.setFillColor(INK); c.setFont("SB",11.5); c.drawString(w-78*mm,h-84*mm,"¡Ya me la sé!")
-        _star(c,w-16*mm,h-86*mm,10*mm,fill=None,stroke=self.col,sw=2.2)
+            c.circle(cx,cy,6*mm,fill=1,stroke=1)
+            c.setFillColor(fc); c.circle(cx-2*mm,cy+1.7*mm,0.9*mm,fill=1,stroke=0); c.circle(cx+2*mm,cy+1.7*mm,0.9*mm,fill=1,stroke=0)
+            c.setStrokeColor(fc); c.setLineWidth(1.7); p=c.beginPath()
+            if kind=="smile":
+                p.moveTo(cx-2.6*mm,cy-1.1*mm); p.curveTo(cx-1*mm,cy-3.6*mm,cx+1*mm,cy-3.6*mm,cx+2.6*mm,cy-1.1*mm)
+            elif kind=="frown":
+                p.moveTo(cx-2.6*mm,cy-3.4*mm); p.curveTo(cx-1*mm,cy-0.9*mm,cx+1*mm,cy-0.9*mm,cx+2.6*mm,cy-3.4*mm)
+            else:
+                p.moveTo(cx-2.6*mm,cy-2.2*mm); p.lineTo(cx+2.6*mm,cy-2.2*mm)
+            c.drawPath(p,fill=0,stroke=1)
+            c.setFillColor(MUT); c.setFont("S",8.6); c.drawCentredString(cx,cy-12*mm,lab)
+            fx+=50*mm
+        # "¡Ya me la sé!" en su propia fila, sin solaparse con las caritas
+        c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-104*mm,w-9*mm,h-104*mm)
+        _star(c,15*mm,h-115*mm,8*mm,fill=None,stroke=self.col,sw=2.2)
+        c.setFillColor(self.col); c.setFont("SB",13); c.drawString(27*mm,h-117*mm,"¡Ya me la sé de memoria!")
+        c.setFillColor(MUT); c.setFont("S",9.5); c.drawString(27*mm,h-123*mm,"Colorea la estrella cuando puedas tocarla sin mirar.")
         # zona de dibujo que rellena el espacio sobrante
-        if h>120*mm:
-            c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-102*mm,w-9*mm,h-102*mm)
-            _star(c,14*mm,h-111*mm,3.5*mm,fill=GOLD,stroke=GOLD)
-            c.setFillColor(self.col); c.setFont("SB",12); c.drawString(20*mm,h-113*mm,"Dibuja algo de esta canción:")
+        if h>140*mm:
+            c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-133*mm,w-9*mm,h-133*mm)
+            _star(c,14*mm,h-142*mm,3.5*mm,fill=GOLD,stroke=GOLD)
+            c.setFillColor(self.col); c.setFont("SB",12); c.drawString(20*mm,h-144*mm,"Dibuja algo de esta canción:")
 
 def workshop(base, key, stage):
     col=STG[stage]; chex="#%s"%col.hexval()[2:]

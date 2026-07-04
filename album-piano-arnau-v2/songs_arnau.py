@@ -115,7 +115,7 @@ SONGS=[
    "Un himno alegre del jazz de Nueva Orleans. Empieza subiendo <b>Do-Mi-Fa-Sol</b>: fácil de recordar y muy contagioso.",
    "La melodía sube por saltos pequeños (Do-Mi-Fa-Sol). ¡Cántala mientras la tocas!",
    {"cc":"cc. 5–8","tt":"Subir Do-Mi-Fa-Sol","reto":"Que cada nota suene igual de fuerte al subir.","truco":"Toca solo esas 4 notas subiendo, cinco veces seguidas."},
-   melody=("C","C E F G|G4|E C E G|C4|]","Do Mi Fa Sol Sol Mi Do Mi Sol Do")),
+   melody=("C","C E F G|G4|C E F G|G4|]","Do Mi Fa Sol Do Mi Fa Sol")),
  make("Rain, Rain, Go Away","Canción tradicional · arr. Regina Pratley (4 manos)","src/rain-rain-away-easy-piano-4 manos.pdf","wHCIq28aqe8","C","4/4","Tranquilo · ♩≈ 90","Pregunta–respuesta","1",
    "«Lluvia, vete ya». Una cancioncita de solo <b>dos notas</b> al principio (Sol y Mi): la más fácil de todas para empezar.",
    "Es de las más cortas: se toca casi entera con la mano derecha.",
