@@ -641,6 +641,58 @@ TAGCOL={"Ritmo":"#b5762b","Manos":"#6b7f52","Dinámica":"#8a6d3b","Memoria":"#7a
 
 EXJSON=json.load(open("exercises.json",encoding="utf-8")) if os.path.exists("exercises.json") else {}
 
+def _star(c,cx,cy,r,fill=None,stroke=None,sw=1.5):
+    import math
+    p=c.beginPath()
+    for i in range(10):
+        ang=math.pi/2+i*math.pi/5; rr=r if i%2==0 else r*0.45
+        x=cx+rr*math.cos(ang); y=cy+rr*math.sin(ang)
+        (p.moveTo if i==0 else p.lineTo)(x,y)
+    p.close()
+    if fill: c.setFillColor(fill)
+    c.setStrokeColor(stroke or INK); c.setLineWidth(sw)
+    c.drawPath(p,fill=1 if fill else 0,stroke=1)
+
+class PracticeTracker(Flowable):
+    def __init__(self,col,w,h=98*mm):
+        Flowable.__init__(self); self.col=col; self.w=w; self.height=h
+    def wrap(self,aw,ah):
+        # se estira para rellenar lo que quede de pagina (sin dejar huecos)
+        self.height=max(98*mm, min(ah-3, 210*mm)); return (self.w,self.height)
+    def draw(self):
+        c=self.canv; w=self.w; h=self.height
+        c.setFillColor(colors.HexColor("#fbf7ec")); c.setStrokeColor(self.col); c.setLineWidth(1.5)
+        c.roundRect(0,0,w,h,12,fill=1,stroke=1)
+        _star(c,15*mm,h-11*mm,4.5*mm,fill=GOLD,stroke=GOLD)
+        c.setFillColor(self.col); c.setFont("SB",15); c.drawString(22*mm,h-13*mm,"Mi diario de práctica")
+        c.setFillColor(INK); c.setFont("S",11); c.drawString(9*mm,h-23*mm,"Colorea una estrella cada día que practiques esta canción:")
+        days=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]; gap=(w-20*mm)/7
+        for i,d in enumerate(days):
+            cx=10*mm+gap*i+gap/2; cy=h-42*mm
+            _star(c,cx,cy,9*mm,fill=None,stroke=GOLD,sw=2)
+            c.setFillColor(MUT); c.setFont("SB",9); c.drawCentredString(cx,cy-15*mm,d)
+        c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-64*mm,w-9*mm,h-64*mm)
+        c.setFillColor(INK); c.setFont("SB",11.5); c.drawString(9*mm,h-74*mm,"¿Cómo me salió hoy? Rodea una carita:")
+        faces=[("bien",colors.HexColor("#5bb85b")),("regular",GOLD),("difícil",WINE)]
+        fx=9*mm
+        for lab,fc in faces:
+            c.setStrokeColor(fc); c.setLineWidth(2); c.setFillColor(colors.white)
+            c.circle(fx+5*mm,h-84*mm,6*mm,fill=1,stroke=1)
+            c.setFillColor(fc); c.circle(fx+3*mm,h-83*mm,0.9*mm,fill=1,stroke=0); c.circle(fx+7*mm,h-83*mm,0.9*mm,fill=1,stroke=0)
+            c.setStrokeColor(fc); c.setLineWidth(1.4)
+            if lab=="bien": c.arc(fx+2*mm,h-89*mm,fx+8*mm,h-83*mm,200,140)
+            elif lab=="regular": c.line(fx+2.5*mm,h-86*mm,fx+7.5*mm,h-86*mm)
+            else: c.arc(fx+2*mm,h-84*mm,fx+8*mm,h-78*mm,200,140)
+            c.setFillColor(MUT); c.setFont("S",8.5); c.drawCentredString(fx+5*mm,h-95*mm,lab)
+            fx+=30*mm
+        c.setFillColor(INK); c.setFont("SB",11.5); c.drawString(w-78*mm,h-84*mm,"¡Ya me la sé!")
+        _star(c,w-16*mm,h-86*mm,10*mm,fill=None,stroke=self.col,sw=2.2)
+        # zona de dibujo que rellena el espacio sobrante
+        if h>120*mm:
+            c.setStrokeColor(LINE); c.setLineWidth(0.8); c.line(9*mm,h-102*mm,w-9*mm,h-102*mm)
+            _star(c,14*mm,h-111*mm,3.5*mm,fill=GOLD,stroke=GOLD)
+            c.setFillColor(self.col); c.setFont("SB",12); c.drawString(20*mm,h-113*mm,"Dibuja algo de esta canción:")
+
 def workshop(base, key, stage):
     col=STG[stage]; chex="#%s"%col.hexval()[2:]
     out=[Spacer(0,4),HRFlowable(width="100%",thickness=2.6,color=col,spaceAfter=3,lineCap="round")]
@@ -680,14 +732,7 @@ def workshop(base, key, stage):
             blk+=staff("ex_%s.png"%e["id"])
             out.append(KeepTogether(blk))
             out.append(Spacer(0,4))
-    box=[Paragraph("<b>La idea</b>",P("SB",9.5,12,color=col)),
-         Paragraph("Estas actividades son distintas entre sí a propósito: unas trabajan el ritmo, otras las manos, "
-         "otras el oído o la memoria, y algunas son puro juego. No hace falta hacerlas todas cada día —ve rotando. "
-         "Cuando disfrutes tocándolas, la pieza estará aprendida casi sin darte cuenta.",P("S",9,12.5))]
-    t=Table([[box]],colWidths=[CW])
-    t.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#f3eee2")),("BOX",(0,0),(-1,-1),0.6,LINE),
-        ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6)]))
-    out.append(Spacer(0,4)); out.append(t)
+    out.append(Spacer(0,6)); out.append(PracticeTracker(col,CW))
     return out
 
 
