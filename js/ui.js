@@ -906,7 +906,7 @@ function renderHome(){
   document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
   document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
     <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
-      <span class="folder-icon">${f.emoji}</span>
+      <span class="folder-icon"><i class="ti ${f.icon}"></i></span>
       <h2>${escapeHtml(t(`folder.${key}.title`))}</h2>
       <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
     </div>
@@ -916,7 +916,7 @@ function renderHome(){
 function renderFolder(){
   const f = FOLDERS[currentFolder];
   if(!f){ navigate('home'); return; }
-  document.getElementById('folder-title').innerHTML = `${f.emoji} ${escapeHtml(t(`folder.${currentFolder}.title`))}`;
+  document.getElementById('folder-title').innerHTML = `<i class="ti ${f.icon}"></i> ${escapeHtml(t(`folder.${currentFolder}.title`))}`;
   document.getElementById('folder-subtitle').textContent = t(`folder.${currentFolder}.subtitle`);
   const editToggle = document.getElementById('folder-edit-toggle');
   if(currentFolder === 'cocina' || currentFolder === 'sala'){

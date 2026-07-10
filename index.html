@@ -31,7 +31,7 @@
 <header class="app-header" id="app-header">
   <a class="app-logo" href="#" onclick="goHome();return false">
     <div class="app-logo-icon" id="app-logo-icon"><i class="ti ti-tools-kitchen-2"></i></div>
-    <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
+    <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:var(--olive);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span></span>
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
   <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text" data-i18n="common.update"> Actualizar</span></button>
@@ -119,19 +119,19 @@
           <div id="platos-chart" class="bar-chart"></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>🔥 Más vendidos (por unidades)</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> Más vendidos (por unidades)</h4></div>
           <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>🧊 Menos vendidos</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> Menos vendidos</h4></div>
           <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>💎 Más rentables (margen)</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> Más rentables (margen)</h4></div>
           <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>⚠️ Menos rentables</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> Menos rentables</h4></div>
           <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
         </div>
         <div class="ge-section">
@@ -376,8 +376,8 @@
       </div>
 
       <nav class="ge-tab-row">
-        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')">🥕 Ingredientes</button>
-        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')">🍲 Elaboraciones</button>
+        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')"><i class="ti ti-carrot"></i> Ingredientes</button>
+        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')"><i class="ti ti-soup"></i> Elaboraciones</button>
       </nav>
 
       <div id="stock-tab-ing" class="ge-tab-panel active">
@@ -416,13 +416,13 @@
       </div>
 
       <nav class="ge-tab-row" id="ge-tabs-row">
-        <button class="ge-tab active" onclick="GE.tab('fijos')">💰 Gastos Fijos</button>
-        <button class="ge-tab" onclick="GE.tab('variables')">🛒 Gastos Variables</button>
-        <button class="ge-tab" onclick="GE.tab('cdr')">📊 Cuenta de Resultados</button>
-        <button class="ge-tab" onclick="GE.tab('resultado')">📈 Resultado</button>
-        <button class="ge-tab" onclick="GE.tab('tesoreria')">🏦 Tesorería</button>
-        <button class="ge-tab" onclick="GE.tab('pe')">⚖️ Punto de Equilibrio</button>
-        <button class="ge-tab" onclick="GE.tab('capex')">🏗 CAPEX</button>
+        <button class="ge-tab active" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> Gastos Fijos</button>
+        <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> Gastos Variables</button>
+        <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> Cuenta de Resultados</button>
+        <button class="ge-tab" onclick="GE.tab('resultado')"><i class="ti ti-trending-up"></i> Resultado</button>
+        <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> Tesorería</button>
+        <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> Punto de Equilibrio</button>
+        <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> CAPEX</button>
       </nav>
 
       <!-- GASTOS FIJOS -->

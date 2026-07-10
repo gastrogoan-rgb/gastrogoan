@@ -3,8 +3,8 @@
    ============================================================ */
 const LIMPIEZA_TABS = ['protocolo','manos','mes','temperaturas','alergenos','plagas','mantenimiento'];
 const LIMPIEZA_TAB_LABELS = {
-  manos: '🧼 Higiene de Manos', protocolo: '🚪 Apertura / Cierre', mes: '📅 Limpieza Mensual', temperaturas: '🌡️ Temperaturas',
-  alergenos: '⚠️ Alérgenos', plagas: '🐜 Plagas', mantenimiento: '🔧 Mantenimiento'
+  manos: '<i class="ti ti-droplet"></i> Higiene de Manos', protocolo: '<i class="ti ti-door"></i> Apertura / Cierre', mes: '<i class="ti ti-calendar-month"></i> Limpieza Mensual', temperaturas: '<i class="ti ti-temperature"></i> Temperaturas',
+  alergenos: '<i class="ti ti-alert-triangle"></i> Alérgenos', plagas: '<i class="ti ti-bug"></i> Plagas', mantenimiento: '<i class="ti ti-settings"></i> Mantenimiento'
 };
 const LIMPIEZA_LOG_CONFIG = {
   temperaturas: {fields:['fecha','hora','equipo','temp','estado','responsable'], labels:['Fecha','Hora','Equipo','Tª (°C)','Estado','Responsable']},
@@ -2712,7 +2712,7 @@ function changeOwnerPin(){
 let manualChapter = 0;
 const MANUAL_CHAPTERS = [
   {
-    title:'🚀 Cómo empezar',
+    title:'<i class="ti ti-rocket"></i> Cómo empezar',
     content:`<h3>Qué es GastroGoan y cómo está organizado</h3>
     <p>GastroGoan es un <strong>kit de gestión integral</strong> para bares y restaurantes: un único sistema donde la información fluye de un módulo a otro sin que tengas que copiar nada a mano. La app está dividida en tres grandes áreas, accesibles desde la pantalla de inicio:</p>
     <ul>
@@ -2747,7 +2747,7 @@ const MANUAL_CHAPTERS = [
     <p>La sección <strong>Gestión</strong> está protegida con un PIN (configurable en Mi Negocio) porque contiene información sensible: finanzas, costes y configuración general. El equipo de cocina y sala puede usar libremente sus respectivos módulos (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...) sin necesidad de ese PIN. Reparte el PIN de Gestión solo a quien deba ver esos datos.</p>`
   },
   {
-    title:'📋 Mega Lista',
+    title:'<i class="ti ti-list"></i> Mega Lista',
     content:`<h3>Qué es y por qué es el módulo más importante</h3>
     <p>La Mega Lista es el <strong>catálogo maestro de todos los ingredientes y productos</strong> que compras: desde materias primas (carne, pescado, verdura) hasta productos ya elaborados que utilizas para montar tus platos (salsas envasadas, panes, bebidas...). Es la primera pieza que debes montar bien, porque <strong>todo lo demás se calcula a partir de los precios que pongas aquí</strong>: el coste de las recetas del Escandallo, el food cost de cada plato, el valor del stock y, en cascada, los informes de la Gestión Económica.</p>
     <p>Piensa en la Mega Lista como la "lista de la compra permanente" de tu negocio: cada vez que un producto nuevo entra en tu cocina o tu barra, debe tener aquí una ficha.</p>
@@ -2776,7 +2776,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-warning">⚠️ Si un ingrediente aparece con coste 0 o muy bajo en el Escandallo, normalmente es porque su precio o cantidad de compra están mal puestos aquí (por ejemplo, se ha confundido la cantidad de compra en gramos con la cantidad en kilos). Revisa siempre estos dos campos si un coste no te encaja.</div>`
   },
   {
-    title:'🏭 Proveedores',
+    title:'<i class="ti ti-building-factory"></i> Proveedores',
     content:`<h3>Tu agenda de proveedores centralizada</h3>
     <p>Este módulo es la agenda de contactos de todos los proveedores con los que trabajas: desde el mayorista de congelados hasta el repartidor de bebidas o el proveedor de productos de limpieza. Tenerlos bien dados de alta aquí es lo que permite que, más adelante, generar un pedido sea cuestión de un par de clics en lugar de buscar el número de teléfono en una libreta.</p>
     <h4>Cómo dar de alta un proveedor</h4>
@@ -2798,7 +2798,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Cuantos más ingredientes tengas correctamente vinculados a su proveedor, más útil será el módulo de Pedidos: podrás generar el pedido completo de un proveedor con un solo clic en lugar de añadir línea a línea.</div>`
   },
   {
-    title:'🧮 Escandallo',
+    title:'<i class="ti ti-calculator"></i> Escandallo',
     content:`<h3>Qué es un escandallo y para qué sirve</h3>
     <p>El escandallo es la <strong>ficha de coste de cada plato</strong>: el desglose de qué ingredientes lleva, en qué cantidad, y cuánto cuesta cada uno según los precios de tu Mega Lista. Con él sabes <strong>cuánto te cuesta realmente producir un plato</strong> y, comparándolo con su precio de venta, si ese plato te da margen o te hace perder dinero. Es la herramienta más directa para fijar precios de carta con criterio en lugar de "a ojo".</p>
     <div class="manual-tip">💡 Al entrar en Escandallo ves primero las <strong>carpetas por categoría</strong>; al pulsar una, la lista de <strong>nombres de platos</strong>; y al pulsar un nombre, su <strong>escandallo completo</strong>. Así no se satura la pantalla cuando tienes muchos platos. (El buscador sigue mostrando los resultados directos.) El Stock funciona igual: carpetas → producto → detalle.</div>
@@ -2839,7 +2839,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Una vez creado el escandallo de un plato, ya no tienes que volver a calcular nada manualmente: si cambia el precio de un ingrediente en la Mega Lista, este plato (y su food cost y margen) se actualizan solos. Revisa el Escandallo periódicamente, sobre todo tras subidas de precios de proveedores, para detectar platos que han pasado a zona ámbar o roja.</div>`
   },
   {
-    title:'📄 Fichas Técnicas',
+    title:'<i class="ti ti-file-text"></i> Fichas Técnicas',
     content:`<h3>El "manual de instrucciones" de cada plato</h3>
     <p>Mientras que el Escandallo se centra en el <strong>coste</strong> de un plato, la Ficha Técnica se centra en su <strong>ejecución</strong>: cómo se prepara paso a paso, cómo se presenta y qué alérgenos contiene. Es la herramienta que garantiza que un plato salga igual sin importar quién esté ese día en la partida, y es también el documento que necesitas tener a mano (y a veces mostrar) ante una inspección de seguridad alimentaria por el control de alérgenos.</p>
     <h4>Creación automática desde el Escandallo</h4>
@@ -2870,7 +2870,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Dedica un rato a completar las fichas de los platos más vendidos primero — son los que más impacto tienen en la consistencia del servicio y en las preguntas de alérgenos de los clientes.</div>`
   },
   {
-    title:'🍽 Carta',
+    title:'<i class="ti ti-tools-kitchen-2"></i> Carta',
     content:`<h3>De las recetas a lo que ve el cliente</h3>
     <p>La Carta es la traducción de tu Escandallo en algo que el cliente puede pedir: una colección de platos organizados por secciones, con su precio de venta, agrupados en una o varias "cartas" que se activan según el día y la hora. Es el puente entre tu trabajo de cocina (recetas con coste calculado) y la operativa de sala (TPV y pedidos online).</p>
     <h4>Por qué tener varias cartas</h4>
@@ -2902,7 +2902,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Organiza las secciones en el mismo orden en que aparecen físicamente en tu carta de papel o pizarra — facilita que el equipo encuentre rápido los platos durante el servicio, sobre todo en horas de mucho ritmo.</div>`
   },
   {
-    title:'📦 Stock',
+    title:'<i class="ti ti-box"></i> Stock',
     content:`<h3>Saber qué tienes y cuándo se te va a acabar</h3>
     <p>El módulo de Stock mantiene el inventario de cantidades disponibles de cada ingrediente de tu Mega Lista, y te avisa cuando algo está a punto de agotarse. Su gran ventaja es que <strong>no tienes que actualizarlo manualmente cada vez que vendes o recibes algo</strong>: se mueve solo en función de lo que pasa en el TPV y en Pedidos.</p>
     <h4>Configurar el stock mínimo</h4>
@@ -2920,7 +2920,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Revisa la pestaña de alertas de stock bajo justo antes de planificar el pedido de la semana — así generas pedidos completos y evitas rotos de producto durante el servicio.</div>`
   },
   {
-    title:'🛒 Pedidos',
+    title:'<i class="ti ti-shopping-cart"></i> Pedidos',
     content:`<h3>El ciclo completo de una compra a proveedor</h3>
     <p>El módulo de Pedidos te permite preparar, enviar y recibir pedidos a tus proveedores, y es el paso que conecta el aviso de "stock bajo" con la reposición real de producto — y de ahí, automáticamente, con el Stock y con la Gestión Económica (gastos variables).</p>
     <h4>Los tres estados de un pedido</h4>
@@ -2948,7 +2948,7 @@ const MANUAL_CHAPTERS = [
     </ul>`
   },
   {
-    title:'📅 Horario del Personal',
+    title:'<i class="ti ti-calendar"></i> Horario del Personal',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Este módulo es el corazón de la gestión de tu equipo: aquí das de alta a cada trabajador, organizas sus turnos semana a semana en formato calendario, controlas las horas que ficha cada persona y mantienes sus datos de contacto a mano. Tener el horario bien planificado evita los dos problemas más típicos de un restaurante: quedarte corto de personal en una hora punta, o pagar horas de más porque "nadie sabía quién tenía que venir".</p>
 
@@ -2976,7 +2976,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Si ves que un empleado acumula muchas más horas de las que tenía asignadas en el calendario, revisa si hubo turnos extra, sustituciones o si simplemente se olvidó de fichar la salida.</div>`
   },
   {
-    title:'📋 Distribución del Trabajo',
+    title:'<i class="ti ti-clipboard-list"></i> Distribución del Trabajo',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. Este módulo resuelve el segundo problema: te permite repartir responsabilidades concretas — qué platos prepara cada cocinero, qué tareas de limpieza o mise en place le tocan cada día — y dejarlo todo por escrito para que no haya confusiones ni "yo pensaba que eso lo hacías tú".</p>
 
@@ -3003,7 +3003,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-warning">⚠️ Si cambias la carta o el escandallo (por ejemplo, eliminas un plato), revisa este módulo: los platos "a cargo" de cada empleado no se actualizan solos si el plato ya no existe.</div>`
   },
   {
-    title:'🧽 Plan de Limpieza',
+    title:'<i class="ti ti-spray"></i> Plan de Limpieza',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 6 hojas de registro más habituales que pide Sanidad, ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. Si te visita un inspector, aquí tienes el historial completo.</p>
 
@@ -3045,7 +3045,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-warning">⚠️ Mantener estos registros al día no es opcional: es un requisito legal y lo primero que se revisa en una inspección sanitaria. Un registro vacío o desactualizado puede acarrear sanciones aunque tu cocina esté impecable.</div>`
   },
   {
-    title:'👤 Clientes',
+    title:'<i class="ti ti-user"></i> Clientes',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Conocer a tus clientes habituales es una de las formas más baratas de aumentar tus ventas: cuesta mucho menos conseguir que un cliente que ya te conoce vuelva, que atraer a uno nuevo. Este módulo es tu base de datos de clientes: guarda sus datos de contacto y calcula automáticamente, a partir de las ventas registradas en el TPV, cómo se está comportando cada uno (cuánto gasta, con qué frecuencia viene y cuándo fue la última vez).</p>
 
@@ -3080,7 +3080,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Combina este módulo con la pestaña "Clientes" de Promoción: desde ahí puedes lanzar campañas dirigidas a estos grupos.</div>`
   },
   {
-    title:'📆 Reservas',
+    title:'<i class="ti ti-calendar-event"></i> Reservas',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Este módulo es tu libro de reservas digital. Te permite ver y gestionar todas las reservas de tu negocio en tres vistas (Día, Semana, Mes), controlar el aforo de cada turno y atender automáticamente las reservas que tus clientes hagan desde tu web pública (módulo Reservas y Pedidos Online).</p>
 
@@ -3119,7 +3119,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-warning">⚠️ Si cancelas o cambias una reserva confirmada desde la web pública, recuerda avisar al cliente por teléfono o WhatsApp: la cancelación no le envía un mensaje automático.</div>`
   },
   {
-    title:'🖥 TPV',
+    title:'<i class="ti ti-device-desktop"></i> TPV',
     content:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
     <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada muestra de un vistazo en qué <strong>fase del servicio</strong> está (📝 Tomando nota, ⏳ Marchado, 🔥 En cocina, ✅ Servido), su número de comensales y el total.</p>
@@ -3152,7 +3152,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`
   },
   {
-    title:'📊 Gestión Económica',
+    title:'<i class="ti ti-chart-bar"></i> Gestión Económica',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 7 pestañas que conviene rellenar en este orden.</p>
 
@@ -3213,7 +3213,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 El ranking de platos más/menos vendidos y más/menos rentables (Análisis de Platos) se encuentra ahora en el Panel de Control.</div>`
   },
   {
-    title:'📈 Panel de Control',
+    title:'<i class="ti ti-dashboard"></i> Panel de Control',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>El Panel de Control es la primera pantalla que deberías mirar cada día. No introduces nada aquí: simplemente reúne y resume datos de todos los demás módulos (TPV, Gestión Económica, Stock, Reservas, Fichas Técnicas...) para darte, de un vistazo, el estado de salud de tu negocio. Si solo tuvieras un minuto al día para "mirar" la app, sería este.</p>
 
@@ -3238,7 +3238,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las ventas y el resultado van en línea con los meses anteriores y por encima del punto de equilibrio, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
   },
   {
-    title:'🏪 Mi Negocio',
+    title:'<i class="ti ti-building-store"></i> Mi Negocio',
     content:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
@@ -3307,7 +3307,7 @@ const MANUAL_CHAPTERS = [
     <p>Muestra un botón pequeño por cada <strong>mesa</strong> que hayas configurado en Operativa (interior, exterior/terraza y barra). Al pulsar sobre el nombre de una mesa (ej. "Mesa 3 (Interior)" o "Barra 1") se abre su <strong>código QR</strong>, listo para descargar e imprimir. Cuando un cliente lo escanea desde esa mesa, el pedido que haga llegará directamente asignado a ese número de mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`
   },
   {
-    title:'🌐 Reservas y Pedidos Online',
+    title:'<i class="ti ti-world"></i> Reservas y Pedidos Online',
     content:`<h3>Tu web pública para clientes</h3>
     <p>GastroGoan genera automáticamente una página web (y un código QR) donde tus clientes pueden reservar mesa o hacer pedidos para recoger/delivery, sin que tengas que programar nada.</p>
     <h4>Activar la nube</h4>

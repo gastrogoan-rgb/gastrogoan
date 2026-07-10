@@ -314,9 +314,9 @@ function getProviderByName(name){
 const PEDIDO_ESTADOS = ['BORRADOR','ENVIADO','RECIBIDO'];
 const PEDIDO_BADGE = {BORRADOR:'badge-gray', ENVIADO:'badge-amber', RECIBIDO:'badge-green'};
 const PEDIDO_COMPROBACION = {
-  ok:    {label:'✅ Todo correcto', cls:'badge-green'},
-  falta: {label:'⚠️ Ha faltado algo', cls:'badge-amber'},
-  mal:   {label:'❌ Algo en mal estado', cls:'badge-red'},
+  ok:    {label:'<i class="ti ti-check"></i> Todo correcto', cls:'badge-green'},
+  falta: {label:'<i class="ti ti-alert-triangle"></i> Ha faltado algo', cls:'badge-amber'},
+  mal:   {label:'<i class="ti ti-x"></i> Algo en mal estado', cls:'badge-red'},
 };
 let pedidoDetailId = null;
 

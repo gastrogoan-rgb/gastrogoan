@@ -172,7 +172,7 @@ function renderTpvKpis(){
       <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
       <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
       <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label">👨‍🍳 En cocina</div><div class="value">${comandasEnCocina}</div></div>
+      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label"><i class="ti ti-tools-kitchen-2"></i> En cocina</div><div class="value">${comandasEnCocina}</div></div>
     </div>
   `;
 }
