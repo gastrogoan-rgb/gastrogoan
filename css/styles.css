@@ -1,34 +1,37 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  /* GastroGoan brand */
-  --brand-orange:#DF7039;
-  --brand-yellow:#FFFF00;
-  --brand-cream:#F6EDD5;
-  --brand-black:#000000;
+  /* GastroGoan — Sistema de diseño nórdico (handoff) */
+  --brand-orange:#1C1A17;   /* estructural: negro humo (antes acento) */
+  --brand-yellow:#4A5D4E;   /* verd oliva */
+  --brand-cream:#F1EFE9;    /* neutro cálido apagado */
+  --brand-black:#1C1A17;
 
-  /* Interface — primario = naranja GastroGoan */
-  --dark:#000000;--dark2:#1A1A1A;
-  --teal:#DF7039;--teal-l:#FDEEE4;--teal-d:#8B3A18;
-  --mid:#1A1A1A;
+  /* Primario = Negre Fumat; acento = Verd Oliva */
+  --dark:#1C1A17;--dark2:#1C1A17;
+  --teal:#1C1A17;--teal-l:#F1EFE9;--teal-d:#1C1A17;
+  --olive:#4A5D4E;--olive-l:#7E9B84;
+  --mid:#1C1A17;
 
-  /* Acento = amarillo GastroGoan (uso controlado) */
-  --amber:#C8821A;--amber-l:#FEF3E2;--amber-dark:#6B3A10;
+  /* Aviso apagado coherente con la paleta */
+  --amber:#8A7440;--amber-l:#F5F0E3;--amber-dark:#8A7440;
 
-  /* Semánticos (sin cambio — universales) */
-  --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#042C53;
-  --green:#3B6D11;--green-l:#EAF3DE;
-  --purple:#533BAB;--purple-l:#EEEDFE;
-  --red-l:#FCEBEB;--red:#E24B4A;
+  /* Datos financieros — familia apagada, no primarios brillantes */
+  --blue:#4E5A63;--blue-l:#ECEFF1;--blue-d:#2E363C;
+  --green:#4A5D4E;--green-l:#EDF1EC;
+  --purple:#6E5A6B;--purple-l:#F1ECEF;
+  --red-l:#F5EBE7;--red:#8A4A3B;
 
   /* Layout */
-  --bg:#F6EDD5;--surface:#FFFFFF;--border:#DFD0B8;
-  --text:#1A1A1A;--muted:#7A6A58;
+  --bg:#FAF8F4;--surface:#FFFFFF;--border:#E7E2D9;
+  --text:#1C1A17;--body:#3D3A34;--muted:#8A857C;
 
-  --radius:12px;
+  --radius:0;
   --header-h:60px;
 }
 html{height:100%;width:100%;overflow:hidden;overflow-x:hidden;overscroll-behavior:none}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100%;width:100%;font-size:15px;line-height:1.5;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--body);height:100%;width:100%;font-size:15px;line-height:1.55;overflow:hidden;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+a{color:var(--text)}a:hover{color:var(--olive)}
+::selection{background:#1C1A17;color:#FAF8F4}
 
 /* ===== Header ===== */
 .app-header{
@@ -760,3 +763,106 @@ td.wrap{white-space:normal}
 /* Transición de entrada del contenido */
 .content .view.active{animation:view-fade-in .35s ease}
 @keyframes view-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* =====================================================================
+   SISTEMA DE DISEÑO NÓRDICO — capa de identidad (handoff GastroGoan)
+   Minimalismo tipográfico · cero radios · sin sombras · Schibsted + Plex Mono
+   ===================================================================== */
+
+/* Cero redondeos en toda la app — rasgo clave de la identidad */
+*{border-radius:0 !important}
+
+/* Sin sombras — la jerarquía la hacen los bordes de 1px */
+.folder-card,.module-card,.modal,.help-panel,.help-fab,.toast,.tour-bubble,
+.chat-fab,#business-select-screen .bs-item,.kpi,.card{box-shadow:none !important}
+
+/* Tipografía de titulares */
+.view-title,.folder-top-title,.folder-card h2,.home-hero h1,.modal-header h3,
+.card h3,.module-card h3,.manual-detail h3{
+  font-family:'Schibsted Grotesk',system-ui,sans-serif;letter-spacing:-.015em;color:var(--text);
+}
+.view-title{font-weight:700;letter-spacing:-.02em}
+
+/* Cifras, etiquetas y datos en IBM Plex Mono (aspecto de informe técnico) */
+.kpi .label,.ge-kpi .lbl,.kpi-mini .l,.vis-section h4,.manual-detail h4,
+.ge-sec-head h4,.cat-heading,.badge,.alg-pill,.ge-auto,.ge-link-note{
+  font-family:'IBM Plex Mono',ui-monospace,monospace !important;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.ge-grid td,.ge-input-row input,.ge-pe-result .pe-val,td.num,
+.kpi .value,.ge-kpi .val,.kpi-mini .v{font-variant-numeric:tabular-nums}
+
+/* ===== Header claro (no oscuro) ===== */
+.app-header{background:var(--bg);border-bottom:1px solid var(--border)}
+.app-logo{color:var(--text)}
+.app-logo-icon{background:#1C1A17;color:#FAF8F4}
+.app-logo-icon img{background:#fff}
+.app-logo-text{color:var(--text);font-weight:700;letter-spacing:-.01em}
+.app-logo-sub{color:var(--muted)}
+.app-header .btn{background:transparent;border-color:var(--border);color:var(--text)}
+.app-header .btn:hover{background:#F1EFE9}
+
+/* ===== Botones ===== */
+.btn{background:#FFFFFF;border:1px solid var(--border);color:var(--text);font-weight:600}
+.btn:hover{filter:none;background:#F1EFE9}
+.btn-primary{background:#1C1A17;border-color:#1C1A17;color:#FAF8F4}
+.btn-primary:hover{background:var(--olive);border-color:var(--olive);filter:none}
+.btn-danger{background:#8A4A3B;border-color:#8A4A3B;color:#FFFFFF}
+.btn-danger:hover{background:#743d31;border-color:#743d31;filter:none}
+.view-toggle .btn.active{background:#1C1A17;color:#FAF8F4;border-color:#1C1A17}
+
+/* ===== Tablas ===== */
+th{background:transparent;color:var(--muted);border-bottom:1px solid #1C1A17;
+   font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:11px;letter-spacing:.08em}
+tbody tr:hover td{background:#FAF8F4}
+.table-wrap{background:var(--surface)}
+
+/* ===== Formularios ===== */
+.field label{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--border);background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus,
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-shadow:none}
+
+/* ===== Badges tipo kicker (sin píldora de color) ===== */
+.badge{background:transparent;border:1px solid currentColor;font-size:10.5px;
+  font-weight:500;padding:2px 7px;letter-spacing:.06em}
+.badge-green{color:var(--olive);background:transparent}
+.badge-red{color:var(--red);background:transparent}
+.badge-amber{color:var(--amber);background:transparent}
+.badge-blue{color:var(--blue);background:transparent}
+.badge-purple{color:var(--purple);background:transparent}
+.badge-gray{color:var(--muted);background:transparent}
+
+/* ===== Home / carpetas: superficies planas bordeadas ===== */
+.home-hero{background:#1C1A17;border-radius:0 !important}
+.home-hero .hero-badge{background:rgba(126,155,132,.18);color:var(--olive-l);border:1px solid rgba(126,155,132,.5)}
+.folder-card,.folder-card.folder-cocina,.folder-card.folder-sala,.folder-card.folder-gestion{
+  background:#FFFFFF;border:1px solid var(--border);color:var(--text)}
+.folder-card::before{background:#1C1A17}
+.folder-card:hover{transform:none;box-shadow:none;border-color:#1C1A17;background:#fff}
+.folder-card h2{color:var(--text)}
+.folder-btn{background:#1C1A17;color:#FAF8F4;border-color:#1C1A17}
+.module-card::before{background:#1C1A17}
+.module-card:hover{transform:none;box-shadow:none;border-color:#1C1A17}
+.module-icon{color:#1C1A17}
+.module-open{color:var(--olive)}
+
+/* KPIs: variación positiva oliva, negativa arcilla */
+.kpi.ok .value{color:var(--olive)}
+.kpi.warn .value{color:var(--red)}
+
+/* Modal: separación por borde, overlay tono tinta */
+.modal{border:1px solid var(--border)}
+.modal-overlay{background:rgba(28,26,23,.5)}
+
+/* Fab de ayuda: cuadrado negro */
+.help-fab{background:#1C1A17;border:1px solid #1C1A17}
+.help-fab:hover{transform:none;background:var(--olive)}
+
+/* Sin animación de entrada de vista (el sistema evita movimiento) */
+.content .view.active{animation:none}
+
+/* Paso numerado y encabezados de categoría en la paleta */
+.step-num,.manual-step .sn{background:#1C1A17;color:#FAF8F4}
+.cat-heading{background:#F1EFE9;color:var(--text)}

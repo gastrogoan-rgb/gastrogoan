@@ -7,8 +7,9 @@ mkdir -p dist
 
 echo "🔧 Construyendo index.html..."
 
-# Read CSS (icons + app styles)
+# Read CSS (icons + fuentes incrustadas + app styles)
 CSS_ICONS=$(cat css/tabler-icons.min.css)
+CSS_FONTS=$(cat css/fonts.css)
 CSS_APP=$(cat css/styles.css)
 
 # Read all JS in order
@@ -23,9 +24,10 @@ done
   # Everything up to the first CSS link (tabler-icons)
   sed -n '1,/link rel="stylesheet" href="css\/tabler-icons.min.css"/p' index.html | head -n -1
 
-  # Inline both CSS files
+  # Inline CSS (iconos + fuentes + estilos)
   echo "<style>"
   echo "$CSS_ICONS"
+  echo "$CSS_FONTS"
   echo "$CSS_APP"
   echo "</style>"
 
