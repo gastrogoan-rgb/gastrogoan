@@ -229,7 +229,7 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo independiente</button>
         <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> Abrir sucursal</button>
       </div>
-      <a href="https://gastrogoan.com/appgastrogoan" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--brand-yellow);color:var(--brand-black);border-radius:9px;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> Comprar nueva licencia</a>
+      <a href="https://gastrogoan.com/appgastrogoan" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> Comprar nueva licencia</a>
     </div>
   `;
 }
@@ -580,7 +580,7 @@ function showRevokedGate(){
   g.style.cssText = 'position:fixed;inset:0;z-index:100001;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
-      <div style="width:54px;height:54px;border-radius:14px;background:#C0392B;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🔒</div>
+      <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🔒</div>
       <h2 style="margin-bottom:4px">Licencia desactivada</h2>
       <p style="color:#444;font-size:13.5px;line-height:1.6">Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.</p>
     </div>`;
@@ -595,7 +595,7 @@ function showActivationGate(){
   g.id = 'license-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  const cardStyle = (active) => `flex:1;border:2px solid ${active?'var(--brand-orange)':'var(--border)'};background:${active?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  const cardStyle = (active) => `flex:1;border:2px solid ${active?'var(--brand-orange)':'var(--border)'};background:${active?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
   const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
@@ -610,9 +610,9 @@ function showActivationGate(){
           <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>Soy<br>empleado/a</div>
         </div>
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px" id="license-label">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor/jefe/a)</span></label>
-        <div id="license-help-box" style="display:none;background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:8px;text-align:left"></div>
+        <div id="license-help-box" style="display:none;background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:8px;text-align:left"></div>
         <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
-        <div id="license-error" style="display:none;background:#FDECEA;color:#C0392B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
+        <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
         <p id="license-owner-note" style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 Si eres empleado/a, usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
       </div>
@@ -642,8 +642,8 @@ function selectOnboardingRole(role){
   localStorage.setItem(ONBOARDING_ROLE_LS, role);
   const ownerCard = document.getElementById('role-owner-card');
   const employeeCard = document.getElementById('role-employee-card');
-  if(ownerCard) ownerCard.style.cssText = `flex:1;border:2px solid ${role==='owner'?'var(--brand-orange)':'var(--border)'};background:${role==='owner'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
-  if(employeeCard) employeeCard.style.cssText = `flex:1;border:2px solid ${role==='employee'?'var(--brand-orange)':'var(--border)'};background:${role==='employee'?'#FFF3E0':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  if(ownerCard) ownerCard.style.cssText = `flex:1;border:2px solid ${role==='owner'?'var(--brand-orange)':'var(--border)'};background:${role==='owner'?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
+  if(employeeCard) employeeCard.style.cssText = `flex:1;border:2px solid ${role==='employee'?'var(--brand-orange)':'var(--border)'};background:${role==='employee'?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
   updateLicenseFieldForRole(role);
 }
 
@@ -757,13 +757,13 @@ function showFirebaseSetupGate(){
       `)}`;
 
   const employeeBoxHtml = `
-      <div style="background:#EAF4FF;border-left:4px solid #3B82C4;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
+      <div style="background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
         📱 <strong>¿Eres empleado/a, no el/la propietario/a?</strong> No hace falta que sigas los pasos: pide a tu jefe/a que te diga la <strong>Clave de API</strong> y la <strong>URL de la base de datos</strong> que él/ella configuró (las puede ver en Nube → "Cambiar la configuración de Firebase"), pégalas en el formulario de abajo y pulsa "Guardar y conectar". Listo.
       </div>`;
 
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   const intro = `
-      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         Cada negocio tiene su <strong>propio espacio en la nube</strong> (gratuito, de Google), separado del resto. Sirve para sincronizar tus dispositivos (camareros, cocina, TPV) y activar las reservas/pedidos online por QR.
       </div>`;
 
@@ -838,8 +838,8 @@ function showNetlifySetupGate(){
     ${step(5, 'Abre SIEMPRE la app desde esa dirección', `A partir de ahora gestiona la app desde <code>https://tu-sitio.netlify.app</code>. Al llamarse index.html, se abre directamente. Solo así el QR de reservas y pedidos funcionará de verdad para tus clientes.`)}`;
 
   const hostedBox = hosted
-    ? `<div style="background:#E9F8EF;border-left:4px solid #34C759;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
-    : `<div style="background:#FDECEA;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ Ahora mismo estás abriendo la app <strong>desde un archivo local</strong>, no desde internet. Las reservas/pedidos por QR <strong>no funcionarán</strong> hasta que subas la app a Netlify y la abras desde su dirección pública.</div>`;
+    ? `<div style="background:#EDF1EC;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
+    : `<div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ Ahora mismo estás abriendo la app <strong>desde un archivo local</strong>, no desde internet. Las reservas/pedidos por QR <strong>no funcionarán</strong> hasta que subas la app a Netlify y la abras desde su dirección pública.</div>`;
 
   const showBackBtnNt = getBusinessSlots().length > 1;
   g.innerHTML = `
@@ -851,7 +851,7 @@ function showNetlifySetupGate(){
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Paso 1 de 3 — Sube tu app a internet (≈5 minutos, una sola vez)</p>
       </div>
       ${hostedBox}
-      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         La app de gestión funciona abierta en tu navegador, pero el <strong>QR de reservas y pedidos online</strong> solo funciona si subes los dos archivos a un hosting público gratuito como <strong>Netlify</strong>. Tienes el tutorial completo en <strong>tutorial-netlify.html</strong> (junto a la app).
       </div>
       <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Sigue estos pasos:</h3>
@@ -1624,7 +1624,7 @@ function openCloudWizard(){
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${lic.name}</strong></p>
-      <div style="background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
+      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
         Para sincronizar varios dispositivos (camareros, cocina...) y activar las reservas/pedidos online por QR, este negocio necesita su <strong>propio proyecto Firebase</strong> (gratuito, de Google — cada negocio tiene el suyo, así nunca hay límites compartidos ni costes para nadie).
       </div>
       <p style="font-size:13px;margin-bottom:10px">Tardarás unos 10 minutos, una sola vez. Sigue la guía paso a paso y luego pega aquí los dos datos que te pida al final:</p>
