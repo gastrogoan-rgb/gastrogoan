@@ -36,6 +36,7 @@ const GE = (function(){
     if(name==='capex') renderCapex();
     if(name==='resultado') renderResultado();
     if(name==='tesoreria') renderTesoreria();
+    requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
   }
 
   /* -- Helpers -- */

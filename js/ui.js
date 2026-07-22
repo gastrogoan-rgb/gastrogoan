@@ -898,6 +898,7 @@ function renderView(view){
     case 'minegocio': renderMiNegocio(); break;
     case 'manual': renderManual(); break;
   }
+  requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
 }
 
 function renderHome(){

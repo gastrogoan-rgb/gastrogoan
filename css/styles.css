@@ -866,3 +866,42 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 /* Paso numerado y encabezados de categoría en la paleta */
 .step-num,.manual-step .sn{background:#1C1A17;color:#FAF8F4}
 .cat-heading{background:#F1EFE9;color:var(--text)}
+
+/* ============================================================
+   MICRO-INTERACCIONES — inspiradas en la demo del Kit de Gestión.
+   Mismos colores y estilo plano de siempre; solo se añade
+   movimiento sutil (sin sombras) para que la app se sienta viva.
+   ============================================================ */
+
+/* Entrada de vista: un fundido corto, no un salto brusco */
+.content .view.active{animation:view-fade-in .28s ease}
+@keyframes view-fade-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* Mesas del TPV: elevación sutil al pasar el ratón, sin sombra (queda plano) */
+.mesa-card{transition:transform .15s ease, border-color .15s ease}
+.mesa-card:hover{transform:translateY(-2px); border-color:#1C1A17}
+.mesa-card:active{transform:translateY(0)}
+
+/* Aviso de comanda nueva: parpadeo suave para que llame la atención */
+.mesa-card .badge-amber .ti-bell-ringing{display:inline-block; animation:bell-pulse 1.6s ease-in-out infinite}
+@keyframes bell-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* KPIs (dashboard y Gestión Económica): elevación sutil, coherente con las mesas */
+.kpi,.ge-kpi,.kpi-mini{transition:transform .15s ease, border-color .15s ease}
+.kpi:hover,.ge-kpi:hover,.kpi-mini:hover{transform:translateY(-2px); border-color:#1C1A17}
+
+/* Pestañas de Gestión Económica: el panel entra con un fundido corto */
+.ge-tab-panel.active{animation:view-fade-in .22s ease}
+
+/* Tarjetas de módulo/área: mismo trato sutil (ya tenían transform:none forzado) */
+.module-card,.folder-card{transition:transform .15s ease, border-color .15s ease, background-color .15s ease}
+.module-card:hover{transform:translateY(-2px)}
+.folder-card:hover{transform:translateY(-2px)}
+
+@media (prefers-reduced-motion: reduce){
+  .content .view.active{animation:none}
+  .ge-tab-panel.active{animation:none}
+  .mesa-card,.kpi,.ge-kpi,.kpi-mini,.module-card,.folder-card{transition:none}
+  .mesa-card:hover,.kpi:hover,.ge-kpi:hover,.kpi-mini:hover,.module-card:hover,.folder-card:hover{transform:none}
+  .mesa-card .badge-amber .ti-bell-ringing{animation:none}
+}
