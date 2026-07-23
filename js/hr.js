@@ -1166,14 +1166,15 @@ const GE = (function(){
    ============================================================ */
 const WEEK_DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const WEEK_DAY_KEYS = ['lun','mar','mie','jue','vie','sab','dom'];
+const SHIFT_TYPE_KEYS = {M:'shift.morning', T:'shift.afternoon', P:'shift.split', D:'shift.rest', V:'shift.vacation', B:'shift.leave', C:'shift.other'};
 const SHIFT_TYPES = {
-  M: {label:'Mañana', bg:'#DBEAFE', tx:'#1E40AF'},
-  T: {label:'Tarde', bg:'#FEF9C3', tx:'#854D0E'},
-  P: {label:'Partido', bg:'#DCFCE7', tx:'#166534'},
-  D: {label:'Descanso', bg:'#F3F4F6', tx:'#6B7280'},
-  V: {label:'Vacaciones', bg:'#FFF7ED', tx:'#9A3412'},
-  B: {label:'Baja', bg:'#FEE2E2', tx:'#991B1B'},
-  C: {label:'Otro', bg:'#EDE9FE', tx:'#5B21B6'}
+  get M(){ return {label:t('shift.morning'), bg:'#DBEAFE', tx:'#1E40AF'}; },
+  get T(){ return {label:t('shift.afternoon'), bg:'#FEF9C3', tx:'#854D0E'}; },
+  get P(){ return {label:t('shift.split'), bg:'#DCFCE7', tx:'#166534'}; },
+  get D(){ return {label:t('shift.rest'), bg:'#F3F4F6', tx:'#6B7280'}; },
+  get V(){ return {label:t('shift.vacation'), bg:'#FFF7ED', tx:'#9A3412'}; },
+  get B(){ return {label:t('shift.leave'), bg:'#FEE2E2', tx:'#991B1B'}; },
+  get C(){ return {label:t('shift.other'), bg:'#EDE9FE', tx:'#5B21B6'}; }
 };
 
 let horariosTab = 'personal';
@@ -1216,11 +1217,11 @@ function renderHorarios(){
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
-      <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> Personal</button>
-      <button class="ge-tab ${horariosTab==='fichar'?'active':''}" onclick="setHorariosTab('fichar')"><i class="ti ti-clock-play"></i> Fichar</button>
-      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> Día</button>
-      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> Semana</button>
-      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> Mes</button>
+      <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
+      <button class="ge-tab ${horariosTab==='fichar'?'active':''}" onclick="setHorariosTab('fichar')"><i class="ti ti-clock-play"></i> ${t('tab.clockIn')}</button>
+      <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> ${t('common.day')}</button>
+      <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> ${t('common.week')}</button>
+      <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> ${t('common.month')}</button>
     </nav>
     <div id="horarios-tab-content"></div>
   `;
@@ -1286,9 +1287,9 @@ function renderHorariosDia(){
             <span><strong>${escapeHtml(emp.name)}</strong>${emp.rol?`<br><span style="font-size:11px;color:var(--muted)">${escapeHtml(emp.rol)}</span>`:''}</span>
           </span>
         </td>
-        <td colspan="4"><span style="color:var(--muted)">Sin turno asignado</span></td>
+        <td colspan="4"><span style="color:var(--muted)">${t('label.noShiftAssigned')}</span></td>
         <td class="actions-cell">
-          <button class="owner-only btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> Asignar</button>
+          <button class="owner-only btn btn-sm" onclick="openTurnoModal(null, ${emp.id}, '${date}')"><i class="ti ti-plus"></i> ${t('btn.assign')}</button>
         </td>
       </tr>
     `;
@@ -1299,14 +1300,14 @@ function renderHorariosDia(){
       <div class="left">
         <input type="date" id="horarios-filter-date" value="${date}" onchange="horariosDate=this.value;renderHorarios()">
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal(null, null, '${date}')"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Empleado</th><th>Turno</th><th>Horario</th><th>Horas</th><th>Notas</th><th></th></tr></thead>
+        <thead><tr><th>${t('th.employee')}</th><th>${t('th.shift')}</th><th>${t('label.schedule')}</th><th>${t('th.hours')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -1351,7 +1352,7 @@ function renderHorariosMes(){
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -1407,14 +1408,14 @@ function renderHorariosSemana(){
         <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
         <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">Hoy</button>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
+      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Empleado</th>${headerCells}<th>Total h.</th></tr></thead>
+        <thead><tr><th>${t('th.employee')}</th>${headerCells}<th>${t('label.totalHoursAbbrev')}</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -1563,7 +1564,7 @@ function renderHorariosPersonal(){
     <div class="toolbar">
       <div class="left"></div>
       <div style="display:flex;gap:8px">
-        <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> Añadir Empleado</button>
+        <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
     ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
@@ -1578,35 +1579,35 @@ function openBulkTurnoModal(employeeId){
 
   openModal(`
     <div class="modal-header">
-      <h3>Asignar turnos por periodo</h3>
+      <h3>${t('title.assignShiftsByPeriod')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Empleado</label>
+      <label>${t('th.employee')}</label>
       <select id="bulk-employee" onchange="renderBulkCalendar()">${empOptions}</select>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Desde</label>
+        <label>${t('label.from')}</label>
         <input type="date" id="bulk-desde" value="${dateStr(today)}" onchange="renderBulkCalendar()">
       </div>
       <div class="field">
-        <label>Hasta</label>
+        <label>${t('label.to')}</label>
         <input type="date" id="bulk-hasta" value="${dateStr(end)}" onchange="renderBulkCalendar()">
       </div>
     </div>
     <div class="field">
-      <label>Horario de cada día del periodo</label>
+      <label>${t('label.scheduleForEachDay')}</label>
       <div id="bulk-calendar"></div>
     </div>
     <div class="field">
-      <label>Notas (opcional, se aplica a todos los días)</label>
-      <input type="text" id="bulk-notas" placeholder="Notas para todos estos turnos...">
+      <label>${t('label.notesAppliedToAllDays')}</label>
+      <input type="text" id="bulk-notas" placeholder="${t('ph.notesForAllShifts')}">
     </div>
-    <p style="font-size:12px;color:var(--muted)">Si ya había un turno asignado ese día a este empleado, se sustituirá.</p>
+    <p style="font-size:12px;color:var(--muted)">${t('msg.existingShiftReplaced')}</p>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="applyBulkTurno()">Aplicar</button>
+      <button class="btn btn-primary" onclick="applyBulkTurno()">${t('common.apply')}</button>
     </div>
   `);
   renderBulkCalendar();
@@ -1623,7 +1624,7 @@ function renderBulkCalendar(){
   const hasta = document.getElementById('bulk-hasta').value;
   const employeeId = parseInt(document.getElementById('bulk-employee').value);
   if(!desde || !hasta || desde > hasta){
-    box.innerHTML = `<p style="font-size:12px;color:var(--muted)">Selecciona un periodo válido.</p>`;
+    box.innerHTML = `<p style="font-size:12px;color:var(--muted)">${t('label.validPeriod')}</p>`;
     return;
   }
 
@@ -1647,10 +1648,10 @@ function renderBulkCalendar(){
       <div class="card bulk-day-card" data-date="${ds}" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
           <strong>${weekDayFull(dow)} ${cursor.getDate()}/${cursor.getMonth()+1}</strong>
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> Festivo</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.holiday')}</label>
         </div>
         <div class="bulk-day-fields" style="${isFestivo?'display:none':''}">
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;margin-bottom:6px"><input type="checkbox" class="bulk-day-partido" ${isPartido?'checked':''} onchange="toggleBulkDayFields(this)"> Turno partido (2 tramos)</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:13px;margin-bottom:6px"><input type="checkbox" class="bulk-day-partido" ${isPartido?'checked':''} onchange="toggleBulkDayFields(this)"> ${t('label.splitShift2Legs')}</label>
           <div class="field-row bulk-day-seguido" style="${isPartido?'display:none':''}">
             <select class="bulk-day-tipo">${bulkTipoOptions(tipo)}</select>
             <input type="time" class="bulk-day-entrada" value="${entrada}">
@@ -1728,39 +1729,39 @@ function openEmployeeModal(id){
   const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
   openModal(`
     <div class="modal-header">
-      <h3>${id ? 'Editar' : 'Nuevo'} Empleado</h3>
+      <h3>${id ? t('title.editEmployee') : t('title.newEmployee')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre</label>
-      <input type="text" id="emp-name" value="${escapeHtml(e.name)}" placeholder="Nombre del empleado">
+      <label>${t('common.name')}</label>
+      <input type="text" id="emp-name" value="${escapeHtml(e.name)}" placeholder="${t('ph.employeeName')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Rol</label>
-        <input type="text" id="emp-rol" value="${escapeHtml(e.rol||'')}" placeholder="Ej. Cocinero, Camarero...">
+        <label>${t('label.role')}</label>
+        <input type="text" id="emp-rol" value="${escapeHtml(e.rol||'')}" placeholder="${t('ph.roleExample')}">
       </div>
       <div class="field">
-        <label>Color identificativo</label>
+        <label>${t('label.identifyingColor')}</label>
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Teléfono</label>
+        <label>${t('common.phone')}</label>
         <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="Ej. 600123456">
       </div>
       <div class="field">
-        <label>Email</label>
+        <label>${t('common.email')}</label>
         <input type="email" id="emp-email" value="${escapeHtml(e.email||'')}" placeholder="ejemplo@correo.com">
       </div>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">Para comentarios o envío de documentación (WhatsApp / email).</p>
+    <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
     ${id ? `
     <div class="field">
-      <label>PIN de fichaje</label>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${e.pinChanged ? 'El empleado ya configuró su PIN personal.' : 'PIN por defecto (1234) — el empleado deberá cambiarlo al fichar por primera vez.'}</p>
-      <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> Restablecer PIN a 1234</button>
+      <label>${t('label.clockInPin')}</label>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${e.pinChanged ? t('msg.employeeSetOwnPin') : t('msg.defaultPinExplainer')}</p>
+      <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> ${t('btn.resetPinTo1234')}</button>
     </div>` : ''}
     <div class="modal-footer">
       ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
@@ -1961,21 +1962,21 @@ function openNewPinModal(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-key"></i> Crea tu PIN personal</h3>
+      <h3><i class="ti ti-key"></i> ${t('title.createYourPin')}</h3>
       <button class="modal-close" onclick="renderHorariosTab();closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">Es tu primer fichaje, ${escapeHtml(e.name)}. Por seguridad, crea un PIN personal de 4 dígitos antes de continuar.</p>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.firstClockIn').replace('${name}', escapeHtml(e.name))}</p>
     <div class="field">
-      <label>Nuevo PIN (4 dígitos)</label>
+      <label>${t('label.newPin4Digits')}</label>
       <input type="password" id="new-pin-1" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
     <div class="field">
-      <label>Repite el PIN</label>
+      <label>${t('label.repeatPin')}</label>
       <input type="password" id="new-pin-2" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmNewPin(${employeeId}, '${action}')">Guardar y fichar</button>
+      <button class="btn btn-primary" onclick="confirmNewPin(${employeeId}, '${action}')">${t('btn.saveAndClockIn')}</button>
     </div>
   `);
 }

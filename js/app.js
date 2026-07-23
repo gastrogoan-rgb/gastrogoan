@@ -466,7 +466,7 @@ function renderDistribucion(){
 
   if(!areaEmployees().length){
     box.innerHTML = `
-      <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> Añadir Empleado</button></div>
+      <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button></div>
       <div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>
     `;
     return;
@@ -502,7 +502,7 @@ function renderDistList(){
   }).join('');
 
   box.innerHTML = `
-    <div class="toolbar"><div class="left"></div><button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> Imprimir todo</button></div>
+    <div class="toolbar"><div class="left"></div><button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button></div>
     <div class="grid grid-3">${cards}</div>
   `;
 }
@@ -583,12 +583,12 @@ function renderDistDetail(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left">
-        <button class="btn btn-sm btn-default" onclick="backToDistList()"><i class="ti ti-arrow-left"></i> Equipo</button>
+        <button class="btn btn-sm btn-default" onclick="backToDistList()"><i class="ti ti-arrow-left"></i> ${t('label.team')}</button>
         <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block"></span>
         <strong>${escapeHtml(emp.name)}</strong>
         <span style="font-size:12px;color:var(--muted)">${escapeHtml(emp.rol||'')}</span>
       </div>
-      <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> Imprimir</button>
+      <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
     </div>
 
     <div class="grid grid-2">
@@ -689,7 +689,7 @@ function removeDistTarea(dayIdx, idx){
 function printDistribucion(empId){
   migrateWorkDistribution();
   const targets = empId ? DB.employees.filter(e=>e.id===empId) : DB.employees;
-  let html = `<h2 style="margin:0 0 16px">Distribución del trabajo</h2>`;
+  let html = `<h2 style="margin:0 0 16px">${t('view.distribucion.title')}</h2>`;
   targets.forEach(emp => {
     const d = getDistEmpData(emp.id);
     html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
@@ -704,7 +704,7 @@ function printDistribucion(empId){
   });
   const w = window.open('', '_blank', 'width=620,height=700');
   if(!w){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Distribución del trabajo</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('view.distribucion.title')}</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
   w.document.close();
 }
 
