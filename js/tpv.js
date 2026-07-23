@@ -123,21 +123,21 @@ function renderTpvCartaSelector(){
   return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-book-2"></i>
-      <span style="font-weight:600;font-size:14px">Cartas activas:</span>
+      <span style="font-weight:600;font-size:14px">${t('label.activeCartas')}:</span>
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.cartas.length ? DB.cartas.map(c=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
             <input type="checkbox" ${activeIds.includes(c.id)?'checked':''} ${cartaAuto?'disabled':''} onchange="toggleActiveCarta(${c.id}, this.checked)">
             ${escapeHtml(tItem(c))}
           </label>
-        `).join('') : '<span style="font-size:12px;color:var(--muted)">No hay cartas creadas</span>'}
+        `).join('') : `<span style="font-size:12px;color:var(--muted)">${t('empty.noCartasCreated')}</span>`}
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
         <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
-        Cambio automático según horario
+        ${t('label.autoSwitchBySchedule')}
       </label>
       <span style="font-size:12px;color:var(--muted)">
-        ${activeCartas.length ? totalPlatos + ' platos disponibles' : 'Selecciona al menos una carta para tomar comandas'}
+        ${activeCartas.length ? totalPlatos + ' ' + t('label.dishesAvailable') : t('label.selectAtLeastOneCarta')}
       </span>
     </div>
   `;
@@ -150,7 +150,7 @@ function renderTpvMenuSelector(){
   return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-list-details"></i>
-      <span style="font-weight:600;font-size:14px">Menús activos:</span>
+      <span style="font-weight:600;font-size:14px">${t('label.activeMenus')}:</span>
       <div style="display:flex;gap:10px;flex-wrap:wrap;flex:1">
         ${DB.menus.map(m=>`
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
@@ -175,44 +175,45 @@ function renderTpvKpis(){
 
   return `
     <div class="grid grid-4" style="margin-bottom:14px">
-      <div class="kpi ok"><div class="label">Ventas hoy</div><div class="value">${fmtMoney(todayTotal)}</div></div>
-      <div class="kpi"><div class="label">Tickets hoy</div><div class="value">${ticketCount}</div></div>
-      <div class="kpi"><div class="label">Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label"><i class="ti ti-tools-kitchen-2"></i> En cocina</div><div class="value">${comandasEnCocina}</div></div>
+      <div class="kpi ok"><div class="label">${t('label.salesToday')}</div><div class="value">${fmtMoney(todayTotal)}</div></div>
+      <div class="kpi"><div class="label">${t('label.ticketsToday')}</div><div class="value">${ticketCount}</div></div>
+      <div class="kpi"><div class="label">${t('label.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label"><i class="ti ti-tools-kitchen-2"></i> ${t('label.inKitchen')}</div><div class="value">${comandasEnCocina}</div></div>
     </div>
   `;
 }
 
-const ZONA_LABELS = {interior:'Interior', terraza:'Terraza', barra:'Barra'};
+const ZONA_LABEL_KEYS = {interior:'zone.interior', terraza:'zone.terrace', barra:'zone.bar'};
+function zonaLabel(z){ return t(ZONA_LABEL_KEYS[z]) || z; }
 const ZONA_ICONS = {interior:'ti-home', terraza:'ti-sun', barra:'ti-glass-cocktail'};
 
-function renderMesaCard(t){
-  const order = getOpenOrderForTable(t.id);
+function renderMesaCard(table){
+  const order = getOpenOrderForTable(table.id);
   const total = order ? orderTotal(order) : 0;
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
-  const displayName = t.zona ? (t.name||'').replace(/\s*\([^)]*\)\s*$/, '') : t.name;
+  const displayName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
 
-  let badge = '<span class="badge badge-green">Libre</span>';
+  let badge = `<span class="badge badge-green">${t('status.free')}</span>`;
   let phaseInfo = '';
   if(order){
-    badge = '<span class="badge badge-amber">Ocupada</span>';
+    badge = `<span class="badge badge-amber">${t('status.occupied')}</span>`;
     // Mostrar fase del servicio
     const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
     const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
-    if(allDelivered) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-green" style="font-size:8px">✅ Servido</span></div>';
+    if(allDelivered) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-green" style="font-size:8px">✅ ${t('status.served')}</span></div>`;
     else {
       const preparing = foodItems.filter(l => l.estado === 'preparando');
       const inKitchen = foodItems.filter(l => l.estado === 'cocina');
       const pending = (order.items||[]).filter(l => !l.bebida && l.qty > (l.marchada||0));
-      if(preparing.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-blue" style="font-size:8px">🔥 En cocina</span></div>';
-      else if(inKitchen.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-amber" style="font-size:8px">⏳ Marchado</span></div>';
-      else if(pending.length) phaseInfo = '<div style="margin-top:3px"><span class="badge badge-gray" style="font-size:8px">📝 Tomando nota</span></div>';
+      if(preparing.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-blue" style="font-size:8px">🔥 ${t('status.inKitchen')}</span></div>`;
+      else if(inKitchen.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-amber" style="font-size:8px">⏳ ${t('status.sentToKitchen')}</span></div>`;
+      else if(pending.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-gray" style="font-size:8px">📝 ${t('status.takingOrder')}</span></div>`;
     }
   }
 
   return `
-    <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${t.id})" title="${escapeHtml(t.name)}">
-      <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${t.id})" ${order?'disabled':''} title="Eliminar mesa"><i class="ti ti-trash"></i></button>
+    <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+      <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${table.id})" ${order?'disabled':''} title="${t('title.deleteTable')}"><i class="ti ti-trash"></i></button>
       <div class="mesa-name"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(displayName)}</div>
       ${badge}
       ${phaseInfo}
@@ -229,7 +230,7 @@ function renderTpvMesas(tiposServicio){
   const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
   if(!sortedTables.length){
     return `
-      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> ${t("label.tables")}</h3>
       <div class="grid grid-4"><div class="empty">${t('empty.tables')}</div></div>
     `;
   }
@@ -239,7 +240,7 @@ function renderTpvMesas(tiposServicio){
   const hasZonas = sortedTables.some(t => t.zona);
   if(!hasZonas){
     return `
-      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> Mesas</h3>
+      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> ${t("label.tables")}</h3>
       <div class="grid grid-mesas">${sortedTables.map(renderMesaCard).join('')}</div>
     `;
   }
@@ -250,7 +251,7 @@ function renderTpvMesas(tiposServicio){
     const tables = sortedTables.filter(t => t.zona === z);
     if(!tables.length) return;
     html += `
-      <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${ZONA_LABELS[z]}</h3>
+      <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${zonaLabel(z)}</h3>
       <div class="grid grid-mesas">${tables.map(renderMesaCard).join('')}</div>
     `;
   });
@@ -296,11 +297,11 @@ function renderTpvPendingOnline(){
         <div class="card" style="border:2px solid var(--brand-orange)">
           <h3 style="justify-content:space-between;font-size:14px">
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
-            <span class="badge badge-amber">Nuevo</span>
+            <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
-          ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
+          ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
-          ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> Programado para las ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
+          ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
           ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>` : ''}
           <div style="margin:8px 0;font-size:13px">
             ${(o.items||[]).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}
@@ -308,8 +309,8 @@ function renderTpvPendingOnline(){
           ${o.notas ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ti-note"></i> ${escapeHtml(o.notas)}</div>` : ''}
           <div style="font-weight:700;font-size:18px;margin-bottom:8px">${fmtMoney(orderTotal(o))}</div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-sm btn-primary" style="flex:1" onclick="acceptOnlineOrder(${o.id})"><i class="ti ti-check"></i> Aceptar</button>
-            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineOrder(${o.id})"><i class="ti ti-x"></i> Rechazar</button>
+            <button class="btn btn-sm btn-primary" style="flex:1" onclick="acceptOnlineOrder(${o.id})"><i class="ti ti-check"></i> ${t('common.accept')}</button>
+            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineOrder(${o.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
           </div>
         </div>
       `).join('')}
@@ -749,7 +750,7 @@ function openMenuConfigModal(orderId, menuId){
     `).join('')}
     <div class="modal-footer">
       <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+      <button class="btn btn-primary" onclick="confirmAddMenuToOrder(${orderId}, ${menuId})"><i class="ti ti-plus"></i> ${t("btn.addToOrder")}</button>
     </div>
   `);
 }
@@ -835,7 +836,7 @@ function groupOrderItemsByTanda(order){
 
 function renderOrderLinesHtml(order){
   const groups = groupOrderItemsByTanda(order);
-  if(!groups.length) return `<div class="empty" style="padding:10px">Comanda vacía</div>`;
+  if(!groups.length) return `<div class="empty" style="padding:10px">${t('empty.orderEmpty')}</div>`;
   groups.sort((a,b) => {
     const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
     const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
@@ -851,7 +852,7 @@ function renderOrderLinesHtml(order){
         <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
         ${elapsedBadge}
       </div>
-      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar (${pendingCount})</button></div>` : ''}
+      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')} (${pendingCount})</button></div>` : ''}
       ${g.items.map(({line, idx}) => `
         <div class="list-row">
           <div class="list-row-name">
@@ -863,7 +864,7 @@ function renderOrderLinesHtml(order){
             <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
             <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
             <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
-            ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" title="Marchar este plato a cocina" style="color:var(--brand-orange)" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
+            ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" title="${t('title.sendDishToKitchen')}" style="color:var(--brand-orange)" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
             ${line.estado === 'entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
           </div>
         </div>
@@ -883,7 +884,7 @@ function renderOrderMarcharButtons(order){
   if(!hasPending) return '';
 
   // "Marchar vale": marcha todas las bebidas + el primer grupo de comida pendiente
-  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> Marchar vale</button>`;
+  return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> ${t('btn.sendFullTicket')}</button>`;
 }
 
 // Marcha automáticamente: todas las bebidas + el primer grupo de comida con platos pendientes.
@@ -997,7 +998,7 @@ function renderTableOrderModal(orderId){
   const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
   const actionButtons = allDelivered && order.items.length
     ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`
-    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> Cobrar · ${fmtMoney(total)}</button></div>`;
+    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button></div>`;
 
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
@@ -1053,14 +1054,14 @@ function renderMenuSelectorInline(order, menu){
 // ordenados como se fueron añadiendo (arriba lo primero, abajo lo último).
 function renderOrderComandaPanel(order){
   const groups = groupOrderItemsByTanda(order);
-  if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>Comanda vacía<br><span style="font-size:12px;color:var(--muted)">Selecciona platos de la carta</span></div>`;
+  if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>${t('empty.orderEmpty')}<br><span style="font-size:12px;color:var(--muted)">${t('label.selectFromMenu')}</span></div>`;
   groups.sort((a,b) => {
     const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
     const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
     return aB - bB;
   });
   const total = orderTotal(order);
-  let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>Comanda</span><span>${fmtMoney(total)}</span></div>`;
+  let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>${t('label.order')}</span><span>${fmtMoney(total)}</span></div>`;
   html += groups.map(g => {
     const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
     const allInGroup = g.items;
@@ -1078,7 +1079,7 @@ function renderOrderComandaPanel(order){
         <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
         <div style="display:flex;gap:4px;align-items:center">
           ${statusBadge}
-          ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> Marchar</button>` : ''}
+          ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
         </div>
       </div>
       ${allInGroup.map(({line, idx}) => {
@@ -1167,8 +1168,8 @@ function printMarchadasIfEnabled(order, firedLines){
   const titulo = table ? table.name : togoOrderLabel(order);
   const comida = firedLines.filter(l => !l.bebida && l.qty > 0);
   const bebida = firedLines.filter(l => l.bebida && l.qty > 0);
-  if(comida.length) printComandaTicket('COCINA', titulo, comida);
-  if(bebida.length) printComandaTicket('SALA / BARRA', titulo, bebida);
+  if(comida.length) printComandaTicket(t('label.kitchen'), titulo, comida);
+  if(bebida.length) printComandaTicket(t('label.diningBar'), titulo, bebida);
 }
 
 /* ============================================================
@@ -1266,8 +1267,8 @@ function renderComandasCocina(){
 
   const tabsHtml = `
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> Activas</button>
-      <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> Cerradas</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
+      <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
     </div>
   `;
 
@@ -1460,7 +1461,7 @@ function openAddItemModal(orderId, secId, platoId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddOrderItem(${orderId}, ${secId}, ${platoId})"><i class="ti ti-plus"></i> Añadir al pedido</button>
+      <button class="btn btn-primary" onclick="confirmAddOrderItem(${orderId}, ${secId}, ${platoId})"><i class="ti ti-plus"></i> ${t("btn.addToOrder")}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('add-item-notas')?.focus(), 50);
@@ -1965,7 +1966,7 @@ function buildTicketText(sale, opts={}){
   const lines = [...buildTicketHeaderLines()];
   if(opts.factura) lines.push('FACTURA SIMPLIFICADA Nº ' + sale.facturaNum);
   lines.push(sale.date);
-  lines.push(`${sale.tipo==='mesa'?'Mesa':sale.express?'Pedido Express':sale.tipo==='delivery'?'Delivery':'Take Away'}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
+  lines.push(`${sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway')}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
   lines.push('------------------------------');
   sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
   lines.push('------------------------------');
@@ -1988,7 +1989,7 @@ function buildTicketText(sale, opts={}){
 function printTicket(sale, opts={}){
   const text = buildTicketText(sale, opts);
   const win = window.open('', '_blank', 'width=320,height=520');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}</body></html>`);
   win.document.close();
   win.print();
