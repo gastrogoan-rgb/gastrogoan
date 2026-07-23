@@ -2,15 +2,24 @@
    PLAN DE LIMPIEZA — APPCC e higiene alimentaria
    ============================================================ */
 const LIMPIEZA_TABS = ['protocolo','manos','mes','temperaturas','alergenos','plagas','mantenimiento'];
-const LIMPIEZA_TAB_LABELS = {
-  manos: '<i class="ti ti-droplet"></i> Higiene de Manos', protocolo: '<i class="ti ti-door"></i> Apertura / Cierre', mes: '<i class="ti ti-calendar-month"></i> Limpieza Mensual', temperaturas: '<i class="ti ti-temperature"></i> Temperaturas',
-  alergenos: '<i class="ti ti-alert-triangle"></i> Alérgenos', plagas: '<i class="ti ti-bug"></i> Plagas', mantenimiento: '<i class="ti ti-settings"></i> Mantenimiento'
+const LIMPIEZA_TAB_LABEL_KEYS = {
+  manos: 'tab.handHygiene', protocolo: 'tab.openingClosing', mes: 'tab.monthlyCleaning', temperaturas: 'tab.temperatures',
+  alergenos: 'tab.allergens', plagas: 'tab.pests', mantenimiento: 'tab.maintenance'
 };
-const LIMPIEZA_LOG_CONFIG = {
-  temperaturas: {fields:['fecha','hora','equipo','temp','estado','responsable'], labels:['Fecha','Hora','Equipo','Tª (°C)','Estado','Responsable']},
-  alergenos: {fields:['fecha','plato','alergenos','verificado','notas'], labels:['Fecha','Plato/Elaboración','Alérgenos presentes','Verificado por','Notas']},
-  plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labels:['Fecha','Área','Hallazgos','Acción tomada','Próxima revisión']}
+const LIMPIEZA_TAB_ICONS = {
+  manos: 'ti-droplet', protocolo: 'ti-door', mes: 'ti-calendar-month', temperaturas: 'ti-temperature',
+  alergenos: 'ti-alert-triangle', plagas: 'ti-bug', mantenimiento: 'ti-settings'
 };
+function limpiezaTabLabel(k){ return `<i class="ti ${LIMPIEZA_TAB_ICONS[k]}"></i> ${t(LIMPIEZA_TAB_LABEL_KEYS[k])}`; }
+const LIMPIEZA_LOG_CONFIG_KEYS = {
+  temperaturas: {fields:['fecha','hora','equipo','temp','estado','responsable'], labelKeys:['common.date','th.time','label.equipment','label.tempC','label.status','label.responsible']},
+  alergenos: {fields:['fecha','plato','alergenos','verificado','notas'], labelKeys:['common.date','label.dishElaboration','label.allergensPresent','label.verifiedBy','th.notes']},
+  plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labelKeys:['common.date','label.area','label.findings','label.actionTaken','label.nextReview']}
+};
+function limpiezaLogConfig(key){
+  const c = LIMPIEZA_LOG_CONFIG_KEYS[key];
+  return {fields: c.fields, labels: c.labelKeys.map(k => t(k))};
+}
 const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
 const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
 const LIMPIEZA_DEFAULT_CIERRE = ['Limpiar y desinfectar todas las superficies','Barrer y fregar suelos','Vaciar cubos de basura','Verificar que todo el equipamiento está apagado','Cerrar cámaras y comprobar temperaturas','Activar alarma y cerrar con llave'];
@@ -38,7 +47,7 @@ function renderLimpieza(){
   const box = document.getElementById('limpieza-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
-      ${LIMPIEZA_TABS.map(t => `<button class="ge-tab ${limpiezaTab===t?'active':''}" onclick="setLimpiezaTab('${t}')">${LIMPIEZA_TAB_LABELS[t]}</button>`).join('')}
+      ${LIMPIEZA_TABS.map(tb => `<button class="ge-tab ${limpiezaTab===tb?'active':''}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
     </nav>
     <div id="limpieza-tab-content"></div>
   `;
@@ -63,7 +72,7 @@ function renderLimpiezaManos(){
   box.innerHTML = `
     <div class="grid grid-2">
       <div class="card">
-        <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> Protocolo de lavado de manos</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
+        <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
         ${pasos.map((p,i) => `
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
             <div class="step-num">${i+1}</div>
@@ -71,31 +80,31 @@ function renderLimpiezaManos(){
             <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
         `).join('')}
-        <button class="owner-only btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> Añadir paso</button>
-        <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> Restablecer por defecto</button>
+        <button class="owner-only btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+        <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> ${t('btn.resetToDefault')}</button>
       </div>
       <div>
         <div class="card">
-          <h3>⏰ Cuándo lavarse las manos</h3>
+          <h3>⏰ ${t('title.whenToWashHands')}</h3>
           <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:2">
-            <li>Al incorporarse al trabajo</li>
-            <li>Tras manipular residuos</li>
-            <li>Después de tocar la cara o el cabello</li>
-            <li>Tras usar los aseos</li>
-            <li>Al cambiar de producto crudo a cocinado</li>
-            <li>Después de comer o fumar</li>
+            <li>${t('li.startingWork')}</li>
+            <li>${t('li.afterHandlingWaste')}</li>
+            <li>${t('li.afterTouchingFaceHair')}</li>
+            <li>${t('li.afterUsingRestroom')}</li>
+            <li>${t('li.rawToCookedProduct')}</li>
+            <li>${t('li.afterEatingSmoking')}</li>
           </ul>
         </div>
         <div class="card">
-          <h3>✅ Duración mínima</h3>
-          <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">20 segundos</p>
-          <p style="font-size:13px;color:var(--muted);margin-top:4px">Equivale a cantar "Cumpleaños feliz" dos veces</p>
+          <h3>✅ ${t('title.minimumDuration')}</h3>
+          <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">${t('label.20seconds')}</p>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">${t('msg.happyBirthdayEquivalent')}</p>
         </div>
       </div>
     </div>
   `;
 }
-function resetManosPasos(){ DB.limpieza.manosPasos = [...LIMPIEZA_DEFAULT_MANOS]; saveDB(); renderLimpiezaManos(); showToast('Pasos restablecidos'); }
+function resetManosPasos(){ DB.limpieza.manosPasos = [...LIMPIEZA_DEFAULT_MANOS]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function updateManosPaso(i, val){ DB.limpieza.manosPasos[i] = val; saveDB(); }
 function addManosPaso(){ DB.limpieza.manosPasos.push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
 function removeManosPaso(i){
@@ -118,10 +127,10 @@ function renderLimpiezaProtocolo(){
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
-      <button class="owner-only btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> Añadir paso</button>
-      <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> Restablecer</button>
+      <button class="owner-only btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+      <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> ${t('common.reset')}</button>
     </div>`;
-  box.innerHTML = `<div class="grid grid-2">${renderBlock('Protocolo de Apertura','sunrise',ap,'apertura')}${renderBlock('Protocolo de Cierre','sunset',ci,'cierre')}</div>`;
+  box.innerHTML = `<div class="grid grid-2">${renderBlock(t('title.openingProtocol'),'sunrise',ap,'apertura')}${renderBlock(t('title.closingProtocol'),'sunset',ci,'cierre')}</div>`;
 }
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
 function updateProtocoloPaso(type,i,val){ DB.limpieza[_protocoloKey(type)][i] = val; saveDB(); }
@@ -135,11 +144,11 @@ function removeProtocoloPaso(type,i){
 }
 function resetProtocoloPasos(type){
   DB.limpieza[_protocoloKey(type)] = [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA : LIMPIEZA_DEFAULT_CIERRE)];
-  saveDB(); renderLimpiezaProtocolo(); showToast('Pasos restablecidos');
+  saveDB(); renderLimpiezaProtocolo(); showToast(t('msg.stepsReset'));
 }
 function printProtocolo(type){
   const pasos = DB.limpieza[_protocoloKey(type)];
-  const title = type==='apertura' ? 'Protocolo de Apertura' : 'Protocolo de Cierre';
+  const title = type==='apertura' ? t('title.openingProtocol') : t('title.closingProtocol');
   const w = window.open('','_blank');
   w.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:40px}h2{margin-bottom:20px}ol li{padding:6px 0;font-size:16px}</style></head><body><h2>${title}</h2><ol>${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ol></body></html>`);
   w.document.close(); w.print();
@@ -148,7 +157,7 @@ function printManosProtocolo(){
   const pasos = DB.limpieza.manosPasos;
   const html = `<h2>Protocolo de lavado de manos</h2><ol>${pasos.map(p=>`<li style="margin-bottom:8px">${escapeHtml(p)}</li>`).join('')}</ol>`;
   const w = window.open('', '_blank', 'width=500,height=600');
-  if(!w){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!w){ showToast(t('msg.allowPopupsPrint')); return; }
   w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Protocolo de lavado de manos</title><style>body{font-family:Arial,sans-serif;padding:24px;font-size:14px}</style></head><body>${html}</body></html>`);
   w.document.close();
   w.focus();
@@ -208,13 +217,13 @@ function renderLimpiezaMes(){
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
+      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
-    </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>No hay tareas de limpieza mensual. Añade la primera.</div>`}
+    </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
   `;
 }
 function toggleLimpiezaCheckMes(monthKey, tareaId, val){
@@ -290,7 +299,7 @@ function confirmLimpiezaTareaMes(id){
 
 function renderLimpiezaLog(key){
   const box = document.getElementById('limpieza-tab-content');
-  const cfg = LIMPIEZA_LOG_CONFIG[key];
+  const cfg = limpiezaLogConfig(key);
   const entries = DB.limpieza[key];
 
   const formFields = cfg.fields.map((f,i) => {
@@ -311,7 +320,7 @@ function renderLimpiezaLog(key){
   box.innerHTML = `
     <div class="card" style="margin-bottom:16px">
       <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
-      <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> Registrar</button>
+      <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -322,7 +331,7 @@ function renderLimpiezaLog(key){
   `;
 }
 function addLimpiezaLogEntry(key){
-  const cfg = LIMPIEZA_LOG_CONFIG[key];
+  const cfg = limpiezaLogConfig(key);
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
     const el = document.getElementById(`lp-${key}-${f}`);
@@ -345,11 +354,11 @@ function renderLimpiezaMantenimiento(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> Añadir equipo</button>
+      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Equipo</th><th>Último mantenimiento</th><th>Próximo</th><th>Responsable</th><th>Estado</th><th>Notas</th><th></th></tr></thead>
+        <thead><tr><th>${t('label.equipment')}</th><th>${t('label.lastMaintenance')}</th><th>${t('label.next')}</th><th>${t('label.responsible')}</th><th>${t('label.status')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
         <tbody>${equipos.length ? equipos.map(e => `
           <tr>
             <td><strong>${escapeHtml(e.nombre)}</strong></td>
@@ -357,12 +366,12 @@ function renderLimpiezaMantenimiento(){
             <td><input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)"></td>
             <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)"></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)">
-              ${['OK','Pendiente','Urgente'].map(opt=>`<option value="${opt}"${e.estado===opt?' selected':''}>${opt}</option>`).join('')}
+              ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
             <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)"></td>
             <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
-        `).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">Sin equipos registrados.</div></td></tr>`}</tbody>
+        `).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
       </table>
     </div>
   `;
@@ -370,16 +379,16 @@ function renderLimpiezaMantenimiento(){
 function addMantenimientoEquipo(){
   openModal(`
     <div class="modal-header">
-      <h3>Nuevo equipo</h3>
+      <h3>${t('title.newEquipment')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre del equipo</label>
-      <input type="text" id="new-mantenimiento-equipo" placeholder="Ej. Cámara frigorífica, Horno, Freidora...">
+      <label>${t('label.equipmentName')}</label>
+      <input type="text" id="new-mantenimiento-equipo" placeholder="${t('ph.equipmentExample')}">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmAddMantenimientoEquipo()">Añadir</button>
+      <button class="btn btn-primary" onclick="confirmAddMantenimientoEquipo()">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-mantenimiento-equipo')?.focus(), 50);
@@ -703,7 +712,7 @@ function printDistribucion(empId){
     html += `</div>`;
   });
   const w = window.open('', '_blank', 'width=620,height=700');
-  if(!w){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!w){ showToast(t('msg.allowPopupsPrint')); return; }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('view.distribucion.title')}</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
   w.document.close();
 }
