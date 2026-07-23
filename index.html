@@ -618,14 +618,14 @@
       <div class="view-subtitle" data-i18n="view.clientes.subtitle">Fichas de cliente y fidelización</div>
       <div class="toolbar">
         <div class="left">
-          <input type="text" class="search-input" id="clientes-search" placeholder="Buscar cliente..." oninput="renderClientes()">
+          <input type="text" class="search-input" id="clientes-search" data-i18n-ph="ph.searchClient" placeholder="Buscar cliente..." oninput="renderClientes()">
         </div>
-        <button class="btn btn-primary" onclick="openClientModal()"><i class="ti ti-plus"></i> Nuevo Cliente</button>
+        <button class="btn btn-primary" onclick="openClientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newClient">Nuevo Cliente</span></button>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Contacto</th><th>Visitas</th><th>Ticket medio</th><th>Última visita</th><th>Puntos de fidelidad <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th>Notas</th><th></th></tr>
+            <tr><th data-i18n="common.name">Nombre</th><th data-i18n="label.contact">Contacto</th><th data-i18n="label.visits">Visitas</th><th data-i18n="label.avgTicket">Ticket medio</th><th data-i18n="label.lastVisit">Última visita</th><th><span data-i18n="label.loyaltyPoints">Puntos de fidelidad</span> <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" data-i18n-title="title.howDoesItWork" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th data-i18n="common.notes">Notas</th><th></th></tr>
           </thead>
           <tbody id="clientes-tbody"></tbody>
         </table>
@@ -638,9 +638,9 @@
       <div class="view-title" data-i18n="view.reservas.title">Reservas</div>
       <div class="view-subtitle" data-i18n="view.reservas.subtitle">Reservas de mesas vinculadas al TPV</div>
       <nav class="ge-tab-row">
-        <button class="ge-tab" id="reservas-tab-dia" onclick="setReservasTab('dia')">Día</button>
-        <button class="ge-tab" id="reservas-tab-semana" onclick="setReservasTab('semana')">Semana</button>
-        <button class="ge-tab" id="reservas-tab-mes" onclick="setReservasTab('mes')">Mes</button>
+        <button class="ge-tab" id="reservas-tab-dia" onclick="setReservasTab('dia')" data-i18n="common.day">Día</button>
+        <button class="ge-tab" id="reservas-tab-semana" onclick="setReservasTab('semana')" data-i18n="common.week">Semana</button>
+        <button class="ge-tab" id="reservas-tab-mes" onclick="setReservasTab('mes')" data-i18n="common.month">Mes</button>
       </nav>
       <div id="reservas-pending-online"></div>
       <div id="reservas-tab-content"></div>

@@ -204,9 +204,9 @@ function renderLimpiezaMes(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="limpiezaMonthOffset--;renderLimpiezaMes()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="limpiezaMonthOffset=0;renderLimpiezaMes()">Hoy</button>
+        <button class="btn btn-sm" onclick="limpiezaMonthOffset=0;renderLimpiezaMes()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
       <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> Añadir tarea</button>
     </div>
@@ -740,7 +740,7 @@ function renderClientes(){
     let loyaltyCls, loyaltyBtn;
     if(points >= 10){
       loyaltyCls = 'badge-green';
-      loyaltyBtn = `<button class="btn btn-sm" onclick="openRewardModal(${c.id})" title="Dar premio y reiniciar"><i class="ti ti-gift"></i> Dar premio</button>`;
+      loyaltyBtn = `<button class="btn btn-sm" onclick="openRewardModal(${c.id})" title="${t('title.giveRewardReset')}"><i class="ti ti-gift"></i> ${t('btn.giveReward')}</button>`;
     } else {
       loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
       loyaltyBtn = '';
@@ -755,7 +755,7 @@ function renderClientes(){
       </td>
       <td><span class="badge badge-blue">${stats.visitas}</span></td>
       <td>${fmtMoney(stats.ticketMedio)}</td>
-      <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(hace ${stats.recency}d)</span>` : '—'}</td>
+      <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap">${escapeHtml(c.notes||'—')}</td>
       <td class="actions-cell">
@@ -770,24 +770,24 @@ function renderClientes(){
 function showLoyaltyInfo(){
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-info-circle"></i> Puntos de fidelidad</h3>
+      <h3><i class="ti ti-info-circle"></i> ${t('title.loyaltyPoints')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13.5px;line-height:1.6">
-      Los puntos se suman automáticamente cada vez que <strong>confirmas una reserva</strong> de un cliente.
+      ${t('msg.loyaltyPointsIntro')}
     </p>
     <p style="font-size:13.5px;line-height:1.6">
-      <span class="badge badge-gray">0-6/10</span> el cliente va sumando visitas con normalidad.<br>
-      <span class="badge badge-amber">7-9/10</span> le faltan pocas visitas para el premio: ¡está cerca!<br>
-      <span class="badge badge-green">10/10</span> ¡ha llegado al premio! Pulsa "Dar premio": la app te sugerirá una recompensa (basada en su producto favorito y en tu catálogo de premios) y reiniciará su contador a 0.
+      <span class="badge badge-gray">0-6/10</span> ${t('msg.loyaltyTierLow')}<br>
+      <span class="badge badge-amber">7-9/10</span> ${t('msg.loyaltyTierMid')}<br>
+      <span class="badge badge-green">10/10</span> ${t('msg.loyaltyTierMax')}
     </p>
     <div class="owner-only" style="margin-top:14px">
-      <h3 style="font-size:14px">Catálogo de premios sugeridos</h3>
-      <p style="font-size:12px;color:var(--muted);margin-top:-4px">Estos premios se ofrecerán como opción cada vez que un cliente llegue a 10 puntos.</p>
+      <h3 style="font-size:14px">${t('title.suggestedRewardsCatalog')}</h3>
+      <p style="font-size:12px;color:var(--muted);margin-top:-4px">${t('msg.suggestedRewardsDesc')}</p>
       <div id="loyalty-rewards-list">${renderLoyaltyRewardsList()}</div>
       <div class="field-row" style="margin-top:8px">
-        <input type="text" id="new-loyalty-reward" placeholder="Ej. Postre gratis" style="flex:1">
-        <button class="btn btn-sm" onclick="addLoyaltyReward()"><i class="ti ti-plus"></i> Añadir</button>
+        <input type="text" id="new-loyalty-reward" placeholder="${t('ph.rewardExample')}" style="flex:1">
+        <button class="btn btn-sm" onclick="addLoyaltyReward()"><i class="ti ti-plus"></i> ${t('common.add')}</button>
       </div>
     </div>
   `);
@@ -795,7 +795,7 @@ function showLoyaltyInfo(){
 
 function renderLoyaltyRewardsList(){
   const rewards = DB.loyaltyRewards||[];
-  if(!rewards.length) return `<p style="font-size:12px;color:var(--muted)">No hay premios definidos.</p>`;
+  if(!rewards.length) return `<p style="font-size:12px;color:var(--muted)">${t('empty.noRewardsDefined')}</p>`;
   return rewards.map((r,i) => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:13px">${escapeHtml(r)}</span>
@@ -823,54 +823,54 @@ function openClientModal(id){
   const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',points:0,cp:'',cumpleanos:'',ultimoContacto:''};
   openModal(`
     <div class="modal-header">
-      <h3>${id?'Editar':'Nuevo'} Cliente</h3>
+      <h3>${id?t('title.editClient'):t('title.newClient')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre</label>
-      <input type="text" id="client-name" value="${escapeHtml(c.name)}" placeholder="Nombre del cliente">
+      <label>${t('common.name')}</label>
+      <input type="text" id="client-name" value="${escapeHtml(c.name)}" placeholder="${t('ph.clientName')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Teléfono</label>
-        <input type="text" id="client-phone" value="${escapeHtml(c.phone)}" placeholder="Ej. 600 123 456">
+        <label>${t('common.phone')}</label>
+        <input type="text" id="client-phone" value="${escapeHtml(c.phone)}" placeholder="${t('ph.phoneExample')}">
       </div>
       <div class="field">
-        <label>Email</label>
+        <label>${t('common.email')}</label>
         <input type="email" id="client-email" value="${escapeHtml(c.email)}" placeholder="cliente@email.com">
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Código postal</label>
-        <input type="text" id="client-cp" value="${escapeHtml(c.cp||'')}" placeholder="Ej. 36001">
+        <label>${t('label.postalCode')}</label>
+        <input type="text" id="client-cp" value="${escapeHtml(c.cp||'')}" placeholder="${t('ph.postalCodeExample')}">
       </div>
       <div class="field">
-        <label>Cumpleaños</label>
+        <label>${t('label.birthday')}</label>
         <input type="date" id="client-cumpleanos" value="${escapeHtml(c.cumpleanos||'')}">
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Último contacto</label>
+        <label>${t('label.lastContact')}</label>
         <input type="date" id="client-ultimo-contacto" value="${escapeHtml(c.ultimoContacto||'')}">
       </div>
       <div class="field">
-        <label>Puntos de fidelidad</label>
-        <div style="padding:10px 0;font-size:14px"><span class="badge ${(c.points||0)>=10?'badge-green':(c.points||0)>=7?'badge-amber':'badge-gray'}">${c.points||0}/10</span> <span style="font-size:12px;color:var(--muted)">Se suman automáticamente al confirmar reservas</span></div>
+        <label>${t('label.loyaltyPoints')}</label>
+        <div style="padding:10px 0;font-size:14px"><span class="badge ${(c.points||0)>=10?'badge-green':(c.points||0)>=7?'badge-amber':'badge-gray'}">${c.points||0}/10</span> <span style="font-size:12px;color:var(--muted)">${t('msg.pointsAutoAdded')}</span></div>
       </div>
     </div>
     <div class="field">
-      <label>Alergias / preferencias</label>
-      <input type="text" id="client-allergies" value="${escapeHtml(c.allergies||'')}" placeholder="Ej. Alérgico a frutos secos, prefiere mesa junto a ventana">
+      <label>${t('label.allergiesPrefs')}</label>
+      <input type="text" id="client-allergies" value="${escapeHtml(c.allergies||'')}" placeholder="${t('ph.allergiesExample')}">
     </div>
     <div class="field">
-      <label>Notas</label>
-      <textarea id="client-notes" placeholder="Notas adicionales...">${escapeHtml(c.notes||'')}</textarea>
+      <label>${t('th.notes')}</label>
+      <textarea id="client-notes" placeholder="${t('ph.additionalNotes')}">${escapeHtml(c.notes||'')}</textarea>
     </div>
     ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
     <div class="field">
-      <label>Historial de premios entregados</label>
+      <label>${t('label.rewardHistory')}</label>
       <div style="font-size:12px;color:var(--muted);line-height:1.6">
         ${[...c.rewardsHistory].reverse().map(r=>`${escapeHtml(r.fecha)} — ${escapeHtml(r.premio)}`).join('<br>')}
       </div>
@@ -1038,17 +1038,16 @@ function deleteClient(id){
 /* ============================================================
    RESERVAS — Reservas vinculadas a mesas del TPV
    ============================================================ */
-const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 let reservasTab = 'dia';
 let reservasDate = todayStr();
 let reservasWeekOffset = 0;
 let reservasMonthOffset = 0;
 
 function reservationStatusBadge(status){
-  return status==='pendiente' ? '<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pendiente</span>'
-    : status==='confirmada' ? '<span class="badge badge-green">Confirmada</span>'
-    : status==='cancelada' ? '<span class="badge badge-red">Cancelada</span>'
-    : '<span class="badge badge-blue">Completada</span>';
+  return status==='pendiente' ? `<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> ${t('status.pending')}</span>`
+    : status==='confirmada' ? `<span class="badge badge-green">${t('status.confirmed')}</span>`
+    : status==='cancelada' ? `<span class="badge badge-red">${t('status.cancelled')}</span>`
+    : `<span class="badge badge-blue">${t('status.completed')}</span>`;
 }
 
 function setReservasTab(t){
@@ -1073,20 +1072,20 @@ function renderReservasPendingOnline(){
   const pending = DB.reservations.filter(r => r.status === 'pendiente');
   if(!pending.length){ box.innerHTML = ''; return; }
   box.innerHTML = `
-    <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> Solicitudes online pendientes</h3>
+    <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.pendingOnlineRequests')}</h3>
     <div class="grid grid-3" style="margin-bottom:16px">
       ${pending.map(r => `
         <div class="card" style="border:2px solid var(--brand-orange)">
           <h3 style="justify-content:space-between;font-size:14px">
             <span>${escapeHtml(r.clientName||'—')}</span>
-            <span class="badge badge-amber">Nueva</span>
+            <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
           <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
           ${r.clientPhone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
           <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-sm btn-primary" style="flex:1" onclick="setReservationStatus(${r.id}, 'confirmada')"><i class="ti ti-check"></i> Confirmar</button>
-            <button class="btn btn-sm btn-danger" style="flex:1" onclick="setReservationStatus(${r.id}, 'cancelada')"><i class="ti ti-x"></i> Rechazar</button>
+            <button class="btn btn-sm btn-primary" style="flex:1" onclick="setReservationStatus(${r.id}, 'confirmada')"><i class="ti ti-check"></i> ${t('common.confirm')}</button>
+            <button class="btn btn-sm btn-danger" style="flex:1" onclick="setReservationStatus(${r.id}, 'cancelada')"><i class="ti ti-x"></i> ${t('common.reject')}</button>
           </div>
         </div>
       `).join('')}
@@ -1106,7 +1105,7 @@ function setReservationStatus(id, status){
       const turnos = getTurnosForDate(r.date);
       const turno = turnos[turnoIdx];
       if(yaReservado + r.people > aforo){
-        const ok = confirm(`Atención: el turno de ${turno.abre}-${turno.cierra} del ${r.date} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + r.people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        const ok = confirm(t('msg.confirmOverbookedShift').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + r.people).replace('${cap}', aforo));
         if(!ok) return;
       }
     }
@@ -1126,7 +1125,7 @@ function setReservationStatus(id, status){
   }
   saveDB();
   renderReservas();
-  showToast(status==='confirmada' ? 'Reserva confirmada' : 'Reserva rechazada');
+  showToast(status==='confirmada' ? t('msg.reservationConfirmed') : t('msg.reservationRejected'));
 }
 
 function goToReservasDia(date){
@@ -1142,9 +1141,9 @@ function renderReservasDia(){
   const items = DB.reservations.filter(r => r.date === date && !r.llegada).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
 
   const tableHtml = !items.length
-    ? `<div class="empty"><i class="ti ti-calendar-event"></i>No hay reservas para este día.</div>`
+    ? `<div class="empty"><i class="ti ti-calendar-event"></i>${t('empty.noReservationsDay')}</div>`
     : `<div class="table-wrap"><table>
-        <thead><tr><th>Hora</th><th>Cliente</th><th>Personas</th><th>Mesa</th><th>Notas</th><th>Estado</th><th>Llegada</th><th></th></tr></thead>
+        <thead><tr><th>${t('th.time')}</th><th>${t('th.client')}</th><th>${t('th.people')}</th><th>${t('th.table')}</th><th>${t('th.notes')}</th><th>${t('th.status')}</th><th>${t('th.arrival')}</th><th></th></tr></thead>
         <tbody>
           ${items.map(r => {
             const client = DB.clients.find(c=>c.id===r.clientId);
@@ -1154,11 +1153,11 @@ function renderReservasDia(){
                 <td><strong>${escapeHtml(r.time)}</strong></td>
                 <td>${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
                 <td>${r.people}</td>
-                <td>${table ? escapeHtml(table.name) : '<span class="badge badge-gray">Sin asignar</span>'}</td>
+                <td>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</td>
                 <td class="wrap">${escapeHtml(r.notes||'—')}</td>
                 <td>${reservationStatusBadge(r.status)}</td>
                 <td>
-                  ${r.status==='confirmada' ? `<button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?'<i class="ti ti-check"></i> Llegó':'Aún no'}</button>` : '—'}
+                  ${r.status==='confirmada' ? `<button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>` : '—'}
                 </td>
                 <td class="actions-cell">
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
@@ -1187,7 +1186,7 @@ function renderReservasDia(){
       <div class="left">
         <input type="date" id="reservas-filter-date" value="${date}" onchange="reservasDate=this.value;renderReservas()">
       </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
     </div>
     ${aforoHtml}
     ${tableHtml}
@@ -1211,7 +1210,7 @@ function renderReservasSemana(){
         ${items.length ? items.map(r => {
           const client = DB.clients.find(c=>c.id===r.clientId);
           return `<div style="font-size:12px;padding:2px 0">${escapeHtml(r.time)} · ${escapeHtml(client ? client.name : (r.clientName||'—'))} (${r.people}p)</div>`;
-        }).join('') : `<div style="font-size:12px;color:var(--muted)">Sin reservas</div>`}
+        }).join('') : `<div style="font-size:12px;color:var(--muted)">${t('empty.noReservations')}</div>`}
       </div>
     `;
   }).join('');
@@ -1220,11 +1219,11 @@ function renderReservasSemana(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="reservasWeekOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="reservasWeekOffset=0;renderReservas()">Hoy</button>
+        <button class="btn btn-sm" onclick="reservasWeekOffset=0;renderReservas()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="reservasWeekOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
       </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
     </div>
     <div class="grid grid-3">${cardsHtml}</div>
   `;
@@ -1261,11 +1260,11 @@ function renderReservasMes(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="reservasMonthOffset--;renderReservas()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="reservasMonthOffset=0;renderReservas()">Hoy</button>
+        <button class="btn btn-sm" onclick="reservasMonthOffset=0;renderReservas()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="reservasMonthOffset++;renderReservas()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
+      <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> ${t('btn.newReservation')}</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -1333,7 +1332,7 @@ function reservationTimeFieldHtml(r){
   const options = [...slots];
   if(r.time && !options.includes(r.time)) options.push(r.time);
   options.sort();
-  if(!options.length) return `<select id="reservation-time" disabled><option>Cerrado este día</option></select>`;
+  if(!options.length) return `<select id="reservation-time" disabled><option>${t('label.closedThisDay')}</option></select>`;
   return `
     <select id="reservation-time" onchange="updateReservationTableOptions()">
       ${options.map(t=>`<option value="${t}" ${r.time===t?'selected':''}>${t}</option>`).join('')}
@@ -1351,8 +1350,8 @@ function reservationTableFieldHtml(r){
   }
   return `
     <select id="reservation-table">
-      <option value="">Sin asignar</option>
-      ${options.map(t=>`<option value="${t.id}" ${r.tableId===t.id?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}
+      <option value="">${t('label.notAssigned')}</option>
+      ${options.map(tb=>`<option value="${tb.id}" ${r.tableId===tb.id?'selected':''}>${escapeHtml(tb.name)}</option>`).join('')}
     </select>
   `;
 }
@@ -1384,44 +1383,44 @@ function openReservationModal(id){
   const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: reservasDate || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
   currentReservationId = id || null;
 
-  const clientOptions = `<option value="">— Cliente sin ficha —</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  const clientOptions = `<option value="">${t('label.clientNoRecord')}</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
 
   openModal(`
     <div class="modal-header">
-      <h3>${id?'Editar':'Nueva'} Reserva</h3>
+      <h3>${id?t('title.editReservation'):t('title.newReservation')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Cliente</label>
+      <label>${t('th.client')}</label>
       <select id="reservation-client">${clientOptions}</select>
     </div>
     <div class="field">
-      <label>Nombre (si no tiene ficha de cliente)</label>
-      <input type="text" id="reservation-client-name" value="${escapeHtml(r.clientName||'')}" placeholder="Nombre para la reserva">
+      <label>${t('label.nameIfNoClientRecord')}</label>
+      <input type="text" id="reservation-client-name" value="${escapeHtml(r.clientName||'')}" placeholder="${t('ph.nameForReservation')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Fecha</label>
+        <label>${t('common.date')}</label>
         <input type="date" id="reservation-date" value="${r.date}" onchange="updateReservationTimeOptions()">
       </div>
       <div class="field">
-        <label>Hora</label>
+        <label>${t('th.time')}</label>
         ${reservationTimeFieldHtml(r)}
       </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Nº de personas</label>
+        <label>${t('label.numberOfPeople')}</label>
         <input type="number" id="reservation-people" value="${r.people}" min="1">
       </div>
       <div class="field">
-        <label>Mesa (TPV)</label>
+        <label>${t('label.tablePos')}</label>
         ${reservationTableFieldHtml(r)}
       </div>
     </div>
     <div class="field">
-      <label>Notas</label>
-      <textarea id="reservation-notes" placeholder="Notas de la reserva...">${escapeHtml(r.notes||'')}</textarea>
+      <label>${t('th.notes')}</label>
+      <textarea id="reservation-notes" placeholder="${t('ph.reservationNotes')}">${escapeHtml(r.notes||'')}</textarea>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
@@ -1448,7 +1447,7 @@ function saveReservation(id){
     const disponible = getAvailableTablesForReservation(date, time, id).some(t => t.id === tableId);
     if(!disponible){
       const table = DB.tables.find(t=>t.id===tableId);
-      showToast(`${table?table.name:'Esa mesa'} ya está reservada cerca de esa hora (mínimo 1h30 entre reservas)`);
+      showToast(`${table?table.name:t('label.thatTable')} ${t('msg.tableReservedNearby')}`);
       return;
     }
   }
@@ -1464,7 +1463,7 @@ function saveReservation(id){
       const turnos = getTurnosForDate(date);
       const turno = turnos[turnoIdx];
       if(yaReservado + people > aforo){
-        const ok = confirm(`Atención: el turno de ${turno.abre}-${turno.cierra} ya tiene ${yaReservado} personas reservadas. Con esta reserva serían ${yaReservado + people} de un aforo de ${aforo}.\n\n¿Confirmas igualmente esta reserva?`);
+        const ok = confirm(t('msg.confirmOverbookedShift').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + people).replace('${cap}', aforo));
         if(!ok) return;
       }
     }
@@ -1587,7 +1586,7 @@ function renderPromoSemana(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="promoWeekOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="promoWeekOffset=0;renderPromocion()">Hoy</button>
+        <button class="btn btn-sm" onclick="promoWeekOffset=0;renderPromocion()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
       </div>
@@ -1633,9 +1632,9 @@ function renderPromoMes(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="promoMonthOffset--;renderPromocion()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="promoMonthOffset=0;renderPromocion()">Hoy</button>
+        <button class="btn btn-sm" onclick="promoMonthOffset=0;renderPromocion()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="promoMonthOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
       <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>

@@ -108,7 +108,7 @@ function renderDashboard(){
     const sales = salesTotalForMonth(y, m);
     const variablesM = geTotalVariablesNetoMes(y, m);
     const fijosM = geTotalFijosNeto();
-    const label = MONTH_NAMES[m].slice(0,3);
+    const label = monthFull(m).slice(0,3);
     ventasTrend.push({label, value: sales});
     gastosTrend.push({label, value: variablesM + fijosM});
     resultadoTrend.push({label, value: sales - variablesM - fijosM});

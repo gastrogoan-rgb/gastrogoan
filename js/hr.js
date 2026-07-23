@@ -1349,7 +1349,7 @@ function renderHorariosMes(){
         <button class="btn btn-sm" onclick="horariosMonthOffset--;renderHorarios()"><i class="ti ti-chevron-left"></i></button>
         <button class="btn btn-sm" onclick="horariosMonthOffset=0;renderHorarios()">Hoy</button>
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${MONTH_NAMES[month]} ${year}</strong>
+        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
       <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
     </div>
