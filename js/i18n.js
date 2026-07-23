@@ -168,6 +168,9 @@ const I18N = {
     'view.carta.title.sala': 'Carta de Bebidas',
     'view.carta.subtitle.sala': 'Gestiona tu carta de bebidas · Vincula con Escandallo',
     'btn.newCarta': 'Nueva Carta', 'btn.newBeverageCarta': 'Nueva Carta de Bebidas',
+    'days.full': ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+    'days.short': ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'],
+    'common.allDays': 'Todos los días', 'common.emptyAllDay': 'Vacío = todo el día', 'label.usualDeliveryDays': 'Días de entrega habituales',
     'bs.title': 'Selecciona tu negocio', 'bs.searchPh': 'Buscar negocio o sucursal...',
     'bs.buyLicense': 'Comprar nueva licencia', 'bs.independentTag': 'independiente',
     'bs.current': 'Actual', 'bs.remove': 'Quitar', 'bs.mainLocation': 'Sede principal',
@@ -615,6 +618,9 @@ const I18N = {
     'view.carta.title.sala': 'Carta de Begudes',
     'view.carta.subtitle.sala': 'Gestiona la teva carta de begudes · Vincula amb l\'Escandall',
     'btn.newCarta': 'Nova Carta', 'btn.newBeverageCarta': 'Nova Carta de Begudes',
+    'days.full': ['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
+    'days.short': ['DL','DT','DC','DJ','DV','DS','DG'],
+    'common.allDays': 'Tots els dies', 'common.emptyAllDay': 'Buit = tot el dia', 'label.usualDeliveryDays': 'Dies d\'entrega habituals',
     'bs.title': 'Selecciona el teu negoci', 'bs.searchPh': 'Cerca negoci o sucursal...',
     'bs.buyLicense': 'Comprar nova llicència', 'bs.independentTag': 'independent',
     'bs.current': 'Actual', 'bs.remove': 'Treure', 'bs.mainLocation': 'Seu principal',
@@ -1062,6 +1068,9 @@ const I18N = {
     'view.carta.title.sala': 'Beverage Menu',
     'view.carta.subtitle.sala': 'Manage your beverage menu · Link with Costing',
     'btn.newCarta': 'New Menu', 'btn.newBeverageCarta': 'New Beverage Menu',
+    'days.full': ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    'days.short': ['MON','TUE','WED','THU','FRI','SAT','SUN'],
+    'common.allDays': 'Every day', 'common.emptyAllDay': 'Empty = all day', 'label.usualDeliveryDays': 'Usual delivery days',
     'bs.title': 'Select your business', 'bs.searchPh': 'Search business or branch...',
     'bs.buyLicense': 'Buy new license', 'bs.independentTag': 'independent',
     'bs.current': 'Current', 'bs.remove': 'Remove', 'bs.mainLocation': 'Main location',
@@ -1477,6 +1486,13 @@ function t(key){
   if(dict[key] !== undefined) return dict[key];
   return I18N.es[key] !== undefined ? I18N.es[key] : key;
 }
+
+// Nombres de los días de la semana SOLO para mostrar en el idioma actual.
+// OJO: no usar esto para guardar o comparar datos — para eso sigue existiendo
+// la constante WEEK_DAYS (siempre en español), que es como se guardan cosas
+// como el día de entrega de un proveedor.
+function weekDayFull(idx){ return t('days.full')[idx]; }
+function weekDayShort(idx){ return t('days.short')[idx]; }
 
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el => {

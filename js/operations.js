@@ -239,12 +239,12 @@ function openProviderModal(id){
       <div class="field"><label>${t('common.email')}</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
     </div>
     <div class="field">
-      <label>Días de entrega habituales</label>
+      <label>${t('label.usualDeliveryDays')}</label>
       <div style="display:flex;flex-wrap:wrap;gap:10px">
         ${WEEK_DAYS.map((d,i)=>`
           <label style="display:flex;align-items:center;gap:4px;font-weight:400;font-size:13px">
             <input type="checkbox" id="prov-dia-entrega-${i}" value="${escapeHtml(d)}" ${diasEntrega.includes(d)?'checked':''} style="width:auto">
-            ${d}
+            ${weekDayFull(i)}
           </label>
         `).join('')}
       </div>

@@ -40,7 +40,7 @@ function fmtItemSchedule(item){
     (groups[label] = groups[label] || []).push(i);
   });
   return Object.entries(groups).map(([label, idxs])=>{
-    const days = idxs.length===7 ? 'Todos los días' : idxs.map(i=>WEEK_DAYS[i].slice(0,3)).join(', ');
+    const days = idxs.length===7 ? t('common.allDays') : idxs.map(i=>weekDayShort(i)).join(', ');
     return `${days}: ${label}`;
   }).join(' · ');
 }
@@ -195,7 +195,7 @@ function renderScheduleRows(prefix, horario){
     <div style="padding:8px;border:1px solid var(--border);border-radius:8px;${d.activo===false?'opacity:.5':''}">
       <label style="display:flex;align-items:center;gap:5px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:4px">
         <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})">
-        ${WEEK_DAYS[i].slice(0,3)}
+        ${weekDayShort(i)}
       </label>
       <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:4px">
         ${franjas.map((f,j) => `
@@ -209,7 +209,7 @@ function renderScheduleRows(prefix, horario){
         ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:2px 6px;font-size:11px;margin-top:2px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}
       </div>
     </div>
-  `}).join('')}</div><p style="font-size:11px;color:var(--muted);margin-top:4px">Vacío = todo el día</p>`;
+  `}).join('')}</div><p style="font-size:11px;color:var(--muted);margin-top:4px">${t('common.emptyAllDay')}</p>`;
 }
 function toggleScheduleDia(prefix, i){
   const on = document.getElementById(`${prefix}-hor-${i}-activo`).checked;

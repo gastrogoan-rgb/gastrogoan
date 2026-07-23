@@ -1354,7 +1354,7 @@ function renderHorariosMes(){
       <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> Nuevo Turno</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>
   `;
@@ -1373,7 +1373,7 @@ function renderHorariosSemana(){
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
   const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
-  const headerCells = dates.map((d,i) => `<th>${WEEK_DAYS[i].slice(0,3)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
+  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
   const rows = emps.map(emp => {
     let totalH = 0;
@@ -1646,7 +1646,7 @@ function renderBulkCalendar(){
     html += `
       <div class="card bulk-day-card" data-date="${ds}" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-          <strong>${WEEK_DAYS[dow]} ${cursor.getDate()}/${cursor.getMonth()+1}</strong>
+          <strong>${weekDayFull(dow)} ${cursor.getDate()}/${cursor.getMonth()+1}</strong>
           <label style="display:flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" class="bulk-day-festivo" ${isFestivo?'checked':''} onchange="toggleBulkDayFields(this)"> Festivo</label>
         </div>
         <div class="bulk-day-fields" style="${isFestivo?'display:none':''}">

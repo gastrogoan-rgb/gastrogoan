@@ -212,7 +212,7 @@ function renderLimpiezaMes(){
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>No hay tareas de limpieza mensual. Añade la primera.</div>`}
   `;
@@ -536,7 +536,8 @@ function renderDistDetail(){
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
     .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
 
-  const diasHtml = WEEK_DAYS.map((label, idx) => {
+  const diasHtml = WEEK_DAYS.map((_, idx) => {
+    const label = weekDayFull(idx);
     const tareas = d.produccion[idx] || [];
     const tareasHtml = tareas.map((t,i)=>`
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
@@ -694,7 +695,8 @@ function printDistribucion(empId){
     html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
       <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
     if(d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
-    WEEK_DAYS.forEach((label, idx) => {
+    WEEK_DAYS.forEach((_, idx) => {
+      const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
       if(tasks.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${tasks.map(escapeHtml).join(' · ')}</div>`;
     });
@@ -1203,7 +1205,7 @@ function renderReservasSemana(){
     return `
       <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
         <h3 style="justify-content:space-between;font-size:14px">
-          <span>${WEEK_DAYS[i]} ${d.getDate()}/${d.getMonth()+1}</span>
+          <span>${weekDayFull(i)} ${d.getDate()}/${d.getMonth()+1}</span>
           ${items.length ? `<span class="badge badge-blue">${items.length}</span>` : ''}
         </h3>
         ${items.length ? items.map(r => {
@@ -1266,7 +1268,7 @@ function renderReservasMes(){
       <button class="btn btn-primary" onclick="openReservationModal()"><i class="ti ti-plus"></i> Nueva Reserva</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>
   `;
@@ -1565,7 +1567,7 @@ function renderPromoSemana(){
   const headerCells = dates.map((d,i) => {
     const ds = dateStr(d);
     const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${WEEK_DAYS[i].slice(0,3)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
   }).join('');
 
   const bodyCells = dates.map(d => {
@@ -1638,7 +1640,7 @@ function renderPromoMes(){
       <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${WEEK_DAYS.map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d.slice(0,3)}</div>`).join('')}
+      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>
   `;
