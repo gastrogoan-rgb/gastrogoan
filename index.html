@@ -73,8 +73,8 @@
     <!-- ========== DASHBOARD ========== -->
     <section class="view" id="view-dashboard">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Panel de Control</div>
-      <div class="view-subtitle">Resumen general de tu negocio</div>
+      <div class="view-title" data-i18n="view.dashboard.title">Panel de Control</div>
+      <div class="view-subtitle" data-i18n="view.dashboard.subtitle">Resumen general de tu negocio</div>
 
       <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
 
@@ -144,8 +144,8 @@
     <!-- ========== MEGA LISTA ========== -->
     <section class="view" id="view-megalista">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Mega Lista</div>
-      <div class="view-subtitle">Gestión de ingredientes y proveedores</div>
+      <div class="view-title" data-i18n="view.megalista.title">Mega Lista</div>
+      <div class="view-subtitle" data-i18n="view.megalista.subtitle">Gestión de ingredientes y proveedores</div>
 
       <div class="toolbar">
         <div class="left">
@@ -181,8 +181,8 @@
     <!-- ========== PROVEEDORES ========== -->
     <section class="view" id="view-proveedores">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Proveedores</div>
-      <div class="view-subtitle">Contactos y condiciones de compra</div>
+      <div class="view-title" data-i18n="view.proveedores.title">Proveedores</div>
+      <div class="view-subtitle" data-i18n="view.proveedores.subtitle">Contactos y condiciones de compra</div>
 
       <div class="toolbar">
         <div class="left"></div>
@@ -195,8 +195,8 @@
     <!-- ========== ESCANDALLO ========== -->
     <section class="view" id="view-escandallo">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Escandallo</div>
-      <div class="view-subtitle">Cálculo automático de costes de platos</div>
+      <div class="view-title" data-i18n="view.escandallo.title">Escandallo</div>
+      <div class="view-subtitle" data-i18n="view.escandallo.subtitle">Cálculo automático de costes de platos</div>
 
       <div class="toolbar" style="margin-bottom:4px">
         <div class="left">
@@ -228,8 +228,8 @@
     <!-- ========== FICHAS TÉCNICAS ========== -->
     <section class="view" id="view-fichas">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Fichas Técnicas</div>
-      <div class="view-subtitle">Elaboración estándar y alérgenos</div>
+      <div class="view-title" data-i18n="view.fichas.title">Fichas Técnicas</div>
+      <div class="view-subtitle" data-i18n="view.fichas.subtitle">Elaboración estándar y alérgenos</div>
 
       <div class="toolbar" style="margin-bottom:4px">
         <div class="left">
@@ -257,13 +257,13 @@
     <!-- ========== OFERTA GASTRONÓMICA ========== -->
     <section class="view" id="view-carta">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Oferta Gastronómica</div>
-      <div class="view-subtitle">Gestiona tus cartas y menús · Vincula con Escandallo</div>
+      <div class="view-title" data-i18n="view.carta.title">Oferta Gastronómica</div>
+      <div class="view-subtitle" data-i18n="view.carta.subtitle">Gestiona tus cartas y menús · Vincula con Escandallo</div>
 
       <div class="toolbar" style="margin-bottom:10px">
         <div class="left">
-          <button class="btn btn-sm" id="oferta-tab-carta" onclick="setOfertaTab('carta')"><i class="ti ti-tools-kitchen-2"></i> Carta</button>
-          <button class="btn btn-sm" id="oferta-tab-menus" onclick="setOfertaTab('menus')"><i class="ti ti-list-details"></i> Menús</button>
+          <button class="btn btn-sm" id="oferta-tab-carta" onclick="setOfertaTab('carta')"><i class="ti ti-tools-kitchen-2"></i> <span data-i18n="tab.carta">Carta</span></button>
+          <button class="btn btn-sm" id="oferta-tab-menus" onclick="setOfertaTab('menus')"><i class="ti ti-list-details"></i> <span data-i18n="tab.menus">Menús</span></button>
         </div>
       </div>
 
@@ -346,24 +346,24 @@
     <!-- ========== TPV ========== -->
     <section class="view" id="view-tpv">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">TPV</div>
-      <div class="view-subtitle">Comandas, mesas y tickets</div>
+      <div class="view-title" data-i18n="view.tpv.title">TPV</div>
+      <div class="view-subtitle" data-i18n="view.tpv.subtitle">Comandas, mesas y tickets</div>
       <div id="tpv-content"></div>
     </section>
 
     <!-- ========== COMANDAS COCINA ========== -->
     <section class="view" id="view-comandascocina">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Comandas Cocina</div>
-      <div class="view-subtitle">Pedidos en tiempo real desde sala</div>
+      <div class="view-title" data-i18n="view.comandascocina.title">Comandas Cocina</div>
+      <div class="view-subtitle" data-i18n="view.comandascocina.subtitle">Pedidos en tiempo real desde sala</div>
       <div id="comandascocina-content"></div>
     </section>
 
     <!-- ========== STOCK ========== -->
     <section class="view" id="view-stock">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Stock</div>
-      <div class="view-subtitle">Inventario con alertas de mínimos</div>
+      <div class="view-title" data-i18n="view.stock.title">Stock</div>
+      <div class="view-subtitle" data-i18n="view.stock.subtitle">Inventario con alertas de mínimos</div>
 
       <div class="toolbar">
         <div class="left">
@@ -392,8 +392,8 @@
     <!-- ========== PEDIDOS ========== -->
     <section class="view" id="view-pedidos">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Pedidos</div>
-      <div class="view-subtitle">Gestión de compras a proveedores</div>
+      <div class="view-title" data-i18n="view.pedidos.title">Pedidos</div>
+      <div class="view-subtitle" data-i18n="view.pedidos.subtitle">Gestión de compras a proveedores</div>
 
       <div class="toolbar">
         <div class="left">
@@ -408,8 +408,8 @@
     <!-- ========== GESTIÓN ECONÓMICA ========== -->
     <section class="view" id="view-economia">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Gestión Económica</div>
-      <div class="view-subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
+      <div class="view-title" data-i18n="view.economia.title">Gestión Económica</div>
+      <div class="view-subtitle" data-i18n="view.economia.subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
       <div style="margin-bottom:12px">
         <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> Exportar contabilidad mensual</button>
@@ -590,32 +590,32 @@
     <!-- ========== HORARIOS ========== -->
     <section class="view" id="view-horarios">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Horario del Personal</div>
-      <div class="view-subtitle">Turnos del personal</div>
+      <div class="view-title" data-i18n="view.horarios.title">Horario del Personal</div>
+      <div class="view-subtitle" data-i18n="view.horarios.subtitle">Turnos del personal</div>
       <div id="horarios-content"></div>
     </section>
 
     <!-- ========== PLAN DE LIMPIEZA ========== -->
     <section class="view" id="view-limpieza">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Plan de Limpieza</div>
-      <div class="view-subtitle">APPCC e higiene alimentaria</div>
+      <div class="view-title" data-i18n="view.limpieza.title">Plan de Limpieza</div>
+      <div class="view-subtitle" data-i18n="view.limpieza.subtitle">APPCC e higiene alimentaria</div>
       <div id="limpieza-content"></div>
     </section>
 
     <!-- ========== DISTRIBUCIÓN DEL TRABAJO ========== -->
     <section class="view" id="view-distribucion">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Distribución del Trabajo</div>
-      <div class="view-subtitle">Tareas asignadas por empleado y día</div>
+      <div class="view-title" data-i18n="view.distribucion.title">Distribución del Trabajo</div>
+      <div class="view-subtitle" data-i18n="view.distribucion.subtitle">Tareas asignadas por empleado y día</div>
       <div id="distribucion-content"></div>
     </section>
 
     <!-- ========== CLIENTES ========== -->
     <section class="view" id="view-clientes">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Clientes</div>
-      <div class="view-subtitle">Fichas de cliente y fidelización</div>
+      <div class="view-title" data-i18n="view.clientes.title">Clientes</div>
+      <div class="view-subtitle" data-i18n="view.clientes.subtitle">Fichas de cliente y fidelización</div>
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="clientes-search" placeholder="Buscar cliente..." oninput="renderClientes()">
@@ -635,8 +635,8 @@
     <!-- ========== RESERVAS ========== -->
     <section class="view" id="view-reservas">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Reservas</div>
-      <div class="view-subtitle">Reservas de mesas vinculadas al TPV</div>
+      <div class="view-title" data-i18n="view.reservas.title">Reservas</div>
+      <div class="view-subtitle" data-i18n="view.reservas.subtitle">Reservas de mesas vinculadas al TPV</div>
       <nav class="ge-tab-row">
         <button class="ge-tab" id="reservas-tab-dia" onclick="setReservasTab('dia')">Día</button>
         <button class="ge-tab" id="reservas-tab-semana" onclick="setReservasTab('semana')">Semana</button>
@@ -649,8 +649,8 @@
     <!-- ========== PROMOCIÓN ========== -->
     <section class="view" id="view-promocion">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Promoción</div>
-      <div class="view-subtitle">Calendario de marketing y promoción del negocio</div>
+      <div class="view-title" data-i18n="view.promocion.title">Promoción</div>
+      <div class="view-subtitle" data-i18n="view.promocion.subtitle">Calendario de marketing y promoción del negocio</div>
       <nav class="ge-tab-row">
         <button class="ge-tab" id="promo-tab-dia" onclick="setPromoTab('dia')">Día</button>
         <button class="ge-tab" id="promo-tab-semana" onclick="setPromoTab('semana')">Semana</button>
@@ -663,16 +663,16 @@
     <!-- ========== MI NEGOCIO ========== -->
     <section class="view" id="view-minegocio">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Mi Negocio</div>
-      <div class="view-subtitle">Datos generales del establecimiento</div>
+      <div class="view-title" data-i18n="view.minegocio.title">Mi Negocio</div>
+      <div class="view-subtitle" data-i18n="view.minegocio.subtitle">Datos generales del establecimiento</div>
       <div id="minegocio-content"></div>
     </section>
 
     <!-- ========== MANUAL DE USO ========== -->
     <section class="view" id="view-manual">
       <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.back">Volver</span></button>
-      <div class="view-title">Manual de Uso</div>
-      <div class="view-subtitle">Guía rápida de cada módulo</div>
+      <div class="view-title" data-i18n="view.manual.title">Manual de Uso</div>
+      <div class="view-subtitle" data-i18n="view.manual.subtitle">Guía rápida de cada módulo</div>
 
       <div class="card" style="margin-bottom:14px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-map-2"></i> Tour guiado interactivo</h3>

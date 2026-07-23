@@ -117,12 +117,12 @@ function renderCarta(){
   const isBebidas = currentArea()==='sala';
   const titleEl = document.querySelector('#view-carta .view-title');
   const subtitleEl = document.querySelector('#view-carta .view-subtitle');
-  if(titleEl) titleEl.textContent = isBebidas ? 'Carta de Bebidas' : 'Oferta Gastronómica';
-  if(subtitleEl) subtitleEl.textContent = isBebidas ? 'Gestiona tu carta de bebidas · Vincula con Escandallo' : 'Gestiona tus cartas y menús · Vincula con Escandallo';
+  if(titleEl) titleEl.textContent = isBebidas ? t('view.carta.title.sala') : t('view.carta.title');
+  if(subtitleEl) subtitleEl.textContent = isBebidas ? t('view.carta.subtitle.sala') : t('view.carta.subtitle');
   const newCartaBtn = document.querySelector('#carta-list-view .toolbar button[onclick="newCarta()"]');
-  if(newCartaBtn) newCartaBtn.innerHTML = isBebidas ? `<i class="ti ti-plus"></i> Nueva Carta de Bebidas` : `<i class="ti ti-plus"></i> Nueva Carta`;
+  if(newCartaBtn) newCartaBtn.innerHTML = isBebidas ? `<i class="ti ti-plus"></i> ${t('btn.newBeverageCarta')}` : `<i class="ti ti-plus"></i> ${t('btn.newCarta')}`;
   const newSecBtn = document.querySelector('#carta-editor-view button[onclick="newCartaSection()"]');
-  if(newSecBtn) newSecBtn.innerHTML = `<i class="ti ti-plus"></i> Nueva Sección`;
+  if(newSecBtn) newSecBtn.innerHTML = `<i class="ti ti-plus"></i> ${t('btn.newSection')}`;
   document.getElementById('carta-list-view').style.display = cartaEdit ? 'none' : '';
   document.getElementById('carta-editor-view').style.display = cartaEdit ? '' : 'none';
   if(cartaEdit) renderCartaEditor();
@@ -134,8 +134,8 @@ function renderCartaList(){
   const cartas = DB.cartas.filter(c => isBebidaCarta(c) === (currentArea()==='sala'));
   const totalPlatos = cartas.reduce((s,c)=> s + (c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
   document.getElementById('carta-stats').innerHTML = `
-    <div class="kpi"><div class="label">Cartas / Menús</div><div class="value">${cartas.length}</div></div>
-    <div class="kpi"><div class="label">Total ${itemNoun()}s</div><div class="value">${totalPlatos}</div></div>
+    <div class="kpi"><div class="label">${t('label.cartasMenus')}</div><div class="value">${cartas.length}</div></div>
+    <div class="kpi"><div class="label">${currentArea()==='sala' ? t('label.totalDrinks') : t('label.totalDishes')}</div><div class="value">${totalPlatos}</div></div>
   `;
   const box = document.getElementById('carta-list');
   if(!cartas.length){
@@ -560,8 +560,8 @@ function renderMenuList(){
   const menus = areaMenus();
   const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
   document.getElementById('menu-stats').innerHTML = `
-    <div class="kpi"><div class="label">Menús</div><div class="value">${menus.length}</div></div>
-    <div class="kpi"><div class="label">Total grupos</div><div class="value">${totalGrupos}</div></div>
+    <div class="kpi"><div class="label">${t('common.menus')}</div><div class="value">${menus.length}</div></div>
+    <div class="kpi"><div class="label">${t('label.totalGroups')}</div><div class="value">${totalGrupos}</div></div>
   `;
   const box = document.getElementById('menu-list');
   if(!menus.length){

@@ -146,7 +146,7 @@ function renderEscandallo(){
     }
   }
 
-  document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : `Cálculo automático de costes de ${noun}s`;
+  document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : (currentArea()==='sala' ? t('view.escandallo.subtitle.sala') : t('view.escandallo.subtitle'));
   document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
 
   document.getElementById('escandallo-view-grid').classList.toggle('active', escandalloView==='grid');
