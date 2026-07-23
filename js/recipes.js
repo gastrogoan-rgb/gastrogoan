@@ -132,8 +132,6 @@ function renderEscandallo(){
     return matchSearch && matchCat;
   });
   const box = document.getElementById('escandallo-list');
-  const noun = itemNoun();
-
   document.getElementById('escandallo-tab-platos').classList.toggle('active', !isElab);
   document.getElementById('escandallo-tab-elaboraciones').classList.toggle('active', isElab);
 
@@ -142,7 +140,7 @@ function renderEscandallo(){
     if(isElab){
       newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal(null, true)"><i class="ti ti-plus"></i> ${t('tab.newElaboration')}</button>`;
     } else {
-      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${noun==='bebida' ? 'Nueva Bebida' : t('tab.newDish')}</button>`;
+      newBtns.innerHTML = `<button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('tab.newDrink') : t('tab.newDish')}</button>`;
     }
   }
 
@@ -153,7 +151,7 @@ function renderEscandallo(){
   document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations.none') : t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
     return;
   }
 
@@ -165,7 +163,7 @@ function renderEscandallo(){
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
         <h3><i class="ti ti-folder"></i> ${escapeHtml(label)}</h3>
-        <div style="font-size:12px;color:var(--muted)">${group.length} ${group.length===1?noun:noun+'s'}</div>
+        <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
       </div>
     `).join('')}</div>`;
     return;
@@ -750,7 +748,7 @@ function renderFichas(){
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
     return;
   }
 

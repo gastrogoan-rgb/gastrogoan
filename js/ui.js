@@ -706,12 +706,6 @@ function currentArea(){
   return currentFolder === 'sala' ? 'sala' : 'cocina';
 }
 
-/* Nombre del ítem de carta según el área: "bebida" en sala, "plato" en cocina. */
-function itemNoun(cap){
-  const word = currentArea()==='sala' ? 'bebida' : 'plato';
-  return cap ? word.charAt(0).toUpperCase()+word.slice(1) : word;
-}
-
 /* ============== Navigation ============== */
 function goHome(){
   lockEditMode();

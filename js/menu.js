@@ -295,7 +295,6 @@ function renderCartaEditor(){
 
 function renderCartaSecciones(){
   const box = document.getElementById('carta-secciones');
-  const noun = itemNoun();
   if(!cartaEdit.secciones.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
@@ -305,8 +304,8 @@ function renderCartaSecciones(){
       <div class="ge-sec-head">
         <h4>${escapeHtml(tItem(sec))}</h4>
         <div class="actions-cell">
-          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${itemNoun(true)} manual</button>
-          <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> Escandallo</button>
+          <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
+          <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -314,11 +313,11 @@ function renderCartaSecciones(){
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
-          <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> Extras${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
-          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?'No disponible':'Disponible'}</button>
+          <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
+          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:14px">Sin ${noun}s en esta sección.</div>`}
+      `).join('') : `<div class="empty" style="padding:14px">${currentArea()==='sala' ? t('empty.sectionDrinks') : t('empty.sectionDishes')}</div>`}
     </div>
   `).join('');
 }
@@ -364,30 +363,30 @@ function removeCartaPlato(secId, platoId){
   renderCartaSecciones();
 }
 function addCartaPlato(secId){
-  const noun = itemNoun();
+  const isBebidas = currentArea()==='sala';
   openModal(`
     <div class="modal-header">
       <h3>${t('title.newDishManual')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Nombre de la ${noun}</label>
-      <input type="text" id="new-carta-plato-nombre" placeholder="${noun==='bebida'?'Ej. Agua mineral':'Ej. Ensalada de la casa'}">
+      <label>${isBebidas ? t('label.newDrinkNameField') : t('label.newDishNameField')}</label>
+      <input type="text" id="new-carta-plato-nombre" placeholder="${isBebidas ? t('ph.drinkNameExample') : t('ph.dishNameExample')}">
     </div>
     <div class="field">
-      <label>Precio (€)</label>
+      <label>${t('common.price')} (€)</label>
       <input type="number" id="new-carta-plato-precio" step="0.01" min="0">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId})">Añadir</button>
+      <button class="btn btn-primary" onclick="confirmAddCartaPlato(${secId})">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-carta-plato-nombre')?.focus(), 50);
 }
 function confirmAddCartaPlato(secId){
   const nombre = document.getElementById('new-carta-plato-nombre').value;
-  if(!nombre || !nombre.trim()){ showToast(`Escribe un nombre para la ${itemNoun()}`); return; }
+  if(!nombre || !nombre.trim()){ showToast(currentArea()==='sala' ? t('msg.needDrinkName') : t('msg.needDishName')); return; }
   const precioStr = document.getElementById('new-carta-plato-precio').value;
   const precio = parseFloat((precioStr||'').replace(',','.'));
   if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
@@ -406,33 +405,33 @@ function renderPlatoModsModalHtml(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   const mods = p.modificadores || [];
-  const noun = itemNoun();
+  const isBebidas = currentArea()==='sala';
   return `
     <div class="modal-header">
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(tItem(p))}"</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales para esta ${noun} (ej. "${noun==='bebida'?'Con hielo' : 'Extra queso'}" +1€). Se podrán añadir al tomar la comanda.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${isBebidas ? t('msg.extrasDescDrink') : t('msg.extrasDescDish')}</p>
     <div style="margin-bottom:12px">
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
           <span style="flex:1">${escapeHtml(tItem(m))}</span>
-          <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : 'Gratis'}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removePlatoMod(${secId},${platoId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:10px">Sin extras configurados.</div>`}
+      `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field">
-      <label>Nombre del extra</label>
-      <input type="text" id="new-mod-nombre" placeholder="Ej. Extra queso">
+      <label>${t('label.extraName')}</label>
+      <input type="text" id="new-mod-nombre" placeholder="${t('ph.extraNameExample')}">
     </div>
     <div class="field">
-      <label>Precio adicional (€) — déjalo en 0 si no tiene coste</label>
+      <label>${t('label.extraPrice')}</label>
       <input type="number" id="new-mod-precio" step="0.01" min="0" value="0">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-      <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> Añadir extra</button>
+      <button class="btn btn-primary" onclick="addPlatoMod(${secId},${platoId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
     </div>
   `;
 }
@@ -457,7 +456,7 @@ function removePlatoMod(secId, platoId, modId){
 
 function importFromEscandallo(secId){
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
-  if(!areaRecipes.length){ showToast(`No hay ${itemNoun()}s en el Escandallo`); return; }
+  if(!areaRecipes.length){ showToast(currentArea()==='sala' ? t('msg.noDrinksInCosting') : t('msg.noDishesInCosting')); return; }
   const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
   openModal(`
     <div class="modal-header">
@@ -466,7 +465,7 @@ function importFromEscandallo(secId){
     </div>
     <div class="field" style="margin-bottom:8px">
       <label style="display:flex;align-items:center;gap:6px">
-        <input type="checkbox" id="import-esc-all" onchange="toggleImportEscAll(this.checked)" style="width:auto"> Seleccionar todo
+        <input type="checkbox" id="import-esc-all" onchange="toggleImportEscAll(this.checked)" style="width:auto"> ${t('common.selectAll')}
       </label>
     </div>
     <div id="import-esc-list" style="max-height:320px;overflow:auto">
@@ -490,7 +489,7 @@ function toggleImportEscAll(checked){
 }
 function confirmImportEsc(secId){
   const checked = [...document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)')].map(c=>parseInt(c.value));
-  if(!checked.length){ showToast(`Selecciona al menos una ${itemNoun()}`); return; }
+  if(!checked.length){ showToast(currentArea()==='sala' ? t('msg.selectAtLeastOneDrink') : t('msg.selectAtLeastOneDish')); return; }
   let sec;
   if(secId != null){
     sec = cartaEdit.secciones.find(s=>s.id===secId);
