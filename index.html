@@ -367,17 +367,17 @@
 
       <div class="toolbar">
         <div class="left">
-          <input type="text" class="search-input" id="stock-search" placeholder="Buscar en stock..." oninput="renderStock()">
+          <input type="text" class="search-input" id="stock-search" data-i18n-ph="ph.searchStock" placeholder="Buscar en stock..." oninput="renderStock()">
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
-            <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> Solo alertas
+            <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> <span data-i18n="label.onlyAlerts">Solo alertas</span>
           </label>
         </div>
-        <button class="owner-only btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> Nueva elaboración</button>
+        <button class="owner-only btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> <span data-i18n="btn.newElaboration">Nueva elaboración</span></button>
       </div>
 
       <nav class="ge-tab-row">
-        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')"><i class="ti ti-carrot"></i> Ingredientes</button>
-        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')"><i class="ti ti-soup"></i> Elaboraciones</button>
+        <button class="ge-tab active" id="stock-tab-btn-ing" onclick="stockTab('ing')"><i class="ti ti-carrot"></i> <span data-i18n="label.ingredients">Ingredientes</span></button>
+        <button class="ge-tab" id="stock-tab-btn-elab" onclick="stockTab('elab')"><i class="ti ti-soup"></i> <span data-i18n="label.elaborations">Elaboraciones</span></button>
       </nav>
 
       <div id="stock-tab-ing" class="ge-tab-panel active">
