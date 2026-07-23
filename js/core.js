@@ -216,26 +216,26 @@ function renderBusinessSelectScreenHtml(){
   const showSearch = slots.length > 5;
   return `
     <div class="bs-box">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="Cerrar">&times;</button>
+      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>
       <div class="bs-title">
         <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff"><i class="ti ti-tools-kitchen-2"></i></div>
-        Selecciona tu negocio
+        ${t('bs.title')}
       </div>
-      ${showSearch ? `<input id="bs-search" type="search" placeholder="Buscar negocio o sucursal..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
+      ${showSearch ? `<input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> Nuevo independiente</button>
-        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> Abrir sucursal</button>
+        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
+        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
-      <a href="https://gastrogoan.com/appgastrogoan" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> Comprar nueva licencia</a>
+      <a href="https://gastrogoan.com/appgastrogoan" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
     </div>
   `;
 }
 
 function renderBsGroups(allSlots){
-  if(!allSlots.length) return '<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">Sin resultados</div>';
+  if(!allSlots.length) return `<div style="text-align:center;padding:16px;color:var(--muted);font-size:14px">${t('common.noResults')}</div>`;
   const total = getBusinessSlots().length;
   const roots = allSlots.filter(s => !s.parentId);
   const allDB = getBusinessSlots();
@@ -252,12 +252,12 @@ function renderBsGroups(allSlots){
         <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
           <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
-            <span class="bs-item-name">${escapeHtml(root.name||'Negocio')}</span>
-            <span style="font-size:11px;color:var(--muted);font-weight:400;flex-shrink:0">(independiente)</span>
+            <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+            <span style="font-size:11px;color:var(--muted);font-weight:400;flex-shrink:0">(${t('bs.independentTag')})</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            ${isRootActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+            ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
         </div>`;
     }
@@ -268,11 +268,11 @@ function renderBsGroups(allSlots){
         <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
           <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
             <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sede principal</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t('bs.mainLocation')}</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            ${isRootActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>` : ''}
+            ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
         </div>
         ${sucursales.map(s => {
@@ -281,11 +281,11 @@ function renderBsGroups(allSlots){
           <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
             <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
               <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
-              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(s.name||'Sucursal')}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-              ${sActive ? '<span class="badge badge-amber">Actual</span>' : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-              <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="Quitar"><i class="ti ti-trash"></i></button>
+              ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
+              <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
             </div>
           </div>`;
         }).join('')}
@@ -296,8 +296,8 @@ function renderBsGroups(allSlots){
         <div class="bs-group-header ${(isRootActive || sucursales.some(s=>s.id===ACTIVE_SLOT))?'active':''} ${isOpen?'open':''}"
              onclick="toggleBsGroup('${escapeHtml(root.id)}')">
           <i class="ti ti-building" style="flex-shrink:0"></i>
-          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||'Negocio')}</span>
-          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} locales</span>
+          <span class="bs-item-name" style="flex:1">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+          <span style="font-size:12px;color:var(--muted);font-weight:400;flex-shrink:0">${sucursales.length + 1} ${t('bs.locationsSuffix')}</span>
           <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="color:var(--muted);margin-left:4px"></i>
         </div>
         ${childrenHtml}
@@ -342,7 +342,7 @@ function pickParentForSucursal(){
     <div class="bs-item" style="cursor:pointer" onclick="addSucursal('${escapeHtml(r.id)}');closeBsPickModal()">
       <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
         <i class="ti ti-building-store"></i>
-        <span class="bs-item-name">${escapeHtml(r.name||'Negocio')}</span>
+        <span class="bs-item-name">${escapeHtml(r.name||t('bs.defaultBusinessName'))}</span>
       </div>
       <i class="ti ti-chevron-right" style="color:var(--muted)"></i>
     </div>`).join('');
@@ -351,9 +351,9 @@ function pickParentForSucursal(){
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px">
-      <div style="font-weight:800;font-size:17px">¿Sucursal de qué negocio?</div>
+      <div style="font-weight:800;font-size:17px">${t('bs.pickParentTitle')}</div>
       <div style="display:flex;flex-direction:column;gap:8px">${optsHtml}</div>
-      <button class="btn" onclick="closeBsPickModal()">Cancelar</button>
+      <button class="btn" onclick="closeBsPickModal()">${t('common.cancel')}</button>
     </div>`;
   document.body.appendChild(modal);
 }

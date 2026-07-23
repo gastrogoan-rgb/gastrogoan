@@ -153,7 +153,7 @@ function renderEscandallo(){
   document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations') : t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations.none') : t('empty.dishes')}</div>`;
     return;
   }
 
@@ -750,7 +750,7 @@ function renderFichas(){
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations') : t('empty.dishes')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : t('empty.dishes')}</div>`;
     return;
   }
 

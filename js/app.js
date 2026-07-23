@@ -2329,9 +2329,9 @@ function renderHeader(){
   icon.innerHTML = b.logo ? `<img src="${b.logo}" alt="Logo">` : `<i class="ti ti-tools-kitchen-2"></i>`;
   const text = document.getElementById('app-logo-text');
   if(b.name){
-    text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · Kit de Gestión</span>`;
+    text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · ${t('hdr.subtitle')}</span>`;
   }else{
-    text.innerHTML = `GastroGoan<span style="color:rgba(255,255,0,.8);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">Kit de Gestión</span>`;
+    text.innerHTML = `GastroGoan<span style="color:var(--olive);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">${t('hdr.subtitle')}</span>`;
   }
   const langSelect = document.getElementById('lang-select');
   if(langSelect) langSelect.value = getLang();
