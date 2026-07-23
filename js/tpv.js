@@ -87,6 +87,12 @@ function updateAutoActiveCarta(force){
   }
 }
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+// El método de pago se guarda siempre en español (valor interno/histórico);
+// esto solo traduce la etiqueta que se le muestra al usuario.
+const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro'};
+function paymentMethodTpvLabel(value){
+  return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
+}
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
 let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
 let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
@@ -1623,7 +1629,7 @@ function renderFullPaymentTab(order, total){
     <div class="field">
       <label>Método de pago</label>
       <select id="payment-method" onchange="togglePaymentCash()">
-        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="payment-cash-field">
@@ -1842,7 +1848,7 @@ function openSplitPartPayment(orderId, partId){
     <div class="field">
       <label>Método de pago</label>
       <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
-        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${m}</option>`).join('')}
+        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="split-part-cash-field">

@@ -33,10 +33,10 @@ function migrateCartas(){
 function fmtItemSchedule(item){
   const horario = migrateItemHorario(item);
   const active = horario.map((d,i)=>({i, d})).filter(x=>x.d.activo!==false);
-  if(!active.length) return 'Sin días activos';
+  if(!active.length) return t('empty.noActiveDays');
   const groups = {};
   active.forEach(({i,d})=>{
-    const label = (d.desde && d.hasta) ? `${d.desde}-${d.hasta}` : 'Todo el día';
+    const label = (d.desde && d.hasta) ? `${d.desde}-${d.hasta}` : t('label.allDayLong');
     (groups[label] = groups[label] || []).push(i);
   });
   return Object.entries(groups).map(([label, idxs])=>{
@@ -145,13 +145,13 @@ function renderCartaList(){
   box.innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Horario</th><th>Secciones</th><th>Platos</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.name')}</th><th>${t('label.schedule')}</th><th>${t('label.sections')}</th><th>${t('label.dishesTh')}</th><th></th></tr></thead>
         <tbody>
           ${cartas.map(c => {
             const nsec = (c.secciones||[]).length;
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
-              <td><strong>${escapeHtml(tItem(c))}</strong>${(DB.activeCartaIds||[]).includes(c.id)?' <span class="badge badge-green">Activa en TPV</span>':''}</td>
+              <td><strong>${escapeHtml(tItem(c))}</strong>${(DB.activeCartaIds||[]).includes(c.id)?` <span class="badge badge-green">${t('badge.activeInPos')}</span>`:''}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(c)}</td>
               <td>${nsec}</td>
               <td>${nplat}</td>
@@ -570,12 +570,12 @@ function renderMenuList(){
   box.innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Nombre</th><th>Precio</th><th>Horario</th><th>Grupos</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.name')}</th><th>${t('common.price')}</th><th>${t('label.schedule')}</th><th>${t('label.groups')}</th><th></th></tr></thead>
         <tbody>
           ${menus.map(m => {
             const ngrupos = (m.grupos||[]).length;
             return `<tr>
-              <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?' <span class="badge badge-green">Activo en TPV</span>':''}</td>
+              <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?` <span class="badge badge-green">${t('badge.activeInPosM')}</span>`:''}</td>
               <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
               <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(m)}</td>
               <td>${ngrupos}</td>

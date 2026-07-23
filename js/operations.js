@@ -50,30 +50,30 @@ function openCashClosureModal(){
   const {totales, total, ticketCount} = computeClosureTotals(sales);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-cash-register"></i> Cierre de caja / Arqueo</h3>
+      <h3><i class="ti ti-cash-register"></i> ${t('title.cashClosure')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted)">Periodo: ${fmtDateTime(desde)} — ${fmtDateTime(hasta)}<br>${ticketCount} ticket${ticketCount!==1?'s':''}</p>
+    <p style="font-size:13px;color:var(--muted)">${t('label.period')}: ${fmtDateTime(desde)} — ${fmtDateTime(hasta)}<br>${ticketCount} ${ticketCount!==1?t('noun.tickets'):t('noun.ticket')}</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Método de pago</th><th>Total ventas</th></tr></thead>
+        <thead><tr><th>${t('label.paymentMethod')}</th><th>${t('label.totalSales')}</th></tr></thead>
         <tbody>
-          ${PAYMENT_METHODS.map(m => `<tr><td>${escapeHtml(m)}</td><td>${fmtMoney(totales[m]||0)}</td></tr>`).join('')}
-          <tr style="font-weight:700"><td>Total</td><td>${fmtMoney(total)}</td></tr>
+          ${PAYMENT_METHODS.map(m => `<tr><td>${escapeHtml(paymentMethodTpvLabel(m))}</td><td>${fmtMoney(totales[m]||0)}</td></tr>`).join('')}
+          <tr style="font-weight:700"><td>${t('common.total')}</td><td>${fmtMoney(total)}</td></tr>
         </tbody>
       </table>
     </div>
     <div class="field-row">
-      <div class="field"><label>Fondo de caja inicial (opcional)</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
-      <div class="field"><label>Efectivo contado en caja</label><input type="number" id="closure-contado" step="0.01" placeholder="0.00" oninput="updateClosureDiffPreview()"></div>
+      <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
+      <div class="field"><label>${t('label.cashCounted')}</label><input type="number" id="closure-contado" step="0.01" placeholder="0.00" oninput="updateClosureDiffPreview()"></div>
     </div>
     <div id="closure-diff-preview" style="font-size:13px;font-weight:600;margin:6px 0"></div>
-    <div class="field"><label>Notas (opcional)</label><textarea id="closure-notas" rows="2" placeholder="Observaciones del cierre..."></textarea></div>
+    <div class="field"><label>${t('label.notesOptional')}</label><textarea id="closure-notas" rows="2" placeholder="${t('ph.closureObservations')}"></textarea></div>
     <input type="hidden" id="closure-desde" value="${desde.toISOString()}">
     <input type="hidden" id="closure-hasta" value="${hasta.toISOString()}">
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="performCashClosure()"><i class="ti ti-check"></i> Confirmar cierre</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="performCashClosure()"><i class="ti ti-check"></i> ${t('btn.confirmClosure')}</button>
     </div>
   `);
   updateClosureDiffPreview();
@@ -89,13 +89,13 @@ function updateClosureDiffPreview(){
   const esperado = fondo + efectivo;
   const box = document.getElementById('closure-diff-preview');
   if(contadoRaw === ''){
-    box.textContent = `Efectivo esperado: ${fmtMoney(esperado)}`;
+    box.textContent = `${t('label.expectedCash')}: ${fmtMoney(esperado)}`;
     box.style.color = '';
     return;
   }
   const contado = parseFloat(contadoRaw) || 0;
   const diff = contado - esperado;
-  box.textContent = `Efectivo esperado: ${fmtMoney(esperado)} · Diferencia: ${diff>0?'+':''}${fmtMoney(diff)}${diff===0?' (caja exacta)':diff>0?' (sobra)':' (falta)'}`;
+  box.textContent = `${t('label.expectedCash')}: ${fmtMoney(esperado)} · ${t('label.difference')}: ${diff>0?'+':''}${fmtMoney(diff)}${diff===0?` (${t('label.exactCash')})`:diff>0?` (${t('label.cashSurplus')})`:` (${t('label.cashShortage')})`}`;
   box.style.color = diff===0 ? 'var(--ok, #2e7d32)' : (diff>0 ? 'var(--warn, #b8860b)' : 'var(--danger, #c0392b)');
 }
 
@@ -127,23 +127,23 @@ function performCashClosure(){
 
 function printCashClosure(closure){
   const win = window.open('', '_blank', 'width=320,height=520');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   const diffLine = closure.efectivoContado === null ? '' :
-    `Efectivo contado: ${fmtMoney(closure.efectivoContado)}\nDiferencia: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?' (caja exacta)':closure.diferencia>0?' (sobra)':' (falta)'}\n`;
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Arqueo de caja</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
+    `${t('label.cashCounted')}: ${fmtMoney(closure.efectivoContado)}\n${t('label.difference')}: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?` (${t('label.exactCash')})`:closure.diferencia>0?` (${t('label.cashSurplus')})`:` (${t('label.cashShortage')})`}\n`;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.cashClosureReceipt')}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
 ${escapeHtml(DB.business.name||'GastroGoan')}
-ARQUEO DE CAJA / CIERRE
-Desde: ${fmtDateTime(new Date(closure.desde))}
-Hasta: ${fmtDateTime(new Date(closure.hasta))}
+${t('title.cashClosureReceipt').toUpperCase()}
+${t('label.from')}: ${fmtDateTime(new Date(closure.desde))}
+${t('label.to')}: ${fmtDateTime(new Date(closure.hasta))}
 ------------------------------
-${PAYMENT_METHODS.map(m => `${m.padEnd(12)}${fmtMoney(closure.totales[m]||0)}`).join('\n')}
+${PAYMENT_METHODS.map(m => `${paymentMethodTpvLabel(m).padEnd(12)}${fmtMoney(closure.totales[m]||0)}`).join('\n')}
 ------------------------------
-TOTAL VENTAS: ${fmtMoney(closure.total)}
-Tickets: ${closure.ticketCount}
+${t('label.totalSales').toUpperCase()}: ${fmtMoney(closure.total)}
+${t('noun.tickets')}: ${closure.ticketCount}
 ------------------------------
-Fondo inicial: ${fmtMoney(closure.fondoInicial)}
-Efectivo esperado: ${fmtMoney(closure.efectivoEsperado)}
-${diffLine}${closure.notas ? '\nNotas: '+escapeHtml(closure.notas)+'\n' : ''}
+${t('label.initialFund')}: ${fmtMoney(closure.fondoInicial)}
+${t('label.expectedCash')}: ${fmtMoney(closure.efectivoEsperado)}
+${diffLine}${closure.notas ? '\n'+t('common.notes')+': '+escapeHtml(closure.notas)+'\n' : ''}
 </body></html>`);
   win.document.close();
   win.print();
@@ -153,13 +153,13 @@ function openCashClosureHistory(){
   const closures = [...DB.cashClosures].sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-history"></i> Historial de arqueos</h3>
+      <h3><i class="ti ti-history"></i> ${t('title.closureHistory')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     ${closures.length ? `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Fecha</th><th>Hora cierre</th><th>Total ventas</th><th>Diferencia</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.totalSales')}</th><th>${t('label.difference')}</th><th></th></tr></thead>
         <tbody>
           ${closures.map(c => `
             <tr>
@@ -173,7 +173,7 @@ function openCashClosureHistory(){
         </tbody>
       </table>
     </div>
-    ` : `<div class="empty"><i class="ti ti-cash-register"></i>Todavía no se ha realizado ningún cierre de caja.</div>`}
+    ` : `<div class="empty"><i class="ti ti-cash-register"></i>${t('empty.cashClosures')}</div>`}
   `);
 }
 
