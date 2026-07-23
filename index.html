@@ -35,11 +35,16 @@
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
   <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" data-i18n-title="hdr.updateTitle" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text" data-i18n="common.update"> Actualizar</span></button>
-  <select id="lang-select" onchange="setLang(this.value)" style="margin-right:8px;border-radius:8px;border:1px solid var(--border);padding:6px 8px;font-size:13px;background:#fff">
-    <option value="es">🇪🇸 Castellano</option>
-    <option value="ca">🏴 Català</option>
-    <option value="en">🇬🇧 English</option>
-  </select>
+  <div style="position:relative;margin-right:8px">
+    <button class="btn btn-sm" id="lang-btn" onclick="toggleLangMenu(event)" style="display:flex;align-items:center;gap:6px;background:#fff">
+      <span id="lang-btn-flag">🇪🇸</span><span class="hdr-text" id="lang-btn-label">Castellano</span>
+    </button>
+    <div id="lang-menu" style="display:none;position:fixed;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;min-width:150px;overflow:hidden">
+      <button class="lang-menu-item" data-lang="es" onclick="setLang('es')" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:none;text-align:left;cursor:pointer;font-size:13px">🇪🇸 Castellano</button>
+      <button class="lang-menu-item" data-lang="ca" onclick="setLang('ca')" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:none;text-align:left;cursor:pointer;font-size:13px"><svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg> Català</button>
+      <button class="lang-menu-item" data-lang="en" onclick="setLang('en')" style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:none;background:none;text-align:left;cursor:pointer;font-size:13px">🇬🇧 English</button>
+    </div>
+  </div>
   <button class="btn btn-sm" id="business-switch-btn" onclick="showBusinessSelectScreen()" style="margin-right:4px" data-i18n-title="hdr.switchBusinessTitle" title="Cambiar de negocio"><i class="ti ti-building-store"></i><span class="hdr-text" data-i18n="hdr.businesses"> Negocios</span></button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:4px"><i class="ti ti-cloud"></i><span class="hdr-text" data-i18n="hdr.cloud"> Nube</span></button>
   <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:4px;background:#8A4A3B;color:#fff;border:none"><i class="ti ti-archive"></i><span class="hdr-text" data-i18n="hdr.archive"> Archivar</span></button>

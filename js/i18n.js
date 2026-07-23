@@ -1834,6 +1834,39 @@ function setLang(lang){
   saveDB();
   location.reload();
 }
+const LANG_FLAGS = {es:'🇪🇸', en:'🇬🇧', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};
+const LANG_NAMES = {es:'Castellano', en:'English', ca:'Català'};
+function toggleLangMenu(ev){
+  if(ev) ev.stopPropagation();
+  const menu = document.getElementById('lang-menu');
+  const btn = document.getElementById('lang-btn');
+  if(!menu || !btn) return;
+  const opening = menu.style.display === 'none';
+  if(opening){
+    menu.style.display = 'block';
+    const r = btn.getBoundingClientRect();
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.left = Math.max(4, r.right - menu.offsetWidth) + 'px';
+    document.addEventListener('click', closeLangMenuOnce);
+  }else{
+    menu.style.display = 'none';
+  }
+}
+function closeLangMenuOnce(){
+  const menu = document.getElementById('lang-menu');
+  if(menu) menu.style.display = 'none';
+  document.removeEventListener('click', closeLangMenuOnce);
+}
+function syncLangButton(){
+  const lang = getLang();
+  const flagEl = document.getElementById('lang-btn-flag');
+  const labelEl = document.getElementById('lang-btn-label');
+  if(flagEl) flagEl.innerHTML = LANG_FLAGS[lang] || LANG_FLAGS.es;
+  if(labelEl) labelEl.textContent = LANG_NAMES[lang] || LANG_NAMES.es;
+  document.querySelectorAll('.lang-menu-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+}
 function t(key){
   const lang = getLang();
   const dict = I18N[lang] || I18N.es;

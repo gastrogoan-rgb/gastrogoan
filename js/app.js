@@ -2343,8 +2343,7 @@ function renderHeader(){
   }else{
     text.innerHTML = `GastroGoan<span style="color:var(--olive);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub">${t('hdr.subtitle')}</span>`;
   }
-  const langSelect = document.getElementById('lang-select');
-  if(langSelect) langSelect.value = getLang();
+  syncLangButton();
   checkArchiveReminder();
 }
 
