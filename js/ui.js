@@ -490,7 +490,8 @@ function openHelpContactEmail(){
 
 /* ===== Chat interno ===== */
 const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
-const CHAT_CHANNEL_LABELS = {general:'General', cocina:'Cocina', sala:'Sala'};
+const CHAT_CHANNEL_LABEL_KEYS = {general:'label.general', cocina:'folder.cocina.title', sala:'folder.sala.title'};
+function chatChannelLabel(ch){ return t(CHAT_CHANNEL_LABEL_KEYS[ch]) || ch; }
 let currentChatChannel = 'general';
 // Canales visibles según el área en la que estés: en Cocina solo General+Cocina,
 // en Sala solo General+Sala. Así el chat de cada área queda restringido a su personal.
@@ -606,7 +607,7 @@ function renderChatMessages(){
       <span class="chat-meta">${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
       ${escapeHtml(m.text)}
     </div>
-  `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> Sin mensajes en ${escapeHtml(CHAT_CHANNEL_LABELS[currentChatChannel])} todavía</div>`;
+  `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
 }
 function sendChatMessage(){

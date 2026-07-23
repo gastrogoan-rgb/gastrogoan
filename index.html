@@ -731,22 +731,22 @@
 </button>
 <div class="help-panel" id="chat-panel">
   <div class="help-panel-header">
-    <h4><i class="ti ti-messages"></i> Chat interno</h4>
+    <h4><i class="ti ti-messages"></i> <span data-i18n="title.internalChat">Chat interno</span></h4>
     <button class="help-panel-close" onclick="toggleChatPanel()">&times;</button>
   </div>
   <div class="help-tabs">
-    <button class="help-tab active" id="chat-tab-btn-general" onclick="switchChatTab('general')">General</button>
-    <button class="help-tab" id="chat-tab-btn-cocina" onclick="switchChatTab('cocina')">Cocina</button>
-    <button class="help-tab" id="chat-tab-btn-sala" onclick="switchChatTab('sala')">Sala</button>
+    <button class="help-tab active" id="chat-tab-btn-general" onclick="switchChatTab('general')" data-i18n="label.general">General</button>
+    <button class="help-tab" id="chat-tab-btn-cocina" onclick="switchChatTab('cocina')" data-i18n="folder.cocina.title">Cocina</button>
+    <button class="help-tab" id="chat-tab-btn-sala" onclick="switchChatTab('sala')" data-i18n="folder.sala.title">Sala</button>
   </div>
   <div class="chat-author-row">
-    <span>Escribo como:</span>
+    <span data-i18n="label.writingAs">Escribo como:</span>
     <select id="chat-author-sel" onchange="onChatAuthorChange(this)"></select>
   </div>
   <div class="help-tab-panel active" style="display:flex">
     <div class="help-chat-messages" id="chat-messages"></div>
     <div class="help-chat-input-row">
-      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+      <input type="text" id="chat-input" data-i18n-ph="ph.writeMessage" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter') sendChatMessage()">
       <button onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>

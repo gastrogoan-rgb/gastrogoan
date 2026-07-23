@@ -136,7 +136,7 @@
 </header>
 
 <div class="wrap" id="app">
-  <div class="empty">Cargando…</div>
+  <div class="empty" id="app-loading">Cargando…</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -179,6 +179,7 @@ function escapeHtml(str){
 /* ============ IDIOMA DE LA CARTA ============ */
 const LANGS = {es:'ES', en:'EN', ca:'CA'};
 let currentLang = localStorage.getItem('gastrogoan_lang') || 'es';
+let bizNameLoaded = false;
 
 const I18N = {
   es: {
@@ -218,7 +219,8 @@ const I18N = {
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
-    'branch.title':'¿En qué local quieres reservar o pedir?','branch.subtitle':'Este negocio tiene varios locales. Elige el tuyo:'
+    'branch.title':'¿En qué local quieres reservar o pedir?','branch.subtitle':'Este negocio tiene varios locales. Elige el tuyo:',
+    'app.title':'Reservas y Pedidos','app.loading':'Cargando…'
   },
   en: {
     'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
@@ -257,7 +259,8 @@ const I18N = {
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
-    'branch.title':'Which location would you like?','branch.subtitle':'This business has multiple locations. Choose yours:'
+    'branch.title':'Which location would you like?','branch.subtitle':'This business has multiple locations. Choose yours:',
+    'app.title':'Reservations and Orders','app.loading':'Loading…'
   },
   ca: {
     'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
@@ -296,7 +299,8 @@ const I18N = {
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
-    'branch.title':'A quin local vols reservar o demanar?','branch.subtitle':'Aquest negoci té diversos locals. Tria el teu:'
+    'branch.title':'A quin local vols reservar o demanar?','branch.subtitle':'Aquest negoci té diversos locals. Tria el teu:',
+    'app.title':'Reserves i Comandes','app.loading':'Carregant…'
   }
 };
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
@@ -305,7 +309,12 @@ function setLang(lang){
   currentLang = lang;
   localStorage.setItem('gastrogoan_lang', lang);
   renderLangSwitcher();
+  if(!bizNameLoaded) document.getElementById('biz-name').textContent = t('app.title');
+  if(document.title === 'Reservas y Pedidos' || Object.values(I18N).some(d=>d['app.title']===document.title)) document.title = t('app.title');
+  const loadingEl = document.getElementById('app-loading');
+  if(loadingEl) loadingEl.textContent = t('app.loading');
   if(currentTab) renderTabContent();
+  else if(lastErrorKey) showError(lastErrorKey);
 }
 
 function renderLangSwitcher(){
@@ -352,11 +361,13 @@ function getTableIdFromUrl(){
   return null;
 }
 
-function showError(msg){
+let lastErrorKey = null;
+function showError(key){
+  lastErrorKey = key;
   document.getElementById('app').innerHTML = `
     <div class="error-box">
       <div class="icon">⚠️</div>
-      <h2>${escapeHtml(msg)}</h2>
+      <h2>${escapeHtml(t(key))}</h2>
       <p style="font-size:13px;color:#888">${t('error.enlace.sub')}</p>
     </div>
   `;
@@ -365,7 +376,7 @@ function showError(msg){
 function init(){
   publicId = getPublicIdFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
-  if(!publicId){ showError(t('error.enlace')); return; }
+  if(!publicId){ showError('error.enlace'); return; }
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
@@ -398,18 +409,18 @@ function init(){
     // por el SDK de Firebase.
     firebase.auth().signInAnonymously().then(() => loadBusinessInfo()).catch(e => {
       console.error(e);
-      showError(t('error.conexion'));
+      showError('error.conexion');
     });
   }catch(e){
     console.error(e);
-    showError(t('error.conexion'));
+    showError('error.conexion');
   }
 }
 
 function loadBusinessInfo(){
   db.ref('gastrogoan/public/' + publicId + '/info').once('value').then(snap => {
     const val = snap.val();
-    if(!val){ showError(t('error.carga')); return; }
+    if(!val){ showError('error.carga'); return; }
 
     if(val.sucursales && Array.isArray(val.sucursales) && val.sucursales.length > 1 && !new URLSearchParams(location.search).get('local')){
       renderBranchSelector(val.business || {}, val.sucursales);
@@ -428,13 +439,13 @@ function loadBusinessInfo(){
     checkRedsysConfigured();
   }).catch(e => {
     console.error(e);
-    showError(t('error.conexion'));
+    showError('error.conexion');
   });
 }
 
 function renderBranchSelector(business, sucursales){
   if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="Logo">`;
-  if(business.name) document.getElementById('biz-name').textContent = business.name;
+  if(business.name){ document.getElementById('biz-name').textContent = business.name; bizNameLoaded = true; }
   const base = location.href.split('?')[0];
   document.getElementById('app').innerHTML = `
     <div class="card" style="text-align:center">
@@ -467,7 +478,7 @@ function checkRedsysConfigured(){
 function renderHeader(){
   const b = DB.business || {};
   if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${b.logo}" alt="Logo">`;
-  if(b.name) document.getElementById('biz-name').textContent = b.name;
+  if(b.name){ document.getElementById('biz-name').textContent = b.name; bizNameLoaded = true; }
   const parts = [];
   if(b.address) parts.push('📍 ' + b.address);
   if(b.schedule) parts.push('🕐 ' + b.schedule);
