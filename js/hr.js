@@ -8,7 +8,7 @@ const GE = (function(){
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
-  const IVA_OPTIONS = [{v:21,l:'21% (General)'},{v:10,l:'10% (Reducido)'},{v:4,l:'4% (Superreducido)'},{v:0,l:'0% (Exento)'}];
+  const IVA_OPTIONS = [{v:21,l:t('vat.general')},{v:10,l:t('vat.reduced')},{v:4,l:t('vat.superReduced')},{v:0,l:t('vat.exempt')}];
   function ivaSelect(id, val){ return `<select id="${id}">${IVA_OPTIONS.map(o=>`<option value="${o.v}" ${parseFloat(val)===o.v?'selected':''}>${o.l}</option>`).join('')}</select>`; }
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null;
   let cdrYear = new Date().getFullYear();

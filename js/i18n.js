@@ -171,6 +171,16 @@ const I18N = {
     'days.full': ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
     'days.short': ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'],
     'common.allDays': 'Todos los días', 'common.emptyAllDay': 'Vacío = todo el día', 'label.usualDeliveryDays': 'Días de entrega habituales',
+    'label.contactPerson': 'Persona de contacto', 'label.paymentMethod': 'Forma de pago',
+    'pago.contado': 'Contado', 'pago.transferencia': 'Transferencia',
+    'pago.reciboDomiciliado': 'Recibo domiciliado', 'pago.otro': 'Otro',
+    'label.approxDeliveryTime': 'Hora de entrega aprox.', 'common.address': 'Dirección',
+    'label.delivery': 'Entrega', 'label.hoursApprox': 'h aprox.',
+    'msg.onlyDeliversOn': 'solo entrega', 'msg.dateAdjusted': 'Fecha ajustada.',
+    'label.deliveryDaysOf': 'Días de entrega de',
+    'label.usualVatType': 'Tipo de IVA habitual',
+    'vat.general': '21% (General)', 'vat.reduced': '10% (Reducido)',
+    'vat.superReduced': '4% (Superreducido)', 'vat.exempt': '0% (Exento)',
     'bs.title': 'Selecciona tu negocio', 'bs.searchPh': 'Buscar negocio o sucursal...',
     'bs.buyLicense': 'Comprar nueva licencia', 'bs.independentTag': 'independiente',
     'bs.current': 'Actual', 'bs.remove': 'Quitar', 'bs.mainLocation': 'Sede principal',
@@ -621,6 +631,16 @@ const I18N = {
     'days.full': ['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
     'days.short': ['DL','DT','DC','DJ','DV','DS','DG'],
     'common.allDays': 'Tots els dies', 'common.emptyAllDay': 'Buit = tot el dia', 'label.usualDeliveryDays': 'Dies d\'entrega habituals',
+    'label.contactPerson': 'Persona de contacte', 'label.paymentMethod': 'Forma de pagament',
+    'pago.contado': 'Al comptat', 'pago.transferencia': 'Transferència',
+    'pago.reciboDomiciliado': 'Rebut domiciliat', 'pago.otro': 'Altre',
+    'label.approxDeliveryTime': 'Hora d\'entrega aprox.', 'common.address': 'Adreça',
+    'label.delivery': 'Entrega', 'label.hoursApprox': 'h aprox.',
+    'msg.onlyDeliversOn': 'només entrega', 'msg.dateAdjusted': 'Data ajustada.',
+    'label.deliveryDaysOf': 'Dies d\'entrega de',
+    'label.usualVatType': 'Tipus d\'IVA habitual',
+    'vat.general': '21% (General)', 'vat.reduced': '10% (Reduït)',
+    'vat.superReduced': '4% (Superreduït)', 'vat.exempt': '0% (Exempt)',
     'bs.title': 'Selecciona el teu negoci', 'bs.searchPh': 'Cerca negoci o sucursal...',
     'bs.buyLicense': 'Comprar nova llicència', 'bs.independentTag': 'independent',
     'bs.current': 'Actual', 'bs.remove': 'Treure', 'bs.mainLocation': 'Seu principal',
@@ -1071,6 +1091,16 @@ const I18N = {
     'days.full': ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
     'days.short': ['MON','TUE','WED','THU','FRI','SAT','SUN'],
     'common.allDays': 'Every day', 'common.emptyAllDay': 'Empty = all day', 'label.usualDeliveryDays': 'Usual delivery days',
+    'label.contactPerson': 'Contact person', 'label.paymentMethod': 'Payment method',
+    'pago.contado': 'Cash', 'pago.transferencia': 'Bank transfer',
+    'pago.reciboDomiciliado': 'Direct debit', 'pago.otro': 'Other',
+    'label.approxDeliveryTime': 'Approx. delivery time', 'common.address': 'Address',
+    'label.delivery': 'Delivery', 'label.hoursApprox': 'h approx.',
+    'msg.onlyDeliversOn': 'only delivers on', 'msg.dateAdjusted': 'Date adjusted.',
+    'label.deliveryDaysOf': 'Delivery days for',
+    'label.usualVatType': 'Usual VAT type',
+    'vat.general': '21% (Standard)', 'vat.reduced': '10% (Reduced)',
+    'vat.superReduced': '4% (Super-reduced)', 'vat.exempt': '0% (Exempt)',
     'bs.title': 'Select your business', 'bs.searchPh': 'Search business or branch...',
     'bs.buyLicense': 'Buy new license', 'bs.independentTag': 'independent',
     'bs.current': 'Current', 'bs.remove': 'Remove', 'bs.mainLocation': 'Main location',
@@ -1493,6 +1523,12 @@ function t(key){
 // como el día de entrega de un proveedor.
 function weekDayFull(idx){ return t('days.full')[idx]; }
 function weekDayShort(idx){ return t('days.short')[idx]; }
+// Convierte un nombre de día GUARDADO (siempre en español, ej. 'Lunes') a su
+// etiqueta traducida para mostrar. No usar para comparar/guardar datos.
+function weekDayLabelFromStored(storedName){
+  const idx = WEEK_DAYS.indexOf(storedName);
+  return idx === -1 ? storedName : weekDayFull(idx);
+}
 
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el => {

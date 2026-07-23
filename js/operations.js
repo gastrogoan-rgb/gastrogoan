@@ -199,14 +199,21 @@ function renderProveedores(){
       ${p.contacto ? `<div><i class="ti ti-user"></i> ${escapeHtml(p.contacto)}</div>` : ''}
       ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
       ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
-      ${getProviderDiasEntrega(p).length ? `<div><i class="ti ti-truck-delivery"></i> Entrega: ${getProviderDiasEntrega(p).map(escapeHtml).join(', ')}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}h aprox.`:''}</div>` : ''}
+      ${getProviderDiasEntrega(p).length ? `<div><i class="ti ti-truck-delivery"></i> ${t('label.delivery')}: ${getProviderDiasEntrega(p).map(d=>escapeHtml(weekDayLabelFromStored(d))).join(', ')}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}${t('label.hoursApprox')}`:''}</div>` : ''}
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
-      ${p.pago ? `<span class="badge badge-gray">${escapeHtml(p.pago)}</span>` : ''}
+      ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
       ${p.iva!=null ? `<span class="badge badge-gray">IVA ${p.iva}%</span>` : ''}
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
     </div>
   `).join('');
+}
+
+// La forma de pago se guarda siempre en español (es el valor interno/histórico);
+// esto solo traduce la etiqueta que se le muestra al usuario.
+const PAGO_LABEL_KEYS = {'Contado':'pago.contado','Transferencia':'pago.transferencia','Recibo domiciliado':'pago.reciboDomiciliado','Otro':'pago.otro'};
+function paymentMethodLabel(value){
+  return PAGO_LABEL_KEYS[value] ? t(PAGO_LABEL_KEYS[value]) : (value||'');
 }
 
 // Devuelve los días de entrega de un proveedor como array, migrando el antiguo
@@ -227,10 +234,10 @@ function openProviderModal(id){
     </div>
     <div class="field"><label>${t('common.name')}</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="Ej. Makro"></div>
     <div class="field-row">
-      <div class="field"><label>Persona de contacto</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
-      <div class="field"><label>Forma de pago</label>
+      <div class="field"><label>${t('label.contactPerson')}</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
+      <div class="field"><label>${t('label.paymentMethod')}</label>
         <select id="prov-pago">
-          ${['Contado','Transferencia','Recibo domiciliado','Otro'].map(o=>`<option ${p.pago===o?'selected':''}>${o}</option>`).join('')}
+          ${[['Contado','pago.contado'],['Transferencia','pago.transferencia'],['Recibo domiciliado','pago.reciboDomiciliado'],['Otro','pago.otro']].map(([o,key])=>`<option value="${o}" ${p.pago===o?'selected':''}>${t(key)}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -249,15 +256,15 @@ function openProviderModal(id){
         `).join('')}
       </div>
     </div>
-    <div class="field"><label>Hora de entrega aprox.</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
-    <div class="field"><label>Dirección</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
+    <div class="field"><label>${t('label.approxDeliveryTime')}</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
+    <div class="field"><label>${t('common.address')}</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
-    <div class="field"><label>Tipo de IVA habitual</label>
+    <div class="field"><label>${t('label.usualVatType')}</label>
       <select id="prov-iva">
-        <option value="21" ${(p.iva==null||parseFloat(p.iva)===21)?'selected':''}>21% (General)</option>
-        <option value="10" ${parseFloat(p.iva)===10?'selected':''}>10% (Reducido)</option>
-        <option value="4" ${parseFloat(p.iva)===4?'selected':''}>4% (Superreducido)</option>
-        <option value="0" ${parseFloat(p.iva)===0?'selected':''}>0% (Exento)</option>
+        <option value="21" ${(p.iva==null||parseFloat(p.iva)===21)?'selected':''}>${t('vat.general')}</option>
+        <option value="10" ${parseFloat(p.iva)===10?'selected':''}>${t('vat.reduced')}</option>
+        <option value="4" ${parseFloat(p.iva)===4?'selected':''}>${t('vat.superReduced')}</option>
+        <option value="0" ${parseFloat(p.iva)===0?'selected':''}>${t('vat.exempt')}</option>
       </select>
     </div>
     <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
@@ -826,9 +833,9 @@ function validateOrderDate(input, silent){
   if(!diasEntrega.includes(weekDayName)){
     const next = nextValidDeliveryDate(input.value, diasEntrega);
     input.value = next;
-    if(!silent) showToast(`${orderModalSupplier} solo entrega: ${diasEntrega.join(', ')}. Fecha ajustada.`);
+    if(!silent) showToast(`${orderModalSupplier} ${t('msg.onlyDeliversOn')}: ${diasEntrega.map(weekDayLabelFromStored).join(', ')}. ${t('msg.dateAdjusted')}`);
   }
-  if(hint) hint.textContent = `Días de entrega de ${orderModalSupplier}: ${diasEntrega.join(', ')}`;
+  if(hint) hint.textContent = `${t('label.deliveryDaysOf')} ${orderModalSupplier}: ${diasEntrega.map(weekDayLabelFromStored).join(', ')}`;
 }
 
 function nextValidDeliveryDate(dateStr, diasEntrega){
