@@ -204,6 +204,10 @@
           <button class="btn btn-sm" id="escandallo-tab-platos" onclick="setEscandalloTab('platos')"><i class="ti ti-chef-hat"></i> <span data-i18n="tab.dishes">Platos</span></button>
           <button class="btn btn-sm" id="escandallo-tab-elaboraciones" onclick="setEscandalloTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
         </div>
+        <div style="display:flex;gap:8px" id="escandallo-new-btns">
+          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> Nueva Elaboración</button>
+          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+        </div>
       </div>
 
       <div class="toolbar">
@@ -216,10 +220,6 @@
             <button class="btn btn-sm" id="escandallo-view-grid" onclick="setEscandalloView('grid')"><i class="ti ti-layout-grid"></i></button>
             <button class="btn btn-sm" id="escandallo-view-list" onclick="setEscandalloView('list')"><i class="ti ti-list"></i></button>
           </div>
-        </div>
-        <div style="display:flex;gap:8px" id="escandallo-new-btns">
-          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> Nueva Elaboración</button>
-          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
         </div>
       </div>
 
