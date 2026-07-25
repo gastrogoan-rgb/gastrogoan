@@ -267,14 +267,14 @@ td.wrap{white-space:normal}
 
 /* ===== Ayuda / Asistente ===== */
 .help-fab{
-  position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;
+  position:fixed;bottom:34px;right:20px;width:56px;height:56px;border-radius:50%;
   background:var(--teal);color:#fff;border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:24px;
   box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:240;transition:.15s;
 }
 .help-fab:hover{transform:scale(1.06)}
 .help-panel{
-  display:none;position:fixed;bottom:88px;right:20px;width:340px;max-width:calc(100vw - 32px);
+  display:none;position:fixed;bottom:102px;right:20px;width:340px;max-width:calc(100vw - 32px);
   height:480px;max-height:calc(100vh - 120px);background:var(--surface);border-radius:var(--radius);
   box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden;
   border:1px solid var(--border);
@@ -317,8 +317,8 @@ td.wrap{white-space:normal}
 .help-msg.other{align-self:flex-start;background:var(--dark2);color:#fff;border-bottom-left-radius:2px}
 .help-msg .chat-meta{display:block;font-size:10.5px;opacity:.7;margin-bottom:2px;font-weight:600}
 @media (max-width:480px){
-  .help-panel{right:10px;bottom:80px;width:calc(100vw - 20px)}
-  .help-fab{right:14px;bottom:14px}
+  .help-panel{right:10px;bottom:94px;width:calc(100vw - 20px)}
+  .help-fab{right:14px;bottom:28px}
   .chat-fab{right:80px}
 }
 
@@ -571,8 +571,8 @@ td.wrap{white-space:normal}
   .toast{bottom:calc(24px + env(safe-area-inset-bottom));max-width:90%;font-size:13px}
 
   /* Help fab — ensure tappable */
-  .help-fab{bottom:calc(20px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:22px}
-  .help-panel{bottom:calc(82px + env(safe-area-inset-bottom));max-height:calc(100vh - 140px)}
+  .help-fab{bottom:calc(34px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:22px}
+  .help-panel{bottom:calc(96px + env(safe-area-inset-bottom));max-height:calc(100vh - 140px)}
 
   /* Modals — ensure content visible */
   .modal{max-height:85vh}
