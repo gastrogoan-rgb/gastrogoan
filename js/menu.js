@@ -714,10 +714,61 @@ function toggleGrupoBebida(grupoId, checked){
   renderMenuGrupos();
 }
 
+// Todas las bebidas ya dadas de alta en las cartas de Sala (Carta de
+// Bebidas), para poder elegirlas por nombre al montar un grupo de bebida
+// de un Menú — sin arrastrar su precio de carta, ya que el menú es de
+// precio fijo (solo se copia el nombre; el "Suplemento" sigue siendo un
+// extra manual y opcional sobre el precio del menú).
+function getCartaBebidaDishes(){
+  const dishes = [];
+  (DB.cartas||[]).filter(isBebidaCarta).forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      (sec.platos||[]).forEach(p => dishes.push({platoId: p.id, nombre: tItem(p)}));
+    });
+  });
+  return dishes;
+}
 function addMenuOpcion(grupoId){
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
-  const opcionArea = (g && g.bebida) ? 'sala' : currentArea();
-  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === opcionArea);
+  if(g && g.bebida){
+    const bebidas = getCartaBebidaDishes();
+    openModal(`
+      <div class="modal-header">
+        <h3>${t('title.newOption')}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="field">
+        <label>Origen de la bebida</label>
+        <select id="new-menu-opcion-tipo" onchange="toggleMenuOpcionTipo()">
+          <option value="carta">Bebida de la Carta (Sala)</option>
+          <option value="manual">Escribir nombre manualmente</option>
+        </select>
+      </div>
+      <div class="field" id="new-menu-opcion-recipe-field" style="display:${bebidas.length?'':'none'}">
+        <label>Bebida (Carta de Sala)</label>
+        <select id="new-menu-opcion-plato">
+          ${bebidas.map(b=>`<option value="${b.platoId}">${escapeHtml(b.nombre)}</option>`).join('')}
+        </select>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">Se copia solo el nombre; el precio no se enlaza porque el menú tiene precio fijo.</p>
+      </div>
+      <div class="field" id="new-menu-opcion-manual-field" style="display:${bebidas.length?'none':''}">
+        <label>Nombre de la bebida</label>
+        <input type="text" id="new-menu-opcion-nombre" placeholder="Ej. Copa de vino tinto">
+      </div>
+      <div class="field">
+        <label>Suplemento (€) <span style="color:var(--muted);font-weight:400">opcional, extra sobre el precio del menú</span></label>
+        <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">Añadir</button>
+      </div>
+    `);
+    if(!bebidas.length) document.getElementById('new-menu-opcion-tipo').value = 'manual';
+    setTimeout(()=>document.getElementById('new-menu-opcion-nombre')?.focus(), 50);
+    return;
+  }
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea());
   openModal(`
     <div class="modal-header">
       <h3>${t('title.newOption')}</h3>
@@ -766,6 +817,11 @@ function confirmAddMenuOpcion(grupoId){
     const nombre = document.getElementById('new-menu-opcion-nombre').value.trim();
     if(!nombre){ showToast(t('msg.dishNameRequired')); return; }
     g.opciones.push({id: genId(), recipeId: null, nombre, suplemento});
+  } else if(tipo === 'carta'){
+    const platoId = parseInt(document.getElementById('new-menu-opcion-plato').value);
+    const b = getCartaBebidaDishes().find(x => x.platoId === platoId);
+    if(!b){ showToast(t('msg.selectDish')); return; }
+    g.opciones.push({id: genId(), recipeId: null, platoId: b.platoId, nombre: b.nombre, suplemento});
   } else {
     const recipeId = parseInt(document.getElementById('new-menu-opcion-recipe').value);
     const r = getRecipe(recipeId);
