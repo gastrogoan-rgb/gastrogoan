@@ -1000,7 +1000,7 @@ function updateSyncBadge(state){
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
-  if(state === 'online'){ el.textContent = '☁ Nube conectada'; el.style.background = 'rgba(52,199,89,.2)'; el.style.color = '#7BE495'; }
+  if(state === 'online'){ el.textContent = '☁ Nube conectada'; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
   else if(state === 'offline'){ el.textContent = '☁ Sin conexión'; el.style.background = 'rgba(255,204,0,.2)'; el.style.color = '#FFD60A'; }
   else { el.textContent = '☁ Error de nube'; el.style.background = 'rgba(255,69,58,.2)'; el.style.color = '#FF6B61'; }
 }
