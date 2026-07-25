@@ -654,6 +654,16 @@ function saveRecipe(id){
   if(id){
     const r = getRecipe(id);
     if(!r) return;
+    // Convertir un plato ya puesto a la venta en "elaboración base" lo
+    // sacaría de la lista de platos vendibles sin avisar, dejándolo
+    // huérfano en la carta. Bloquear hasta que se quite de la carta.
+    if(isBase && !r.isBase){
+      const cartaHits = cartaPlatosUsingRecipe(id);
+      if(cartaHits.length){
+        showToast(t('msg.cannotMakeBaseWhileOnCarta').replace('${cartas}', cartaHits.map(h=>h.carta.nombre).join(', ')));
+        return;
+      }
+    }
     Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
