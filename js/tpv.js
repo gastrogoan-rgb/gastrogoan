@@ -666,7 +666,8 @@ function findCartaSeccion(secId){
 }
 function isSeccionBebida(secId){
   for(const c of (DB.cartas||[])){
-    if((c.secciones||[]).some(s=>s.id===secId)) return isBebidaCarta(c);
+    const sec = (c.secciones||[]).find(s=>s.id===secId);
+    if(sec) return sec.bebida === true || isBebidaCarta(c);
   }
   return false;
 }
