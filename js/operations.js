@@ -205,9 +205,6 @@ function renderProveedores(){
   }
   box.innerHTML = providers.map(p => {
     const ings = ingredientsForSupplier(p.nombre);
-    const SHOWN = 6;
-    const ingNames = ings.slice(0, SHOWN).map(i=>escapeHtml(i.name)).join(', ');
-    const more = ings.length > SHOWN ? ` +${ings.length - SHOWN} más` : '';
     return `
     <div class="card">
       <h3 style="justify-content:space-between">
@@ -225,10 +222,37 @@ function renderProveedores(){
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
       ${p.iva!=null ? `<span class="badge badge-gray">IVA ${p.iva}%</span>` : ''}
-      <div style="margin-top:6px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})${ings.length ? `: ${ingNames}${more}` : ''}</div>
+      <div style="margin-top:6px">
+        ${ings.length
+          ? `<button class="btn btn-sm" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
+          : `<span style="color:var(--muted);font-size:13px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
+      </div>
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
     </div>
   `;}).join('');
+}
+function openSupplierIngredientsModal(providerId){
+  const p = DB.providers.find(x=>x.id===providerId);
+  if(!p) return;
+  const ings = ingredientsForSupplier(p.nombre).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-list"></i> ${escapeHtml(p.nombre)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="max-height:60vh;overflow-y:auto">
+      ${ings.length ? ings.map(i => `
+        <div class="ge-item">
+          <span style="flex:1;font-weight:600">${escapeHtml(i.name)}</span>
+          <span style="font-family:monospace;color:var(--muted)">${escapeHtml(i.unit||'')}</span>
+          <span style="font-family:monospace;font-weight:600;margin-left:10px">${fmtMoney(i.price)}</span>
+        </div>
+      `).join('') : `<div class="empty"><i class="ti ti-list"></i>${t('empty.suppliers')}</div>`}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
 }
 
 // La forma de pago se guarda siempre en español (es el valor interno/histórico);
