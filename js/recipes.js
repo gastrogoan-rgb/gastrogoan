@@ -679,8 +679,57 @@ function syncElaboracionForRecipe(recipeId, isBase, name, unit){
   }
 }
 
+// Secciones de carta donde este plato/receta está puesto a la venta ahora
+// mismo, para avisar antes de borrarlo (si no, desaparece de la carta sin
+// avisar). Devuelve [{carta, seccion}, ...].
+function cartaPlatosUsingRecipe(id){
+  const hits = [];
+  (DB.cartas||[]).forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      if((sec.platos||[]).some(p => p.recipeId === id)) hits.push({carta:c, seccion:sec});
+    });
+  });
+  return hits;
+}
+// Otras recetas que usan esta (una elaboración base) como componente, para
+// avisar antes de borrarla — si no, esas recetas se quedan con un coste
+// más bajo del real, sin ningún aviso.
+function recipesUsingBaseRecipe(id){
+  return DB.recipes.filter(r => r.id!==id && (r.ingredients||[]).some(line => line.type==='base' && line.baseRecipeId===id));
+}
 function deleteRecipe(id){
+  const r = DB.recipes.find(x=>x.id===id);
+  const cartaHits = cartaPlatosUsingRecipe(id);
+  const dependentRecipes = recipesUsingBaseRecipe(id);
+  if(cartaHits.length || dependentRecipes.length){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-alert-triangle"></i> ${t('title.dishInUse')}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      ${cartaHits.length ? `
+        <p style="font-size:13px">${t('msg.dishInCartaWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
+        <div style="max-height:160px;overflow-y:auto;margin:6px 0 12px;border:1px solid var(--border);border-radius:8px">
+          ${cartaHits.map(h=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(h.carta.nombre)}</span><span style="color:var(--muted)">${escapeHtml(h.seccion.nombre)}</span></div>`).join('')}
+        </div>
+      ` : ''}
+      ${dependentRecipes.length ? `
+        <p style="font-size:13px">${t('msg.baseRecipeInUseWarning').replace('${name}', escapeHtml(r?r.name:''))}</p>
+        <div style="max-height:160px;overflow-y:auto;margin:6px 0 12px;border:1px solid var(--border);border-radius:8px">
+          ${dependentRecipes.map(dr=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(dr.name)}</span></div>`).join('')}
+        </div>
+      ` : ''}
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-danger" onclick="confirmDeleteRecipe(${id})">${t('btn.deleteAnyway')}</button>
+      </div>
+    `);
+    return;
+  }
   if(!confirm(t('msg.confirmDeleteDish'))) return;
+  confirmDeleteRecipe(id);
+}
+function confirmDeleteRecipe(id){
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
   DB.cartas.forEach(c => {
@@ -689,6 +738,7 @@ function deleteRecipe(id){
     });
   });
   saveDB();
+  closeModal();
   renderEscandallo();
   showToast(t('msg.dishDeleted'));
 }
