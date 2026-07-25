@@ -493,10 +493,10 @@ const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
 const CHAT_CHANNEL_LABEL_KEYS = {general:'label.general', cocina:'folder.cocina.title', sala:'folder.sala.title'};
 function chatChannelLabel(ch){ return t(CHAT_CHANNEL_LABEL_KEYS[ch]) || ch; }
 let currentChatChannel = 'general';
-// Canales visibles según el área en la que estés: en Cocina solo General+Cocina,
-// en Sala solo General+Sala. Así el chat de cada área queda restringido a su personal.
+// Los tres canales están siempre visibles: General (todo el personal),
+// Cocina (jefe/a + personal de cocina) y Sala (jefe/a + personal de sala).
 function visibleChatChannels(){
-  return ['general', currentArea()];
+  return CHAT_CHANNELS.slice();
 }
 let chatOwnerVerified = false;
 let chatPinPrevValue = '';
@@ -512,29 +512,35 @@ function getChatAuthorName(val){
   const e = DB.employees.find(x => String(x.id) === String(val));
   return e ? e.name : t('common.chef');
 }
+// Quién puede escribir en cada canal: en General, cualquier empleado (de
+// cocina o de sala) + Jefe/a; en Cocina/Sala, solo el personal de esa área + Jefe/a.
+function chatEligibleEmployees(channel){
+  if(channel === 'general') return DB.employees.slice();
+  return DB.employees.filter(e => (e.area||'cocina')===channel);
+}
 function populateChatAuthorSelect(){
   const sel = document.getElementById('chat-author-sel');
   const current = getChatAuthor();
-  // Solo el personal del área actual (+ Jefe/a) puede escribir en su chat.
-  const area = currentArea();
-  const areaEmps = DB.employees.filter(e => (e.area||'cocina')===area);
-  const opts = areaEmps.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
-  sel.innerHTML = `<option value="owner">${t('common.chef')}</option>`
-    + (opts ? `<optgroup label="${area==='sala'?'Sala':'Cocina'}">${opts}</optgroup>` : '');
-  const valid = current==='owner' ? chatOwnerVerified : areaEmps.some(e => String(e.id)===String(current));
-  sel.value = valid ? current : (areaEmps[0] ? String(areaEmps[0].id) : 'owner');
+  const emps = chatEligibleEmployees(currentChatChannel);
+  let opts;
+  if(currentChatChannel === 'general'){
+    const cocina = emps.filter(e => (e.area||'cocina')==='cocina');
+    const sala = emps.filter(e => e.area==='sala');
+    opts = (cocina.length ? `<optgroup label="Cocina">${cocina.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '')
+      + (sala.length ? `<optgroup label="Sala">${sala.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '');
+  } else {
+    const label = currentChatChannel==='sala' ? 'Sala' : 'Cocina';
+    opts = emps.length ? `<optgroup label="${label}">${emps.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '';
+  }
+  sel.innerHTML = `<option value="owner">${t('common.chef')}</option>` + opts;
+  const valid = current==='owner' ? chatOwnerVerified : emps.some(e => String(e.id)===String(current));
+  sel.value = valid ? current : 'owner';
   if(sel.value !== current) setChatAuthor(sel.value);
 }
-// Oculta el canal del área contraria y, si estabas en él, vuelve a General.
+// Los tres canales están siempre disponibles; solo se refresca quién puede
+// escribir en el canal activo.
 function applyChatAreaRestrictions(){
-  const area = currentArea();
-  const cocinaBtn = document.getElementById('chat-tab-btn-cocina');
-  const salaBtn = document.getElementById('chat-tab-btn-sala');
-  if(cocinaBtn) cocinaBtn.style.display = area==='cocina' ? '' : 'none';
-  if(salaBtn) salaBtn.style.display = area==='sala' ? '' : 'none';
-  if(!visibleChatChannels().includes(currentChatChannel)){
-    switchChatTab('general');
-  }
+  // no-op: mantenido por compatibilidad con las llamadas existentes.
 }
 function onChatAuthorChange(sel){
   const val = sel.value;
@@ -594,6 +600,7 @@ function toggleChatPanel(){
 function switchChatTab(channel){
   currentChatChannel = channel;
   CHAT_CHANNELS.forEach(c => document.getElementById('chat-tab-btn-'+c).classList.toggle('active', c===channel));
+  populateChatAuthorSelect();
   renderChatMessages();
   markChatRead(channel);
   updateChatBadge();
