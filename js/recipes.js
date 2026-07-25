@@ -737,6 +737,10 @@ function deleteRecipe(id){
 function confirmDeleteRecipe(id){
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
+  // La ficha técnica vinculada documenta este plato en concreto: si el
+  // plato se borra del Escandallo, se borra con él en vez de dejarla
+  // huérfana mostrando datos de una foto fija desactualizada.
+  DB.fichas = (DB.fichas||[]).filter(f => f.recipeId !== id);
   DB.cartas.forEach(c => {
     (c.secciones||[]).forEach(sec => {
       sec.platos = (sec.platos||[]).filter(p => p.recipeId !== id);
