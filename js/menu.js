@@ -302,9 +302,8 @@ function renderCartaSecciones(){
   box.innerHTML = cartaEdit.secciones.map(sec => `
     <div class="ge-section">
       <div class="ge-sec-head">
-        <h4>${escapeHtml(tItem(sec))}${sec.bebida ? ' <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> Sala</span>' : ''}</h4>
+        <h4>${escapeHtml(tItem(sec))}</h4>
         <div class="actions-cell">
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${sec.bebida?'checked':''} onchange="toggleSeccionBebida(${sec.id},this.checked)"> Bebidas (sala)</label>
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
@@ -350,14 +349,6 @@ function confirmNewCartaSection(){
 function removeCartaSection(secId){
   if(!confirm(t('msg.confirmDeleteSection'))) return;
   cartaEdit.secciones = cartaEdit.secciones.filter(s=>s.id!==secId);
-  renderCartaSecciones();
-}
-// Marca una sección como de bebidas aunque esté dentro de una carta de
-// comida: sus platos dejan de verse en Comandas Cocina y solo se ven/editan
-// desde Sala (igual que ya funciona para los grupos de Menús).
-function toggleSeccionBebida(secId, checked){
-  const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  if(sec) sec.bebida = checked;
   renderCartaSecciones();
 }
 function toggleCartaPlato(secId, platoId){
