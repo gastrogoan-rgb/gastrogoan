@@ -709,6 +709,7 @@
   </div>
   <div class="help-tabs">
     <button class="help-tab active" id="help-tab-btn-asistente" onclick="switchHelpTab('asistente')"><i class="ti ti-message-chatbot"></i> <span data-i18n="help.tab.assistant"></span></button>
+    <button class="help-tab" id="help-tab-btn-temas" onclick="switchHelpTab('temas')"><i class="ti ti-list-details"></i> <span data-i18n="help.tab.topics"></span></button>
     <button class="help-tab" id="help-tab-btn-contacto" onclick="switchHelpTab('contacto')"><i class="ti ti-mail"></i> <span data-i18n="help.tab.contact"></span></button>
   </div>
   <div class="help-tab-panel active" id="help-tab-asistente">
@@ -719,12 +720,22 @@
       <button onclick="sendHelpMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
+  <div class="help-tab-panel" id="help-tab-temas">
+    <div class="help-topics" id="help-topics-list"></div>
+  </div>
   <div class="help-tab-panel" id="help-tab-contacto">
     <div class="help-contact">
       <i class="ti ti-mail"></i>
       <h4 data-i18n="help.contact.title"></h4>
       <p data-i18n="help.contact.desc"></p>
       <button class="btn btn-primary btn-sm" onclick="openHelpContactEmail()"><i class="ti ti-mail"></i> <span data-i18n="help.contact.button"></span></button>
+      <div class="help-contact-fallback">
+        <p data-i18n="help.contact.fallback"></p>
+        <div class="help-contact-email-row">
+          <code id="help-contact-email-text">gastrogoan@gmail.com</code>
+          <button class="btn btn-sm" onclick="copyHelpContactEmail()"><i class="ti ti-copy"></i> <span data-i18n="help.contact.copy"></span></button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

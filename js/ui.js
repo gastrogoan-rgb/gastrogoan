@@ -405,6 +405,85 @@ const HELP_FAQS = [
       ca:'A <strong>El Meu Negoci</strong> indiques el teu <strong>aforament</strong> (places per torn). A Reserves veuràs quantes persones hi ha reservades respecte a l\'aforament de cada torn, i l\'app avisa si se supera.',
       en:'In <strong>My Business</strong> you set your <strong>capacity</strong> (seats per shift). In Reservations you\'ll see how many people are booked versus the capacity of each shift, and the app warns if it\'s exceeded.' } },
 ];
+// Índice de temas navegables del centro de ayuda: agrupa las preguntas de
+// HELP_FAQS (por posición) en categorías, para poder consultarlas sin tener
+// que adivinar cómo escribirlas en el buscador del asistente.
+const HELP_TOPIC_GROUPS = [
+  { cat:{es:'TPV y Comandas', ca:'TPV i Comandes', en:'POS and Orders'}, items:[
+    {idx:0, label:{es:'Abrir una mesa', ca:'Obrir una taula', en:'Open a table'}},
+    {idx:1, label:{es:'Vincular una reserva al abrir mesa', ca:'Vincular una reserva en obrir taula', en:'Link a reservation when opening a table'}},
+    {idx:2, label:{es:'Añadir un plato a la comanda', ca:'Afegir un plat a la comanda', en:'Add a dish to the order'}},
+    {idx:3, label:{es:'Extras y modificadores', ca:'Extres i modificadors', en:'Extras and modifiers'}},
+    {idx:4, label:{es:'Añadir una nota al plato', ca:'Afegir una nota al plat', en:'Add a note to a dish'}},
+    {idx:5, label:{es:'Editar o borrar una nota', ca:'Editar o esborrar una nota', en:'Edit or remove a note'}},
+    {idx:6, label:{es:'Tandas y marchar a cocina', ca:'Torns i enviar a cuina', en:'Courses and firing to the kitchen'}},
+    {idx:7, label:{es:'Pantalla de Comandas Cocina', ca:'Pantalla de Comandes Cuina', en:'Kitchen Orders screen'}},
+    {idx:8, label:{es:'Cobrar y dividir la cuenta', ca:'Cobrar i dividir el compte', en:'Charging and splitting the bill'}},
+    {idx:9, label:{es:'Pedidos Take Away', ca:'Comandes Take Away', en:'Take Away orders'}},
+    {idx:10, label:{es:'Pedidos Delivery', ca:'Comandes Delivery', en:'Delivery orders'}},
+    {idx:11, label:{es:'Aceptar o rechazar pedidos online', ca:'Acceptar o rebutjar comandes en línia', en:'Accept or reject online orders'}},
+    {idx:12, label:{es:'Cierre de caja', ca:'Tancament de caixa', en:'Cash closure'}}
+  ]},
+  { cat:{es:'Carta y Menús', ca:'Carta i Menús', en:'Menu'}, items:[
+    {idx:13, label:{es:'Crear y organizar tu carta', ca:'Crear i organitzar la teva carta', en:'Create and organize your menu'}},
+    {idx:14, label:{es:'Marcar un plato agotado', ca:'Marcar un plat esgotat', en:'Mark a dish as sold out'}},
+    {idx:15, label:{es:'Configurar extras en un plato', ca:'Configurar extres en un plat', en:'Configure extras on a dish'}},
+    {idx:16, label:{es:'Importar plato desde Escandallo', ca:'Importar plat des de l’Escandall', en:'Import a dish from Costing'}},
+    {idx:17, label:{es:'Crear menús de precio fijo', ca:'Crear menús de preu fix', en:'Create combo menus'}}
+  ]},
+  { cat:{es:'Reservas y Clientes', ca:'Reserves i Clients', en:'Reservations and Customers'}, items:[
+    {idx:18, label:{es:'Crear una reserva', ca:'Crear una reserva', en:'Create a reservation'}},
+    {idx:19, label:{es:'Asignar mesa a una reserva', ca:'Assignar taula a una reserva', en:'Assign a table to a reservation'}},
+    {idx:20, label:{es:'Marcar la llegada del cliente', ca:'Marcar l’arribada del client', en:'Mark customer arrival'}},
+    {idx:21, label:{es:'Añadir un cliente nuevo', ca:'Afegir un client nou', en:'Add a new customer'}},
+    {idx:22, label:{es:'Puntos de fidelización', ca:'Punts de fidelització', en:'Loyalty points'}}
+  ]},
+  { cat:{es:'Cocina y Costes', ca:'Cuina i Costos', en:'Kitchen and Costing'}, items:[
+    {idx:23, label:{es:'Mega Lista de ingredientes', ca:'Mega Llista d’ingredients', en:'Master ingredient list'}},
+    {idx:24, label:{es:'Ficha técnica y coste del plato', ca:'Fitxa tècnica i cost del plat', en:'Technical sheet and dish cost'}},
+    {idx:25, label:{es:'Control de stock y pedidos a proveedor', ca:'Control d’estoc i comandes a proveïdor', en:'Stock control and purchase orders'}}
+  ]},
+  { cat:{es:'Personal y Limpieza', ca:'Personal i Neteja', en:'Staff and Cleaning'}, items:[
+    {idx:26, label:{es:'Horario del personal y tareas', ca:'Horari del personal i tasques', en:'Staff schedule and tasks'}},
+    {idx:27, label:{es:'Plan de limpieza (APPCC)', ca:'Pla de neteja (APPCC)', en:'Cleaning plan (HACCP)'}}
+  ]},
+  { cat:{es:'Gestión y Marketing', ca:'Gestió i Marketing', en:'Management and Marketing'}, items:[
+    {idx:28, label:{es:'Promoción y marketing', ca:'Promoció i marketing', en:'Promotion and marketing'}},
+    {idx:29, label:{es:'Panel de Control (Dashboard)', ca:'Tauler de Control (Dashboard)', en:'Dashboard'}},
+    {idx:30, label:{es:'Gestión Económica y punto de equilibrio', ca:'Gestió Econòmica i punt d’equilibri', en:'Financial management and break-even'}}
+  ]},
+  { cat:{es:'Configuración y Cuenta', ca:'Configuració i Compte', en:'Settings and Account'}, items:[
+    {idx:31, label:{es:'PIN y bloqueo de acceso', ca:'PIN i bloqueig d’accés', en:'PIN and access lock'}},
+    {idx:32, label:{es:'Conectar tu nube (Firebase)', ca:'Connectar el teu núvol (Firebase)', en:'Connect your cloud (Firebase)'}},
+    {idx:33, label:{es:'Cambiar el idioma', ca:'Canviar l’idioma', en:'Change the language'}},
+    {idx:34, label:{es:'Activar tu licencia', ca:'Activar la teva llicència', en:'Activate your license'}},
+    {idx:35, label:{es:'Repetir el tour guiado', ca:'Repetir el tour guiat', en:'Replay the guided tour'}},
+    {idx:36, label:{es:'Enlace público y código QR', ca:'Enllaç públic i codi QR', en:'Public link and QR code'}},
+    {idx:37, label:{es:'Configurar el aforo', ca:'Configurar l’aforament', en:'Set your venue capacity'}}
+  ]}
+];
+function renderHelpTopics(){
+  const box = document.getElementById('help-topics-list');
+  if(!box) return;
+  const lang = getLang();
+  box.innerHTML = HELP_TOPIC_GROUPS.map(g => `
+    <div class="help-topic-group">
+      <div class="help-topic-group-title">${escapeHtml(g.cat[lang] || g.cat.es)}</div>
+      ${g.items.map(it => `<button class="help-topic-item" onclick="askHelpTopic(${it.idx})">${escapeHtml(it.label[lang] || it.label.es)}</button>`).join('')}
+    </div>
+  `).join('');
+}
+function askHelpTopic(idx){
+  const faq = HELP_FAQS[idx];
+  if(!faq) return;
+  const lang = getLang();
+  const group = HELP_TOPIC_GROUPS.flatMap(g => g.items).find(it => it.idx === idx);
+  const label = group ? (group.label[lang] || group.label.es) : '';
+  switchHelpTab('asistente');
+  document.getElementById('help-suggestions').innerHTML = '';
+  if(label) appendHelpMessage(escapeHtml(label), 'user');
+  appendHelpMessage(faq.answers[lang] || faq.answers.es, 'bot');
+}
 let helpChatStarted = false;
 function applyHelpI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
@@ -414,17 +493,21 @@ function toggleHelpPanel(){
   const panel = document.getElementById('help-panel');
   const opening = !panel.classList.contains('active');
   panel.classList.toggle('active');
-  if(opening && !helpChatStarted){
-    helpChatStarted = true;
-    appendHelpMessage(t('help.assistant.welcome'), 'bot');
-    renderHelpSuggestions();
+  if(opening){
+    if(!helpChatStarted){
+      helpChatStarted = true;
+      appendHelpMessage(t('help.assistant.welcome'), 'bot');
+      renderHelpSuggestions();
+    }
+    renderHelpTopics();
   }
 }
+const HELP_TABS = ['asistente', 'temas', 'contacto'];
 function switchHelpTab(tab){
-  document.getElementById('help-tab-btn-asistente').classList.toggle('active', tab==='asistente');
-  document.getElementById('help-tab-btn-contacto').classList.toggle('active', tab==='contacto');
-  document.getElementById('help-tab-asistente').classList.toggle('active', tab==='asistente');
-  document.getElementById('help-tab-contacto').classList.toggle('active', tab==='contacto');
+  HELP_TABS.forEach(tb => {
+    document.getElementById('help-tab-btn-'+tb).classList.toggle('active', tb===tab);
+    document.getElementById('help-tab-'+tb).classList.toggle('active', tb===tab);
+  });
 }
 function renderHelpSuggestions(){
   const box = document.getElementById('help-suggestions');
@@ -485,7 +568,24 @@ function appendHelpMessage(html, who){
 }
 function openHelpContactEmail(){
   const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.name) ? ' - ' + DB.business.name : ''));
-  window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject;
+  const body = encodeURIComponent('Hola,\n\nTengo una duda sobre GastroGoan' + ((DB.business && DB.business.name) ? ' (negocio: ' + DB.business.name + ')' : '') + ':\n\n');
+  window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject + '&body=' + body;
+}
+// Copia el email de soporte al portapapeles, por si el cliente de correo
+// del dispositivo no se abre automáticamente con el enlace mailto.
+function copyHelpContactEmail(){
+  const email = 'gastrogoan@gmail.com';
+  const done = () => showToast(t('help.contact.copied'));
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(email).then(done).catch(done);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = email; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+    done();
+  }
 }
 
 /* ===== Chat interno ===== */
