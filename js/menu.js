@@ -189,27 +189,27 @@ function migrateItemHorario(item){
 // Renderiza las filas de días/horario compartidas por el editor de cartas y menús.
 // Diseño compacto: una fila por día, con hasta 2 franjas horarias apilables.
 function renderScheduleRows(prefix, horario){
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px">${horario.map((d,i) => {
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,98px));gap:4px">${horario.map((d,i) => {
     const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
     return `
-    <div style="padding:8px;border:1px solid var(--border);border-radius:8px;${d.activo===false?'opacity:.5':''}">
-      <label style="display:flex;align-items:center;gap:5px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:4px">
-        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})">
+    <div style="padding:5px 6px;border:1px solid var(--border);border-radius:6px;${d.activo===false?'opacity:.5':''}">
+      <label style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:3px">
+        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})" style="width:12px;height:12px;margin:0">
         ${weekDayShort(i)}
       </label>
-      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:4px">
+      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:3px">
         ${franjas.map((f,j) => `
-          <div style="display:flex;align-items:center;gap:3px">
-            <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:2px 4px;font-size:12px;width:58px;min-height:28px">
-            <span style="color:var(--muted);font-size:11px">-</span>
-            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:2px 4px;font-size:12px;width:58px;min-height:28px">
-            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:2px 4px;min-height:24px;min-width:24px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar"><i class="ti ti-x" style="font-size:13px"></i></button>` : ''}
+          <div style="display:flex;align-items:center;gap:2px">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
+            <span style="color:var(--muted);font-size:9px">-</span>
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
+            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:1px 3px;min-height:20px;min-width:20px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar"><i class="ti ti-x" style="font-size:11px"></i></button>` : ''}
           </div>
         `).join('')}
-        ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:2px 6px;font-size:11px;margin-top:2px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}
+        ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:1px 5px;font-size:10px;margin-top:1px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}
       </div>
     </div>
-  `}).join('')}</div><p style="font-size:11px;color:var(--muted);margin-top:4px">${t('common.emptyAllDay')}</p>`;
+  `}).join('')}</div><p style="font-size:10px;color:var(--muted);margin-top:3px">${t('common.emptyAllDay')}</p>`;
 }
 function toggleScheduleDia(prefix, i){
   const on = document.getElementById(`${prefix}-hor-${i}-activo`).checked;
