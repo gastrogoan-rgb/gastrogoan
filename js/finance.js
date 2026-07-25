@@ -287,9 +287,39 @@ function populateProviderFilter(){
   sel.value = current;
 }
 
+// Orden de la tabla de Mega Lista: clic en una cabecera ordena por esa
+// columna, un segundo clic invierte el sentido.
+let megalistaSortKey = 'name';
+let megalistaSortDir = 1;
+const MEGALISTA_COLUMNS = [
+  {key:'name', label:'Ingrediente'},
+  {key:'category', label:'Categoría'},
+  {key:'supplier', label:'Proveedor'},
+  {key:'unit', label:'Unidad'},
+  {key:'price', label:'Compra'},
+  {key:null, label:'Alérgenos'},
+  {key:null, label:''}
+];
+function setMegalistaSort(key){
+  if(!key) return;
+  if(megalistaSortKey === key) megalistaSortDir *= -1;
+  else { megalistaSortKey = key; megalistaSortDir = 1; }
+  renderMegalista();
+}
+function renderMegalistaHead(){
+  const row = document.getElementById('megalista-thead-row');
+  if(!row) return;
+  row.innerHTML = MEGALISTA_COLUMNS.map(c => {
+    if(!c.key) return `<th>${c.label}</th>`;
+    const active = megalistaSortKey === c.key;
+    const arrow = active ? (megalistaSortDir === 1 ? ' <i class="ti ti-arrow-up"></i>' : ' <i class="ti ti-arrow-down"></i>') : '';
+    return `<th style="cursor:pointer;white-space:nowrap" onclick="setMegalistaSort('${c.key}')">${c.label}${arrow}</th>`;
+  }).join('');
+}
 function renderMegalista(){
   populateCategoryFilter();
   populateProviderFilter();
+  renderMegalistaHead();
   const search = document.getElementById('megalista-search').value.toLowerCase();
   const cat = document.getElementById('megalista-filter-cat').value;
   const prov = document.getElementById('megalista-filter-prov').value;
@@ -300,6 +330,14 @@ function renderMegalista(){
     const matchCat = !cat || i.category === cat;
     const matchProv = !prov || (i.supplier||'') === prov;
     return matchArea && matchSearch && matchCat && matchProv;
+  });
+
+  items = items.slice().sort((a,b) => {
+    let av, bv;
+    if(megalistaSortKey === 'price'){ av = a.packPrice!=null?a.packPrice:a.price; bv = b.packPrice!=null?b.packPrice:b.price; }
+    else { av = (a[megalistaSortKey]||''); bv = (b[megalistaSortKey]||''); }
+    if(typeof av === 'string') return av.localeCompare(bv) * megalistaSortDir;
+    return ((av||0) - (bv||0)) * megalistaSortDir;
   });
 
   const tbody = document.getElementById('megalista-tbody');
@@ -492,14 +530,42 @@ function saveIngredient(id){
   showToast(t('msg.ingredientSaved'));
 }
 
+// Recetas (Escandallo) que usan un ingrediente, para avisar antes de
+// borrarlo y evitar descuadrar el coste de esos platos sin darse cuenta.
+function recipesUsingIngredient(id){
+  return DB.recipes.filter(r => (r.ingredients||[]).some(line => line.type!=='base' && line.ingredientId===id));
+}
 function deleteIngredient(id){
+  const ing = DB.ingredients.find(i=>i.id===id);
+  const usedIn = recipesUsingIngredient(id);
+  if(usedIn.length){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-alert-triangle"></i> ${t('title.ingredientInUse')}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <p style="font-size:13px">${t('msg.ingredientInUseWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedIn.length)}</p>
+      <div style="max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);border-radius:8px">
+        ${usedIn.map(r=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(r.name)}</span></div>`).join('')}
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-danger" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
+      </div>
+    `);
+    return;
+  }
   if(!confirm(t('msg.confirmDeleteIngredient'))) return;
+  confirmDeleteIngredient(id);
+}
+function confirmDeleteIngredient(id){
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
     r.ingredients = (r.ingredients||[]).filter(line => line.ingredientId !== id);
   });
   saveDB();
+  closeModal();
   renderMegalista();
   showToast(t('msg.ingredientDeleted'));
 }
