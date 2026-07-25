@@ -3,6 +3,18 @@
    ============================================================ */
 const CARTA_TIPOS = ['MEDIODÍA','NOCHE','FIN DE SEMANA','DEGUSTACIÓN','TEMPORADA','GENERAL'];
 let cartaEdit = null; // {id, nombre, horario:[7x{activo,desde,hasta}], secciones:[]}
+let cartaSearchQuery = '';
+
+// Mueve un elemento dentro de un array una posición arriba/abajo (in place).
+function moveArrayItem(arr, index, dir){
+  const j = index + dir;
+  if(j < 0 || j >= arr.length) return;
+  [arr[index], arr[j]] = [arr[j], arr[index]];
+}
+function reorderButtons(onUp, onDown, isFirst, isLast){
+  return `<button class="btn btn-sm btn-icon" ${isFirst?'disabled':''} onclick="${onUp}" title="Subir"><i class="ti ti-chevron-up"></i></button>`
+    + `<button class="btn btn-sm btn-icon" ${isLast?'disabled':''} onclick="${onDown}" title="Bajar"><i class="ti ti-chevron-down"></i></button>`;
+}
 
 function migrateCartas(){
   if((!DB.cartas || !DB.cartas.length) && DB.menuItems && DB.menuItems.length){
@@ -293,33 +305,70 @@ function renderCartaEditor(){
   renderCartaSecciones();
 }
 
+function setCartaSearchQuery(val){
+  cartaSearchQuery = val;
+  const el = document.getElementById('carta-search-input');
+  const pos = el ? el.selectionStart : null;
+  renderCartaSecciones();
+  const newEl = document.getElementById('carta-search-input');
+  if(newEl && pos != null){ newEl.focus(); newEl.setSelectionRange(pos, pos); }
+}
 function renderCartaSecciones(){
   const box = document.getElementById('carta-secciones');
+  const q = cartaSearchQuery.trim().toLowerCase();
+  const searchBox = `
+    <div class="field" style="margin-bottom:10px">
+      <input type="text" id="carta-search-input" placeholder="${t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)" style="max-width:320px">
+    </div>`;
   if(!cartaEdit.secciones.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
+    box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
     return;
   }
-  box.innerHTML = cartaEdit.secciones.map(sec => `
+  const secciones = cartaEdit.secciones;
+  const rows = secciones.map((sec, si) => {
+    const platos = sec.platos || [];
+    const secMatches = !q || tItem(sec).toLowerCase().includes(q);
+    const visiblePlatos = q && !secMatches ? platos.filter(p => tItem(p).toLowerCase().includes(q)) : platos;
+    if(q && !secMatches && !visiblePlatos.length) return '';
+    return `
     <div class="ge-section">
       <div class="ge-sec-head">
-        <h4>${escapeHtml(tItem(sec))}</h4>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${reorderButtons(`moveCartaSection(${si},-1)`, `moveCartaSection(${si},1)`, si===0, si===secciones.length-1)}
+          <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
+        </div>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
-      ${(sec.platos||[]).length ? sec.platos.map(p => `
+      ${visiblePlatos.length ? visiblePlatos.map(p => {
+        const pi = platos.indexOf(p);
+        return `
         <div class="ge-item">
+          <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
           <span style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:14px">${currentArea()==='sala' ? t('empty.sectionDrinks') : t('empty.sectionDishes')}</div>`}
+      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (currentArea()==='sala' ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
     </div>
-  `).join('');
+  `;
+  }).join('');
+  box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
+}
+function moveCartaSection(index, dir){
+  moveArrayItem(cartaEdit.secciones, index, dir);
+  renderCartaSecciones();
+}
+function moveCartaPlato(secId, index, dir){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
+  moveArrayItem(sec.platos, index, dir);
+  renderCartaSecciones();
 }
 
 function newCartaSection(){
@@ -650,32 +699,70 @@ function renderMenuEditor(){
   renderMenuGrupos();
 }
 
+let menuSearchQuery = '';
+function setMenuSearchQuery(val){
+  menuSearchQuery = val;
+  const el = document.getElementById('menu-search-input');
+  const pos = el ? el.selectionStart : null;
+  renderMenuGrupos();
+  const newEl = document.getElementById('menu-search-input');
+  if(newEl && pos != null){ newEl.focus(); newEl.setSelectionRange(pos, pos); }
+}
 function renderMenuGrupos(){
   const box = document.getElementById('menu-grupos');
+  const q = menuSearchQuery.trim().toLowerCase();
+  const searchBox = `
+    <div class="field" style="margin-bottom:10px">
+      <input type="text" id="menu-search-input" placeholder="${t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)" style="max-width:320px">
+    </div>`;
   if(!menuEdit.grupos.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list"></i>${t('empty.groups')}</div>`;
+    box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.groups')}</div>`;
     return;
   }
-  box.innerHTML = menuEdit.grupos.map(g => `
+  const grupos = menuEdit.grupos;
+  const rows = grupos.map((g, gi) => {
+    const opciones = g.opciones || [];
+    const grupoMatches = !q || g.nombre.toLowerCase().includes(q);
+    const visibleOpciones = q && !grupoMatches ? opciones.filter(o => o.nombre.toLowerCase().includes(q)) : opciones;
+    if(q && !grupoMatches && !visibleOpciones.length) return '';
+    return `
     <div class="ge-section">
       <div class="ge-sec-head">
-        <h4>${escapeHtml(g.nombre)}${g.bebida ? ' <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> Sala</span>' : ''}</h4>
+        <div style="display:flex;align-items:center;gap:4px">
+          ${reorderButtons(`moveMenuGrupo(${gi},-1)`, `moveMenuGrupo(${gi},1)`, gi===0, gi===grupos.length-1)}
+          <h4 style="margin:0">${escapeHtml(g.nombre)}${g.bebida ? ' <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> Sala</span>' : ''}</h4>
+        </div>
         <div class="actions-cell">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> Bebidas (sala)</label>
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> Opción</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
-      ${(g.opciones||[]).length ? g.opciones.map(o => `
+      ${visibleOpciones.length ? visibleOpciones.map(o => {
+        const oi = opciones.indexOf(o);
+        return `
         <div class="ge-item">
+          <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
           <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> Extras${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:14px">Sin opciones en este grupo.</div>`}
+      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : 'Sin opciones en este grupo.'}</div>`}
     </div>
-  `).join('');
+  `;
+  }).join('');
+  box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
+}
+function moveMenuGrupo(index, dir){
+  moveArrayItem(menuEdit.grupos, index, dir);
+  renderMenuGrupos();
+}
+function moveMenuOpcion(grupoId, index, dir){
+  const g = menuEdit.grupos.find(x=>x.id===grupoId);
+  if(!g) return;
+  moveArrayItem(g.opciones, index, dir);
+  renderMenuGrupos();
 }
 
 function newMenuGrupo(){
