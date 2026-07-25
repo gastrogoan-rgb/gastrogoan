@@ -180,14 +180,35 @@ function openCashClosureHistory(){
 /* ============================================================
    PROVEEDORES — Contactos y condiciones de compra
    ============================================================ */
+let providerSearchQuery = '';
+function setProviderSearchQuery(val){
+  providerSearchQuery = val;
+  const el = document.getElementById('proveedores-search-input');
+  const pos = el ? el.selectionStart : null;
+  renderProveedores();
+  const newEl = document.getElementById('proveedores-search-input');
+  if(newEl && pos != null){ newEl.focus(); newEl.setSelectionRange(pos, pos); }
+}
+// Ingredientes de la Mega Lista comprados a un proveedor (por nombre, que es
+// como se enlazan hoy los ingredientes con su proveedor).
+function ingredientsForSupplier(nombre){
+  return DB.ingredients.filter(i => i.supplier === nombre && (i.area||'cocina') === currentArea());
+}
 function renderProveedores(){
   const box = document.getElementById('proveedores-list');
-  const providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
+  const q = providerSearchQuery.trim().toLowerCase();
+  let providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
+  if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q));
   if(!providers.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>${t('empty.suppliers')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>${q ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
     return;
   }
-  box.innerHTML = providers.map(p => `
+  box.innerHTML = providers.map(p => {
+    const ings = ingredientsForSupplier(p.nombre);
+    const SHOWN = 6;
+    const ingNames = ings.slice(0, SHOWN).map(i=>escapeHtml(i.name)).join(', ');
+    const more = ings.length > SHOWN ? ` +${ings.length - SHOWN} más` : '';
+    return `
     <div class="card">
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-building-factory-2"></i> ${escapeHtml(p.nombre)}</span>
@@ -204,9 +225,10 @@ function renderProveedores(){
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
       ${p.iva!=null ? `<span class="badge badge-gray">IVA ${p.iva}%</span>` : ''}
+      <div style="margin-top:6px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})${ings.length ? `: ${ingNames}${more}` : ''}</div>
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 // La forma de pago se guarda siempre en español (es el valor interno/histórico);

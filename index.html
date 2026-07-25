@@ -194,6 +194,10 @@
         <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> Nuevo Proveedor</button>
       </div>
 
+      <div class="field" style="max-width:320px">
+        <input type="text" id="proveedores-search-input" data-i18n-ph="ph.searchSupplier" placeholder="Buscar proveedor..." oninput="setProviderSearchQuery(this.value)">
+      </div>
+
       <div class="grid grid-2" id="proveedores-list"></div>
     </section>
 
