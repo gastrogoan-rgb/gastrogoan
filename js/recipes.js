@@ -425,10 +425,11 @@ function renderRecipeModal(id, r){
     </div>
 
     <div class="field">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
-        <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
+      <label style="display:flex;align-items:center;gap:8px;cursor:${id?'default':'pointer'};font-weight:400;${id?'opacity:.7':''}">
+        <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} ${id?'disabled':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
         Es una elaboración base (caldo, sofrito, masa...) que se puede usar como ingrediente en otros platos
       </label>
+      ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.isBaseLockedAfterCreation')}</p>` : ''}
     </div>
     ${r.isBase ? `
     <div class="field-row">
@@ -654,17 +655,11 @@ function saveRecipe(id){
   if(id){
     const r = getRecipe(id);
     if(!r) return;
-    // Convertir un plato ya puesto a la venta en "elaboración base" lo
-    // sacaría de la lista de platos vendibles sin avisar, dejándolo
-    // huérfano en la carta. Bloquear hasta que se quite de la carta.
-    if(isBase && !r.isBase){
-      const cartaHits = cartaPlatosUsingRecipe(id);
-      if(cartaHits.length){
-        showToast(t('msg.cannotMakeBaseWhileOnCarta').replace('${cartas}', cartaHits.map(h=>h.carta.nombre).join(', ')));
-        return;
-      }
-    }
-    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase, baseYield, baseUnit});
+    // "Elaboración base" solo se decide al crear el plato/elaboración (el
+    // checkbox está deshabilitado al editar uno existente) — así una
+    // elaboración nunca puede acabar puesta a la venta como plato, ni
+    // viceversa.
+    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
     DB.recipes.push({id: recipeId, name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
