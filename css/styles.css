@@ -837,8 +837,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .badge-gray{color:var(--muted);background:transparent}
 
 /* ===== Home / carpetas: superficies planas bordeadas ===== */
-.home-hero{background:#1C1A17;border-radius:0 !important}
-.home-hero .hero-badge{background:rgba(126,155,132,.18);color:var(--olive-l);border:1px solid rgba(126,155,132,.5)}
+.home-hero{
+  background:radial-gradient(circle at 50% -30%,rgba(126,155,132,.30),transparent 60%),linear-gradient(160deg,#1C1A17 0%,#211F1A 100%);
+  border-radius:0 0 28px 28px !important;
+  border-bottom:1px solid rgba(126,155,132,.22);
+}
+.home-hero .hero-badge{background:rgba(126,155,132,.20);color:#C3D4C8;border:1px solid rgba(126,155,132,.55);box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.home-hero h1{color:#fff}
+.home-hero p{color:rgba(255,255,255,.85)}
 .folder-card,.folder-card.folder-cocina,.folder-card.folder-sala,.folder-card.folder-gestion{
   background:#FFFFFF;border:1px solid var(--border);color:var(--text)}
 .folder-card::before{background:#1C1A17}
