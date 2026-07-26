@@ -12,13 +12,33 @@ const LIMPIEZA_TAB_ICONS = {
 };
 function limpiezaTabLabel(k){ return `<i class="ti ${LIMPIEZA_TAB_ICONS[k]}"></i> ${t(LIMPIEZA_TAB_LABEL_KEYS[k])}`; }
 const LIMPIEZA_LOG_CONFIG_KEYS = {
-  temperaturas: {fields:['fecha','hora','equipo','temp','estado','responsable'], labelKeys:['common.date','th.time','label.equipment','label.tempC','label.status','label.responsible']},
+  temperaturas: {fields:['fecha','hora','equipo','tipo','temp','estado','responsable'], labelKeys:['common.date','th.time','label.equipment','label.equipmentType','label.tempC','label.status','label.responsible']},
   alergenos: {fields:['fecha','plato','alergenos','verificado','notas'], labelKeys:['common.date','label.dishElaboration','label.allergensPresent','label.verifiedBy','th.notes']},
   plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labelKeys:['common.date','label.area','label.findings','label.actionTaken','label.nextReview']}
 };
 function limpiezaLogConfig(key){
   const c = LIMPIEZA_LOG_CONFIG_KEYS[key];
   return {fields: c.fields, labels: c.labelKeys.map(k => t(k))};
+}
+
+// Rangos seguros de temperatura por tipo de equipo, para calcular el estado
+// (OK/No OK) automáticamente en vez de que el usuario tenga que juzgarlo.
+const LIMPIEZA_TEMP_RANGES = {
+  nevera: {min:0, max:5},
+  congelador: {min:-25, max:-18},
+  caliente: {min:65, max:120}
+};
+function limpiezaTempTipoOptions(){
+  return [['nevera', t('opt.tempFridge')], ['congelador', t('opt.tempFreezer')], ['caliente', t('opt.tempHot')], ['otro', t('opt.tempOther')]];
+}
+function limpiezaTempTipoLabel(tipo){
+  const found = limpiezaTempTipoOptions().find(([v]) => v === tipo);
+  return found ? found[1] : (tipo || '—');
+}
+function computeTempEstado(tipo, temp){
+  const r = LIMPIEZA_TEMP_RANGES[tipo];
+  if(!r || isNaN(temp)) return null;
+  return (temp >= r.min && temp <= r.max) ? 'OK' : 'NOK';
 }
 const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
 const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
@@ -40,6 +60,8 @@ function ensureLimpiezaData(){
   if(!l.mantenimiento) l.mantenimiento = [];
   if(!l.aperturaPasos) l.aperturaPasos = [...LIMPIEZA_DEFAULT_APERTURA];
   if(!l.cierrePasos) l.cierrePasos = [...LIMPIEZA_DEFAULT_CIERRE];
+  if(!l.aperturaLog) l.aperturaLog = [];
+  if(!l.cierreLog) l.cierreLog = [];
 }
 
 function renderLimpieza(){
@@ -117,23 +139,70 @@ function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
   const ap = DB.limpieza.aperturaPasos;
   const ci = DB.limpieza.cierrePasos;
-  const renderBlock = (title, icon, pasos, type) => `
+  const empOptions = areaEmployees().map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  const renderBlock = (title, icon, pasos, type) => {
+    const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
+    const log = DB.limpieza[logKey] || [];
+    const logEntries = [...log].reverse().slice(0, 5);
+    return `
     <div class="card">
       <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
       ${pasos.map((p,i) => `
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
           <div class="step-num">${i+1}</div>
           <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
+          <div class="owner-only" style="display:flex;gap:2px">
+            ${reorderButtons(`moveProtocoloPaso('${type}',${i},-1)`, `moveProtocoloPaso('${type}',${i},1)`, i===0, i===pasos.length-1)}
+          </div>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
       <button class="owner-only btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
       <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> ${t('common.reset')}</button>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase">${t('title.dailyCompliance')}</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <select id="protocolo-resp-${type}" style="flex:1">
+            <option value="">${t('label.responsible')}</option>
+            ${empOptions}
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-check"></i> ${t('btn.registerToday')}</button>
+        </div>
+        ${logEntries.length ? `<div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto">${logEntries.map(entry => {
+          const resp = entry.responsableId ? DB.employees.find(e=>e.id===entry.responsableId) : null;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px">
+            <span><i class="ti ti-check" style="color:var(--green)"></i> ${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora)}${resp?` · ${escapeHtml(resp.name)}`:''}</span>
+            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteProtocoloComplianceEntry('${type}',${entry.id})"><i class="ti ti-trash"></i></button>
+          </div>`;
+        }).join('')}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('empty.noComplianceLog')}</div>`}
+      </div>
     </div>`;
+  };
   box.innerHTML = `<div class="grid grid-2">${renderBlock(t('title.openingProtocol'),'sunrise',ap,'apertura')}${renderBlock(t('title.closingProtocol'),'sunset',ci,'cierre')}</div>`;
 }
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
 function updateProtocoloPaso(type,i,val){ DB.limpieza[_protocoloKey(type)][i] = val; saveDB(); }
+function moveProtocoloPaso(type,i,dir){
+  moveArrayItem(DB.limpieza[_protocoloKey(type)], i, dir);
+  saveDB();
+  renderLimpiezaProtocolo();
+}
+function registerProtocoloCompliance(type){
+  const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
+  const sel = document.getElementById(`protocolo-resp-${type}`);
+  const responsableId = sel && sel.value ? parseInt(sel.value) : null;
+  const now = new Date();
+  DB.limpieza[logKey].push({id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5), responsableId});
+  saveDB();
+  renderLimpiezaProtocolo();
+  showToast(t('msg.complianceRegistered'));
+}
+function deleteProtocoloComplianceEntry(type, id){
+  const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
+  DB.limpieza[logKey] = DB.limpieza[logKey].filter(x => x.id !== id);
+  saveDB();
+  renderLimpiezaProtocolo();
+}
 function addProtocoloPaso(type){ DB.limpieza[_protocoloKey(type)].push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
 function removeProtocoloPaso(type,i){
   const key = _protocoloKey(type);
@@ -304,17 +373,26 @@ function renderLimpiezaLog(key){
 
   const formFields = cfg.fields.map((f,i) => {
     let input;
-    if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
+    if(f === 'estado' && key === 'temperaturas') input = `<div style="font-size:12px;color:var(--muted);padding-top:8px">${t('label.autoCalculated')}</div>`;
+    else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
+    else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
     else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
+    else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
     else input = `<input type="text" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
     return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
 
   const rows = entries.length ? [...entries].slice().reverse().map(e => `
-    <tr>${cfg.fields.map(f => f==='estado'
-      ? `<td style="font-weight:700;color:${e[f]==='OK'?'var(--green)':'var(--red)'}">${e[f]==='OK'?'✅ OK':'❌ No OK'}</td>`
-      : `<td>${escapeHtml(String(e[f]||'—'))}</td>`).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
+    <tr>${cfg.fields.map(f => {
+      if(f === 'estado'){
+        if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)">✅ OK</td>`;
+        if(e[f]==='NOK') return `<td style="font-weight:700;color:var(--red)">❌ No OK</td>`;
+        return `<td style="color:var(--muted)">ℹ️ ${t('status.notEvaluated')}</td>`;
+      }
+      if(f === 'tipo' && key === 'temperaturas') return `<td>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
+      return `<td>${escapeHtml(String(e[f]||'—'))}</td>`;
+    }).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">Sin registros todavía.</div></td></tr>`;
 
   box.innerHTML = `
@@ -334,9 +412,13 @@ function addLimpiezaLogEntry(key){
   const cfg = limpiezaLogConfig(key);
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
+    if(f === 'estado' && key === 'temperaturas') return; // se calcula solo, más abajo
     const el = document.getElementById(`lp-${key}-${f}`);
     entry[f] = el ? el.value : '';
   });
+  if(key === 'temperaturas'){
+    entry.estado = computeTempEstado(entry.tipo, parseFloat(entry.temp)) || null;
+  }
   DB.limpieza[key].push(entry);
   saveDB();
   renderLimpiezaLog(key);
@@ -348,6 +430,14 @@ function deleteLimpiezaLogEntry(key, id){
   renderLimpiezaLog(key);
 }
 
+// Vencido si "próximo" ya pasó; próximo a vencer si faltan 7 días o menos.
+function limpiezaMantenimientoDueStatus(e){
+  if(!e.proximo) return null;
+  const diffDays = Math.floor((new Date(e.proximo) - new Date(todayStr())) / 86400000);
+  if(diffDays < 0) return 'overdue';
+  if(diffDays <= 7) return 'soon';
+  return null;
+}
 function renderLimpiezaMantenimiento(){
   const box = document.getElementById('limpieza-tab-content');
   const equipos = DB.limpieza.mantenimiento;
@@ -359,11 +449,17 @@ function renderLimpiezaMantenimiento(){
     <div class="table-wrap">
       <table>
         <thead><tr><th>${t('label.equipment')}</th><th>${t('label.lastMaintenance')}</th><th>${t('label.next')}</th><th>${t('label.responsible')}</th><th>${t('label.status')}</th><th>${t('th.notes')}</th><th></th></tr></thead>
-        <tbody>${equipos.length ? equipos.map(e => `
+        <tbody>${equipos.length ? equipos.map(e => {
+          const due = limpiezaMantenimientoDueStatus(e);
+          return `
           <tr>
             <td><strong>${escapeHtml(e.nombre)}</strong></td>
             <td><input type="date" value="${e.ultimo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)"></td>
-            <td><input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)"></td>
+            <td>
+              <input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)">
+              ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
+              ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
+            </td>
             <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)"></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)">
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
@@ -371,7 +467,7 @@ function renderLimpiezaMantenimiento(){
             <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)"></td>
             <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
-        `).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
+        `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
       </table>
     </div>
   `;
