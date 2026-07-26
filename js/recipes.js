@@ -1041,6 +1041,17 @@ function renderFichaModal(){
     <div class="field">
       <label>${t('label.plating')}</label>
       <textarea id="ficha-presentation" placeholder="Notas de presentación..." ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+        ${f.photo ? `
+          <img src="${f.photo}" alt="Foto de emplatado" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          ${ro ? '' : `<button class="btn btn-sm btn-danger" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
+        ` : (ro ? '' : `
+          <label class="btn btn-sm" style="cursor:pointer">
+            <i class="ti ti-camera-plus"></i> ${t('btn.uploadPlatingPhoto')}
+            <input type="file" accept="image/*" style="display:none" onchange="handleFichaPhotoUpload(this)">
+          </label>
+        `)}
+      </div>
     </div>
 
     <div class="field">
@@ -1081,6 +1092,23 @@ function removeFichaStep(idx){
   renderFichaModal();
 }
 
+function handleFichaPhotoUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 2 * 1024 * 1024){ showToast(t('msg.photoTooLarge')); return; }
+  syncFichaModalFields();
+  const reader = new FileReader();
+  reader.onload = e => {
+    fichaModalState.photo = e.target.result;
+    renderFichaModal();
+  };
+  reader.readAsDataURL(file);
+}
+function removeFichaPhoto(){
+  syncFichaModalFields();
+  fichaModalState.photo = '';
+  renderFichaModal();
+}
 function toggleFichaAllergen(a){
   syncFichaModalFields();
   if(!fichaModalState.allergens) fichaModalState.allergens = [];
@@ -1105,7 +1133,8 @@ function saveFicha(){
     ingredients: f.ingredients.filter(i => i && i.trim()),
     pasos: f.pasos.filter(p => p && p.trim()),
     allergens: f.allergens || [],
-    presentation: (f.presentation||'').trim()
+    presentation: (f.presentation||'').trim(),
+    photo: f.photo || ''
   };
   if(f.id){
     const ficha = getFicha(f.id);
@@ -1156,6 +1185,7 @@ function printFicha(id){
   <h2>Ingredientes</h2><ul>${ings || '<li>Sin ingredientes</li>'}</ul>
   <h2>Modo de elaboración</h2>${steps || '<p>Sin especificar</p>'}
   <h2>Presentación</h2><p>${escapeHtml(f.presentation) || 'Sin especificar'}</p>
+  ${f.photo ? `<img src="${f.photo}" alt="Foto de emplatado" style="max-width:100%;max-height:80mm;border-radius:6px;margin-top:6px">` : ''}
   <h2>Alérgenos</h2><div>${algs}</div>
   </body></html>`);
   win.document.close();
