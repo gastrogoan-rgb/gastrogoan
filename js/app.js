@@ -579,9 +579,7 @@ function confirmDistEmployeePin(){
   const e = DB.employees.find(x=>x.id===distPendingPinEmployeeId);
   if(!e) return;
   const val = document.getElementById('dist-pin-input').value;
-  const storedPin = e.pin || '1234';
-  const match = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
-  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
   closeModal();
   openDistEmployeeAuthed(e.id);
 }

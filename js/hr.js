@@ -1879,13 +1879,20 @@ function requestEmployeePersonalPin(employeeId){
   `);
   setTimeout(()=>document.getElementById('personal-pin-input')?.focus(), 50);
 }
+// Un PIN "coincide" si es el del propio empleado, o si es el PIN del negocio
+// (el dueño siempre puede entrar aunque no sepa el PIN de cada empleado).
+function pinMatchesEmployeeOrBusiness(val, employee){
+  const storedPin = employee.pin || '1234';
+  const empMatch = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  if(empMatch) return true;
+  const bp = DB.business.pin;
+  return bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+}
 function confirmEmployeePersonalPin(){
   const e = DB.employees.find(x=>x.id===personalPendingPinEmployeeId);
   if(!e) return;
   const val = document.getElementById('personal-pin-input').value;
-  const storedPin = e.pin || '1234';
-  const match = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
-  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
   openEmployeeFicharModal(e.id);
 }
 function openEmployeeFicharModal(employeeId){
