@@ -683,7 +683,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><i class="ti ti-folder"></i> ${escapeHtml(cat)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock')">${getCategoryIcon(cat)}</span> ${escapeHtml(cat)}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -762,7 +762,7 @@ function renderStock(){
       } else {
         elabGroupsWrap.innerHTML = `<div class="grid grid-compact">${elabCats.map(cat => `
           <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${cat.replace(/'/g,"\\'")}')">
-            <h3><i class="ti ti-folder"></i> ${escapeHtml(cat)}</h3>
+            <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock')">${getCategoryIcon(cat)}</span> ${escapeHtml(cat)}</h3>
             <div style="font-size:12px;color:var(--muted)">${elabByCat[cat].length===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', elabByCat[cat].length)}</div>
           </div>
         `).join('')}</div>`;

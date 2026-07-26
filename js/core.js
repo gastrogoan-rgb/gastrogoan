@@ -1752,6 +1752,7 @@ function defaultData(){
     },
     clients: [],
     chatMessages: [], // {id, channel:'general'|'cocina'|'sala', authorId, authorName, text, ts}
+    categoryIcons: {}, // {categoryName: emoji} — icono elegido a mano para carpetas de Escandallo/Fichas/Stock
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     business: {
@@ -1827,6 +1828,7 @@ async function loadDB(){
     if(!Array.isArray(merged.promos)) merged.promos = [];
     if(!Array.isArray(merged.loyaltyRewards)) merged.loyaltyRewards = ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'];
     if(!Array.isArray(merged.chatMessages)) merged.chatMessages = [];
+    if(!merged.categoryIcons || typeof merged.categoryIcons !== 'object' || Array.isArray(merged.categoryIcons)) merged.categoryIcons = {};
     (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } if(!e.area) e.area = 'cocina'; });
     (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;

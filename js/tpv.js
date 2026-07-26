@@ -111,6 +111,38 @@ function guessSeccionEmoji(nombre){
   return '🍽️';
 }
 
+// Icono elegido a mano por el cliente para una carpeta de categoría (en
+// Escandallo, Fichas Técnicas y Stock), guardado por nombre de categoría y
+// compartido entre los tres apartados. Sin icono elegido, se usa 📁 por defecto.
+const CATEGORY_ICON_CHOICES = ['🥩','🐟','🦐','🥬','🍅','🍎','🍌','🧀','🥛','🍞','🥐','🥤','🍷','🍺','☕','🧂','🌶️','🧄','🧅','🧊','🍰','🍫','🥗','🍽️','🥫','🥚','🫒','🍚','🍝','🌾','🍕','🍔','🌮','🍣','📦'];
+function getCategoryIcon(key){
+  return (DB.categoryIcons && DB.categoryIcons[key]) || '📁';
+}
+function openCategoryIconModal(key, label, reRenderFn){
+  const safeKey = key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safeReRender = reRenderFn.replace(/'/g,"\\'");
+  openModal(`
+    <div class="modal-header">
+      <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(label)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
+      ${CATEGORY_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}')">${e}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="setCategoryIcon('${safeKey}','','${safeReRender}')">${t('btn.removeIcon')}</button>
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function setCategoryIcon(key, emoji, reRenderFn){
+  if(!DB.categoryIcons) DB.categoryIcons = {};
+  if(emoji) DB.categoryIcons[key] = emoji; else delete DB.categoryIcons[key];
+  saveDB();
+  closeModal();
+  if(typeof window[reRenderFn] === 'function') window[reRenderFn]();
+}
+
 function getOpenOrderForTable(tableId){
   return DB.tpvOrders.find(o => o.tableId === tableId && o.status !== 'pagada');
 }
