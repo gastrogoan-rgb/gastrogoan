@@ -1915,7 +1915,7 @@ function openFichajeHistoryModal(employeeId){
                 <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
                 <td style="${mismatch?'color:var(--red);font-weight:700':''}">${actual!=null ? fmtDuracion(actual) : '—'}${mismatch?' <i class="ti ti-alert-triangle" title="No coincide con el turno planificado"></i>':''}</td>
                 <td style="color:var(--muted)">${planned!=null ? fmtDuracion(planned) : '—'}</td>
-                <td class="actions-cell">${f.salida ? `<button class="owner-only btn btn-sm btn-icon" title="Corregir fichaje" onclick="openEditFichajeModal(${f.id})"><i class="ti ti-edit"></i></button>` : ''}</td>
+                <td class="actions-cell">${f.salida ? `<button class="btn btn-sm btn-icon" title="Corregir fichaje (requiere PIN del negocio)" onclick="requestFichajeEditPin(${f.id})"><i class="ti ti-lock-edit"></i></button>` : ''}</td>
               </tr>
             `;}).join('')}
           </tbody>
@@ -1928,6 +1928,42 @@ function openFichajeHistoryModal(employeeId){
   `, {xl:true});
 }
 
+// Corregir un fichaje cambia las horas realmente trabajadas de un empleado,
+// así que se pide siempre el PIN del negocio en el momento (no basta con que
+// el modo edición esté ya desbloqueado): evita que un empleado se "añada"
+// horas de más aunque tenga el dispositivo en la mano.
+let fichajePendingEditId = null;
+function requestFichajeEditPin(fichajeId){
+  fichajePendingEditId = fichajeId;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> ${t('title.bossAccess')}</h3>
+      <button class="modal-close" onclick="openFichajeHistoryModal(${(DB.fichajes||[]).find(x=>x.id===fichajeId)?.employeeId})">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.fichajeEditPinDesc')}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="fichaje-edit-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmFichajeEditPin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openFichajeHistoryModal(${(DB.fichajes||[]).find(x=>x.id===fichajeId)?.employeeId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmFichajeEditPin()">${t('common.unlock')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('fichaje-edit-pin-input')?.focus(), 50);
+}
+function confirmFichajeEditPin(){
+  const f = (DB.fichajes||[]).find(x=>x.id===fichajePendingEditId);
+  if(!f) return;
+  const val = document.getElementById('fichaje-edit-pin-input').value;
+  const bp = DB.business.pin;
+  const match = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  if(!match){
+    showToast(t('msg.pinIncorrect'));
+    return;
+  }
+  openEditFichajeModal(fichajePendingEditId);
+}
 function openEditFichajeModal(fichajeId){
   const f = (DB.fichajes||[]).find(x=>x.id===fichajeId);
   if(!f) return;
