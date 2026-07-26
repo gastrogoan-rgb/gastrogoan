@@ -1550,13 +1550,15 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;gap:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div>
-          <strong>${escapeHtml(e.name)}</strong>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <strong>${escapeHtml(e.name)}</strong>
+            <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:3px 9px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
+          </div>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div>
           ${open ? `<span class="badge badge-green" style="margin-top:4px"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
-        <span style="font-size:12px;color:var(--brand-orange);white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
         <div class="actions-cell">
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
