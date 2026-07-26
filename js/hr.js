@@ -1878,6 +1878,15 @@ function renderHorariosFichar(){
   box.innerHTML = `<div class="grid grid-3">${cards}</div>`;
 }
 
+// Turno planificado de un empleado para una fecha concreta (para comparar
+// horas planificadas vs. fichadas de verdad).
+function turnoForDate(employeeId, fecha){
+  return (DB.turnos||[]).find(t => t.employeeId===employeeId && t.fecha===fecha);
+}
+// Umbral (en horas) a partir del cual se avisa de que lo fichado no
+// coincide con el turno planificado para ese día.
+const FICHAJE_TURNO_MISMATCH_THRESHOLD = 0.25;
+
 function openFichajeHistoryModal(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
@@ -1892,16 +1901,23 @@ function openFichajeHistoryModal(employeeId){
     ${fichajes.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Turno</th><th></th></tr></thead>
           <tbody>
-            ${fichajes.map(f => `
+            ${fichajes.map(f => {
+              const turno = turnoForDate(employeeId, f.fecha);
+              const planned = turno ? turnoHours(turno) : null;
+              const actual = f.salida ? fichajeHoras(f) : null;
+              const mismatch = planned!=null && actual!=null && Math.abs(actual-planned) > FICHAJE_TURNO_MISMATCH_THRESHOLD;
+              return `
               <tr>
                 <td>${escapeHtml(f.fecha)}</td>
                 <td>${fmtHora(f.entrada)}</td>
                 <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
-                <td>${f.salida ? fmtDuracion(fichajeHoras(f)) : '—'}</td>
+                <td style="${mismatch?'color:var(--red);font-weight:700':''}">${actual!=null ? fmtDuracion(actual) : '—'}${mismatch?' <i class="ti ti-alert-triangle" title="No coincide con el turno planificado"></i>':''}</td>
+                <td style="color:var(--muted)">${planned!=null ? fmtDuracion(planned) : '—'}</td>
+                <td class="actions-cell">${f.salida ? `<button class="owner-only btn btn-sm btn-icon" title="Corregir fichaje" onclick="openEditFichajeModal(${f.id})"><i class="ti ti-edit"></i></button>` : ''}</td>
               </tr>
-            `).join('')}
+            `;}).join('')}
           </tbody>
         </table>
       </div>
@@ -1909,7 +1925,44 @@ function openFichajeHistoryModal(employeeId){
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">Cerrar</button>
     </div>
+  `, {xl:true});
+}
+
+function openEditFichajeModal(fichajeId){
+  const f = (DB.fichajes||[]).find(x=>x.id===fichajeId);
+  if(!f) return;
+  const entradaTime = f.entrada ? new Date(f.entrada).toTimeString().slice(0,5) : '';
+  const salidaTime = f.salida ? new Date(f.salida).toTimeString().slice(0,5) : '';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-edit"></i> Corregir fichaje — ${escapeHtml(f.fecha)}</h3>
+      <button class="modal-close" onclick="openFichajeHistoryModal(${f.employeeId})">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Hora de entrada</label><input type="time" id="edit-fichaje-entrada" value="${entradaTime}"></div>
+      <div class="field"><label>Hora de salida</label><input type="time" id="edit-fichaje-salida" value="${salidaTime}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openFichajeHistoryModal(${f.employeeId})">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditedFichaje(${fichajeId})">${t('common.save')}</button>
+    </div>
   `);
+}
+function saveEditedFichaje(fichajeId){
+  const f = (DB.fichajes||[]).find(x=>x.id===fichajeId);
+  if(!f) return;
+  const entradaVal = document.getElementById('edit-fichaje-entrada').value;
+  const salidaVal = document.getElementById('edit-fichaje-salida').value;
+  if(!entradaVal || !salidaVal){ showToast(t('msg.indicateBothTimes')); return; }
+  const entradaDate = new Date(`${f.fecha}T${entradaVal}:00`);
+  const salidaDate = new Date(`${f.fecha}T${salidaVal}:00`);
+  if(salidaDate <= entradaDate){ showToast(t('msg.exitAfterEntry')); return; }
+  f.entrada = entradaDate.toISOString();
+  f.salida = salidaDate.toISOString();
+  saveDB();
+  showToast(t('msg.fichajeUpdated'));
+  openFichajeHistoryModal(f.employeeId);
+  renderHorariosTab();
 }
 
 function openFichajeModal(employeeId, action){
