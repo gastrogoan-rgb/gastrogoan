@@ -613,6 +613,23 @@ function renderStock(){
     return matchArea && matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, recipeId: e.recipeId||null, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
+  // Totales de referencia: cuántos productos (Mega Lista) y elaboraciones
+  // (escandalladas o creadas a mano) hay en total en esta área, sin que la
+  // búsqueda ni el filtro "Solo alertas" afecten al recuento.
+  const kpisBox = document.getElementById('stock-kpis');
+  if(kpisBox){
+    const allIngCount = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea()).length;
+    const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
+    const lowIngCount = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
+    const lowElabCount = allElabList.filter(e => (e.qty||0) <= (e.min||0)).length;
+    kpisBox.innerHTML = `
+      <div class="kpi"><div class="label">${t('label.products')}</div><div class="value">${allIngCount}</div></div>
+      <div class="kpi"><div class="label">${t('label.elaborations')}</div><div class="value">${allElabList.length}</div></div>
+      <div class="kpi ${lowIngCount?'warn':''}"><div class="label">${t('label.productsBelowMin')}</div><div class="value">${lowIngCount}</div></div>
+      <div class="kpi ${lowElabCount?'warn':''}"><div class="label">${t('label.elaborationsBelowMin')}</div><div class="value">${lowElabCount}</div></div>
+    `;
+  }
+
   const renderRow = row => {
     const low = row.qty <= row.min;
     const isElab = row.type === 'elab';
