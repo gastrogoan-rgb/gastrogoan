@@ -472,6 +472,10 @@ td.wrap{white-space:normal}
 
   /* Treasury rows */
   .te-row{font-size:12.5px}
+
+  /* 4 columnas de 220px mínimo no caben por debajo de ~950px: bajar a 3
+     antes de que se produzca desbordamiento horizontal. */
+  .grid-modules{grid-template-columns:repeat(3,minmax(200px,1fr))}
 }
 
 @media (max-width: 880px){
