@@ -162,7 +162,7 @@ function renderEscandallo(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo')">${getCategoryIcon(key)}</span> ${escapeHtml(label)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
         <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
       </div>
     `).join('')}</div>`;
@@ -820,7 +820,7 @@ function renderFichas(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas')">${getCategoryIcon(key)}</span> ${escapeHtml(label)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
         <div style="font-size:12px;color:var(--muted)">${group.length} plato${group.length===1?'':'s'}</div>
       </div>
     `).join('')}</div>`;
