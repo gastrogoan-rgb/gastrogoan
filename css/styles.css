@@ -129,6 +129,10 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
 .grid-personal{grid-template-columns:repeat(auto-fill,minmax(260px,320px))}
+/* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
+   para que con un número de módulos no divisible entre columnas la última
+   fila quede repartida en el centro en vez de estirarse o colgar suelta. */
+.grid-modules{grid-template-columns:repeat(4,minmax(200px,240px));justify-content:center}
 
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
@@ -500,6 +504,7 @@ td.wrap{white-space:normal}
 
   /* Módulos — 2 columnas */
   .grid-3{grid-template-columns:repeat(2,1fr)}
+  .grid-modules{grid-template-columns:repeat(2,1fr)}
   .module-card{padding:14px}
 
   /* Grids */
@@ -627,6 +632,7 @@ td.wrap{white-space:normal}
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
   .grid-personal{grid-template-columns:1fr !important}
+  .grid-modules{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
   .module-card::before{width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
   .module-icon{font-size:24px;margin-bottom:0;flex-shrink:0}
