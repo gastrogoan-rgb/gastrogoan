@@ -407,28 +407,49 @@ function renderPedidos(){
   }
 }
 
+let pedidoHistorialSupplierFilter = '';
+function setPedidoHistorialSupplierFilter(val){
+  pedidoHistorialSupplierFilter = val;
+  renderPedidoList();
+}
 function renderPedidoList(){
   const box = document.getElementById('pedidos-list');
-  const orders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
+  const allOrders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
   const counts = {BORRADOR:0, ENVIADO:0, RECIBIDO:0};
-  orders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
+  allOrders.forEach(o => { if(counts[o.estado] !== undefined) counts[o.estado]++; });
 
   const kpiHtml = `
     <div class="grid grid-4" style="margin-bottom:14px">
       <div class="kpi"><div class="label">Borradores</div><div class="value">${counts.BORRADOR}</div></div>
       <div class="kpi warn"><div class="label">Enviados</div><div class="value">${counts.ENVIADO}</div></div>
       <div class="kpi ok"><div class="label">Recibidos</div><div class="value">${counts.RECIBIDO}</div></div>
-      <div class="kpi"><div class="label">Total</div><div class="value">${orders.length}</div></div>
+      <div class="kpi"><div class="label">Total</div><div class="value">${allOrders.length}</div></div>
     </div>
   `;
 
-  if(!orders.length){
+  if(!allOrders.length){
     box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>No hay pedidos. Crea uno nuevo.</div>`;
     return;
   }
 
+  const suppliers = [...new Set(allOrders.map(o => o.supplier))].sort((a,b)=>a.localeCompare(b));
+  const filterHtml = `
+    <div class="field" style="max-width:280px;margin-bottom:12px">
+      <select id="pedido-historial-supplier-filter" onchange="setPedidoHistorialSupplierFilter(this.value)">
+        <option value="">${t('label.allSuppliers')}</option>
+        ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  const orders = pedidoHistorialSupplierFilter ? allOrders.filter(o => o.supplier === pedidoHistorialSupplierFilter) : allOrders;
+  if(!orders.length){
+    box.innerHTML = kpiHtml + filterHtml + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+    return;
+  }
+
   const sorted = orders.slice().sort((a,b) => b.date.localeCompare(a.date));
-  box.innerHTML = kpiHtml + sorted.map(o => {
+  box.innerHTML = kpiHtml + filterHtml + sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     const comp = PEDIDO_COMPROBACION[o.comprobacion];
