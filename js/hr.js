@@ -1844,10 +1844,6 @@ function fichajeHoras(f){
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
 }
-function employeePropinasInRange(employeeId, dates){
-  return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + (f.propinas||0), 0);
-}
-
 function renderHorariosFichar(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
@@ -1864,7 +1860,6 @@ function renderHorariosFichar(){
     const open = getOpenFichaje(e.id);
     const horasSemana = employeeHoursInRange(e.id, weekDates);
     const horasMes = employeeHoursInRange(e.id, monthDates);
-    const propinasSemana = employeePropinasInRange(e.id, weekDates);
     return `
       <div class="card" style="text-align:center;cursor:pointer" onclick="openFichajeHistoryModal(${e.id})">
         <h3 style="justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -1875,7 +1870,6 @@ function renderHorariosFichar(){
         </div>
         <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
         <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
-        <div style="font-size:12px;color:var(--muted)">Propinas esta semana: <strong>${fmtMoney(propinasSemana)}</strong></div>
         <div style="margin-top:6px;font-size:12px;color:var(--brand-orange)"><i class="ti ti-history"></i> Ver últimos fichajes</div>
       </div>
     `;
@@ -1898,7 +1892,7 @@ function openFichajeHistoryModal(employeeId){
     ${fichajes.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Propinas</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead>
           <tbody>
             ${fichajes.map(f => `
               <tr>
@@ -1906,7 +1900,6 @@ function openFichajeHistoryModal(employeeId){
                 <td>${fmtHora(f.entrada)}</td>
                 <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
                 <td>${f.salida ? fmtDuracion(fichajeHoras(f)) : '—'}</td>
-                <td>${f.propinas ? fmtMoney(f.propinas) : '—'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1931,11 +1924,6 @@ function openFichajeModal(employeeId, action){
       <label>Introduce tu PIN</label>
       <input type="password" id="fichaje-pin" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
-    ${action==='salida' ? `
-    <div class="field">
-      <label>Propinas recibidas en este turno (€)</label>
-      <input type="number" id="fichaje-propinas" min="0" step="0.01" placeholder="0.00">
-    </div>` : ''}
     <div class="modal-footer">
       <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</button>
@@ -2004,7 +1992,6 @@ function doFichaje(employeeId, action){
     const open = getOpenFichaje(employeeId);
     if(!open){ showToast(t('msg.noClockedIn')); closeModal(); renderHorariosTab(); return; }
     open.salida = now;
-    open.propinas = parseFloat(document.getElementById('fichaje-propinas')?.value || '0') || 0;
   }
   saveDB();
   closeModal();
