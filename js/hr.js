@@ -1546,17 +1546,19 @@ function renderHorariosPersonal(){
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
     return `
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="requestEmployeePersonalPin(${e.id})">
-      <div style="display:flex;align-items:center;gap:10px">
+    <div class="card" style="cursor:pointer" onclick="requestEmployeePersonalPin(${e.id})">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-        <div>
-          <strong>${escapeHtml(e.name)}</strong>
+        <div style="min-width:0;flex:1">
+          <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div>
-          ${open ? `<span class="badge badge-green" style="margin-top:4px"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
         </div>
+        ${open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
       </div>
-      <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:3px 9px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
-      <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
+      <div style="text-align:center;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
@@ -1574,7 +1576,7 @@ function renderHorariosPersonal(){
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
-    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
+    ${emps.length ? `<div class="grid grid-personal">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
   `;
 }
 

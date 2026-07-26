@@ -128,6 +128,7 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.grid-personal{grid-template-columns:repeat(auto-fill,minmax(260px,320px))}
 
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
@@ -625,6 +626,7 @@ td.wrap{white-space:normal}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
+  .grid-personal{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
   .module-card::before{width:3px;height:100%;top:0;left:0;right:auto;bottom:0}
   .module-icon{font-size:24px;margin-bottom:0;flex-shrink:0}

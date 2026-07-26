@@ -551,7 +551,41 @@ function renderDistList(){
   `;
 }
 
+// Igual que en la pestaña Personal: para ver la distribución de tareas de un
+// empleado hay que introducir su PIN primero, así cada uno solo ve lo suyo.
+let distPendingPinEmployeeId = null;
 function openDistEmployee(id){
+  const e = DB.employees.find(x=>x.id===id);
+  if(!e) return;
+  distPendingPinEmployeeId = id;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> ${escapeHtml(e.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.distPinDesc')}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="dist-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmDistEmployeePin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmDistEmployeePin()">${t('common.unlock')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('dist-pin-input')?.focus(), 50);
+}
+function confirmDistEmployeePin(){
+  const e = DB.employees.find(x=>x.id===distPendingPinEmployeeId);
+  if(!e) return;
+  const val = document.getElementById('dist-pin-input').value;
+  const storedPin = e.pin || '1234';
+  const match = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  closeModal();
+  openDistEmployeeAuthed(e.id);
+}
+function openDistEmployeeAuthed(id){
   distCurrentEmployeeId = id;
   distWeekOffset = 0;
   renderDistribucion();
