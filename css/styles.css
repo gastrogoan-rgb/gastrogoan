@@ -132,7 +132,7 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 /* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
    para que con un número de módulos no divisible entre columnas la última
    fila quede repartida en el centro en vez de estirarse o colgar suelta. */
-.grid-modules{grid-template-columns:repeat(4,minmax(200px,240px));justify-content:center}
+.grid-modules{grid-template-columns:repeat(4,minmax(220px,1fr));justify-content:center;max-width:1400px;margin:0 auto}
 
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
