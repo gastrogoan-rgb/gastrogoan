@@ -1555,11 +1555,14 @@ function renderHorariosPersonal(){
           ${open ? `<span class="badge badge-green" style="margin-top:4px"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
         </div>
       </div>
-      <div class="actions-cell" onclick="event.stopPropagation()">
-        ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
-        ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
-        <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+      <div style="display:flex;align-items:center;gap:10px" onclick="event.stopPropagation()">
+        <span style="font-size:12px;color:var(--brand-orange);white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
+        <div class="actions-cell">
+          ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
+          <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+        </div>
       </div>
     </div>
   `;}).join('');
