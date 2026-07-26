@@ -742,8 +742,9 @@ function orderFormBodyHtml(){
       itemsHtml = `<div class="empty" style="padding:10px">Este proveedor no tiene ingredientes asociados en Mega Lista</div>`;
     }else{
       const search = orderModalSearch.toLowerCase();
-      const rows = orderModalLines.filter(line => {
-        if(!search) return true;
+      // Sin búsqueda no se lista nada: con proveedores de muchos artículos,
+      // volcarlos todos de golpe abruma. Solo aparecen al buscarlos por nombre.
+      const rows = !search ? '' : orderModalLines.filter(line => {
         const ing = getIngredient(line.ingredientId);
         return ing && ing.name.toLowerCase().includes(search);
       }).map(line => {
@@ -758,10 +759,13 @@ function orderFormBodyHtml(){
           </div>
         `;
       }).join('');
+      const emptyMsg = !search
+        ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
+        : `<div class="empty" style="padding:10px">Sin resultados</div>`;
       itemsHtml = `
         <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="refreshOrderForm()" style="margin-bottom:8px;width:100%">
         <div style="max-height:480px;overflow:auto;margin-bottom:8px">
-          ${rows || '<div class="empty" style="padding:10px">Sin resultados</div>'}
+          ${rows || emptyMsg}
         </div>
         <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> Sugerir por déficit de stock</button>
       `;
