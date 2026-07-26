@@ -1218,7 +1218,6 @@ function renderHorarios(){
   box.innerHTML = `
     <nav class="ge-tab-row">
       <button class="ge-tab ${horariosTab==='personal'?'active':''}" onclick="setHorariosTab('personal')"><i class="ti ti-users"></i> ${t('label.staff')}</button>
-      <button class="ge-tab ${horariosTab==='fichar'?'active':''}" onclick="setHorariosTab('fichar')"><i class="ti ti-clock-play"></i> ${t('tab.clockIn')}</button>
       <button class="ge-tab ${horariosTab==='dia'?'active':''}" onclick="setHorariosTab('dia')"><i class="ti ti-calendar-event"></i> ${t('common.day')}</button>
       <button class="ge-tab ${horariosTab==='semana'?'active':''}" onclick="setHorariosTab('semana')"><i class="ti ti-calendar"></i> ${t('common.week')}</button>
       <button class="ge-tab ${horariosTab==='mes'?'active':''}" onclick="setHorariosTab('mes')"><i class="ti ti-calendar-month"></i> ${t('common.month')}</button>
@@ -1230,7 +1229,6 @@ function renderHorarios(){
 function setHorariosTab(t){ horariosTab = t; renderHorarios(); }
 function renderHorariosTab(){
   if(horariosTab === 'personal') renderHorariosPersonal();
-  else if(horariosTab === 'fichar') renderHorariosFichar();
   else if(horariosTab === 'dia') renderHorariosDia();
   else if(horariosTab === 'mes') renderHorariosMes();
   else renderHorariosSemana();
@@ -1545,20 +1543,26 @@ function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
   const emps = areaEmployees();
-  const cards = emps.map(e => `
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+  const cards = emps.map(e => {
+    const open = getOpenFichaje(e.id);
+    return `
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="requestEmployeePersonalPin(${e.id})">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
-        <div><strong>${escapeHtml(e.name)}</strong><div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div></div>
+        <div>
+          <strong>${escapeHtml(e.name)}</strong>
+          <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div>
+          ${open ? `<span class="badge badge-green" style="margin-top:4px"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
+        </div>
       </div>
-      <div class="actions-cell">
+      <div class="actions-cell" onclick="event.stopPropagation()">
         ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
         ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
         <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
       </div>
     </div>
-  `).join('');
+  `;}).join('');
 
   box.innerHTML = `
     <div class="toolbar">
@@ -1844,38 +1848,66 @@ function fichajeHoras(f){
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
 }
-function renderHorariosFichar(){
-  const box = document.getElementById('horarios-tab-content');
-  if(!box) return;
-  const emps = areaEmployees();
-  if(!emps.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`;
-    return;
-  }
+// Ver la jornada/fichar de un empleado ya no está abierto para cualquiera
+// que abra la pestaña Personal: hay que introducir el PIN de ese empleado
+// primero, igual que para fichar. Así cada uno solo ve sus propios datos
+// (o el dueño, si conoce el PIN de esa persona).
+let personalPendingPinEmployeeId = null;
+function requestEmployeePersonalPin(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  personalPendingPinEmployeeId = employeeId;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> ${escapeHtml(e.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.employeePersonalPinDesc')}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="personal-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmEmployeePersonalPin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmEmployeePersonalPin()">${t('common.unlock')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('personal-pin-input')?.focus(), 50);
+}
+function confirmEmployeePersonalPin(){
+  const e = DB.employees.find(x=>x.id===personalPendingPinEmployeeId);
+  if(!e) return;
+  const val = document.getElementById('personal-pin-input').value;
+  const storedPin = e.pin || '1234';
+  const match = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  openEmployeeFicharModal(e.id);
+}
+function openEmployeeFicharModal(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const open = getOpenFichaje(e.id);
   const weekDates = getWeekDates(0).map(d=>dateStr(d));
   const now = new Date();
   const monthDates = Array.from({length: new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}, (_,i) => dateStr(new Date(now.getFullYear(), now.getMonth(), i+1)));
-
-  const cards = emps.map(e => {
-    const open = getOpenFichaje(e.id);
-    const horasSemana = employeeHoursInRange(e.id, weekDates);
-    const horasMes = employeeHoursInRange(e.id, monthDates);
-    return `
-      <div class="card" style="text-align:center;cursor:pointer" onclick="openFichajeHistoryModal(${e.id})">
-        <h3 style="justify-content:center"><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
-        ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> Fichado desde las ${fmtHora(open.entrada)}</span>` : `<span class="badge badge-gray">Fuera de servicio</span>`}
-        <div style="margin-top:10px;display:flex;gap:6px;justify-content:center" onclick="event.stopPropagation()">
-          <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> Entrada</button>
-          <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
-        </div>
-        <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
-        <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
-        <div style="margin-top:6px;font-size:12px;color:var(--brand-orange)"><i class="ti ti-history"></i> Ver últimos fichajes</div>
+  const horasSemana = employeeHoursInRange(e.id, weekDates);
+  const horasMes = employeeHoursInRange(e.id, monthDates);
+  openModal(`
+    <div class="modal-header">
+      <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="text-align:center">
+      ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> Fichado desde las ${fmtHora(open.entrada)}</span>` : `<span class="badge badge-gray">Fuera de servicio</span>`}
+      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> Entrada</button>
+        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
       </div>
-    `;
-  }).join('');
-
-  box.innerHTML = `<div class="grid grid-3">${cards}</div>`;
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
+      <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
+      <div style="margin-top:10px"><button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> Ver últimos fichajes</button></div>
+    </div>
+  `);
 }
 
 // Turno planificado de un empleado para una fecha concreta (para comparar
