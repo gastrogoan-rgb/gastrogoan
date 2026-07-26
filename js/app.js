@@ -417,6 +417,7 @@ function deleteMantenimientoEquipo(id){
    DISTRIBUCIÓN DEL TRABAJO — Master-detail por empleado
    ============================================================ */
 let distCurrentEmployeeId = null;
+let distWeekOffset = 0; // semana mostrada en la cuadrícula de tareas (0 = actual)
 
 function migrateWorkDistribution(){
   DB.workDistribution = DB.workDistribution || {};
@@ -425,26 +426,60 @@ function migrateWorkDistribution(){
     if(Array.isArray(val)){
       const produccion = {};
       val.forEach((txt, idx) => {
-        if(txt && txt.trim()) produccion[idx] = [txt.trim()];
+        if(txt && txt.trim()) produccion[idx] = [{id: genId(), text: txt.trim()}];
       });
-      DB.workDistribution[empId] = { platos: [], produccion };
+      DB.workDistribution[empId] = { platos: [], produccion, doneDates: {} };
     } else if(val && !val.produccion){
-      DB.workDistribution[empId] = { platos: val.platos || [], produccion: val.produccion || {} };
+      DB.workDistribution[empId] = { platos: val.platos || [], produccion: val.produccion || {}, doneDates: val.doneDates || {} };
     }
+    // Cada tarea de producción pasa a tener un id propio y estable (antes era
+    // solo texto), para poder marcarla como hecha por fecha sin que el
+    // estado se desplace a otra tarea si se borra o reordena alguna.
+    const d = DB.workDistribution[empId];
+    if(!d.doneDates) d.doneDates = {};
+    Object.keys(d.produccion||{}).forEach(dayIdx => {
+      d.produccion[dayIdx] = (d.produccion[dayIdx]||[]).map(t => typeof t === 'string' ? {id: genId(), text: t} : t);
+    });
   });
 }
 
 function getDistEmpData(empId){
-  if(!DB.workDistribution[empId]) DB.workDistribution[empId] = { platos: [], produccion: {} };
+  if(!DB.workDistribution[empId]) DB.workDistribution[empId] = { platos: [], produccion: {}, doneDates: {} };
   const d = DB.workDistribution[empId];
   if(!d.platos) d.platos = [];
   if(!d.produccion) d.produccion = {};
+  if(!d.doneDates) d.doneDates = {};
   return d;
 }
 
-function getPromosForEmployeeDay(empId, dayIdx){
-  return DB.promos.filter(p => p.responsableId === empId && (new Date(p.fecha+'T00:00:00').getDay()+6)%7 === dayIdx)
+// Promociones asignadas a un empleado para una fecha exacta (no solo el
+// mismo día de la semana, que haría reaparecer promos de otras semanas).
+function getPromosForEmployeeDate(empId, dateStr){
+  return DB.promos.filter(p => p.responsableId === empId && p.fecha === dateStr)
     .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+function togglePromoDone(promoId, checked){
+  const p = DB.promos.find(x=>x.id===promoId);
+  if(!p) return;
+  p.done = checked;
+  saveDB();
+  renderDistDetail();
+}
+
+// Tareas de producción: son una plantilla recurrente por día de la semana
+// (no atada a una fecha), pero si se marcan como "hecha" o no, eso sí que se
+// guarda por fecha concreta (por el id propio de la tarea), para no marcar
+// todas las semanas a la vez ni desplazar el estado a otra tarea.
+function isDistTareaDone(empId, dateStr, taskId){
+  const d = getDistEmpData(empId);
+  return !!(d.doneDates[dateStr] && d.doneDates[dateStr][taskId]);
+}
+function toggleDistTareaDone(dateStr, taskId, checked){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(!d.doneDates[dateStr]) d.doneDates[dateStr] = {};
+  d.doneDates[dateStr][taskId] = checked;
+  saveDB();
+  renderDistDetail();
 }
 
 function goToFichaForDish(name){
@@ -518,12 +553,18 @@ function renderDistList(){
 
 function openDistEmployee(id){
   distCurrentEmployeeId = id;
+  distWeekOffset = 0;
   renderDistribucion();
 }
 
 function backToDistList(){
   distCurrentEmployeeId = null;
   renderDistribucion();
+}
+
+function distWeekShift(delta){
+  distWeekOffset += delta;
+  renderDistDetail();
 }
 
 function renderDistDetail(){
@@ -545,27 +586,67 @@ function renderDistDetail(){
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
     .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
 
-  const diasHtml = WEEK_DAYS.map((_, idx) => {
+  ensureLimpiezaData();
+  const weekDates = getWeekDates(distWeekOffset);
+  const weekRangeLabel = `${weekDates[0].getDate()} ${monthFull(weekDates[0].getMonth()).slice(0,3)} – ${weekDates[6].getDate()} ${monthFull(weekDates[6].getMonth()).slice(0,3)}`;
+
+  let nTareasTotal = 0, nTareasHechas = 0;
+
+  const diasHtml = weekDates.map((date, idx) => {
     const label = weekDayFull(idx);
+    const ds = dateStr(date);
+    const isToday = ds === todayStr();
+
+    // Producción: plantilla recurrente por día de la semana, "hecha" se
+    // guarda por fecha concreta (con el id propio de cada tarea).
     const tareas = d.produccion[idx] || [];
-    const tareasHtml = tareas.map((t,i)=>`
+    const tareasHtml = tareas.map(task => {
+      const done = isDistTareaDone(emp.id, ds, task.id);
+      nTareasTotal++; if(done) nTareasHechas++;
+      return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updateDistTarea(${idx},${i},this.value)" ${editUnlocked?'':'disabled'}>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},${i})"><i class="ti ti-x"></i></button>
+        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="Marcar como hecha">
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
-    `).join('');
-    const promos = getPromosForEmployeeDay(emp.id, idx);
-    const promosHtml = promos.map(p=>`
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;cursor:pointer" onclick="openPromoModal(${p.id})">
-        <span class="badge badge-amber"><i class="ti ti-speakerphone"></i> Promo</span>
-        <span style="flex:1;font-size:13px">${escapeHtml(p.titulo)} <span style="color:var(--muted)">(${p.fecha.split('-').reverse().slice(0,2).join('/')})</span></span>
+    `;}).join('');
+
+    // Limpieza mensual: la tarea "toca" ese día si el día del mes coincide
+    // con la fecha real de esta semana.
+    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.tipo==='mensual' && lt.responsableId===emp.id && lt.diaMes===date.getDate());
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+    const checksMes = DB.limpieza.checksMes[monthKey] || {};
+    const limpiezaHtml = tareasLimpiezaDia.map(lt => {
+      const done = !!checksMes[lt.id];
+      nTareasTotal++; if(done) nTareasHechas++;
+      return `
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
+        <input type="checkbox" ${done?'checked':''} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
+        <span class="badge badge-blue" style="font-size:10px"><i class="ti ti-spray"></i> Limpieza</span>
+        <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
+      </label>
+    `;}).join('');
+
+    // Promociones: asignadas a esta fecha exacta (no se repiten cada semana).
+    const promos = getPromosForEmployeeDate(emp.id, ds);
+    const promosHtml = promos.map(p => {
+      const done = !!p.done;
+      nTareasTotal++; if(done) nTareasHechas++;
+      return `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked)" title="Marcar como hecha">
+        <span class="badge badge-amber" style="font-size:10px"><i class="ti ti-speakerphone"></i> Promo</span>
+        <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
-    `).join('');
+    `;}).join('');
+
     return `
-      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label}</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':''}">
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10px">${t('common.today')}</span>`:''}</div>
         ${promosHtml}
+        ${limpiezaHtml}
         ${tareasHtml}
+        ${!tareasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
         <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
           <input type="text" id="dist-tarea-${idx}" placeholder="Nueva tarea..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
@@ -573,21 +654,6 @@ function renderDistDetail(){
       </div>
     `;
   }).join('');
-
-  const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
-
-  ensureLimpiezaData();
-  const today = new Date();
-  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const checksMes = DB.limpieza.checksMes[monthKey] || {};
-  const tareasLimpieza = DB.limpieza.tareas.filter(t => t.tipo==='mensual' && t.responsableId===emp.id).sort((a,b)=>a.diaMes-b.diaMes);
-  const limpiezaTareasHtml = tareasLimpieza.length ? tareasLimpieza.map(t => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <input type="checkbox" ${checksMes[t.id]?'checked':''} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${t.id},this.checked)">
-      <span style="flex:1;${checksMes[t.id]?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}${t.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(t.producto)})</span>`:''}</span>
-      <span class="badge">Día ${t.diaMes}</span>
-    </label>
-  `).join('') : '<div class="empty" style="padding:10px"><i class="ti ti-spray"></i>Sin tareas de limpieza asignadas</div>';
 
   box.innerHTML = `
     <div class="toolbar">
@@ -602,7 +668,7 @@ function renderDistDetail(){
 
     <div class="grid grid-2">
       <div class="kpi"><div class="label">Platos a su cargo</div><div class="value">${d.platos.length}</div></div>
-      <div class="kpi"><div class="label">Tareas de producción</div><div class="value">${nTareas}</div></div>
+      <div class="kpi"><div class="label">Tareas de esta semana</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
 
     <div class="card">
@@ -622,20 +688,19 @@ function renderDistDetail(){
     </div>
 
     <div class="card">
-      <h3><i class="ti ti-clipboard-list"></i> Plan de producción semanal</h3>
+      <h3 style="justify-content:space-between">
+        <span><i class="ti ti-clipboard-list"></i> Tareas de la semana</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-sm btn-icon" onclick="distWeekShift(-1)" title="Semana anterior"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:13px;font-weight:600">${weekRangeLabel}</span>
+          <button class="btn btn-sm btn-icon" onclick="distWeekShift(1)" title="Semana siguiente"><i class="ti ti-chevron-right"></i></button>
+          ${distWeekOffset!==0 ? `<button class="btn btn-sm" onclick="distWeekOffset=0;renderDistDetail()">${t('common.today')}</button>` : ''}
+        </span>
+      </h3>
+      <p style="font-size:12px;color:var(--muted);margin:-4px 0 8px">${t('msg.unifiedTasksDesc')}</p>
       ${diasHtml}
     </div>
-
-    <div class="card">
-      <h3 style="justify-content:space-between"><span><i class="ti ti-spray"></i> Tareas de limpieza asignadas</span><button class="btn btn-sm" onclick="goToLimpiezaMes()"><i class="ti ti-calendar-month"></i> Limpieza Mensual</button></h3>
-      ${limpiezaTareasHtml}
-    </div>
   `;
-}
-
-function goToLimpiezaMes(){
-  navigate('limpieza');
-  setLimpiezaTab('mes');
 }
 
 function addEmployeeFromDistribucion(){
@@ -675,21 +740,22 @@ function addDistTarea(dayIdx){
   if(!val) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
-  d.produccion[dayIdx].push(val);
+  d.produccion[dayIdx].push({id: genId(), text: val});
   saveDB();
   renderDistDetail();
 }
 
-function updateDistTarea(dayIdx, idx, val){
+function updateDistTarea(dayIdx, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
-  if(d.produccion[dayIdx]) d.produccion[dayIdx][idx] = val;
+  const task = (d.produccion[dayIdx]||[]).find(t=>t.id===taskId);
+  if(task) task.text = val;
   saveDB();
 }
 
-function removeDistTarea(dayIdx, idx){
+function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   if(d.produccion[dayIdx]){
-    d.produccion[dayIdx].splice(idx,1);
+    d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>t.id!==taskId);
     saveDB();
     renderDistDetail();
   }
@@ -707,7 +773,7 @@ function printDistribucion(empId){
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
-      if(tasks.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${tasks.map(escapeHtml).join(' · ')}</div>`;
+      if(tasks.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${tasks.map(task=>escapeHtml(task.text)).join(' · ')}</div>`;
     });
     html += `</div>`;
   });
@@ -1822,7 +1888,7 @@ function savePromo(id){
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
     Object.assign(promo, {fecha, titulo, descripcion, responsableId});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false});
   }
   saveDB();
   closeModal();
