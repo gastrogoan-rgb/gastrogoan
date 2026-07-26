@@ -111,14 +111,18 @@ function guessSeccionEmoji(nombre){
   return '🍽️';
 }
 
-// Icono elegido a mano por el cliente para una carpeta de categoría (en
-// Escandallo, Fichas Técnicas y Stock), guardado por nombre de categoría y
-// compartido entre los tres apartados. Sin icono elegido, se usa 📁 por defecto.
+// Icono elegido a mano por el cliente para una carpeta de categoría, guardado
+// por nombre de categoría en uno de dos espacios independientes:
+// - 'recipe': Escandallo y Fichas Técnicas (categorías de platos/elaboraciones)
+// - 'ingredient': Mega Lista y Stock (categorías de ingredientes)
+// Así "Carnes" puede tener un icono distinto en cada lado si el negocio quiere,
+// pero se mantiene coherente entre los dos apartados que comparten esa misma
+// taxonomía. Sin icono elegido, se usa 📁 por defecto.
 const CATEGORY_ICON_CHOICES = ['🥩','🐟','🦐','🥬','🍅','🍎','🍌','🧀','🥛','🍞','🥐','🥤','🍷','🍺','☕','🧂','🌶️','🧄','🧅','🧊','🍰','🍫','🥗','🍽️','🥫','🥚','🫒','🍚','🍝','🌾','🍕','🍔','🌮','🍣','📦'];
-function getCategoryIcon(key){
-  return (DB.categoryIcons && DB.categoryIcons[key]) || '📁';
+function getCategoryIcon(key, ns){
+  return (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '📁';
 }
-function openCategoryIconModal(key, label, reRenderFn){
+function openCategoryIconModal(key, label, reRenderFn, ns){
   const safeKey = key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const safeReRender = reRenderFn.replace(/'/g,"\\'");
   openModal(`
@@ -127,17 +131,18 @@ function openCategoryIconModal(key, label, reRenderFn){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
-      ${CATEGORY_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}')">${e}</button>`).join('')}
+      ${CATEGORY_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}','${ns}')">${e}</button>`).join('')}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="setCategoryIcon('${safeKey}','','${safeReRender}')">${t('btn.removeIcon')}</button>
+      <button class="btn" onclick="setCategoryIcon('${safeKey}','','${safeReRender}','${ns}')">${t('btn.removeIcon')}</button>
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `);
 }
-function setCategoryIcon(key, emoji, reRenderFn){
-  if(!DB.categoryIcons) DB.categoryIcons = {};
-  if(emoji) DB.categoryIcons[key] = emoji; else delete DB.categoryIcons[key];
+function setCategoryIcon(key, emoji, reRenderFn, ns){
+  if(!DB.categoryIcons) DB.categoryIcons = {recipe:{}, ingredient:{}};
+  if(!DB.categoryIcons[ns]) DB.categoryIcons[ns] = {};
+  if(emoji) DB.categoryIcons[ns][key] = emoji; else delete DB.categoryIcons[ns][key];
   saveDB();
   closeModal();
   if(typeof window[reRenderFn] === 'function') window[reRenderFn]();

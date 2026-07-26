@@ -261,14 +261,6 @@ function todayStr(){
 /* ============================================================
    MEGA LISTA — Ingredientes y proveedores
    ============================================================ */
-function populateCategoryFilter(){
-  const sel = document.getElementById('megalista-filter-cat');
-  const current = sel.value;
-  sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  sel.value = current;
-}
-
 // Llena el filtro de proveedores con los proveedores del área actual más
 // cualquier proveedor que aparezca en los ingredientes (por si quedó alguno
 // de un proveedor ya borrado de la lista).
@@ -306,60 +298,88 @@ function setMegalistaSort(key){
   else { megalistaSortKey = key; megalistaSortDir = 1; }
   renderMegalista();
 }
-function renderMegalistaHead(){
-  const row = document.getElementById('megalista-thead-row');
-  if(!row) return;
-  row.innerHTML = MEGALISTA_COLUMNS.map(c => {
-    if(!c.key) return `<th>${c.label}</th>`;
-    const active = megalistaSortKey === c.key;
-    const arrow = active ? (megalistaSortDir === 1 ? ' <i class="ti ti-arrow-up"></i>' : ' <i class="ti ti-arrow-down"></i>') : '';
-    return `<th style="cursor:pointer;white-space:nowrap" onclick="setMegalistaSort('${c.key}')">${c.label}${arrow}</th>`;
-  }).join('');
-}
-function renderMegalista(){
-  populateCategoryFilter();
-  populateProviderFilter();
-  renderMegalistaHead();
-  const search = document.getElementById('megalista-search').value.toLowerCase();
-  const cat = document.getElementById('megalista-filter-cat').value;
-  const prov = document.getElementById('megalista-filter-prov').value;
-
-  let items = DB.ingredients.filter(i => {
-    const matchArea = (i.area||'cocina') === currentArea();
-    const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
-    const matchCat = !cat || i.category === cat;
-    const matchProv = !prov || (i.supplier||'') === prov;
-    return matchArea && matchSearch && matchCat && matchProv;
-  });
-
-  items = items.slice().sort((a,b) => {
+function megalistaSortItems(items){
+  return items.slice().sort((a,b) => {
     let av, bv;
     if(megalistaSortKey === 'price'){ av = a.packPrice!=null?a.packPrice:a.price; bv = b.packPrice!=null?b.packPrice:b.price; }
     else { av = (a[megalistaSortKey]||''); bv = (b[megalistaSortKey]||''); }
     if(typeof av === 'string') return av.localeCompare(bv) * megalistaSortDir;
     return ((av||0) - (bv||0)) * megalistaSortDir;
   });
+}
+function renderMegalistaTable(items){
+  const theadHtml = MEGALISTA_COLUMNS.map(c => {
+    if(!c.key) return `<th>${c.label}</th>`;
+    const active = megalistaSortKey === c.key;
+    const arrow = active ? (megalistaSortDir === 1 ? ' <i class="ti ti-arrow-up"></i>' : ' <i class="ti ti-arrow-down"></i>') : '';
+    return `<th style="cursor:pointer;white-space:nowrap" onclick="setMegalistaSort('${c.key}')">${c.label}${arrow}</th>`;
+  }).join('');
+  const rowsHtml = !items.length
+    ? `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
+    : items.map(ing => `
+      <tr>
+        <td><strong>${escapeHtml(ing.name)}</strong></td>
+        <td><span class="badge badge-gray">${escapeHtml(ing.category||'—')}</span></td>
+        <td>${escapeHtml(ing.supplier||'—')}</td>
+        <td>${escapeHtml(ing.unit)}</td>
+        <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
+        <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
+        <td class="actions-cell">
+          <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  return `<div class="table-wrap"><table><thead><tr>${theadHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+}
 
-  const tbody = document.getElementById('megalista-tbody');
+// Carpeta de categoría actualmente abierta en Mega Lista (null = vista de carpetas)
+let megalistaFolder = null;
+function openMegalistaFolder(cat){ megalistaFolder = cat; renderMegalista(); }
+function backToMegalistaFolders(){ megalistaFolder = null; renderMegalista(); }
+
+function renderMegalista(){
+  populateProviderFilter();
+  const search = document.getElementById('megalista-search').value.toLowerCase();
+  const prov = document.getElementById('megalista-filter-prov').value;
+  const box = document.getElementById('megalista-content');
+
+  const items = DB.ingredients.filter(i => {
+    const matchArea = (i.area||'cocina') === currentArea();
+    const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
+    const matchProv = !prov || (i.supplier||'') === prov;
+    return matchArea && matchSearch && matchProv;
+  });
+
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div>`;
     return;
   }
 
-  tbody.innerHTML = items.map(ing => `
-    <tr>
-      <td><strong>${escapeHtml(ing.name)}</strong></td>
-      <td><span class="badge badge-gray">${escapeHtml(ing.category||'—')}</span></td>
-      <td>${escapeHtml(ing.supplier||'—')}</td>
-      <td>${escapeHtml(ing.unit)}</td>
-      <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
-      <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
-      <td class="actions-cell">
-        <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
-      </td>
-    </tr>
-  `).join('');
+  const searching = !!(search || prov);
+  if(searching){
+    box.innerHTML = renderMegalistaTable(megalistaSortItems(items));
+    return;
+  }
+
+  const byCat = {};
+  items.forEach(i => { const c = i.category || t('label.noCategory'); (byCat[c] = byCat[c] || []).push(i); });
+  const cats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
+
+  if(megalistaFolder === null){
+    box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
+      <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${cat.replace(/'/g,"\\'")}')">
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
+        <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
+      </div>
+    `).join('')}</div>`;
+    return;
+  }
+
+  const folderItems = byCat[megalistaFolder];
+  if(!folderItems || !folderItems.length){ megalistaFolder = null; renderMegalista(); return; }
+  const backBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToMegalistaFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>`;
+  box.innerHTML = backBtn + renderMegalistaTable(megalistaSortItems(folderItems));
 }
 
 function openIngredientModal(id, overrideState){
@@ -683,7 +703,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock')">${getCategoryIcon(cat)}</span> ${escapeHtml(cat)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -762,7 +782,7 @@ function renderStock(){
       } else {
         elabGroupsWrap.innerHTML = `<div class="grid grid-compact">${elabCats.map(cat => `
           <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${cat.replace(/'/g,"\\'")}')">
-            <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock')">${getCategoryIcon(cat)}</span> ${escapeHtml(cat)}</h3>
+            <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
             <div style="font-size:12px;color:var(--muted)">${elabByCat[cat].length===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', elabByCat[cat].length)}</div>
           </div>
         `).join('')}</div>`;

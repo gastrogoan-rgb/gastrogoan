@@ -155,9 +155,6 @@
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="megalista-search" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
-          <select id="megalista-filter-cat" onchange="renderMegalista()">
-            <option value="">Todas las categorías</option>
-          </select>
           <select id="megalista-filter-prov" onchange="renderMegalista()">
             <option value="">Todos los proveedores</option>
           </select>
@@ -165,14 +162,7 @@
         <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr id="megalista-thead-row"></tr>
-          </thead>
-          <tbody id="megalista-tbody"></tbody>
-        </table>
-      </div>
+      <div id="megalista-content"></div>
     </section>
 
     <!-- ========== PROVEEDORES ========== -->
