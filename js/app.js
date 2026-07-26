@@ -104,6 +104,11 @@ function ensureLimpiezaData(){
 
 function renderLimpieza(){
   ensureLimpiezaData();
+  const isSala = currentArea()==='sala';
+  const titleEl = document.querySelector('#view-limpieza .view-title');
+  const subtitleEl = document.querySelector('#view-limpieza .view-subtitle');
+  if(titleEl) titleEl.textContent = isSala ? t('view.limpieza.title.sala') : t('view.limpieza.title');
+  if(subtitleEl) subtitleEl.textContent = isSala ? t('view.limpieza.subtitle.sala') : t('view.limpieza.subtitle');
   const box = document.getElementById('limpieza-content');
   box.innerHTML = `
     <nav class="ge-tab-row">
