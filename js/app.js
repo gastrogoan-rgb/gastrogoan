@@ -13,7 +13,6 @@ const LIMPIEZA_TAB_ICONS = {
 function limpiezaTabLabel(k){ return `<i class="ti ${LIMPIEZA_TAB_ICONS[k]}"></i> ${t(LIMPIEZA_TAB_LABEL_KEYS[k])}`; }
 const LIMPIEZA_LOG_CONFIG_KEYS = {
   temperaturas: {fields:['fecha','hora','equipo','tipo','temp','estado','responsable'], labelKeys:['common.date','th.time','label.equipment','label.equipmentType','label.tempC','label.status','label.responsible']},
-  alergenos: {fields:['fecha','plato','alergenos','verificado','notas'], labelKeys:['common.date','label.dishElaboration','label.allergensPresent','label.verifiedBy','th.notes']},
   plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labelKeys:['common.date','label.area','label.findings','label.actionTaken','label.nextReview']}
 };
 function limpiezaLogConfig(key){
@@ -65,12 +64,19 @@ function getAllDishAllergens(){
     .map(r => ({name: r.name, allergens: [...recipeAllergens(r)]}))
     .sort((a,b) => a.name.localeCompare(b.name));
 }
-function updateAlergenosAutoFill(){
-  const sel = document.getElementById('lp-alergenos-plato');
-  const out = document.getElementById('lp-alergenos-alergenos');
-  if(!sel || !out) return;
-  const dish = getAllDishAllergens().find(p => p.name === sel.value);
-  out.value = !sel.value ? '' : (dish && dish.allergens.length ? dish.allergens.join(', ') : t('label.noAllergensDetected'));
+function renderLimpiezaAlergenos(){
+  const box = document.getElementById('limpieza-tab-content');
+  const dishes = getAllDishAllergens();
+  box.innerHTML = `
+    <div class="card">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')}</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
+      ${dishes.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
+        <tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td class="wrap">${d.allergens.length ? d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') : `<span style="color:var(--muted)">${t('label.noAllergensDetected')}</span>`}</td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty" style="padding:14px">${t('empty.noDishesForAllergens')}</div>`}
+    </div>
+  `;
 }
 const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
 const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
@@ -114,7 +120,7 @@ function renderLimpiezaTab(){
     case 'protocolo': renderLimpiezaProtocolo(); break;
     case 'mes': renderLimpiezaMes(); break;
     case 'temperaturas': renderLimpiezaLog('temperaturas'); break;
-    case 'alergenos': renderLimpiezaLog('alergenos'); break;
+    case 'alergenos': renderLimpiezaAlergenos(); break;
     case 'plagas': renderLimpiezaLog('plagas'); break;
     case 'mantenimiento': renderLimpiezaMantenimiento(); break;
   }
@@ -408,8 +414,6 @@ function renderLimpiezaLog(key){
     if(f === 'estado' && key === 'temperaturas') input = `<div style="font-size:12px;color:var(--muted);padding-top:8px">${t('label.autoCalculated')}</div>`;
     else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
     else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
-    else if(f === 'plato' && key === 'alergenos') input = `<select id="lp-${key}-${f}" onchange="updateAlergenosAutoFill()"><option value="">—</option>${getAllDishAllergens().map(p=>`<option value="${escapeJsAttr(p.name)}">${escapeHtml(p.name)}</option>`).join('')}</select>`;
-    else if(f === 'alergenos' && key === 'alergenos') input = `<input type="text" id="lp-${key}-${f}" readonly placeholder="${t('label.pickDishFirst')}" style="background:var(--bg-alt,#f2f0e8)">`;
     else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
     else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
@@ -429,21 +433,7 @@ function renderLimpiezaLog(key){
     }).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">Sin registros todavía.</div></td></tr>`;
 
-  const dishAllergensTable = key !== 'alergenos' ? '' : (() => {
-    const dishes = getAllDishAllergens();
-    return `
-    <div class="card" style="margin-bottom:16px">
-      <h3><i class="ti ti-alert-triangle"></i> ${t('title.dishAllergensOverview')}</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
-      ${dishes.length ? `<div class="table-wrap"><table>
-        <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td class="wrap">${d.allergens.length ? d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') : `<span style="color:var(--muted)">${t('label.noAllergensDetected')}</span>`}</td></tr>`).join('')}</tbody>
-      </table></div>` : `<div class="empty" style="padding:14px">${t('empty.noDishesForAllergens')}</div>`}
-    </div>`;
-  })();
-
   box.innerHTML = `
-    ${dishAllergensTable}
     <div class="card" style="margin-bottom:16px">
       <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
       <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
