@@ -2405,11 +2405,20 @@ function deleteZonaCompleta(zona){
     return;
   }
   if(!confirm(`¿Eliminar la zona "${zonaLabel(zona)}" y sus ${tables.length} mesa${tables.length!==1?'s':''}?`)) return;
+  clearDanglingTableRefs(tables.map(t => t.id));
   DB.tables = DB.tables.filter(t => t.zona !== zona);
   if(Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = DB.business.zonaOrder.filter(z => z !== zona);
   saveDB();
   renderMesasConfigList();
   showToast('Zona eliminada');
+}
+
+// Al borrar una o varias mesas, quita cualquier referencia a ellas que quede
+// suelta (p.ej. una reserva con tableId apuntando a una mesa que ya no existe),
+// para que luego no se intente usar un id de mesa inexistente.
+function clearDanglingTableRefs(tableIds){
+  const idSet = new Set(tableIds);
+  DB.reservations.forEach(r => { if(r.tableId && idSet.has(r.tableId)) r.tableId = null; });
 }
 
 // Crea de golpe N mesas nuevas en una zona/rango con el nombre que indique el
@@ -2448,14 +2457,20 @@ function updateTableName(id, val){
 }
 function deleteTableFromConfig(id){
   const order = getOpenOrderForTable(id);
-  if(order){
-    if(!confirm(t('msg.confirmDeleteTableWithOrder'))){
-      return;
-    }
-    order.status = 'pagada';
-  } else {
-    if(!confirm(t('msg.confirmDeleteTable'))) return;
+  // Si la comanda tiene platos sin cobrar, no se puede borrar la mesa desde
+  // aquí: antes se marcaba como "pagada" sin generar venta, sin descontar
+  // stock y sin dejar ningún registro, perdiendo esa comanda sin rastro.
+  // Hay que cobrarla o vaciarla desde el TPV primero.
+  if(order && order.items && order.items.length){
+    showToast(t('msg.tableHasOpenOrderItems'));
+    return;
   }
+  if(order){
+    // Comanda vacía (mesa abierta por error, sin platos): se puede liberar sin más.
+    DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== order.id);
+  }
+  if(!confirm(t('msg.confirmDeleteTable'))) return;
+  clearDanglingTableRefs([id]);
   DB.tables = DB.tables.filter(t => t.id !== id);
   saveDB();
   renderMesasConfigList();

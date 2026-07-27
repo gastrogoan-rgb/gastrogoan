@@ -1691,7 +1691,7 @@ function confirmVoidLine(){
 
   if(!DB.voidLog) DB.voidLog = [];
   DB.voidLog.push({
-    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5),
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
     plato: line.name, cantidad: type==='remove' ? line.qty : Math.abs(delta),
     estado: line.estado||'', motivo, mesa: mesa||''
   });
@@ -1968,6 +1968,19 @@ function requestApplyDiscount(orderId){
   const discPctEl = document.getElementById('payment-discount');
   const pct = Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0));
   if(pct <= 0){
+    // Quitar un descuento ya aplicado también queda registrado (con importe
+    // negativo), para que en el cierre de caja se vea que se revirtió y no
+    // solo que en algún momento se concedió.
+    if(order.descuentoPct){
+      if(!DB.discountLog) DB.discountLog = [];
+      DB.discountLog.push({
+        id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
+        mesa: order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order),
+        porcentaje: -order.descuentoPct, importe: -(orderTotal(order) * order.descuentoPct / 100),
+        motivo: t('msg.discountReverted') + (order.descuentoMotivo ? ` (${order.descuentoMotivo})` : ''),
+        responsableId: order.descuentoResponsableId, responsableNombre: order.descuentoResponsableNombre || ''
+      });
+    }
     order.descuentoPct = 0;
     order.descuentoMotivo = '';
     order.descuentoResponsableId = null;
@@ -2401,10 +2414,32 @@ function confirmMergeTable(orderId){
   if(!targetTableId){ showToast(t('msg.selectTable')); return; }
   const targetOrder = getOpenOrderForTable(targetTableId);
   if(!targetOrder) return;
+  // Si cualquiera de las dos mesas tiene una división de cuenta con partes ya
+  // cobradas, no se fusiona: se perdería el rastro de ese dinero, igual que
+  // ya se bloquea al cancelar una división con pagos hechos.
+  const hasPaidSplit = o => o.splitPayments && o.splitPayments.some(p => p.paid);
+  if(hasPaidSplit(order) || hasPaidSplit(targetOrder)){
+    showToast(t('msg.cannotMergeSplitPaid'));
+    return;
+  }
   if(!confirm(t('msg.confirmMergeTables'))) return;
   targetOrder.items.push(...order.items);
   targetOrder.tandas = [...new Set([...(targetOrder.tandas||[]), ...(order.tandas||[])])];
   targetOrder.pax = (targetOrder.pax||0) + (order.pax||0);
+  if(!targetOrder.camareroId && order.camareroId) targetOrder.camareroId = order.camareroId;
+  targetOrder.propina = (targetOrder.propina||0) + (order.propina||0);
+  // Un descuento ya autorizado en la mesa que desaparece no debe perderse en
+  // silencio: si la mesa destino no tiene uno propio, se traspasa entero.
+  if(order.descuentoPct){
+    if(!targetOrder.descuentoPct){
+      targetOrder.descuentoPct = order.descuentoPct;
+      targetOrder.descuentoMotivo = order.descuentoMotivo;
+      targetOrder.descuentoResponsableId = order.descuentoResponsableId;
+      targetOrder.descuentoResponsableNombre = order.descuentoResponsableNombre;
+    } else {
+      showToast(t('msg.mergeDiscountConflict'));
+    }
+  }
   DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== order.id);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
