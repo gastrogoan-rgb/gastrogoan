@@ -366,6 +366,7 @@ function renderTPV(){
     ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
+      <button class="btn" onclick="openTodaySalesModal()"><i class="ti ti-receipt"></i> ${t('title.todaySales')}</button>
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
@@ -1076,6 +1077,7 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
+      ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     <!-- Pestañas de cartas/menús -->
@@ -2168,6 +2170,105 @@ function applyDeliveryCommission(order, sale){
   const comision = sale.total * (comisionPct/100) * (1 + ivaPct/100);
   sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct};
   sale.comisionPlataforma = Math.round(comision * 100) / 100;
+}
+
+/* ------------------ Transferir / fusionar mesas ------------------ */
+function openTableTransferModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.tableId) return;
+  const freeTables = DB.tables.filter(t => t.id !== order.tableId && !getOpenOrderForTable(t.id));
+  const occupiedTables = DB.tables.filter(t => t.id !== order.tableId && getOpenOrderForTable(t.id));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-transfer"></i> ${t('title.transferTable')}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.moveToFreeTable')}</label>
+      <select id="transfer-table-sel">
+        <option value="">—</option>
+        ${freeTables.map(tb => `<option value="${tb.id}">${escapeHtml(tb.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <button class="btn btn-primary" onclick="confirmTransferTable(${orderId})" ${!freeTables.length?'disabled':''}><i class="ti ti-check"></i> ${t('btn.moveOrder')}</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:0 0 16px">
+    <div class="field">
+      <label>${t('label.mergeIntoOccupiedTable')}</label>
+      <select id="merge-table-sel">
+        <option value="">—</option>
+        ${occupiedTables.map(tb => { const o = getOpenOrderForTable(tb.id); return `<option value="${tb.id}">${escapeHtml(tb.name)} (${fmtMoney(orderTotal(o))})</option>`; }).join('')}
+      </select>
+      <small style="color:var(--muted)">${t('msg.mergeTableDesc')}</small>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmMergeTable(${orderId})" ${!occupiedTables.length?'disabled':''}><i class="ti ti-arrows-join"></i> ${t('btn.mergeOrders')}</button>
+    </div>
+  `);
+}
+function confirmTransferTable(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const sel = document.getElementById('transfer-table-sel');
+  const newTableId = parseInt(sel.value);
+  if(!newTableId){ showToast(t('msg.selectTable')); return; }
+  if(getOpenOrderForTable(newTableId)){ showToast(t('msg.tableBusy')); return; }
+  order.tableId = newTableId;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTableOrderModal(orderId);
+  showToast(t('msg.tableTransferred'));
+}
+function confirmMergeTable(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const sel = document.getElementById('merge-table-sel');
+  const targetTableId = parseInt(sel.value);
+  if(!targetTableId){ showToast(t('msg.selectTable')); return; }
+  const targetOrder = getOpenOrderForTable(targetTableId);
+  if(!targetOrder) return;
+  if(!confirm(t('msg.confirmMergeTables'))) return;
+  targetOrder.items.push(...order.items);
+  targetOrder.tandas = [...new Set([...(targetOrder.tandas||[]), ...(order.tandas||[])])];
+  targetOrder.pax = (targetOrder.pax||0) + (order.pax||0);
+  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== order.id);
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  closeModal();
+  renderTPV();
+  showToast(t('msg.tablesMerged'));
+}
+
+/* ------------------ Ventas de hoy / reimprimir tique ------------------ */
+function openTodaySalesModal(){
+  const today = todayStr();
+  const sales = [...DB.sales.filter(s => s.date === today)].reverse();
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-receipt"></i> ${t('title.todaySales')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
+        <tbody>${sales.length ? sales.map(s => {
+          const table = s.tableId ? DB.tables.find(t=>t.id===s.tableId) : null;
+          const label = table ? table.name : togoOrderLabel(s);
+          const hora = s.createdAt ? new Date(s.createdAt).toTimeString().slice(0,5) : '';
+          return `<tr>
+            <td>${escapeHtml(hora)}</td>
+            <td>${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>
+            <td>${fmtMoney(s.total)}</td>
+            <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
+            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button></td>
+          </tr>`;
+        }).join('') : `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
 }
 
 /* ------------------ Ticket: contenido, impresión, email y factura ------------------ */
