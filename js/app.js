@@ -2286,33 +2286,24 @@ function renderMiNegocio(){
         <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">Tus clientes no podrán reservar una mesa ni pedir online para una hora antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
       </div>
+      <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> Crea el plano de tu sala</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Define las zonas o rangos de mesas que tenga tu sala (por ejemplo "Rango 1" con 4 mesas, "Rango 2" con 6, "Terraza" con 3) y créalas de golpe. Verás las mesas agrupadas exactamente así en el plano del TPV. Después puedes renombrar cada mesa individualmente más abajo.</p>
       <div class="field-row">
         <div class="field">
-          <label>Mesas de interior</label>
-          <input type="number" id="mn-mesas-interior" value="${escapeHtml(b.mesasInterior!=null?b.mesasInterior:(b.mesasInt||''))}" placeholder="8" onchange="saveBusiness(true)">
+          <label>Nombre de la zona/rango</label>
+          <input type="text" id="mn-zona-nombre" placeholder="Ej. Rango 1, Terraza...">
         </div>
         <div class="field">
-          <label>Mesas de exterior/terraza</label>
-          <input type="number" id="mn-mesas-terraza" value="${escapeHtml(b.mesasTerraza||'')}" placeholder="4" onchange="saveBusiness(true)">
-        </div>
-        <div class="field">
-          <label>Mesas/taburetes de barra</label>
-          <input type="number" id="mn-mesas-barra" value="${escapeHtml(b.mesasBarra||'')}" placeholder="3" onchange="saveBusiness(true)">
+          <label>Nº de mesas</label>
+          <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Estas cantidades son las mesas que verás organizadas por zonas (Interior, Terraza, Barra) en el plano de mesas del TPV.</p>
-      <button class="btn btn-sm" onclick="syncMesasConfig()"><i class="ti ti-tools-kitchen-2"></i> Crear mesas automáticamente</button>
-      <p style="font-size:12px;color:var(--muted);margin-top:6px">Crea automáticamente las mesas que falten hasta llegar a estas cantidades (no borra ni duplica las que ya existen). Después puedes renombrarlas abajo.</p>
+      <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> Crear zona</button>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> Mesas configuradas</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Edita el nombre o número de cada mesa, su zona, o añade/elimina mesas. Estas son exactamente las mesas que aparecen en el TPV y en las reservas.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Edita el nombre o número de cada mesa, muévela de zona, o añade/elimina mesas sueltas. Estas son exactamente las mesas que aparecen en el TPV y en las reservas.</p>
       <div id="mn-mesas-list"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <button class="btn btn-sm" onclick="addTableManual('interior')"><i class="ti ti-plus"></i> Mesa interior</button>
-        <button class="btn btn-sm" onclick="addTableManual('terraza')"><i class="ti ti-plus"></i> Mesa terraza</button>
-        <button class="btn btn-sm" onclick="addTableManual('barra')"><i class="ti ti-plus"></i> Mesa barra</button>
-      </div>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -2359,35 +2350,66 @@ function renderMiNegocio(){
 }
 
 // Lista editable de mesas en Mi Negocio: nombre/número editable, zona y borrar.
+// Las zonas ya no son 3 fijas (interior/terraza/barra): son las que el negocio
+// ha ido creando en "Crea el plano de tu sala" (getZonaOrder), en ese orden.
 function renderMesasConfigList(){
   const box = document.getElementById('mn-mesas-list');
   if(!box) return;
   if(!DB.tables.length){
-    box.innerHTML = `<p style="font-size:13px;color:var(--muted)">No hay mesas todavía. Usa "Crear mesas automáticamente" o el botón de añadir.</p>`;
+    box.innerHTML = `<p style="font-size:13px;color:var(--muted)">No hay mesas todavía. Crea una zona arriba para empezar.</p>`;
     return;
   }
-  const zonas = ['interior','terraza','barra', null];
-  const zonaLabel = z => z==='interior'?'Interior':z==='terraza'?'Terraza':z==='barra'?'Barra':'Sin zona';
+  const zonas = [...getZonaOrder(), null];
+  const zonaOptions = getZonaOrder();
   let html = '';
   zonas.forEach(z => {
     const tables = DB.tables.filter(t => (t.zona||null) === z);
     if(!tables.length) return;
-    html += `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:8px 0 4px">${zonaLabel(z)}</div>`;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">${escapeHtml(zonaLabel(z) || 'Sin zona')}</span>
+      ${z ? `<button class="btn btn-sm" onclick="addTableToZona('${escapeJsAttr(z)}')" title="Añadir mesa a esta zona"><i class="ti ti-plus"></i></button>` : ''}
+    </div>`;
     html += tables.map(t => {
-      const ocupada = getOpenOrderForTable(t.id);
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="text" value="${escapeHtml(t.name||'')}" onchange="updateTableName(${t.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Nombre o nº de mesa">
         <select onchange="updateTableZona(${t.id}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:13px">
-          <option value="interior" ${(t.zona||'interior')==='interior'?'selected':''}>Interior</option>
-          <option value="terraza" ${t.zona==='terraza'?'selected':''}>Terraza</option>
-          <option value="barra" ${t.zona==='barra'?'selected':''}>Barra</option>
+          <option value="" ${!t.zona?'selected':''}>Sin zona</option>
+          ${zonaOptions.map(zo => `<option value="${escapeHtml(zo)}" ${t.zona===zo?'selected':''}>${escapeHtml(zonaLabel(zo))}</option>`).join('')}
         </select>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" title="Eliminar mesa"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });
   box.innerHTML = html;
+}
+
+// Crea de golpe N mesas nuevas en una zona/rango con el nombre que indique el
+// negocio (por ejemplo "Rango 1" con 4 mesas), tal como se pidió: que el plano
+// de sala se organice como cada restaurante quiera, no en 3 zonas fijas.
+function addZonaConMesas(){
+  const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
+  const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
+  if(!nombre){ showToast('Escribe un nombre para la zona'); return; }
+  if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
+  if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
+  const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
+  for(let i = 1; i <= cantidad; i++){
+    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre});
+  }
+  saveDB();
+  document.getElementById('mn-zona-nombre').value = '';
+  document.getElementById('mn-zona-cantidad').value = '4';
+  renderMesasConfigList();
+  showToast(`Zona "${nombre}" creada con ${cantidad} mesa${cantidad!==1?'s':''}`);
+}
+
+// Añade una mesa suelta más a una zona ya existente, sin tener que recrearla.
+function addTableToZona(zona){
+  const existingInZone = DB.tables.filter(t => t.zona === zona).length;
+  DB.tables.push({id: genId(), name: `Mesa ${existingInZone+1}`, zona});
+  saveDB();
+  renderMesasConfigList();
 }
 
 function updateTableName(id, val){
@@ -2400,15 +2422,6 @@ function updateTableZona(id, val){
   const tbl = DB.tables.find(x => x.id === id);
   if(!tbl) return;
   tbl.zona = val;
-  saveDB();
-  renderMesasConfigList();
-}
-function addTableManual(zona){
-  const sameZone = DB.tables.filter(t => (t.zona||'interior') === zona).length;
-  const prefix = zona==='barra' ? 'Barra' : 'Mesa';
-  const zonaSuffix = zona==='interior' ? ' (Interior)' : zona==='terraza' ? ' (Terraza)' : '';
-  const name = zona==='barra' ? `Barra ${sameZone+1}` : `${prefix} ${sameZone+1}${zonaSuffix}`;
-  DB.tables.push({id: genId(), name, zona});
   saveDB();
   renderMesasConfigList();
 }
@@ -2584,33 +2597,6 @@ function renderHeader(){
   checkArchiveReminder();
 }
 
-function syncMesasConfig(){
-  const intEl = document.getElementById('mn-mesas-interior');
-  const terEl = document.getElementById('mn-mesas-terraza');
-  const barEl = document.getElementById('mn-mesas-barra');
-  if(!intEl || !terEl || !barEl) return;
-  const interior = parseInt(intEl.value) || 0;
-  const terraza = parseInt(terEl.value) || 0;
-  const barra = parseInt(barEl.value) || 0;
-  if(interior + terraza + barra === 0){ showToast('Indica primero cuántas mesas quieres'); return; }
-  const interiorActuales = DB.tables.filter(m=>!m.zona || m.zona==='interior').length;
-  const terrazaActuales = DB.tables.filter(m=>m.zona==='terraza').length;
-  const barraActuales = DB.tables.filter(m=>m.zona==='barra').length;
-  for(let i = interiorActuales + 1; i <= interior; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${i} (Interior)`, zona:'interior'});
-  }
-  for(let i = terrazaActuales + 1; i <= terraza; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${i} (Terraza)`, zona:'terraza'});
-  }
-  for(let i = barraActuales + 1; i <= barra; i++){
-    DB.tables.push({id: genId(), name: `Barra ${i}`, zona:'barra'});
-  }
-  saveBusiness(true);
-  saveDB();
-  renderMesasConfigList();
-  showToast(t('msg.tablesSynced'));
-}
-
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
 // instante. Debe quedar siempre al menos un servicio activo.
 function toggleTipoServicio(tipo, checked){
@@ -2645,9 +2631,6 @@ function saveBusiness(silent){
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
-  if(el('mn-mesas-interior')) DB.business.mesasInterior = el('mn-mesas-interior').value.trim();
-  if(el('mn-mesas-terraza')) DB.business.mesasTerraza = el('mn-mesas-terraza').value.trim();
-  if(el('mn-mesas-barra')) DB.business.mesasBarra = el('mn-mesas-barra').value.trim();
   if(el('mn-aforo')) DB.business.aforo = el('mn-aforo').value.trim();
   if(el('mn-leadtime-min')){
     DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);

@@ -220,9 +220,29 @@ function renderTpvKpis(){
   `;
 }
 
+// Zonas heredadas (fijas antiguamente) con traducción propia; cualquier zona
+// nueva creada en Mi Negocio → Operativa es simplemente el nombre que le puso
+// el negocio (Rango 1, Terraza grande...), sin traducir.
 const ZONA_LABEL_KEYS = {interior:'zone.interior', terraza:'zone.terrace', barra:'zone.bar'};
-function zonaLabel(z){ return t(ZONA_LABEL_KEYS[z]) || z; }
 const ZONA_ICONS = {interior:'ti-home', terraza:'ti-sun', barra:'ti-glass-cocktail'};
+function zonaLabel(z){ return ZONA_LABEL_KEYS[z] ? t(ZONA_LABEL_KEYS[z]) : z; }
+function zonaIconClass(z){ return ZONA_ICONS[z] || 'ti-map-pin'; }
+
+// Orden en el que se muestran las zonas/rangos de mesas en el TPV: el que el
+// negocio fue creando (DB.business.zonaOrder), más cualquier zona antigua o
+// suelta que exista en las mesas pero no esté todavía en esa lista (para no
+// perder mesas de instalaciones anteriores al plano de sala personalizado).
+function getZonaOrder(){
+  const stored = Array.isArray(DB.business.zonaOrder) ? [...DB.business.zonaOrder] : [];
+  const seen = new Set(stored);
+  ['interior','terraza','barra'].forEach(z => {
+    if(!seen.has(z) && DB.tables.some(t => t.zona === z)){ stored.push(z); seen.add(z); }
+  });
+  DB.tables.forEach(t => {
+    if(t.zona && !seen.has(t.zona)){ stored.push(t.zona); seen.add(t.zona); }
+  });
+  return stored;
+}
 
 function renderMesaCard(table){
   const order = getOpenOrderForTable(table.id);
@@ -292,13 +312,13 @@ function renderTpvMesas(tiposServicio){
     `;
   }
 
-  const zonas = ['interior','terraza','barra'];
+  const zonas = getZonaOrder();
   let html = '';
   zonas.forEach(z => {
     const tables = sortedTables.filter(t => t.zona === z);
     if(!tables.length) return;
     html += `
-      <h3 style="margin-top:16px"><i class="ti ${ZONA_ICONS[z]}"></i> ${zonaLabel(z)}</h3>
+      <h3 style="margin-top:16px"><i class="ti ${zonaIconClass(z)}"></i> ${escapeHtml(zonaLabel(z))}</h3>
       <div class="grid grid-mesas">${tables.map(renderMesaCard).join('')}</div>
     `;
   });
