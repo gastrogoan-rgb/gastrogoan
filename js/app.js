@@ -2360,28 +2360,56 @@ function renderMesasConfigList(){
     return;
   }
   const zonas = [...getZonaOrder(), null];
-  const zonaOptions = getZonaOrder();
   let html = '';
   zonas.forEach(z => {
     const tables = DB.tables.filter(t => (t.zona||null) === z);
     if(!tables.length) return;
-    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px">
-      <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">${escapeHtml(zonaLabel(z) || 'Sin zona')}</span>
-      ${z ? `<button class="btn btn-sm" onclick="addTableToZona('${escapeJsAttr(z)}')" title="Añadir mesa a esta zona"><i class="ti ti-plus"></i></button>` : ''}
+    html += `<div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px">
+      ${z ? `<input type="text" value="${escapeHtml(zonaLabel(z))}" onchange="renameZona('${escapeJsAttr(z)}', this.value)" title="Renombrar zona" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1;min-width:80px;max-width:220px" onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'">`
+        : `<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;flex:1">Sin zona</span>`}
+      ${z ? `<button class="btn btn-sm btn-icon" onclick="addTableToZona('${escapeJsAttr(z)}')" title="Añadir mesa a esta zona"><i class="ti ti-plus"></i></button>` : ''}
+      ${z ? `<button class="btn btn-sm btn-icon btn-danger" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="Eliminar zona completa"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
     html += tables.map(t => {
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="text" value="${escapeHtml(t.name||'')}" onchange="updateTableName(${t.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Nombre o nº de mesa">
-        <select onchange="updateTableZona(${t.id}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:13px">
-          <option value="" ${!t.zona?'selected':''}>Sin zona</option>
-          ${zonaOptions.map(zo => `<option value="${escapeHtml(zo)}" ${t.zona===zo?'selected':''}>${escapeHtml(zonaLabel(zo))}</option>`).join('')}
-        </select>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" title="Eliminar mesa"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });
   box.innerHTML = html;
+}
+
+// Renombra una zona/rango entera de una vez: se aplica a todas sus mesas y
+// se actualiza el orden de zonas guardado.
+function renameZona(oldName, newNameRaw){
+  const newName = (newNameRaw||'').trim();
+  if(!newName || newName === zonaLabel(oldName)){ renderMesasConfigList(); return; }
+  if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
+  DB.tables.forEach(t => { if(t.zona === oldName) t.zona = newName; });
+  const idx = DB.business.zonaOrder.indexOf(oldName);
+  if(idx !== -1) DB.business.zonaOrder[idx] = newName;
+  else if(!DB.business.zonaOrder.includes(newName)) DB.business.zonaOrder.push(newName);
+  saveDB();
+  renderMesasConfigList();
+  showToast(`Zona renombrada a "${newName}"`);
+}
+
+// Elimina una zona entera junto con todas sus mesas. Si alguna tiene una
+// comanda abierta, se bloquea (igual que al borrar una mesa suelta).
+function deleteZonaCompleta(zona){
+  const tables = DB.tables.filter(t => t.zona === zona);
+  if(tables.some(t => getOpenOrderForTable(t.id))){
+    showToast('No se puede eliminar: hay mesas de esta zona con comandas abiertas.');
+    return;
+  }
+  if(!confirm(`¿Eliminar la zona "${zonaLabel(zona)}" y sus ${tables.length} mesa${tables.length!==1?'s':''}?`)) return;
+  DB.tables = DB.tables.filter(t => t.zona !== zona);
+  if(Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = DB.business.zonaOrder.filter(z => z !== zona);
+  saveDB();
+  renderMesasConfigList();
+  showToast('Zona eliminada');
 }
 
 // Crea de golpe N mesas nuevas en una zona/rango con el nombre que indique el
@@ -2417,13 +2445,6 @@ function updateTableName(id, val){
   if(!tbl) return;
   tbl.name = (val||'').trim() || tbl.name;
   saveDB();
-}
-function updateTableZona(id, val){
-  const tbl = DB.tables.find(x => x.id === id);
-  if(!tbl) return;
-  tbl.zona = val;
-  saveDB();
-  renderMesasConfigList();
 }
 function deleteTableFromConfig(id){
   const order = getOpenOrderForTable(id);
