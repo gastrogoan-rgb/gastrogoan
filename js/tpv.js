@@ -1939,10 +1939,8 @@ function updatePaymentTip(orderId){
   updatePaymentChange(orderId);
 }
 
-// Aplicar un descuento exige el PIN del responsable y el motivo, para que
+// Aplicar un descuento exige indicar el responsable y el motivo, para que
 // quede constancia (visible al cerrar caja) de quién lo dio, cuánto y por qué.
-// Quitar un descuento (poner el % a 0) no reduce ningún cobro, así que no
-// requiere PIN.
 let discountPending = null; // {orderId, pct}
 function requestApplyDiscount(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
@@ -1966,10 +1964,6 @@ function requestApplyDiscount(orderId){
       <button class="modal-close" onclick="renderPaymentModal(${orderId})">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('msg.applyDiscountDesc')}</p>
-    <div class="field">
-      <label>${t('label.accessPin')}</label>
-      <input type="password" id="discount-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')document.getElementById('discount-reason-input')?.focus()">
-    </div>
     ${camareros.length ? `<div class="field">
       <label>${t('label.responsible')}</label>
       <select id="discount-responsable-sel">
@@ -1986,17 +1980,13 @@ function requestApplyDiscount(orderId){
       <button class="btn btn-primary" onclick="confirmApplyDiscount()"><i class="ti ti-check"></i> ${t('btn.applyDiscount')}</button>
     </div>
   `);
-  setTimeout(()=>document.getElementById('discount-pin-input')?.focus(), 50);
+  setTimeout(()=>document.getElementById('discount-reason-input')?.focus(), 50);
 }
 function confirmApplyDiscount(){
   if(!discountPending) return;
   const {orderId, pct} = discountPending;
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const pin = document.getElementById('discount-pin-input').value;
-  const bp = DB.business.pin;
-  const match = bp.startsWith('H:') ? hashPin(pin) === bp : pin === bp;
-  if(!match){ showToast(t('msg.pinIncorrect')); return; }
   const reason = document.getElementById('discount-reason-input').value.trim();
   if(!reason){ showToast(t('msg.discountReasonRequired')); return; }
   const respSel = document.getElementById('discount-responsable-sel');
