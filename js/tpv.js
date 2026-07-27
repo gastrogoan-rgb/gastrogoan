@@ -869,13 +869,20 @@ function confirmAddMenuToOrder(orderId, menuId){
     return txt;
   }).join(' · ');
 
+  // Todas las líneas de esta compra de menú (una por plato/grupo) comparten un
+  // mismo menuInstanceId. Solo la primera línea "lleva" el precio del menú
+  // (menuBaseAmount) para no sumarlo varias veces; si esa línea se borra más
+  // tarde, reassignMenuBasePrice() traspasa ese importe a otra línea hermana
+  // en vez de perderlo, para no acabar sirviendo el resto del menú gratis.
+  const menuInstanceId = genId();
   order.tandas = order.tandas || [];
   selections.forEach((s, i) => {
     if(!order.tandas.includes(s.grupoNombre)) order.tandas.push(s.grupoNombre);
     const modExtra = s.modificadores.reduce((sum,mod) => sum + (mod.precio||0), 0);
     const lineName = s.modificadores.length ? `${s.opcionNombre} (${s.modificadores.map(mod=>mod.nombre).join(', ')})` : s.opcionNombre;
     const grupo = m.grupos.find(g => g.nombre === s.grupoNombre);
-    const linePrice = (i===0 ? m.precio : 0) + s.suplemento + modExtra;
+    const baseAmount = i===0 ? m.precio : 0;
+    const linePrice = baseAmount + s.suplemento + modExtra;
     const isBebida = !!(grupo && grupo.bebida);
     const existing = order.items.find(l =>
       l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
@@ -888,7 +895,7 @@ function confirmAddMenuToOrder(orderId, menuId){
         menuId: m.id, recipeId: s.recipeId, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
-        modificadores: s.modificadores
+        modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount
       };
       if(isBebida) line.bebida = true;
       order.items.push(line);
@@ -897,6 +904,17 @@ function confirmAddMenuToOrder(orderId, menuId){
   });
   saveDB();
   renderTableOrderModal(orderId);
+}
+
+// Si se borra la línea que llevaba el precio base de un menú, ese importe pasa
+// a otra línea del mismo menuInstanceId que siga en el pedido, para que el
+// resto del menú no se quede sirviendo gratis por error.
+function reassignMenuBasePrice(order, removedLine){
+  if(!removedLine || !removedLine.menuInstanceId || !removedLine.menuBaseAmount) return;
+  const sibling = order.items.find(l => l.menuInstanceId === removedLine.menuInstanceId);
+  if(!sibling) return;
+  sibling.price += removedLine.menuBaseAmount;
+  sibling.menuBaseAmount = (sibling.menuBaseAmount||0) + removedLine.menuBaseAmount;
 }
 
 function groupOrderItemsByTanda(order){
@@ -1577,8 +1595,10 @@ function changeOrderItemQty(orderId, idx, delta){
     return;
   }
   line.qty += delta;
-  if(line.qty <= 0) order.items.splice(idx,1);
-  else autoSendTakeawayLine(order, line);
+  if(line.qty <= 0){
+    order.items.splice(idx,1);
+    reassignMenuBasePrice(order, line);
+  } else autoSendTakeawayLine(order, line);
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -1594,6 +1614,7 @@ function removeOrderItem(orderId, idx){
     return;
   }
   order.items.splice(idx,1);
+  reassignMenuBasePrice(order, line);
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -1657,10 +1678,13 @@ function confirmVoidLine(){
 
   if(type === 'remove'){
     order.items.splice(idx,1);
+    reassignMenuBasePrice(order, line);
   } else {
     line.qty += delta;
-    if(line.qty <= 0) order.items.splice(idx,1);
-    else if(line.marchada > line.qty) line.marchada = line.qty;
+    if(line.qty <= 0){
+      order.items.splice(idx,1);
+      reassignMenuBasePrice(order, line);
+    } else if(line.marchada > line.qty) line.marchada = line.qty;
   }
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
