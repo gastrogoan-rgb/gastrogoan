@@ -89,7 +89,7 @@ function updateAutoActiveCarta(force){
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
 // El método de pago se guarda siempre en español (valor interno/histórico);
 // esto solo traduce la etiqueta que se le muestra al usuario.
-const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro'};
+const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed'};
 function paymentMethodTpvLabel(value){
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
@@ -1833,6 +1833,7 @@ function renderFullPaymentTab(order, total){
       <label>Método de pago</label>
       <select id="payment-method" onchange="togglePaymentCash()">
         ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
+        <option value="Mixto">${t('pay.mixed')}</option>
       </select>
     </div>
     <div class="field" id="payment-cash-field">
@@ -1843,14 +1844,55 @@ function renderFullPaymentTab(order, total){
       <div class="label">Cambio</div>
       <div class="value" id="payment-change">${fmtMoney(0)}</div>
     </div>
+    <div id="payment-mixed-fields" style="display:none">
+      <div class="field-row">
+        <div class="field">
+          <label>${t('pay.cash')} (€)</label>
+          <input type="number" id="payment-mixed-cash" step="0.01" min="0" value="${(finalTotal/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'cash')">
+        </div>
+        <div class="field">
+          <label>${t('pay.card')} (€)</label>
+          <input type="number" id="payment-mixed-card" step="0.01" min="0" value="${(finalTotal - finalTotal/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'card')">
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted)" id="payment-mixed-hint"></p>
+    </div>
   `;
 }
 
 function togglePaymentCash(){
   const method = document.getElementById('payment-method').value;
   const isCash = method === 'Efectivo';
+  const isMixed = method === 'Mixto';
   document.getElementById('payment-cash-field').style.display = isCash ? '' : 'none';
   document.getElementById('payment-change-kpi').style.display = isCash ? '' : 'none';
+  document.getElementById('payment-mixed-fields').style.display = isMixed ? '' : 'none';
+  if(isMixed) updatePaymentMixedHint();
+}
+
+// Al editar uno de los dos importes del pago mixto, ajusta el otro para que
+// la suma siga cuadrando con el total a cobrar.
+function updatePaymentMixed(orderId, changed){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const {finalTotal} = computeFinalTotal(order);
+  const cashEl = document.getElementById('payment-mixed-cash');
+  const cardEl = document.getElementById('payment-mixed-card');
+  if(changed === 'cash'){
+    const cash = Math.max(0, Math.min(finalTotal, parseFloat(cashEl.value) || 0));
+    cardEl.value = (finalTotal - cash).toFixed(2);
+  } else {
+    const card = Math.max(0, Math.min(finalTotal, parseFloat(cardEl.value) || 0));
+    cashEl.value = (finalTotal - card).toFixed(2);
+  }
+  updatePaymentMixedHint();
+}
+function updatePaymentMixedHint(){
+  const hint = document.getElementById('payment-mixed-hint');
+  if(!hint) return;
+  const cash = parseFloat(document.getElementById('payment-mixed-cash')?.value) || 0;
+  const card = parseFloat(document.getElementById('payment-mixed-card')?.value) || 0;
+  hint.textContent = `${t('pay.cash')}: ${fmtMoney(cash)} + ${t('pay.card')}: ${fmtMoney(card)} = ${fmtMoney(cash+card)}`;
 }
 
 function updatePaymentTotals(orderId){
@@ -1880,7 +1922,16 @@ function finalizeCharge(orderId){
   if(!order || !order.items.length) return;
   const {total: subtotal, descuentoPct, descuentoImporte, propina, finalTotal: total} = computeFinalTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
+  let pagos = null;
+  if(metodoPago === 'Mixto'){
+    const cash = Math.max(0, parseFloat(document.getElementById('payment-mixed-cash').value) || 0);
+    const card = Math.max(0, parseFloat(document.getElementById('payment-mixed-card').value) || 0);
+    if(Math.abs((cash+card) - total) > 0.01){ showToast(t('msg.mixedPaymentMismatch')); return; }
+    pagos = [];
+    if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
+    if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
+  }
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
