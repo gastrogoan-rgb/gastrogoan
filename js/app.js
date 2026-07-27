@@ -993,7 +993,7 @@ function renderClientes(){
     }
     return `
     <tr>
-      <td><strong>${escapeHtml(c.name)}</strong>${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td><strong>${escapeHtml(c.name)}</strong>${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
       <td>
         ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
@@ -1293,7 +1293,29 @@ function reservationStatusBadge(status){
   return status==='pendiente' ? `<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> ${t('status.pending')}</span>`
     : status==='confirmada' ? `<span class="badge badge-green">${t('status.confirmed')}</span>`
     : status==='cancelada' ? `<span class="badge badge-red">${t('status.cancelled')}</span>`
+    : status==='no_show' ? `<span class="badge badge-red"><i class="ti ti-user-x"></i> ${t('status.noShow')}</span>`
     : `<span class="badge badge-blue">${t('status.completed')}</span>`;
+}
+
+// Marca una reserva confirmada como "no presentado" (el cliente no vino) y
+// suma un aviso al historial del cliente, para detectar quién falla a menudo.
+function markReservationNoShow(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  if(!confirm(t('msg.confirmNoShow'))) return;
+  r.status = 'no_show';
+  let cid = r.clientId;
+  if(!cid && r.clientPhone){
+    const match = DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === r.clientPhone.replace(/\D/g,''));
+    if(match) cid = match.id;
+  }
+  if(cid){
+    const c = DB.clients.find(x=>x.id===cid);
+    if(c) c.noShows = (c.noShows||0) + 1;
+  }
+  saveDB();
+  renderReservas();
+  showToast(t('msg.markedNoShow'));
 }
 
 function setReservasTab(t){
@@ -1403,9 +1425,15 @@ function renderReservasDia(){
                 <td class="wrap">${escapeHtml(r.notes||'—')}</td>
                 <td>${reservationStatusBadge(r.status)}</td>
                 <td>
-                  ${r.status==='confirmada' ? `<button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>` : '—'}
+                  ${r.status==='confirmada' ? `
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                      <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
+                      ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})" title="${t('btn.noShow')}"><i class="ti ti-user-x"></i></button>` : ''}
+                    </div>
+                  ` : '—'}
                 </td>
                 <td class="actions-cell">
+                  ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
                   <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
                 </td>
@@ -1549,20 +1577,25 @@ function reservaTimeToMinutes(t){
   return h*60 + m;
 }
 
-// Ventana mínima entre dos reservas de la misma mesa: 90 min (hora y media).
-// Una mesa reservada a las 13:30 no se podrá volver a reservar hasta las 15:00.
+// Ventana mínima entre dos reservas de la misma mesa: 90 min (hora y media)
+// de base, +15 min más por cada comensal por encima de 4 (un grupo grande
+// tarda más en comer que una mesa de 2, así que necesita más margen).
 const RESERVA_VENTANA_MIN = 90;
+function reservaVentanaMin(people){
+  return RESERVA_VENTANA_MIN + Math.max(0, (people||1) - 4) * 15;
+}
 
-function getAvailableTablesForReservation(dateStr, time, excludeId){
+function getAvailableTablesForReservation(dateStr, time, excludeId, people){
   const reqMin = reservaTimeToMinutes(time);
   const occupied = new Set(
     DB.reservations
       .filter(r => {
-        if(r.date !== dateStr || r.id === excludeId || r.status === 'cancelada') return false;
+        if(r.date !== dateStr || r.id === excludeId || r.status === 'cancelada' || r.status === 'no_show') return false;
         const rMin = reservaTimeToMinutes(r.time);
         // Si no podemos comparar horas, caemos al criterio antiguo (hora exacta).
         if(reqMin == null || rMin == null) return r.time === time;
-        return Math.abs(rMin - reqMin) < RESERVA_VENTANA_MIN;
+        const ventana = reservaVentanaMin(Math.max(people||1, r.people||1));
+        return Math.abs(rMin - reqMin) < ventana;
       })
       .map(r => r.tableId)
       .filter(Boolean)
@@ -1588,16 +1621,23 @@ function reservationTimeFieldHtml(r){
 
 function reservationTableFieldHtml(r){
   const date = r.date, time = r.time;
-  const available = getAvailableTablesForReservation(date, time, r.id);
+  const available = getAvailableTablesForReservation(date, time, r.id, r.people);
   const options = [...available];
   if(r.tableId && !available.some(t=>t.id===r.tableId)){
     const current = DB.tables.find(t=>t.id===r.tableId);
     if(current) options.unshift(current);
   }
+  // Si la mesa tiene un nº de plazas configurado y no llegan para el grupo,
+  // se avisa en la propia opción (no bloquea, por si se quieren juntar mesas).
+  const tableLabel = tb => {
+    if(!tb.plazas) return tb.name;
+    const short = tb.plazas < (r.people||1) ? ` ⚠ ${tb.plazas}p` : ` (${tb.plazas}p)`;
+    return tb.name + short;
+  };
   return `
     <select id="reservation-table">
       <option value="">${t('label.notAssigned')}</option>
-      ${options.map(tb=>`<option value="${tb.id}" ${r.tableId===tb.id?'selected':''}>${escapeHtml(tb.name)}</option>`).join('')}
+      ${options.map(tb=>`<option value="${tb.id}" ${r.tableId===tb.id?'selected':''}>${escapeHtml(tableLabel(tb))}</option>`).join('')}
     </select>
   `;
 }
@@ -1619,8 +1659,10 @@ function updateReservationTableOptions(){
   const time = document.getElementById('reservation-time').value;
   const tableEl = document.getElementById('reservation-table');
   const currentTableId = tableEl.value ? parseInt(tableEl.value) : null;
+  const peopleEl = document.getElementById('reservation-people');
+  const people = peopleEl ? parseInt(peopleEl.value) || 1 : 1;
   const wrap = tableEl.parentElement;
-  wrap.innerHTML = reservationTableFieldHtml({date, time, tableId: currentTableId, id: currentReservationId});
+  wrap.innerHTML = reservationTableFieldHtml({date, time, tableId: currentTableId, id: currentReservationId, people});
 }
 
 let currentReservationId = null;
@@ -1657,7 +1699,7 @@ function openReservationModal(id){
     <div class="field-row">
       <div class="field">
         <label>${t('label.numberOfPeople')}</label>
-        <input type="number" id="reservation-people" value="${r.people}" min="1">
+        <input type="number" id="reservation-people" value="${r.people}" min="1" onchange="updateReservationTableOptions()">
       </div>
       <div class="field">
         <label>${t('label.tablePos')}</label>
@@ -1688,14 +1730,30 @@ function saveReservation(id){
 
   if(!clientId && !clientName){ showToast(t('msg.indicateClient')); return; }
 
-  // No permitir reservar la misma mesa dos veces con menos de 1h30 de diferencia.
+  // No permitir reservar la misma mesa dos veces con menos de 1h30 de diferencia
+  // (más si el grupo es grande, ver reservaVentanaMin).
   if(tableId){
-    const disponible = getAvailableTablesForReservation(date, time, id).some(t => t.id === tableId);
+    const disponible = getAvailableTablesForReservation(date, time, id, people).some(t => t.id === tableId);
     if(!disponible){
       const table = DB.tables.find(t=>t.id===tableId);
       showToast(`${table?table.name:t('label.thatTable')} ${t('msg.tableReservedNearby')}`);
       return;
     }
+    // Aviso (no bloqueante) si la mesa elegida tiene menos plazas que el grupo.
+    const table = DB.tables.find(t=>t.id===tableId);
+    if(table && table.plazas && people > table.plazas){
+      if(!confirm(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', people))) return;
+    }
+  }
+
+  // Aviso (no bloqueante) si ya hay otra reserva sin cancelar para el mismo
+  // cliente a la misma fecha y hora, para no duplicarla sin querer.
+  const dupe = DB.reservations.find(r =>
+    r.id !== id && r.date === date && r.time === time && r.status !== 'cancelada' && r.status !== 'no_show' &&
+    ((clientId && r.clientId === clientId) || (!clientId && clientName && (r.clientName||'').trim().toLowerCase() === clientName.toLowerCase()))
+  );
+  if(dupe){
+    if(!confirm(t('msg.confirmDuplicateReservation'))) return;
   }
 
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
@@ -1739,6 +1797,55 @@ function deleteReservation(id){
   DB.reservations = DB.reservations.filter(r=>r.id!==id);
   saveDB();
   renderReservas();
+}
+
+// Recordatorio de la reserva por WhatsApp/email, con el mismo patrón que el
+// aviso de premio de fidelidad en Clientes.
+function openReservationReminderModal(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const name = client ? client.name : (r.clientName || '');
+  const phone = (client && client.phone) || r.clientPhone || '';
+  const email = client && client.email;
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const msg = `Hola ${name}, te recordamos tu reserva en ${bizName} el ${r.date} a las ${r.time} para ${r.people} persona${r.people!==1?'s':''}. ¡Te esperamos!`;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-bell"></i> ${t('title.sendReminderTo')} ${escapeHtml(name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function sendReservationReminderWhatsapp(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  const phone = (client && client.phone) || r.clientPhone;
+  if(!phone){ showToast(t('msg.noPhone')); return; }
+  const tel = phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+}
+function sendReservationReminderEmail(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+  if(!client || !client.email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const subject = encodeURIComponent('Recordatorio de tu reserva en ' + bizName);
+  const body = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(client.email)+'?subject='+subject+'&body='+body;
 }
 
 /* ============================================================
@@ -2374,6 +2481,7 @@ function renderMesasConfigList(){
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="text" value="${escapeHtml(t.name||'')}" onchange="updateTableName(${t.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Nombre o nº de mesa">
+        <input type="number" min="1" max="50" value="${t.plazas||''}" onchange="updateTablePlazas(${t.id}, this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Plazas" title="Nº de plazas (opcional)">
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" title="Eliminar mesa"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
@@ -2453,6 +2561,15 @@ function updateTableName(id, val){
   const tbl = DB.tables.find(x => x.id === id);
   if(!tbl) return;
   tbl.name = (val||'').trim() || tbl.name;
+  saveDB();
+}
+// Nº de plazas de la mesa (opcional): se usa solo para avisar en Reservas si
+// un grupo no cabe, no limita nada por sí sola en el TPV.
+function updateTablePlazas(id, val){
+  const tbl = DB.tables.find(x => x.id === id);
+  if(!tbl) return;
+  const n = parseInt(val);
+  tbl.plazas = (n && n > 0) ? n : null;
   saveDB();
 }
 function deleteTableFromConfig(id){
