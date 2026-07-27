@@ -2394,7 +2394,7 @@ function renderMiNegocio(){
         <small style="color:var(--muted)">Tus clientes no podrán reservar una mesa ni pedir online para una hora antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
       </div>
       <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> Crea el plano de tu sala</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Define las zonas o rangos de mesas que tenga tu sala (por ejemplo "Rango 1" con 4 mesas, "Rango 2" con 6, "Terraza" con 3) y créalas de golpe. Verás las mesas agrupadas exactamente así en el plano del TPV. Después puedes renombrar cada mesa individualmente más abajo.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Define las zonas o rangos de mesas que tenga tu sala (por ejemplo "Rango 1" con 4 mesas, "Rango 2" con 6, "Terraza" con 3) y créalas de golpe, indicando para cuántas personas es cada mesa. Verás las mesas agrupadas exactamente así en el plano del TPV, y en Reservas se avisará si una mesa no tiene plazas suficientes. Después puedes renombrar o ajustar cada mesa individualmente más abajo.</p>
       <div class="field-row">
         <div class="field">
           <label>Nombre de la zona/rango</label>
@@ -2403,6 +2403,10 @@ function renderMiNegocio(){
         <div class="field">
           <label>Nº de mesas</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
+        </div>
+        <div class="field">
+          <label>Plazas por mesa</label>
+          <input type="number" id="mn-zona-plazas" min="1" max="50" value="4">
         </div>
       </div>
       <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> Crear zona</button>
@@ -2535,12 +2539,14 @@ function clearDanglingTableRefs(tableIds){
 function addZonaConMesas(){
   const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
+  const plazasEl = document.getElementById('mn-zona-plazas');
+  const plazas = plazasEl ? Math.max(1, Math.min(50, parseInt(plazasEl.value)||0)) || null : null;
   if(!nombre){ showToast('Escribe un nombre para la zona'); return; }
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
   for(let i = 1; i <= cantidad; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre});
+    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas});
   }
   saveDB();
   document.getElementById('mn-zona-nombre').value = '';
@@ -2550,9 +2556,12 @@ function addZonaConMesas(){
 }
 
 // Añade una mesa suelta más a una zona ya existente, sin tener que recrearla.
+// Hereda las plazas de las mesas de esa zona si todas tienen la misma.
 function addTableToZona(zona){
-  const existingInZone = DB.tables.filter(t => t.zona === zona).length;
-  DB.tables.push({id: genId(), name: `Mesa ${existingInZone+1}`, zona});
+  const tablesInZone = DB.tables.filter(t => t.zona === zona);
+  const plazasSet = new Set(tablesInZone.map(t => t.plazas||null));
+  const plazas = plazasSet.size === 1 ? [...plazasSet][0] : null;
+  DB.tables.push({id: genId(), name: `Mesa ${tablesInZone.length+1}`, zona, plazas});
   saveDB();
   renderMesasConfigList();
 }
