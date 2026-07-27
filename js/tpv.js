@@ -366,6 +366,7 @@ function renderTPV(){
     ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
+      <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
       ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
@@ -397,11 +398,45 @@ function acceptOnlineOrder(orderId){
 }
 
 function rejectOnlineOrder(orderId){
-  if(!confirm(t('msg.confirmRejectOrder'))) return;
-  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
-  saveDB();
-  renderTPV();
-  showToast(t('msg.orderRejected'));
+  requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
+    saveDB();
+    renderTPV();
+    showToast(t('msg.orderRejected'));
+  });
+}
+
+// Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un
+// pedido online, borrar una mesa...), en vez de un simple confirm().
+let businessPinPendingAction = null;
+function requestBusinessPinAction(title, desc, actionFn){
+  businessPinPendingAction = actionFn;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> ${escapeHtml(title)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${escapeHtml(desc)}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="biz-pin-action-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmBusinessPinAction()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmBusinessPinAction()">${t('common.confirm')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('biz-pin-action-input')?.focus(), 50);
+}
+function confirmBusinessPinAction(){
+  const val = document.getElementById('biz-pin-action-input').value;
+  const bp = DB.business.pin;
+  const match = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  const fn = businessPinPendingAction;
+  businessPinPendingAction = null;
+  closeModal();
+  if(fn) fn();
 }
 
 // Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
@@ -422,10 +457,11 @@ function renderCamareroFieldHtml(selectId, selectedId){
 
 function deleteTable(id){
   if(getOpenOrderForTable(id)){ showToast(t('msg.tableBusy')); return; }
-  if(!confirm(t('msg.confirmDeleteTable'))) return;
-  DB.tables = DB.tables.filter(t => t.id !== id);
-  saveDB();
-  renderTPV();
+  requestBusinessPinAction(t('title.deleteTable'), t('msg.confirmDeleteTable'), () => {
+    DB.tables = DB.tables.filter(t => t.id !== id);
+    saveDB();
+    renderTPV();
+  });
 }
 
 function orderTotal(order){
@@ -1234,6 +1270,7 @@ function setLineEstado(orderId, idx, estado){
   if(estado === 'entregado') line.entregadoAt = new Date().toISOString();
   checkComandaCierre(order);
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-comandascocina') renderComandasCocina();
   else if(active && active.id === 'view-tpv') renderTPV();
@@ -1289,6 +1326,7 @@ function cycleGroupEstado(orderId, tanda){
   if(!changed) return;
   checkComandaCierre(order);
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-comandascocina') renderComandasCocina();
   else if(active && active.id === 'view-tpv') renderTPV();
@@ -1544,12 +1582,16 @@ function changeOrderItemQty(orderId, idx, delta){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items[idx]) return;
   const line = order.items[idx];
+  // Bajar la cantidad de un plato que ya se ha marchado a cocina (o servido)
+  // exige PIN y motivo: si no, se podría reducir en silencio la venta de
+  // comida que el cliente ya se ha comido.
+  if(delta < 0 && (line.marchada||0) > 0){
+    requestVoidLine(orderId, idx, 'qty', delta);
+    return;
+  }
   line.qty += delta;
   if(line.qty <= 0) order.items.splice(idx,1);
-  else {
-    if(line.marchada > line.qty) line.marchada = line.qty;
-    autoSendTakeawayLine(order, line);
-  }
+  else autoSendTakeawayLine(order, line);
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -1557,14 +1599,105 @@ function removeOrderItem(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items[idx]) return;
   const line = order.items[idx];
-  // Si el plato ya se ha marchado a cocina, pedir confirmación para evitar
-  // anular por error comida que se está preparando.
-  if((line.marchada||0) > 0 && line.estado !== 'entregado'){
-    if(!confirm(`"${line.name}" ya está en cocina. ¿Anular este plato?`)) return;
+  // Si el plato ya se ha marchado a cocina (incluido si ya se ha entregado),
+  // anularlo exige PIN y motivo, para no borrar en silencio comida que se
+  // está preparando o que el cliente ya se ha comido.
+  if((line.marchada||0) > 0){
+    requestVoidLine(orderId, idx, 'remove', null);
+    return;
   }
   order.items.splice(idx,1);
   saveDB();
   renderTableOrderModal(orderId);
+}
+
+// Motivos estándar de anulación de un plato, para el registro de auditoría.
+const VOID_REASON_KEYS = {
+  error_comanda: 'void.reason.orderError', cliente_cambio: 'void.reason.clientChanged',
+  cocina_error: 'void.reason.kitchenError', producto_agotado: 'void.reason.outOfStock', otro: 'void.reason.other'
+};
+let voidPending = null; // {orderId, idx, type:'remove'|'qty', delta}
+function requestVoidLine(orderId, idx, type, delta){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line) return;
+  voidPending = {orderId, idx, type, delta};
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('title.voidDish')}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">"${escapeHtml(line.name)}" ${t('msg.voidDishDesc')}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="void-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    </div>
+    <div class="field">
+      <label>${t('label.voidReason')}</label>
+      <select id="void-reason-select" onchange="document.getElementById('void-reason-other').style.display=this.value==='otro'?'block':'none'">
+        ${Object.entries(VOID_REASON_KEYS).map(([k,labelKey])=>`<option value="${k}">${t(labelKey)}</option>`).join('')}
+      </select>
+      <textarea id="void-reason-other" rows="2" placeholder="${t('ph.describeReason')}" style="display:none;margin-top:6px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmVoidLine()"><i class="ti ti-trash"></i> ${t('btn.voidDish')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('void-pin-input')?.focus(), 50);
+}
+function confirmVoidLine(){
+  if(!voidPending) return;
+  const {orderId, idx, type, delta} = voidPending;
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!order || !line) return;
+  const pin = document.getElementById('void-pin-input').value;
+  const bp = DB.business.pin;
+  const match = bp.startsWith('H:') ? hashPin(pin) === bp : pin === bp;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  const reasonSel = document.getElementById('void-reason-select').value;
+  const reasonOther = document.getElementById('void-reason-other').value.trim();
+  const motivo = reasonSel === 'otro' ? (reasonOther || t(VOID_REASON_KEYS.otro)) : t(VOID_REASON_KEYS[reasonSel]);
+  const mesa = order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order);
+
+  if(!DB.voidLog) DB.voidLog = [];
+  DB.voidLog.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5),
+    plato: line.name, cantidad: type==='remove' ? line.qty : Math.abs(delta),
+    estado: line.estado||'', motivo, mesa: mesa||''
+  });
+
+  if(type === 'remove'){
+    order.items.splice(idx,1);
+  } else {
+    line.qty += delta;
+    if(line.qty <= 0) order.items.splice(idx,1);
+    else if(line.marchada > line.qty) line.marchada = line.qty;
+  }
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  voidPending = null;
+  renderTableOrderModal(orderId);
+  showToast(t('msg.voidRegistered'));
+}
+function openVoidLogModal(){
+  const log = [...(DB.voidLog||[])].reverse().slice(0, 100);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.voidReason')}</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.mesa||'—')}</td><td>${escapeHtml(e.plato)}</td><td>${e.cantidad}</td><td>${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
 }
 
 // Momentos de servicio típicos para poder marchar la comanda por tandas
@@ -1858,8 +1991,12 @@ function renderSplitPartsList(order){
 
 function cancelSplit(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
+  // Si ya se ha cobrado alguna parte, no se puede cancelar la división: se
+  // perdería el rastro de ese dinero ya cobrado sin dejar ningún registro.
+  // Hay que terminar de cobrar las partes que quedan pendientes.
   if(order.splitPayments && order.splitPayments.some(p=>p.paid)){
-    if(!confirm(t('msg.confirmCancelSplit'))) return;
+    showToast(t('msg.cannotCancelSplitPaid'));
+    return;
   }
   delete order.splitMode;
   delete order.splitPayments;
