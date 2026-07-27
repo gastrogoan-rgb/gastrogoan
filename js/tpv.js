@@ -249,7 +249,6 @@ function renderMesaCard(table){
 
   return `
     <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
-      <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${table.id})" ${order?'disabled':''} title="${t('title.deleteTable')}"><i class="ti ti-trash"></i></button>
       <div class="mesa-icons-row">
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
@@ -455,15 +454,6 @@ function renderCamareroFieldHtml(selectId, selectedId){
       </select>
     </div>
   `;
-}
-
-function deleteTable(id){
-  if(getOpenOrderForTable(id)){ showToast(t('msg.tableBusy')); return; }
-  requestBusinessPinAction(t('title.deleteTable'), t('msg.confirmDeleteTable'), () => {
-    DB.tables = DB.tables.filter(t => t.id !== id);
-    saveDB();
-    renderTPV();
-  });
 }
 
 function orderTotal(order){
