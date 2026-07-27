@@ -980,7 +980,8 @@ const MERGEABLE_ARRAYS = new Set([
   'purchaseOrders','providers','tables','tpvOrders','sales',
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
-  'ingredientCategories','recipeCategories','elaboraciones'
+  'ingredientCategories','recipeCategories','elaboraciones',
+  'voidLog','discountLog'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */

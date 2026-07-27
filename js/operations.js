@@ -25,6 +25,19 @@ function getSalesForClosure(){
   });
 }
 
+// Descuentos autorizados (con PIN + motivo) durante el periodo de este cierre,
+// para que el arqueo muestre quién dio cada descuento, cuánto y por qué.
+function getDiscountsForClosure(){
+  const {desde, hasta, lastClosure} = getCashClosurePeriod();
+  const today = todayStr();
+  return (DB.discountLog||[]).filter(d => {
+    if(d.fecha !== today) return false;
+    if(!d.createdAt) return !lastClosure;
+    const dt = new Date(d.createdAt);
+    return dt > desde && dt <= hasta;
+  });
+}
+
 function computeClosureTotals(sales){
   const totales = {};
   PAYMENT_METHODS.forEach(m => totales[m] = 0);
@@ -48,6 +61,8 @@ function openCashClosureModal(){
   const {desde, hasta} = getCashClosurePeriod();
   const sales = getSalesForClosure();
   const {totales, total, ticketCount} = computeClosureTotals(sales);
+  const discounts = getDiscountsForClosure();
+  const totalDiscounts = discounts.reduce((s,d)=>s+d.importe, 0);
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-cash-register"></i> ${t('title.cashClosure')}</h3>
@@ -63,6 +78,15 @@ function openCashClosureModal(){
         </tbody>
       </table>
     </div>
+    ${discounts.length ? `
+    <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-discount-2"></i> ${t('title.discountsAppliedThisPeriod')}</h3>
+    <div class="table-wrap" style="margin-bottom:14px">
+      <table>
+        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.responsible')}</th><th>%</th><th>${t('label.total')}</th><th>${t('label.voidReason')}</th></tr></thead>
+        <tbody>${discounts.map(d => `<tr><td>${escapeHtml(d.hora)}</td><td>${escapeHtml(d.mesa||'—')}</td><td>${escapeHtml(d.responsableNombre||'—')}</td><td>${d.porcentaje}%</td><td>${fmtMoney(d.importe)}</td><td>${escapeHtml(d.motivo)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="font-weight:700"><td colspan="4">${t('label.totalDiscounts')}</td><td colspan="2">${fmtMoney(totalDiscounts)}</td></tr></tfoot>
+      </table>
+    </div>` : ''}
     <div class="field-row">
       <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
       <div class="field"><label>${t('label.cashCounted')}</label><input type="number" id="closure-contado" step="0.01" placeholder="0.00" oninput="updateClosureDiffPreview()"></div>
@@ -102,6 +126,7 @@ function updateClosureDiffPreview(){
 function performCashClosure(){
   const sales = getSalesForClosure();
   const {totales, total, ticketCount} = computeClosureTotals(sales);
+  const discounts = getDiscountsForClosure();
   const fondoInicial = parseFloat(document.getElementById('closure-fondo').value) || 0;
   const contadoRaw = document.getElementById('closure-contado').value;
   const efectivoContado = contadoRaw === '' ? null : (parseFloat(contadoRaw) || 0);
@@ -114,6 +139,7 @@ function performCashClosure(){
   const closure = {
     id: genId(), fecha: todayStr(), desde, hasta,
     totales, total, ticketCount,
+    descuentos: discounts, totalDescuentos: discounts.reduce((s,d)=>s+d.importe, 0),
     fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas,
     createdAt: new Date().toISOString()
   };
@@ -130,6 +156,9 @@ function printCashClosure(closure){
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   const diffLine = closure.efectivoContado === null ? '' :
     `${t('label.cashCounted')}: ${fmtMoney(closure.efectivoContado)}\n${t('label.difference')}: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?` (${t('label.exactCash')})`:closure.diferencia>0?` (${t('label.cashSurplus')})`:` (${t('label.cashShortage')})`}\n`;
+  const discountsBlock = (closure.descuentos||[]).length ? `------------------------------\n${t('title.discountsAppliedThisPeriod').toUpperCase()}\n` +
+    closure.descuentos.map(d => `${escapeHtml(d.hora)} ${escapeHtml(d.mesa||'')} ${escapeHtml(d.responsableNombre||'—')} ${d.porcentaje}% -${fmtMoney(d.importe)}\n  ${escapeHtml(d.motivo)}`).join('\n') +
+    `\n${t('label.totalDiscounts')}: ${fmtMoney(closure.totalDescuentos||0)}\n` : '';
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.cashClosureReceipt')}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
 ${escapeHtml(DB.business.name||'GastroGoan')}
 ${t('title.cashClosureReceipt').toUpperCase()}
@@ -140,7 +169,7 @@ ${PAYMENT_METHODS.map(m => `${paymentMethodTpvLabel(m).padEnd(12)}${fmtMoney(clo
 ------------------------------
 ${t('label.totalSales').toUpperCase()}: ${fmtMoney(closure.total)}
 ${t('noun.tickets')}: ${closure.ticketCount}
-------------------------------
+${discountsBlock}------------------------------
 ${t('label.initialFund')}: ${fmtMoney(closure.fondoInicial)}
 ${t('label.expectedCash')}: ${fmtMoney(closure.efectivoEsperado)}
 ${diffLine}${closure.notas ? '\n'+t('common.notes')+': '+escapeHtml(closure.notas)+'\n' : ''}

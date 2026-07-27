@@ -1809,14 +1809,31 @@ function renderPaymentModal(orderId){
 // Descuento (%) y propina (importe) solo se aplican en el cobro de cuenta
 // completa: cuando se divide la cuenta, cada parte se cobra por su importe
 // exacto sin más ajustes, para no complicar cómo se reparten.
+// El descuento SIEMPRE se lee de order.descuentoPct (ya aplicado con PIN +
+// motivo), nunca directamente del input, para que no se pueda cobrar un
+// descuento sin haberlo autorizado.
 function computeFinalTotal(order){
   const total = orderTotal(order);
-  const discPctEl = document.getElementById('payment-discount');
   const tipEl = document.getElementById('payment-tip');
-  const descuentoPct = discPctEl ? Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0)) : (order.descuentoPct||0);
+  const descuentoPct = order.descuentoPct || 0;
   const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
   const descuentoImporte = total * descuentoPct / 100;
   return {total, descuentoPct, descuentoImporte, propina, finalTotal: total - descuentoImporte + propina};
+}
+
+// Vista previa del total mientras se escribe el % de descuento, sin
+// aplicarlo todavía (eso requiere pulsar "Aplicar" + PIN + motivo).
+function previewDiscountTotal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const discPctEl = document.getElementById('payment-discount');
+  const pct = Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0));
+  const total = orderTotal(order);
+  const tipEl = document.getElementById('payment-tip');
+  const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
+  const finalTotal = total - (total*pct/100) + propina;
+  const kpiEl = document.getElementById('payment-final-total');
+  if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
 }
 
 function renderFullPaymentTab(order, total){
@@ -1827,11 +1844,15 @@ function renderFullPaymentTab(order, total){
     <div class="field-row">
       <div class="field">
         <label>${t('label.discountPct')}</label>
-        <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" oninput="updatePaymentTotals(${order.id})">
+        <div style="display:flex;gap:6px">
+          <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" oninput="previewDiscountTotal(${order.id})" style="flex:1">
+          <button class="btn btn-sm" onclick="requestApplyDiscount(${order.id})">${t('btn.applyDiscount')}</button>
+        </div>
+        ${descuentoPct > 0 ? `<small style="color:var(--muted)">${t('label.discountAppliedBy')}: ${escapeHtml(order.descuentoResponsableNombre||'—')} — "${escapeHtml(order.descuentoMotivo||'')}"</small>` : ''}
       </div>
       <div class="field">
         <label>${t('label.tip')} (€)</label>
-        <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTotals(${order.id})">
+        <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTip(${order.id})">
       </div>
     </div>
     <div class="kpi" style="margin-bottom:12px">
@@ -1904,18 +1925,101 @@ function updatePaymentMixedHint(){
   hint.textContent = `${t('pay.cash')}: ${fmtMoney(cash)} + ${t('pay.card')}: ${fmtMoney(card)} = ${fmtMoney(cash+card)}`;
 }
 
-function updatePaymentTotals(orderId){
+function updatePaymentTip(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const {descuentoPct, propina, finalTotal} = computeFinalTotal(order);
-  order.descuentoPct = descuentoPct;
-  order.propina = propina;
+  const tipEl = document.getElementById('payment-tip');
+  order.propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : 0;
   saveDB();
+  const {finalTotal} = computeFinalTotal(order);
   const kpiEl = document.getElementById('payment-final-total');
   if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
   const cashEl = document.getElementById('payment-cash');
   if(cashEl) cashEl.value = finalTotal.toFixed(2);
   updatePaymentChange(orderId);
+}
+
+// Aplicar un descuento exige el PIN del responsable y el motivo, para que
+// quede constancia (visible al cerrar caja) de quién lo dio, cuánto y por qué.
+// Quitar un descuento (poner el % a 0) no reduce ningún cobro, así que no
+// requiere PIN.
+let discountPending = null; // {orderId, pct}
+function requestApplyDiscount(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const discPctEl = document.getElementById('payment-discount');
+  const pct = Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0));
+  if(pct <= 0){
+    order.descuentoPct = 0;
+    order.descuentoMotivo = '';
+    order.descuentoResponsableId = null;
+    order.descuentoResponsableNombre = '';
+    saveDB();
+    renderPaymentModal(orderId);
+    return;
+  }
+  discountPending = {orderId, pct};
+  const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-discount-2"></i> ${t('title.applyDiscount')}</h3>
+      <button class="modal-close" onclick="renderPaymentModal(${orderId})">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.applyDiscountDesc')}</p>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="discount-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')document.getElementById('discount-reason-input')?.focus()">
+    </div>
+    ${camareros.length ? `<div class="field">
+      <label>${t('label.responsible')}</label>
+      <select id="discount-responsable-sel">
+        <option value="">—</option>
+        ${camareros.map(e => `<option value="${e.id}" ${order.camareroId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+    <div class="field">
+      <label>${t('label.discountReason')}</label>
+      <textarea id="discount-reason-input" rows="2" placeholder="${t('ph.discountReasonExample')}"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderPaymentModal(${orderId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmApplyDiscount()"><i class="ti ti-check"></i> ${t('btn.applyDiscount')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('discount-pin-input')?.focus(), 50);
+}
+function confirmApplyDiscount(){
+  if(!discountPending) return;
+  const {orderId, pct} = discountPending;
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const pin = document.getElementById('discount-pin-input').value;
+  const bp = DB.business.pin;
+  const match = bp.startsWith('H:') ? hashPin(pin) === bp : pin === bp;
+  if(!match){ showToast(t('msg.pinIncorrect')); return; }
+  const reason = document.getElementById('discount-reason-input').value.trim();
+  if(!reason){ showToast(t('msg.discountReasonRequired')); return; }
+  const respSel = document.getElementById('discount-responsable-sel');
+  const responsableId = respSel && respSel.value ? parseInt(respSel.value) : null;
+  const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
+
+  const subtotal = orderTotal(order);
+  const importe = subtotal * pct / 100;
+  order.descuentoPct = pct;
+  order.descuentoMotivo = reason;
+  order.descuentoResponsableId = responsableId;
+  order.descuentoResponsableNombre = responsable ? responsable.name : '';
+
+  if(!DB.discountLog) DB.discountLog = [];
+  DB.discountLog.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
+    mesa: order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order),
+    porcentaje: pct, importe, motivo: reason, responsableId, responsableNombre: responsable ? responsable.name : ''
+  });
+  saveDB();
+  discountPending = null;
+  renderPaymentModal(orderId);
+  showToast(t('msg.discountApplied'));
 }
 
 function updatePaymentChange(orderId){
@@ -1940,7 +2044,7 @@ function finalizeCharge(orderId){
     if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
     if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
   }
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
