@@ -230,34 +230,35 @@ function renderMesaCard(table){
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
   const displayName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
 
-  let badge = `<span class="badge badge-green">${t('status.free')}</span>`;
-  let phaseInfo = '';
+  // Icono único de fase de servicio (el más avanzado), como indicador discreto
+  // en vez de una fila de badges apilados.
+  let phaseIcon = '', phaseTitle = '';
   if(order){
-    badge = `<span class="badge badge-amber">${t('status.occupied')}</span>`;
-    // Mostrar fase del servicio
     const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
     const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
-    if(allDelivered) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-green" style="font-size:8px">✅ ${t('status.served')}</span></div>`;
+    if(allDelivered){ phaseIcon = '✅'; phaseTitle = t('status.served'); }
     else {
-      const preparing = foodItems.filter(l => l.estado === 'preparando');
-      const inKitchen = foodItems.filter(l => l.estado === 'cocina');
-      const pending = (order.items||[]).filter(l => !l.bebida && l.qty > (l.marchada||0));
-      if(preparing.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-blue" style="font-size:8px">🔥 ${t('status.inKitchen')}</span></div>`;
-      else if(inKitchen.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-amber" style="font-size:8px">⏳ ${t('status.sentToKitchen')}</span></div>`;
-      else if(pending.length) phaseInfo = `<div style="margin-top:3px"><span class="badge badge-gray" style="font-size:8px">📝 ${t('status.takingOrder')}</span></div>`;
+      const preparing = foodItems.some(l => l.estado === 'preparando');
+      const inKitchen = foodItems.some(l => l.estado === 'cocina');
+      const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
+      if(preparing){ phaseIcon = '🔥'; phaseTitle = t('status.inKitchen'); }
+      else if(inKitchen){ phaseIcon = '⏳'; phaseTitle = t('status.sentToKitchen'); }
+      else if(pending){ phaseIcon = '📝'; phaseTitle = t('status.takingOrder'); }
     }
   }
 
   return `
-    <div class="card mesa-card" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <button class="btn btn-sm btn-danger mesa-del" onclick="event.stopPropagation();deleteTable(${table.id})" ${order?'disabled':''} title="${t('title.deleteTable')}"><i class="ti ti-trash"></i></button>
-      <div class="mesa-name"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(displayName)}</div>
-      ${badge}
-      ${phaseInfo}
-      ${hayNuevos ? '<div style="margin-top:3px"><span class="badge badge-amber"><i class="ti ti-bell-ringing"></i></span></div>' : ''}
-      ${order && order.pagado ? '<div style="margin-top:3px"><span class="badge badge-green"><i class="ti ti-credit-card"></i></span></div>' : ''}
-      ${order && order.pax ? `<div style="margin-top:3px;color:var(--muted)">👥 ${order.pax}</div>` : ''}
-      ${order ? `<div class="mesa-total">${fmtMoney(total)}</div>` : ''}
+      <div class="mesa-icons-row">
+        ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
+        ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
+        ${phaseIcon ? `<span class="mesa-mini-badge" title="${phaseTitle}">${phaseIcon}</span>` : ''}
+      </div>
+      <div class="mesa-name">${escapeHtml(displayName)}</div>
+      ${order
+        ? `<div class="mesa-total">${fmtMoney(total)}</div>${order.pax ? `<div class="mesa-pax">👥 ${order.pax}</div>` : ''}`
+        : `<div class="mesa-status-free">${t('status.free')}</div>`}
     </div>
   `;
 }
