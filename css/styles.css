@@ -149,6 +149,12 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .mesa-card .mesa-icons-row{position:absolute;top:6px;left:6px;display:flex;gap:3px}
 .mesa-card .mesa-mini-badge{font-size:12px;line-height:1}
 .mesa-card .mesa-mini-badge .ti{font-size:13px;color:var(--brand-orange)}
+.mesa-card .mesa-elapsed-row{position:absolute;top:6px;right:6px}
+.mesa-card .mesa-elapsed{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700}
+.mesa-card .mesa-elapsed .ti{font-size:11px}
+.mesa-card .mesa-elapsed-normal{color:var(--muted)}
+.mesa-card .mesa-elapsed-warn{color:var(--amber-dark, #b35900)}
+.mesa-card .mesa-elapsed-urgent{color:var(--red)}
 
 .view-toggle{display:flex;gap:4px}
 .view-toggle .btn.active{background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)}

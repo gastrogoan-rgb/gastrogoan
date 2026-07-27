@@ -230,6 +230,15 @@ function renderMesaCard(table){
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
   const displayName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
 
+  // Tiempo que lleva abierta la mesa, para detectar mesas "atascadas" de un
+  // vistazo (normal en gris, aviso a partir de 60 min, urgente a partir de 120).
+  let elapsedHtml = '';
+  if(order && order.createdAt){
+    const mins = minutesSince(order.createdAt);
+    const cls = mins >= 120 ? 'mesa-elapsed-urgent' : mins >= 60 ? 'mesa-elapsed-warn' : 'mesa-elapsed-normal';
+    elapsedHtml = `<span class="mesa-elapsed ${cls}" title="${t('label.timeOpen')}"><i class="ti ti-clock"></i> ${mins} min</span>`;
+  }
+
   // Icono único de fase de servicio (el más avanzado), como indicador discreto
   // en vez de una fila de badges apilados.
   let phaseIcon = '', phaseTitle = '';
@@ -254,6 +263,7 @@ function renderMesaCard(table){
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
         ${phaseIcon ? `<span class="mesa-mini-badge" title="${phaseTitle}">${phaseIcon}</span>` : ''}
       </div>
+      ${elapsedHtml ? `<div class="mesa-elapsed-row">${elapsedHtml}</div>` : ''}
       <div class="mesa-name">${escapeHtml(displayName)}</div>
       ${order
         ? `<div class="mesa-total">${fmtMoney(total)}</div>${order.pax ? `<div class="mesa-pax">👥 ${order.pax}</div>` : ''}`
@@ -1010,6 +1020,28 @@ function marcharLine(orderId, idx){
   showToast(t('msg.dishSentToKitchen'));
 }
 
+// Avisos de la reserva (notas) y del cliente (alergias/notas) vinculados a esta
+// comanda, para que camareros y cocina los vean sin tener que ir a buscarlos
+// a Reservas o Clientes.
+function renderOrderClientNotesHtml(order){
+  const parts = [];
+  if(order.reservationId){
+    const r = DB.reservations.find(x => x.id === order.reservationId);
+    if(r && r.notes) parts.push({icon:'ti-calendar-event', text: r.notes});
+  }
+  if(order.clientId){
+    const c = DB.clients.find(x => x.id === order.clientId);
+    if(c){
+      if(c.allergies) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${c.allergies}`});
+      if(c.notes) parts.push({icon:'ti-note', text: c.notes});
+    }
+  }
+  if(!parts.length) return '';
+  return `<div class="card" style="border:2px solid var(--brand-orange);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
+    ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--brand-orange);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
+  </div>`;
+}
+
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
@@ -1071,6 +1103,7 @@ function renderTableOrderModal(orderId){
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
+    ${renderOrderClientNotesHtml(order)}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
