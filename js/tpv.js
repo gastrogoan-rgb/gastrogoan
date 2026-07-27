@@ -1795,8 +1795,38 @@ function renderPaymentModal(orderId){
 }
 
 /* ------------------ Pestaña: cuenta completa ------------------ */
+// Descuento (%) y propina (importe) solo se aplican en el cobro de cuenta
+// completa: cuando se divide la cuenta, cada parte se cobra por su importe
+// exacto sin más ajustes, para no complicar cómo se reparten.
+function computeFinalTotal(order){
+  const total = orderTotal(order);
+  const discPctEl = document.getElementById('payment-discount');
+  const tipEl = document.getElementById('payment-tip');
+  const descuentoPct = discPctEl ? Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0)) : (order.descuentoPct||0);
+  const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
+  const descuentoImporte = total * descuentoPct / 100;
+  return {total, descuentoPct, descuentoImporte, propina, finalTotal: total - descuentoImporte + propina};
+}
+
 function renderFullPaymentTab(order, total){
+  const descuentoPct = order.descuentoPct || 0;
+  const propina = order.propina || 0;
+  const finalTotal = total - (total*descuentoPct/100) + propina;
   return `
+    <div class="field-row">
+      <div class="field">
+        <label>${t('label.discountPct')}</label>
+        <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" oninput="updatePaymentTotals(${order.id})">
+      </div>
+      <div class="field">
+        <label>${t('label.tip')} (€)</label>
+        <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTotals(${order.id})">
+      </div>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">${t('label.totalToCharge')}</div>
+      <div class="value" id="payment-final-total">${fmtMoney(finalTotal)}</div>
+    </div>
     <div class="field">
       <label>Método de pago</label>
       <select id="payment-method" onchange="togglePaymentCash()">
@@ -1805,7 +1835,7 @@ function renderFullPaymentTab(order, total){
     </div>
     <div class="field" id="payment-cash-field">
       <label>Importe entregado (€)</label>
-      <input type="number" id="payment-cash" step="0.01" min="0" value="${total.toFixed(2)}" oninput="updatePaymentChange(${total})">
+      <input type="number" id="payment-cash" step="0.01" min="0" value="${finalTotal.toFixed(2)}" oninput="updatePaymentChange(${order.id})">
     </div>
     <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
       <div class="label">Cambio</div>
@@ -1821,17 +1851,34 @@ function togglePaymentCash(){
   document.getElementById('payment-change-kpi').style.display = isCash ? '' : 'none';
 }
 
-function updatePaymentChange(total){
+function updatePaymentTotals(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const {descuentoPct, propina, finalTotal} = computeFinalTotal(order);
+  order.descuentoPct = descuentoPct;
+  order.propina = propina;
+  saveDB();
+  const kpiEl = document.getElementById('payment-final-total');
+  if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
+  const cashEl = document.getElementById('payment-cash');
+  if(cashEl) cashEl.value = finalTotal.toFixed(2);
+  updatePaymentChange(orderId);
+}
+
+function updatePaymentChange(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const {finalTotal} = computeFinalTotal(order);
   const cash = parseFloat(document.getElementById('payment-cash').value) || 0;
-  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, cash - total));
+  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, cash - finalTotal));
 }
 
 function finalizeCharge(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length) return;
-  const total = orderTotal(order);
+  const {total: subtotal, descuentoPct, descuentoImporte, propina, finalTotal: total} = computeFinalTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -2144,6 +2191,8 @@ function buildTicketText(sale, opts={}){
   lines.push('------------------------------');
   sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
   lines.push('------------------------------');
+  if(sale.descuentoImporte) lines.push(`${t('label.discount')} (${sale.descuentoPct}%): -${fmtMoney(sale.descuentoImporte)}`);
+  if(sale.propina) lines.push(`${t('label.tip')}: ${fmtMoney(sale.propina)}`);
   const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
   const base = sale.total / (1 + ivaPct/100);
   const iva = sale.total - base;
