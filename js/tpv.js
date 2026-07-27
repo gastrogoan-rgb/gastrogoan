@@ -909,46 +909,6 @@ function groupOrderItemsByTanda(order){
   return [...(order.tandas||[]), ''].filter(t => groups[t]).map(t => ({tanda: t, items: groups[t]}));
 }
 
-function renderOrderLinesHtml(order){
-  const groups = groupOrderItemsByTanda(order);
-  if(!groups.length) return `<div class="empty" style="padding:10px">${t('empty.orderEmpty')}</div>`;
-  groups.sort((a,b) => {
-    const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
-    const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
-    return aB - bB;
-  });
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${groups.map(g => {
-    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
-    const enviados = g.items.map(({line}) => line.enviadoAt).filter(Boolean);
-    const elapsedBadge = enviados.length ? urgencyBadge(minutesSince(enviados.sort()[0])) : '';
-    return `
-    <div class="card card-compact">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;flex-wrap:wrap">
-        <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
-        ${elapsedBadge}
-      </div>
-      ${pendingCount ? `<div style="margin-bottom:6px"><button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')} (${pendingCount})</button></div>` : ''}
-      ${g.items.map(({line, idx}) => `
-        <div class="list-row">
-          <div class="list-row-name">
-            <span>${line.qty} × ${escapeHtml(line.name)}</span>${line.estado && line.estado !== 'entregado' ? `<span class="badge ${KITCHEN_STATES[line.estado]?.cls||''}" style="cursor:pointer" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ${KITCHEN_STATES[line.estado]?.icon||''}"></i> ${KITCHEN_STATES[line.estado]?.label||''}</span>` : line.estado === 'entregado' ? `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Servido</span>` : ''}${line.nuevo ? ` <span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> Pedido por el cliente</span>` : ''}
-            ${line.notas ? `<div style="font-size:11.5px;color:var(--muted)"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
-            <button class="btn btn-sm btn-icon" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
-            <strong style="min-width:58px;text-align:right">${fmtMoney(line.price * line.qty)}</strong>
-            <button class="btn btn-sm btn-icon" title="Notas" onclick="openLineNotesModal(${order.id}, ${idx})"><i class="ti ti-note"></i></button>
-            ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" title="${t('title.sendDishToKitchen')}" style="color:var(--brand-orange)" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
-            ${line.estado === 'entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-  }).join('')}</div>`;
-}
-
 // Botón principal: marcha el primer grupo (tanda) con platos pendientes (p.ej. "Entrantes"
 // primero). Los siguientes grupos (segundos, postres...) se marchan con su propio botón
 // dentro de cada tarjeta cuando el cliente esté listo.
@@ -1193,6 +1153,7 @@ function renderOrderComandaPanel(order){
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
+          ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0;color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
           ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         </div>
         ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
