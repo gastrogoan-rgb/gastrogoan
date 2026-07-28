@@ -663,9 +663,18 @@ function renderDistribucion(){
   }
 }
 
+let distSearch = '';
+function setDistSearch(val){
+  distSearch = val.toLowerCase();
+  renderDistList();
+}
+
 function renderDistList(){
   const box = document.getElementById('distribucion-content');
-  const cards = areaEmployees().map(emp => {
+  const isSala = currentArea() === 'sala';
+  const allEmps = areaEmployees();
+  const emps = distSearch ? allEmps.filter(e => e.name.toLowerCase().includes(distSearch) || (e.rol||'').toLowerCase().includes(distSearch)) : allEmps;
+  const cards = emps.map(emp => {
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
     const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
@@ -677,7 +686,7 @@ function renderDistList(){
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||'Sin rol')}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
-          <span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos} plato${nPlatos!==1?'s':''}</span>
+          ${isSala ? '' : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos} plato${nPlatos!==1?'s':''}</span>`}
           <span><i class="ti ti-clipboard-list"></i> ${nTareas} tarea${nTareas!==1?'s':''}</span>
         </div>
       </div>
@@ -685,8 +694,11 @@ function renderDistList(){
   }).join('');
 
   box.innerHTML = `
-    <div class="toolbar"><div class="left"></div><button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button></div>
-    <div class="grid grid-3">${cards}</div>
+    <div class="toolbar">
+      <div class="left"><input type="text" class="search-input" value="${escapeHtml(distSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setDistSearch(this.value)"></div>
+      <button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button>
+    </div>
+    ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t('empty.employees')}</div>`}
   `;
 }
 
@@ -744,10 +756,14 @@ function renderDistDetail(){
   if(!emp){ backToDistList(); return; }
   const d = getDistEmpData(emp.id);
   const allDishes = getAllDishNames();
+  // En Sala no tiene sentido el concepto de "plan de producción semanal de
+  // platos" (eso es propio de cocina); ahí este módulo es solo el calendario
+  // de tareas (Sala + Limpieza + Promos) de cada persona.
+  const isSala = currentArea() === 'sala';
 
   const platosHtml = d.platos.length
     ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
-        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${pl.replace(/'/g,"\\'")}')" title="Ver ficha técnica">
+        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="Ver ficha técnica">
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(pl)}</span>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
         </div>
@@ -837,11 +853,12 @@ function renderDistDetail(){
       <button class="btn btn-default" onclick="printDistribucion(${emp.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
     </div>
 
-    <div class="grid grid-2">
-      <div class="kpi"><div class="label">Platos a su cargo</div><div class="value">${d.platos.length}</div></div>
+    <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
+      ${isSala ? '' : `<div class="kpi"><div class="label">Platos a su cargo</div><div class="value">${d.platos.length}</div></div>`}
       <div class="kpi"><div class="label">Tareas de esta semana</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
 
+    ${isSala ? '' : `
     <div class="card">
       <h3><i class="ti ti-tools-kitchen-2"></i> Platos a su cargo</h3>
       ${platosHtml}
@@ -857,6 +874,7 @@ function renderDistDetail(){
         <button class="btn btn-default" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> Añadir</button>
       </div>
     </div>
+    `}
 
     <div class="card">
       <h3 style="justify-content:space-between">
@@ -934,13 +952,14 @@ function removeDistTarea(dayIdx, taskId){
 
 function printDistribucion(empId){
   migrateWorkDistribution();
-  const targets = empId ? DB.employees.filter(e=>e.id===empId) : DB.employees;
+  const targets = empId ? DB.employees.filter(e=>e.id===empId) : areaEmployees();
+  const isSala = currentArea() === 'sala';
   let html = `<h2 style="margin:0 0 16px">${t('view.distribucion.title')}</h2>`;
   targets.forEach(emp => {
     const d = getDistEmpData(emp.id);
     html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
       <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
-    if(d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
+    if(!isSala && d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
