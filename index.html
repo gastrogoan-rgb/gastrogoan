@@ -365,7 +365,11 @@
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> <span data-i18n="label.onlyAlerts">Solo alertas</span>
           </label>
         </div>
-        <button class="owner-only btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> <span data-i18n="btn.newElaboration">Nueva elaboración</span></button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="printStockCountSheet()"><i class="ti ti-printer"></i> <span data-i18n="btn.printStockSheet">Hoja de recuento</span></button>
+          <button class="owner-only btn" onclick="openStockLogModal()"><i class="ti ti-history"></i> <span data-i18n="btn.stockLog">Historial</span></button>
+          <button class="owner-only btn btn-primary" id="stock-new-elab-btn" onclick="openElaboracionModal()" style="display:none"><i class="ti ti-plus"></i> <span data-i18n="btn.newElaboration">Nueva elaboración</span></button>
+        </div>
       </div>
 
       <nav class="ge-tab-row">

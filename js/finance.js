@@ -583,10 +583,14 @@ function deleteIngredient(id){
     `);
     return;
   }
-  if(!confirm(t('msg.confirmDeleteIngredient'))) return;
   confirmDeleteIngredient(id);
 }
+// Borrar un ingrediente pierde para siempre su historial de stock, igual de
+// irreversible que borrar un cliente o una mesa con pedido: se pide el PIN.
 function confirmDeleteIngredient(id){
+  requestBusinessPinAction(t('title.deleteIngredient'), t('msg.confirmDeleteIngredient'), () => reallyDeleteIngredient(id));
+}
+function reallyDeleteIngredient(id){
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
@@ -856,9 +860,72 @@ function updateStockMin(ingredientId, value){
   renderStock();
 }
 
+// Registro de ajustes de stock (manuales y rápidos), para poder investigar
+// mermas/descuadres: qué se tocó, cuándo y de qué cantidad a qué cantidad.
+function logStockAdjustment(type, refId, name, before, after){
+  if(!DB.stockLog) DB.stockLog = [];
+  DB.stockLog.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
+    type, refId, name, before, after, delta: after - before, area: currentArea()
+  });
+  if(DB.stockLog.length > 500) DB.stockLog = DB.stockLog.slice(-500);
+}
+
+function openStockLogModal(){
+  const log = [...(DB.stockLog||[])].filter(e => (e.area||'cocina')===currentArea()).reverse().slice(0, 100);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-history"></i> ${t('title.stockLog')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('label.stockQty')} antes</th><th>${t('label.stockQty')} después</th><th>Cambio</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.name)}</td><td>${fmtNum(e.before)}</td><td>${fmtNum(e.after)}</td><td style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td></tr>`).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
+// Hoja imprimible para el recuento físico de stock (ingredientes + elaboraciones
+// del área actual), con una columna en blanco para anotar la cantidad real y
+// poder cuadrarla luego contra lo que la app tiene estimado.
+function printStockCountSheet(){
+  const area = currentArea();
+  const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area)
+    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category||'Otros', qty: getStockEntry(ing.id).qty}))
+    .sort((a,b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
+  const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
+    .map(e => ({name: e.name, unit: e.unit, category: t('label.elaborations'), qty: e.qty||0}))
+    .sort((a,b) => a.name.localeCompare(b.name));
+  const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td>${fmtNum(x.qty)}</td><td></td></tr>`).join('');
+  const win = window.open('', '_blank', 'width=800,height=1000');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printStockSheet')}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:15mm 12mm}
+  h1{font-size:16pt;margin:0 0 12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}
+  th{background:#f5f5f3}
+  @media print{body{padding:10mm}}</style></head><body>
+  <h1>${t('btn.printStockSheet')} — ${new Date().toLocaleDateString('es-ES')}</h1>
+  <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>Estimado</th><th>Real</th></tr></thead>
+  <tbody>${rows || `<tr><td colspan="5">${t('common.noResults')}</td></tr>`}</tbody></table>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
 function adjustStock(ingredientId, delta){
   const s = getStockEntry(ingredientId);
-  s.qty = Math.max(0, (s.qty||0) + delta);
+  const before = s.qty||0;
+  s.qty = Math.max(0, before + delta);
+  const ing = getIngredient(ingredientId);
+  logStockAdjustment('ing', ingredientId, ing?ing.name:'', before, s.qty);
   saveDB();
   renderStock();
 }
@@ -886,7 +953,10 @@ function confirmSetStockQty(ingredientId){
   const val = document.getElementById('stock-qty-value').value;
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
+  const before = s.qty||0;
   s.qty = num;
+  const ing = getIngredient(ingredientId);
+  logStockAdjustment('ing', ingredientId, ing?ing.name:'', before, num);
   saveDB();
   closeModal();
   renderStock();
@@ -964,7 +1034,9 @@ function updateElaboracionMin(id, value){
 
 function adjustElaboracion(id, delta){
   const e = getElaboracion(id); if(!e) return;
-  e.qty = Math.max(0, (e.qty||0) + delta);
+  const before = e.qty||0;
+  e.qty = Math.max(0, before + delta);
+  logStockAdjustment('elab', id, e.name, before, e.qty);
   saveDB();
   renderStock();
 }
@@ -992,7 +1064,9 @@ function confirmSetElaboracionQty(id){
   const val = document.getElementById('elaboracion-qty-value').value;
   const num = parseFloat(val);
   if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
+  const before = e.qty||0;
   e.qty = num;
+  logStockAdjustment('elab', id, e.name, before, num);
   saveDB();
   closeModal();
   renderStock();

@@ -2341,6 +2341,13 @@ function discountStockForOrder(order){
       const r = getRecipe(recipeId);
       if(!r) return;
       (r.ingredients||[]).forEach(ri => {
+        if(ri.type === 'base'){
+          // La línea usa una elaboración base (almíbar, caldo...) como ingrediente:
+          // esa elaboración tiene su propio stock (DB.elaboraciones), no Mega Lista.
+          const elab = (DB.elaboraciones||[]).find(e => e.recipeId === ri.baseRecipeId);
+          if(elab) elab.qty = Math.max(0, (elab.qty||0) - ri.qty * line.qty);
+          return;
+        }
         const s = getStockEntry(ri.ingredientId);
         s.qty = Math.max(0, s.qty - ri.qty * line.qty);
       });
