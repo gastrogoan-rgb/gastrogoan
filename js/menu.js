@@ -111,14 +111,14 @@ function getAforoInfoForDate(dateStr){
 }
 let ofertaTab = 'carta'; // 'carta' | 'menus'
 
-// Los "Menús" (combos de varios platos a precio fijo) tienen sentido en
-// Cocina, pero casi nunca en la carta de bebidas de Sala (salvo un raro
-// maridaje/menú de cata) — se oculta esa pestaña ahí en vez de mostrar algo
-// que la mayoría de negocios no va a usar nunca desde el bar.
+// La segunda pestaña es "Menús" (combos de varios platos a precio fijo) en
+// Cocina, y "Maridajes" en Sala (una combinación de bebidas a precio
+// cerrado — mismo modelo de datos, grupos y opciones, solo cambia el nombre
+// y el icono para que tenga sentido en una carta de bebidas).
 function renderOferta(){
   const isSala = currentArea()==='sala';
-  if(isSala && ofertaTab==='menus') ofertaTab = 'carta';
-  document.getElementById('oferta-tab-menus').style.display = isSala ? 'none' : '';
+  const menusTabBtn = document.getElementById('oferta-tab-menus');
+  menusTabBtn.innerHTML = `<i class="ti ${isSala?'ti-glass-full':'ti-list-details'}"></i> ${isSala ? t('tab.maridajes') : t('tab.menus')}`;
   document.getElementById('oferta-carta-tab').style.display = ofertaTab==='carta' ? '' : 'none';
   document.getElementById('oferta-menus-tab').style.display = ofertaTab==='menus' ? '' : 'none';
   document.getElementById('oferta-tab-carta').classList.toggle('btn-primary', ofertaTab==='carta');
@@ -612,15 +612,18 @@ function areaMenus(){
   return DB.menus.filter(m => !m.area || m.area === currentArea());
 }
 function renderMenuList(){
+  const isSala = currentArea()==='sala';
   const menus = areaMenus();
   const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
+  const newBtn = document.querySelector('#menu-list-view button[onclick="newMenu()"] span');
+  if(newBtn) newBtn.textContent = isSala ? t('label.newMaridaje') : t('label.menuName');
   document.getElementById('menu-stats').innerHTML = `
-    <div class="kpi"><div class="label">${t('common.menus')}</div><div class="value">${menus.length}</div></div>
+    <div class="kpi"><div class="label">${isSala ? t('tab.maridajes') : t('common.menus')}</div><div class="value">${menus.length}</div></div>
     <div class="kpi"><div class="label">${t('label.totalGroups')}</div><div class="value">${totalGrupos}</div></div>
   `;
   const box = document.getElementById('menu-list');
   if(!menus.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-list-details"></i>${t('empty.menus')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ${isSala?'ti-glass-full':'ti-list-details'}"></i>${isSala ? t('empty.maridajes') : t('empty.menus')}</div>`;
     return;
   }
   box.innerHTML = `
@@ -700,7 +703,10 @@ function saveMenu(){
 }
 
 function renderMenuEditor(){
+  const isSala = currentArea()==='sala';
+  document.getElementById('menu-editor-back-label').textContent = isSala ? t('tab.maridajes') : t('common.menus');
   document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
+  document.getElementById('menu-f-nombre').placeholder = isSala ? t('ph.maridajeName') : t('ph.menuName');
   document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
   document.getElementById('menu-horario').innerHTML = renderScheduleRows('menu', menuEdit.horario);
   renderMenuGrupos();
