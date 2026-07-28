@@ -111,7 +111,14 @@ function getAforoInfoForDate(dateStr){
 }
 let ofertaTab = 'carta'; // 'carta' | 'menus'
 
+// Los "Menús" (combos de varios platos a precio fijo) tienen sentido en
+// Cocina, pero casi nunca en la carta de bebidas de Sala (salvo un raro
+// maridaje/menú de cata) — se oculta esa pestaña ahí en vez de mostrar algo
+// que la mayoría de negocios no va a usar nunca desde el bar.
 function renderOferta(){
+  const isSala = currentArea()==='sala';
+  if(isSala && ofertaTab==='menus') ofertaTab = 'carta';
+  document.getElementById('oferta-tab-menus').style.display = isSala ? 'none' : '';
   document.getElementById('oferta-carta-tab').style.display = ofertaTab==='carta' ? '' : 'none';
   document.getElementById('oferta-menus-tab').style.display = ofertaTab==='menus' ? '' : 'none';
   document.getElementById('oferta-tab-carta').classList.toggle('btn-primary', ofertaTab==='carta');
