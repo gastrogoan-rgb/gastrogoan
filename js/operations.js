@@ -465,8 +465,14 @@ function renderPedidos(){
 }
 
 let pedidoHistorialSupplierFilter = '';
+let pedidoHistorialDateFrom = '';
+let pedidoHistorialDateTo = '';
 function setPedidoHistorialSupplierFilter(val){
   pedidoHistorialSupplierFilter = val;
+  renderPedidoList();
+}
+function setPedidoHistorialDateFilter(field, val){
+  if(field === 'from') pedidoHistorialDateFrom = val; else pedidoHistorialDateTo = val;
   renderPedidoList();
 }
 function renderPedidoList(){
@@ -491,15 +497,29 @@ function renderPedidoList(){
 
   const suppliers = [...new Set(allOrders.map(o => o.supplier))].sort((a,b)=>a.localeCompare(b));
   const filterHtml = `
-    <div class="field" style="max-width:280px;margin-bottom:12px">
-      <select id="pedido-historial-supplier-filter" onchange="setPedidoHistorialSupplierFilter(this.value)">
-        <option value="">${t('label.allSuppliers')}</option>
-        ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
-      </select>
+    <div class="field-row" style="margin-bottom:12px;flex-wrap:wrap">
+      <div class="field" style="max-width:280px">
+        <select id="pedido-historial-supplier-filter" onchange="setPedidoHistorialSupplierFilter(this.value)">
+          <option value="">${t('label.allSuppliers')}</option>
+          ${suppliers.map(s => `<option value="${escapeHtml(s)}" ${pedidoHistorialSupplierFilter===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="max-width:160px">
+        <label style="font-size:11px">${t('label.dateFrom')}</label>
+        <input type="date" value="${pedidoHistorialDateFrom}" onchange="setPedidoHistorialDateFilter('from', this.value)">
+      </div>
+      <div class="field" style="max-width:160px">
+        <label style="font-size:11px">${t('label.dateTo')}</label>
+        <input type="date" value="${pedidoHistorialDateTo}" onchange="setPedidoHistorialDateFilter('to', this.value)">
+      </div>
     </div>
   `;
 
-  const orders = pedidoHistorialSupplierFilter ? allOrders.filter(o => o.supplier === pedidoHistorialSupplierFilter) : allOrders;
+  const orders = allOrders.filter(o =>
+    (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
+    (!pedidoHistorialDateFrom || o.date >= pedidoHistorialDateFrom) &&
+    (!pedidoHistorialDateTo || o.date <= pedidoHistorialDateTo)
+  );
   if(!orders.length){
     box.innerHTML = kpiHtml + filterHtml + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
@@ -518,7 +538,7 @@ function renderPedidoList(){
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} producto${itemCount!==1?'s':''} · ${withQty} con cantidad</div>
         ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
-        ${o.estado==='RECIBIDO' ? `<button class="btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="Eliminar pedido"><i class="ti ti-trash"></i></button>` : ''}
+        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="Eliminar pedido"><i class="ti ti-trash"></i></button>` : ''}
       </div>
     `;
   }).join('');
@@ -652,7 +672,8 @@ function renderPedidoDetail(){
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
-        <button class="${o.estado==='RECIBIDO' ? '' : 'owner-only '}btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
+        <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
+        <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
       </div>
     </div>
   `;
@@ -661,7 +682,27 @@ function renderPedidoDetail(){
 function updatePedidoItem(idx, field, value){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o || idx < 0 || idx >= (o.items||[]).length) return;
-  o.items[idx][field] = parseFloat(value) || 0;
+  const line = o.items[idx];
+  const newVal = parseFloat(value) || 0;
+  if(field === 'cantidadRecibida' && o.estado === 'RECIBIDO'){
+    // El pedido ya sumó stock y registró un gasto con la cantidad recibida
+    // original: si se corrige a mano después, hay que resincronizar ambos.
+    const ing = getIngredient(line.ingredientId);
+    const oldVal = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+    line.cantidadRecibida = newVal;
+    if(ing){
+      const s = getStockEntry(line.ingredientId);
+      const before = s.qty||0;
+      s.qty = Math.max(0, before + (newVal - oldVal));
+      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty);
+      renderStock();
+    }
+    DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== o.id);
+    o.gvCreated = false;
+    registerPedidoComoGastoVariable(o);
+  } else {
+    line[field] = newVal;
+  }
   saveDB();
 }
 
@@ -737,6 +778,8 @@ function changePedidoEstado(estado){
   o.estado = estado;
   if(estado === 'RECIBIDO'){
     (o.items||[]).forEach(line => {
+      const ing = getIngredient(line.ingredientId);
+      if(!ing) return; // ingrediente borrado de Mega Lista: no hay stock real que sumar
       const s = getStockEntry(line.ingredientId);
       const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
       s.qty = (s.qty||0) + (recibida||0);
@@ -1041,10 +1084,53 @@ function sendNewPedido(method){
 }
 
 function deleteOrder(id){
+  const o = getPurchaseOrder(id);
+  if(!o) return;
+  if(o.estado === 'RECIBIDO'){
+    // Ya sumó stock y registró un gasto real: borrar sin más dejaría stock
+    // fantasma y un gasto huérfano, así que pide el PIN y revierte ambos.
+    requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), () => reallyDeleteOrder(id));
+    return;
+  }
   if(!confirm(t('msg.confirmDeleteOrder'))) return;
+  reallyDeleteOrder(id);
+}
+function reallyDeleteOrder(id){
+  const o = getPurchaseOrder(id);
+  if(!o) return;
+  if(o.estado === 'RECIBIDO'){
+    (o.items||[]).forEach(line => {
+      const ing = getIngredient(line.ingredientId);
+      if(!ing) return;
+      const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+      const s = getStockEntry(line.ingredientId);
+      const before = s.qty||0;
+      s.qty = Math.max(0, before - (recibida||0));
+      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty);
+    });
+    DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
+    renderStock();
+  }
   DB.purchaseOrders = DB.purchaseOrders.filter(o => o.id !== id);
   if(pedidoDetailId === id) pedidoDetailId = null;
   saveDB();
   renderPedidos();
+  showToast(t('msg.orderDeleted'));
+}
+
+// Clona un pedido (recibido o no) como borrador nuevo con los mismos productos
+// y cantidades originales, para no tener que rehacer pedidos recurrentes.
+function duplicateOrder(id){
+  const o = getPurchaseOrder(id);
+  if(!o) return;
+  const copy = {
+    id: genId(), supplier: o.supplier, date: todayStr(), estado: 'BORRADOR',
+    items: (o.items||[]).map(line => ({ingredientId: line.ingredientId, cantidad: line.cantidad})),
+    notas: '', recepcion: null, comprobacion: '', area: o.area || currentArea()
+  };
+  DB.purchaseOrders.push(copy);
+  saveDB();
+  showToast(t('msg.orderDuplicated'));
+  openPedido(copy.id);
 }
 
