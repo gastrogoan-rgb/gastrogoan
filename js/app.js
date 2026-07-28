@@ -2126,6 +2126,7 @@ function renderPromocion(){
   if(promoTab === 'semana') renderPromoSemana();
   else if(promoTab === 'mes') renderPromoMes();
   else if(promoTab === 'clientes') renderPromoClientes();
+  else if(promoTab === 'ideas') renderPromoIdeas();
   else renderPromoDia();
 }
 
@@ -2315,6 +2316,222 @@ function printPromoMes(year, month){
   win.print();
 }
 
+/* ============================================================
+   IDEAS DE CONTENIDO — Biblioteca de formatos para redes sociales,
+   pensada para bares, restaurantes y cafeterías. Cada idea se puede
+   convertir con un clic en una Acción de Promoción con fecha y responsable.
+   ============================================================ */
+const CONTENT_IDEAS = [
+  { cat: 'Detrás de cámaras', icon: 'ti-video', ideas: [
+    { t: 'Un día en la vida del chef o camarero/a', h: 'Vídeo corto desde la apertura hasta el cierre, mostrando el ritmo real de un turno.' },
+    { t: 'Cómo se monta la sala antes de abrir', h: 'Time-lapse de mesas, mantelería y luces preparándose para el servicio.' },
+    { t: 'El briefing de equipo antes del servicio', h: 'Los minutos previos: qué platos destacar, mesas reservadas, avisos del día.' },
+    { t: 'Recibiendo el pedido de proveedores', h: 'Muestra la frescura del producto nada más llegar por la puerta.' },
+    { t: 'Preparando la mise en place', h: 'Cortes, salsas y guarniciones listas antes de que lleguen los primeros clientes.' },
+    { t: 'Cierre y limpieza al final del día', h: 'Time-lapse del recogido, transmite orden y profesionalidad.' },
+    { t: 'Un vistazo a la cocina en pleno rush', h: 'El caos organizado de una hora punta, siempre motivador de ver.' },
+    { t: 'Cómo se diseña la carta o el menú del día', h: 'El proceso de pensar combinaciones, precios y nombres de los platos.' },
+    { t: 'Probando un plato nuevo antes de sacarlo', h: 'Reacciones sinceras del equipo catando algo antes de que sea oficial.' },
+    { t: 'Un día de compras en el mercado', h: 'El chef eligiendo producto de temporada en el mercado o con el proveedor local.' },
+    { t: 'Decorando la sala para una fecha especial', h: 'Antes/después de vestir el local para Navidad, San Valentín, etc.' },
+    { t: 'La comida del personal (family meal)', h: 'El momento en que el equipo come junto antes de abrir, cercano y humano.' },
+  ]},
+  { cat: 'Producto — platos y bebidas', icon: 'ti-tools-kitchen-2', ideas: [
+    { t: 'Plato del día explicado en 15 segundos', h: 'Ingredientes, punto fuerte y precio, directo a cámara.' },
+    { t: 'Cóctel de la semana, paso a paso', h: 'Grabación cenital de la coctelera preparando la receta destacada.' },
+    { t: 'Top 3 platos más pedidos este mes', h: 'Ranking con imágenes, genera curiosidad y prueba social.' },
+    { t: 'Adivina el ingrediente secreto', h: 'Reto interactivo: el equipo da pistas y el público adivina en comentarios.' },
+    { t: 'Del fuego al plato: el emplatado', h: 'Últimos segundos de cocción hasta el emplatado final, muy visual.' },
+    { t: 'Maridaje: qué bebida va con cada plato', h: 'Recomendaciones rápidas de vino, cerveza o cóctel para un plato concreto.' },
+    { t: '¿Te atreves con el picante?', h: 'Reacciones probando el plato más picante de la carta.' },
+    { t: 'ASMR de la preparación', h: 'Sonido del corte, la plancha o la coctelera, sin música, muy relajante.' },
+    { t: 'La carta de temporada, plato a plato', h: 'Recorrido breve por cada novedad de la nueva carta.' },
+    { t: 'Ingrediente sorpresa: crea algo en directo', h: 'El chef recibe un ingrediente al azar y improvisa una receta.' },
+    { t: 'Individual vs. para compartir', h: 'Comparativa visual de raciones, ayuda a decidir qué pedir.' },
+    { t: 'La bebida perfecta: copa, hielo y temperatura', h: 'Cómo se sirve correctamente para que sepa mejor.' },
+  ]},
+  { cat: 'Proceso y elaboración', icon: 'ti-flame', ideas: [
+    { t: 'Cómo se hace el pan o la masa madre', h: 'Desde el amasado hasta que sale del horno, con tiempos.' },
+    { t: 'Un fondo o caldo casero, de cero a listo', h: 'El paso lento que nadie ve pero que marca la diferencia de sabor.' },
+    { t: 'Elaborando un almíbar o infusión para cócteles', h: 'La "elaboración base" del Escandallo, explicada al público.' },
+    { t: 'Fermentación o maceración en directo', h: 'Muestra el "antes" de un producto que normalmente solo se ve terminado.' },
+    { t: 'El café perfecto: tips de barista', h: 'Molienda, temperatura y tiempo de extracción explicados en 30 segundos.' },
+    { t: 'El postre de la casa, paso a paso', h: 'Desde la mezcla hasta el emplatado final del postre estrella.' },
+    { t: 'La salsa estrella del restaurante', h: 'Sin desvelar la receta completa, muestra el proceso y el resultado.' },
+    { t: 'Ahumado o curado de un producto', h: 'Proceso lento y visual que transmite artesanía.' },
+    { t: 'Cómo cuidan y afilan los cuchillos', h: 'Detalle de profesionalidad que sorprende al público no hostelero.' },
+    { t: 'Selección del pescado o la carne del día', h: 'Cómo eligen el mejor producto antes de que llegue a la carta.' },
+  ]},
+  { cat: 'Equipo y personas', icon: 'ti-users', ideas: [
+    { t: 'Presentación del chef: quién es y su historia', h: 'Vídeo corto con su trayectoria y qué le apasiona de cocinar.' },
+    { t: 'Mini entrevista a cada camarero/a', h: 'Preguntas rápidas: plato favorito, anécdota, por qué le gusta el oficio.' },
+    { t: 'Pregúntame lo que quieras (Q&A en directo)', h: 'El equipo responde preguntas del público en historias o directo.' },
+    { t: 'Cómo empezó el dueño/a este negocio', h: 'La motivación real detrás de abrir el local, genera cercanía.' },
+    { t: 'Aniversario de un empleado en la casa', h: 'Reconocimiento público a la antigüedad y fidelidad del equipo.' },
+    { t: 'Un día en la vida del bartender', h: 'Desde la apertura de barra hasta el cierre de caja.' },
+    { t: 'El chef reacciona a comentarios de clientes', h: 'Lee reseñas (buenas y constructivas) y responde con humor y respeto.' },
+    { t: 'Anécdota graciosa del servicio', h: 'Con permiso de los implicados, una situación divertida del día a día.' },
+    { t: 'Quién es quién: el equipo al completo', h: 'Presentación coral de todo el personal, con nombre y puesto.' },
+    { t: 'Celebrando un cumpleaños del equipo', h: 'Momento cercano que humaniza la marca.' },
+  ]},
+  { cat: 'Clientes y comunidad', icon: 'ti-heart', ideas: [
+    { t: 'Leyendo reseñas de clientes en voz alta', h: 'El equipo reacciona a comentarios reales de Google/TripAdvisor.' },
+    { t: 'Clientes disfrutando (con su permiso)', h: 'Fotos o vídeos espontáneos de mesas felices durante el servicio.' },
+    { t: '"El de siempre": un cliente habitual cuenta por qué vuelve', h: 'Testimonio breve y genuino de fidelidad.' },
+    { t: 'Reto: foto con el plato y etiquetar al local', h: 'Incentiva contenido generado por el propio cliente (UGC).' },
+    { t: 'Testimonio en vídeo tras la comida', h: 'Pregunta rápida a la salida: "¿qué te ha parecido?"' },
+    { t: 'Sorpresa a un cliente fiel', h: 'Graba el momento de un descuento o detalle inesperado.' },
+    { t: 'Responde las preguntas frecuentes de tus clientes', h: 'Horario, reservas, alérgenos, aparcamiento... en formato ágil.' },
+    { t: 'Un cliente elige el menú del día', h: 'Colaboración divertida: un habitual "diseña" el menú de una jornada.' },
+    { t: 'Mesa cero: primeras reacciones a un plato nuevo', h: 'Clientes de confianza prueban una novedad antes que nadie.' },
+    { t: 'Historias de clientes de toda la vida', h: 'Quién lleva viniendo años y qué ha vivido en el local.' },
+  ]},
+  { cat: 'Temporada y fechas señaladas', icon: 'ti-calendar-event', ideas: [
+    { t: 'Especial San Valentín', h: 'Menú, decoración o detalle romántico para parejas.' },
+    { t: 'Especial Navidad y Nochevieja', h: 'Decoración, menú de grupos y últimas mesas disponibles.' },
+    { t: 'Halloween: platos y cócteles temáticos', h: 'Nombres y presentación terrorífica para la ocasión.' },
+    { t: 'Vuelta al cole: menú rápido de mediodía', h: 'Ideal para familias con poco tiempo entre semana.' },
+    { t: 'Verano: bebidas refrescantes y terraza', h: 'Contenido pensado para las horas de más calor.' },
+    { t: 'Día del Padre / de la Madre', h: 'Menú especial o detalle de regalo para la ocasión.' },
+    { t: 'Black Friday o rebajas de temporada', h: 'Promoción puntual con sensación de urgencia.' },
+    { t: 'Semana Santa: menú de cuaresma', h: 'Platos de bacalao, potaje o torrijas de la casa.' },
+    { t: 'Fiestas o feria local', h: 'Platos típicos de la zona durante las fiestas del pueblo/barrio.' },
+    { t: 'Aniversario del negocio', h: 'Celebración con clientes: tarta, descuentos o sorteo especial.' },
+    { t: 'Cambio de carta de temporada', h: '"Despedida" de los platos que se van y bienvenida a los nuevos.' },
+  ]},
+  { cat: 'Promociones y ofertas', icon: 'ti-discount-2', ideas: [
+    { t: 'Happy hour con cuenta atrás', h: 'Historia con temporizador para crear urgencia real.' },
+    { t: '2x1 en un cóctel o bebida concreta', h: 'Oferta puntual para atraer tráfico en horas valle.' },
+    { t: 'Menú del día explicado (precio y qué incluye)', h: 'Contenido informativo que resuelve la duda más frecuente.' },
+    { t: 'Descuento por traer a un amigo nuevo', h: 'Incentiva el boca a boca con una ventaja concreta.' },
+    { t: 'Sorteo en redes', h: 'Like + comentario + etiquetar a un amigo para ganar una cena.' },
+    { t: 'Oferta relámpago solo en stories', h: 'Válida unas horas, exclusiva para quien vea las historias.' },
+    { t: 'Combo especial (entrante + bebida + postre)', h: 'Precio cerrado atractivo para aumentar el ticket medio.' },
+    { t: 'Descuento a estudiantes un día concreto', h: 'Fideliza a un público que vuelve varias veces por semana.' },
+    { t: '"Trae tu propia taza o vaso"', h: 'Promoción sostenible con descuento simbólico.' },
+    { t: 'Últimas raciones antes de cerrar', h: 'Aviso en tiempo real de un plato a punto de agotarse, genera urgencia.' },
+  ]},
+  { cat: 'Historia y valores', icon: 'ti-book', ideas: [
+    { t: 'Por qué el negocio se llama así', h: 'El origen del nombre suele ser una historia bonita y poco contada.' },
+    { t: 'La historia del local antes de ser tu negocio', h: 'Qué había antes en ese mismo espacio.' },
+    { t: 'La receta familiar que sigue en la carta', h: 'Un plato heredado de un abuelo/a o familiar, con su historia.' },
+    { t: 'Por qué eligen a estos proveedores', h: 'Kilómetro cero, calidad o relación de confianza con quien suministra.' },
+    { t: 'Los valores del negocio', h: 'Sostenibilidad, producto local, trato humano... explicados con ejemplos reales.' },
+    { t: 'Cómo ha evolucionado la carta con los años', h: 'Comparativa de la primera carta con la actual.' },
+    { t: 'El objeto con historia del local', h: 'Un cuadro, una silla o una foto antigua con una anécdota detrás.' },
+    { t: 'La primera noche de apertura', h: 'Recuerdos y fotos de cuando todo empezó.' },
+    { t: 'Premios o certificaciones conseguidas', h: 'Reconocimientos que dan confianza a quien no os conoce.' },
+    { t: 'El "por qué" de una sección de la carta', h: 'Qué inspiró a crear ese apartado concreto del menú.' },
+  ]},
+  { cat: 'Formatos de tendencia', icon: 'ti-trending-up', ideas: [
+    { t: 'Audio de moda aplicado a un plato o bebida', h: 'Usa la canción/sonido viral del momento con vuestro producto.' },
+    { t: '"POV: eres camarero/a un viernes noche"', h: 'Formato POV muy popular, con humor y ritmo rápido.' },
+    { t: 'Reto de comida picante o de ración gigante', h: 'Challenge grabado con reacciones exageradas.' },
+    { t: 'Transición "antes de cocinar" → "plato listo"', h: 'Corte seco muy usado en TikTok/Reels, muy efectivo.' },
+    { t: 'El equipo puntúa sus propios platos', h: 'Formato "rating" del 1 al 10 con opiniones sinceras.' },
+    { t: 'Responder a un comentario con humor', h: 'Convierte un comentario gracioso en un vídeo de respuesta.' },
+    { t: '"Get Ready With Me" del local antes de abrir', h: 'Formato GRWM aplicado a preparar la sala/barra.' },
+    { t: 'Unboxing de un producto o proveedor nuevo', h: 'Reacción genuina al probar algo que acaba de llegar.' },
+    { t: '"Cosas que solo entienden en hostelería"', h: 'Formato relatable que genera muchos comentarios e identificación.' },
+    { t: 'Reacciona a una reseña de una estrella', h: 'Con humor y sin faltar al respeto, suele generar mucho engagement.' },
+  ]},
+  { cat: 'Educativo / tips', icon: 'ti-school', ideas: [
+    { t: 'Cómo maridar vino con quesos o platos', h: 'Consejos prácticos y sencillos de aplicar en casa.' },
+    { t: 'Cómo se cata un vino correctamente', h: 'Vista, nariz y boca explicados en menos de un minuto.' },
+    { t: 'Diferencias entre tipos de café', h: 'Espresso, cortado, americano... explicado con la máquina en mano.' },
+    { t: 'Cómo pedir tapas como un local', h: 'Tips pensados también para turistas, muy compartible.' },
+    { t: 'Cómo gestionan los alérgenos en el local', h: 'Transmite confianza y seguridad alimentaria.' },
+    { t: 'Trucos para conservar sobras en casa', h: 'Contenido de valor que no vende directamente pero genera marca.' },
+    { t: 'Qué copa usar para cada bebida', h: 'Guía rápida y visual, muy guardable/compartible.' },
+    { t: 'Qué significan los términos de la carta', h: '"Al punto", "poco hecho", "reducción"... explicado sencillo.' },
+    { t: 'El origen de un plato típico de la zona', h: 'Curiosidad histórica o cultural sobre un plato de la carta.' },
+    { t: 'Producto fresco vs. congelado: cómo distinguirlos', h: 'Consejo útil que además pone en valor vuestro producto fresco.' },
+  ]},
+  { cat: 'Barra y coctelería', icon: 'ti-glass-cocktail', ideas: [
+    { t: 'Flair o técnica de coctelería en directo', h: 'Espectáculo visual detrás de la barra, muy compartible.' },
+    { t: 'Mocktail de la casa (sin alcohol)', h: 'Cada vez más demandado, buen contenido inclusivo.' },
+    { t: 'La historia de un cóctel clásico', h: 'Origen y anécdota de un cóctel icónico de la carta.' },
+    { t: 'Tutorial de decoración de copa (garnish)', h: 'Paso a paso de cómo se monta la guarnición de un cóctel.' },
+    { t: 'Cata de cervezas artesanas de la casa', h: 'Presenta variedades poco conocidas de la carta de cervezas.' },
+    { t: 'Maridaje de cócteles con tapas', h: 'Recomendaciones cruzadas entre barra y cocina.' },
+    { t: 'El tiro perfecto de cerveza', h: 'Ritual de servido correcto, con espuma y temperatura ideal.' },
+    { t: 'Cóctel de temporada con fruta de mercado', h: 'Aprovecha producto de temporada también en la barra.' },
+  ]},
+  { cat: 'Eventos y experiencias', icon: 'ti-confetti', ideas: [
+    { t: 'Música en directo o DJ en el local', h: 'Anuncio con adelanto del ambiente que se van a encontrar.' },
+    { t: 'Cata maridaje con el chef', h: 'Evento especial de pago, ideal para promocionar con antelación.' },
+    { t: 'Clase de coctelería para clientes', h: 'Experiencia diferencial que genera contenido y ventas extra.' },
+    { t: 'Retransmisión de un partido o evento deportivo', h: 'Aviso de ambiente y promoción específica para la ocasión.' },
+    { t: 'Noche temática (italiana, mexicana...)', h: 'Menú y ambientación especial durante una noche concreta.' },
+    { t: 'Evento privado o de empresa en el local', h: 'Muestra las instalaciones para captar futuras reservas de grupo.' },
+    { t: 'Colaboración con otro negocio local', h: 'Foodtruck, bodega o productor invitado un día concreto.' },
+    { t: 'Mercadillo o feria gastronómica', h: 'Participación del negocio fuera de sus paredes habituales.' },
+  ]},
+  { cat: 'Sostenibilidad y proveedores', icon: 'ti-leaf', ideas: [
+    { t: 'Visita al proveedor o productor local', h: 'Muestra de dónde viene realmente el producto que sirven.' },
+    { t: 'Cómo reducen el desperdicio alimentario', h: 'Prácticas reales de aprovechamiento, genera buena imagen.' },
+    { t: 'Producto de temporada explicado', h: 'Por qué ahora sí está en carta y en otra época del año no.' },
+    { t: 'Reciclaje o compostaje en el local', h: 'Detalle sostenible que valoran cada vez más los clientes.' },
+    { t: 'Packaging sostenible para delivery', h: 'Envases reciclables o reutilizables usados en los pedidos para llevar.' },
+    { t: 'Colaboración con productores de la zona', h: 'Queso, vino, embutido... con nombre y cara del productor.' },
+  ]},
+  { cat: 'Humor y entretenimiento', icon: 'ti-mood-smile', ideas: [
+    { t: 'Sketch cómico sobre un cliché de hostelería', h: 'Situaciones exageradas que todo el mundo reconoce.' },
+    { t: '"Cosas que nunca le digas a un camarero"', h: 'Lista humorística basada en situaciones reales del servicio.' },
+    { t: 'Blooper o momento gracioso del servicio', h: 'Con permiso de los implicados, un fallo divertido y sin mala imagen.' },
+    { t: 'Meme propio sobre un plato o el día a día', h: 'Contenido ligero que humaniza la marca y genera comentarios.' },
+    { t: 'Canción o rap improvisado sobre el menú', h: 'Formato divertido y muy compartible si sale bien.' },
+  ]},
+];
+
+function contentIdeasTotalCount(){
+  return CONTENT_IDEAS.reduce((sum, c) => sum + c.ideas.length, 0);
+}
+
+let promoIdeasCategory = null;
+
+function renderPromoIdeas(){
+  const box = document.getElementById('promo-tab-content');
+  if(promoIdeasCategory === null){
+    box.innerHTML = `
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        <i class="ti ti-bulb"></i> ${contentIdeasTotalCount()} ideas de contenido para redes sociales, listas para grabar. Elige una categoría, y cuando tengas clara una idea, pulsa "Crear acción" para planificarla con fecha y responsable.
+      </p>
+      <div class="grid grid-3">
+        ${CONTENT_IDEAS.map((c, i) => `
+          <div class="card" style="cursor:pointer" onclick="openPromoIdeasCategory(${i})">
+            <h3><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
+            <div style="font-size:12px;color:var(--muted)">${c.ideas.length} ideas</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    const c = CONTENT_IDEAS[promoIdeasCategory];
+    box.innerHTML = `
+      <button class="btn btn-sm" style="margin-bottom:10px" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> Categorías</button>
+      <h3 style="margin-bottom:10px"><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
+      <div class="grid grid-3">
+        ${c.ideas.map((idea, ideaIdx) => `
+          <div class="card">
+            <h3 style="font-size:14px">${escapeHtml(idea.t)}</h3>
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(idea.h)}</div>
+            <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> Crear acción</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+}
+function openPromoIdeasCategory(i){
+  promoIdeasCategory = i;
+  renderPromoIdeas();
+}
+function createPromoFromIdea(catIdx, ideaIdx){
+  const idea = CONTENT_IDEAS[catIdx].ideas[ideaIdx];
+  openPromoModal(null, promoDate || todayStr(), {titulo: idea.t, descripcion: idea.h});
+}
+
 // Mensajes preconfigurados para la interacción post-servicio con el cliente
 // (cumpleaños, reseñas, clientes que hace tiempo no vienen).
 const PROMO_MESSAGE_TEMPLATES = {
@@ -2433,8 +2650,8 @@ function sendPromoClientEmail(id, subject){
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+encodeURIComponent(subject)+'&body='+body;
 }
 
-function openPromoModal(id, fecha){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:'', descripcion:'', responsableId:null};
+function openPromoModal(id, fecha, prefill){
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null};
   const ro = !editUnlocked;
   const dis = ro ? 'disabled' : '';
 
