@@ -117,6 +117,8 @@ let ofertaTab = 'carta'; // 'carta' | 'menus'
 // y el icono para que tenga sentido en una carta de bebidas).
 function renderOferta(){
   const isSala = currentArea()==='sala';
+  const cartaTabBtn = document.getElementById('oferta-tab-carta');
+  cartaTabBtn.innerHTML = `<i class="ti ${isSala?'ti-glass-cocktail':'ti-tools-kitchen-2'}"></i> ${t('tab.carta')}`;
   const menusTabBtn = document.getElementById('oferta-tab-menus');
   menusTabBtn.innerHTML = `<i class="ti ${isSala?'ti-glass-full':'ti-list-details'}"></i> ${isSala ? t('tab.maridajes') : t('tab.menus')}`;
   document.getElementById('oferta-carta-tab').style.display = ofertaTab==='carta' ? '' : 'none';
