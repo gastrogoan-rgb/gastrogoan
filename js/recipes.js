@@ -39,12 +39,18 @@ function recipeCostBreakdown(r, visited){
 function recipeCost(r){
   return recipeCostBreakdown(r).total;
 }
+// Categorías de recetas visibles para el área actual: strings antiguas (sin etiquetar)
+// se consideran compartidas; los objetos {name, area} solo se muestran en su área.
+function areaRecipeCategories(){
+  return DB.recipeCategories.filter(c => typeof c !== 'object' || !c.area || c.area === currentArea());
+}
+
 function populateRecipeCategoryFilter(selectId){
   const sel = document.getElementById(selectId);
   if(!sel) return;
   const current = sel.value;
   sel.innerHTML = '<option value="">Todas las categorías</option>' +
-    DB.recipeCategories.map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`; }).join('') +
+    areaRecipeCategories().map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`; }).join('') +
     '<option value="__none__">Sin categoría</option>';
   sel.value = current;
 }
@@ -57,11 +63,12 @@ function groupRecipesByCategory(recipes){
     groups[cat].push(r);
   });
   const ordered = [];
-  DB.recipeCategories.forEach(cat => {
+  const catNames = areaRecipeCategories().map(c => typeof c==='object'?c.name:c);
+  catNames.forEach(cat => {
     if(groups[cat]) ordered.push([cat, groups[cat]]);
   });
   Object.keys(groups).forEach(cat => {
-    if(cat && !DB.recipeCategories.includes(cat)) ordered.push([cat, groups[cat]]);
+    if(cat && !catNames.includes(cat)) ordered.push([cat, groups[cat]]);
   });
   if(groups['']) ordered.push(['Sin categoría', groups['']]);
   return ordered;
@@ -114,8 +121,9 @@ function getEscandalloFolders(recipes){
     (groups[key] = groups[key] || []).push(r);
   });
   const result = [];
-  DB.recipeCategories.forEach(c => { if(groups[c]) result.push([c, c, groups[c]]); });
-  Object.keys(groups).forEach(c => { if(c !== '__none__' && !DB.recipeCategories.includes(c)) result.push([c, c, groups[c]]); });
+  const catNames = areaRecipeCategories().map(c => typeof c==='object'?c.name:c);
+  catNames.forEach(c => { if(groups[c]) result.push([c, c, groups[c]]); });
+  Object.keys(groups).forEach(c => { if(c !== '__none__' && !catNames.includes(c)) result.push([c, c, groups[c]]); });
   if(groups['__none__']) result.push(['__none__', 'Sin categoría', groups['__none__']]);
   return result;
 }
@@ -291,7 +299,7 @@ function renderEscandalloFull(r){
           `}
         </div>
         ${r.comensales || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
+          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ración${r.comensales!==1?'es':''}` : `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}`) : ''}
           ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
         </div>` : ''}
         <div class="table-wrap">
@@ -345,7 +353,7 @@ function renderEscandalloCard(r){
           `}
         </div>
         <div style="font-size:12px;color:var(--muted);margin:6px 0">
-          ${r.comensales ? `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}` : ''}
+          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ración${r.comensales!==1?'es':''}` : `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}`) : ''}
           ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
         </div>
         <div class="table-wrap" style="margin-bottom:6px">
@@ -373,6 +381,7 @@ function openRecipeModal(id, forceBase){
 function renderRecipeModal(id, r){
   const breakdown = recipeCostBreakdown({...r, ingredients: recipeModalLines});
   const area = r.area || currentArea();
+  const isSala = area === 'sala';
 
   const areaIngredients = DB.ingredients.filter(i => (i.area||'cocina') === area);
 
@@ -392,13 +401,13 @@ function renderRecipeModal(id, r){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? t('title.editDish') : t('title.newDish')}</h3>
+      <h3>${id ? (isSala ? t('title.editDrink') : t('title.editDish')) : (isSala ? t('title.newDrink') : t('title.newDish'))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${t('label.dishName')}</label>
-        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${t('ph.dishName')}">
+        <label>${isSala ? t('label.drinkName') : t('label.dishName')}</label>
+        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}">
       </div>
       <div class="field">
         <label>${t('label.salePrice')}</label>
@@ -407,7 +416,7 @@ function renderRecipeModal(id, r){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${t('label.diners')}</label>
+        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
         <input type="number" id="recipe-comensales" value="${r.comensales||2}" step="1" min="1">
       </div>
       <div class="field">
@@ -418,7 +427,7 @@ function renderRecipeModal(id, r){
         <label>${t('common.category')}</label>
         <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
           <option value="">Sin categoría</option>
-          ${DB.recipeCategories.map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
+          ${areaRecipeCategories().map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
           <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
       </div>
@@ -594,7 +603,8 @@ function confirmNewRecipeCategory(id){
   const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
-    if(!DB.recipeCategories.includes(cat)){ DB.recipeCategories.push(cat); saveDB(); }
+    const exists = areaRecipeCategories().some(c => (typeof c==='object'?c.name:c) === cat);
+    if(!exists){ DB.recipeCategories.push({name: cat, area: currentArea()}); saveDB(); }
     state.category = cat;
   } else {
     state.category = '';
