@@ -3051,6 +3051,30 @@ function readHorarioFromForm(){
   }));
 }
 
+// Detecta horas de fin anteriores al inicio y turnos que se solapan, para
+// no dejar que un horario mal introducido rompa en silencio los cálculos
+// de aforo/reservas que dependen de él.
+function validateHorario(horario){
+  const warnings = [];
+  const toMin = s => { if(!s) return null; const p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]||0); };
+  horario.forEach((d, i) => {
+    if(d.abierto === false) return;
+    const tramos = d.modo === 'seguido' ? [d.seguido] : (d.turnos||[]);
+    const ranges = [];
+    (tramos||[]).forEach(tr => {
+      if(!tr || !tr.ini || !tr.fin) return;
+      const ini = toMin(tr.ini), fin = toMin(tr.fin);
+      if(fin <= ini){ warnings.push(`${DIAS_SEMANA[i]}: ${t('msg.scheduleEndBeforeStart')}`); return; }
+      ranges.push([ini, fin]);
+    });
+    if(ranges.length === 2){
+      const [[a1,a2],[b1,b2]] = ranges;
+      if(a1 < b2 && b1 < a2) warnings.push(`${DIAS_SEMANA[i]}: ${t('msg.scheduleShiftsOverlap')}`);
+    }
+  });
+  return warnings;
+}
+
 function renderMiNegocio(){
   const b = DB.business || {};
   // Si el formulario ya estaba pintado y el usuario había cambiado los
@@ -3333,6 +3357,9 @@ function addZonaConMesas(){
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
+  // Si la zona ya tiene mesas, confirma antes de añadir más: evita duplicar
+  // el rango entero por pulsar el botón dos veces sin darse cuenta.
+  if(existingInZone > 0 && !confirm(t('msg.confirmAddMoreTablesToZone').replace('${zone}', nombre).replace('${count}', existingInZone))) return;
   for(let i = 1; i <= cantidad; i++){
     DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas});
   }
@@ -3601,11 +3628,13 @@ function saveBusiness(silent){
     };
   }
   DB.business.horario = readHorarioFromForm();
+  const horarioWarnings = validateHorario(DB.business.horario);
   saveDB();
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
-  if(!silent) showToast(t('msg.businessSaved'));
+  if(horarioWarnings.length) showToast(horarioWarnings[0]);
+  else if(!silent) showToast(t('msg.businessSaved'));
 }
 
 /* ============================================================
@@ -3737,15 +3766,19 @@ function saveDeliveryPlatform(){
   const comisionPct = parseFloat(document.getElementById('dp-f-comision').value);
   const ivaPct = parseFloat(document.getElementById('dp-f-iva').value);
   if(!nombre){ showToast(t('msg.nameRequired')); return; }
-  if(isNaN(comisionPct) || comisionPct<0){ showToast(t('msg.enterCommission')); return; }
+  if(isNaN(comisionPct) || comisionPct<0 || comisionPct>100){ showToast(t('msg.enterCommission')); return; }
   if(!DB.business.deliveryPlatforms) DB.business.deliveryPlatforms = [];
   const idVal = document.getElementById('dp-f-id').value;
-  const data = {nombre, comisionPct, ivaPct: isNaN(ivaPct)?0:ivaPct};
+  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct)};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
-    if(p) Object.assign(p, data);
+    if(p){
+      logBusinessSettingChange(`Plataforma "${nombre}": comisión ${p.comisionPct}% → ${comisionPct}%, IVA ${p.ivaPct}% → ${data.ivaPct}%`);
+      Object.assign(p, data);
+    }
   }else{
     DB.business.deliveryPlatforms.push({id: genId(), ...data});
+    logBusinessSettingChange(`Nueva plataforma de delivery: "${nombre}" (comisión ${comisionPct}%, IVA ${data.ivaPct}%)`);
   }
   saveDB();
   closeModal();
@@ -3876,16 +3909,31 @@ function saveTicketConfig(){
   showToast(t('msg.ticketConfigSaved'));
 }
 
+// Cambiar el PIN de Gestión es tan sensible como cualquier otra acción
+// protegida esta sesión (borrar cliente, ingrediente...): exige el PIN
+// actual antes de aceptar uno nuevo, no basta con tener Gestión ya abierta.
+// Registro ligero de cambios en ajustes sensibles del negocio (PIN,
+// comisiones de delivery...), para poder consultar más adelante qué cambió
+// y cuándo — mismo espíritu que el historial de Stock/Personal.
+function logBusinessSettingChange(desc){
+  if(!DB.settingsLog) DB.settingsLog = [];
+  DB.settingsLog.push({id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), desc});
+  if(DB.settingsLog.length > 300) DB.settingsLog = DB.settingsLog.slice(-300);
+}
+
 function changeOwnerPin(){
   const n1 = document.getElementById('mn-pin-new').value;
   const n2 = document.getElementById('mn-pin-new2').value;
   if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pinMustBe4')); return; }
   if(n1 !== n2){ showToast(t('msg.pinsDontMatch')); return; }
-  DB.business.pin = n1;
-  DB.business.pinSet = true;
-  saveDB();
-  renderMiNegocio();
-  showToast(t('msg.pinUpdated'));
+  requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
+    DB.business.pin = n1;
+    DB.business.pinSet = true;
+    logBusinessSettingChange('PIN de acceso a Gestión cambiado');
+    saveDB();
+    renderMiNegocio();
+    showToast(t('msg.pinUpdated'));
+  });
 }
 
 /* ============================================================

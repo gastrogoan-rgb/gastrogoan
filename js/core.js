@@ -1375,12 +1375,15 @@ function renderTableQrCard(){
   if(!getTenantId() || !getCloudConfig()) return '';
   const link = getPublicClientLink();
   if(!link) return '';
-  // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona
-  // (interior / terraza / barra). Solo hay tantos QR como mesas configuradas.
-  const zonas = [['interior','🏠 Interior'], ['terraza','🌤️ Terraza'], ['barra','🍸 Barra'], [null,'Otras mesas']];
-  const zonasHtml = zonas.map(([z, label]) => {
+  // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona. Se
+  // usan las mismas zonas/orden que el TPV (incluidas las zonas propias que
+  // el negocio haya creado en Operativa), en vez de una lista fija de
+  // interior/terraza/barra que dejaba las zonas personalizadas en "Otras".
+  const zonaKeys = [...getZonaOrder(), null];
+  const zonasHtml = [...new Set(zonaKeys)].map(z => {
     const tables = DB.tables.filter(t => (t.zona||null) === z);
     if(!tables.length) return '';
+    const label = z===null ? t('label.otherTables') : `<i class="ti ${zonaIconClass(z)}"></i> ${escapeHtml(zonaLabel(z))}`;
     return `
       <div style="margin-bottom:10px">
         <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px">${label} (${tables.length})</div>
