@@ -832,6 +832,18 @@ function currentArea(){
   return currentFolder === 'sala' ? 'sala' : 'cocina';
 }
 
+// Última área (Cocina/Sala) en la que el usuario estuvo trabajando de
+// verdad, para que las pantallas de Gestión (Manual, etc.) que no
+// pertenecen a ninguna de las dos áreas puedan mostrar contenido area-aware
+// con criterio, en vez de asumir siempre Cocina por defecto.
+let lastArea = localStorage.getItem('gg_last_area') || 'cocina';
+function rememberLastArea(key){
+  if(key === 'cocina' || key === 'sala'){
+    lastArea = key;
+    localStorage.setItem('gg_last_area', key);
+  }
+}
+
 /* ============== Navigation ============== */
 function goHome(){
   lockEditMode();
@@ -842,6 +854,7 @@ function openFolder(key){
   lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   currentFolder = key;
+  rememberLastArea(key);
   navigate('folder');
 }
 let ownerUnlocked = false;

@@ -690,9 +690,15 @@
         <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> Iniciar tour guiado</button>
       </div>
 
+      <div class="field" style="max-width:340px;margin-bottom:10px">
+        <input type="text" id="manual-search-input" data-i18n-ph="ph.searchManual" placeholder="Buscar en el manual..." oninput="setManualSearch(this.value)">
+      </div>
       <div class="manual-wrap">
         <div class="manual-nav" id="manual-nav"></div>
-        <div class="manual-detail" id="manual-detail"></div>
+        <div>
+          <div style="text-align:right;margin-bottom:6px"><button class="btn btn-sm" onclick="printManualChapter()"><i class="ti ti-printer"></i> Imprimir capítulo</button></div>
+          <div class="manual-detail" id="manual-detail"></div>
+        </div>
       </div>
     </section>
 

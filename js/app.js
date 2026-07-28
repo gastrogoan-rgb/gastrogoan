@@ -4159,7 +4159,10 @@ const MANUAL_CHAPTERS = [
   },
   {
     title:'<i class="ti ti-clipboard-list"></i> Distribución del Trabajo',
-    content: () => currentArea()==='sala' ? `<h3>Qué es y para qué sirve</h3>
+    // El Manual se abre desde Gestión, que no es ni Cocina ni Sala, así que
+    // currentArea() aquí siempre daría 'cocina' por defecto; se usa la
+    // última área en la que el usuario trabajó de verdad (lastArea).
+    content: () => lastArea==='sala' ? `<h3>Qué es y para qué sirve</h3>
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. En Sala este módulo es el <strong>calendario de tareas</strong> de cada persona: no habla de "platos a su cargo" (eso es cosa de Cocina), sino de todo lo que tiene que hacer día a día en barra/sala.</p>
 
     <h4>Vista maestro-detalle</h4>
@@ -4350,6 +4353,27 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`
   },
   {
+    title:'<i class="ti ti-speakerphone"></i> Promoción',
+    content:`<h3>Qué es y para qué sirve</h3>
+    <p>Este módulo es exclusivo de Sala y sirve para planificar de verdad el marketing del negocio: qué acción hacer, cuándo y quién es responsable — en vez de dejarlo en buenas intenciones. Tiene 5 pestañas.</p>
+
+    <h4>Día / Semana / Mes</h4>
+    <p>El calendario de acciones de promoción. Cada acción tiene un título, una descripción, un responsable (de tu equipo de Sala) y una casilla para marcarla como hecha (queda registrada la fecha y hora exacta en la que se completó).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nueva Acción"</strong> desde cualquiera de las tres vistas, o el "+" de un día concreto en la vista semanal.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">En la vista de Día puedes filtrar por responsable y por estado (hechas/pendientes), y marcar directamente la casilla de "hecha".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">En la vista de Mes tienes un resumen rápido: cuántas acciones hay planificadas, cuántas completadas, y cuántas categorías de la biblioteca de ideas has usado ya.</div></div>
+    <div class="manual-tip">💡 Pulsa "Imprimir" en la vista de mes para tener el plan del mes en una hoja, útil para repasarlo en una reunión de equipo.</div>
+
+    <h4>Clientes</h4>
+    <p>Acciones rápidas de fidelización con mensajes ya escritos, listos para enviar por WhatsApp o email: felicitar cumpleaños próximos, pedir reseña a quien ha visitado recientemente, o intentar recuperar a un cliente que hace tiempo no viene. El botón <strong>"Registrar como acción"</strong> de cada tarjeta la apunta también en el calendario de Día/Mes, ya marcada como hecha.</p>
+
+    <h4>Ideas de contenido</h4>
+    <p>Una biblioteca de más de 250 ideas de contenido para redes sociales y de gestión online, organizadas por categorías (detrás de cámaras, producto, temporada, Google Business y reseñas, redes sociales...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Elige una categoría y, cuando tengas clara una idea, pulsa <strong>"Crear acción"</strong> para planificarla con fecha y responsable — queda enlazada a esa idea, así sabrás que ya la usaste (y cuándo) la próxima vez que mires esa categoría.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si no tienes tiempo de mirar todas las categorías, pulsa <strong>"Sorpréndeme"</strong>: elige una idea al azar (priorizando las que nunca has probado) y la abre directamente lista para planificar.</div></div>
+    <div class="manual-tip">💡 Las categorías "Google Business y reseñas" y "Redes sociales — gestión y mantenimiento" no son contenido creativo, sino tareas de mantenimiento real (responder reseñas, actualizar horario en Google...) igual de importantes para que la publicidad del negocio funcione.</div>`
+  },
+  {
     title:'<i class="ti ti-chart-bar"></i> Gestión Económica',
     content:`<h3>Qué es y para qué sirve</h3>
     <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 7 pestañas que conviene rellenar en este orden.</p>
@@ -4532,18 +4556,57 @@ const MANUAL_CHAPTERS = [
   },
 ];
 
+let manualSearch = '';
+function setManualSearch(val){
+  manualSearch = val;
+  const el = document.getElementById('manual-search-input');
+  const pos = el ? el.selectionStart : null;
+  renderManual();
+  const newEl = document.getElementById('manual-search-input');
+  if(newEl && pos != null){ newEl.focus(); newEl.setSelectionRange(pos, pos); }
+}
+function manualChapterText(ch){
+  const content = typeof ch.content === 'function' ? ch.content() : ch.content;
+  return content;
+}
+// Busca en el título y en el texto (sin etiquetas HTML) de cada capítulo,
+// no solo en los títulos de la lista lateral.
+function manualChapterMatches(ch, q){
+  if(!q) return true;
+  if(ch.title.toLowerCase().includes(q)) return true;
+  const plain = manualChapterText(ch).replace(/<[^>]+>/g,' ').toLowerCase();
+  return plain.includes(q);
+}
 function renderManual(){
   const nav = document.getElementById('manual-nav');
   const detail = document.getElementById('manual-detail');
-  nav.innerHTML = MANUAL_CHAPTERS.map((ch,i) => `
+  const q = manualSearch.trim().toLowerCase();
+  const matches = MANUAL_CHAPTERS.map((ch,i) => ({ch,i})).filter(({ch}) => manualChapterMatches(ch, q));
+  nav.innerHTML = matches.length ? matches.map(({ch,i}) => `
     <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${ch.title}</div>
-  `).join('');
-  const content = MANUAL_CHAPTERS[manualChapter].content;
-  detail.innerHTML = typeof content === 'function' ? content() : content;
+  `).join('') : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+  detail.innerHTML = manualChapterText(MANUAL_CHAPTERS[manualChapter]);
 }
 function goManualChapter(i){
   manualChapter = i;
   renderManual();
+}
+function printManualChapter(){
+  const ch = MANUAL_CHAPTERS[manualChapter];
+  const win = window.open('', '_blank', 'width=800,height=1000');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${ch.title.replace(/<[^>]+>/g,'')}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:15mm 12mm;max-width:180mm;margin:0 auto}
+  h3{font-size:15pt}h4{font-size:12.5pt;color:#555;margin-top:16px}
+  .manual-step{display:flex;gap:10px;margin-bottom:8px}.sn{flex:none;width:22px;height:22px;border-radius:50%;background:#DF7039;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid #DF7039;border-radius:6px;padding:8px 12px;margin:10px 0;font-size:10.5pt}
+  @media print{body{padding:8mm}}</style></head><body>
+  <h2>${ch.title.replace(/<[^>]+>/g,'')}</h2>
+  ${manualChapterText(ch)}
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 /* ============================================================
