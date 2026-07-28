@@ -700,6 +700,90 @@ function copyFirebaseRules(){
    dispositivos y activar las reservas/pedidos online. Bloquea el acceso
    a la app hasta que se configure (o, en dispositivos de empleados, hasta
    que se peguen los mismos datos que configuró el dueño/a). */
+const FIREBASE_GATE_STEPS = [
+  {title:{es:'Crea un proyecto gratis en Firebase', ca:'Crea un projecte gratuït a Firebase', en:'Create a free Firebase project'},
+   body:{
+     es:`Abre <code>console.firebase.google.com</code> en otra pestaña (puedes volver a esta después) e inicia sesión con una cuenta de Google (la que quieras, puede ser una nueva solo para esto).<br><br>
+        Pulsa <strong>"Crear un proyecto"</strong> (o "Agregar proyecto"), escribe un nombre (por ejemplo, el nombre de tu restaurante) y pulsa "Continuar". Cuando te pregunte por Google Analytics, puedes <strong>desactivarlo</strong> y pulsar "Crear proyecto". Espera unos segundos hasta que termine.`,
+     ca:`Obre <code>console.firebase.google.com</code> en una altra pestanya (pots tornar a aquesta després) i inicia sessió amb un compte de Google (el que vulguis, pot ser un de nou només per a això).<br><br>
+        Prem <strong>"Crear un projecte"</strong> (o "Afegir projecte"), escriu un nom (per exemple, el nom del teu restaurant) i prem "Continuar". Quan et pregunti per Google Analytics, pots <strong>desactivar-lo</strong> i prémer "Crear projecte". Espera uns segons fins que acabi.`,
+     en:`Open <code>console.firebase.google.com</code> in another tab (you can come back here after) and sign in with a Google account (any one, it can be a new one just for this).<br><br>
+        Click <strong>"Create a project"</strong> (or "Add project"), type a name (e.g. your restaurant's name) and click "Continue". When asked about Google Analytics, you can <strong>disable it</strong> and click "Create project". Wait a few seconds until it finishes.`}},
+  {title:{es:'Activa "Realtime Database"', ca:'Activa "Realtime Database"', en:'Enable "Realtime Database"'},
+   body:{
+     es:`En el menú de la izquierda, busca el apartado <strong>"Base de datos y almacenamiento"</strong> y dentro pulsa <strong>"Realtime Database"</strong>.<br><br>
+        Pulsa el botón <strong>"Crear base de datos"</strong>. En la ubicación, elige <strong>"Bélgica (europe-west1)"</strong> y pulsa "Siguiente".<br><br>
+        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (En el paso 4 pegaremos las reglas correctas).`,
+     ca:`Al menú de l'esquerra, busca l'apartat <strong>"Base de dades i emmagatzematge"</strong> i dins prem <strong>"Realtime Database"</strong>.<br><br>
+        Prem el botó <strong>"Crear base de dades"</strong>. A la ubicació, tria <strong>"Bèlgica (europe-west1)"</strong> i prem "Següent".<br><br>
+        Quan et pregunti per les regles de seguretat, tria l'opció <strong>"Mode bloquejat"</strong> i prem "Habilitar". (Al pas 4 enganxarem les regles correctes).`,
+     en:`In the left menu, find <strong>"Build"</strong> and click <strong>"Realtime Database"</strong>.<br><br>
+        Click <strong>"Create Database"</strong>. For location, choose <strong>"Belgium (europe-west1)"</strong> and click "Next".<br><br>
+        When asked about security rules, choose <strong>"Locked mode"</strong> and click "Enable". (In step 4 we'll paste the correct rules).`}},
+  {title:{es:'Activa el inicio de sesión "Anónimo"', ca:'Activa l\'inici de sessió "Anònim"', en:'Enable "Anonymous" sign-in'},
+   body:{
+     es:`En el menú de la izquierda, dentro de <strong>"Seguridad"</strong>, pulsa <strong>"Authentication"</strong>.<br><br>
+        Pulsa <strong>"Comenzar"</strong> (si es la primera vez) y luego abre la pestaña <strong>"Método de acceso"</strong>.<br><br>
+        En la lista de proveedores, busca <strong>"Anónimo"</strong>, pulsa sobre él, activa el interruptor y pulsa <strong>"Guardar"</strong>.<br><br>
+        <span style="color:var(--muted)">Esto permite que la app se conecte sola, sin pedir usuario ni contraseña a nadie.</span>`,
+     ca:`Al menú de l'esquerra, dins de <strong>"Seguretat"</strong>, prem <strong>"Authentication"</strong>.<br><br>
+        Prem <strong>"Començar"</strong> (si és el primer cop) i després obre la pestanya <strong>"Mètode d'accés"</strong>.<br><br>
+        A la llista de proveïdors, busca <strong>"Anònim"</strong>, prem-hi, activa l'interruptor i prem <strong>"Desar"</strong>.<br><br>
+        <span style="color:var(--muted)">Això permet que l'app es connecti sola, sense demanar usuari ni contrasenya a ningú.</span>`,
+     en:`In the left menu, under <strong>"Build"</strong>, click <strong>"Authentication"</strong>.<br><br>
+        Click <strong>"Get started"</strong> (if it's the first time) and then open the <strong>"Sign-in method"</strong> tab.<br><br>
+        In the provider list, find <strong>"Anonymous"</strong>, click it, toggle it on and click <strong>"Save"</strong>.<br><br>
+        <span style="color:var(--muted)">This lets the app connect on its own, without asking anyone for a username or password.</span>`}},
+  {title:{es:'Pega las reglas de seguridad', ca:'Enganxa les regles de seguretat', en:'Paste the security rules'},
+   body:{
+     es:`Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
+        Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
+        Por último, pulsa el botón <strong>"Publicar"</strong> (Publish) arriba a la derecha.`,
+     ca:`Torna a <strong>Realtime Database</strong> (menú "Base de dades i emmagatzematge") i obre la pestanya <strong>"Regles"</strong> (Rules), a dalt de tot.<br><br>
+        Esborra tot el contingut del quadre de text i enganxa aquestes regles (prem el botó per copiar-les):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar regles</button><br><br>
+        Finalment, prem el botó <strong>"Publicar"</strong> (Publish) a dalt a la dreta.`,
+     en:`Go back to <strong>Realtime Database</strong> ("Build" menu) and open the <strong>"Rules"</strong> tab, at the top.<br><br>
+        Delete all the content in the text box and paste these rules (click the button to copy them):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
+        <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copy rules</button><br><br>
+        Finally, click the <strong>"Publish"</strong> button at the top right.`}},
+  {title:{es:'Crea una "app web" y copia tus datos', ca:'Crea una "app web" i copia les teves dades', en:'Create a "web app" and copy your data'},
+   body:{
+     es:`Pulsa el icono de engranaje ⚙️ (arriba a la izquierda, junto al nombre del proyecto) para abrir <strong>"Configuración"</strong> y entra en la pestaña <strong>"General"</strong>.<br><br>
+        Baja hasta la sección <strong>"Tus apps"</strong>. Si está vacía, pulsa el icono <strong>"&lt;/&gt;"</strong> (Web), ponle un nombre cualquiera (p.ej. "GastroGoan") y pulsa "Registrar app" (no necesitas configurar Hosting).<br><br>
+        Te aparecerá un bloque de código con varios datos. Busca y copia estos dos:
+        <ul style="margin:6px 0 0 18px">
+          <li><code>apiKey</code> → algo como <code>AIzaSy...</code></li>
+          <li><code>databaseURL</code> → algo como <code>https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app</code></li>
+        </ul>`,
+     ca:`Prem la icona d'engranatge ⚙️ (a dalt a l'esquerra, al costat del nom del projecte) per obrir <strong>"Configuració"</strong> i entra a la pestanya <strong>"General"</strong>.<br><br>
+        Baixa fins a la secció <strong>"Les teves apps"</strong>. Si és buida, prem la icona <strong>"&lt;/&gt;"</strong> (Web), posa-li un nom qualsevol (p. ex. "GastroGoan") i prem "Registrar app" (no cal configurar Hosting).<br><br>
+        T'apareixerà un bloc de codi amb diverses dades. Busca i copia aquestes dues:
+        <ul style="margin:6px 0 0 18px">
+          <li><code>apiKey</code> → alguna cosa com <code>AIzaSy...</code></li>
+          <li><code>databaseURL</code> → alguna cosa com <code>https://el-teu-projecte-default-rtdb.europe-west1.firebasedatabase.app</code></li>
+        </ul>`,
+     en:`Click the gear icon ⚙️ (top left, next to the project name) to open <strong>"Project settings"</strong> and go to the <strong>"General"</strong> tab.<br><br>
+        Scroll down to the <strong>"Your apps"</strong> section. If it's empty, click the <strong>"&lt;/&gt;"</strong> (Web) icon, give it any name (e.g. "GastroGoan") and click "Register app" (you don't need to set up Hosting).<br><br>
+        You'll see a code block with several values. Find and copy these two:
+        <ul style="margin:6px 0 0 18px">
+          <li><code>apiKey</code> → something like <code>AIzaSy...</code></li>
+          <li><code>databaseURL</code> → something like <code>https://your-project-default-rtdb.europe-west1.firebasedatabase.app</code></li>
+        </ul>`}},
+  {title:{es:'Pégalos aquí abajo y guarda', ca:'Enganxa-les aquí sota i desa', en:'Paste them below and save'},
+   body:{
+     es:`Pega esos dos valores en los campos siguientes y pulsa "Guardar y conectar". La app se recargará y quedará lista.<br><br>
+        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de abajo.</span>`,
+     ca:`Enganxa aquests dos valors als camps següents i prem "Desar i connectar". L'app es recarregarà i quedarà a punt.<br><br>
+        <span style="color:var(--muted)">Desa també aquestes dues dades en un lloc segur (notes del mòbil, etc.) per poder configurar la resta de dispositius (cambrers, cuina) més endavant — només han d'enganxar el mateix, tal com indica l'avís blau de sota.</span>`,
+     en:`Paste those two values into the fields below and click "Save and connect". The app will reload and be ready.<br><br>
+        <span style="color:var(--muted)">Also save these two values somewhere safe (phone notes, etc.) so you can set up the other devices (waiters, kitchen) later — they just need to paste the same values, as the blue notice below explains.</span>`}},
+];
+
 function showFirebaseSetupGate(){
   if(document.getElementById('firebase-gate')) return;
   const g = document.createElement('div');
@@ -714,57 +798,17 @@ function showFirebaseSetupGate(){
       </div>
     </div>`;
 
-  const stepsHtml = `
-      ${step(1, 'Crea un proyecto gratis en Firebase', `
-        Abre <code>console.firebase.google.com</code> en otra pestaña (puedes volver a esta después) e inicia sesión con una cuenta de Google (la que quieras, puede ser una nueva solo para esto).<br><br>
-        Pulsa <strong>"Crear un proyecto"</strong> (o "Agregar proyecto"), escribe un nombre (por ejemplo, el nombre de tu restaurante) y pulsa "Continuar". Cuando te pregunte por Google Analytics, puedes <strong>desactivarlo</strong> y pulsar "Crear proyecto". Espera unos segundos hasta que termine.
-      `)}
-
-      ${step(2, 'Activa "Realtime Database"', `
-        En el menú de la izquierda, busca el apartado <strong>"Base de datos y almacenamiento"</strong> y dentro pulsa <strong>"Realtime Database"</strong>.<br><br>
-        Pulsa el botón <strong>"Crear base de datos"</strong>. En la ubicación, elige <strong>"Bélgica (europe-west1)"</strong> y pulsa "Siguiente".<br><br>
-        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (En el paso 4 pegaremos las reglas correctas).
-      `)}
-
-      ${step(3, 'Activa el inicio de sesión "Anónimo"', `
-        En el menú de la izquierda, dentro de <strong>"Seguridad"</strong>, pulsa <strong>"Authentication"</strong>.<br><br>
-        Pulsa <strong>"Comenzar"</strong> (si es la primera vez) y luego abre la pestaña <strong>"Método de acceso"</strong>.<br><br>
-        En la lista de proveedores, busca <strong>"Anónimo"</strong>, pulsa sobre él, activa el interruptor y pulsa <strong>"Guardar"</strong>.<br><br>
-        <span style="color:var(--muted)">Esto permite que la app se conecte sola, sin pedir usuario ni contraseña a nadie.</span>
-      `)}
-
-      ${step(4, 'Pega las reglas de seguridad', `
-        Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
-        Borra todo el contenido del cuadro de texto y pega estas reglas (pulsa el botón para copiarlas):<br><br>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;max-height:140px;overflow:auto;white-space:pre-wrap;margin-bottom:8px">${FIREBASE_RULES_JSON.replace(/</g,'&lt;')}</div>
-        <button class="btn btn-sm" onclick="copyFirebaseRules()" type="button"><i class="ti ti-copy"></i> Copiar reglas</button><br><br>
-        Por último, pulsa el botón <strong>"Publicar"</strong> (Publish) arriba a la derecha.
-      `)}
-
-      ${step(5, 'Crea una "app web" y copia tus datos', `
-        Pulsa el icono de engranaje ⚙️ (arriba a la izquierda, junto al nombre del proyecto) para abrir <strong>"Configuración"</strong> y entra en la pestaña <strong>"General"</strong>.<br><br>
-        Baja hasta la sección <strong>"Tus apps"</strong>. Si está vacía, pulsa el icono <strong>"&lt;/&gt;"</strong> (Web), ponle un nombre cualquiera (p.ej. "GastroGoan") y pulsa "Registrar app" (no necesitas configurar Hosting).<br><br>
-        Te aparecerá un bloque de código con varios datos. Busca y copia estos dos:
-        <ul style="margin:6px 0 0 18px">
-          <li><code>apiKey</code> → algo como <code>AIzaSy...</code></li>
-          <li><code>databaseURL</code> → algo como <code>https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app</code></li>
-        </ul>
-      `)}
-
-      ${step(6, 'Pégalos aquí abajo y guarda', `
-        Pega esos dos valores en los campos siguientes y pulsa "Guardar y conectar". La app se recargará y quedará lista.<br><br>
-        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de abajo.</span>
-      `)}`;
+  const stepsHtml = FIREBASE_GATE_STEPS.map((s,i) => step(i+1, gl(s.title), gl(s.body))).join('\n');
 
   const employeeBoxHtml = `
       <div style="background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
-        📱 <strong>¿Eres empleado/a, no el/la propietario/a?</strong> No hace falta que sigas los pasos: pide a tu jefe/a que te diga la <strong>Clave de API</strong> y la <strong>URL de la base de datos</strong> que él/ella configuró (las puede ver en Nube → "Cambiar la configuración de Firebase"), pégalas en el formulario de abajo y pulsa "Guardar y conectar". Listo.
+        📱 <strong>${t('gate.employeeQuestion')}</strong> ${t('gate.employeeBody')}
       </div>`;
 
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
   const intro = `
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        Cada negocio tiene su <strong>propio espacio en la nube</strong> (gratuito, de Google), separado del resto. Sirve para sincronizar tus dispositivos (camareros, cocina, TPV) y activar las reservas/pedidos online por QR.
+        ${t('gate.cloudIntro')}
       </div>`;
 
   let bodyHtml;
@@ -773,7 +817,7 @@ function showFirebaseSetupGate(){
       ${intro}
       ${employeeBoxHtml}
       <details style="margin-bottom:6px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">¿No tienes esos datos? Ver guía completa (para el propietario)</summary>
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">${t('gate.seeFullGuide')}</summary>
         <div style="margin-top:14px">${stepsHtml}</div>
       </details>
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
@@ -782,10 +826,10 @@ function showFirebaseSetupGate(){
   }else{
     bodyHtml = `
       ${intro}
-      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Sigue estos pasos:</h3>
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 ${t('gate.followSteps')}</h3>
       ${stepsHtml}
       <details style="margin:14px 0 6px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">📱 ¿Vas a compartir esto con empleados? Lee esto</summary>
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">📱 ${t('gate.shareWithEmployees')}</summary>
         <div style="margin-top:10px">${employeeBoxHtml}</div>
       </details>
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
@@ -796,11 +840,11 @@ function showFirebaseSetupGate(){
   const showBackBtnFb = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      ${showBackBtnFb ? `<button onclick="hideFirebaseSetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
+      ${showBackBtnFb ? `<button onclick="hideFirebaseSetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
-        <h2 style="margin-bottom:4px">Configura tu nube</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Paso 2 de 3 — Conecta tu nube (≈10 minutos, una sola vez)</p>
+        <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${t('gate.cloudStepLabel')}</p>
       </div>
       ${bodyHtml}
     </div>`;
@@ -831,32 +875,32 @@ function showNetlifySetupGate(){
       </div>
     </div>`;
   const stepsHtml = `
-    ${step(1, 'Crea una cuenta gratis en Netlify', `Abre <code>www.netlify.com</code> en otra pestaña y pulsa <strong>"Sign up"</strong>. Puedes entrar con tu cuenta de Google. Es gratis y no pide tarjeta.`)}
-    ${step(2, 'Ten los dos archivos juntos en una carpeta', `En una carpeta de tu ordenador deja <strong>los dos archivos</strong> de GastroGoan: <code>index.html</code> y <code>reservagastrogoan.html</code>. <strong>No renombres</strong> ninguno de los dos.`)}
-    ${step(3, 'Arrastra la carpeta a Netlify', `En Netlify, ve a <strong>"Sites"</strong> y arrastra tu carpeta al recuadro <strong>"Drag and drop your site output folder here"</strong> (o "Deploys" → "Deploy manually").`)}
-    ${step(4, 'Copia la dirección que te da', `En unos segundos Netlify publica el sitio y te da una dirección tipo <code>https://tu-sitio.netlify.app</code>. Puedes cambiar el nombre en "Site settings" → "Change site name".`)}
-    ${step(5, 'Abre SIEMPRE la app desde esa dirección', `A partir de ahora gestiona la app desde <code>https://tu-sitio.netlify.app</code>. Al llamarse index.html, se abre directamente. Solo así el QR de reservas y pedidos funcionará de verdad para tus clientes.`)}`;
+    ${step(1, t('gate.nt.step1Title'), t('gate.nt.step1Body'))}
+    ${step(2, t('gate.nt.step2Title'), t('gate.nt.step2Body'))}
+    ${step(3, t('gate.nt.step3Title'), t('gate.nt.step3Body'))}
+    ${step(4, t('gate.nt.step4Title'), t('gate.nt.step4Body'))}
+    ${step(5, t('gate.nt.step5Title'), t('gate.nt.step5Body'))}`;
 
   const hostedBox = hosted
-    ? `<div style="background:#EDF1EC;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>¡Bien!</strong> Estás abriendo la app desde una dirección pública (<code>${escapeHtml(location.hostname)}</code>). El QR de reservas ya puede funcionar. Si es tu sitio de Netlify, ya está todo listo.</div>`
-    : `<div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ Ahora mismo estás abriendo la app <strong>desde un archivo local</strong>, no desde internet. Las reservas/pedidos por QR <strong>no funcionarán</strong> hasta que subas la app a Netlify y la abras desde su dirección pública.</div>`;
+    ? `<div style="background:#EDF1EC;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>${t('gate.nt.goodTitle')}</strong> ${t('gate.nt.hostedBody').replace('${host}', escapeHtml(location.hostname))}</div>`
+    : `<div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ ${t('gate.nt.notHostedBody')}</div>`;
 
   const showBackBtnNt = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      ${showBackBtnNt ? `<button onclick="hideNetlifySetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
+      ${showBackBtnNt ? `<button onclick="hideNetlifySetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
-        <h2 style="margin-bottom:4px">Sube tu app a internet</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Paso 1 de 3 — Sube tu app a internet (≈5 minutos, una sola vez)</p>
+        <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${t('gate.nt.stepLabel')}</p>
       </div>
       ${hostedBox}
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        La app de gestión funciona abierta en tu navegador, pero el <strong>QR de reservas y pedidos online</strong> solo funciona si subes los dos archivos a un hosting público gratuito como <strong>Netlify</strong>. Tienes el tutorial completo en <strong>tutorial-netlify.html</strong> (junto a la app).
+        ${t('gate.nt.explain')}
       </div>
-      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 Sigue estos pasos:</h3>
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 ${t('gate.followSteps')}</h3>
       ${stepsHtml}
-      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px">✅ Ya está subida — Continuar</button>
+      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px">✅ ${t('gate.nt.doneBtn')}</button>
     </div>`;
   document.body.appendChild(g);
 }
@@ -884,7 +928,7 @@ function activateLicenseFromGate(){
   const parsed = validateLicenseKey(key);
   const err = document.getElementById('license-error');
   if(!parsed){
-    err.textContent = 'Clave no válida. Comprueba que la copiaste entera, con los guiones, tal y como te la envió tu vendedor.';
+    err.textContent = t('gate.invalidLicenseKey');
     err.style.display = 'block';
     return;
   }
@@ -1598,14 +1642,14 @@ function copyPublicLinkFrom(elId){
 function renderOwnFirebaseForm(){
   return `
     <div class="field" style="margin-bottom:8px">
-      <label style="font-size:12px">Clave de API (apiKey)</label>
+      <label style="font-size:12px">${t('gate.apiKeyLabel')}</label>
       <input id="own-fb-apikey" type="text" placeholder="AIza..." value="${(DB.business?.ownFirebase?.apiKey)||''}" style="font-family:monospace;font-size:12px">
     </div>
     <div class="field" style="margin-bottom:10px">
-      <label style="font-size:12px">URL de la base de datos (databaseURL)</label>
+      <label style="font-size:12px">${t('gate.dbUrlLabel')}</label>
       <input id="own-fb-dburl" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com" value="${(DB.business?.ownFirebase?.databaseURL)||''}" style="font-family:monospace;font-size:12px">
     </div>
-    <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> Guardar y conectar</button>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveOwnFirebaseConfig()"><i class="ti ti-cloud-cog"></i> ${t('gate.saveAndConnect')}</button>
   `;
 }
 
@@ -1614,30 +1658,30 @@ function openCloudWizard(){
   if(!lic){
     openModal(`
       <div class="modal-header">
-        <h3><i class="ti ti-cloud"></i> Nube — Sincronización entre dispositivos</h3>
+        <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <div class="empty"><i class="ti ti-cloud-off"></i>Activa tu licencia de GastroGoan para conectar este dispositivo a la nube.</div>
+      <div class="empty"><i class="ti ti-cloud-off"></i>${t('gate.needLicenseForCloud')}</div>
     `);
     return;
   }
   if(!getCloudConfig()){
     openModal(`
       <div class="modal-header">
-        <h3><i class="ti ti-cloud"></i> Configurar la nube</h3>
+        <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${lic.name}</strong></p>
+      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
-        Para sincronizar varios dispositivos (camareros, cocina...) y activar las reservas/pedidos online por QR, este negocio necesita su <strong>propio proyecto Firebase</strong> (gratuito, de Google — cada negocio tiene el suyo, así nunca hay límites compartidos ni costes para nadie).
+        ${t('gate.cloudIntro')}
       </div>
-      <p style="font-size:13px;margin-bottom:10px">Tardarás unos 10 minutos, una sola vez. Sigue la guía paso a paso y luego pega aquí los dos datos que te pida al final:</p>
+      <p style="font-size:13px;margin-bottom:10px">${t('gate.tenMinutesIntro')}</p>
       <ol style="font-size:12.5px;line-height:1.7;margin:0 0 14px 18px;color:#444">
-        <li>Crea un proyecto gratis en <code>console.firebase.google.com</code></li>
-        <li>Activa <strong>Realtime Database</strong></li>
-        <li>Activa el inicio de sesión <strong>Anónimo</strong> en Authentication</li>
-        <li>Pega las reglas de seguridad que te indica la guía</li>
-        <li>Copia tu <code>apiKey</code> y <code>databaseURL</code> y pégalos abajo</li>
+        <li>${t('gate.miniStep1')}</li>
+        <li>${t('gate.miniStep2')}</li>
+        <li>${t('gate.miniStep3')}</li>
+        <li>${t('gate.miniStep4')}</li>
+        <li>${t('gate.miniStep5')}</li>
       </ol>
       ${renderOwnFirebaseForm()}
     `);
@@ -1645,33 +1689,33 @@ function openCloudWizard(){
   }
   const link = getPublicClientLink();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(link);
-  const otrosServicios = (DB.business?.tiposServicio?.takeaway !== false || DB.business?.tiposServicio?.delivery !== false) ? ' y/o hacer pedidos para llevar / delivery' : '';
+  const otrosServicios = (DB.business?.tiposServicio?.takeaway !== false || DB.business?.tiposServicio?.delivery !== false) ? t('mn.online.andOrder') : '';
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-cloud"></i> Nube — Sincronización entre dispositivos</h3>
+      <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 Licencia activada para: <strong>${lic.name}</strong></p>
-    <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> Este negocio está conectado a su nube Firebase</div>
-    <p style="font-size:13.5px;margin-bottom:14px"><strong>Para conectar más dispositivos</strong> (móviles de camareros, tablet de cocina): instala GastroGoan en ese dispositivo y activa la <strong>misma clave de licencia</strong> (<code>${lic.key}</code>). Se sincronizará solo, automáticamente, sin pasos adicionales.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
+    <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>
+    <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.key}</code>`)}</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <p style="font-size:13.5px;margin-bottom:8px"><strong>📱 Página de reservas y pedidos online</strong></p>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Comparte este enlace o código QR con tus clientes para que puedan reservar mesa${otrosServicios} directamente desde su móvil.</p>
+    <p style="font-size:13.5px;margin-bottom:8px"><strong>📱 ${t('mn.online.title')}</strong></p>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-      <img src="${qrUrl}" alt="Código QR" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
+      <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
       <div class="field" style="flex:1;min-width:180px;margin-bottom:0">
         <textarea id="cloud-public-link" rows="3" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn" style="flex:1" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> Copiar enlace</button>
-      <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Reserva o pide en línea en ' + (DB.business?.name || 'nuestro restaurante') + ':\n\n')}${encodeURIComponent(link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      <button class="btn" style="flex:1" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+      <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <details>
-      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">⚙️ Cambiar la configuración de Firebase</summary>
+      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">⚙️ ${t('gate.changeFirebaseConfig')}</summary>
       <div style="margin-top:10px">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Deja ambos campos vacíos y guarda para desconectar la nube de este negocio.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>
         ${renderOwnFirebaseForm()}
       </div>
     </details>
