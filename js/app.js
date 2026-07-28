@@ -2981,7 +2981,7 @@ function renderTramoFields(prefix, tramo, label){
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
       <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
       <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
-      <span style="color:var(--muted);font-size:12px">a</span>
+      <span style="color:var(--muted);font-size:12px">${t('common.to')}</span>
       <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
     </div>
   `;
@@ -2996,20 +2996,20 @@ function renderHorarioRows(horario){
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--brand-cream);border-bottom:1px solid var(--border)">
         <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer">
           <input type="checkbox" id="mn-hor-${i}-abierto" ${d.abierto!==false?'checked':''} onchange="toggleHorarioDia(${i})">
-          ${DIAS_SEMANA[i]}
+          ${weekDayFull(i)}
         </label>
         <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})" style="padding:2px 4px;font-size:11px;width:auto;min-height:auto;display:${d.abierto!==false?'inline-block':'none'}">
-          <option value="turnos" ${!modoSeguido?'selected':''}>Por turnos</option>
-          <option value="seguido" ${modoSeguido?'selected':''}>Seguido</option>
+          <option value="turnos" ${!modoSeguido?'selected':''}>${t('mn.schedule.byShift')}</option>
+          <option value="seguido" ${modoSeguido?'selected':''}>${t('mn.schedule.continuous')}</option>
         </select>
       </div>
       <div id="mn-hor-${i}-turnos" style="display:${d.abierto!==false?'block':'none'};padding:8px 10px">
         <div id="mn-hor-${i}-seguido-box" style="display:${modoSeguido?'block':'none'}">
-          ${renderTramoFields(`mn-hor-${i}-seguido`, d.seguido, 'Horario')}
+          ${renderTramoFields(`mn-hor-${i}-seguido`, d.seguido, t('mn.schedule.hours'))}
         </div>
         <div id="mn-hor-${i}-turnos-box" style="display:${modoSeguido?'none':'block'}">
-          ${renderTramoFields(`mn-hor-${i}-t1`, d.turnos && d.turnos[0], 'Turno 1')}
-          ${renderTramoFields(`mn-hor-${i}-t2`, d.turnos && d.turnos[1], 'Turno 2')}
+          ${renderTramoFields(`mn-hor-${i}-t1`, d.turnos && d.turnos[0], t('mn.schedule.slot1'))}
+          ${renderTramoFields(`mn-hor-${i}-t2`, d.turnos && d.turnos[1], t('mn.schedule.slot2'))}
         </div>
       </div>
     </div>
@@ -3040,7 +3040,7 @@ function readTramoFromForm(prefix){
 }
 
 function readHorarioFromForm(){
-  return DIAS_SEMANA.map((_,i) => ({
+  return t('days.full').map((_,i) => ({
     modo: document.getElementById(`mn-hor-${i}-modo`).value,
     abierto: document.getElementById(`mn-hor-${i}-abierto`).checked,
     seguido: readTramoFromForm(`mn-hor-${i}-seguido`),
@@ -3064,12 +3064,12 @@ function validateHorario(horario){
     (tramos||[]).forEach(tr => {
       if(!tr || !tr.ini || !tr.fin) return;
       const ini = toMin(tr.ini), fin = toMin(tr.fin);
-      if(fin <= ini){ warnings.push(`${DIAS_SEMANA[i]}: ${t('msg.scheduleEndBeforeStart')}`); return; }
+      if(fin <= ini){ warnings.push(`${weekDayFull(i)}: ${t('msg.scheduleEndBeforeStart')}`); return; }
       ranges.push([ini, fin]);
     });
     if(ranges.length === 2){
       const [[a1,a2],[b1,b2]] = ranges;
-      if(a1 < b2 && b1 < a2) warnings.push(`${DIAS_SEMANA[i]}: ${t('msg.scheduleShiftsOverlap')}`);
+      if(a1 < b2 && b1 < a2) warnings.push(`${weekDayFull(i)}: ${t('msg.scheduleShiftsOverlap')}`);
     }
   });
   return warnings;
@@ -3093,92 +3093,92 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> Acceso propietario</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El acceso a Gestión está protegido por PIN. Cámbialo cuando quieras.</p>
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
       <div class="field-row">
         <div class="field">
-          <label>Nuevo PIN (4 dígitos)</label>
+          <label>${t('mn.ownerAccess.newPin')}</label>
           <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         <div class="field">
-          <label>Repite el nuevo PIN</label>
+          <label>${t('mn.ownerAccess.repeatPin')}</label>
           <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
       </div>
-      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> Cambiar PIN</button>
+      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-building-store"></i> Datos del negocio</h3>
+      <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
-      <h4 style="margin-top:0"><i class="ti ti-id-badge-2"></i> Identidad</h4>
+      <h4 style="margin-top:0"><i class="ti ti-id-badge-2"></i> ${t('mn.business.identity')}</h4>
       <div class="field">
-        <label>Logo del establecimiento</label>
+        <label>${t('mn.business.logo')}</label>
         <div style="display:flex;align-items:center;gap:12px">
           <div id="mn-logo-preview" style="width:64px;height:64px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff">
             ${b.logo ? `<img src="${b.logo}" style="width:100%;height:100%;object-fit:contain">` : `<i class="ti ti-photo" style="color:var(--muted)"></i>`}
           </div>
           <div>
             <input type="file" id="mn-logo-input" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
-            <button class="btn btn-sm" onclick="document.getElementById('mn-logo-input').click()"><i class="ti ti-upload"></i> Subir logo</button>
-            ${b.logo ? `<button class="btn btn-sm btn-danger" onclick="removeLogo()"><i class="ti ti-trash"></i> Quitar</button>` : ''}
+            <button class="btn btn-sm" onclick="document.getElementById('mn-logo-input').click()"><i class="ti ti-upload"></i> ${t('mn.business.uploadLogo')}</button>
+            ${b.logo ? `<button class="btn btn-sm btn-danger" onclick="removeLogo()"><i class="ti ti-trash"></i> ${t('common.remove')}</button>` : ''}
           </div>
         </div>
       </div>
       <div class="field">
-        <label>Nombre del establecimiento *</label>
-        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="Ej. Restaurante GastroGoan" onchange="saveBusiness(true)">
+        <label>${t('mn.business.name')}</label>
+        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="${t('mn.business.namePh')}" onchange="saveBusiness(true)">
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Tipo de negocio</label>
+          <label>${t('mn.business.type')}</label>
           <select id="mn-tipo" onchange="saveBusiness(true)">
-            ${BUSINESS_TIPOS.map(t=>`<option ${b.tipo===t?'selected':''}>${t}</option>`).join('')}
+            ${BUSINESS_TIPOS.map(bt=>`<option ${b.tipo===bt?'selected':''}>${bt}</option>`).join('')}
           </select>
         </div>
         <div class="field">
-          <label>Año de apertura</label>
+          <label>${t('mn.business.yearOpened')}</label>
           <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020" onchange="saveBusiness(true)">
         </div>
       </div>
       <div class="field">
-        <label>Propietario</label>
-        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="Nombre completo" onchange="saveBusiness(true)">
+        <label>${t('mn.business.owner')}</label>
+        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="${t('mn.business.ownerPh')}" onchange="saveBusiness(true)">
       </div>
 
-      <h4><i class="ti ti-notes"></i> Descripción</h4>
+      <h4><i class="ti ti-notes"></i> ${t('mn.business.description')}</h4>
       <div class="field">
-        <label>Descripción / Concepto</label>
-        <textarea id="business-description" placeholder="Breve descripción del negocio..." onchange="saveBusiness(true)">${escapeHtml(b.description||'')}</textarea>
+        <label>${t('mn.business.descriptionLabel')}</label>
+        <textarea id="business-description" placeholder="${t('mn.business.descriptionPh')}" onchange="saveBusiness(true)">${escapeHtml(b.description||'')}</textarea>
       </div>
 
-      <h4><i class="ti ti-address-book"></i> Contacto</h4>
+      <h4><i class="ti ti-address-book"></i> ${t('mn.business.contact')}</h4>
       <div class="field">
-        <label>Dirección</label>
-        <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="Calle, número, ciudad" onchange="saveBusiness(true)">
+        <label>${t('mn.business.address')}</label>
+        <input type="text" id="business-address" value="${escapeHtml(b.address||'')}" placeholder="${t('mn.business.addressPh')}" onchange="saveBusiness(true)">
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Teléfono</label>
-          <input type="text" id="business-phone" value="${escapeHtml(b.phone||'')}" placeholder="Ej. 900 000 000" onchange="saveBusiness(true)">
+          <label>${t('common.phone')}</label>
+          <input type="text" id="business-phone" value="${escapeHtml(b.phone||'')}" placeholder="${t('mn.business.phonePh')}" onchange="saveBusiness(true)">
         </div>
         <div class="field">
-          <label>Email</label>
+          <label>${t('common.email')}</label>
           <input type="email" id="business-email" value="${escapeHtml(b.email||'')}" placeholder="contacto@negocio.com" onchange="saveBusiness(true)">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Web</label>
+          <label>${t('mn.business.web')}</label>
           <input type="url" id="mn-web" value="${escapeHtml(b.web||'')}" placeholder="www.milocal.com" onchange="saveBusiness(true)">
         </div>
         <div class="field">
-          <label>CIF/NIF</label>
+          <label>${t('mn.business.taxId')}</label>
           <input type="text" id="mn-cif" value="${escapeHtml(b.cif||'')}" placeholder="B12345678" onchange="saveBusiness(true)">
         </div>
       </div>
 
-      <h4><i class="ti ti-brand-instagram"></i> Redes sociales</h4>
+      <h4><i class="ti ti-brand-instagram"></i> ${t('mn.business.socialMedia')}</h4>
       <div class="field-row">
         <div class="field">
           <label>Instagram</label>
@@ -3190,65 +3190,65 @@ function renderMiNegocio(){
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> Guardar todo</button>
+      <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> ${t('mn.business.saveAll')}</button>
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-layout-grid"></i> Operativa</h3>
+      <h3><i class="ti ti-layout-grid"></i> ${t('mn.ops.title')}</h3>
       <div class="field">
-        <label>Aforo (plazas por turno)</label>
+        <label>${t('mn.ops.capacity')}</label>
         <input type="number" id="mn-aforo" value="${escapeHtml(b.aforo||'')}" placeholder="40" onchange="saveBusiness(true)">
-        <small style="color:var(--muted)">Capacidad máxima de comensales por turno de comida/cena. Se usa para avisar de reservas que la superen.</small>
+        <small style="color:var(--muted)">${t('mn.ops.capacityDesc')}</small>
       </div>
       <div class="field">
-        <label>Antelación mínima para reservar mesa y pedir online (minutos)</label>
+        <label>${t('mn.ops.leadTime')}</label>
         <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
-        <small style="color:var(--muted)">Tus clientes no podrán reservar una mesa ni pedir online para una hora antes de este tiempo desde ahora. Ej: si son las 14:00 y pones 30, lo antes que podrán elegir hoy son las 14:30. Pon 0 para no exigir antelación.</small>
+        <small style="color:var(--muted)">${t('mn.ops.leadTimeDesc')}</small>
       </div>
-      <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> Crea el plano de tu sala</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Define las zonas o rangos de mesas que tenga tu sala (por ejemplo "Rango 1" con 4 mesas, "Rango 2" con 6, "Terraza" con 3) y créalas de golpe, indicando para cuántas personas es cada mesa. Verás las mesas agrupadas exactamente así en el plano del TPV, y en Reservas se avisará si una mesa no tiene plazas suficientes. Después puedes renombrar o ajustar cada mesa individualmente más abajo.</p>
+      <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> ${t('mn.ops.floorPlan')}</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.floorPlanDesc')}</p>
       <div class="field-row">
         <div class="field">
-          <label>Nombre de la zona/rango</label>
-          <input type="text" id="mn-zona-nombre" placeholder="Ej. Rango 1, Terraza...">
+          <label>${t('mn.ops.zoneName')}</label>
+          <input type="text" id="mn-zona-nombre" placeholder="${t('mn.ops.zoneNamePh')}">
         </div>
         <div class="field">
-          <label>Nº de mesas</label>
+          <label>${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
         <div class="field">
-          <label>Plazas por mesa</label>
+          <label>${t('mn.ops.seatsPerTable')}</label>
           <input type="number" id="mn-zona-plazas" min="1" max="50" value="4">
         </div>
       </div>
-      <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> Crear zona</button>
+      <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> Mesas configuradas</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Edita el nombre o número de cada mesa, muévela de zona, o añade/elimina mesas sueltas. Estas son exactamente las mesas que aparecen en el TPV y en las reservas.</p>
+      <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')}</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.configuredTablesDesc')}</p>
       <div id="mn-mesas-list"></div>
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-toggle-right"></i> Tipos de servicio</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Activa los servicios que ofrece tu negocio. Esto controla qué opciones aparecen en el TPV y en la página de reservas online para tus clientes. <strong>Los cambios se guardan al instante.</strong></p>
+      <h3><i class="ti ti-toggle-right"></i> ${t('mn.serviceTypes.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.serviceTypes.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ Mesa / Sala (reservas y comandas en el local)
+          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ ${t('mn.serviceTypes.table')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 Take Away (recogida en el local)
+          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 ${t('mn.serviceTypes.takeaway')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 Delivery (entrega a domicilio)
+          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 ${t('mn.serviceTypes.delivery')}
         </label>
       </div>
     </div>
 
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-calendar-time"></i> Horario de apertura</h3>
-      <p style="font-size:13px;color:var(--muted,#888)">Es el horario general de tu negocio, día por día. Si un día tienes horario partido (ej. abres a mediodía, cierras, y vuelves a abrir por la noche), rellena también el "Turno 2". Marca como cerrado los días que no abras.</p>
-      <p style="font-size:13px;color:var(--muted,#888)">Este horario se usa para calcular el aforo disponible por turno en Reservas, y para limitar las horas que tus clientes pueden elegir al reservar mesa o hacer un pedido para llevar/domicilio online. Dentro de cada franja, la carta que verán tus clientes es la que tengas marcada como disponible en cada momento (sección Carta).</p>
+      <h3><i class="ti ti-calendar-time"></i> ${t('mn.schedule.title')}</h3>
+      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc1')}</p>
+      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
       <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
     </div>
 
@@ -3279,7 +3279,7 @@ function renderMesasConfigList(){
   const box = document.getElementById('mn-mesas-list');
   if(!box) return;
   if(!DB.tables.length){
-    box.innerHTML = `<p style="font-size:13px;color:var(--muted)">No hay mesas todavía. Crea una zona arriba para empezar.</p>`;
+    box.innerHTML = `<p style="font-size:13px;color:var(--muted)">${t('mn.ops.noTablesYet')}</p>`;
     return;
   }
   const zonas = [...getZonaOrder(), null];
@@ -3288,17 +3288,17 @@ function renderMesasConfigList(){
     const tables = DB.tables.filter(t => (t.zona||null) === z);
     if(!tables.length) return;
     html += `<div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px">
-      ${z ? `<input type="text" value="${escapeHtml(zonaLabel(z))}" onchange="renameZona('${escapeJsAttr(z)}', this.value)" title="Renombrar zona" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1;min-width:80px;max-width:220px" onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'">`
-        : `<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;flex:1">Sin zona</span>`}
-      ${z ? `<button class="btn btn-sm btn-icon" onclick="addTableToZona('${escapeJsAttr(z)}')" title="Añadir mesa a esta zona"><i class="ti ti-plus"></i></button>` : ''}
-      ${z ? `<button class="btn btn-sm btn-icon btn-danger" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="Eliminar zona completa"><i class="ti ti-trash"></i></button>` : ''}
+      ${z ? `<input type="text" value="${escapeHtml(zonaLabel(z))}" onchange="renameZona('${escapeJsAttr(z)}', this.value)" title="${t('mn.ops.renameZone')}" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1;min-width:80px;max-width:220px" onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'">`
+        : `<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;flex:1">${t('mn.ops.noZone')}</span>`}
+      ${z ? `<button class="btn btn-sm btn-icon" onclick="addTableToZona('${escapeJsAttr(z)}')" title="${t('mn.ops.addTableToZone')}"><i class="ti ti-plus"></i></button>` : ''}
+      ${z ? `<button class="btn btn-sm btn-icon btn-danger" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="${t('mn.ops.deleteWholeZone')}"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
-    html += tables.map(t => {
+    html += tables.map(t2 => {
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t.name||'')}" onchange="updateTableName(${t.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Nombre o nº de mesa">
-        <input type="number" min="1" max="50" value="${t.plazas||''}" onchange="updateTablePlazas(${t.id}, this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="Plazas" title="Nº de plazas (opcional)">
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t.id})" title="Eliminar mesa"><i class="ti ti-trash"></i></button>
+        <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
+        <input type="number" min="1" max="50" value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}">
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });
@@ -3311,30 +3311,30 @@ function renameZona(oldName, newNameRaw){
   const newName = (newNameRaw||'').trim();
   if(!newName || newName === zonaLabel(oldName)){ renderMesasConfigList(); return; }
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
-  DB.tables.forEach(t => { if(t.zona === oldName) t.zona = newName; });
+  DB.tables.forEach(tb => { if(tb.zona === oldName) tb.zona = newName; });
   const idx = DB.business.zonaOrder.indexOf(oldName);
   if(idx !== -1) DB.business.zonaOrder[idx] = newName;
   else if(!DB.business.zonaOrder.includes(newName)) DB.business.zonaOrder.push(newName);
   saveDB();
   renderMesasConfigList();
-  showToast(`Zona renombrada a "${newName}"`);
+  showToast(t('msg.zoneRenamed').replace('${name}', newName));
 }
 
 // Elimina una zona entera junto con todas sus mesas. Si alguna tiene una
 // comanda abierta, se bloquea (igual que al borrar una mesa suelta).
 function deleteZonaCompleta(zona){
-  const tables = DB.tables.filter(t => t.zona === zona);
-  if(tables.some(t => getOpenOrderForTable(t.id))){
-    showToast('No se puede eliminar: hay mesas de esta zona con comandas abiertas.');
+  const tables = DB.tables.filter(tb => tb.zona === zona);
+  if(tables.some(tb => getOpenOrderForTable(tb.id))){
+    showToast(t('msg.cannotDeleteZoneOpenOrders'));
     return;
   }
-  if(!confirm(`¿Eliminar la zona "${zonaLabel(zona)}" y sus ${tables.length} mesa${tables.length!==1?'s':''}?`)) return;
-  clearDanglingTableRefs(tables.map(t => t.id));
-  DB.tables = DB.tables.filter(t => t.zona !== zona);
+  if(!confirm(t('msg.confirmDeleteZone').replace('${name}', zonaLabel(zona)).replace('${count}', tables.length))) return;
+  clearDanglingTableRefs(tables.map(tb => tb.id));
+  DB.tables = DB.tables.filter(tb => tb.zona !== zona);
   if(Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = DB.business.zonaOrder.filter(z => z !== zona);
   saveDB();
   renderMesasConfigList();
-  showToast('Zona eliminada');
+  showToast(t('msg.zoneDeleted'));
 }
 
 // Al borrar una o varias mesas, quita cualquier referencia a ellas que quede
@@ -3353,7 +3353,7 @@ function addZonaConMesas(){
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
   const plazasEl = document.getElementById('mn-zona-plazas');
   const plazas = plazasEl ? Math.max(1, Math.min(50, parseInt(plazasEl.value)||0)) || null : null;
-  if(!nombre){ showToast('Escribe un nombre para la zona'); return; }
+  if(!nombre){ showToast(t('msg.enterZoneName')); return; }
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
@@ -3367,7 +3367,7 @@ function addZonaConMesas(){
   document.getElementById('mn-zona-nombre').value = '';
   document.getElementById('mn-zona-cantidad').value = '4';
   renderMesasConfigList();
-  showToast(`Zona "${nombre}" creada con ${cantidad} mesa${cantidad!==1?'s':''}`);
+  showToast(t('msg.zoneCreated').replace('${name}', nombre).replace('${count}', cantidad));
 }
 
 // Añade una mesa suelta más a una zona ya existente, sin tener que recrearla.
@@ -3434,18 +3434,18 @@ function renderDataMaintenanceCard(){
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-database"></i> Mantenimiento de datos</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Tamaño actual de los datos del negocio: <strong>${sizeKB} KB</strong>. Cuanto más pequeño, más rápido va todo (guardado y sincronización entre dispositivos).</p>
-      <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> Descargar copia de seguridad completa</button>
+      <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB)}</p>
+      <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 Archivar datos antiguos</p>
-      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Mueve a un archivo descargable las ventas, reservas finalizadas y cierres de caja anteriores a la fecha elegida. Se descarga primero una copia de seguridad de esos datos y luego se eliminan de la app (dejarán de contar en los informes de Gestión Económica de esos meses).</p>
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 ${t('mn.data.archiveTitle')}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('mn.data.archiveDesc')}</p>
       <div class="field">
-        <label>Archivar todo lo anterior a</label>
+        <label>${t('mn.data.archiveBefore')}</label>
         <input type="date" id="mn-archive-before" value="${dataMaintenanceCutoff()}">
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Con la fecha elegida se archivarían: <strong>${ventasAntiguas}</strong> ventas, <strong>${reservasAntiguas}</strong> reservas finalizadas/canceladas y <strong>${cierresAntiguos}</strong> cierres de caja.</p>
-      <button class="btn btn-sm btn-danger" onclick="archiveOldData()"><i class="ti ti-archive"></i> Archivar y descargar</button>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.data.archivePreview').replace('${sales}', ventasAntiguas).replace('${reservations}', reservasAntiguas).replace('${closures}', cierresAntiguos)}</p>
+      <button class="btn btn-sm btn-danger" onclick="archiveOldData()"><i class="ti ti-archive"></i> ${t('mn.data.archiveAndDownload')}</button>
     </div>
   `;
 }
@@ -3530,7 +3530,7 @@ function archiveOldData(){
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
   const total = sales.length + reservations.length + cashClosures.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
-  if(!confirm(`Se descargará un archivo con ${sales.length} ventas, ${reservations.length} reservas y ${cashClosures.length} cierres de caja anteriores a ${before}, y se eliminarán de la app (dejarán de aparecer en los informes de esos meses).\n\nGuarda bien el archivo descargado. ¿Continuar?`)) return;
+  if(!confirm(t('msg.confirmArchiveData').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before))) return;
   downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
   DB.reservations = DB.reservations.filter(r => !(r.date && r.date < before && (r.status==='completada'||r.status==='cancelada')));
@@ -3544,7 +3544,7 @@ function archiveOldData(){
 function handleLogoUpload(input){
   const file = input.files[0];
   if(!file) return;
-  if(file.size > 2 * 1024 * 1024){ showToast('Imagen demasiado grande (máx. 2 MB)'); return; }
+  if(file.size > 2 * 1024 * 1024){ showToast(t('msg.imageTooLarge')); return; }
   const reader = new FileReader();
   reader.onload = e => {
     DB.business.logo = e.target.result;
@@ -3650,22 +3650,22 @@ function renderDeliveryPlatformsCard(){
   const couriers = (DB.business && DB.business.ownCouriers) || [];
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-moped"></i> Plataformas de delivery</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Si trabajas con apps como Glovo, Uber Eats o Just Eat, añádelas aquí con la comisión que te cobran. Así, cuando registres una venta de delivery a través de esa plataforma, esa comisión se restará automáticamente como gasto en Gestión Económica.</p>
+      <h3><i class="ti ti-moped"></i> ${t('mn.delivery.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.delivery.desc')}</p>
       <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${platforms.length ? platforms.map(p=>`
           <div class="ge-item">
             <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(p.nombre)}</span>
-            <span style="font-size:12px;color:var(--muted);margin-right:8px">Comisión ${fmtNum(p.comisionPct)}% + IVA ${fmtNum(p.ivaPct)}%</span>
+            <span style="font-size:12px;color:var(--muted);margin-right:8px">${t('mn.delivery.commissionLabel')} ${fmtNum(p.comisionPct)}% + ${t('mn.delivery.vatLabel')} ${fmtNum(p.ivaPct)}%</span>
             <button class="btn btn-sm btn-icon" onclick="editDeliveryPlatform(${p.id})"><i class="ti ti-edit"></i></button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteDeliveryPlatform(${p.id})"><i class="ti ti-trash"></i></button>
           </div>`).join('')
-        : `<div class="empty" style="padding:12px 16px">Sin plataformas configuradas. Si recibes pedidos solo por tu cuenta (reparto propio), no necesitas añadir nada.</div>`}
+        : `<div class="empty" style="padding:12px 16px">${t('mn.delivery.empty')}</div>`}
       </div>
-      <button class="btn btn-sm" onclick="newDeliveryPlatform()"><i class="ti ti-plus"></i> Añadir plataforma</button>
+      <button class="btn btn-sm" onclick="newDeliveryPlatform()"><i class="ti ti-plus"></i> ${t('mn.delivery.addPlatform')}</button>
 
-      <h4><i class="ti ti-user-bolt"></i> Repartidores propios</h4>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Si reparties los pedidos a domicilio con tu propio personal (sin pasar por una plataforma), anota aquí a tus repartidores para localizarlos rápido por WhatsApp y coordinar quién lleva cada pedido.</p>
+      <h4><i class="ti ti-user-bolt"></i> ${t('mn.couriers.title')}</h4>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.couriers.desc')}</p>
       <div id="own-couriers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${couriers.length ? couriers.map(c=>`
           <div class="ge-item">
@@ -3674,36 +3674,36 @@ function renderDeliveryPlatformsCard(){
             <button class="btn btn-sm btn-icon" onclick="editOwnCourier(${c.id})"><i class="ti ti-edit"></i></button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteOwnCourier(${c.id})"><i class="ti ti-trash"></i></button>
           </div>`).join('')
-        : `<div class="empty" style="padding:12px 16px">Sin repartidores propios registrados.</div>`}
+        : `<div class="empty" style="padding:12px 16px">${t('mn.couriers.empty')}</div>`}
       </div>
-      <button class="btn btn-sm" onclick="newOwnCourier()"><i class="ti ti-plus"></i> Añadir repartidor</button>
+      <button class="btn btn-sm" onclick="newOwnCourier()"><i class="ti ti-plus"></i> ${t('mn.couriers.addCourier')}</button>
     </div>
   `;
 }
 
 function newOwnCourier(){
-  openOwnCourierModal('Añadir repartidor', {id:null, nombre:'', telefono:''});
+  openOwnCourierModal(t('mn.couriers.addTitle'), {id:null, nombre:'', telefono:''});
 }
 function editOwnCourier(id){
   const c = (DB.business.ownCouriers||[]).find(x=>x.id===id); if(!c) return;
-  openOwnCourierModal('Editar repartidor', c);
+  openOwnCourierModal(t('mn.couriers.editTitle'), c);
 }
 function openOwnCourierModal(title, c){
   openModal(`
     <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="field">
-      <label>Nombre</label>
+      <label>${t('common.name')}</label>
       <input type="text" id="oc-f-nombre" value="${escapeHtml(c.nombre)}" placeholder="Ej. Juan">
     </div>
     <div class="field">
-      <label>Teléfono con prefijo del país (WhatsApp)</label>
+      <label>${t('mn.couriers.phoneLabel')}</label>
       <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="Ej. +34 600 000 000">
-      <div style="font-size:12px;color:var(--muted);margin-top:4px">Incluye el prefijo del país (ej. <strong>+34</strong> en España). Sin él, el botón de WhatsApp no funciona.</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${t('mn.couriers.phoneHint')}</div>
     </div>
     <input type="hidden" id="oc-f-id" value="${c.id||''}">
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveOwnCourier()">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveOwnCourier()">${t('common.save')}</button>
     </div>
   `);
 }
@@ -3734,30 +3734,30 @@ function deleteOwnCourier(id){
 }
 
 function newDeliveryPlatform(){
-  openDeliveryPlatformModal('Añadir plataforma de delivery', {id:null, nombre:'', comisionPct:30, ivaPct:21});
+  openDeliveryPlatformModal(t('mn.delivery.addTitle'), {id:null, nombre:'', comisionPct:30, ivaPct:21});
 }
 function editDeliveryPlatform(id){
   const p = (DB.business.deliveryPlatforms||[]).find(x=>x.id===id); if(!p) return;
-  openDeliveryPlatformModal('Editar plataforma', p);
+  openDeliveryPlatformModal(t('mn.delivery.editTitle'), p);
 }
 function openDeliveryPlatformModal(title, p){
   const sugerencias = DELIVERY_PLATFORM_SUGGESTIONS.map(s=>`<option value="${s}">`).join('');
   openModal(`
     <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="field">
-      <label>Nombre de la plataforma</label>
+      <label>${t('mn.delivery.platformName')}</label>
       <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="Ej. Glovo">
       <datalist id="dp-sugerencias">${sugerencias}</datalist>
     </div>
     <div class="field-row">
-      <div class="field"><label>Comisión (%)</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}"></div>
-      <div class="field"><label>IVA sobre la comisión (%)</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}"></div>
+      <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}"></div>
+      <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}"></div>
     </div>
-    <p style="font-size:12px;color:var(--muted)">Por cada venta a través de esta plataforma, GastroGoan calculará automáticamente: comisión = total venta × ${'comisión%'} × (1 + IVA%), y lo registrará como gasto.</p>
+    <p style="font-size:12px;color:var(--muted)">${t('mn.delivery.calcHint')}</p>
     <input type="hidden" id="dp-f-id" value="${p.id||''}">
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveDeliveryPlatform()">Guardar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="saveDeliveryPlatform()">${t('common.save')}</button>
     </div>
   `);
 }
@@ -3799,32 +3799,32 @@ function renderTicketConfigCard(){
   const tc = (DB.business && DB.business.ticket) || defaultData().business.ticket;
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-receipt"></i> Configuración del ticket</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Personaliza qué información aparece en el ticket que se entrega a los clientes al cobrar.</p>
+      <h3><i class="ti ti-receipt"></i> ${t('mn.ticket.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ticket.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-direccion" ${tc.mostrarDireccion!==false?'checked':''} style="width:18px;height:18px"> Mostrar dirección
+          <input type="checkbox" id="tk-direccion" ${tc.mostrarDireccion!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showAddress')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-telefono" ${tc.mostrarTelefono!==false?'checked':''} style="width:18px;height:18px"> Mostrar teléfono
+          <input type="checkbox" id="tk-telefono" ${tc.mostrarTelefono!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showPhone')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-web" ${tc.mostrarWeb?'checked':''} style="width:18px;height:18px"> Mostrar web
+          <input type="checkbox" id="tk-web" ${tc.mostrarWeb?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showWeb')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="tk-nif" ${tc.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> Mostrar CIF/NIF (necesario para emitir facturas)
+          <input type="checkbox" id="tk-nif" ${tc.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showTaxId')}
         </label>
       </div>
       <div class="field">
-        <label>Mensaje final del ticket</label>
+        <label>${t('mn.ticket.footerMessage')}</label>
         <textarea id="tk-pie" placeholder="Ej. ¡Gracias por su visita! Síguenos en @milocal">${escapeHtml(tc.pie||'')}</textarea>
       </div>
       <div class="field">
-        <label>% de IVA a aplicar en las facturas</label>
+        <label>${t('mn.ticket.vatPct')}</label>
         <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}" style="max-width:120px">
-        <small style="color:var(--muted)">Se usa para desglosar base imponible e IVA cuando el cliente pide factura. Por defecto, el 10% de hostelería.</small>
+        <small style="color:var(--muted)">${t('mn.ticket.vatDesc')}</small>
       </div>
-      <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
+      <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
     </div>
   `;
 }
@@ -3836,26 +3836,26 @@ function renderComandaPrintCard(){
   const esImpresion = c.modo === 'impresion';
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-printer"></i> Comandas de cocina y sala</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Elige cómo quieres que el personal reciba las comandas cuando se marchan desde el TPV.</p>
+      <h3><i class="ti ti-printer"></i> ${t('mn.comandas.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.comandas.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="radio" name="comanda-modo" value="pantalla" ${!esImpresion?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px"> 🖥️ Verlas en pantalla (pantalla de Cocina / Sala)
+          <input type="radio" name="comanda-modo" value="pantalla" ${!esImpresion?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px"> 🖥️ ${t('mn.comandas.screen')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="radio" name="comanda-modo" value="impresion" ${esImpresion?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px"> 🧾 Imprimir un vale al marchar
+          <input type="radio" name="comanda-modo" value="impresion" ${esImpresion?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px"> 🧾 ${t('mn.comandas.print')}
         </label>
       </div>
       <div id="comanda-print-opts" style="display:${esImpresion?'block':'none'}">
         <div class="field">
-          <label>Ancho del papel de la impresora</label>
+          <label>${t('mn.comandas.paperWidth')}</label>
           <select id="comanda-ancho" onchange="setComandaAncho(this.value)" style="max-width:200px">
-            <option value="80" ${c.anchoTicket!=58?'selected':''}>80 mm (estándar)</option>
-            <option value="58" ${c.anchoTicket==58?'selected':''}>58 mm (compacta)</option>
+            <option value="80" ${c.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
+            <option value="58" ${c.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
           </select>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">La impresora se selecciona en el cuadro de impresión del navegador/sistema que aparece al imprimir. Si tienes una impresora de tickets (térmica) conectada por USB/red, configúrala como impresora del dispositivo y elígela ahí. Recomendamos activar la impresión automática en el navegador para que no pida confirmar cada vez.</p>
-        <button class="btn btn-sm" onclick="testComandaPrint()"><i class="ti ti-printer"></i> Imprimir vale de prueba</button>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.comandas.printerHint')}</p>
+        <button class="btn btn-sm" onclick="testComandaPrint()"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
       </div>
     </div>
   `;
@@ -3865,7 +3865,7 @@ function setComandaModo(modo){
   saveDB();
   const opts = document.getElementById('comanda-print-opts');
   if(opts) opts.style.display = modo==='impresion' ? 'block' : 'none';
-  showToast(modo==='impresion' ? 'Las comandas se imprimirán al marchar' : 'Las comandas se verán en pantalla');
+  showToast(modo==='impresion' ? t('mn.comandas.willPrint') : t('mn.comandas.willShowScreen'));
 }
 function setComandaAncho(val){
   DB.business.comandas = {...(DB.business.comandas||{modo:'impresion'}), anchoTicket: parseInt(val)||80};

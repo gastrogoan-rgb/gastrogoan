@@ -1319,16 +1319,16 @@ function renderOnlineCard(){
   if(!getTenantId()){
     return `
       <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
-        <p style="font-size:13.5px;margin-bottom:12px">Activa tu licencia de GastroGoan para obtener un enlace y un código QR con los que tus clientes podrán reservar mesa o pedir take away/delivery desde su móvil.</p>
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needLicense')}</p>
       </div>
     `;
   }
   if(!getCloudConfig()){
     return `
       <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
-        <p style="font-size:13.5px;margin-bottom:12px">Configura la nube de este negocio (botón ☁️ Nube de la cabecera) para obtener un enlace y un código QR con los que tus clientes podrán reservar mesa o pedir take away/delivery desde su móvil.</p>
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needCloud')}</p>
       </div>
     `;
   }
@@ -1336,31 +1336,31 @@ function renderOnlineCard(){
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
   return `
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 Reservas y pedidos online</h3>
-      <p style="font-size:13.5px;margin-bottom:12px">Comparte este código QR o enlace con tus clientes: podrán reservar mesa${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' y pedir take away o delivery' : ''} desde su móvil, sin instalar nada.</p>
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+      <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       <details style="margin-bottom:12px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)">⚠️ Importante: ¿dónde tienes que tener guardada esta app para que esto funcione?</summary>
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)">⚠️ ${t('mn.online.hostingSummary')}</summary>
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
-          Este enlace y QR solo funcionan si los dos archivos de GastroGoan — la app de gestión (este archivo) y <strong>reservagastrogoan.html</strong> (la página que ven tus clientes) — están <strong>subidos juntos, dentro de la misma carpeta, en un hosting con dirección (URL) pública en internet</strong>.<br><br>
-          Es decir: no basta con tenerlos guardados en el ordenador o el móvil y abrirlos haciendo doble clic. "Hosting con URL pública" significa un servicio que aloja tus archivos en internet y les da una dirección web (algo como <code>https://tu-restaurante.netlify.app/</code>) a la que cualquier cliente puede acceder desde su móvil. Hay opciones gratuitas y sencillas (por ejemplo Netlify: se arrastran los dos archivos a su web y ya tienen dirección pública).<br><br>
-          Si abres la app directamente desde tu ordenador (sin subirla a ningún sitio), el QR y el enlace no llevarán a ninguna página real.<br><br>
-          📘 <strong>¿No sabes cómo subirlos?</strong> Sigue el tutorial paso a paso <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> (subir a Netlify, gratis, 5 minutos). Debe estar en la misma carpeta que esta app.
+          ${t('mn.online.hostingP1')}<br><br>
+          ${t('mn.online.hostingP2')}<br><br>
+          ${t('mn.online.hostingP3')}<br><br>
+          📘 <strong>${t('mn.online.hostingTutorialLabel')}</strong> ${t('mn.online.hostingTutorialText')} <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> ${t('mn.online.hostingTutorialSuffix')}
         </div>
       </details>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-        <img src="${qrUrl}" alt="Código QR" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
+        <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:140px;height:140px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
         <div style="flex:1;min-width:180px">
-          <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Descarga el QR e imprímelo para tus mesas, escaparate o redes sociales.</p>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> Descargar QR</a>
-          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> Ver la página</a>
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.printHint')}</p>
+          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex;margin-bottom:6px" href="${qrUrl}" download="qr-reservas.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
+          <a class="btn btn-sm" style="width:100%;text-decoration:none;justify-content:center;display:inline-flex" href="${link}" target="_blank" rel="noopener"><i class="ti ti-eye"></i> ${t('mn.online.viewPage')}</a>
         </div>
       </div>
       <div class="field">
         <textarea id="mn-public-link" rows="2" readonly style="font-family:monospace;font-size:11px" onclick="this.select()">${link}</textarea>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> Copiar enlace</button>
-        <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent('Reserva o pide en línea en ' + (b.name || 'nuestro restaurante') + ':\n\n' + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
+        <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
     </div>
   `;
@@ -1394,8 +1394,8 @@ function renderTableQrCard(){
   }).join('');
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-qrcode"></i> QR auto pedido</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Hay un QR por cada mesa configurada en Mi Negocio (${DB.tables.length} en total). Pulsa sobre una mesa para ver su QR y descargarlo. Imprímelo y colócalo en esa mesa: tus clientes lo escanean, ven la carta y piden directamente desde su móvil. El pedido aparece automáticamente en esa mesa dentro del TPV, sin pasar por la bandeja de pendientes.</p>
+      <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.tableQr.desc').replace('${count}', DB.tables.length)}</p>
       ${zonasHtml}
     </div>
   `;
@@ -1411,8 +1411,8 @@ function showTableQr(tableId){
     <div class="modal-header"><h3><i class="ti ti-qrcode"></i> ${escapeHtml(tbl.name)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div style="text-align:center">
       <img src="${tQr}" alt="QR ${escapeHtml(tbl.name)}" style="width:240px;height:240px;border:1px solid var(--border);border-radius:8px">
-      <p style="font-size:13px;color:var(--muted);margin:10px 0">Tus clientes escanean este código para pedir desde <strong>${escapeHtml(tbl.name)}</strong>.</p>
-      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(tbl.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> Descargar QR</a>
+      <p style="font-size:13px;color:var(--muted);margin:10px 0">${t('mn.tableQr.scanHint').replace('${table}', `<strong>${escapeHtml(tbl.name)}</strong>`)}</p>
+      <a class="btn btn-primary" style="text-decoration:none;display:inline-flex" href="${tQr}" download="qr-${escapeHtml(tbl.name).replace(/\s+/g,'-')}.png"><i class="ti ti-download"></i> ${t('mn.online.downloadQr')}</a>
     </div>
   `);
 }
@@ -1431,38 +1431,38 @@ function renderPedidosConfigCard(){
   const deliveryEnabled = b.tiposServicio?.delivery !== false;
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-clock-hour-4"></i> Pedidos para llevar / domicilio</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> La antelación mínima se configura en la sección <strong>Operativa</strong> (vale tanto para reservas como para pedidos).</p>
+      <h3><i class="ti ti-clock-hour-4"></i> ${t('mn.pedidos.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> ${t('mn.pedidos.leadTimeInfo')}</p>
       <div class="field">
-        <label>Pedido mínimo (€)</label>
+        <label>${t('mn.pedidos.minOrder')}</label>
         <input type="number" id="mn-pedidominimo" min="0" step="0.5" value="${escapeHtml(p.pedidoMinimo||0)}" placeholder="10">
-        <small style="color:var(--muted)">Importe mínimo del pedido (sin contar el envío) para poder realizarlo online. Pon 0 para no exigir mínimo.</small>
+        <small style="color:var(--muted)">${t('mn.pedidos.minOrderDesc')}</small>
       </div>
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400">
-          <input type="checkbox" id="mn-pagolocal" ${p.permitirPagoLocal!==false?'checked':''} style="width:18px;height:18px"> Permitir "pagar al recoger / al recibir"
+          <input type="checkbox" id="mn-pagolocal" ${p.permitirPagoLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.allowPayOnPickup')}
         </label>
-        <small style="color:var(--muted)">Si lo desmarcas, tus clientes solo podrán pagar online con tarjeta (necesita tener configurado el pago con tarjeta).</small>
+        <small style="color:var(--muted)">${t('mn.pedidos.allowPayOnPickupDesc')}</small>
       </div>
       ${deliveryEnabled ? `
       <div class="field">
-        <label>Coste de envío a domicilio (€)</label>
+        <label>${t('mn.pedidos.deliveryFee')}</label>
         <input type="number" id="mn-deliveryfee" min="0" step="0.5" value="${escapeHtml(p.deliveryFee||0)}" placeholder="3.00">
       </div>
       <div class="field">
-        <label>Códigos postales donde repartes</label>
+        <label>${t('mn.pedidos.cpList')}</label>
         <textarea id="mn-cplist" placeholder="28001, 28002, 28003">${escapeHtml((p.cpList||[]).join(', '))}</textarea>
-        <small style="color:var(--muted)">Separados por comas. Déjalo en blanco si no quieres restringir por código postal.</small>
+        <small style="color:var(--muted)">${t('mn.pedidos.cpListDesc')}</small>
       </div>
       <div class="field">
-        <label>Radio de reparto (km desde tu dirección)</label>
+        <label>${t('mn.pedidos.radius')}</label>
         <input type="number" id="mn-radiuskm" min="0" step="0.5" value="${escapeHtml(p.radiusKm||0)}" placeholder="5">
-        <small style="color:var(--muted)">0 = sin límite por distancia. Necesita que la "Dirección" de tu negocio (sección Contacto) esté rellena.</small>
+        <small style="color:var(--muted)">${t('mn.pedidos.radiusDesc')}</small>
       </div>
-      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> Ubicación calculada: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</p>` : ''}
-      <p style="font-size:12px;color:var(--muted)">Un pedido a domicilio se acepta si el código postal del cliente está en tu lista, o si su dirección está dentro del radio configurado (basta con que cumpla una de las dos condiciones).</p>
+      ${p.lat!=null ? `<p style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${t('mn.pedidos.locationCalculated')}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</p>` : ''}
+      <p style="font-size:12px;color:var(--muted)">${t('mn.pedidos.matchExplain')}</p>
       ` : ''}
-      <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
+      <button class="btn btn-primary" onclick="savePedidosConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
     </div>
   `;
 }
@@ -1516,28 +1516,28 @@ function renderRedsysCard(){
   if(!getTenantId()) return '';
   return `
     <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-credit-card"></i> 💳 Pago online con tarjeta (TPV virtual)</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Permite que tus clientes paguen con tarjeta al hacer un pedido online (take away/delivery). El cobro se realiza a través del TPV virtual de tu propio banco (Redsys): el dinero llega directamente a tu cuenta, sin intermediarios.</p>
-      <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">Comprobando configuración...</div>
+      <h3><i class="ti ti-credit-card"></i> 💳 ${t('mn.redsys.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.desc')}</p>
+      <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.checking')}</div>
       <div class="field">
-        <label>Código de comercio (FUC)</label>
+        <label>${t('mn.redsys.merchantCode')}</label>
         <input type="text" id="rs-fuc" placeholder="999008881" style="font-family:monospace">
       </div>
       <div class="field">
-        <label>Terminal</label>
+        <label>${t('mn.redsys.terminal')}</label>
         <input type="text" id="rs-terminal" placeholder="1" style="font-family:monospace;max-width:120px">
       </div>
       <div class="field">
-        <label>Clave secreta (Firma)</label>
-        <input type="password" id="rs-clave" placeholder="Pégala aquí (no se mostrará de nuevo)" style="font-family:monospace">
-        <small style="color:var(--muted)">La obtienes en el módulo de administración de tu TPV virtual, dentro de la web de tu banco.</small>
+        <label>${t('mn.redsys.secretKey')}</label>
+        <input type="password" id="rs-clave" placeholder="${t('mn.redsys.secretKeyPh')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.redsys.secretKeyHint')}</small>
       </div>
       <div class="field" style="margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="rs-real" style="width:18px;height:18px"> Entorno real (cobros reales). Desmarcado = modo pruebas.
+          <input type="checkbox" id="rs-real" style="width:18px;height:18px"> ${t('mn.redsys.realEnv')}
         </label>
       </div>
-      <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> Guardar</button>
+      <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
     </div>
   `;
 }
@@ -1549,7 +1549,7 @@ async function loadRedsysCardStatus(){
     const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(getTenantId())}`);
     const data = await res.json();
     if(data && data.configured){
-      el.innerHTML = `<span style="color:var(--brand-orange);font-weight:600"><i class="ti ti-check"></i> Configurado</span> · FUC ${escapeHtml(data.fuc)} · Terminal ${escapeHtml(data.terminal)} · Entorno ${data.ambiente === 'real' ? 'real' : 'pruebas'}`;
+      el.innerHTML = `<span style="color:var(--brand-orange);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
       document.getElementById('rs-fuc').value = data.fuc || '';
       document.getElementById('rs-terminal').value = data.terminal || '';
       document.getElementById('rs-real').checked = data.ambiente === 'real';
