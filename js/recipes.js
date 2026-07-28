@@ -406,8 +406,8 @@ function renderRecipeModal(id, r){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${isSala ? t('label.drinkName') : t('label.dishName')}</label>
-        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}">
+        <label>${r.isBase ? t('label.elaborationName') : (isSala ? t('label.drinkName') : t('label.dishName'))}</label>
+        <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${r.isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}">
       </div>
       <div class="field">
         <label>${t('label.salePrice')}</label>
@@ -433,6 +433,7 @@ function renderRecipeModal(id, r){
       </div>
     </div>
 
+    ${(r.isBase || isSala) ? `<input type="checkbox" id="recipe-is-base" style="display:none" ${r.isBase?'checked':''}>` : `
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;cursor:${id?'default':'pointer'};font-weight:400;${id?'opacity:.7':''}">
         <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} ${id?'disabled':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
@@ -440,6 +441,7 @@ function renderRecipeModal(id, r){
       </label>
       ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.isBaseLockedAfterCreation')}</p>` : ''}
     </div>
+    `}
     ${r.isBase ? `
     <div class="field-row">
       <div class="field">
