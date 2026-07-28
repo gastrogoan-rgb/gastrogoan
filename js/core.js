@@ -599,22 +599,22 @@ function showActivationGate(){
   const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
-      ${showBackBtn ? `<button onclick="backToBusinessSelectorFromGate()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> Negocios</button>` : ''}
+      ${showBackBtn ? `<button onclick="backToBusinessSelectorFromGate()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
-      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">Paso 3 de 3 — Activa tu licencia</p>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">¿Quién eres?</label>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('gate.lic.whoAreYou')}</label>
         <div style="display:flex;gap:10px;margin-bottom:18px">
-          <div id="role-owner-card" style="${cardStyle(role==='owner')}" onclick="selectOnboardingRole('owner')">👤<br>Soy el/la<br>dueño/a</div>
-          <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>Soy<br>empleado/a</div>
+          <div id="role-owner-card" style="${cardStyle(role==='owner')}" onclick="selectOnboardingRole('owner')">👤<br>${t('gate.lic.imOwner')}</div>
+          <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>${t('gate.lic.imEmployee')}</div>
         </div>
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px" id="license-label">🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio tu vendedor/jefe/a)</span></label>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px" id="license-label">🔑 ${t('gate.lic.licenseKey')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenBySeller')})</span></label>
         <div id="license-help-box" style="display:none;background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:8px;text-align:left"></div>
         <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
-        <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">Activar GastroGoan</button>
-        <p id="license-owner-note" style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 Si eres empleado/a, usa la <strong>misma clave de licencia</strong> que tu jefe/a — tu dispositivo se conectará solo a la nube del restaurante.</p>
+        <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
+        <p id="license-owner-note" style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 ${t('gate.lic.employeeNote')}</p>
       </div>
     </div>`;
   document.body.appendChild(g);
@@ -627,12 +627,12 @@ function updateLicenseFieldForRole(role){
   const ownerNote = document.getElementById('license-owner-note');
   if(!label || !helpBox || !ownerNote) return;
   if(role === 'employee'){
-    label.innerHTML = '🔑 Clave de licencia del restaurante';
+    label.innerHTML = `🔑 ${t('gate.lic.restaurantLicenseKey')}`;
     helpBox.style.display = 'block';
     helpBox.innerHTML = t('msg.employeeLicenseHelp');
     ownerNote.style.display = 'none';
   }else{
-    label.innerHTML = '🔑 Clave de licencia <span style="font-weight:400;color:var(--muted)">(te la dio quien te vendió GastroGoan)</span>';
+    label.innerHTML = `🔑 ${t('gate.lic.licenseKey')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span>`;
     helpBox.style.display = 'none';
     ownerNote.style.display = 'block';
   }
@@ -1045,9 +1045,9 @@ function updateSyncBadge(state){
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
-  if(state === 'online'){ el.textContent = '☁ Nube conectada'; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.textContent = '☁ Sin conexión'; el.style.background = 'rgba(255,204,0,.2)'; el.style.color = '#FFD60A'; }
-  else { el.textContent = '☁ Error de nube'; el.style.background = 'rgba(255,69,58,.2)'; el.style.color = '#FF6B61'; }
+  if(state === 'online'){ el.textContent = `☁ ${t('gate.cloudConnectedShort')}`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+  else if(state === 'offline'){ el.textContent = `☁ ${t('gate.offline')}`; el.style.background = 'rgba(255,204,0,.2)'; el.style.color = '#FFD60A'; }
+  else { el.textContent = `☁ ${t('gate.cloudError')}`; el.style.background = 'rgba(255,69,58,.2)'; el.style.color = '#FF6B61'; }
 }
 
 function refreshAfterRemoteChange(){
