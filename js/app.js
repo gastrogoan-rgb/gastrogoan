@@ -2341,10 +2341,10 @@ const CONTENT_IDEAS = [
     { t: 'Recibiendo el pedido de proveedores', h: 'Muestra la frescura del producto nada más llegar por la puerta.' },
     { t: 'Preparando la mise en place', h: 'Cortes, salsas y guarniciones listas antes de que lleguen los primeros clientes.' },
     { t: 'Cierre y limpieza al final del día', h: 'Time-lapse del recogido, transmite orden y profesionalidad.' },
-    { t: 'Un vistazo a la cocina en pleno rush', h: 'El caos organizado de una hora punta, siempre motivador de ver.' },
+    { t: 'Un vistazo a la barra en plena hora punta', h: 'El caos organizado de un viernes noche, siempre motivador de ver.' },
     { t: 'Cómo se diseña la carta o el menú del día', h: 'El proceso de pensar combinaciones, precios y nombres de los platos.' },
     { t: 'Probando un plato nuevo antes de sacarlo', h: 'Reacciones sinceras del equipo catando algo antes de que sea oficial.' },
-    { t: 'Un día de compras en el mercado', h: 'El chef eligiendo producto de temporada en el mercado o con el proveedor local.' },
+    { t: 'Un día de compras en el mercado', h: 'El equipo eligiendo fruta de temporada, café o producto local para la barra.' },
     { t: 'Decorando la sala para una fecha especial', h: 'Antes/después de vestir el local para Navidad, San Valentín, etc.' },
     { t: 'La comida del personal (family meal)', h: 'El momento en que el equipo come junto antes de abrir, cercano y humano.' },
   ]},
@@ -3907,9 +3907,9 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mi Negocio</strong> (en Gestión) — Es el primer paso siempre. Rellena el nombre, dirección, horario semanal, tipos de servicio (mesa/take away/delivery) y configuración del ticket. Estos datos personalizan toda la app: aparecen en los tickets impresos, en la web de pedidos online y condicionan qué carta se activa en cada horario.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Lista</strong> (en Cocina) — Da de alta todos los ingredientes y productos que compras, con su precio de compra, formato (cantidad por la que pagas ese precio) y unidad. Es la base de todos los cálculos de coste posteriores: si esta lista no es precisa, ningún food cost del resto de la app lo será.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Proveedores</strong> (en Cocina) — Da de alta tus proveedores habituales y vincula cada ingrediente al proveedor que te lo suministra. Esto te permitirá generar pedidos por proveedor más adelante.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Escandallo</strong> (en Cocina) — Crea cada plato como una receta: elige los ingredientes de la Mega Lista, indica los gramajes netos y la merma de cada uno. La app calcula automáticamente el coste por ración, el food cost y el margen sobre el precio de venta que tú definas.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Fichas Técnicas</strong> (en Cocina) — Para cada receta del Escandallo, añade los pasos de elaboración, la presentación y los alérgenos. Sirven como procedimiento estándar para que cualquier cocinero elabore el plato siempre igual, y son obligatorias de cara a inspección sanitaria por el tema de alérgenos.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (en Cocina o Sala) — Crea una o varias cartas importando los platos directamente del Escandallo (ya con su precio de coste calculado), organízalos por secciones (Entrantes, Principales, Postres...) y marca cuáles están disponibles. Puedes programar distintas cartas según el horario (comidas, cenas, fin de semana, carta de bebidas...).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Escandallo</strong> (en Cocina y Sala) — Crea cada plato o bebida como una receta: elige los ingredientes de la Mega Lista, indica los gramajes netos y la merma de cada uno. La app calcula automáticamente el coste por ración, el food cost y el margen sobre el precio de venta que tú definas.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Fichas Técnicas</strong> (en Cocina y Sala) — Para cada receta del Escandallo, añade los pasos de elaboración, la presentación y los alérgenos. Sirven como procedimiento estándar para que cualquier cocinero o bartender elabore el plato o la bebida siempre igual, y son obligatorias de cara a inspección sanitaria por el tema de alérgenos.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (en Cocina y Sala) — Crea una o varias cartas importando los platos o bebidas directamente del Escandallo (ya con su precio de venta de ese momento — si luego cambias el precio en el Escandallo, recuerda pulsar "Actualizar precio" en la Carta para que se refleje ahí también), organízalos por secciones (Entrantes, Principales, Postres... o Cervezas, Cócteles, Vinos...) y marca cuáles están disponibles. Puedes programar distintas cartas según el horario (comidas, cenas, fin de semana, carta de bebidas...).</div></div>
     <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Stock y Pedidos</strong> (en Cocina y Sala) — Define el stock mínimo de cada ingrediente o elaboración. A partir de aquí, el sistema descuenta stock automáticamente con cada venta del TPV y lo repone automáticamente cuando marcas un pedido a proveedor como "Recibido".</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Personal y Plan de Limpieza</strong> (en Cocina y Sala) — Da de alta a tu equipo, organiza turnos y reparte tareas. Configura el plan de limpieza APPCC para cumplir con la normativa de higiene alimentaria.</div></div>
     <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (en Sala) — Aquí es donde tu equipo trabaja cada turno: abrir mesas (cliente de paso o con reserva), tomar la comanda con las pestañas de cartas (bebidas primero), marchar por grupos o con "Marchar vale", seguir el estado del servicio y cobrar cuando todo está servido. Cada venta queda registrada y alimenta el resto del sistema sin pasos adicionales. (Ver el detalle en la sección "🆕 Novedades" de arriba.)</div></div>
@@ -4159,7 +4159,23 @@ const MANUAL_CHAPTERS = [
   },
   {
     title:'<i class="ti ti-clipboard-list"></i> Distribución del Trabajo',
-    content:`<h3>Qué es y para qué sirve</h3>
+    content: () => currentArea()==='sala' ? `<h3>Qué es y para qué sirve</h3>
+    <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. En Sala este módulo es el <strong>calendario de tareas</strong> de cada persona: no habla de "platos a su cargo" (eso es cosa de Cocina), sino de todo lo que tiene que hacer día a día en barra/sala.</p>
+
+    <h4>Vista maestro-detalle</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">A la izquierda verás la lista de tu equipo de Sala (los empleados que diste de alta en Horario del Personal). Haz clic en uno para abrir su calendario de tareas a la derecha.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Todo lo que edites se guarda asociado a ese empleado, así que puedes ir pasando de uno a otro para repartir el trabajo de todo el equipo.</div></div>
+
+    <h4>Tareas de la semana</h4>
+    <p>Aquí ves, día por día, todo lo que tiene asignado esa persona — y viene de tres sitios distintos, unificado en un solo calendario:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Tareas propias</strong> que añadas a mano: "Reponer barra", "Revisar carta de bebidas", "Preparar hielo y guarniciones"... Escribe la tarea en el día que corresponda y pulsa "+".</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Tareas de Plan de Limpieza</strong> que tengan a esa persona como responsable ese día del mes (barra, grifos de cerveza, cafetera...) aparecen aquí solas, con la etiqueta "Limpieza" — no hace falta duplicarlas a mano.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Acciones de Promoción</strong> asignadas a esa persona para esa fecha exacta también aparecen aquí, con la etiqueta "Promo".</div></div>
+    <div class="manual-tip">💡 Marca cada tarea como hecha con su casilla — el contador de "Tareas de esta semana" te dice de un vistazo cuánto lleva completado cada persona.</div>
+
+    <h4>Imprimir y repartir</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Con la ficha de un empleado abierta, pulsa <strong>Imprimir</strong> para generar una hoja solo con sus tareas de la semana.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si quieres la hoja de todo el equipo de golpe, usa la opción de imprimir todo: genera una hoja por empleado, lista para repartir o pegar en barra.</div></div>` : `<h3>Qué es y para qué sirve</h3>
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. Este módulo resuelve el segundo problema: te permite repartir responsabilidades concretas — qué platos prepara cada cocinero, qué tareas de limpieza o mise en place le tocan cada día — y dejarlo todo por escrito para que no haya confusiones ni "yo pensaba que eso lo hacías tú".</p>
 
     <h4>Vista maestro-detalle</h4>
@@ -4406,16 +4422,16 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Comparación de gastos del año</strong> — gráfico con el total de gastos (fijos + variables) de cada uno de los últimos 12 meses, para comparar con el gráfico de ventas y ver si tus costes crecen al mismo ritmo que tu facturación.</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Resultado del mes (P&amp;L)</strong> — facturación, gastos variables, gastos fijos y resultado (beneficio o pérdida) del mes en curso, más el <strong>margen sobre ventas</strong> y el <strong>% Food Cost medio</strong> frente a tu objetivo. Si el resultado está en rojo a mitad de mes no es necesariamente malo, pero conviene vigilar la evolución.</div></div>
     <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Comparación del resultado mensual del año</strong> — gráfico con el resultado (ventas menos gastos) de cada uno de los últimos 12 meses. Las barras en rojo señalan los meses con pérdidas y las naranjas los meses con beneficio, para ver de un vistazo la rentabilidad real mes a mes.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Análisis de ventas (últimos 30 días)</strong> — ticket medio, número de ventas, platos más vendidos, platos de mayor margen bruto y la distribución de ventas por hora del día. Te dice qué está funcionando ahora mismo y a qué horas se concentra tu facturación.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Análisis de ventas (últimos 30 días)</strong> — ticket medio, número de ventas, platos/bebidas más vendidos, platos/bebidas de mayor margen bruto y la distribución de ventas por hora del día. Te dice qué está funcionando ahora mismo y a qué horas se concentra tu facturación.</div></div>
     <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Punto de equilibrio</strong> — compara los cubiertos/ventas reales del mes con el mínimo que calculaste en Gestión Económica. Si vas por debajo del objetivo, este es el primer aviso para reaccionar antes de que acabe el mes.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Análisis de Platos</strong> — ranking de los platos más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Análisis de Platos</strong> — ranking de los platos y bebidas más y menos vendidos, y más y menos rentables, por el periodo que elijas. Cruza esta información con el Escandallo: un plato o bebida que vende mucho pero deja poco margen es candidato a subir de precio o rediseñar; uno que vende poco y deja mucho margen es candidato a promocionar más.</div></div>
 
     <h4>Rutina recomendada</h4>
     <p>Cada mañana, antes de abrir:</p>
     <ol>
       <li>Mira las <strong>ventas y gastos de hoy/semana/mes</strong> y compáralos con los gráficos de los últimos 12 meses para saber si vas en línea con lo esperado.</li>
       <li>Revisa el <strong>Resultado del mes</strong> y el <strong>Punto de equilibrio</strong> para saber si vas camino de cubrir gastos o necesitas reaccionar.</li>
-      <li>Echa un ojo al <strong>Análisis de Platos</strong> para detectar qué platos potenciar o revisar.</li>
+      <li>Echa un ojo al <strong>Análisis de Platos</strong> para detectar qué platos o bebidas potenciar o revisar.</li>
     </ol>
     <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las ventas y el resultado van en línea con los meses anteriores y por encima del punto de equilibrio, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
   },
@@ -4522,7 +4538,8 @@ function renderManual(){
   nav.innerHTML = MANUAL_CHAPTERS.map((ch,i) => `
     <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${ch.title}</div>
   `).join('');
-  detail.innerHTML = MANUAL_CHAPTERS[manualChapter].content;
+  const content = MANUAL_CHAPTERS[manualChapter].content;
+  detail.innerHTML = typeof content === 'function' ? content() : content;
 }
 function goManualChapter(i){
   manualChapter = i;

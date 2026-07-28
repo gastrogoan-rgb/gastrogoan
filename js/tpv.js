@@ -470,6 +470,14 @@ function confirmBusinessPinAction(){
   if(fn) fn();
 }
 
+// Ventas cerradas atendidas por un camarero/a en un conjunto de fechas
+// (para Personal → Fichar), a partir del camareroId guardado en cada venta.
+function camareroSalesInRange(empId, dateStrs){
+  const dateSet = new Set(dateStrs);
+  const sales = DB.sales.filter(s => s.camareroId === empId && dateSet.has(s.date));
+  return {count: sales.length, total: sales.reduce((sum,s) => sum + (s.total||0), 0)};
+}
+
 // Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
 function renderCamareroFieldHtml(selectId, selectedId){
   // Solo empleados del área sala que sean camareros
@@ -2070,7 +2078,7 @@ function finalizeCharge(orderId){
     if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
     if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
   }
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -2313,7 +2321,8 @@ function finalizeSplitOrder(orderId){
   const sale = {
     id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
-    clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, metodoPago: metodos.length===1?metodos[0]:'Dividido',
+    clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
+    metodoPago: metodos.length===1?metodos[0]:'Dividido',
     pagos, items: order.items.map(l=>({...l}))
   };
   applyDeliveryCommission(order, sale);

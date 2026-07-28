@@ -354,11 +354,17 @@ function renderCartaSecciones(){
       </div>
       ${visiblePlatos.length ? visiblePlatos.map(p => {
         const pi = platos.indexOf(p);
+        // Al importar desde Escandallo se copia el precio en ese momento; si
+        // luego cambia el precio de venta de la receta, esto avisa del
+        // desfase en vez de dejarlo desactualizado en silencio.
+        const linkedRecipe = p.recipeId ? getRecipe(p.recipeId) : null;
+        const priceStale = linkedRecipe && (linkedRecipe.price||0) !== (p.precio||0);
         return `
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
           <span style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
+          ${priceStale ? `<button class="btn btn-sm" style="color:var(--brand-orange);border-color:var(--brand-orange)" onclick="syncCartaPlatoPrice(${sec.id},${p.id})" title="El escandallo tiene un precio de venta distinto (${fmtMoney(linkedRecipe.price||0)})"><i class="ti ti-refresh-alert"></i> ${t('btn.updatePrice')}</button>` : ''}
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
@@ -419,6 +425,19 @@ function removeCartaPlato(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
   renderCartaSecciones();
+}
+// El precio se copia del escandallo solo al importar; si luego cambia el
+// precio de venta de la receta, esto lo trae de vuelta a la carta (no se
+// hace solo, para no pisar en silencio un precio ajustado a mano en carta).
+function syncCartaPlatoPrice(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec && sec.platos.find(x=>x.id===platoId);
+  if(!p || !p.recipeId) return;
+  const r = getRecipe(p.recipeId);
+  if(!r) return;
+  p.precio = r.price||0;
+  renderCartaSecciones();
+  showToast(t('msg.priceUpdated'));
 }
 function addCartaPlato(secId){
   const isBebidas = currentArea()==='sala';

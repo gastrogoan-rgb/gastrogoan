@@ -2020,6 +2020,11 @@ function openEmployeeFicharModal(employeeId){
   const monthDates = Array.from({length: new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()}, (_,i) => dateStr(new Date(now.getFullYear(), now.getMonth(), i+1)));
   const horasSemana = employeeHoursInRange(e.id, weekDates);
   const horasMes = employeeHoursInRange(e.id, monthDates);
+  // Ventas atendidas: solo tiene sentido para camareros/as de Sala, ya que
+  // camareroId solo se asigna al abrir mesas/pedidos desde el TPV de Sala.
+  const isSala = (e.area||'cocina') === 'sala';
+  const ventasSemana = isSala ? camareroSalesInRange(e.id, weekDates) : null;
+  const ventasMes = isSala ? camareroSalesInRange(e.id, monthDates) : null;
   openModal(`
     <div class="modal-header">
       <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -2033,6 +2038,10 @@ function openEmployeeFicharModal(employeeId){
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
       <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
+      ${isSala ? `
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Ventas atendidas esta semana: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
+      <div style="font-size:12px;color:var(--muted)">Ventas atendidas este mes: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
+      ` : ''}
       <div style="margin-top:10px"><button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> Ver últimos fichajes</button></div>
     </div>
   `);
