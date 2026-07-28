@@ -211,7 +211,7 @@ function renderEscandallo(){
     // Dentro de la carpeta, sin plato seleccionado: solo nombres clicables.
     box.innerHTML = backBtn + `<div class="table-wrap"><table><tbody>${visibleRecipes.map(r => `
       <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
-        <td><strong><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</td>
+        <td><strong><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</td>
         <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
       </tr>
     `).join('')}</tbody></table></div>`;
@@ -243,7 +243,7 @@ function renderEscandalloRow(r){
       : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
     return `
       <div class="list-row">
-        <div class="list-row-name"><i class="ti ti-chef-hat"></i> <span>${escapeHtml(r.name)}</span></div>
+        <div class="list-row-name"><i class="ti ${(r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i> <span>${escapeHtml(r.name)}</span></div>
         <span style="font-size:12px;color:var(--muted)">Coste ${fmtMoney(cost)} · PVP ${fmtMoney(r.price||0)} · Margen ${fmtMoney(margin)}</span>
         ${pctBadge}
         <div class="actions-cell">
@@ -284,7 +284,7 @@ function renderEscandalloFull(r){
     return `
       <div class="card" style="max-width:100%">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:12px;color:var(--muted);font-weight:400">(Elaboración base)</span>':''}</h3>
+          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:12px;color:var(--muted);font-weight:400">(Elaboración base)</span>':''}</h3>
           <span class="badge badge-${pctClass}">${pctText}</span>
         </div>
         <div class="grid grid-4" style="margin-bottom:14px">
@@ -339,7 +339,7 @@ function renderEscandalloCard(r){
     return `
       <div class="card card-compact">
         <h3 style="justify-content:space-between">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':'ti-chef-hat'}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</span>
           ${pctBadge}
         </h3>
         <div class="grid grid-3" style="margin-bottom:6px">
@@ -833,7 +833,7 @@ function renderFichas(){
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
         <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
-        <div style="font-size:12px;color:var(--muted)">${group.length} plato${group.length===1?'':'s'}</div>
+        <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? `${group.length} bebida${group.length===1?'':'s'}` : `${group.length} plato${group.length===1?'':'s'}`}</div>
       </div>
     `).join('')}</div>`;
     return;
@@ -861,7 +861,7 @@ function renderFichas(){
 
   const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
   if(orphanFichas.length){
-    html += `<h3 class="cat-heading">Fichas sin vincular a un plato</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
+    html += `<h3 class="cat-heading">${currentArea()==='sala' ? 'Fichas sin vincular a una bebida' : 'Fichas sin vincular a un plato'}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
       <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
         <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(f.name)}</span></div>
         <div class="actions-cell">
@@ -975,6 +975,8 @@ function updateFichaProduccion(value){
 
 function renderFichaModal(){
   const f = fichaModalState;
+  const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || currentArea();
+  const isSala = fArea === 'sala';
   const ro = !editUnlocked;
   const roAttr = ro ? 'disabled' : '';
   // Los datos que vienen del escandallo (nombre, vinculación, comensales e ingredientes)
@@ -1012,8 +1014,8 @@ function renderFichaModal(){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${t('label.dishName')}</label>
-        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${t('ph.dishName')}" ${lockedAttr}>
+        <label>${isSala ? t('label.drinkName') : t('label.dishName')}</label>
+        <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
       </div>
       <div class="field">
         <label>${t('label.linkToCosting')}</label>
@@ -1022,7 +1024,7 @@ function renderFichaModal(){
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${t('label.diners')}</label>
+        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
         <input type="number" id="ficha-comensales" value="${f.comensales||2}" step="1" min="1" ${lockedAttr}>
       </div>
       <div class="field">
@@ -1180,6 +1182,7 @@ function printFicha(id){
   const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
   const ingredientLines = getFichaIngredientLines(f);
   const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
+  const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
   if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
@@ -1190,7 +1193,7 @@ function printFicha(id){
   ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
   <h1>${escapeHtml(f.name)}</h1>
   <div class="meta">
-    ${produccion?`<span>👥 ${fmtNum(produccion)} ración${produccion!==1?'es':''}</span>`:''}
+    ${produccion?`<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ración${produccion!==1?'es':''}</span>`:''}
     ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}
     ${f.temp?`<span>${escapeHtml(f.temp)}</span>`:''}
   </div>
