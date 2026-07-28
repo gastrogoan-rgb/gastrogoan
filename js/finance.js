@@ -398,7 +398,7 @@ function openIngredientModal(id, overrideState){
     `);
     return;
   }
-  const ing = overrideState || (id ? getIngredient(id) : {name:'',category:CATEGORIES[0],supplier:areaProviders[0].nombre,unit:'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()});
+  const ing = overrideState || (id ? getIngredient(id) : {name:'',category:ingredientCategories()[0],supplier:areaProviders[0].nombre,unit:currentArea()==='sala'?'ml':'g',price:0,packQty:1000,packPrice:0,allergens:[],area:currentArea()});
   const allergenChecks = ALLERGENS.map(a => `
     <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:13px;margin-bottom:4px">
       <input type="checkbox" value="${a}" ${ing.allergens && ing.allergens.includes(a) ? 'checked':''} style="width:auto"> ${a}
@@ -412,13 +412,13 @@ function openIngredientModal(id, overrideState){
     </div>
     <div class="field">
       <label>${t('common.name')}</label>
-      <input type="text" id="ing-name" value="${escapeHtml(ing.name)}" placeholder="${t('ph.ingredientName')}">
+      <input type="text" id="ing-name" value="${escapeHtml(ing.name)}" placeholder="${currentArea()==='sala' ? t('ph.ingredientNameSala') : t('ph.ingredientName')}">
     </div>
     <div class="field-row">
       <div class="field">
         <label>${t('common.category')}</label>
         <select id="ing-category" onchange="onIngredientCategoryChange(${id||'null'})">
-          ${CATEGORIES.map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
+          ${ingredientCategories().map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
           ${DB.ingredientCategories.map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
           <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
@@ -440,7 +440,7 @@ function openIngredientModal(id, overrideState){
     </div>
     <div class="field-row">
       <div class="field">
-        <label id="ing-pack-qty-label">Cantidad por compra (en ${escapeHtml(ing.unit)}${ing.unit==='g'?', ej. 1000 = 1 kg':''})</label>
+        <label id="ing-pack-qty-label">Cantidad por compra (en ${escapeHtml(ing.unit)}${ingPackQtyHint(ing.unit)})</label>
         <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
       </div>
       <div class="field">
@@ -461,9 +461,17 @@ function openIngredientModal(id, overrideState){
   `);
 }
 
+// Ejemplo aclaratorio para la cantidad por compra, según la unidad elegida
+// (kg/L a partir de la unidad "pequeña" — g/ml —, cl como fracción de litro).
+function ingPackQtyHint(unit){
+  if(unit === 'g') return ', ej. 1000 = 1 kg';
+  if(unit === 'ml') return ', ej. 1000 = 1 L';
+  if(unit === 'cl') return ', ej. 100 = 1 L';
+  return '';
+}
 function updateIngPackPrice(){
   const unit = document.getElementById('ing-unit').value;
-  document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${unit==='g'?', ej. 1000 = 1 kg':''})`;
+  document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${ingPackQtyHint(unit)})`;
 }
 
 let ingredientFormStateBeforeCategory = null;
@@ -492,8 +500,8 @@ function onIngredientCategoryChange(id){
         <button class="modal-close" onclick="cancelNewIngredientCategory(${id||'null'})">&times;</button>
       </div>
       <div class="field">
-        <label>${t('ph.categoryName')}</label>
-        <input type="text" id="new-ingredient-category-name" placeholder="${t('ph.categoryName')}">
+        <label>${currentArea()==='sala' ? t('ph.categoryNameSala') : t('ph.categoryName')}</label>
+        <input type="text" id="new-ingredient-category-name" placeholder="${currentArea()==='sala' ? t('ph.categoryNameSala') : t('ph.categoryName')}">
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="cancelNewIngredientCategory(${id||'null'})">${t('common.cancel')}</button>
@@ -505,7 +513,7 @@ function onIngredientCategoryChange(id){
 }
 function cancelNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
-  state.category = CATEGORIES[0];
+  state.category = ingredientCategories()[0];
   ingredientFormStateBeforeCategory = null;
   openIngredientModal(id, state);
 }
@@ -514,10 +522,10 @@ function confirmNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
-    if(!CATEGORIES.includes(cat) && !DB.ingredientCategories.includes(cat)) DB.ingredientCategories.push(cat);
+    if(!ingredientCategories().includes(cat) && !DB.ingredientCategories.includes(cat)) DB.ingredientCategories.push(cat);
     state.category = cat;
   } else {
-    state.category = CATEGORIES[0];
+    state.category = ingredientCategories()[0];
   }
   ingredientFormStateBeforeCategory = null;
   saveDB();
@@ -682,7 +690,7 @@ function renderStock(){
   const byCat = {};
   items.forEach(it => { (byCat[it.category] = byCat[it.category] || []).push(it); });
   const cats = Object.keys(byCat).sort((a,b) => {
-    const ia = CATEGORIES.indexOf(a), ib = CATEGORIES.indexOf(b);
+    const ia = ingredientCategories().indexOf(a), ib = ingredientCategories().indexOf(b);
     if(ia === -1 && ib === -1) return a.localeCompare(b);
     if(ia === -1) return 1;
     if(ib === -1) return -1;

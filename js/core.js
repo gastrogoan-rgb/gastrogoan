@@ -1675,9 +1675,18 @@ function openCloudWizard(){
   `);
 }
 
-const CATEGORIES = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
+// Categorías de Mega Lista/Stock: distintas según el área, para que Sala
+// vea categorías de bar (Cervezas, Licores...) en vez de las de cocina
+// (Carnes, Pescados...). "Otros" es común a ambas.
+const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
+const CATEGORIES_SALA = ['Cervezas','Vinos y Cavas','Licores y Destilados','Refrescos y Mixers','Café e Infusiones','Hielo y Guarniciones','Otros'];
+function ingredientCategories(){
+  return currentArea()==='sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
+}
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
-const UNITS = ['g','ud'];
+// g/kg para sólidos, ml/cl/L para líquidos (esenciales para escandallar
+// cócteles con precisión), ud para unidades sueltas (botellas, latas...).
+const UNITS = ['g','kg','ud','ml','cl','L'];
 const BASE_UNITS = ['L','ml','kg','g','ud'];
 const DIAS_SEMANA = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 

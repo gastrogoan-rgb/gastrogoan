@@ -118,7 +118,7 @@ function guessSeccionEmoji(nombre){
 // Así "Carnes" puede tener un icono distinto en cada lado si el negocio quiere,
 // pero se mantiene coherente entre los dos apartados que comparten esa misma
 // taxonomía. Sin icono elegido, se usa 📁 por defecto.
-const CATEGORY_ICON_CHOICES = ['🥩','🐟','🦐','🥬','🍅','🍎','🍌','🧀','🥛','🍞','🥐','🥤','🍷','🍺','☕','🧂','🌶️','🧄','🧅','🧊','🍰','🍫','🥗','🍽️','🥫','🥚','🫒','🍚','🍝','🌾','🍕','🍔','🌮','🍣','📦'];
+const CATEGORY_ICON_CHOICES = ['🥩','🐟','🦐','🥬','🍅','🍎','🍌','🧀','🥛','🍞','🥐','🥤','🍷','🍺','☕','🧂','🌶️','🧄','🧅','🧊','🍰','🍫','🥗','🍽️','🥫','🥚','🫒','🍚','🍝','🌾','🍕','🍔','🌮','🍣','📦','🍸','🥃','🍾','🍹','🧋'];
 function getCategoryIcon(key, ns){
   return (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '📁';
 }
