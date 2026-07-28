@@ -57,9 +57,9 @@
     <!-- ========== HOME ========== -->
     <section class="view" id="view-home">
       <div class="home-hero">
-        <div class="hero-badge"><i class="ti ti-star"></i> Kit profesional de gestión hostelera</div>
-        <h1>¿Con qué área vamos a trabajar?</h1>
-        <p>Selecciona un área para acceder a sus herramientas</p>
+        <div class="hero-badge"><i class="ti ti-star"></i> <span data-i18n="home.heroBadge">Kit profesional de gestión hostelera</span></div>
+        <h1 data-i18n="home.title">¿Con qué área vamos a trabajar?</h1>
+        <p data-i18n="home.subtitle">Selecciona un área para acceder a sus herramientas</p>
       </div>
       <div class="folder-grid" id="home-folders"></div>
     </section>
@@ -120,27 +120,27 @@
         <div class="month-sel" id="platos-period-sel"></div>
         <div class="ge-kpi-grid" id="platos-kpis"></div>
         <div class="vis-section" style="margin-bottom:14px">
-          <h4>Top 5 platos por ingresos <span class="ge-auto">AUTO</span></h4>
+          <h4><span data-i18n="dash.top5DishesByRevenue">Top 5 platos por ingresos</span> <span class="ge-auto">AUTO</span></h4>
           <div id="platos-chart" class="bar-chart"></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> Más vendidos (por unidades)</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> <span data-i18n="dash.mostSoldByUnits">Más vendidos (por unidades)</span></h4></div>
           <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> Menos vendidos</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
           <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> Más rentables (margen)</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
           <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> Menos rentables</h4></div>
+          <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> <span data-i18n="dash.leastProfitable">Menos rentables</span></h4></div>
           <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>👻 Sin ventas en el periodo</h4></div>
+          <div class="ge-sec-head"><h4>👻 <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
           <div id="platos-sin-ventas"></div>
         </div>
       </div>
@@ -154,12 +154,12 @@
 
       <div class="toolbar">
         <div class="left">
-          <input type="text" class="search-input" id="megalista-search" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
+          <input type="text" class="search-input" id="megalista-search" data-i18n-ph="ph.searchIngredient" placeholder="Buscar ingrediente..." oninput="renderMegalista()">
           <select id="megalista-filter-prov" onchange="renderMegalista()">
-            <option value="">Todos los proveedores</option>
+            <option value="" data-i18n="megalista.allProviders">Todos los proveedores</option>
           </select>
         </div>
-        <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> Nuevo Ingrediente</button>
+        <button class="owner-only btn btn-primary" onclick="openIngredientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newIngredient">Nuevo Ingrediente</span></button>
       </div>
 
       <div id="megalista-content"></div>
@@ -173,7 +173,7 @@
 
       <div class="toolbar">
         <div class="left"></div>
-        <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> Nuevo Proveedor</button>
+        <button class="owner-only btn btn-primary" onclick="openProviderModal()"><i class="ti ti-plus"></i> <span data-i18n="btn.newSupplier">Nuevo Proveedor</span></button>
       </div>
 
       <div class="field" style="max-width:320px">
@@ -195,16 +195,16 @@
           <button class="btn btn-sm" id="escandallo-tab-elaboraciones" onclick="setEscandalloTab('elaboraciones')"><i class="ti ti-soup"></i> <span data-i18n="tab.elaborations">Elaboraciones</span></button>
         </div>
         <div style="display:flex;gap:8px" id="escandallo-new-btns">
-          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> Nueva Elaboración</button>
-          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> Nuevo Plato</button>
+          <button class="owner-only btn" onclick="openRecipeModal(null, true)"><i class="ti ti-soup"></i> <span data-i18n="title.newElaboration">Nueva Elaboración</span></button>
+          <button class="owner-only btn btn-primary" onclick="openRecipeModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newDish">Nuevo Plato</span></button>
         </div>
       </div>
 
       <div class="toolbar">
         <div class="left">
-          <input type="text" class="search-input" id="escandallo-search" placeholder="Buscar plato..." oninput="renderEscandallo()">
+          <input type="text" class="search-input" id="escandallo-search" data-i18n-ph="ph.searchDish" placeholder="Buscar plato..." oninput="renderEscandallo()">
           <select id="escandallo-filter-cat" onchange="renderEscandallo()">
-            <option value="">Todas las categorías</option>
+            <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
           <div class="view-toggle">
             <button class="btn btn-sm" id="escandallo-view-grid" onclick="setEscandalloView('grid')"><i class="ti ti-layout-grid"></i></button>
@@ -231,15 +231,15 @@
 
       <div class="toolbar">
         <div class="left">
-          <input type="text" class="search-input" id="fichas-search" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
+          <input type="text" class="search-input" id="fichas-search" data-i18n-ph="ph.searchTechSheet" placeholder="Buscar ficha técnica..." oninput="renderFichas()">
           <select id="fichas-filter-cat" onchange="renderFichas()">
-            <option value="">Todas las categorías</option>
+            <option value="" data-i18n="filter.allCategories">Todas las categorías</option>
           </select>
           <div class="view-toggle">
             <button class="btn btn-sm" id="fichas-view-grid" onclick="setFichasView('grid')"><i class="ti ti-layout-grid"></i></button>
             <button class="btn btn-sm" id="fichas-view-list" onclick="setFichasView('list')"><i class="ti ti-list"></i></button>
           </div>
-          <button class="btn btn-sm" onclick="renderFichas()"><i class="ti ti-refresh"></i> Actualizar</button>
+          <button class="btn btn-sm" onclick="renderFichas()"><i class="ti ti-refresh"></i> <span data-i18n="common.update">Actualizar</span></button>
         </div>
       </div>
       <div id="fichas-list"></div>
@@ -274,14 +274,14 @@
         <div id="carta-editor-view" style="display:none">
           <div class="toolbar">
             <div class="left">
-              <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> Cartas</button>
+              <button class="btn btn-sm" onclick="backToCartaList()"><i class="ti ti-arrow-left"></i> <span data-i18n="nav.cartas">Cartas</span></button>
               <input type="text" id="carta-f-nombre" data-i18n-ph="ph.cartaName" placeholder="Nombre de la carta..." style="font-size:15px;font-weight:700;min-width:220px">
             </div>
             <button class="btn btn-primary" onclick="saveCarta()"><i class="ti ti-device-floppy"></i> <span data-i18n="common.save">Guardar</span></button>
           </div>
           <div class="field">
             <label data-i18n="label.daysAndSchedule">Días y horario en que está activa esta carta</label>
-            <p style="font-size:13px;color:var(--muted);margin:2px 0 8px">Activa los días en que se ofrece esta carta. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activa dentro de ese rango.</p>
+            <p style="font-size:13px;color:var(--muted);margin:2px 0 8px" data-i18n="label.cartaScheduleHint">Activa los días en que se ofrece esta carta. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activa dentro de ese rango.</p>
             <div id="carta-horario"></div>
           </div>
           <div class="toolbar">
@@ -322,7 +322,7 @@
           </div>
           <div class="field">
             <label data-i18n="label.daysAndScheduleMenu">Días y horario en que está activo este menú</label>
-            <p style="font-size:13px;color:var(--muted);margin:2px 0 8px">Activa los días en que se ofrece este menú. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activo dentro de ese rango.</p>
+            <p style="font-size:13px;color:var(--muted);margin:2px 0 8px" data-i18n="label.menuScheduleHint">Activa los días en que se ofrece este menú. Si dejas el horario en blanco, estará disponible todo el día. Si pones una hora de inicio y fin, solo estará activo dentro de ese rango.</p>
             <div id="menu-horario"></div>
           </div>
           <div class="toolbar">
@@ -394,8 +394,8 @@
 
       <div class="toolbar">
         <div class="left">
-          <button class="btn btn-sm" id="pedidos-tab-crear" onclick="setPedidosTab('crear')"><i class="ti ti-plus"></i> Realizar Pedido</button>
-          <button class="btn btn-sm" id="pedidos-tab-historial" onclick="setPedidosTab('historial')"><i class="ti ti-history"></i> Historial de Pedidos</button>
+          <button class="btn btn-sm" id="pedidos-tab-crear" onclick="setPedidosTab('crear')"><i class="ti ti-plus"></i> <span data-i18n="tab.makeOrder">Realizar Pedido</span></button>
+          <button class="btn btn-sm" id="pedidos-tab-historial" onclick="setPedidosTab('historial')"><i class="ti ti-history"></i> <span data-i18n="tab.orderHistory">Historial de Pedidos</span></button>
         </div>
       </div>
 
@@ -409,37 +409,37 @@
       <div class="view-subtitle" data-i18n="view.economia.subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
       <div style="margin-bottom:12px">
-        <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> Exportar contabilidad mensual</button>
+        <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> <span data-i18n="hr.export.title">Exportar contabilidad mensual</span></button>
       </div>
 
       <nav class="ge-tab-row" id="ge-tabs-row">
-        <button class="ge-tab active" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> Gastos Fijos</button>
-        <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> Gastos Variables</button>
-        <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> Cuenta de Resultados</button>
-        <button class="ge-tab" onclick="GE.tab('resultado')"><i class="ti ti-trending-up"></i> Resultado</button>
-        <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> Tesorería</button>
-        <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> Punto de Equilibrio</button>
-        <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> CAPEX</button>
+        <button class="ge-tab active" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> <span data-i18n="hr.lbl.fixedExpenses">Gastos Fijos</span></button>
+        <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> <span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span></button>
+        <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> <span data-i18n="tab.incomeStatement">Cuenta de Resultados</span></button>
+        <button class="ge-tab" onclick="GE.tab('resultado')"><i class="ti ti-trending-up"></i> <span data-i18n="common.result">Resultado</span></button>
+        <button class="ge-tab" onclick="GE.tab('tesoreria')"><i class="ti ti-building-bank"></i> <span data-i18n="tab.treasury">Tesorería</span></button>
+        <button class="ge-tab" onclick="GE.tab('pe')"><i class="ti ti-scale"></i> <span data-i18n="title.breakEven">Punto de Equilibrio</span></button>
+        <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
       </nav>
 
       <!-- GASTOS FIJOS -->
       <div id="ge-fijos" class="ge-tab-panel active">
         <div class="ge-kpi-grid" id="gf-kpis"></div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>Personal (nóminas + SS)</h4>
-            <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> Añadir</button></div>
+          <div class="ge-sec-head"><h4 data-i18n="hr.gf.titlePersonal">Personal (nóminas + SS)</h4>
+            <button class="btn btn-sm" onclick="GE.newGF('PERSONAL')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></div>
           <div id="gf-personal"></div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>Gastos Fijos Generales</h4>
-            <button class="btn btn-sm" onclick="GE.newGF('FIJOS')"><i class="ti ti-plus"></i> Añadir</button></div>
+          <div class="ge-sec-head"><h4 data-i18n="ge.generalFixedExpenses">Gastos Fijos Generales</h4>
+            <button class="btn btn-sm" onclick="GE.newGF('FIJOS')"><i class="ti ti-plus"></i> <span data-i18n="common.add">Añadir</span></button></div>
           <div id="gf-fijos"></div>
         </div>
         <div class="vis-section" id="gf-dist-visual" style="display:none">
-          <h4>Distribución sobre ventas <span class="ge-auto">AUTO</span></h4>
+          <h4><span data-i18n="ge.salesDistribution">Distribución sobre ventas</span> <span class="ge-auto">AUTO</span></h4>
           <div id="gf-visual-content"></div>
         </div>
-        <div class="ge-total-bar"><span>TOTAL GASTOS FIJOS MENSUALES</span><span id="gf-total-val">0 €</span></div>
+        <div class="ge-total-bar"><span data-i18n="ge.totalFixedMonthly">TOTAL GASTOS FIJOS MENSUALES</span><span id="gf-total-val">0 €</span></div>
       </div>
 
       <!-- GASTOS VARIABLES -->
@@ -448,10 +448,10 @@
         <div class="ge-kpi-grid" id="gv-kpis"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
-            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> Añadir compra extra</button></div>
-          <div style="padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)"><i class="ti ti-info-circle"></i> Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</div>
+            <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div>
+          <div style="padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)"><i class="ti ti-info-circle"></i> <span data-i18n="ge.autoPurchaseNote">Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</span></div>
           <div id="gv-list"></div>
-          <div id="gv-empty" class="empty" style="display:none">Sin compras registradas este mes.</div>
+          <div id="gv-empty" class="empty" style="display:none" data-i18n="empty.noPurchasesMonth">Sin compras registradas este mes.</div>
         </div>
         <div class="ge-total-bar"><span id="gv-total-lbl">TOTAL VARIABLES MES</span><span id="gv-total-val">0 €</span></div>
       </div>
@@ -464,11 +464,11 @@
           <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
         </div>
         <div class="vis-section" style="margin-bottom:14px">
-          <h4>Resultado mensual <span class="ge-auto">AUTO</span></h4>
+          <h4><span data-i18n="ge.monthlyResultChart">Resultado mensual</span> <span class="ge-auto">AUTO</span></h4>
           <div id="cdr-chart" class="bar-chart"></div>
         </div>
         <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span>
+          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedBillingNote">Facturación vinculada al TPV · Gastos vinculados a Gastos Fijos y Variables</span></span>
         </div>
         <div class="ge-grid"><table id="cdr-table"></table></div>
       </div>
@@ -476,13 +476,13 @@
       <!-- RESULTADO -->
       <div id="ge-resultado" class="ge-tab-panel">
         <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> Calculado automáticamente de Cuenta de Resultados + CAPEX</span>
+          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedResultNote">Calculado automáticamente de Cuenta de Resultados + CAPEX</span></span>
         </div>
         <div class="dist-config" style="margin-bottom:14px">
-          <div class="dist-field">Impuesto sobre beneficios (IRPF/IS) <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
-          <div class="dist-field">IVA soportado en compras (deducible) <input type="number" id="res-pct-iva-compras" value="10" min="0" max="21" step="0.5" oninput="GE.setPctIvaCompras()">%</div>
+          <div class="dist-field"><span data-i18n="label.profitTax">Impuesto sobre beneficios (IRPF/IS)</span> <input type="number" id="res-pct-impuesto" value="25" min="0" max="100" step="0.5" oninput="GE.setPctImpuesto()">%</div>
+          <div class="dist-field"><span data-i18n="label.vatOnPurchases">IVA soportado en compras (deducible)</span> <input type="number" id="res-pct-iva-compras" value="10" min="0" max="21" step="0.5" oninput="GE.setPctIvaCompras()">%</div>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. En la "Cuenta de Resultados" verás además el "IVA a liquidar con Hacienda (modelo 303)", que es la diferencia entre el IVA cobrado en ventas y el IVA pagado en compras e inversiones.</p>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> <span data-i18n="ge.netResultExplanation">El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. En la "Cuenta de Resultados" verás además el "IVA a liquidar con Hacienda (modelo 303)", que es la diferencia entre el IVA cobrado en ventas y el IVA pagado en compras e inversiones.</span></p>
         <div class="ge-grid"><table id="res-table"></table></div>
       </div>
 
@@ -491,23 +491,23 @@
         <div class="month-sel" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div class="dist-config">
-          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ Configurar distribución objetivo (suma 100%):</span>
-          <div class="dist-field">Personal <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
-          <div class="dist-field">G.Fijos <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-gf')">%</div>
-          <div class="dist-field">Gastos Variables <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-mp')">%</div>
-          <div class="dist-field">Otros <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-og')">%</div>
-          <div class="dist-field">Beneficio <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-ben')">%</div>
+          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
+          <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
+          <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-gf')">%</div>
+          <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-mp')">%</div>
+          <div class="dist-field"><span data-i18n="label.other">Otros</span> <input type="number" id="te-pct-og" value="5" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-og')">%</div>
+          <div class="dist-field"><span data-i18n="label.profit">Beneficio</span> <input type="number" id="te-pct-ben" value="10" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-ben')">%</div>
         </div>
         <div class="ge-section">
-          <div class="ge-sec-head"><h4>Distribución de tesorería <span class="ge-auto">AUTO</span></h4></div>
+          <div class="ge-sec-head"><h4><span data-i18n="ge.treasuryDistribution">Distribución de tesorería</span> <span class="ge-auto">AUTO</span></h4></div>
           <div class="te-row" style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;background:var(--bg)">
-            <span>Concepto</span><span style="text-align:right">%</span><span style="text-align:right">Objetivo</span>
-            <span style="text-align:right">Real</span><span style="text-align:right">Dif.</span><span style="text-align:center">Estado</span>
+            <span data-i18n="hr.lbl.concept">Concepto</span><span style="text-align:right">%</span><span style="text-align:right" data-i18n="hr.lbl.target">Objetivo</span>
+            <span style="text-align:right" data-i18n="label.real">Real</span><span style="text-align:right" data-i18n="label.diff">Dif.</span><span style="text-align:center" data-i18n="hr.lbl.status">Estado</span>
           </div>
           <div id="te-rows"></div>
         </div>
         <div class="vis-section">
-          <h4>Resultado mensual anual <span class="ge-auto">AUTO</span></h4>
+          <h4><span data-i18n="ge.annualMonthlyResult">Resultado mensual anual</span> <span class="ge-auto">AUTO</span></h4>
           <div id="te-annual-chart" class="bar-chart"></div>
         </div>
       </div>
@@ -515,51 +515,51 @@
       <!-- PUNTO DE EQUILIBRIO -->
       <div id="ge-pe" class="ge-tab-panel">
         <div style="margin-bottom:14px">
-          <span class="ge-link-note"><i class="ti ti-plug"></i> Costes fijos vinculados a Gastos Fijos</span>
+          <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.fixedCostsLinkedNote">Costes fijos vinculados a Gastos Fijos</span></span>
         </div>
         <div class="grid grid-2">
           <div>
             <div class="ge-section">
-              <div class="ge-sec-head"><h4>Datos de entrada</h4></div>
+              <div class="ge-sec-head"><h4 data-i18n="ge.inputData">Datos de entrada</h4></div>
               <div class="ge-input-row">
-                <label>Costes fijos totales <span class="ge-auto">AUTO</span></label>
+                <label><span data-i18n="label.fixedCosts">Costes fijos totales</span> <span class="ge-auto">AUTO</span></label>
                 <input type="number" id="pe-fijos" readonly style="background:var(--teal-l);color:var(--teal-d);border-color:var(--teal)">
               </div>
               <div class="ge-input-row">
-                <label>Ticket medio (€/cubierto)</label>
+                <label data-i18n="label.avgTicket">Ticket medio (€/cubierto)</label>
                 <input type="number" id="pe-ticket" min="0" step="0.5" oninput="GE.calcPE()">
               </div>
               <div class="ge-input-row">
-                <label>Cubiertos al mes</label>
+                <label data-i18n="label.coversMonth">Cubiertos al mes</label>
                 <input type="number" id="pe-cubiertos" min="0" step="1" oninput="GE.calcPE()">
               </div>
               <div class="ge-input-row">
-                <label>Días de apertura/mes</label>
+                <label data-i18n="label.openDaysMonth">Días de apertura/mes</label>
                 <input type="number" id="pe-dias" min="0" max="31" step="1" oninput="GE.calcPE()">
               </div>
               <div class="ge-input-row">
-                <label>Food cost objetivo (%)</label>
+                <label data-i18n="label.targetFoodCost">Food cost objetivo (%)</label>
                 <input type="number" id="pe-fc" min="0" max="100" step="0.5" value="35" oninput="GE.calcPE()">
               </div>
             </div>
           </div>
           <div>
             <div class="ge-section">
-              <div class="ge-sec-head"><h4>Resultados <span class="ge-auto">AUTO</span></h4></div>
-              <div class="ge-pe-result"><span class="pe-lbl">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
-              <div class="ge-pe-result" style="background:var(--amber-l)"><span class="pe-lbl" style="font-weight:700">Cubiertos para cubrir gastos</span><span class="pe-val" id="pe-r3" style="color:var(--amber-dark)">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl">Cubiertos por día necesarios</span><span class="pe-val" id="pe-r4">—</span></div>
-              <div class="ge-pe-result" style="background:var(--green-l)"><span class="pe-lbl" style="font-weight:700">Ventas mínimas mensuales</span><span class="pe-val" id="pe-r5" style="color:var(--green)">—</span></div>
+              <div class="ge-sec-head"><h4><span data-i18n="ge.results">Resultados</span> <span class="ge-auto">AUTO</span></h4></div>
+              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.variableCostPerCover">Coste variable por cubierto</span><span class="pe-val" id="pe-r1">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.contributionPerCover">Contribución por cubierto</span><span class="pe-val" id="pe-r2">—</span></div>
+              <div class="ge-pe-result" style="background:var(--amber-l)"><span class="pe-lbl" style="font-weight:700" data-i18n="label.coversToBreakEven">Cubiertos para cubrir gastos</span><span class="pe-val" id="pe-r3" style="color:var(--amber-dark)">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.coversPerDayNeeded">Cubiertos por día necesarios</span><span class="pe-val" id="pe-r4">—</span></div>
+              <div class="ge-pe-result" style="background:var(--green-l)"><span class="pe-lbl" style="font-weight:700" data-i18n="label.minMonthlySales">Ventas mínimas mensuales</span><span class="pe-val" id="pe-r5" style="color:var(--green)">—</span></div>
             </div>
             <div class="ge-section" style="margin-top:12px">
-              <div class="ge-sec-head"><h4>Comparativa</h4></div>
+              <div class="ge-sec-head"><h4 data-i18n="common.comparison">Comparativa</h4></div>
               <div class="vis-section" style="margin-bottom:0">
-                <h4>Cobertura actual vs equilibrio</h4>
+                <h4 data-i18n="ge.coverageVsBreakEven">Cobertura actual vs equilibrio</h4>
                 <div id="pe-gauge" style="margin-top:4px"></div>
               </div>
-              <div class="ge-pe-result"><span class="pe-lbl">Cubiertos actuales vs necesarios</span><span class="pe-val" id="pe-r6">—</span></div>
-              <div class="ge-pe-result"><span class="pe-lbl">Estado del negocio</span><span id="pe-estado" style="font-size:14px;font-weight:700">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.currentVsNeededCovers">Cubiertos actuales vs necesarios</span><span class="pe-val" id="pe-r6">—</span></div>
+              <div class="ge-pe-result"><span class="pe-lbl" data-i18n="label.businessStatus">Estado del negocio</span><span id="pe-estado" style="font-size:14px;font-weight:700">—</span></div>
             </div>
           </div>
         </div>
@@ -568,19 +568,19 @@
       <!-- CAPEX -->
       <div id="ge-capex" class="ge-tab-panel">
         <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-          <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> Nueva inversión</button>
+          <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> <span data-i18n="hr.capex.newInvestment">Nueva inversión</span></button>
         </div>
         <div class="ge-grid"><table id="capex-table">
           <thead><tr>
-            <th style="text-align:left">Descripción</th>
-            <th>Fecha</th><th>Importe</th><th>IVA</th><th>Total</th><th>Estado</th><th>Financiación</th><th style="width:60px"></th>
+            <th style="text-align:left" data-i18n="hr.lbl.description">Descripción</th>
+            <th data-i18n="common.date">Fecha</th><th data-i18n="hr.lbl.amountEur">Importe</th><th data-i18n="label.vat">IVA</th><th data-i18n="common.total">Total</th><th data-i18n="hr.lbl.status">Estado</th><th data-i18n="label.financing">Financiación</th><th style="width:60px"></th>
           </tr></thead>
           <tbody id="capex-tbody"></tbody>
           <tfoot><tr class="total">
-            <td>TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td><td></td>
+            <td data-i18n="ge.totalCapex">TOTAL CAPEX</td><td></td><td id="capex-base">—</td><td id="capex-iva">—</td><td id="capex-total">—</td><td></td><td></td><td></td>
           </tr></tfoot>
         </table></div>
-        <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p>Sin inversiones registradas</p></div>
+        <div id="capex-empty" class="empty" style="display:none"><i class="ti ti-building-factory"></i><p data-i18n="empty.noInvestments">Sin inversiones registradas</p></div>
       </div>
     </section>
 
@@ -661,11 +661,11 @@
       <div class="view-title" data-i18n="view.promocion.title">Promoción</div>
       <div class="view-subtitle" data-i18n="view.promocion.subtitle">Calendario de marketing y promoción del negocio</div>
       <nav class="ge-tab-row">
-        <button class="ge-tab" id="promo-tab-dia" onclick="setPromoTab('dia')">Día</button>
-        <button class="ge-tab" id="promo-tab-semana" onclick="setPromoTab('semana')">Semana</button>
-        <button class="ge-tab" id="promo-tab-mes" onclick="setPromoTab('mes')">Mes</button>
-        <button class="ge-tab" id="promo-tab-clientes" onclick="setPromoTab('clientes')">Clientes</button>
-        <button class="ge-tab" id="promo-tab-ideas" onclick="setPromoTab('ideas')"><i class="ti ti-bulb"></i> Ideas de contenido</button>
+        <button class="ge-tab" id="promo-tab-dia" onclick="setPromoTab('dia')" data-i18n="common.day">Día</button>
+        <button class="ge-tab" id="promo-tab-semana" onclick="setPromoTab('semana')" data-i18n="common.week">Semana</button>
+        <button class="ge-tab" id="promo-tab-mes" onclick="setPromoTab('mes')" data-i18n="common.month">Mes</button>
+        <button class="ge-tab" id="promo-tab-clientes" onclick="setPromoTab('clientes')" data-i18n="view.clientes.title">Clientes</button>
+        <button class="ge-tab" id="promo-tab-ideas" onclick="setPromoTab('ideas')"><i class="ti ti-bulb"></i> <span data-i18n="tab.contentIdeas">Ideas de contenido</span></button>
       </nav>
       <div id="promo-tab-content"></div>
     </section>
@@ -685,9 +685,9 @@
       <div class="view-subtitle" data-i18n="view.manual.subtitle">Guía rápida de cada módulo</div>
 
       <div class="card" style="margin-bottom:14px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-map-2"></i> Tour guiado interactivo</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> 💬 (botón inferior derecho) para preguntas concretas del día a día.</p>
-        <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> Iniciar tour guiado</button>
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-map-2"></i> <span data-i18n="manual.tourTitle">Tour guiado interactivo</span></h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px" data-i18n="manual.tourDesc">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> 💬 (botón inferior derecho) para preguntas concretas del día a día.</p>
+        <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> <span data-i18n="btn.startTour">Iniciar tour guiado</span></button>
       </div>
 
       <div class="field" style="max-width:340px;margin-bottom:10px">
@@ -696,7 +696,7 @@
       <div class="manual-wrap">
         <div class="manual-nav" id="manual-nav"></div>
         <div>
-          <div style="text-align:right;margin-bottom:6px"><button class="btn btn-sm" onclick="printManualChapter()"><i class="ti ti-printer"></i> Imprimir capítulo</button></div>
+          <div style="text-align:right;margin-bottom:6px"><button class="btn btn-sm" onclick="printManualChapter()"><i class="ti ti-printer"></i> <span data-i18n="btn.printChapter">Imprimir capítulo</span></button></div>
           <div class="manual-detail" id="manual-detail"></div>
         </div>
       </div>
@@ -712,7 +712,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- ========== AYUDA / ASISTENTE ========== -->
-<button class="help-fab" id="help-fab" onclick="toggleHelpPanel()" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
+<button class="help-fab" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
 <div class="help-panel" id="help-panel">
   <div class="help-panel-header">
     <h4><i class="ti ti-lifebuoy"></i> <span data-i18n="help.title"></span></h4>
@@ -727,7 +727,7 @@
     <div class="help-chat-messages" id="help-chat-messages"></div>
     <div class="help-suggestions" id="help-suggestions"></div>
     <div class="help-chat-input-row">
-      <input type="text" id="help-chat-input" data-i18n-placeholder="help.assistant.placeholder" onkeydown="if(event.key==='Enter') sendHelpMessage()">
+      <input type="text" id="help-chat-input" data-i18n-ph="help.assistant.placeholder" onkeydown="if(event.key==='Enter') sendHelpMessage()">
       <button onclick="sendHelpMessage()"><i class="ti ti-send"></i></button>
     </div>
   </div>
@@ -752,7 +752,7 @@
 </div>
 
 <!-- ========== CHAT INTERNO ========== -->
-<button class="help-fab chat-fab" id="chat-fab" onclick="toggleChatPanel()" title="Chat interno">
+<button class="help-fab chat-fab" id="chat-fab" onclick="toggleChatPanel()" data-i18n-title="title.internalChat" title="Chat interno">
   <i class="ti ti-messages"></i>
   <span class="chat-badge" id="chat-badge" style="display:none"></span>
 </button>
