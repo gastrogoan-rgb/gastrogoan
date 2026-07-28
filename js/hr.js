@@ -1406,7 +1406,10 @@ function renderHorariosSemana(){
         <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
         <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">Hoy</button>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button>
+        <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       ${Object.entries(SHIFT_TYPES).map(([k,v]) => `<span class="badge" style="background:${v.bg};color:${v.tx}">${k} = ${v.label}</span>`).join('')}
@@ -1418,6 +1421,40 @@ function renderHorariosSemana(){
       </table>
     </div>
   `;
+}
+
+// Hoja imprimible del horario semanal visible, para pegar en cocina/barra.
+function printWeeklySchedule(){
+  const emps = areaEmployees();
+  const dates = getWeekDates(horariosWeekOffset);
+  const dateStrs = dates.map(dateStr);
+  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)} ${d.getDate()}/${d.getMonth()+1}</th>`).join('');
+  const rows = emps.map(emp => {
+    const cells = dateStrs.map(ds => {
+      const turno = (DB.turnos||[]).find(x => x.employeeId===emp.id && x.fecha===ds);
+      if(!turno) return '<td>—</td>';
+      const tipo = SHIFT_TYPES[turno.tipo] || SHIFT_TYPES.C;
+      return `<td>${turno.tipo}${turno.tipo!=='D'?` (${escapeHtml(turnoHorarioLabel(turno))})`:''} — ${escapeHtml(tipo.label)}</td>`;
+    }).join('');
+    return `<tr><td><strong>${escapeHtml(emp.name)}</strong>${emp.rol?` <span style="color:#888">(${escapeHtml(emp.rol)})</span>`:''}</td>${cells}</tr>`;
+  }).join('');
+  const win = window.open('', '_blank', 'width=900,height=1000');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printSchedule')}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:9.5pt;color:#111;padding:12mm}
+  h1{font-size:15pt;margin:0 0 10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+  th{background:#f5f5f3}
+  @media print{body{padding:8mm}}</style></head><body>
+  <h1>${t('btn.printSchedule')} — ${label}</h1>
+  <table><thead><tr><th>${t('th.employee')}</th>${headerCells}</tr></thead>
+  <tbody>${rows || `<tr><td colspan="8">${t('empty.employees')}</td></tr>`}</tbody></table>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 function openTurnoModal(id, employeeId, fecha){
@@ -1512,13 +1549,23 @@ function saveTurno(id){
     notas: document.getElementById('turno-notas').value.trim()
   };
   if(!DB.turnos) DB.turnos = [];
-  if(id){
-    const turno = DB.turnos.find(x => x.id===id);
-    if(!turno){ showToast(t('msg.shiftNotFound')); return; }
+  let turno = id ? DB.turnos.find(x => x.id===id) : null;
+  if(id && !turno){ showToast(t('msg.shiftNotFound')); return; }
+  if(!turno){
+    // Un empleado solo puede tener un turno por día: si ya había uno para esa
+    // fecha, se sustituye en vez de crear un duplicado que descuadraría las
+    // horas totales (contadas sumando todos los turnos, no solo el visible).
+    turno = DB.turnos.find(x => x.employeeId===data.employeeId && x.fecha===data.fecha);
+  }
+  const emp = DB.employees.find(x=>x.id===data.employeeId);
+  const wasNew = !turno;
+  if(turno){
     Object.assign(turno, data);
   } else {
-    DB.turnos.push({id: genId(), ...data});
+    turno = {id: genId(), ...data};
+    DB.turnos.push(turno);
   }
+  logPersonalEvent(`${wasNew?'Turno creado':'Turno editado'}: ${emp?emp.name:'?'} — ${data.fecha} (${data.tipo})`);
   saveDB();
   closeModal();
   renderHorariosTab();
@@ -1527,6 +1574,11 @@ function saveTurno(id){
 
 function deleteTurno(id){
   if(!confirm(t('msg.confirmDeleteShift'))) return;
+  const turno = (DB.turnos||[]).find(t => t.id===id);
+  if(turno){
+    const emp = DB.employees.find(x=>x.id===turno.employeeId);
+    logPersonalEvent(`Turno eliminado: ${emp?emp.name:'?'} — ${turno.fecha} (${turno.tipo})`);
+  }
   DB.turnos = (DB.turnos||[]).filter(t => t.id!==id);
   saveDB();
   closeModal();
@@ -1539,10 +1591,48 @@ function areaEmployees(){
   return DB.employees.filter(e => (e.area||'cocina') === currentArea());
 }
 
+// Registro de cambios sensibles de Personal (turnos, reseteos de PIN), para
+// poder consultar quién cambió qué y cuándo — mismo espíritu que el
+// historial de ajustes de Stock.
+function logPersonalEvent(desc){
+  if(!DB.personalLog) DB.personalLog = [];
+  DB.personalLog.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5),
+    createdAt: new Date().toISOString(), desc, area: currentArea()
+  });
+  if(DB.personalLog.length > 500) DB.personalLog = DB.personalLog.slice(-500);
+}
+
+function openPersonalLogModal(){
+  const log = [...(DB.personalLog||[])].filter(e => (e.area||'cocina')===currentArea()).reverse().slice(0, 100);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-history"></i> ${t('title.personalLog')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>Detalle</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.desc)}</td></tr>`).join('') : `<tr><td colspan="3"><div class="empty" style="padding:14px">${t('empty.noPersonalLog')}</div></td></tr>`}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
+let personalSearch = '';
+function setPersonalSearch(val){
+  personalSearch = val.toLowerCase();
+  renderHorariosPersonal();
+}
+
 function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
-  const emps = areaEmployees();
+  const allEmps = areaEmployees();
+  const emps = personalSearch ? allEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : allEmps;
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
     return `
@@ -1571,12 +1661,15 @@ function renderHorariosPersonal(){
 
   box.innerHTML = `
     <div class="toolbar">
-      <div class="left"></div>
+      <div class="left">
+        <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
+      </div>
       <div style="display:flex;gap:8px">
+        <button class="owner-only btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
-    ${emps.length ? `<div class="grid grid-personal">${cards}</div>` : `<div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>`}
+    ${emps.length ? `<div class="grid grid-personal">${cards}</div>` : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
 
@@ -1783,13 +1876,17 @@ function openEmployeeModal(id){
 function resetEmployeePin(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  if(!confirm(t('msg.confirmResetPin').replace('${name}', e.name))) return;
-  e.pin = '1234';
-  e.pinChanged = false;
-  // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
-  saveDB();
-  showToast(t('msg.pinResetDone'));
-  openEmployeeModal(id);
+  // Resetear el PIN de fichaje de otra persona es tan sensible como borrar su
+  // ficha: requiere el PIN del negocio, no basta con tener el panel abierto.
+  requestBusinessPinAction(t('title.resetPin'), t('msg.confirmResetPin').replace('${name}', e.name), () => {
+    e.pin = '1234';
+    e.pinChanged = false;
+    // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
+    logPersonalEvent(`PIN de fichaje restablecido: ${e.name}`);
+    saveDB();
+    showToast(t('msg.pinResetDone'));
+    openEmployeeModal(id);
+  });
 }
 
 function saveEmployee(id){
@@ -1817,17 +1914,36 @@ function saveEmployee(id){
 }
 
 function deleteEmployee(id){
-  if(!confirm(t('msg.confirmDeleteEmployee'))) return;
+  const e = DB.employees.find(x=>x.id===id);
+  if(!e) return;
+  // Borrar personal es irreversible (se pierden turnos/fichajes) y deja huecos
+  // en pedidos/tareas asignadas: mismo PIN de negocio que otras bajas sensibles.
+  requestBusinessPinAction(t('title.deleteEmployee'), t('msg.confirmDeleteEmployee'), () => reallyDeleteEmployee(id));
+}
+function reallyDeleteEmployee(id){
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);
   delete DB.shifts[id];
   delete DB.workDistribution[id];
+  // Limpia referencias sueltas en otros módulos para que no quede un id
+  // fantasma apuntando a un empleado que ya no existe.
+  (DB.tpvOrders||[]).forEach(o => { if(o.camareroId===id) o.camareroId = null; });
+  (DB.limpieza && DB.limpieza.tareas||[]).forEach(t => { if(t.responsableId===id) t.responsableId = null; });
+  if(DB.limpieza){
+    Object.keys(DB.limpieza).forEach(key => {
+      if(Array.isArray(DB.limpieza[key])){
+        DB.limpieza[key].forEach(entry => { if(entry && entry.responsableId===id) entry.responsableId = null; });
+      }
+    });
+  }
+  (DB.promos||[]).forEach(p => { if(p.responsableId===id) p.responsableId = null; });
   saveDB();
   closeModal();
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-horarios') renderHorarios();
   else if(active && active.id === 'view-distribucion') renderDistribucion();
+  showToast(t('msg.employeeDeleted'));
 }
 
 /* ============================================================
@@ -2102,6 +2218,15 @@ function openNewPinModal(employeeId, action){
   `);
 }
 
+// ¿Coincide pinPlain con el PIN ya guardado (hasheado o en claro) de otro empleado?
+function employeePinCollides(pinPlain, excludeId){
+  return DB.employees.some(e => {
+    if(e.id === excludeId || !e.pinChanged) return false;
+    const stored = e.pin || '1234';
+    return stored.startsWith('H:') ? stored === hashPin(pinPlain) : stored === pinPlain;
+  });
+}
+
 function confirmNewPin(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
@@ -2110,6 +2235,7 @@ function confirmNewPin(employeeId, action){
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
+  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
   e.pin = hashPin(p1);
   e.pinChanged = true;
   saveDB();
