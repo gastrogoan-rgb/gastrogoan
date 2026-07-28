@@ -13,14 +13,14 @@ function purgePaidOrders(){
 }
 
 const KITCHEN_STATES = {
-  cocina:     {label:'En espera',      icon:'ti-clock',        cls:'badge-amber'},
-  preparando: {label:'En preparación', icon:'ti-flame',        cls:'badge-blue'},
-  entregado:  {label:'Entregado',      icon:'ti-circle-check', cls:'badge-green'}
+  cocina:     {labelKey:'kitchen.waiting',    icon:'ti-clock',        cls:'badge-amber'},
+  preparando: {labelKey:'kitchen.preparing',  icon:'ti-flame',        cls:'badge-blue'},
+  entregado:  {labelKey:'kitchen.delivered',  icon:'ti-circle-check', cls:'badge-green'}
 };
 function kitchenStatusBadge(line){
   const st = KITCHEN_STATES[line.estado];
   if(!st || line.estado === 'entregado') return '';
-  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${st.label}</span>`;
+  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${t(st.labelKey)}</span>`;
 }
 function getActiveCartas(){
   const ids = DB.activeCartaIds||[];
@@ -541,7 +541,7 @@ function openNewOrderPaxModal(tableId){
         ${pendingReservas.map(r=>{
           const client = DB.clients.find(c=>c.id===r.clientId);
           const name = client ? client.name : (r.clientName||'—');
-          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} pers.</option>`;
+          return `<option value="${r.id}">${escapeHtml(r.time)} · ${escapeHtml(name)} · ${r.people} ${t('common.persAbbr')}</option>`;
         }).join('')}
       </select>
     </div>
@@ -1054,7 +1054,7 @@ function renderOrderClientNotesHtml(order){
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
@@ -1177,14 +1177,14 @@ function renderOrderComandaPanel(order){
     const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
     let statusBadge = '';
     if(allDelivered) statusBadge = '<span class="badge badge-green" style="font-size:10px">✅ Recogido</span>';
-    else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = '<span class="badge badge-green" style="font-size:10px">🍽️ Listo para recoger</span>';
-    else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = '<span class="badge badge-blue" style="font-size:10px">🔥 En preparación</span>';
-    else if(allFired) statusBadge = '<span class="badge badge-amber" style="font-size:10px">⏳ Marchado</span>';
+    else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px">🍽️ ${t('tpv.readyToPickup')}</span>`;
+    else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px">🔥 ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px">⏳ ${t('tpv.fired')}</span>`;
 
     return `
     <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
-        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : 'Sin categoría'}</strong>
+        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
         <div style="display:flex;gap:4px;align-items:center">
           ${statusBadge}
           ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
@@ -1316,7 +1316,7 @@ function setLineEstado(orderId, idx, estado){
 
 function comandaOrderTitle(order){
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  if(table) return `${table.name}${order.pax ? ` · ${order.pax} pers.` : ''}`;
+  if(table) return `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}`;
   return `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
 }
 
@@ -1744,13 +1744,13 @@ function openVoidLogModal(){
 
 // Momentos de servicio típicos para poder marchar la comanda por tandas
 // (primeros, segundos...) independientemente de la sección de la carta.
-const COURSE_OPTIONS = ['Bebidas','Entrantes','Primeros','Segundos','Terceros','Postres','Cafés y copas'];
+function getCourseOptions(){ return t('tpv.courseOptions'); }
 
 function openLineNotesModal(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line) return;
-  const options = [...new Set([...COURSE_OPTIONS, ...(order.tandas||[]), line.tanda||''])].filter(t=>t!=='');
+  const options = [...new Set([...getCourseOptions(), ...(order.tandas||[]), line.tanda||''])].filter(o=>o!=='');
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-note"></i> ${escapeHtml(line.name)}</h3>
@@ -2222,7 +2222,7 @@ function renderSplitPartsList(order){
             <tr>
               <td>${escapeHtml(p.label)}${p.itemNames && p.itemNames.length ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(p.itemNames.join(', '))}</div>` : ''}</td>
               <td>${fmtMoney(p.amount)}</td>
-              <td>${p.paid ? `<span class="badge badge-green"><i class="ti ti-check"></i> Pagado${p.metodoPago ? ' · '+escapeHtml(p.metodoPago) : ''}</span>` : `<span class="badge">Pendiente</span>`}</td>
+              <td>${p.paid ? `<span class="badge badge-green"><i class="ti ti-check"></i> ${t('common.paid')}${p.metodoPago ? ' · '+escapeHtml(p.metodoPago) : ''}</span>` : `<span class="badge">${t('common.pending')}</span>`}</td>
               <td>${p.paid ? '' : `<button class="btn btn-primary" onclick="openSplitPartPayment(${order.id}, ${p.id})"><i class="ti ti-cash"></i> Cobrar</button>`}</td>
             </tr>
           `).join('')}
@@ -2514,7 +2514,7 @@ function buildTicketHeaderLines(){
 function buildTicketText(sale, opts={}){
   const tc = (DB.business && DB.business.ticket) || {};
   const lines = [...buildTicketHeaderLines()];
-  if(opts.factura) lines.push('FACTURA SIMPLIFICADA Nº ' + sale.facturaNum);
+  if(opts.factura) lines.push(t('ticket.invoiceNumber') + ' ' + sale.facturaNum);
   lines.push(sale.date);
   lines.push(`${sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway')}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
   lines.push('------------------------------');
@@ -2525,16 +2525,16 @@ function buildTicketText(sale, opts={}){
   const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
   const base = sale.total / (1 + ivaPct/100);
   const iva = sale.total - base;
-  lines.push(`Base imponible: ${fmtMoney(base)}`);
-  lines.push(`IVA (${ivaPct}%): ${fmtMoney(iva)}`);
-  lines.push(`TOTAL: ${fmtMoney(sale.total)}`);
+  lines.push(`${t('ticket.taxBase')}: ${fmtMoney(base)}`);
+  lines.push(`${t('common.vat')} (${ivaPct}%): ${fmtMoney(iva)}`);
+  lines.push(`${t('common.total')}: ${fmtMoney(sale.total)}`);
   if(sale.pagos && sale.pagos.length > 1){
     sale.pagos.forEach(p => lines.push(`${p.label}: ${fmtMoney(p.amount)} (${p.metodoPago||''})`));
   }else{
-    lines.push(`Pago: ${sale.metodoPago||''}`);
+    lines.push(`${t('ticket.payment')}: ${sale.metodoPago||''}`);
   }
   lines.push('');
-  lines.push(tc.pie || '¡Gracias por su visita!');
+  lines.push(tc.pie || t('ticket.thanksVisit'));
   return lines.join('\n');
 }
 

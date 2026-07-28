@@ -880,6 +880,13 @@ const I18N = {
     'gate.connectMoreDevicesBody': '(móviles de camareros, tablet de cocina): instala GastroGoan en ese dispositivo y activa la misma clave de licencia (${key}). Se sincronizará solo, automáticamente, sin pasos adicionales.',
     'gate.changeFirebaseConfig': 'Cambiar la configuración de Firebase', 'gate.emptyToDisconnect': 'Deja ambos campos vacíos y guarda para desconectar la nube de este negocio.',
     'gate.invalidLicenseKey': 'Clave no válida. Comprueba que la copiaste entera, con los guiones, tal y como te la envió tu vendedor.',
+    'common.paid': 'Pagado', 'common.pending': 'Pendiente',
+    'kitchen.waiting': 'En espera', 'kitchen.preparing': 'En preparación', 'kitchen.delivered': 'Entregado',
+    'tpv.readyToPickup': 'Listo para recoger', 'tpv.fired': 'Marchado',
+    'tpv.courseOptions': ['Bebidas','Entrantes','Primeros','Segundos','Terceros','Postres','Cafés y copas'],
+    'ticket.invoiceNumber': 'FACTURA SIMPLIFICADA Nº', 'ticket.thanksVisit': '¡Gracias por su visita!',
+    'common.vat': 'IVA', 'ticket.taxBase': 'Base imponible', 'ticket.payment': 'Pago',
+    'common.persAbbr': 'pers.',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -1640,6 +1647,13 @@ const I18N = {
     'gate.connectMoreDevicesBody': '(mòbils de cambrers, tauleta de cuina): instal·la GastroGoan en aquest dispositiu i activa la mateixa clau de llicència (${key}). Es sincronitzarà sol, automàticament, sense passos addicionals.',
     'gate.changeFirebaseConfig': 'Canviar la configuració de Firebase', 'gate.emptyToDisconnect': 'Deixa els dos camps buits i desa per desconnectar el núvol d\'aquest negoci.',
     'gate.invalidLicenseKey': 'Clau no vàlida. Comprova que la vas copiar sencera, amb els guions, tal com te la va enviar el teu venedor.',
+    'common.paid': 'Pagat', 'common.pending': 'Pendent',
+    'kitchen.waiting': 'En espera', 'kitchen.preparing': 'En preparació', 'kitchen.delivered': 'Lliurat',
+    'tpv.readyToPickup': 'Llest per recollir', 'tpv.fired': 'Marxat',
+    'tpv.courseOptions': ['Begudes','Entrants','Primers','Segons','Tercers','Postres','Cafès i copes'],
+    'ticket.invoiceNumber': 'FACTURA SIMPLIFICADA Núm.', 'ticket.thanksVisit': 'Gràcies per la teva visita!',
+    'common.vat': 'IVA', 'ticket.taxBase': 'Base imposable', 'ticket.payment': 'Pagament',
+    'common.persAbbr': 'pers.',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -2400,6 +2414,13 @@ const I18N = {
     'gate.connectMoreDevicesBody': '(waiters\' phones, kitchen tablet): install GastroGoan on that device and activate the same license key (${key}). It will sync automatically, with no extra steps.',
     'gate.changeFirebaseConfig': 'Change Firebase settings', 'gate.emptyToDisconnect': 'Leave both fields empty and save to disconnect this business\'s cloud.',
     'gate.invalidLicenseKey': 'Invalid key. Check that you copied it in full, with the dashes, exactly as your vendor sent it.',
+    'common.paid': 'Paid', 'common.pending': 'Pending',
+    'kitchen.waiting': 'Waiting', 'kitchen.preparing': 'Preparing', 'kitchen.delivered': 'Delivered',
+    'tpv.readyToPickup': 'Ready to pick up', 'tpv.fired': 'Fired',
+    'tpv.courseOptions': ['Drinks','Starters','First courses','Main courses','Third courses','Desserts','Coffees & drinks'],
+    'ticket.invoiceNumber': 'SIMPLIFIED INVOICE No.', 'ticket.thanksVisit': 'Thank you for your visit!',
+    'common.vat': 'VAT', 'ticket.taxBase': 'Taxable base', 'ticket.payment': 'Payment',
+    'common.persAbbr': 'ppl',
   }
 };
 function getLang(){
