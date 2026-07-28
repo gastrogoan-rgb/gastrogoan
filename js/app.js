@@ -639,8 +639,13 @@ function togglePromoDone(promoId, checked){
   const p = DB.promos.find(x=>x.id===promoId);
   if(!p) return;
   p.done = checked;
+  // Traza de cuándo se completó (no solo un booleano reversible sin rastro),
+  // mismo espíritu que la fecha/hora añadida a las tareas de Plan de Limpieza.
+  const now = new Date();
+  p.doneAt = checked ? now.toISOString() : null;
   saveDB();
-  renderDistDetail();
+  if(document.getElementById('distribucion-content')) renderDistDetail();
+  if(document.getElementById('promo-tab-content')) renderPromocion();
 }
 
 // Tareas de producción: son una plantilla recurrente por día de la semana
@@ -2130,21 +2135,39 @@ function goToPromoDia(date){
   renderPromocion();
 }
 
+let promoFilterResponsable = '';
+let promoFilterStatus = '';
+function setPromoFilter(field, val){
+  if(field==='resp') promoFilterResponsable = val; else promoFilterStatus = val;
+  renderPromoDia();
+}
+
 function renderPromoDia(){
   const box = document.getElementById('promo-tab-content');
   const date = promoDate;
-  const items = DB.promos.filter(p => p.fecha === date);
+  const salaEmployees = DB.employees.filter(e=>(e.area||'cocina')==='sala');
+  const allItems = DB.promos.filter(p => p.fecha === date);
+  const items = allItems.filter(p =>
+    (!promoFilterResponsable || String(p.responsableId||'')===promoFilterResponsable) &&
+    (!promoFilterStatus || (promoFilterStatus==='done' ? p.done : !p.done))
+  );
 
-  const listHtml = !items.length
+  const listHtml = !allItems.length
     ? `<div class="empty"><i class="ti ti-speakerphone"></i>No hay acciones de promoción para este día.</div>`
+    : !items.length
+    ? `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`
     : `<div class="grid grid-3">
         ${items.map(p => `
           <div class="card">
             <h3 style="justify-content:space-between;font-size:14px">
-              <span>${escapeHtml(p.titulo)}</span>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700">
+                <input type="checkbox" ${p.done?'checked':''} onchange="togglePromoDone(${p.id},this.checked)">
+                <span style="${p.done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
+              </label>
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
+            ${p.done && p.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Hecho el ${escapeHtml(new Date(p.doneAt).toLocaleString('es-ES'))}</div>` : ''}
             <div class="actions-cell owner-only" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -2157,6 +2180,15 @@ function renderPromoDia(){
     <div class="toolbar">
       <div class="left">
         <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
+        <select onchange="setPromoFilter('resp', this.value)" style="max-width:180px">
+          <option value="">Todos los responsables</option>
+          ${salaEmployees.map(e=>`<option value="${e.id}" ${promoFilterResponsable===String(e.id)?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+        </select>
+        <select onchange="setPromoFilter('status', this.value)" style="max-width:140px">
+          <option value="">Todos los estados</option>
+          <option value="done" ${promoFilterStatus==='done'?'selected':''}>Hechas</option>
+          <option value="pending" ${promoFilterStatus==='pending'?'selected':''}>Pendientes</option>
+        </select>
       </div>
       <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
     </div>
@@ -2241,13 +2273,46 @@ function renderPromoMes(){
         <button class="btn btn-sm" onclick="promoMonthOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> Imprimir</button>
+        <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      </div>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>
   `;
+}
+
+// Listado imprimible de las acciones de promoción del mes visible.
+function printPromoMes(year, month){
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const rows = [];
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = dateStr(new Date(year, month, day));
+    const items = DB.promos.filter(p => p.fecha === ds);
+    items.forEach(p => {
+      const resp = p.responsableId ? DB.employees.find(e=>e.id===p.responsableId) : null;
+      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${p.done?'✅':'—'}</td></tr>`);
+    });
+  }
+  const win = window.open('', '_blank', 'width=900,height=1000');
+  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Promoción — ${monthFull(month)} ${year}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:12mm}
+  h1{font-size:15pt;margin:0 0 10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+  th{background:#f5f5f3}
+  @media print{body{padding:8mm}}</style></head><body>
+  <h1>Promoción — ${monthFull(month)} ${year}</h1>
+  <table><thead><tr><th>Fecha</th><th>Título</th><th>Descripción</th><th>Responsable</th><th>Hecho</th></tr></thead>
+  <tbody>${rows.join('') || '<tr><td colspan="5">Sin acciones este mes.</td></tr>'}</tbody></table>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 // Mensajes preconfigurados para la interacción post-servicio con el cliente
@@ -2413,17 +2478,19 @@ function savePromo(id){
 
   if(!titulo){ showToast(t('msg.indicateTitle')); return; }
 
+  const isDuplicate = DB.promos.some(p => p.id!==id && p.fecha===fecha && p.titulo.toLowerCase()===titulo.toLowerCase() && p.responsableId===responsableId);
+
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
     Object.assign(promo, {fecha, titulo, descripcion, responsableId});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false, doneAt:null, zona:'sala'});
   }
   saveDB();
   closeModal();
   renderPromocion();
-  showToast(t('msg.actionSaved'));
+  showToast(isDuplicate ? 'Guardado — ya había otra acción igual ese día para esa persona' : t('msg.actionSaved'));
 }
 
 function deletePromo(id){
