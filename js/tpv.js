@@ -567,8 +567,11 @@ function confirmOpenTableOrder(tableId){
     const client = DB.clients.find(c=>c.id===r.clientId);
     clienteNombre = client ? client.name : (r.clientName||'');
     reservationId = r.id;
-    r.llegada = true;
-    if(!r.tableId) r.tableId = tableId;
+    // Marca la llegada y, sobre todo, actualiza la mesa de la reserva a la
+    // mesa REAL donde se sienta (no solo si estaba sin asignar): si la sala
+    // se reorganiza sobre la marcha, la reserva no debe quedar "atada" a una
+    // mesa distinta a la que de verdad se está usando.
+    setReservationArrival(r.id, true, tableId);
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }

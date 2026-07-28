@@ -1747,11 +1747,18 @@ function saveReservation(id){
   }
 
   // Aviso (no bloqueante) si ya hay otra reserva sin cancelar para el mismo
-  // cliente a la misma fecha y hora, para no duplicarla sin querer.
-  const dupe = DB.reservations.find(r =>
-    r.id !== id && r.date === date && r.time === time && r.status !== 'cancelada' && r.status !== 'no_show' &&
-    ((clientId && r.clientId === clientId) || (!clientId && clientName && (r.clientName||'').trim().toLowerCase() === clientName.toLowerCase()))
-  );
+  // cliente cerca de la misma fecha y hora (mismo margen que se usa para
+  // decidir si dos reservas "chocan" al asignar mesa, en vez de exigir que
+  // la hora coincida al minuto exacto — 20:00 y 20:05 son la misma reserva
+  // duplicada por error, no dos reservas distintas).
+  const dupe = DB.reservations.find(r => {
+    if(r.id === id || r.date !== date || r.status === 'cancelada' || r.status === 'no_show') return false;
+    const isSameClient = (clientId && r.clientId === clientId) || (!clientId && clientName && (r.clientName||'').trim().toLowerCase() === clientName.toLowerCase());
+    if(!isSameClient) return false;
+    const rMin = reservaTimeToMinutes(r.time), reqMin = reservaTimeToMinutes(time);
+    if(rMin == null || reqMin == null) return r.time === time;
+    return Math.abs(rMin - reqMin) < reservaVentanaMin(Math.max(people||1, r.people||1));
+  });
   if(dupe){
     if(!confirm(t('msg.confirmDuplicateReservation'))) return;
   }
@@ -1784,11 +1791,28 @@ function saveReservation(id){
   showToast(t('msg.reservationSaved'));
 }
 
+// Marca (o desmarca) la llegada de una reserva, actualizando su estado a la
+// vez: al llegar pasa a "completada" (antes se quedaba en "confirmada" para
+// siempre, contando de más si alguna vez se recontaba el aforo del turno).
+// Solo tiene sentido sobre una reserva confirmada o ya completada — no sobre
+// una cancelada o marcada como no presentada.
+// `tableId`, si se indica, actualiza la mesa de la reserva a la mesa real
+// donde se ha sentado (evita que se quede "reservada" una mesa distinta a
+// la que realmente se usó, si se reorganizó sobre la marcha).
+function setReservationArrival(id, arrived, tableId){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  if(r.status !== 'confirmada' && r.status !== 'completada') return;
+  r.llegada = arrived;
+  r.status = arrived ? 'completada' : 'confirmada';
+  if(arrived && tableId) r.tableId = tableId;
+  saveDB();
+}
+
 function toggleReservaLlegada(id){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
-  r.llegada = !r.llegada;
-  saveDB();
+  setReservationArrival(id, !r.llegada);
   renderReservas();
 }
 
