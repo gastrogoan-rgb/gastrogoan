@@ -2154,7 +2154,7 @@ function renderPromoDia(){
   );
 
   const listHtml = !allItems.length
-    ? `<div class="empty"><i class="ti ti-speakerphone"></i>No hay acciones de promoción para este día.</div>`
+    ? `<div class="empty"><i class="ti ti-speakerphone"></i>${t('promo.day.noActions')}</div>`
     : !items.length
     ? `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`
     : `<div class="grid grid-3">
@@ -2168,7 +2168,7 @@ function renderPromoDia(){
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            ${p.done && p.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">Hecho el ${escapeHtml(new Date(p.doneAt).toLocaleString('es-ES'))}</div>` : ''}
+            ${p.done && p.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(p.doneAt).toLocaleString('es-ES')))}</div>` : ''}
             <div class="actions-cell owner-only" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -2182,16 +2182,16 @@ function renderPromoDia(){
       <div class="left">
         <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
         <select onchange="setPromoFilter('resp', this.value)" style="max-width:180px">
-          <option value="">Todos los responsables</option>
+          <option value="">${t('promo.day.allResponsibles')}</option>
           ${salaEmployees.map(e=>`<option value="${e.id}" ${promoFilterResponsable===String(e.id)?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
         </select>
         <select onchange="setPromoFilter('status', this.value)" style="max-width:140px">
-          <option value="">Todos los estados</option>
-          <option value="done" ${promoFilterStatus==='done'?'selected':''}>Hechas</option>
-          <option value="pending" ${promoFilterStatus==='pending'?'selected':''}>Pendientes</option>
+          <option value="">${t('promo.day.allStatuses')}</option>
+          <option value="done" ${promoFilterStatus==='done'?'selected':''}>${t('promo.day.done')}</option>
+          <option value="pending" ${promoFilterStatus==='pending'?'selected':''}>${t('promo.day.pending')}</option>
         </select>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t("promo.newAction")}</button>
     </div>
     ${listHtml}
   `;
@@ -2228,7 +2228,7 @@ function renderPromoSemana(){
         <button class="btn btn-sm" onclick="promoWeekOffset++;renderPromocion()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${dates[0].getDate()}/${dates[0].getMonth()+1} – ${dates[6].getDate()}/${dates[6].getMonth()+1}</strong>
       </div>
-      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+      <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -2282,14 +2282,14 @@ function renderPromoMes(){
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> Imprimir</button>
-        <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
+        <button class="btn" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> ${t('promo.print')}</button>
+        <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> ${t('promo.newAction')}</button>
       </div>
     </div>
     <div class="grid grid-3" style="margin-bottom:12px">
-      <div class="kpi"><div class="label">Acciones este mes</div><div class="value">${monthPromos.length}</div></div>
-      <div class="kpi ok"><div class="label">Completadas</div><div class="value">${monthDone} / ${monthPromos.length}</div></div>
-      <div class="kpi"><div class="label">Categorías de ideas usadas</div><div class="value">${usedCategories} / ${CONTENT_IDEAS.length}</div></div>
+      <div class="kpi"><div class="label">${t('promo.kpi.actionsThisMonth')}</div><div class="value">${monthPromos.length}</div></div>
+      <div class="kpi ok"><div class="label">${t('promo.kpi.completed')}</div><div class="value">${monthDone} / ${monthPromos.length}</div></div>
+      <div class="kpi"><div class="label">${t('promo.kpi.categoriesUsed')}</div><div class="value">${usedCategories} / ${CONTENT_IDEAS.length}</div></div>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -2311,17 +2311,18 @@ function printPromoMes(year, month){
     });
   }
   const win = window.open('', '_blank', 'width=900,height=1000');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Promoción — ${monthFull(month)} ${year}</title>
+  if(!win){ showToast(t('promo.print.popupBlocked')); return; }
+  const printTitle = t('promo.print.title').replace('${month}', monthFull(month)).replace('${year}', year);
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${printTitle}</title>
   <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:12mm}
   h1{font-size:15pt;margin:0 0 10px}
   table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
   th{background:#f5f5f3}
   @media print{body{padding:8mm}}</style></head><body>
-  <h1>Promoción — ${monthFull(month)} ${year}</h1>
-  <table><thead><tr><th>Fecha</th><th>Título</th><th>Descripción</th><th>Responsable</th><th>Hecho</th></tr></thead>
-  <tbody>${rows.join('') || '<tr><td colspan="5">Sin acciones este mes.</td></tr>'}</tbody></table>
+  <h1>${printTitle}</h1>
+  <table><thead><tr><th>${t('promo.print.date')}</th><th>${t('promo.print.title.col')}</th><th>${t('promo.print.description')}</th><th>${t('promo.print.responsible')}</th><th>${t('promo.print.done')}</th></tr></thead>
+  <tbody>${rows.join('') || `<tr><td colspan="5">${t('promo.print.noActions')}</td></tr>`}</tbody></table>
   </body></html>`);
   win.document.close();
   win.focus();
@@ -2334,340 +2335,340 @@ function printPromoMes(year, month){
    convertir con un clic en una Acción de Promoción con fecha y responsable.
    ============================================================ */
 const CONTENT_IDEAS = [
-  { cat: 'Detrás de cámaras', icon: 'ti-video', ideas: [
-    { t: 'Un día en la vida del chef o camarero/a', h: 'Vídeo corto desde la apertura hasta el cierre, mostrando el ritmo real de un turno.' },
-    { t: 'Cómo se monta la sala antes de abrir', h: 'Time-lapse de mesas, mantelería y luces preparándose para el servicio.' },
-    { t: 'El briefing de equipo antes del servicio', h: 'Los minutos previos: qué platos destacar, mesas reservadas, avisos del día.' },
-    { t: 'Recibiendo el pedido de proveedores', h: 'Muestra la frescura del producto nada más llegar por la puerta.' },
-    { t: 'Preparando la mise en place', h: 'Cortes, salsas y guarniciones listas antes de que lleguen los primeros clientes.' },
-    { t: 'Cierre y limpieza al final del día', h: 'Time-lapse del recogido, transmite orden y profesionalidad.' },
-    { t: 'Un vistazo a la barra en plena hora punta', h: 'El caos organizado de un viernes noche, siempre motivador de ver.' },
-    { t: 'Cómo se diseña la carta o el menú del día', h: 'El proceso de pensar combinaciones, precios y nombres de los platos.' },
-    { t: 'Probando un plato nuevo antes de sacarlo', h: 'Reacciones sinceras del equipo catando algo antes de que sea oficial.' },
-    { t: 'Un día de compras en el mercado', h: 'El equipo eligiendo fruta de temporada, café o producto local para la barra.' },
-    { t: 'Decorando la sala para una fecha especial', h: 'Antes/después de vestir el local para Navidad, San Valentín, etc.' },
-    { t: 'La comida del personal (family meal)', h: 'El momento en que el equipo come junto antes de abrir, cercano y humano.' },
+  { cat: {es:'Detrás de cámaras', ca:'Darrere les càmeres', en:'Behind the scenes'}, icon: 'ti-video', ideas: [
+    { title:{es:'Un día en la vida del chef o camarero/a', ca:'Un dia a la vida del xef o cambrer/a', en:'A day in the life of the chef or waiter/waitress'}, description:{es:'Vídeo corto desde la apertura hasta el cierre, mostrando el ritmo real de un turno.', ca:'Vídeo curt des de l\'obertura fins al tancament, mostrant el ritme real d\'un torn.', en:'Short video from opening to closing, showing the real pace of a shift.'} },
+    { title:{es:'Cómo se monta la sala antes de abrir', ca:'Com es munta la sala abans d\'obrir', en:'How the dining room is set up before opening'}, description:{es:'Time-lapse de mesas, mantelería y luces preparándose para el servicio.', ca:'Time-lapse de taules, mantelería i llums preparant-se per al servei.', en:'Time-lapse of tables, linens and lights getting ready for service.'} },
+    { title:{es:'El briefing de equipo antes del servicio', ca:'El briefing de l\'equip abans del servei', en:'The team briefing before service'}, description:{es:'Los minutos previos: qué platos destacar, mesas reservadas, avisos del día.', ca:'Els minuts previs: quins plats destacar, taules reservades, avisos del dia.', en:'The moments before: which dishes to highlight, reserved tables, notices for the day.'} },
+    { title:{es:'Recibiendo el pedido de proveedores', ca:'Rebent la comanda dels proveïdors', en:'Receiving the supplier delivery'}, description:{es:'Muestra la frescura del producto nada más llegar por la puerta.', ca:'Mostra la frescor del producte just quan arriba per la porta.', en:'Shows how fresh the product is the moment it comes through the door.'} },
+    { title:{es:'Preparando la mise en place', ca:'Preparant la mise en place', en:'Preparing the mise en place'}, description:{es:'Cortes, salsas y guarniciones listas antes de que lleguen los primeros clientes.', ca:'Talls, salses i guarnicions a punt abans que arribin els primers clients.', en:'Cuts, sauces and garnishes ready before the first customers arrive.'} },
+    { title:{es:'Cierre y limpieza al final del día', ca:'Tancament i neteja al final del dia', en:'Closing and cleaning at the end of the day'}, description:{es:'Time-lapse del recogido, transmite orden y profesionalidad.', ca:'Time-lapse de la recollida, transmet ordre i professionalitat.', en:'Time-lapse of the clean-up, conveys order and professionalism.'} },
+    { title:{es:'Un vistazo a la barra en plena hora punta', ca:'Un cop d\'ull a la barra en plena hora punta', en:'A look at the bar during peak hour'}, description:{es:'El caos organizado de un viernes noche, siempre motivador de ver.', ca:'El caos organitzat d\'un divendres a la nit, sempre motivador de veure.', en:'The organized chaos of a Friday night, always fun to watch.'} },
+    { title:{es:'Cómo se diseña la carta o el menú del día', ca:'Com es dissenya la carta o el menú del dia', en:'How the menu or daily set menu is designed'}, description:{es:'El proceso de pensar combinaciones, precios y nombres de los platos.', ca:'El procés de pensar combinacions, preus i noms dels plats.', en:'The process of thinking up combinations, prices and dish names.'} },
+    { title:{es:'Probando un plato nuevo antes de sacarlo', ca:'Provant un plat nou abans de treure\'l', en:'Trying a new dish before launching it'}, description:{es:'Reacciones sinceras del equipo catando algo antes de que sea oficial.', ca:'Reaccions sinceres de l\'equip tastant alguna cosa abans que sigui oficial.', en:'Honest reactions from the team tasting something before it goes official.'} },
+    { title:{es:'Un día de compras en el mercado', ca:'Un dia de compres al mercat', en:'A day of shopping at the market'}, description:{es:'El equipo eligiendo fruta de temporada, café o producto local para la barra.', ca:'L\'equip triant fruita de temporada, cafè o producte local per a la barra.', en:'The team choosing seasonal fruit, coffee or local produce for the bar.'} },
+    { title:{es:'Decorando la sala para una fecha especial', ca:'Decorant la sala per a una data especial', en:'Decorating the dining room for a special date'}, description:{es:'Antes/después de vestir el local para Navidad, San Valentín, etc.', ca:'Abans/després de vestir el local per Nadal, Sant Valentí, etc.', en:'Before/after dressing up the venue for Christmas, Valentine\'s Day, etc.'} },
+    { title:{es:'La comida del personal (family meal)', ca:'El menjar del personal (family meal)', en:'The staff meal (family meal)'}, description:{es:'El momento en que el equipo come junto antes de abrir, cercano y humano.', ca:'El moment en què l\'equip menja junt abans d\'obrir, proper i humà.', en:'The moment the team eats together before opening, warm and human.'} },
   ]},
-  { cat: 'Producto — platos y bebidas', icon: 'ti-tools-kitchen-2', ideas: [
-    { t: 'Plato del día explicado en 15 segundos', h: 'Ingredientes, punto fuerte y precio, directo a cámara.' },
-    { t: 'Cóctel de la semana, paso a paso', h: 'Grabación cenital de la coctelera preparando la receta destacada.' },
-    { t: 'Top 3 platos más pedidos este mes', h: 'Ranking con imágenes, genera curiosidad y prueba social.' },
-    { t: 'Adivina el ingrediente secreto', h: 'Reto interactivo: el equipo da pistas y el público adivina en comentarios.' },
-    { t: 'Del fuego al plato: el emplatado', h: 'Últimos segundos de cocción hasta el emplatado final, muy visual.' },
-    { t: 'Maridaje: qué bebida va con cada plato', h: 'Recomendaciones rápidas de vino, cerveza o cóctel para un plato concreto.' },
-    { t: '¿Te atreves con el picante?', h: 'Reacciones probando el plato más picante de la carta.' },
-    { t: 'ASMR de la preparación', h: 'Sonido del corte, la plancha o la coctelera, sin música, muy relajante.' },
-    { t: 'La carta de temporada, plato a plato', h: 'Recorrido breve por cada novedad de la nueva carta.' },
-    { t: 'Ingrediente sorpresa: crea algo en directo', h: 'El chef recibe un ingrediente al azar y improvisa una receta.' },
-    { t: 'Individual vs. para compartir', h: 'Comparativa visual de raciones, ayuda a decidir qué pedir.' },
-    { t: 'La bebida perfecta: copa, hielo y temperatura', h: 'Cómo se sirve correctamente para que sepa mejor.' },
+  { cat: {es:'Producto — platos y bebidas', ca:'Producte — plats i begudes', en:'Product — dishes and drinks'}, icon: 'ti-tools-kitchen-2', ideas: [
+    { title:{es:'Plato del día explicado en 15 segundos', ca:'Plat del dia explicat en 15 segons', en:'Dish of the day explained in 15 seconds'}, description:{es:'Ingredientes, punto fuerte y precio, directo a cámara.', ca:'Ingredients, punt fort i preu, directe a càmera.', en:'Ingredients, standout feature and price, straight to camera.'} },
+    { title:{es:'Cóctel de la semana, paso a paso', ca:'Còctel de la setmana, pas a pas', en:'Cocktail of the week, step by step'}, description:{es:'Grabación cenital de la coctelera preparando la receta destacada.', ca:'Gravació zenital de la coctelera preparant la recepta destacada.', en:'Overhead shot of the shaker preparing the featured recipe.'} },
+    { title:{es:'Top 3 platos más pedidos este mes', ca:'Top 3 plats més demanats aquest mes', en:'Top 3 most ordered dishes this month'}, description:{es:'Ranking con imágenes, genera curiosidad y prueba social.', ca:'Rànquing amb imatges, genera curiositat i prova social.', en:'A ranking with images, builds curiosity and social proof.'} },
+    { title:{es:'Adivina el ingrediente secreto', ca:'Endevina l\'ingredient secret', en:'Guess the secret ingredient'}, description:{es:'Reto interactivo: el equipo da pistas y el público adivina en comentarios.', ca:'Repte interactiu: l\'equip dona pistes i el públic endevina als comentaris.', en:'Interactive challenge: the team gives clues and the audience guesses in the comments.'} },
+    { title:{es:'Del fuego al plato: el emplatado', ca:'Del foc al plat: l\'emplatat', en:'From the stove to the plate: plating'}, description:{es:'Últimos segundos de cocción hasta el emplatado final, muy visual.', ca:'Últims segons de cocció fins a l\'emplatat final, molt visual.', en:'The final seconds of cooking through to plating, very visual.'} },
+    { title:{es:'Maridaje: qué bebida va con cada plato', ca:'Maridatge: quina beguda va amb cada plat', en:'Pairing: which drink goes with each dish'}, description:{es:'Recomendaciones rápidas de vino, cerveza o cóctel para un plato concreto.', ca:'Recomanacions ràpides de vi, cervesa o còctel per a un plat concret.', en:'Quick recommendations of wine, beer or a cocktail for a specific dish.'} },
+    { title:{es:'¿Te atreves con el picante?', ca:'T\'atreveixes amb el picant?', en:'Do you dare go spicy?'}, description:{es:'Reacciones probando el plato más picante de la carta.', ca:'Reaccions provant el plat més picant de la carta.', en:'Reactions to trying the spiciest dish on the menu.'} },
+    { title:{es:'ASMR de la preparación', ca:'ASMR de la preparació', en:'ASMR of the preparation'}, description:{es:'Sonido del corte, la plancha o la coctelera, sin música, muy relajante.', ca:'So del tall, la planxa o la coctelera, sense música, molt relaxant.', en:'Sound of the chopping, the grill or the shaker, no music, very soothing.'} },
+    { title:{es:'La carta de temporada, plato a plato', ca:'La carta de temporada, plat a plat', en:'The seasonal menu, dish by dish'}, description:{es:'Recorrido breve por cada novedad de la nueva carta.', ca:'Recorregut breu per cada novetat de la nova carta.', en:'A brief tour through every new item on the new menu.'} },
+    { title:{es:'Ingrediente sorpresa: crea algo en directo', ca:'Ingredient sorpresa: crea alguna cosa en directe', en:'Surprise ingredient: create something live'}, description:{es:'El chef recibe un ingrediente al azar y improvisa una receta.', ca:'El xef rep un ingredient a l\'atzar i improvisa una recepta.', en:'The chef receives a random ingredient and improvises a recipe.'} },
+    { title:{es:'Individual vs. para compartir', ca:'Individual vs. per compartir', en:'Individual vs. to share'}, description:{es:'Comparativa visual de raciones, ayuda a decidir qué pedir.', ca:'Comparativa visual de racions, ajuda a decidir què demanar.', en:'A visual comparison of portions, helps decide what to order.'} },
+    { title:{es:'La bebida perfecta: copa, hielo y temperatura', ca:'La beguda perfecta: copa, gel i temperatura', en:'The perfect drink: glass, ice and temperature'}, description:{es:'Cómo se sirve correctamente para que sepa mejor.', ca:'Com es serveix correctament perquè sàpiga millor.', en:'How to serve it correctly so it tastes better.'} },
   ]},
-  { cat: 'Proceso y elaboración', icon: 'ti-flame', ideas: [
-    { t: 'Cómo se hace el pan o la masa madre', h: 'Desde el amasado hasta que sale del horno, con tiempos.' },
-    { t: 'Un fondo o caldo casero, de cero a listo', h: 'El paso lento que nadie ve pero que marca la diferencia de sabor.' },
-    { t: 'Elaborando un almíbar o infusión para cócteles', h: 'La "elaboración base" del Escandallo, explicada al público.' },
-    { t: 'Fermentación o maceración en directo', h: 'Muestra el "antes" de un producto que normalmente solo se ve terminado.' },
-    { t: 'El café perfecto: tips de barista', h: 'Molienda, temperatura y tiempo de extracción explicados en 30 segundos.' },
-    { t: 'El postre de la casa, paso a paso', h: 'Desde la mezcla hasta el emplatado final del postre estrella.' },
-    { t: 'La salsa estrella del restaurante', h: 'Sin desvelar la receta completa, muestra el proceso y el resultado.' },
-    { t: 'Ahumado o curado de un producto', h: 'Proceso lento y visual que transmite artesanía.' },
-    { t: 'Cómo cuidan y afilan los cuchillos', h: 'Detalle de profesionalidad que sorprende al público no hostelero.' },
-    { t: 'Selección del pescado o la carne del día', h: 'Cómo eligen el mejor producto antes de que llegue a la carta.' },
+  { cat: {es:'Proceso y elaboración', ca:'Procés i elaboració', en:'Process and preparation'}, icon: 'ti-flame', ideas: [
+    { title:{es:'Cómo se hace el pan o la masa madre', ca:'Com es fa el pa o la massa mare', en:'How the bread or sourdough is made'}, description:{es:'Desde el amasado hasta que sale del horno, con tiempos.', ca:'Des de l\'amassat fins que surt del forn, amb temps.', en:'From kneading to coming out of the oven, with timings.'} },
+    { title:{es:'Un fondo o caldo casero, de cero a listo', ca:'Un fons o brou casolà, de zero a llest', en:'A homemade stock, from scratch to ready'}, description:{es:'El paso lento que nadie ve pero que marca la diferencia de sabor.', ca:'El pas lent que ningú veu però que marca la diferència de sabor.', en:'The slow step nobody sees but that makes all the difference in flavour.'} },
+    { title:{es:'Elaborando un almíbar o infusión para cócteles', ca:'Elaborant un almívar o infusió per a còctels', en:'Making a syrup or infusion for cocktails'}, description:{es:'La "elaboración base" del Escandallo, explicada al público.', ca:'L\'"elaboració base" de l\'Escandall, explicada al públic.', en:'The "base preparation" from the Costing sheet, explained to the audience.'} },
+    { title:{es:'Fermentación o maceración en directo', ca:'Fermentació o maceració en directe', en:'Fermentation or maceration live'}, description:{es:'Muestra el "antes" de un producto que normalmente solo se ve terminado.', ca:'Mostra el "abans" d\'un producte que normalment només es veu acabat.', en:'Shows the "before" of a product that\'s normally only seen finished.'} },
+    { title:{es:'El café perfecto: tips de barista', ca:'El cafè perfecte: consells de barista', en:'The perfect coffee: barista tips'}, description:{es:'Molienda, temperatura y tiempo de extracción explicados en 30 segundos.', ca:'Mòlta, temperatura i temps d\'extracció explicats en 30 segons.', en:'Grind, temperature and extraction time explained in 30 seconds.'} },
+    { title:{es:'El postre de la casa, paso a paso', ca:'El postre de la casa, pas a pas', en:'The house dessert, step by step'}, description:{es:'Desde la mezcla hasta el emplatado final del postre estrella.', ca:'Des de la barreja fins a l\'emplatat final del postre estrella.', en:'From the mix to the final plating of the star dessert.'} },
+    { title:{es:'La salsa estrella del restaurante', ca:'La salsa estrella del restaurant', en:'The restaurant\'s signature sauce'}, description:{es:'Sin desvelar la receta completa, muestra el proceso y el resultado.', ca:'Sense desvelar la recepta completa, mostra el procés i el resultat.', en:'Without revealing the whole recipe, shows the process and the result.'} },
+    { title:{es:'Ahumado o curado de un producto', ca:'Fumat o curat d\'un producte', en:'Smoking or curing a product'}, description:{es:'Proceso lento y visual que transmite artesanía.', ca:'Procés lent i visual que transmet artesania.', en:'A slow, visual process that conveys craftsmanship.'} },
+    { title:{es:'Cómo cuidan y afilan los cuchillos', ca:'Com cuiden i esmolen els ganivets', en:'How the knives are cared for and sharpened'}, description:{es:'Detalle de profesionalidad que sorprende al público no hostelero.', ca:'Detall de professionalitat que sorprèn el públic no hostaler.', en:'A touch of professionalism that surprises people outside the trade.'} },
+    { title:{es:'Selección del pescado o la carne del día', ca:'Selecció del peix o la carn del dia', en:'Selecting the fish or meat of the day'}, description:{es:'Cómo eligen el mejor producto antes de que llegue a la carta.', ca:'Com trien el millor producte abans que arribi a la carta.', en:'How they choose the best product before it reaches the menu.'} },
   ]},
-  { cat: 'Equipo y personas', icon: 'ti-users', ideas: [
-    { t: 'Presentación del chef: quién es y su historia', h: 'Vídeo corto con su trayectoria y qué le apasiona de cocinar.' },
-    { t: 'Mini entrevista a cada camarero/a', h: 'Preguntas rápidas: plato favorito, anécdota, por qué le gusta el oficio.' },
-    { t: 'Pregúntame lo que quieras (Q&A en directo)', h: 'El equipo responde preguntas del público en historias o directo.' },
-    { t: 'Cómo empezó el dueño/a este negocio', h: 'La motivación real detrás de abrir el local, genera cercanía.' },
-    { t: 'Aniversario de un empleado en la casa', h: 'Reconocimiento público a la antigüedad y fidelidad del equipo.' },
-    { t: 'Un día en la vida del bartender', h: 'Desde la apertura de barra hasta el cierre de caja.' },
-    { t: 'El chef reacciona a comentarios de clientes', h: 'Lee reseñas (buenas y constructivas) y responde con humor y respeto.' },
-    { t: 'Anécdota graciosa del servicio', h: 'Con permiso de los implicados, una situación divertida del día a día.' },
-    { t: 'Quién es quién: el equipo al completo', h: 'Presentación coral de todo el personal, con nombre y puesto.' },
-    { t: 'Celebrando un cumpleaños del equipo', h: 'Momento cercano que humaniza la marca.' },
+  { cat: {es:'Equipo y personas', ca:'Equip i persones', en:'Team and people'}, icon: 'ti-users', ideas: [
+    { title:{es:'Presentación del chef: quién es y su historia', ca:'Presentació del xef: qui és i la seva història', en:'Chef introduction: who they are and their story'}, description:{es:'Vídeo corto con su trayectoria y qué le apasiona de cocinar.', ca:'Vídeo curt amb la seva trajectòria i què li apassiona de cuinar.', en:'A short video about their journey and what they love about cooking.'} },
+    { title:{es:'Mini entrevista a cada camarero/a', ca:'Mini entrevista a cada cambrer/a', en:'Mini interview with each waiter/waitress'}, description:{es:'Preguntas rápidas: plato favorito, anécdota, por qué le gusta el oficio.', ca:'Preguntes ràpides: plat preferit, anècdota, per què li agrada l\'ofici.', en:'Quick questions: favourite dish, an anecdote, why they love the job.'} },
+    { title:{es:'Pregúntame lo que quieras (Q&A en directo)', ca:'Pregunta\'m el que vulguis (Q&A en directe)', en:'Ask me anything (live Q&A)'}, description:{es:'El equipo responde preguntas del público en historias o directo.', ca:'L\'equip respon preguntes del públic a les històries o en directe.', en:'The team answers audience questions on stories or live.'} },
+    { title:{es:'Cómo empezó el dueño/a este negocio', ca:'Com va començar el propietari/a aquest negoci', en:'How the owner started this business'}, description:{es:'La motivación real detrás de abrir el local, genera cercanía.', ca:'La motivació real darrere d\'obrir el local, genera proximitat.', en:'The real motivation behind opening the venue, builds closeness.'} },
+    { title:{es:'Aniversario de un empleado en la casa', ca:'Aniversari d\'un empleat a la casa', en:'An employee\'s work anniversary'}, description:{es:'Reconocimiento público a la antigüedad y fidelidad del equipo.', ca:'Reconeixement públic a l\'antiguitat i fidelitat de l\'equip.', en:'Public recognition of a team member\'s seniority and loyalty.'} },
+    { title:{es:'Un día en la vida del bartender', ca:'Un dia a la vida del bartender', en:'A day in the life of the bartender'}, description:{es:'Desde la apertura de barra hasta el cierre de caja.', ca:'Des de l\'obertura de la barra fins al tancament de caixa.', en:'From opening the bar to closing the till.'} },
+    { title:{es:'El chef reacciona a comentarios de clientes', ca:'El xef reacciona a comentaris de clients', en:'The chef reacts to customer comments'}, description:{es:'Lee reseñas (buenas y constructivas) y responde con humor y respeto.', ca:'Llegeix ressenyes (bones i constructives) i respon amb humor i respecte.', en:'Reads reviews (good and constructive) and responds with humour and respect.'} },
+    { title:{es:'Anécdota graciosa del servicio', ca:'Anècdota divertida del servei', en:'A funny anecdote from service'}, description:{es:'Con permiso de los implicados, una situación divertida del día a día.', ca:'Amb permís dels implicats, una situació divertida del dia a dia.', en:'With permission from those involved, a funny everyday moment.'} },
+    { title:{es:'Quién es quién: el equipo al completo', ca:'Qui és qui: l\'equip complet', en:'Who\'s who: the whole team'}, description:{es:'Presentación coral de todo el personal, con nombre y puesto.', ca:'Presentació coral de tot el personal, amb nom i lloc.', en:'A group introduction of the entire staff, with name and role.'} },
+    { title:{es:'Celebrando un cumpleaños del equipo', ca:'Celebrant l\'aniversari d\'algú de l\'equip', en:'Celebrating a team member\'s birthday'}, description:{es:'Momento cercano que humaniza la marca.', ca:'Moment proper que humanitza la marca.', en:'A warm moment that humanizes the brand.'} },
   ]},
-  { cat: 'Clientes y comunidad', icon: 'ti-heart', ideas: [
-    { t: 'Leyendo reseñas de clientes en voz alta', h: 'El equipo reacciona a comentarios reales de Google/TripAdvisor.' },
-    { t: 'Clientes disfrutando (con su permiso)', h: 'Fotos o vídeos espontáneos de mesas felices durante el servicio.' },
-    { t: '"El de siempre": un cliente habitual cuenta por qué vuelve', h: 'Testimonio breve y genuino de fidelidad.' },
-    { t: 'Reto: foto con el plato y etiquetar al local', h: 'Incentiva contenido generado por el propio cliente (UGC).' },
-    { t: 'Testimonio en vídeo tras la comida', h: 'Pregunta rápida a la salida: "¿qué te ha parecido?"' },
-    { t: 'Sorpresa a un cliente fiel', h: 'Graba el momento de un descuento o detalle inesperado.' },
-    { t: 'Responde las preguntas frecuentes de tus clientes', h: 'Horario, reservas, alérgenos, aparcamiento... en formato ágil.' },
-    { t: 'Un cliente elige el menú del día', h: 'Colaboración divertida: un habitual "diseña" el menú de una jornada.' },
-    { t: 'Mesa cero: primeras reacciones a un plato nuevo', h: 'Clientes de confianza prueban una novedad antes que nadie.' },
-    { t: 'Historias de clientes de toda la vida', h: 'Quién lleva viniendo años y qué ha vivido en el local.' },
+  { cat: {es:'Clientes y comunidad', ca:'Clients i comunitat', en:'Customers and community'}, icon: 'ti-heart', ideas: [
+    { title:{es:'Leyendo reseñas de clientes en voz alta', ca:'Llegint ressenyes de clients en veu alta', en:'Reading customer reviews out loud'}, description:{es:'El equipo reacciona a comentarios reales de Google/TripAdvisor.', ca:'L\'equip reacciona a comentaris reals de Google/TripAdvisor.', en:'The team reacts to real comments from Google/TripAdvisor.'} },
+    { title:{es:'Clientes disfrutando (con su permiso)', ca:'Clients gaudint (amb el seu permís)', en:'Customers enjoying themselves (with their permission)'}, description:{es:'Fotos o vídeos espontáneos de mesas felices durante el servicio.', ca:'Fotos o vídeos espontanis de taules felices durant el servei.', en:'Spontaneous photos or videos of happy tables during service.'} },
+    { title:{es:'"El de siempre": un cliente habitual cuenta por qué vuelve', ca:'"El de sempre": un client habitual explica per què torna', en:'"The regular": a loyal customer explains why they keep coming back'}, description:{es:'Testimonio breve y genuino de fidelidad.', ca:'Testimoni breu i genuí de fidelitat.', en:'A short, genuine testimony of loyalty.'} },
+    { title:{es:'Reto: foto con el plato y etiquetar al local', ca:'Repte: foto amb el plat i etiquetar el local', en:'Challenge: photo with the dish and tag the venue'}, description:{es:'Incentiva contenido generado por el propio cliente (UGC).', ca:'Incentiva contingut generat pel propi client (UGC).', en:'Encourages user-generated content (UGC) from customers.'} },
+    { title:{es:'Testimonio en vídeo tras la comida', ca:'Testimoni en vídeo després de menjar', en:'Video testimonial after the meal'}, description:{es:'Pregunta rápida a la salida: "¿qué te ha parecido?"', ca:'Pregunta ràpida a la sortida: "què t\'ha semblat?"', en:'A quick question on the way out: "how was it?"'} },
+    { title:{es:'Sorpresa a un cliente fiel', ca:'Sorpresa a un client fidel', en:'A surprise for a loyal customer'}, description:{es:'Graba el momento de un descuento o detalle inesperado.', ca:'Grava el moment d\'un descompte o detall inesperat.', en:'Film the moment of an unexpected discount or gift.'} },
+    { title:{es:'Responde las preguntas frecuentes de tus clientes', ca:'Respon les preguntes freqüents dels teus clients', en:'Answer your customers\' frequently asked questions'}, description:{es:'Horario, reservas, alérgenos, aparcamiento... en formato ágil.', ca:'Horari, reserves, al·lergens, aparcament... en format àgil.', en:'Hours, bookings, allergens, parking... in a quick format.'} },
+    { title:{es:'Un cliente elige el menú del día', ca:'Un client tria el menú del dia', en:'A customer chooses the daily set menu'}, description:{es:'Colaboración divertida: un habitual "diseña" el menú de una jornada.', ca:'Col·laboració divertida: un habitual "dissenya" el menú d\'una jornada.', en:'A fun collaboration: a regular "designs" the menu for a day.'} },
+    { title:{es:'Mesa cero: primeras reacciones a un plato nuevo', ca:'Taula zero: primeres reaccions a un plat nou', en:'Table zero: first reactions to a new dish'}, description:{es:'Clientes de confianza prueban una novedad antes que nadie.', ca:'Clients de confiança tasten una novetat abans que ningú.', en:'Trusted customers try a new dish before anyone else.'} },
+    { title:{es:'Historias de clientes de toda la vida', ca:'Històries de clients de tota la vida', en:'Stories from lifelong customers'}, description:{es:'Quién lleva viniendo años y qué ha vivido en el local.', ca:'Qui porta anys venint i què ha viscut al local.', en:'Someone who has been coming for years and what they\'ve experienced there.'} },
   ]},
-  { cat: 'Temporada y fechas señaladas', icon: 'ti-calendar-event', ideas: [
-    { t: 'Especial San Valentín', h: 'Menú, decoración o detalle romántico para parejas.' },
-    { t: 'Especial Navidad y Nochevieja', h: 'Decoración, menú de grupos y últimas mesas disponibles.' },
-    { t: 'Halloween: platos y cócteles temáticos', h: 'Nombres y presentación terrorífica para la ocasión.' },
-    { t: 'Vuelta al cole: menú rápido de mediodía', h: 'Ideal para familias con poco tiempo entre semana.' },
-    { t: 'Verano: bebidas refrescantes y terraza', h: 'Contenido pensado para las horas de más calor.' },
-    { t: 'Día del Padre / de la Madre', h: 'Menú especial o detalle de regalo para la ocasión.' },
-    { t: 'Black Friday o rebajas de temporada', h: 'Promoción puntual con sensación de urgencia.' },
-    { t: 'Semana Santa: menú de cuaresma', h: 'Platos de bacalao, potaje o torrijas de la casa.' },
-    { t: 'Fiestas o feria local', h: 'Platos típicos de la zona durante las fiestas del pueblo/barrio.' },
-    { t: 'Aniversario del negocio', h: 'Celebración con clientes: tarta, descuentos o sorteo especial.' },
-    { t: 'Cambio de carta de temporada', h: '"Despedida" de los platos que se van y bienvenida a los nuevos.' },
+  { cat: {es:'Temporada y fechas señaladas', ca:'Temporada i dates assenyalades', en:'Season and special dates'}, icon: 'ti-calendar-event', ideas: [
+    { title:{es:'Especial San Valentín', ca:'Especial Sant Valentí', en:'Valentine\'s Day special'}, description:{es:'Menú, decoración o detalle romántico para parejas.', ca:'Menú, decoració o detall romàntic per a parelles.', en:'A menu, decor or romantic touch for couples.'} },
+    { title:{es:'Especial Navidad y Nochevieja', ca:'Especial Nadal i Cap d\'Any', en:'Christmas and New Year\'s Eve special'}, description:{es:'Decoración, menú de grupos y últimas mesas disponibles.', ca:'Decoració, menú de grups i últimes taules disponibles.', en:'Decor, group menus and last available tables.'} },
+    { title:{es:'Halloween: platos y cócteles temáticos', ca:'Halloween: plats i còctels temàtics', en:'Halloween: themed dishes and cocktails'}, description:{es:'Nombres y presentación terrorífica para la ocasión.', ca:'Noms i presentació terrorífica per a l\'ocasió.', en:'Spooky names and presentation for the occasion.'} },
+    { title:{es:'Vuelta al cole: menú rápido de mediodía', ca:'Tornada a l\'escola: menú ràpid de migdia', en:'Back to school: quick lunchtime menu'}, description:{es:'Ideal para familias con poco tiempo entre semana.', ca:'Ideal per a famílies amb poc temps entre setmana.', en:'Ideal for families short on time during the week.'} },
+    { title:{es:'Verano: bebidas refrescantes y terraza', ca:'Estiu: begudes refrescants i terrassa', en:'Summer: refreshing drinks and the terrace'}, description:{es:'Contenido pensado para las horas de más calor.', ca:'Contingut pensat per a les hores de més calor.', en:'Content designed for the hottest hours of the day.'} },
+    { title:{es:'Día del Padre / de la Madre', ca:'Dia del Pare / de la Mare', en:'Father\'s Day / Mother\'s Day'}, description:{es:'Menú especial o detalle de regalo para la ocasión.', ca:'Menú especial o detall de regal per a l\'ocasió.', en:'A special menu or gift touch for the occasion.'} },
+    { title:{es:'Black Friday o rebajas de temporada', ca:'Black Friday o rebaixes de temporada', en:'Black Friday or seasonal sales'}, description:{es:'Promoción puntual con sensación de urgencia.', ca:'Promoció puntual amb sensació d\'urgència.', en:'A one-off promotion with a sense of urgency.'} },
+    { title:{es:'Semana Santa: menú de cuaresma', ca:'Setmana Santa: menú de quaresma', en:'Easter: Lenten menu'}, description:{es:'Platos de bacalao, potaje o torrijas de la casa.', ca:'Plats de bacallà, potatge o torrades de la casa.', en:'House dishes of salt cod, stew or French toast.'} },
+    { title:{es:'Fiestas o feria local', ca:'Festes o fira local', en:'Local festival or fair'}, description:{es:'Platos típicos de la zona durante las fiestas del pueblo/barrio.', ca:'Plats típics de la zona durant les festes del poble/barri.', en:'Local specialties during the town/neighbourhood festival.'} },
+    { title:{es:'Aniversario del negocio', ca:'Aniversari del negoci', en:'Business anniversary'}, description:{es:'Celebración con clientes: tarta, descuentos o sorteo especial.', ca:'Celebració amb clients: pastís, descomptes o sorteig especial.', en:'Celebrate with customers: cake, discounts or a special giveaway.'} },
+    { title:{es:'Cambio de carta de temporada', ca:'Canvi de carta de temporada', en:'Seasonal menu change'}, description:{es:'"Despedida" de los platos que se van y bienvenida a los nuevos.', ca:'"Comiat" dels plats que se\'n van i benvinguda als nous.', en:'A "farewell" to the outgoing dishes and a welcome to the new ones.'} },
   ]},
-  { cat: 'Promociones y ofertas', icon: 'ti-discount-2', ideas: [
-    { t: 'Happy hour con cuenta atrás', h: 'Historia con temporizador para crear urgencia real.' },
-    { t: '2x1 en un cóctel o bebida concreta', h: 'Oferta puntual para atraer tráfico en horas valle.' },
-    { t: 'Menú del día explicado (precio y qué incluye)', h: 'Contenido informativo que resuelve la duda más frecuente.' },
-    { t: 'Descuento por traer a un amigo nuevo', h: 'Incentiva el boca a boca con una ventaja concreta.' },
-    { t: 'Sorteo en redes', h: 'Like + comentario + etiquetar a un amigo para ganar una cena.' },
-    { t: 'Oferta relámpago solo en stories', h: 'Válida unas horas, exclusiva para quien vea las historias.' },
-    { t: 'Combo especial (entrante + bebida + postre)', h: 'Precio cerrado atractivo para aumentar el ticket medio.' },
-    { t: 'Descuento a estudiantes un día concreto', h: 'Fideliza a un público que vuelve varias veces por semana.' },
-    { t: '"Trae tu propia taza o vaso"', h: 'Promoción sostenible con descuento simbólico.' },
-    { t: 'Últimas raciones antes de cerrar', h: 'Aviso en tiempo real de un plato a punto de agotarse, genera urgencia.' },
+  { cat: {es:'Promociones y ofertas', ca:'Promocions i ofertes', en:'Promotions and offers'}, icon: 'ti-discount-2', ideas: [
+    { title:{es:'Happy hour con cuenta atrás', ca:'Happy hour amb compte enrere', en:'Happy hour with a countdown'}, description:{es:'Historia con temporizador para crear urgencia real.', ca:'Història amb temporitzador per crear urgència real.', en:'A story with a timer to create real urgency.'} },
+    { title:{es:'2x1 en un cóctel o bebida concreta', ca:'2x1 en un còctel o beguda concreta', en:'2-for-1 on a specific cocktail or drink'}, description:{es:'Oferta puntual para atraer tráfico en horas valle.', ca:'Oferta puntual per atreure trànsit en hores vall.', en:'A one-off offer to attract traffic during off-peak hours.'} },
+    { title:{es:'Menú del día explicado (precio y qué incluye)', ca:'Menú del dia explicat (preu i què inclou)', en:'Set menu explained (price and what\'s included)'}, description:{es:'Contenido informativo que resuelve la duda más frecuente.', ca:'Contingut informatiu que resol el dubte més freqüent.', en:'Informative content that answers the most common question.'} },
+    { title:{es:'Descuento por traer a un amigo nuevo', ca:'Descompte per portar un amic nou', en:'Discount for bringing a new friend'}, description:{es:'Incentiva el boca a boca con una ventaja concreta.', ca:'Incentiva el boca a boca amb un avantatge concret.', en:'Encourages word of mouth with a concrete perk.'} },
+    { title:{es:'Sorteo en redes', ca:'Sorteig a les xarxes', en:'Social media giveaway'}, description:{es:'Like + comentario + etiquetar a un amigo para ganar una cena.', ca:'Like + comentari + etiquetar un amic per guanyar un sopar.', en:'Like + comment + tag a friend to win dinner.'} },
+    { title:{es:'Oferta relámpago solo en stories', ca:'Oferta llampec només a les stories', en:'Flash offer only on stories'}, description:{es:'Válida unas horas, exclusiva para quien vea las historias.', ca:'Vàlida unes hores, exclusiva per a qui vegi les històries.', en:'Valid for a few hours, exclusive to whoever sees the stories.'} },
+    { title:{es:'Combo especial (entrante + bebida + postre)', ca:'Combo especial (entrant + beguda + postre)', en:'Special combo (starter + drink + dessert)'}, description:{es:'Precio cerrado atractivo para aumentar el ticket medio.', ca:'Preu tancat atractiu per augmentar el tiquet mitjà.', en:'An attractive fixed price to increase the average ticket.'} },
+    { title:{es:'Descuento a estudiantes un día concreto', ca:'Descompte a estudiants un dia concret', en:'Student discount on a specific day'}, description:{es:'Fideliza a un público que vuelve varias veces por semana.', ca:'Fidelitza un públic que torna diverses vegades per setmana.', en:'Builds loyalty with an audience that comes back several times a week.'} },
+    { title:{es:'"Trae tu propia taza o vaso"', ca:'"Porta la teva pròpia tassa o got"', en:'"Bring your own cup or glass"'}, description:{es:'Promoción sostenible con descuento simbólico.', ca:'Promoció sostenible amb descompte simbòlic.', en:'A sustainable promotion with a token discount.'} },
+    { title:{es:'Últimas raciones antes de cerrar', ca:'Últimes racions abans de tancar', en:'Last portions before closing'}, description:{es:'Aviso en tiempo real de un plato a punto de agotarse, genera urgencia.', ca:'Avís en temps real d\'un plat a punt d\'esgotar-se, genera urgència.', en:'A real-time notice that a dish is about to run out, creates urgency.'} },
   ]},
-  { cat: 'Historia y valores', icon: 'ti-book', ideas: [
-    { t: 'Por qué el negocio se llama así', h: 'El origen del nombre suele ser una historia bonita y poco contada.' },
-    { t: 'La historia del local antes de ser tu negocio', h: 'Qué había antes en ese mismo espacio.' },
-    { t: 'La receta familiar que sigue en la carta', h: 'Un plato heredado de un abuelo/a o familiar, con su historia.' },
-    { t: 'Por qué eligen a estos proveedores', h: 'Kilómetro cero, calidad o relación de confianza con quien suministra.' },
-    { t: 'Los valores del negocio', h: 'Sostenibilidad, producto local, trato humano... explicados con ejemplos reales.' },
-    { t: 'Cómo ha evolucionado la carta con los años', h: 'Comparativa de la primera carta con la actual.' },
-    { t: 'El objeto con historia del local', h: 'Un cuadro, una silla o una foto antigua con una anécdota detrás.' },
-    { t: 'La primera noche de apertura', h: 'Recuerdos y fotos de cuando todo empezó.' },
-    { t: 'Premios o certificaciones conseguidas', h: 'Reconocimientos que dan confianza a quien no os conoce.' },
-    { t: 'El "por qué" de una sección de la carta', h: 'Qué inspiró a crear ese apartado concreto del menú.' },
+  { cat: {es:'Historia y valores', ca:'Història i valors', en:'History and values'}, icon: 'ti-book', ideas: [
+    { title:{es:'Por qué el negocio se llama así', ca:'Per què el negoci es diu així', en:'Why the business is named that'}, description:{es:'El origen del nombre suele ser una historia bonita y poco contada.', ca:'L\'origen del nom sol ser una història bonica i poc explicada.', en:'The origin of the name is usually a nice story rarely told.'} },
+    { title:{es:'La historia del local antes de ser tu negocio', ca:'La història del local abans de ser el teu negoci', en:'The history of the venue before it was your business'}, description:{es:'Qué había antes en ese mismo espacio.', ca:'Què hi havia abans en aquest mateix espai.', en:'What was there before in that same space.'} },
+    { title:{es:'La receta familiar que sigue en la carta', ca:'La recepta familiar que continua a la carta', en:'The family recipe still on the menu'}, description:{es:'Un plato heredado de un abuelo/a o familiar, con su historia.', ca:'Un plat heretat d\'un avi/àvia o familiar, amb la seva història.', en:'A dish inherited from a grandparent or relative, with its story.'} },
+    { title:{es:'Por qué eligen a estos proveedores', ca:'Per què trien aquests proveïdors', en:'Why they choose these suppliers'}, description:{es:'Kilómetro cero, calidad o relación de confianza con quien suministra.', ca:'Quilòmetre zero, qualitat o relació de confiança amb qui subministra.', en:'Local sourcing, quality or a trusted relationship with the supplier.'} },
+    { title:{es:'Los valores del negocio', ca:'Els valors del negoci', en:'The business\'s values'}, description:{es:'Sostenibilidad, producto local, trato humano... explicados con ejemplos reales.', ca:'Sostenibilitat, producte local, tracte humà... explicats amb exemples reals.', en:'Sustainability, local produce, personal service... explained with real examples.'} },
+    { title:{es:'Cómo ha evolucionado la carta con los años', ca:'Com ha evolucionat la carta amb els anys', en:'How the menu has evolved over the years'}, description:{es:'Comparativa de la primera carta con la actual.', ca:'Comparativa de la primera carta amb l\'actual.', en:'A comparison of the first menu with the current one.'} },
+    { title:{es:'El objeto con historia del local', ca:'L\'objecte amb història del local', en:'The venue\'s object with a story'}, description:{es:'Un cuadro, una silla o una foto antigua con una anécdota detrás.', ca:'Un quadre, una cadira o una foto antiga amb una anècdota al darrere.', en:'A painting, a chair or an old photo with a story behind it.'} },
+    { title:{es:'La primera noche de apertura', ca:'La primera nit d\'obertura', en:'The first opening night'}, description:{es:'Recuerdos y fotos de cuando todo empezó.', ca:'Records i fotos de quan tot va començar.', en:'Memories and photos of when it all started.'} },
+    { title:{es:'Premios o certificaciones conseguidas', ca:'Premis o certificacions aconseguides', en:'Awards or certifications earned'}, description:{es:'Reconocimientos que dan confianza a quien no os conoce.', ca:'Reconeixements que donen confiança a qui no us coneix.', en:'Recognitions that build trust with people who don\'t know you yet.'} },
+    { title:{es:'El "por qué" de una sección de la carta', ca:'El "per què" d\'una secció de la carta', en:'The "why" behind a section of the menu'}, description:{es:'Qué inspiró a crear ese apartado concreto del menú.', ca:'Què va inspirar a crear aquest apartat concret del menú.', en:'What inspired the creation of that specific menu section.'} },
   ]},
-  { cat: 'Formatos de tendencia', icon: 'ti-trending-up', ideas: [
-    { t: 'Audio de moda aplicado a un plato o bebida', h: 'Usa la canción/sonido viral del momento con vuestro producto.' },
-    { t: '"POV: eres camarero/a un viernes noche"', h: 'Formato POV muy popular, con humor y ritmo rápido.' },
-    { t: 'Reto de comida picante o de ración gigante', h: 'Challenge grabado con reacciones exageradas.' },
-    { t: 'Transición "antes de cocinar" → "plato listo"', h: 'Corte seco muy usado en TikTok/Reels, muy efectivo.' },
-    { t: 'El equipo puntúa sus propios platos', h: 'Formato "rating" del 1 al 10 con opiniones sinceras.' },
-    { t: 'Responder a un comentario con humor', h: 'Convierte un comentario gracioso en un vídeo de respuesta.' },
-    { t: '"Get Ready With Me" del local antes de abrir', h: 'Formato GRWM aplicado a preparar la sala/barra.' },
-    { t: 'Unboxing de un producto o proveedor nuevo', h: 'Reacción genuina al probar algo que acaba de llegar.' },
-    { t: '"Cosas que solo entienden en hostelería"', h: 'Formato relatable que genera muchos comentarios e identificación.' },
-    { t: 'Reacciona a una reseña de una estrella', h: 'Con humor y sin faltar al respeto, suele generar mucho engagement.' },
+  { cat: {es:'Formatos de tendencia', ca:'Formats de tendència', en:'Trending formats'}, icon: 'ti-trending-up', ideas: [
+    { title:{es:'Audio de moda aplicado a un plato o bebida', ca:'Àudio de moda aplicat a un plat o beguda', en:'Trending audio applied to a dish or drink'}, description:{es:'Usa la canción/sonido viral del momento con vuestro producto.', ca:'Fes servir la cançó/so viral del moment amb el vostre producte.', en:'Use the viral song/sound of the moment with your product.'} },
+    { title:{es:'"POV: eres camarero/a un viernes noche"', ca:'"POV: ets cambrer/a un divendres a la nit"', en:'"POV: you\'re a waiter/waitress on a Friday night"'}, description:{es:'Formato POV muy popular, con humor y ritmo rápido.', ca:'Format POV molt popular, amb humor i ritme ràpid.', en:'A very popular POV format, with humour and fast pacing.'} },
+    { title:{es:'Reto de comida picante o de ración gigante', ca:'Repte de menjar picant o de ració gegant', en:'Spicy food or giant portion challenge'}, description:{es:'Challenge grabado con reacciones exageradas.', ca:'Challenge gravat amb reaccions exagerades.', en:'A filmed challenge with over-the-top reactions.'} },
+    { title:{es:'Transición "antes de cocinar" → "plato listo"', ca:'Transició "abans de cuinar" → "plat llest"', en:'Transition "before cooking" → "dish ready"'}, description:{es:'Corte seco muy usado en TikTok/Reels, muy efectivo.', ca:'Tall sec molt usat a TikTok/Reels, molt efectiu.', en:'A hard cut widely used on TikTok/Reels, very effective.'} },
+    { title:{es:'El equipo puntúa sus propios platos', ca:'L\'equip puntua els seus propis plats', en:'The team rates their own dishes'}, description:{es:'Formato "rating" del 1 al 10 con opiniones sinceras.', ca:'Format "rating" de l\'1 al 10 amb opinions sinceres.', en:'A 1-to-10 "rating" format with honest opinions.'} },
+    { title:{es:'Responder a un comentario con humor', ca:'Respondre a un comentari amb humor', en:'Reply to a comment with humour'}, description:{es:'Convierte un comentario gracioso en un vídeo de respuesta.', ca:'Converteix un comentari divertit en un vídeo de resposta.', en:'Turn a funny comment into a video reply.'} },
+    { title:{es:'"Get Ready With Me" del local antes de abrir', ca:'"Get Ready With Me" del local abans d\'obrir', en:'"Get Ready With Me" of the venue before opening'}, description:{es:'Formato GRWM aplicado a preparar la sala/barra.', ca:'Format GRWM aplicat a preparar la sala/barra.', en:'The GRWM format applied to getting the dining room/bar ready.'} },
+    { title:{es:'Unboxing de un producto o proveedor nuevo', ca:'Unboxing d\'un producte o proveïdor nou', en:'Unboxing a new product or supplier delivery'}, description:{es:'Reacción genuina al probar algo que acaba de llegar.', ca:'Reacció genuïna en tastar alguna cosa que acaba d\'arribar.', en:'A genuine reaction to trying something that just arrived.'} },
+    { title:{es:'"Cosas que solo entienden en hostelería"', ca:'"Coses que només entenen en hostaleria"', en:'"Things only hospitality people understand"'}, description:{es:'Formato relatable que genera muchos comentarios e identificación.', ca:'Format relatable que genera molts comentaris i identificació.', en:'A relatable format that sparks lots of comments and recognition.'} },
+    { title:{es:'Reacciona a una reseña de una estrella', ca:'Reacciona a una ressenya d\'una estrella', en:'React to a one-star review'}, description:{es:'Con humor y sin faltar al respeto, suele generar mucho engagement.', ca:'Amb humor i sense faltar al respecte, sol generar molt engagement.', en:'With humour and respect, this usually drives a lot of engagement.'} },
   ]},
-  { cat: 'Educativo / tips', icon: 'ti-school', ideas: [
-    { t: 'Cómo maridar vino con quesos o platos', h: 'Consejos prácticos y sencillos de aplicar en casa.' },
-    { t: 'Cómo se cata un vino correctamente', h: 'Vista, nariz y boca explicados en menos de un minuto.' },
-    { t: 'Diferencias entre tipos de café', h: 'Espresso, cortado, americano... explicado con la máquina en mano.' },
-    { t: 'Cómo pedir tapas como un local', h: 'Tips pensados también para turistas, muy compartible.' },
-    { t: 'Cómo gestionan los alérgenos en el local', h: 'Transmite confianza y seguridad alimentaria.' },
-    { t: 'Trucos para conservar sobras en casa', h: 'Contenido de valor que no vende directamente pero genera marca.' },
-    { t: 'Qué copa usar para cada bebida', h: 'Guía rápida y visual, muy guardable/compartible.' },
-    { t: 'Qué significan los términos de la carta', h: '"Al punto", "poco hecho", "reducción"... explicado sencillo.' },
-    { t: 'El origen de un plato típico de la zona', h: 'Curiosidad histórica o cultural sobre un plato de la carta.' },
-    { t: 'Producto fresco vs. congelado: cómo distinguirlos', h: 'Consejo útil que además pone en valor vuestro producto fresco.' },
+  { cat: {es:'Educativo / tips', ca:'Educatiu / consells', en:'Educational / tips'}, icon: 'ti-school', ideas: [
+    { title:{es:'Cómo maridar vino con quesos o platos', ca:'Com maridar vi amb formatges o plats', en:'How to pair wine with cheeses or dishes'}, description:{es:'Consejos prácticos y sencillos de aplicar en casa.', ca:'Consells pràctics i senzills d\'aplicar a casa.', en:'Practical tips that are easy to apply at home.'} },
+    { title:{es:'Cómo se cata un vino correctamente', ca:'Com es tasta un vi correctament', en:'How to properly taste a wine'}, description:{es:'Vista, nariz y boca explicados en menos de un minuto.', ca:'Vista, nas i boca explicats en menys d\'un minut.', en:'Sight, nose and palate explained in under a minute.'} },
+    { title:{es:'Diferencias entre tipos de café', ca:'Diferències entre tipus de cafè', en:'Differences between types of coffee'}, description:{es:'Espresso, cortado, americano... explicado con la máquina en mano.', ca:'Espresso, tallat, americà... explicat amb la màquina a la mà.', en:'Espresso, cortado, americano... explained with the machine in hand.'} },
+    { title:{es:'Cómo pedir tapas como un local', ca:'Com demanar tapes com un local', en:'How to order tapas like a local'}, description:{es:'Tips pensados también para turistas, muy compartible.', ca:'Consells pensats també per a turistes, molt compartible.', en:'Tips aimed also at tourists, very shareable.'} },
+    { title:{es:'Cómo gestionan los alérgenos en el local', ca:'Com gestionen els al·lergens al local', en:'How allergens are managed on-site'}, description:{es:'Transmite confianza y seguridad alimentaria.', ca:'Transmet confiança i seguretat alimentària.', en:'Builds trust and shows food safety in practice.'} },
+    { title:{es:'Trucos para conservar sobras en casa', ca:'Trucs per conservar les sobres a casa', en:'Tricks for storing leftovers at home'}, description:{es:'Contenido de valor que no vende directamente pero genera marca.', ca:'Contingut de valor que no ven directament però genera marca.', en:'Valuable content that doesn\'t sell directly but builds the brand.'} },
+    { title:{es:'Qué copa usar para cada bebida', ca:'Quina copa fer servir per a cada beguda', en:'Which glass to use for each drink'}, description:{es:'Guía rápida y visual, muy guardable/compartible.', ca:'Guia ràpida i visual, molt guardable/compartible.', en:'A quick, visual guide, easy to save and share.'} },
+    { title:{es:'Qué significan los términos de la carta', ca:'Què signifiquen els termes de la carta', en:'What the menu terms mean'}, description:{es:'"Al punto", "poco hecho", "reducción"... explicado sencillo.', ca:'"Al punt", "poc fet", "reducció"... explicat de manera senzilla.', en:'"Medium", "rare", "reduction"... explained simply.'} },
+    { title:{es:'El origen de un plato típico de la zona', ca:'L\'origen d\'un plat típic de la zona', en:'The origin of a local dish'}, description:{es:'Curiosidad histórica o cultural sobre un plato de la carta.', ca:'Curiositat històrica o cultural sobre un plat de la carta.', en:'A historical or cultural fun fact about a dish on the menu.'} },
+    { title:{es:'Producto fresco vs. congelado: cómo distinguirlos', ca:'Producte fresc vs. congelat: com distingir-los', en:'Fresh vs. frozen product: how to tell them apart'}, description:{es:'Consejo útil que además pone en valor vuestro producto fresco.', ca:'Consell útil que a més posa en valor el vostre producte fresc.', en:'A useful tip that also highlights your fresh produce.'} },
   ]},
-  { cat: 'Barra y coctelería', icon: 'ti-glass-cocktail', ideas: [
-    { t: 'Flair o técnica de coctelería en directo', h: 'Espectáculo visual detrás de la barra, muy compartible.' },
-    { t: 'Mocktail de la casa (sin alcohol)', h: 'Cada vez más demandado, buen contenido inclusivo.' },
-    { t: 'La historia de un cóctel clásico', h: 'Origen y anécdota de un cóctel icónico de la carta.' },
-    { t: 'Tutorial de decoración de copa (garnish)', h: 'Paso a paso de cómo se monta la guarnición de un cóctel.' },
-    { t: 'Cata de cervezas artesanas de la casa', h: 'Presenta variedades poco conocidas de la carta de cervezas.' },
-    { t: 'Maridaje de cócteles con tapas', h: 'Recomendaciones cruzadas entre barra y cocina.' },
-    { t: 'El tiro perfecto de cerveza', h: 'Ritual de servido correcto, con espuma y temperatura ideal.' },
-    { t: 'Cóctel de temporada con fruta de mercado', h: 'Aprovecha producto de temporada también en la barra.' },
-    { t: 'Cóctel clásico con un twist propio de la casa', h: 'Vuestra versión personal de un cóctel de toda la vida.' },
-    { t: 'Cata a ciegas del propio equipo', h: 'El equipo prueba cócteles sin ver la etiqueta y adivina cuál es cuál.' },
+  { cat: {es:'Barra y coctelería', ca:'Barra i coctelería', en:'Bar and mixology'}, icon: 'ti-glass-cocktail', ideas: [
+    { title:{es:'Flair o técnica de coctelería en directo', ca:'Flair o tècnica de coctelería en directe', en:'Flair or mixology technique live'}, description:{es:'Espectáculo visual detrás de la barra, muy compartible.', ca:'Espectacle visual darrere la barra, molt compartible.', en:'A visual show behind the bar, very shareable.'} },
+    { title:{es:'Mocktail de la casa (sin alcohol)', ca:'Mocktail de la casa (sense alcohol)', en:'House mocktail (alcohol-free)'}, description:{es:'Cada vez más demandado, buen contenido inclusivo.', ca:'Cada cop més demandat, bon contingut inclusiu.', en:'Increasingly in demand, great inclusive content.'} },
+    { title:{es:'La historia de un cóctel clásico', ca:'La història d\'un còctel clàssic', en:'The story of a classic cocktail'}, description:{es:'Origen y anécdota de un cóctel icónico de la carta.', ca:'Origen i anècdota d\'un còctel icònic de la carta.', en:'The origin and story of an iconic cocktail on the menu.'} },
+    { title:{es:'Tutorial de decoración de copa (garnish)', ca:'Tutorial de decoració de copa (garnish)', en:'Glass garnish tutorial'}, description:{es:'Paso a paso de cómo se monta la guarnición de un cóctel.', ca:'Pas a pas de com es munta la guarnició d\'un còctel.', en:'A step-by-step of how a cocktail garnish is put together.'} },
+    { title:{es:'Cata de cervezas artesanas de la casa', ca:'Tast de cerveses artesanes de la casa', en:'House craft beer tasting'}, description:{es:'Presenta variedades poco conocidas de la carta de cervezas.', ca:'Presenta varietats poc conegudes de la carta de cerveses.', en:'Presents lesser-known varieties from the beer menu.'} },
+    { title:{es:'Maridaje de cócteles con tapas', ca:'Maridatge de còctels amb tapes', en:'Pairing cocktails with tapas'}, description:{es:'Recomendaciones cruzadas entre barra y cocina.', ca:'Recomanacions creuades entre barra i cuina.', en:'Cross-recommendations between the bar and the kitchen.'} },
+    { title:{es:'El tiro perfecto de cerveza', ca:'El tir perfecte de cervesa', en:'The perfect pour of beer'}, description:{es:'Ritual de servido correcto, con espuma y temperatura ideal.', ca:'Ritual de servei correcte, amb escuma i temperatura ideal.', en:'The correct pouring ritual, with ideal foam and temperature.'} },
+    { title:{es:'Cóctel de temporada con fruta de mercado', ca:'Còctel de temporada amb fruita de mercat', en:'Seasonal cocktail with market fruit'}, description:{es:'Aprovecha producto de temporada también en la barra.', ca:'Aprofita producte de temporada també a la barra.', en:'Makes the most of seasonal produce at the bar too.'} },
+    { title:{es:'Cóctel clásico con un twist propio de la casa', ca:'Còctel clàssic amb un twist propi de la casa', en:'A classic cocktail with the house\'s own twist'}, description:{es:'Vuestra versión personal de un cóctel de toda la vida.', ca:'La vostra versió personal d\'un còctel de tota la vida.', en:'Your own personal take on a classic cocktail.'} },
+    { title:{es:'Cata a ciegas del propio equipo', ca:'Tast a cegues del mateix equip', en:'Blind tasting by the team itself'}, description:{es:'El equipo prueba cócteles sin ver la etiqueta y adivina cuál es cuál.', ca:'L\'equip tasta còctels sense veure l\'etiqueta i endevina quin és quin.', en:'The team tries cocktails without seeing the label and guesses which is which.'} },
   ]},
-  { cat: 'Eventos y experiencias', icon: 'ti-confetti', ideas: [
-    { t: 'Música en directo o DJ en el local', h: 'Anuncio con adelanto del ambiente que se van a encontrar.' },
-    { t: 'Cata maridaje con el chef', h: 'Evento especial de pago, ideal para promocionar con antelación.' },
-    { t: 'Clase de coctelería para clientes', h: 'Experiencia diferencial que genera contenido y ventas extra.' },
-    { t: 'Retransmisión de un partido o evento deportivo', h: 'Aviso de ambiente y promoción específica para la ocasión.' },
-    { t: 'Noche temática (italiana, mexicana...)', h: 'Menú y ambientación especial durante una noche concreta.' },
-    { t: 'Evento privado o de empresa en el local', h: 'Muestra las instalaciones para captar futuras reservas de grupo.' },
-    { t: 'Colaboración con otro negocio local', h: 'Foodtruck, bodega o productor invitado un día concreto.' },
-    { t: 'Mercadillo o feria gastronómica', h: 'Participación del negocio fuera de sus paredes habituales.' },
-    { t: 'Recap del evento del fin de semana', h: 'Mejores momentos montados en un vídeo corto al día siguiente.' },
-    { t: 'Montaje del escenario o equipo de sonido', h: 'Detrás de cámaras preparando un evento en directo.' },
+  { cat: {es:'Eventos y experiencias', ca:'Esdeveniments i experiències', en:'Events and experiences'}, icon: 'ti-confetti', ideas: [
+    { title:{es:'Música en directo o DJ en el local', ca:'Música en directe o DJ al local', en:'Live music or a DJ at the venue'}, description:{es:'Anuncio con adelanto del ambiente que se van a encontrar.', ca:'Anunci amb avançament de l\'ambient que es trobaran.', en:'A teaser announcement of the atmosphere guests will find.'} },
+    { title:{es:'Cata maridaje con el chef', ca:'Tast maridatge amb el xef', en:'Pairing tasting with the chef'}, description:{es:'Evento especial de pago, ideal para promocionar con antelación.', ca:'Esdeveniment especial de pagament, ideal per promocionar amb antelació.', en:'A special ticketed event, ideal to promote well in advance.'} },
+    { title:{es:'Clase de coctelería para clientes', ca:'Classe de coctelería per a clients', en:'Mixology class for customers'}, description:{es:'Experiencia diferencial que genera contenido y ventas extra.', ca:'Experiència diferencial que genera contingut i vendes extra.', en:'A distinctive experience that generates content and extra sales.'} },
+    { title:{es:'Retransmisión de un partido o evento deportivo', ca:'Retransmissió d\'un partit o esdeveniment esportiu', en:'Broadcasting a match or sporting event'}, description:{es:'Aviso de ambiente y promoción específica para la ocasión.', ca:'Avís d\'ambient i promoció específica per a l\'ocasió.', en:'An atmosphere notice and specific promotion for the occasion.'} },
+    { title:{es:'Noche temática (italiana, mexicana...)', ca:'Nit temàtica (italiana, mexicana...)', en:'Themed night (Italian, Mexican...)'}, description:{es:'Menú y ambientación especial durante una noche concreta.', ca:'Menú i ambientació especial durant una nit concreta.', en:'A special menu and decor for one specific night.'} },
+    { title:{es:'Evento privado o de empresa en el local', ca:'Esdeveniment privat o d\'empresa al local', en:'Private or corporate event at the venue'}, description:{es:'Muestra las instalaciones para captar futuras reservas de grupo.', ca:'Mostra les instal·lacions per captar futures reserves de grup.', en:'Shows off the venue to attract future group bookings.'} },
+    { title:{es:'Colaboración con otro negocio local', ca:'Col·laboració amb un altre negoci local', en:'Collaboration with another local business'}, description:{es:'Foodtruck, bodega o productor invitado un día concreto.', ca:'Foodtruck, celler o productor convidat un dia concret.', en:'A guest food truck, winery or producer for one specific day.'} },
+    { title:{es:'Mercadillo o feria gastronómica', ca:'Mercadet o fira gastronòmica', en:'Market or food fair'}, description:{es:'Participación del negocio fuera de sus paredes habituales.', ca:'Participació del negoci fora de les seves parets habituals.', en:'The business taking part outside its usual walls.'} },
+    { title:{es:'Recap del evento del fin de semana', ca:'Recapitulació de l\'esdeveniment del cap de setmana', en:'Recap of the weekend event'}, description:{es:'Mejores momentos montados en un vídeo corto al día siguiente.', ca:'Millors moments muntats en un vídeo curt l\'endemà.', en:'Best moments edited into a short video the next day.'} },
+    { title:{es:'Montaje del escenario o equipo de sonido', ca:'Muntatge de l\'escenari o l\'equip de so', en:'Setting up the stage or sound equipment'}, description:{es:'Detrás de cámaras preparando un evento en directo.', ca:'Darrere les càmeres preparant un esdeveniment en directe.', en:'Behind the scenes preparing a live event.'} },
   ]},
-  { cat: 'Sostenibilidad y proveedores', icon: 'ti-leaf', ideas: [
-    { t: 'Visita al proveedor o productor local', h: 'Muestra de dónde viene realmente el producto que sirven.' },
-    { t: 'Cómo reducen el desperdicio alimentario', h: 'Prácticas reales de aprovechamiento, genera buena imagen.' },
-    { t: 'Producto de temporada explicado', h: 'Por qué ahora sí está en carta y en otra época del año no.' },
-    { t: 'Reciclaje o compostaje en el local', h: 'Detalle sostenible que valoran cada vez más los clientes.' },
-    { t: 'Packaging sostenible para delivery', h: 'Envases reciclables o reutilizables usados en los pedidos para llevar.' },
-    { t: 'Colaboración con productores de la zona', h: 'Queso, vino, embutido... con nombre y cara del productor.' },
-    { t: 'Menú de aprovechamiento', h: 'Un plato hecho con excedente del día anterior, explicando la filosofía anti-desperdicio.' },
-    { t: 'Reducción de plástico de un solo uso en barra', h: 'Pajitas, agitadores o vasos reutilizables como gesto sostenible.' },
+  { cat: {es:'Sostenibilidad y proveedores', ca:'Sostenibilitat i proveïdors', en:'Sustainability and suppliers'}, icon: 'ti-leaf', ideas: [
+    { title:{es:'Visita al proveedor o productor local', ca:'Visita al proveïdor o productor local', en:'Visit to the local supplier or producer'}, description:{es:'Muestra de dónde viene realmente el producto que sirven.', ca:'Mostra d\'on ve realment el producte que serveixen.', en:'Shows where the product they serve really comes from.'} },
+    { title:{es:'Cómo reducen el desperdicio alimentario', ca:'Com redueixen el malbaratament alimentari', en:'How they reduce food waste'}, description:{es:'Prácticas reales de aprovechamiento, genera buena imagen.', ca:'Pràctiques reals d\'aprofitament, genera bona imatge.', en:'Real practices to make the most of ingredients, builds a good image.'} },
+    { title:{es:'Producto de temporada explicado', ca:'Producte de temporada explicat', en:'Seasonal product explained'}, description:{es:'Por qué ahora sí está en carta y en otra época del año no.', ca:'Per què ara sí que és a la carta i en una altra època de l\'any no.', en:'Why it\'s on the menu now, but not at other times of the year.'} },
+    { title:{es:'Reciclaje o compostaje en el local', ca:'Reciclatge o compostatge al local', en:'Recycling or composting on-site'}, description:{es:'Detalle sostenible que valoran cada vez más los clientes.', ca:'Detall sostenible que valoren cada cop més els clients.', en:'A sustainable touch that customers increasingly value.'} },
+    { title:{es:'Packaging sostenible para delivery', ca:'Packaging sostenible per a delivery', en:'Sustainable packaging for delivery'}, description:{es:'Envases reciclables o reutilizables usados en los pedidos para llevar.', ca:'Envasos reciclables o reutilitzables usats en les comandes per emportar.', en:'Recyclable or reusable containers used for takeaway orders.'} },
+    { title:{es:'Colaboración con productores de la zona', ca:'Col·laboració amb productors de la zona', en:'Collaboration with local producers'}, description:{es:'Queso, vino, embutido... con nombre y cara del productor.', ca:'Formatge, vi, embotit... amb nom i cara del productor.', en:'Cheese, wine, cured meats... with the producer\'s name and face.'} },
+    { title:{es:'Menú de aprovechamiento', ca:'Menú d\'aprofitament', en:'Zero-waste menu'}, description:{es:'Un plato hecho con excedente del día anterior, explicando la filosofía anti-desperdicio.', ca:'Un plat fet amb l\'excedent del dia anterior, explicant la filosofia antimalbaratament.', en:'A dish made from the previous day\'s surplus, explaining the anti-waste philosophy.'} },
+    { title:{es:'Reducción de plástico de un solo uso en barra', ca:'Reducció de plàstic d\'un sol ús a la barra', en:'Reducing single-use plastic at the bar'}, description:{es:'Pajitas, agitadores o vasos reutilizables como gesto sostenible.', ca:'Palletes, agitadors o gots reutilitzables com a gest sostenible.', en:'Reusable straws, stirrers or cups as a sustainable gesture.'} },
   ]},
-  { cat: 'Humor y entretenimiento', icon: 'ti-mood-smile', ideas: [
-    { t: 'Sketch cómico sobre un cliché de hostelería', h: 'Situaciones exageradas que todo el mundo reconoce.' },
-    { t: '"Cosas que nunca le digas a un camarero"', h: 'Lista humorística basada en situaciones reales del servicio.' },
-    { t: 'Blooper o momento gracioso del servicio', h: 'Con permiso de los implicados, un fallo divertido y sin mala imagen.' },
-    { t: 'Meme propio sobre un plato o el día a día', h: 'Contenido ligero que humaniza la marca y genera comentarios.' },
-    { t: 'Canción o rap improvisado sobre el menú', h: 'Formato divertido y muy compartible si sale bien.' },
-    { t: 'El cliente indeciso', h: 'Sketch sobre esa persona que tarda diez minutos en elegir plato.' },
-    { t: '"Sin gluten, pero ponme pan"', h: 'Situaciones contradictorias reales del servicio, contadas con cariño.' },
-    { t: 'Traducciones graciosas de la carta', h: 'Errores de traducción reales (o inventados) de un menú a otro idioma.' },
+  { cat: {es:'Humor y entretenimiento', ca:'Humor i entreteniment', en:'Humour and entertainment'}, icon: 'ti-mood-smile', ideas: [
+    { title:{es:'Sketch cómico sobre un cliché de hostelería', ca:'Sketch còmic sobre un clixé d\'hostaleria', en:'A comedy sketch about a hospitality cliché'}, description:{es:'Situaciones exageradas que todo el mundo reconoce.', ca:'Situacions exagerades que tothom reconeix.', en:'Exaggerated situations everyone recognizes.'} },
+    { title:{es:'"Cosas que nunca le digas a un camarero"', ca:'"Coses que mai li diguis a un cambrer"', en:'"Things you should never say to a waiter"'}, description:{es:'Lista humorística basada en situaciones reales del servicio.', ca:'Llista humorística basada en situacions reals del servei.', en:'A humorous list based on real service situations.'} },
+    { title:{es:'Blooper o momento gracioso del servicio', ca:'Blooper o moment divertit del servei', en:'A blooper or funny moment during service'}, description:{es:'Con permiso de los implicados, un fallo divertido y sin mala imagen.', ca:'Amb permís dels implicats, un error divertit i sense mala imatge.', en:'With permission from those involved, a funny slip-up with no bad image.'} },
+    { title:{es:'Meme propio sobre un plato o el día a día', ca:'Meme propi sobre un plat o el dia a dia', en:'A homemade meme about a dish or everyday life'}, description:{es:'Contenido ligero que humaniza la marca y genera comentarios.', ca:'Contingut lleuger que humanitza la marca i genera comentaris.', en:'Light content that humanizes the brand and sparks comments.'} },
+    { title:{es:'Canción o rap improvisado sobre el menú', ca:'Cançó o rap improvisat sobre el menú', en:'An improvised song or rap about the menu'}, description:{es:'Formato divertido y muy compartible si sale bien.', ca:'Format divertit i molt compartible si surt bé.', en:'A fun, highly shareable format if it goes well.'} },
+    { title:{es:'El cliente indeciso', ca:'El client indecís', en:'The indecisive customer'}, description:{es:'Sketch sobre esa persona que tarda diez minutos en elegir plato.', ca:'Sketch sobre aquella persona que triga deu minuts a triar plat.', en:'A sketch about that person who takes ten minutes to choose a dish.'} },
+    { title:{es:'"Sin gluten, pero ponme pan"', ca:'"Sense gluten, però posa\'m pa"', en:'"Gluten-free, but give me bread"'}, description:{es:'Situaciones contradictorias reales del servicio, contadas con cariño.', ca:'Situacions contradictòries reals del servei, explicades amb estima.', en:'Real contradictory situations from service, told with affection.'} },
+    { title:{es:'Traducciones graciosas de la carta', ca:'Traduccions divertides de la carta', en:'Funny menu translations'}, description:{es:'Errores de traducción reales (o inventados) de un menú a otro idioma.', ca:'Errors de traducció reals (o inventats) d\'un menú a un altre idioma.', en:'Real (or made-up) translation errors of a menu into another language.'} },
   ]},
-  { cat: 'Delivery y para llevar', icon: 'ti-package', ideas: [
-    { t: 'Cómo llega tu pedido: el packaging por dentro', h: 'Muestra el cuidado con el que preparáis cada pedido a domicilio.' },
-    { t: 'Qué platos viajan mejor a domicilio', h: 'Recomendaciones para acertar al pedir para llevar.' },
-    { t: 'Cómo recalentar en casa sin perder calidad', h: 'Tips prácticos que mejoran la experiencia post-compra.' },
-    { t: 'Oferta especial solo para pedidos por delivery', h: 'Incentiva el canal de reparto en horas valle.' },
-    { t: 'Mismo plato en sala vs. en el envase de reparto', h: 'Comparativa honesta que genera confianza.' },
-    { t: 'El repartidor recogiendo el pedido', h: 'Colaboración con la app de delivery, cercano y transparente.' },
-    { t: 'Reseña de un cliente de delivery', h: 'Testimonio leído en directo sobre un pedido a domicilio.' },
-    { t: 'Plato exclusivo para la carta de delivery', h: 'Algo pensado específicamente para llevar, no solo para sala.' },
-    { t: 'Pedir por WhatsApp o web y ahorrar comisión', h: 'Explica la alternativa directa a las apps de reparto.' },
-    { t: 'Un pedido grande para oficina o evento', h: 'Detrás de cámaras preparando un pedido corporativo grande.' },
+  { cat: {es:'Delivery y para llevar', ca:'Delivery i per emportar', en:'Delivery and takeaway'}, icon: 'ti-package', ideas: [
+    { title:{es:'Cómo llega tu pedido: el packaging por dentro', ca:'Com arriba la teva comanda: el packaging per dins', en:'How your order arrives: the packaging from the inside'}, description:{es:'Muestra el cuidado con el que preparáis cada pedido a domicilio.', ca:'Mostra la cura amb què preparau cada comanda a domicili.', en:'Shows the care put into preparing every home delivery order.'} },
+    { title:{es:'Qué platos viajan mejor a domicilio', ca:'Quins plats viatgen millor a domicili', en:'Which dishes travel best for delivery'}, description:{es:'Recomendaciones para acertar al pedir para llevar.', ca:'Recomanacions per encertar en demanar per emportar.', en:'Recommendations for getting your takeaway order right.'} },
+    { title:{es:'Cómo recalentar en casa sin perder calidad', ca:'Com reescalfar a casa sense perdre qualitat', en:'How to reheat at home without losing quality'}, description:{es:'Tips prácticos que mejoran la experiencia post-compra.', ca:'Consells pràctics que milloren l\'experiència posterior a la compra.', en:'Practical tips that improve the post-purchase experience.'} },
+    { title:{es:'Oferta especial solo para pedidos por delivery', ca:'Oferta especial només per a comandes per delivery', en:'Special offer only for delivery orders'}, description:{es:'Incentiva el canal de reparto en horas valle.', ca:'Incentiva el canal de repartiment en hores vall.', en:'Encourages the delivery channel during off-peak hours.'} },
+    { title:{es:'Mismo plato en sala vs. en el envase de reparto', ca:'Mateix plat a sala vs. a l\'envàs de repartiment', en:'Same dish in the dining room vs. in the delivery container'}, description:{es:'Comparativa honesta que genera confianza.', ca:'Comparativa honesta que genera confiança.', en:'An honest comparison that builds trust.'} },
+    { title:{es:'El repartidor recogiendo el pedido', ca:'El repartidor recollint la comanda', en:'The delivery rider picking up the order'}, description:{es:'Colaboración con la app de delivery, cercano y transparente.', ca:'Col·laboració amb l\'app de delivery, proper i transparent.', en:'Collaboration with the delivery app, close and transparent.'} },
+    { title:{es:'Reseña de un cliente de delivery', ca:'Ressenya d\'un client de delivery', en:'Review from a delivery customer'}, description:{es:'Testimonio leído en directo sobre un pedido a domicilio.', ca:'Testimoni llegit en directe sobre una comanda a domicili.', en:'A live-read testimonial about a home delivery order.'} },
+    { title:{es:'Plato exclusivo para la carta de delivery', ca:'Plat exclusiu per a la carta de delivery', en:'Exclusive dish for the delivery menu'}, description:{es:'Algo pensado específicamente para llevar, no solo para sala.', ca:'Alguna cosa pensada específicament per emportar, no només per a sala.', en:'Something designed specifically for takeaway, not just the dining room.'} },
+    { title:{es:'Pedir por WhatsApp o web y ahorrar comisión', ca:'Demanar per WhatsApp o web i estalviar comissió', en:'Order via WhatsApp or the website and save on commission'}, description:{es:'Explica la alternativa directa a las apps de reparto.', ca:'Explica l\'alternativa directa a les apps de repartiment.', en:'Explains the direct alternative to delivery apps.'} },
+    { title:{es:'Un pedido grande para oficina o evento', ca:'Una comanda gran per a oficina o esdeveniment', en:'A large order for an office or event'}, description:{es:'Detrás de cámaras preparando un pedido corporativo grande.', ca:'Darrere les càmeres preparant una comanda corporativa gran.', en:'Behind the scenes preparing a large corporate order.'} },
   ]},
-  { cat: 'Reservas y disponibilidad', icon: 'ti-calendar-check', ideas: [
-    { t: 'Quedan pocas mesas para esta noche', h: 'Aviso puntual que genera urgencia real (solo si es cierto).' },
-    { t: 'Cómo reservar en 30 segundos', h: 'Tutorial rápido del proceso de reserva (web, teléfono, redes).' },
-    { t: 'Ventajas de reservar frente a venir sin avisar', h: 'Explica por qué conviene asegurar mesa en días de mucha gente.' },
-    { t: 'Mesa libre de última hora por cancelación', h: 'Aprovecha una baja para llenar el hueco al momento.' },
-    { t: 'Recuerda que se puede reservar terraza', h: 'Muchos clientes no saben que existe esa opción concreta.' },
-    { t: 'Esta semana casi completo, no te quedes sin sitio', h: 'Aviso de ocupación alta para animar a reservar con tiempo.' },
-    { t: 'Cómo modificar o cancelar tu reserva', h: 'Tutorial breve que reduce llamadas y confusiones.' },
-    { t: 'Aforo limitado para una fecha señalada', h: 'Nochevieja, San Valentín... aviso de plazas limitadas.' },
-    { t: 'Reservas para grupos grandes: qué necesitáis saber', h: 'Condiciones, anticipación y menú cerrado para grupos.' },
-    { t: 'Apúntate a la lista de espera', h: 'Explica que merece la pena esperar aunque parezca completo.' },
+  { cat: {es:'Reservas y disponibilidad', ca:'Reserves i disponibilitat', en:'Bookings and availability'}, icon: 'ti-calendar-check', ideas: [
+    { title:{es:'Quedan pocas mesas para esta noche', ca:'Queden poques taules per a aquesta nit', en:'Few tables left for tonight'}, description:{es:'Aviso puntual que genera urgencia real (solo si es cierto).', ca:'Avís puntual que genera urgència real (només si és cert).', en:'A one-off notice that creates real urgency (only if it\'s true).'} },
+    { title:{es:'Cómo reservar en 30 segundos', ca:'Com reservar en 30 segons', en:'How to book in 30 seconds'}, description:{es:'Tutorial rápido del proceso de reserva (web, teléfono, redes).', ca:'Tutorial ràpid del procés de reserva (web, telèfon, xarxes).', en:'A quick tutorial of the booking process (website, phone, social media).'} },
+    { title:{es:'Ventajas de reservar frente a venir sin avisar', ca:'Avantatges de reservar enfront de venir sense avisar', en:'Benefits of booking vs. walking in without notice'}, description:{es:'Explica por qué conviene asegurar mesa en días de mucha gente.', ca:'Explica per què convé assegurar taula en dies de molta gent.', en:'Explains why it\'s worth securing a table on busy days.'} },
+    { title:{es:'Mesa libre de última hora por cancelación', ca:'Taula lliure d\'última hora per cancel·lació', en:'Last-minute free table due to a cancellation'}, description:{es:'Aprovecha una baja para llenar el hueco al momento.', ca:'Aprofita una baixa per omplir el buit a l\'instant.', en:'Uses a cancellation to fill the slot right away.'} },
+    { title:{es:'Recuerda que se puede reservar terraza', ca:'Recorda que es pot reservar terrassa', en:'Reminder: the terrace can be booked too'}, description:{es:'Muchos clientes no saben que existe esa opción concreta.', ca:'Molts clients no saben que existeix aquesta opció concreta.', en:'Many customers don\'t know that specific option exists.'} },
+    { title:{es:'Esta semana casi completo, no te quedes sin sitio', ca:'Aquesta setmana gairebé complet, no et quedis sense lloc', en:'Almost fully booked this week, don\'t miss out'}, description:{es:'Aviso de ocupación alta para animar a reservar con tiempo.', ca:'Avís d\'ocupació alta per animar a reservar amb temps.', en:'A high-occupancy notice to encourage booking ahead.'} },
+    { title:{es:'Cómo modificar o cancelar tu reserva', ca:'Com modificar o cancel·lar la teva reserva', en:'How to change or cancel your booking'}, description:{es:'Tutorial breve que reduce llamadas y confusiones.', ca:'Tutorial breu que redueix trucades i confusions.', en:'A brief tutorial that reduces calls and confusion.'} },
+    { title:{es:'Aforo limitado para una fecha señalada', ca:'Aforament limitat per a una data assenyalada', en:'Limited capacity for a special date'}, description:{es:'Nochevieja, San Valentín... aviso de plazas limitadas.', ca:'Cap d\'Any, Sant Valentí... avís de places limitades.', en:'New Year\'s Eve, Valentine\'s Day... a limited-spots notice.'} },
+    { title:{es:'Reservas para grupos grandes: qué necesitáis saber', ca:'Reserves per a grups grans: què necessiteu saber', en:'Bookings for large groups: what you need to know'}, description:{es:'Condiciones, anticipación y menú cerrado para grupos.', ca:'Condicions, antelació i menú tancat per a grups.', en:'Conditions, advance notice and set menus for groups.'} },
+    { title:{es:'Apúntate a la lista de espera', ca:'Apunta\'t a la llista d\'espera', en:'Join the waiting list'}, description:{es:'Explica que merece la pena esperar aunque parezca completo.', ca:'Explica que val la pena esperar encara que sembli complet.', en:'Explains it\'s worth waiting even if it looks fully booked.'} },
   ]},
-  { cat: 'Salud, dietas y opciones especiales', icon: 'ti-apple', ideas: [
-    { t: 'Opciones veganas o vegetarianas de la carta', h: 'Recorrido por los platos aptos, con foto de cada uno.' },
-    { t: 'Platos sin gluten y cómo evitáis la contaminación cruzada', h: 'Genera confianza real en clientes celíacos.' },
-    { t: 'Opciones más ligeras o bajas en calorías', h: 'Útil para quien busca comer fuera cuidándose.' },
-    { t: 'Menú keto o bajo en carbohidratos', h: 'Si el negocio lo ofrece, un nicho con demanda creciente.' },
-    { t: 'Cómo adaptáis un plato ante una intolerancia', h: 'Muestra flexibilidad real del equipo de cocina.' },
-    { t: 'Beneficios nutricionales de un ingrediente estrella', h: 'Contenido educativo ligado directamente a vuestra carta.' },
-    { t: 'Opciones bajas en azúcar para diabéticos', h: 'Nicho poco cubierto por la competencia, gran valor percibido.' },
-    { t: 'Menú infantil saludable', h: 'Tranquiliza a familias que buscan algo más que fritos para niños.' },
-    { t: 'Ingredientes ecológicos o de cultivo propio', h: 'Si tenéis huerto propio o proveedores ecológicos certificados.' },
-    { t: 'Cómo equilibráis sabor y salud en un plato', h: 'La reflexión del chef detrás de una receta "sana pero rica".' },
+  { cat: {es:'Salud, dietas y opciones especiales', ca:'Salut, dietes i opcions especials', en:'Health, diets and special options'}, icon: 'ti-apple', ideas: [
+    { title:{es:'Opciones veganas o vegetarianas de la carta', ca:'Opcions veganes o vegetarianes de la carta', en:'Vegan or vegetarian options on the menu'}, description:{es:'Recorrido por los platos aptos, con foto de cada uno.', ca:'Recorregut pels plats aptes, amb foto de cadascun.', en:'A tour of the suitable dishes, with a photo of each one.'} },
+    { title:{es:'Platos sin gluten y cómo evitáis la contaminación cruzada', ca:'Plats sense gluten i com eviteu la contaminació creuada', en:'Gluten-free dishes and how you avoid cross-contamination'}, description:{es:'Genera confianza real en clientes celíacos.', ca:'Genera confiança real en clients celíacs.', en:'Builds real trust with coeliac customers.'} },
+    { title:{es:'Opciones más ligeras o bajas en calorías', ca:'Opcions més lleugeres o baixes en calories', en:'Lighter or lower-calorie options'}, description:{es:'Útil para quien busca comer fuera cuidándose.', ca:'Útil per a qui busca menjar fora cuidant-se.', en:'Useful for those wanting to eat out while watching what they eat.'} },
+    { title:{es:'Menú keto o bajo en carbohidratos', ca:'Menú keto o baix en carbohidrats', en:'Keto or low-carb menu'}, description:{es:'Si el negocio lo ofrece, un nicho con demanda creciente.', ca:'Si el negoci ho ofereix, un nínxol amb demanda creixent.', en:'If the business offers it, a niche with growing demand.'} },
+    { title:{es:'Cómo adaptáis un plato ante una intolerancia', ca:'Com adapteu un plat davant d\'una intolerància', en:'How you adapt a dish for an intolerance'}, description:{es:'Muestra flexibilidad real del equipo de cocina.', ca:'Mostra flexibilitat real de l\'equip de cuina.', en:'Shows the kitchen team\'s real flexibility.'} },
+    { title:{es:'Beneficios nutricionales de un ingrediente estrella', ca:'Beneficis nutricionals d\'un ingredient estrella', en:'Nutritional benefits of a star ingredient'}, description:{es:'Contenido educativo ligado directamente a vuestra carta.', ca:'Contingut educatiu lligat directament a la vostra carta.', en:'Educational content directly tied to your menu.'} },
+    { title:{es:'Opciones bajas en azúcar para diabéticos', ca:'Opcions baixes en sucre per a diabètics', en:'Low-sugar options for diabetics'}, description:{es:'Nicho poco cubierto por la competencia, gran valor percibido.', ca:'Nínxol poc cobert per la competència, gran valor percebut.', en:'A niche barely covered by competitors, high perceived value.'} },
+    { title:{es:'Menú infantil saludable', ca:'Menú infantil saludable', en:'Healthy kids\' menu'}, description:{es:'Tranquiliza a familias que buscan algo más que fritos para niños.', ca:'Tranquil·litza famílies que busquen alguna cosa més que fregits per als nens.', en:'Reassures families looking for more than fried food for kids.'} },
+    { title:{es:'Ingredientes ecológicos o de cultivo propio', ca:'Ingredients ecològics o de cultiu propi', en:'Organic or own-grown ingredients'}, description:{es:'Si tenéis huerto propio o proveedores ecológicos certificados.', ca:'Si teniu hort propi o proveïdors ecològics certificats.', en:'If you have your own garden or certified organic suppliers.'} },
+    { title:{es:'Cómo equilibráis sabor y salud en un plato', ca:'Com equilibreu sabor i salut en un plat', en:'How you balance flavour and health in a dish'}, description:{es:'La reflexión del chef detrás de una receta "sana pero rica".', ca:'La reflexió del xef darrere d\'una recepta "sana però bona".', en:'The chef\'s thinking behind a "healthy but tasty" recipe.'} },
   ]},
-  { cat: 'Comparativas y listas', icon: 'ti-list-numbers', ideas: [
-    { t: 'Top 5 platos para probar si es tu primera vez', h: 'Guía de bienvenida para clientes nuevos.' },
-    { t: '"Si te gusta X, prueba Y"', h: 'Recomendaciones cruzadas basadas en gustos conocidos.' },
-    { t: 'Los 3 cócteles más pedidos de la temporada', h: 'Ranking con datos reales de ventas, genera curiosidad.' },
-    { t: 'Comparativa de raciones: precio y cantidad', h: 'Ayuda a decidir entre individual, media ración o para compartir.' },
-    { t: 'Ranking de los postres más fotografiados', h: 'Aprovecha el atractivo visual para animar a pedirlos.' },
-    { t: 'Cómo ha cambiado la carta este año', h: 'Comparativa de novedades frente a la carta anterior.' },
-    { t: '5 razones para venir esta semana', h: 'Lista dinámica que combina novedades, eventos y promos.' },
-    { t: 'Lo más pedido por turistas vs. por locales', h: 'Curiosidad que genera comentarios y comparaciones.' },
-    { t: 'Menú del día vs. fin de semana vs. grupos', h: 'Comparativa clara de las distintas opciones disponibles.' },
-    { t: 'Los platos favoritos... del propio equipo', h: 'Qué pide el personal cuando come en su día libre.' },
+  { cat: {es:'Comparativas y listas', ca:'Comparatives i llistes', en:'Comparisons and lists'}, icon: 'ti-list-numbers', ideas: [
+    { title:{es:'Top 5 platos para probar si es tu primera vez', ca:'Top 5 plats per provar si és la teva primera vegada', en:'Top 5 dishes to try if it\'s your first visit'}, description:{es:'Guía de bienvenida para clientes nuevos.', ca:'Guia de benvinguda per a clients nous.', en:'A welcome guide for new customers.'} },
+    { title:{es:'"Si te gusta X, prueba Y"', ca:'"Si t\'agrada X, prova Y"', en:'"If you like X, try Y"'}, description:{es:'Recomendaciones cruzadas basadas en gustos conocidos.', ca:'Recomanacions creuades basades en gustos coneguts.', en:'Cross-recommendations based on known tastes.'} },
+    { title:{es:'Los 3 cócteles más pedidos de la temporada', ca:'Els 3 còctels més demanats de la temporada', en:'The 3 most ordered cocktails of the season'}, description:{es:'Ranking con datos reales de ventas, genera curiosidad.', ca:'Rànquing amb dades reals de vendes, genera curiositat.', en:'A ranking with real sales data, sparks curiosity.'} },
+    { title:{es:'Comparativa de raciones: precio y cantidad', ca:'Comparativa de racions: preu i quantitat', en:'Portion comparison: price and quantity'}, description:{es:'Ayuda a decidir entre individual, media ración o para compartir.', ca:'Ajuda a decidir entre individual, mitja ració o per compartir.', en:'Helps decide between individual, half portion or to share.'} },
+    { title:{es:'Ranking de los postres más fotografiados', ca:'Rànquing dels postres més fotografiats', en:'Ranking of the most photographed desserts'}, description:{es:'Aprovecha el atractivo visual para animar a pedirlos.', ca:'Aprofita l\'atractiu visual per animar a demanar-los.', en:'Uses the visual appeal to encourage people to order them.'} },
+    { title:{es:'Cómo ha cambiado la carta este año', ca:'Com ha canviat la carta aquest any', en:'How the menu has changed this year'}, description:{es:'Comparativa de novedades frente a la carta anterior.', ca:'Comparativa de novetats enfront de la carta anterior.', en:'A comparison of new items versus the previous menu.'} },
+    { title:{es:'5 razones para venir esta semana', ca:'5 raons per venir aquesta setmana', en:'5 reasons to come this week'}, description:{es:'Lista dinámica que combina novedades, eventos y promos.', ca:'Llista dinàmica que combina novetats, esdeveniments i promocions.', en:'A dynamic list combining news, events and promotions.'} },
+    { title:{es:'Lo más pedido por turistas vs. por locales', ca:'El més demanat pels turistes vs. pels locals', en:'What tourists order vs. what locals order'}, description:{es:'Curiosidad que genera comentarios y comparaciones.', ca:'Curiositat que genera comentaris i comparacions.', en:'A fun fact that sparks comments and comparisons.'} },
+    { title:{es:'Menú del día vs. fin de semana vs. grupos', ca:'Menú del dia vs. cap de setmana vs. grups', en:'Weekday set menu vs. weekend vs. groups'}, description:{es:'Comparativa clara de las distintas opciones disponibles.', ca:'Comparativa clara de les diferents opcions disponibles.', en:'A clear comparison of the different options available.'} },
+    { title:{es:'Los platos favoritos... del propio equipo', ca:'Els plats preferits... del mateix equip', en:'The favourite dishes... of the team itself'}, description:{es:'Qué pide el personal cuando come en su día libre.', ca:'Què demana el personal quan menja en el seu dia lliure.', en:'What the staff order when they eat here on their day off.'} },
   ]},
-  { cat: 'Por franja horaria', icon: 'ti-clock', ideas: [
-    { t: 'Qué pedir para desayunar rápido antes de trabajar', h: 'Propuesta ágil para el desayuno de entre semana.' },
-    { t: 'Brunch de fin de semana', h: 'Carta especial más relajada para sábados y domingos.' },
-    { t: 'Menú de mediodía para una pausa corta', h: 'Pensado para quien tiene poco tiempo para comer.' },
-    { t: 'La merienda perfecta con café o té de la casa', h: 'Propuesta dulce para la media tarde.' },
-    { t: 'Aperitivo de media tarde-noche', h: 'Algo para picar antes de la cena, con bebida recomendada.' },
-    { t: 'Cena tranquila entre semana', h: 'Propuesta ligera para quien no quiere una cena copiosa un día laborable.' },
-    { t: 'La última copa antes de cerrar', h: 'Ambiente de última hora, tranquilo y con buena música.' },
-    { t: 'Plan de domingo: comida larga y sobremesa', h: 'Propuesta pensada para quedarse charlando sin prisa.' },
-    { t: 'Desayuno especial de fin de semana', h: 'Algo más elaborado que entre semana, con más tiempo para disfrutarlo.' },
-    { t: 'Menú nocturno después de un evento cercano', h: 'Para quien sale de un concierto o cine y busca cenar tarde.' },
+  { cat: {es:'Por franja horaria', ca:'Per franja horària', en:'By time of day'}, icon: 'ti-clock', ideas: [
+    { title:{es:'Qué pedir para desayunar rápido antes de trabajar', ca:'Què demanar per esmorzar ràpid abans de treballar', en:'What to order for a quick breakfast before work'}, description:{es:'Propuesta ágil para el desayuno de entre semana.', ca:'Proposta àgil per a l\'esmorzar entre setmana.', en:'A quick option for weekday breakfast.'} },
+    { title:{es:'Brunch de fin de semana', ca:'Brunch de cap de setmana', en:'Weekend brunch'}, description:{es:'Carta especial más relajada para sábados y domingos.', ca:'Carta especial més relaxada per a dissabtes i diumenges.', en:'A more relaxed special menu for Saturdays and Sundays.'} },
+    { title:{es:'Menú de mediodía para una pausa corta', ca:'Menú de migdia per a una pausa curta', en:'Midday menu for a short break'}, description:{es:'Pensado para quien tiene poco tiempo para comer.', ca:'Pensat per a qui té poc temps per menjar.', en:'Designed for those with little time to eat.'} },
+    { title:{es:'La merienda perfecta con café o té de la casa', ca:'El berenar perfecte amb cafè o te de la casa', en:'The perfect afternoon snack with house coffee or tea'}, description:{es:'Propuesta dulce para la media tarde.', ca:'Proposta dolça per a mitja tarda.', en:'A sweet option for mid-afternoon.'} },
+    { title:{es:'Aperitivo de media tarde-noche', ca:'Aperitiu de mitja tarda-nit', en:'Early-evening aperitif'}, description:{es:'Algo para picar antes de la cena, con bebida recomendada.', ca:'Alguna cosa per picar abans del sopar, amb beguda recomanada.', en:'Something to nibble on before dinner, with a recommended drink.'} },
+    { title:{es:'Cena tranquila entre semana', ca:'Sopar tranquil entre setmana', en:'A quiet weekday dinner'}, description:{es:'Propuesta ligera para quien no quiere una cena copiosa un día laborable.', ca:'Proposta lleugera per a qui no vol un sopar copiós un dia laborable.', en:'A light option for those who don\'t want a heavy dinner on a workday.'} },
+    { title:{es:'La última copa antes de cerrar', ca:'L\'última copa abans de tancar', en:'The last drink before closing'}, description:{es:'Ambiente de última hora, tranquilo y con buena música.', ca:'Ambient d\'última hora, tranquil i amb bona música.', en:'A late-night vibe, relaxed and with good music.'} },
+    { title:{es:'Plan de domingo: comida larga y sobremesa', ca:'Pla de diumenge: dinar llarg i sobretaula', en:'Sunday plan: a long lunch and after-dinner chat'}, description:{es:'Propuesta pensada para quedarse charlando sin prisa.', ca:'Proposta pensada per quedar-se xerrant sense pressa.', en:'An option designed for lingering and chatting without rushing.'} },
+    { title:{es:'Desayuno especial de fin de semana', ca:'Esmorzar especial de cap de setmana', en:'Special weekend breakfast'}, description:{es:'Algo más elaborado que entre semana, con más tiempo para disfrutarlo.', ca:'Alguna cosa més elaborada que entre setmana, amb més temps per gaudir-ho.', en:'Something more elaborate than on weekdays, with more time to enjoy it.'} },
+    { title:{es:'Menú nocturno después de un evento cercano', ca:'Menú nocturn després d\'un esdeveniment proper', en:'Late-night menu after a nearby event'}, description:{es:'Para quien sale de un concierto o cine y busca cenar tarde.', ca:'Per a qui surt d\'un concert o cinema i busca sopar tard.', en:'For those leaving a concert or the cinema looking for a late dinner.'} },
   ]},
-  { cat: 'Encuestas e interacción', icon: 'ti-message-2', ideas: [
-    { t: 'Encuesta en historias: ¿cuál prefieres, A o B?', h: 'Formato rápido de interacción con dos opciones visuales.' },
-    { t: 'Vota el próximo plato que entra en carta', h: 'Involucra a la audiencia en una decisión real del negocio.' },
-    { t: '¿Qué plato quieres que traigamos de vuelta?', h: 'Pregunta abierta que recupera nostalgia por platos antiguos.' },
-    { t: 'Trivia gastronómica sobre vuestra cocina', h: 'Preguntas curiosas relacionadas con vuestros platos o bebidas.' },
-    { t: 'Adivina el precio de un plato', h: 'Juego sencillo que genera muchos comentarios.' },
-    { t: 'Encuesta de horario: ¿abrimos los domingos?', h: 'Decisión real del negocio consultada a la comunidad.' },
-    { t: 'Buzón de preguntas para el chef o el equipo', h: 'Caja de preguntas en historias, responded en un vídeo recopilatorio.' },
-    { t: 'Elige el nombre de nuestro nuevo cóctel', h: 'Dinámica colaborativa que genera pertenencia a la marca.' },
-    { t: 'Test: ¿qué tipo de cliente eres?', h: 'Formato ligero con resultados divertidos y compartibles.' },
-    { t: 'Cuenta atrás para una novedad', h: 'Genera expectativa antes de lanzar un plato, carta o evento.' },
+  { cat: {es:'Encuestas e interacción', ca:'Enquestes i interacció', en:'Polls and interaction'}, icon: 'ti-message-2', ideas: [
+    { title:{es:'Encuesta en historias: ¿cuál prefieres, A o B?', ca:'Enquesta a les històries: quin prefereixes, A o B?', en:'Story poll: which do you prefer, A or B?'}, description:{es:'Formato rápido de interacción con dos opciones visuales.', ca:'Format ràpid d\'interacció amb dues opcions visuals.', en:'A quick interaction format with two visual options.'} },
+    { title:{es:'Vota el próximo plato que entra en carta', ca:'Vota el proper plat que entra a la carta', en:'Vote for the next dish to join the menu'}, description:{es:'Involucra a la audiencia en una decisión real del negocio.', ca:'Involucra l\'audiència en una decisió real del negoci.', en:'Involves the audience in a real business decision.'} },
+    { title:{es:'¿Qué plato quieres que traigamos de vuelta?', ca:'Quin plat vols que tornem a portar?', en:'Which dish do you want us to bring back?'}, description:{es:'Pregunta abierta que recupera nostalgia por platos antiguos.', ca:'Pregunta oberta que recupera nostàlgia per plats antics.', en:'An open question that taps into nostalgia for old dishes.'} },
+    { title:{es:'Trivia gastronómica sobre vuestra cocina', ca:'Trivial gastronòmic sobre la vostra cuina', en:'Food trivia about your kitchen'}, description:{es:'Preguntas curiosas relacionadas con vuestros platos o bebidas.', ca:'Preguntes curioses relacionades amb els vostres plats o begudes.', en:'Fun questions related to your dishes or drinks.'} },
+    { title:{es:'Adivina el precio de un plato', ca:'Endevina el preu d\'un plat', en:'Guess the price of a dish'}, description:{es:'Juego sencillo que genera muchos comentarios.', ca:'Joc senzill que genera molts comentaris.', en:'A simple game that generates lots of comments.'} },
+    { title:{es:'Encuesta de horario: ¿abrimos los domingos?', ca:'Enquesta d\'horari: obrim els diumenges?', en:'Schedule poll: should we open on Sundays?'}, description:{es:'Decisión real del negocio consultada a la comunidad.', ca:'Decisió real del negoci consultada a la comunitat.', en:'A real business decision put to the community.'} },
+    { title:{es:'Buzón de preguntas para el chef o el equipo', ca:'Bústia de preguntes per al xef o l\'equip', en:'Question box for the chef or the team'}, description:{es:'Caja de preguntas en historias, responded en un vídeo recopilatorio.', ca:'Caixa de preguntes a les històries, responeu en un vídeo recopilatori.', en:'A question box on stories, answered in a compilation video.'} },
+    { title:{es:'Elige el nombre de nuestro nuevo cóctel', ca:'Tria el nom del nostre còctel nou', en:'Choose the name of our new cocktail'}, description:{es:'Dinámica colaborativa que genera pertenencia a la marca.', ca:'Dinàmica col·laborativa que genera pertinença a la marca.', en:'A collaborative activity that builds a sense of belonging to the brand.'} },
+    { title:{es:'Test: ¿qué tipo de cliente eres?', ca:'Test: quin tipus de client ets?', en:'Quiz: what kind of customer are you?'}, description:{es:'Formato ligero con resultados divertidos y compartibles.', ca:'Format lleuger amb resultats divertits i compartibles.', en:'A light format with fun, shareable results.'} },
+    { title:{es:'Cuenta atrás para una novedad', ca:'Compte enrere per a una novetat', en:'Countdown to something new'}, description:{es:'Genera expectativa antes de lanzar un plato, carta o evento.', ca:'Genera expectació abans de llançar un plat, carta o esdeveniment.', en:'Builds anticipation before launching a dish, menu or event.'} },
   ]},
-  { cat: 'Días mundiales y efemérides gastronómicas', icon: 'ti-stars', ideas: [
-    { t: 'Día Mundial de la Pizza (9 de febrero)', h: 'Si tenéis pizza en carta, promoción o receta especial ese día.' },
-    { t: 'Día Internacional del Café (1 de octubre)', h: 'Contenido sobre vuestro café, tueste u origen.' },
-    { t: 'Día Mundial del Vino (fecha variable, comprobar cada año)', h: 'Recomendación de maridaje o cata especial.' },
-    { t: 'Día de la Hamburguesa (28 de mayo)', h: 'Promoción o receta destacada si tenéis hamburguesas en carta.' },
-    { t: 'Día Mundial de la Cerveza (primer viernes de agosto)', h: 'Cata o promoción de vuestras cervezas de barril/artesanas.' },
-    { t: 'Día Mundial del Chocolate (7 de julio)', h: 'Postre especial o promoción temática de chocolate.' },
-    { t: 'Día de la Tapa (fecha variable según ciudad)', h: 'Buen momento para destacar vuestras tapas de autor.' },
-    { t: 'Día Mundial de la Gastronomía (18 de octubre)', h: 'Contenido sobre vuestra filosofía culinaria o historia.' },
-    { t: 'Día Mundial del Cóctel o de un cóctel concreto', h: 'Muchos cócteles clásicos tienen su propio día (comprobar fecha).' },
-    { t: 'Día Mundial del Sushi (18 de junio)', h: 'Si tenéis oferta de sushi o fusión asiática en carta.' },
-    { t: 'Día Mundial sin Alcohol', h: 'Buen momento para promocionar vuestros mocktails y bebidas sin alcohol.' },
-    { t: 'Efeméride o plato típico local', h: 'Muchas regiones tienen su propio "día de..." para un plato tradicional; aprovechadlo si aplica.' },
+  { cat: {es:'Días mundiales y efemérides gastronómicas', ca:'Dies mundials i efemèrides gastronòmiques', en:'World days and food-related dates'}, icon: 'ti-stars', ideas: [
+    { title:{es:'Día Mundial de la Pizza (9 de febrero)', ca:'Dia Mundial de la Pizza (9 de febrer)', en:'World Pizza Day (February 9)'}, description:{es:'Si tenéis pizza en carta, promoción o receta especial ese día.', ca:'Si teniu pizza a la carta, promoció o recepta especial aquell dia.', en:'If you have pizza on the menu, a promotion or special recipe that day.'} },
+    { title:{es:'Día Internacional del Café (1 de octubre)', ca:'Dia Internacional del Cafè (1 d\'octubre)', en:'International Coffee Day (October 1)'}, description:{es:'Contenido sobre vuestro café, tueste u origen.', ca:'Contingut sobre el vostre cafè, torrefacció o origen.', en:'Content about your coffee, roast or origin.'} },
+    { title:{es:'Día Mundial del Vino (fecha variable, comprobar cada año)', ca:'Dia Mundial del Vi (data variable, comprovar cada any)', en:'World Wine Day (variable date, check each year)'}, description:{es:'Recomendación de maridaje o cata especial.', ca:'Recomanació de maridatge o tast especial.', en:'A pairing recommendation or special tasting.'} },
+    { title:{es:'Día de la Hamburguesa (28 de mayo)', ca:'Dia de l\'Hamburguesa (28 de maig)', en:'Burger Day (May 28)'}, description:{es:'Promoción o receta destacada si tenéis hamburguesas en carta.', ca:'Promoció o recepta destacada si teniu hamburgueses a la carta.', en:'A promotion or featured recipe if you have burgers on the menu.'} },
+    { title:{es:'Día Mundial de la Cerveza (primer viernes de agosto)', ca:'Dia Mundial de la Cervesa (primer divendres d\'agost)', en:'International Beer Day (first Friday of August)'}, description:{es:'Cata o promoción de vuestras cervezas de barril/artesanas.', ca:'Tast o promoció de les vostres cerveses de barril/artesanes.', en:'A tasting or promotion of your draft/craft beers.'} },
+    { title:{es:'Día Mundial del Chocolate (7 de julio)', ca:'Dia Mundial de la Xocolata (7 de juliol)', en:'World Chocolate Day (July 7)'}, description:{es:'Postre especial o promoción temática de chocolate.', ca:'Postre especial o promoció temàtica de xocolata.', en:'A special dessert or chocolate-themed promotion.'} },
+    { title:{es:'Día de la Tapa (fecha variable según ciudad)', ca:'Dia de la Tapa (data variable segons ciutat)', en:'Tapas Day (date varies by city)'}, description:{es:'Buen momento para destacar vuestras tapas de autor.', ca:'Bon moment per destacar les vostres tapes d\'autor.', en:'A great time to showcase your signature tapas.'} },
+    { title:{es:'Día Mundial de la Gastronomía (18 de octubre)', ca:'Dia Mundial de la Gastronomia (18 d\'octubre)', en:'World Gastronomy Day (October 18)'}, description:{es:'Contenido sobre vuestra filosofía culinaria o historia.', ca:'Contingut sobre la vostra filosofia culinària o història.', en:'Content about your culinary philosophy or history.'} },
+    { title:{es:'Día Mundial del Cóctel o de un cóctel concreto', ca:'Dia Mundial del Còctel o d\'un còctel concret', en:'World Cocktail Day or a specific cocktail\'s day'}, description:{es:'Muchos cócteles clásicos tienen su propio día (comprobar fecha).', ca:'Molts còctels clàssics tenen el seu propi dia (comprovar data).', en:'Many classic cocktails have their own day (check the date).'} },
+    { title:{es:'Día Mundial del Sushi (18 de junio)', ca:'Dia Mundial del Sushi (18 de juny)', en:'World Sushi Day (June 18)'}, description:{es:'Si tenéis oferta de sushi o fusión asiática en carta.', ca:'Si teniu oferta de sushi o fusió asiàtica a la carta.', en:'If you have sushi or Asian fusion on the menu.'} },
+    { title:{es:'Día Mundial sin Alcohol', ca:'Dia Mundial sense Alcohol', en:'World No Alcohol Day'}, description:{es:'Buen momento para promocionar vuestros mocktails y bebidas sin alcohol.', ca:'Bon moment per promocionar els vostres mocktails i begudes sense alcohol.', en:'A great time to promote your mocktails and alcohol-free drinks.'} },
+    { title:{es:'Efeméride o plato típico local', ca:'Efemèride o plat típic local', en:'Local anniversary or traditional dish'}, description:{es:'Muchas regiones tienen su propio "día de..." para un plato tradicional; aprovechadlo si aplica.', ca:'Moltes regions tenen el seu propi "dia de..." per a un plat tradicional; aprofiteu-lo si s\'escau.', en:'Many regions have their own "day of..." for a traditional dish; take advantage of it if it applies.'} },
   ]},
-  { cat: 'Grupos, celebraciones y eventos privados', icon: 'ti-users-group', ideas: [
-    { t: 'Menú especial para cumpleaños en grupo', h: 'Propuesta cerrada pensada para celebraciones.' },
-    { t: 'Paquete para despedidas de soltero/a', h: 'Menú, ambientación o detalle especial para el grupo.' },
-    { t: 'Menú de comunión o celebración familiar', h: 'Propuesta específica para este tipo de eventos.' },
-    { t: 'Cómo organizar una cena de empresa', h: 'Explica el proceso, precios y opciones disponibles.' },
-    { t: 'Detalle de bienvenida para grupos grandes', h: 'Un pequeño gesto que marca la diferencia en la experiencia.' },
-    { t: 'Menú de Navidad para grupos y empresas', h: 'Promoción con antelación suficiente para reservar diciembre.' },
-    { t: 'Tarta o postre personalizado para ocasiones especiales', h: 'Servicio añadido que puede generar ingresos extra.' },
-    { t: 'Espacio privado o reservado disponible', h: 'Muestra la sala o reservado para eventos exclusivos.' },
-    { t: 'Decoración de una mesa para un cumpleaños sorpresa', h: 'Detrás de cámaras montando una sorpresa para un cliente.' },
-    { t: 'Detalle especial para el homenajeado del grupo', h: 'Postre gratis, foto de recuerdo o vela de cumpleaños.' },
+  { cat: {es:'Grupos, celebraciones y eventos privados', ca:'Grups, celebracions i esdeveniments privats', en:'Groups, celebrations and private events'}, icon: 'ti-users-group', ideas: [
+    { title:{es:'Menú especial para cumpleaños en grupo', ca:'Menú especial per a aniversaris en grup', en:'Special menu for group birthdays'}, description:{es:'Propuesta cerrada pensada para celebraciones.', ca:'Proposta tancada pensada per a celebracions.', en:'A fixed offer designed for celebrations.'} },
+    { title:{es:'Paquete para despedidas de soltero/a', ca:'Paquet per a comiats de solter/a', en:'Package for stag/hen parties'}, description:{es:'Menú, ambientación o detalle especial para el grupo.', ca:'Menú, ambientació o detall especial per al grup.', en:'A menu, decor or special touch for the group.'} },
+    { title:{es:'Menú de comunión o celebración familiar', ca:'Menú de comunió o celebració familiar', en:'Communion or family celebration menu'}, description:{es:'Propuesta específica para este tipo de eventos.', ca:'Proposta específica per a aquest tipus d\'esdeveniments.', en:'A specific offer for this kind of event.'} },
+    { title:{es:'Cómo organizar una cena de empresa', ca:'Com organitzar un sopar d\'empresa', en:'How to organize a corporate dinner'}, description:{es:'Explica el proceso, precios y opciones disponibles.', ca:'Explica el procés, preus i opcions disponibles.', en:'Explains the process, prices and available options.'} },
+    { title:{es:'Detalle de bienvenida para grupos grandes', ca:'Detall de benvinguda per a grups grans', en:'Welcome touch for large groups'}, description:{es:'Un pequeño gesto que marca la diferencia en la experiencia.', ca:'Un petit gest que marca la diferència en l\'experiència.', en:'A small gesture that makes all the difference in the experience.'} },
+    { title:{es:'Menú de Navidad para grupos y empresas', ca:'Menú de Nadal per a grups i empreses', en:'Christmas menu for groups and companies'}, description:{es:'Promoción con antelación suficiente para reservar diciembre.', ca:'Promoció amb prou antelació per reservar desembre.', en:'A promotion with enough advance notice to book December.'} },
+    { title:{es:'Tarta o postre personalizado para ocasiones especiales', ca:'Pastís o postre personalitzat per a ocasions especials', en:'Custom cake or dessert for special occasions'}, description:{es:'Servicio añadido que puede generar ingresos extra.', ca:'Servei afegit que pot generar ingressos extra.', en:'An add-on service that can generate extra revenue.'} },
+    { title:{es:'Espacio privado o reservado disponible', ca:'Espai privat o reservat disponible', en:'Private or reserved space available'}, description:{es:'Muestra la sala o reservado para eventos exclusivos.', ca:'Mostra la sala o reservat per a esdeveniments exclusius.', en:'Shows off the private room for exclusive events.'} },
+    { title:{es:'Decoración de una mesa para un cumpleaños sorpresa', ca:'Decoració d\'una taula per a un aniversari sorpresa', en:'Table decoration for a surprise birthday'}, description:{es:'Detrás de cámaras montando una sorpresa para un cliente.', ca:'Darrere les càmeres muntant una sorpresa per a un client.', en:'Behind the scenes setting up a surprise for a customer.'} },
+    { title:{es:'Detalle especial para el homenajeado del grupo', ca:'Detall especial per a l\'homenatjat del grup', en:'Special touch for the group\'s guest of honour'}, description:{es:'Postre gratis, foto de recuerdo o vela de cumpleaños.', ca:'Postre gratis, foto de record o espelma d\'aniversari.', en:'A free dessert, a keepsake photo or a birthday candle.'} },
   ]},
-  { cat: 'Accesibilidad, familias y mascotas', icon: 'ti-accessible', ideas: [
-    { t: 'Menú infantil: qué incluye y precio', h: 'Información práctica para familias que buscan dónde comer con niños.' },
-    { t: 'Trona o zona para bebés disponible', h: 'Detalle que facilita la decisión a familias con bebés.' },
-    { t: 'Aquí sí se admiten mascotas', h: 'Foto de un perro en la terraza, muy compartido por dueños de mascotas.' },
-    { t: 'Accesibilidad para sillas de ruedas', h: 'Rampas, baños adaptados y mesas accesibles.' },
-    { t: 'Zona tranquila con wifi y enchufes', h: 'Útil para quien quiere trabajar o estudiar un rato.' },
-    { t: 'Aparcamiento cercano o facilidades de acceso', h: 'Información práctica que resuelve una duda frecuente.' },
-    { t: 'Actividades para niños mientras esperan', h: 'Lápices, juegos o menú para colorear en la mesa.' },
-    { t: 'Menús adaptados para personas mayores', h: 'Raciones y texturas pensadas para ese público.' },
-    { t: 'Normas básicas del espacio pet-friendly', h: 'Transparencia sobre dónde y cómo pueden estar las mascotas.' },
-    { t: 'Espacio para carritos de bebé', h: 'Detalle práctico que agradecen mucho las familias.' },
+  { cat: {es:'Accesibilidad, familias y mascotas', ca:'Accessibilitat, famílies i mascotes', en:'Accessibility, families and pets'}, icon: 'ti-accessible', ideas: [
+    { title:{es:'Menú infantil: qué incluye y precio', ca:'Menú infantil: què inclou i preu', en:'Kids\' menu: what\'s included and the price'}, description:{es:'Información práctica para familias que buscan dónde comer con niños.', ca:'Informació pràctica per a famílies que busquen on menjar amb nens.', en:'Practical information for families looking for somewhere to eat with kids.'} },
+    { title:{es:'Trona o zona para bebés disponible', ca:'Trona o zona per a nadons disponible', en:'High chair or baby area available'}, description:{es:'Detalle que facilita la decisión a familias con bebés.', ca:'Detall que facilita la decisió a famílies amb nadons.', en:'A detail that makes the decision easier for families with babies.'} },
+    { title:{es:'Aquí sí se admiten mascotas', ca:'Aquí sí que s\'admeten mascotes', en:'Pets are welcome here'}, description:{es:'Foto de un perro en la terraza, muy compartido por dueños de mascotas.', ca:'Foto d\'un gos a la terrassa, molt compartit per propietaris de mascotes.', en:'A photo of a dog on the terrace, widely shared by pet owners.'} },
+    { title:{es:'Accesibilidad para sillas de ruedas', ca:'Accessibilitat per a cadires de rodes', en:'Wheelchair accessibility'}, description:{es:'Rampas, baños adaptados y mesas accesibles.', ca:'Rampes, banys adaptats i taules accessibles.', en:'Ramps, adapted restrooms and accessible tables.'} },
+    { title:{es:'Zona tranquila con wifi y enchufes', ca:'Zona tranquil·la amb wifi i endolls', en:'Quiet area with wifi and power outlets'}, description:{es:'Útil para quien quiere trabajar o estudiar un rato.', ca:'Útil per a qui vol treballar o estudiar una estona.', en:'Useful for anyone wanting to work or study for a while.'} },
+    { title:{es:'Aparcamiento cercano o facilidades de acceso', ca:'Aparcament proper o facilitats d\'accés', en:'Nearby parking or access facilities'}, description:{es:'Información práctica que resuelve una duda frecuente.', ca:'Informació pràctica que resol un dubte freqüent.', en:'Practical information that answers a common question.'} },
+    { title:{es:'Actividades para niños mientras esperan', ca:'Activitats per a nens mentre esperen', en:'Activities for kids while they wait'}, description:{es:'Lápices, juegos o menú para colorear en la mesa.', ca:'Llapis, jocs o menú per pintar a la taula.', en:'Crayons, games or a colouring menu at the table.'} },
+    { title:{es:'Menús adaptados para personas mayores', ca:'Menús adaptats per a gent gran', en:'Menus adapted for older adults'}, description:{es:'Raciones y texturas pensadas para ese público.', ca:'Racions i textures pensades per a aquest públic.', en:'Portions and textures designed for that audience.'} },
+    { title:{es:'Normas básicas del espacio pet-friendly', ca:'Normes bàsiques de l\'espai pet-friendly', en:'Basic rules of the pet-friendly area'}, description:{es:'Transparencia sobre dónde y cómo pueden estar las mascotas.', ca:'Transparència sobre on i com poden estar les mascotes.', en:'Transparency about where and how pets can be.'} },
+    { title:{es:'Espacio para carritos de bebé', ca:'Espai per a cotxets de nadó', en:'Space for baby strollers'}, description:{es:'Detalle práctico que agradecen mucho las familias.', ca:'Detall pràctic que agraeixen molt les famílies.', en:'A practical touch families really appreciate.'} },
   ]},
-  { cat: 'Reclutamiento y vida laboral', icon: 'ti-briefcase', ideas: [
-    { t: '"Estamos contratando"', h: 'Puesto, requisitos y cómo apuntarse, con buena presentación visual.' },
-    { t: 'Un día de prueba de un nuevo empleado', h: 'Muestra el ambiente de trabajo desde dentro.' },
-    { t: 'Por qué trabajar en este equipo', h: 'Testimonios internos sinceros sobre el ambiente laboral.' },
-    { t: 'Beneficios de trabajar aquí', h: 'Horarios, formación, ambiente... lo que os diferencia como empleador.' },
-    { t: 'Cómo es el proceso de selección', h: 'Transparencia que atrae a mejores candidatos.' },
-    { t: 'Nueva incorporación al equipo', h: 'Bienvenida pública que también genera cercanía con el cliente.' },
-    { t: 'Formación interna a un nuevo camarero/a', h: 'Muestra el cuidado que ponéis en formar a vuestro personal.' },
-    { t: 'De becario/a a jefe/a de sala', h: 'Historia de crecimiento interno, muy inspiradora.' },
+  { cat: {es:'Reclutamiento y vida laboral', ca:'Reclutament i vida laboral', en:'Recruitment and work life'}, icon: 'ti-briefcase', ideas: [
+    { title:{es:'"Estamos contratando"', ca:'"Estem contractant"', en:'"We\'re hiring"'}, description:{es:'Puesto, requisitos y cómo apuntarse, con buena presentación visual.', ca:'Lloc, requisits i com apuntar-s\'hi, amb bona presentació visual.', en:'Position, requirements and how to apply, with a good visual presentation.'} },
+    { title:{es:'Un día de prueba de un nuevo empleado', ca:'Un dia de prova d\'un nou empleat', en:'A new employee\'s trial day'}, description:{es:'Muestra el ambiente de trabajo desde dentro.', ca:'Mostra l\'ambient de treball des de dins.', en:'Shows the working atmosphere from the inside.'} },
+    { title:{es:'Por qué trabajar en este equipo', ca:'Per què treballar en aquest equip', en:'Why work with this team'}, description:{es:'Testimonios internos sinceros sobre el ambiente laboral.', ca:'Testimonis interns sincers sobre l\'ambient laboral.', en:'Honest internal testimonials about the work environment.'} },
+    { title:{es:'Beneficios de trabajar aquí', ca:'Beneficis de treballar aquí', en:'Benefits of working here'}, description:{es:'Horarios, formación, ambiente... lo que os diferencia como empleador.', ca:'Horaris, formació, ambient... el que us diferencia com a ocupador.', en:'Hours, training, atmosphere... what sets you apart as an employer.'} },
+    { title:{es:'Cómo es el proceso de selección', ca:'Com és el procés de selecció', en:'What the hiring process is like'}, description:{es:'Transparencia que atrae a mejores candidatos.', ca:'Transparència que atreu millors candidats.', en:'Transparency that attracts better candidates.'} },
+    { title:{es:'Nueva incorporación al equipo', ca:'Nova incorporació a l\'equip', en:'New team member'}, description:{es:'Bienvenida pública que también genera cercanía con el cliente.', ca:'Benvinguda pública que també genera proximitat amb el client.', en:'A public welcome that also builds closeness with customers.'} },
+    { title:{es:'Formación interna a un nuevo camarero/a', ca:'Formació interna a un nou cambrer/a', en:'Internal training for a new waiter/waitress'}, description:{es:'Muestra el cuidado que ponéis en formar a vuestro personal.', ca:'Mostra la cura que poseu a formar el vostre personal.', en:'Shows the care you put into training your staff.'} },
+    { title:{es:'De becario/a a jefe/a de sala', ca:'De becari/ària a cap de sala', en:'From intern to floor manager'}, description:{es:'Historia de crecimiento interno, muy inspiradora.', ca:'Història de creixement intern, molt inspiradora.', en:'A story of internal growth, very inspiring.'} },
   ]},
-  { cat: 'Reseñas y reputación online', icon: 'ti-star', ideas: [
-    { t: 'Cómo dejar una reseña en Google en 30 segundos', h: 'Tutorial que facilita conseguir más reseñas.' },
-    { t: 'Agradecimiento a quien deja una reseña de 5 estrellas', h: 'Reconocimiento público que anima a otros a hacerlo.' },
-    { t: 'Reacción del equipo a la mejor reseña del mes', h: 'Formato divertido y cercano de compartir feedback positivo.' },
-    { t: 'Cómo responden a una crítica constructiva', h: 'Muestra profesionalidad y ganas de mejorar.' },
-    { t: 'Reseña destacada convertida en post visual', h: 'Cita textual de un cliente con buen diseño.' },
-    { t: 'Invitación a dejar reseña con un pequeño detalle', h: 'Incentivo dentro de la normativa de la plataforma usada.' },
-    { t: 'Antes y después de mejoras tras el feedback', h: 'Demuestra que escucháis y aplicáis lo que dicen los clientes.' },
-    { t: 'Menciones en prensa o medios locales', h: 'Comparte reconocimientos externos que dan credibilidad.' },
+  { cat: {es:'Reseñas y reputación online', ca:'Ressenyes i reputació en línia', en:'Reviews and online reputation'}, icon: 'ti-star', ideas: [
+    { title:{es:'Cómo dejar una reseña en Google en 30 segundos', ca:'Com deixar una ressenya a Google en 30 segons', en:'How to leave a Google review in 30 seconds'}, description:{es:'Tutorial que facilita conseguir más reseñas.', ca:'Tutorial que facilita aconseguir més ressenyes.', en:'A tutorial that makes it easier to get more reviews.'} },
+    { title:{es:'Agradecimiento a quien deja una reseña de 5 estrellas', ca:'Agraïment a qui deixa una ressenya de 5 estrelles', en:'Thanking whoever leaves a 5-star review'}, description:{es:'Reconocimiento público que anima a otros a hacerlo.', ca:'Reconeixement públic que anima altres a fer-ho.', en:'Public recognition that encourages others to do the same.'} },
+    { title:{es:'Reacción del equipo a la mejor reseña del mes', ca:'Reacció de l\'equip a la millor ressenya del mes', en:'The team\'s reaction to the best review of the month'}, description:{es:'Formato divertido y cercano de compartir feedback positivo.', ca:'Format divertit i proper de compartir feedback positiu.', en:'A fun, warm way of sharing positive feedback.'} },
+    { title:{es:'Cómo responden a una crítica constructiva', ca:'Com responen a una crítica constructiva', en:'How they respond to constructive criticism'}, description:{es:'Muestra profesionalidad y ganas de mejorar.', ca:'Mostra professionalitat i ganes de millorar.', en:'Shows professionalism and a will to improve.'} },
+    { title:{es:'Reseña destacada convertida en post visual', ca:'Ressenya destacada convertida en post visual', en:'A featured review turned into a visual post'}, description:{es:'Cita textual de un cliente con buen diseño.', ca:'Cita textual d\'un client amb bon disseny.', en:'A word-for-word customer quote with nice design.'} },
+    { title:{es:'Invitación a dejar reseña con un pequeño detalle', ca:'Invitació a deixar ressenya amb un petit detall', en:'Invitation to leave a review with a small perk'}, description:{es:'Incentivo dentro de la normativa de la plataforma usada.', ca:'Incentiu dins de la normativa de la plataforma utilitzada.', en:'An incentive within the rules of the platform used.'} },
+    { title:{es:'Antes y después de mejoras tras el feedback', ca:'Abans i després de millores després del feedback', en:'Before and after improvements based on feedback'}, description:{es:'Demuestra que escucháis y aplicáis lo que dicen los clientes.', ca:'Demostra que escolteu i apliqueu el que diuen els clients.', en:'Shows that you listen and act on what customers say.'} },
+    { title:{es:'Menciones en prensa o medios locales', ca:'Mencions a la premsa o mitjans locals', en:'Mentions in the press or local media'}, description:{es:'Comparte reconocimientos externos que dan credibilidad.', ca:'Comparteix reconeixements externs que donen credibilitat.', en:'Shares external recognition that builds credibility.'} },
   ]},
-  { cat: 'Oportunismo y actualidad', icon: 'ti-cloud', ideas: [
-    { t: 'Día de lluvia: plan perfecto con algo calentito', h: 'Aprovecha el tiempo meteorológico real del día.' },
-    { t: 'Ola de calor: bebida o helado destacado', h: 'Contenido reactivo a la temperatura del momento.' },
-    { t: 'Aprovechar un partido importante', h: 'Ambiente del bar para ver el evento deportivo del día.' },
-    { t: 'Festivo inesperado o puente', h: 'Aviso de horario especial cuando cambia lo habitual.' },
-    { t: 'Tendencia de actualidad aplicada con buen gusto', h: 'Sube al tren de una conversación del momento, con cuidado.' },
-    { t: '"Lunes de vuelta al trabajo"', h: 'Oferta o mensaje que anima a arrancar bien la semana.' },
-    { t: 'Apertura especial un día que normalmente cerráis', h: 'Aviso puntual de un cambio de horario excepcional.' },
-    { t: 'Reacción con humor a un titular de actualidad gastronómica', h: 'Contenido oportunista y ligero, siempre con cuidado.' },
+  { cat: {es:'Oportunismo y actualidad', ca:'Oportunisme i actualitat', en:'Timeliness and current events'}, icon: 'ti-cloud', ideas: [
+    { title:{es:'Día de lluvia: plan perfecto con algo calentito', ca:'Dia de pluja: pla perfecte amb alguna cosa calenteta', en:'Rainy day: the perfect plan with something warm'}, description:{es:'Aprovecha el tiempo meteorológico real del día.', ca:'Aprofita el temps meteorològic real del dia.', en:'Makes the most of the actual weather that day.'} },
+    { title:{es:'Ola de calor: bebida o helado destacado', ca:'Onada de calor: beguda o gelat destacat', en:'Heatwave: featured drink or ice cream'}, description:{es:'Contenido reactivo a la temperatura del momento.', ca:'Contingut reactiu a la temperatura del moment.', en:'Content reacting to the current temperature.'} },
+    { title:{es:'Aprovechar un partido importante', ca:'Aprofitar un partit important', en:'Making the most of a big match'}, description:{es:'Ambiente del bar para ver el evento deportivo del día.', ca:'Ambient del bar per veure l\'esdeveniment esportiu del dia.', en:'The bar\'s vibe for watching the day\'s sporting event.'} },
+    { title:{es:'Festivo inesperado o puente', ca:'Festiu inesperat o pont', en:'Unexpected public holiday or long weekend'}, description:{es:'Aviso de horario especial cuando cambia lo habitual.', ca:'Avís d\'horari especial quan canvia l\'habitual.', en:'A special hours notice when the usual schedule changes.'} },
+    { title:{es:'Tendencia de actualidad aplicada con buen gusto', ca:'Tendència d\'actualitat aplicada amb bon gust', en:'A current trend applied tastefully'}, description:{es:'Sube al tren de una conversación del momento, con cuidado.', ca:'Puja al tren d\'una conversa del moment, amb cura.', en:'Jumps on a current conversation, carefully.'} },
+    { title:{es:'"Lunes de vuelta al trabajo"', ca:'"Dilluns de tornada a la feina"', en:'"Back-to-work Monday"'}, description:{es:'Oferta o mensaje que anima a arrancar bien la semana.', ca:'Oferta o missatge que anima a començar bé la setmana.', en:'An offer or message that helps kick off the week well.'} },
+    { title:{es:'Apertura especial un día que normalmente cerráis', ca:'Obertura especial un dia que normalment tanqueu', en:'Special opening on a day you\'re usually closed'}, description:{es:'Aviso puntual de un cambio de horario excepcional.', ca:'Avís puntual d\'un canvi d\'horari excepcional.', en:'A one-off notice of an exceptional schedule change.'} },
+    { title:{es:'Reacción con humor a un titular de actualidad gastronómica', ca:'Reacció amb humor a un titular d\'actualitat gastronòmica', en:'A humorous reaction to a current food-news headline'}, description:{es:'Contenido oportunista y ligero, siempre con cuidado.', ca:'Contingut oportunista i lleuger, sempre amb cura.', en:'Timely, light content, always handled carefully.'} },
   ]},
-  { cat: 'Google Business y reseñas', icon: 'ti-brand-google', ideas: [
-    { t: 'Responder las reseñas nuevas de Google', h: 'Tarea de mantenimiento (no contenido creativo): revisa y contesta lo que dejen esta semana.' },
-    { t: 'Responder a una reseña negativa con profesionalidad', h: 'Sin discutir: agradecer, pedir disculpas si procede y ofrecer solucionarlo fuera de la reseña.' },
-    { t: 'Actualizar el horario en Google si cambia', h: 'Festivos, vacaciones o cambios de temporada — evita que llegue gente con el negocio cerrado.' },
-    { t: 'Subir fotos nuevas al perfil de Google Business', h: 'Fotos recientes de platos, sala o fachada; los perfiles con fotos actualizadas destacan más.' },
-    { t: 'Publicar una novedad como "Google Post"', h: 'Oferta, evento o plato nuevo publicado directamente en la ficha de Google.' },
-    { t: 'Revisar que los datos del perfil sean correctos', h: 'Teléfono, dirección, web y enlace de reservas al día.' },
-    { t: 'Comprobar la carta/menú de Google', h: 'Que los platos, precios y fotos del menú en Google coincidan con la carta real.' },
-    { t: 'Pedir reseña a los últimos clientes', h: 'Mensaje directo (WhatsApp/email) a quien ha visitado recientemente, con el enlace directo a Google.' },
-    { t: 'Revisar preguntas y respuestas públicas del perfil', h: 'La gente pregunta cosas ahí (horario, aparcamiento...); contestar rápido da buena imagen.' },
-    { t: 'Comprobar atributos del negocio en Google', h: 'Pet-friendly, accesible en silla de ruedas, terraza, wifi... marcados correctamente.' },
-    { t: 'Verificar que el local aparece bien situado en Google Maps', h: 'Un pin mal ubicado hace perder clientes que no encuentran el sitio.' },
-    { t: 'Responder mensajes recibidos por Google', h: 'El chat de Google Business Profile también necesita revisión periódica.' },
+  { cat: {es:'Google Business y reseñas', ca:'Google Business i ressenyes', en:'Google Business and reviews'}, icon: 'ti-brand-google', ideas: [
+    { title:{es:'Responder las reseñas nuevas de Google', ca:'Respondre les ressenyes noves de Google', en:'Reply to new Google reviews'}, description:{es:'Tarea de mantenimiento (no contenido creativo): revisa y contesta lo que dejen esta semana.', ca:'Tasca de manteniment (no contingut creatiu): revisa i respon el que deixin aquesta setmana.', en:'A maintenance task (not creative content): review and reply to whatever comes in this week.'} },
+    { title:{es:'Responder a una reseña negativa con profesionalidad', ca:'Respondre a una ressenya negativa amb professionalitat', en:'Respond to a negative review professionally'}, description:{es:'Sin discutir: agradecer, pedir disculpas si procede y ofrecer solucionarlo fuera de la reseña.', ca:'Sense discutir: agrair, demanar disculpes si escau i oferir solucionar-ho fora de la ressenya.', en:'Without arguing: thank them, apologize if appropriate, and offer to resolve it outside the review.'} },
+    { title:{es:'Actualizar el horario en Google si cambia', ca:'Actualitzar l\'horari a Google si canvia', en:'Update Google hours if they change'}, description:{es:'Festivos, vacaciones o cambios de temporada — evita que llegue gente con el negocio cerrado.', ca:'Festius, vacances o canvis de temporada — evita que arribi gent amb el negoci tancat.', en:'Holidays, vacations or seasonal changes — avoids people showing up when you\'re closed.'} },
+    { title:{es:'Subir fotos nuevas al perfil de Google Business', ca:'Pujar fotos noves al perfil de Google Business', en:'Upload new photos to the Google Business profile'}, description:{es:'Fotos recientes de platos, sala o fachada; los perfiles con fotos actualizadas destacan más.', ca:'Fotos recents de plats, sala o façana; els perfils amb fotos actualitzades destaquen més.', en:'Recent photos of dishes, the dining room or the facade; profiles with up-to-date photos stand out more.'} },
+    { title:{es:'Publicar una novedad como "Google Post"', ca:'Publicar una novetat com a "Google Post"', en:'Publish an update as a "Google Post"'}, description:{es:'Oferta, evento o plato nuevo publicado directamente en la ficha de Google.', ca:'Oferta, esdeveniment o plat nou publicat directament a la fitxa de Google.', en:'An offer, event or new dish published directly on the Google listing.'} },
+    { title:{es:'Revisar que los datos del perfil sean correctos', ca:'Revisar que les dades del perfil siguin correctes', en:'Check that the profile details are correct'}, description:{es:'Teléfono, dirección, web y enlace de reservas al día.', ca:'Telèfon, adreça, web i enllaç de reserves al dia.', en:'Phone number, address, website and booking link up to date.'} },
+    { title:{es:'Comprobar la carta/menú de Google', ca:'Comprovar la carta/menú de Google', en:'Check the Google menu'}, description:{es:'Que los platos, precios y fotos del menú en Google coincidan con la carta real.', ca:'Que els plats, preus i fotos del menú a Google coincideixin amb la carta real.', en:'Make sure the dishes, prices and photos on the Google menu match the real one.'} },
+    { title:{es:'Pedir reseña a los últimos clientes', ca:'Demanar ressenya als últims clients', en:'Ask recent customers for a review'}, description:{es:'Mensaje directo (WhatsApp/email) a quien ha visitado recientemente, con el enlace directo a Google.', ca:'Missatge directe (WhatsApp/email) a qui ha visitat recentment, amb l\'enllaç directe a Google.', en:'A direct message (WhatsApp/email) to recent visitors, with the direct link to Google.'} },
+    { title:{es:'Revisar preguntas y respuestas públicas del perfil', ca:'Revisar preguntes i respostes públiques del perfil', en:'Check the profile\'s public Q&A'}, description:{es:'La gente pregunta cosas ahí (horario, aparcamiento...); contestar rápido da buena imagen.', ca:'La gent pregunta coses allà (horari, aparcament...); respondre ràpid dona bona imatge.', en:'People ask things there (hours, parking...); replying quickly gives a good impression.'} },
+    { title:{es:'Comprobar atributos del negocio en Google', ca:'Comprovar atributs del negoci a Google', en:'Check the business attributes on Google'}, description:{es:'Pet-friendly, accesible en silla de ruedas, terraza, wifi... marcados correctamente.', ca:'Pet-friendly, accessible en cadira de rodes, terrassa, wifi... marcats correctament.', en:'Pet-friendly, wheelchair accessible, terrace, wifi... correctly marked.'} },
+    { title:{es:'Verificar que el local aparece bien situado en Google Maps', ca:'Verificar que el local apareix ben situat a Google Maps', en:'Verify the venue is correctly located on Google Maps'}, description:{es:'Un pin mal ubicado hace perder clientes que no encuentran el sitio.', ca:'Un pin mal ubicat fa perdre clients que no troben el lloc.', en:'A misplaced pin loses customers who can\'t find the venue.'} },
+    { title:{es:'Responder mensajes recibidos por Google', ca:'Respondre missatges rebuts per Google', en:'Reply to messages received via Google'}, description:{es:'El chat de Google Business Profile también necesita revisión periódica.', ca:'El xat de Google Business Profile també necessita revisió periòdica.', en:'The Google Business Profile chat also needs periodic checking.'} },
   ]},
-  { cat: 'Redes sociales — gestión y mantenimiento', icon: 'ti-share', ideas: [
-    { t: 'Actualizar biografía y enlace de Instagram/Facebook', h: 'Que el enlace de la bio lleve a la web, carta o reservas actuales, no a algo desactualizado.' },
-    { t: 'Revisar y responder mensajes directos pendientes', h: 'Tarea de mantenimiento: vaciar la bandeja de DMs sin contestar.' },
-    { t: 'Comprobar que el horario esté al día en Facebook', h: 'Facebook tiene su propio horario, independiente del de Google.' },
-    { t: 'Planificar las publicaciones de la semana', h: 'Bloque de tiempo fijo para programar contenido con antelación, no improvisar cada día.' },
-    { t: 'Responder comentarios pendientes en publicaciones antiguas', h: 'Revisión periódica de comentarios que se quedaron sin respuesta.' },
-    { t: 'Actualizar los destacados de Instagram (Stories)', h: 'Menú, horario, ubicación y promos siempre visibles y actualizados en el perfil.' },
-    { t: 'Repostear contenido en el que os etiquetan clientes', h: 'Aprovechar el contenido que generan los propios clientes (UGC).' },
-    { t: 'Comprobar que los enlaces de reserva/pedido funcionan', h: 'Revisión rápida de que el botón de reservar o pedir online no esté roto.' },
-    { t: 'Revisar qué publicaciones han funcionado mejor', h: 'Repasar estadísticas del mes para repetir lo que mejor funciona.' },
-    { t: 'Actualizar el catálogo de Instagram/Facebook Shop', h: 'Si vendéis productos propios (salsas, mercancía...) mantenerlo al día.' },
+  { cat: {es:'Redes sociales — gestión y mantenimiento', ca:'Xarxes socials — gestió i manteniment', en:'Social media — management and maintenance'}, icon: 'ti-share', ideas: [
+    { title:{es:'Actualizar biografía y enlace de Instagram/Facebook', ca:'Actualitzar biografia i enllaç d\'Instagram/Facebook', en:'Update Instagram/Facebook bio and link'}, description:{es:'Que el enlace de la bio lleve a la web, carta o reservas actuales, no a algo desactualizado.', ca:'Que l\'enllaç de la bio porti a la web, carta o reserves actuals, no a alguna cosa desactualitzada.', en:'Make sure the bio link points to the current website, menu or bookings, not something outdated.'} },
+    { title:{es:'Revisar y responder mensajes directos pendientes', ca:'Revisar i respondre missatges directes pendents', en:'Review and reply to pending direct messages'}, description:{es:'Tarea de mantenimiento: vaciar la bandeja de DMs sin contestar.', ca:'Tasca de manteniment: buidar la safata de DMs sense contestar.', en:'A maintenance task: clear the inbox of unanswered DMs.'} },
+    { title:{es:'Comprobar que el horario esté al día en Facebook', ca:'Comprovar que l\'horari estigui al dia a Facebook', en:'Check that the hours are up to date on Facebook'}, description:{es:'Facebook tiene su propio horario, independiente del de Google.', ca:'Facebook té el seu propi horari, independent del de Google.', en:'Facebook has its own hours, separate from Google\'s.'} },
+    { title:{es:'Planificar las publicaciones de la semana', ca:'Planificar les publicacions de la setmana', en:'Plan the week\'s posts'}, description:{es:'Bloque de tiempo fijo para programar contenido con antelación, no improvisar cada día.', ca:'Bloc de temps fix per programar contingut amb antelació, no improvisar cada dia.', en:'A fixed time block to schedule content in advance, instead of improvising every day.'} },
+    { title:{es:'Responder comentarios pendientes en publicaciones antiguas', ca:'Respondre comentaris pendents en publicacions antigues', en:'Reply to pending comments on older posts'}, description:{es:'Revisión periódica de comentarios que se quedaron sin respuesta.', ca:'Revisió periòdica de comentaris que es van quedar sense resposta.', en:'A periodic check of comments that were left unanswered.'} },
+    { title:{es:'Actualizar los destacados de Instagram (Stories)', ca:'Actualitzar els destacats d\'Instagram (Stories)', en:'Update Instagram Story highlights'}, description:{es:'Menú, horario, ubicación y promos siempre visibles y actualizados en el perfil.', ca:'Menú, horari, ubicació i promocions sempre visibles i actualitzats al perfil.', en:'Menu, hours, location and promos always visible and up to date on the profile.'} },
+    { title:{es:'Repostear contenido en el que os etiquetan clientes', ca:'Repostar contingut en què us etiqueten clients', en:'Repost content where customers tag you'}, description:{es:'Aprovechar el contenido que generan los propios clientes (UGC).', ca:'Aprofitar el contingut que generen els mateixos clients (UGC).', en:'Make the most of the content customers generate themselves (UGC).'} },
+    { title:{es:'Comprobar que los enlaces de reserva/pedido funcionan', ca:'Comprovar que els enllaços de reserva/comanda funcionen', en:'Check that booking/order links work'}, description:{es:'Revisión rápida de que el botón de reservar o pedir online no esté roto.', ca:'Revisió ràpida que el botó de reservar o demanar en línia no estigui trencat.', en:'A quick check that the booking or online ordering button isn\'t broken.'} },
+    { title:{es:'Revisar qué publicaciones han funcionado mejor', ca:'Revisar quines publicacions han funcionat millor', en:'Review which posts have performed best'}, description:{es:'Repasar estadísticas del mes para repetir lo que mejor funciona.', ca:'Repassar estadístiques del mes per repetir el que millor funciona.', en:'Go over the month\'s stats to repeat what works best.'} },
+    { title:{es:'Actualizar el catálogo de Instagram/Facebook Shop', ca:'Actualitzar el catàleg d\'Instagram/Facebook Shop', en:'Update the Instagram/Facebook Shop catalogue'}, description:{es:'Si vendéis productos propios (salsas, mercancía...) mantenerlo al día.', ca:'Si veneu productes propis (salses, mercaderia...) mantenir-lo al dia.', en:'If you sell your own products (sauces, merchandise...) keep it up to date.'} },
   ]},
 ];
 
@@ -2710,16 +2711,16 @@ function renderPromoIdeas(){
   if(promoIdeasCategory === null){
     box.innerHTML = `
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
-        <i class="ti ti-bulb"></i> ${contentIdeasTotalCount()} ideas de contenido y gestión online, listas para usar. Elige una categoría, y cuando tengas clara una, pulsa "Crear acción" para planificarla con fecha y responsable.
+        <i class="ti ti-bulb"></i> ${t('promo.ideas.intro').replace('${count}', contentIdeasTotalCount())}
       </p>
-      <button class="owner-only btn btn-primary" style="margin-bottom:14px" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> Sorpréndeme (idea rápida para hoy)</button>
+      <button class="owner-only btn btn-primary" style="margin-bottom:14px" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> ${t('promo.ideas.surpriseMe')}</button>
       <div class="grid grid-3">
         ${CONTENT_IDEAS.map((c, i) => {
           const used = categoryUsedCount(i);
           return `
           <div class="card" style="cursor:pointer" onclick="openPromoIdeasCategory(${i})">
-            <h3><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
-            <div style="font-size:12px;color:var(--muted)">${c.ideas.length} ideas${used?` · <span style="color:var(--brand-orange)">${used} usada${used!==1?'s':''}</span>`:''}</div>
+            <h3><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
+            <div style="font-size:12px;color:var(--muted)">${t('promo.ideas.ideasCount').replace('${count}', c.ideas.length)}${used?` · <span style="color:var(--brand-orange)">${t('promo.ideas.usedCount').replace('${count}', used).replace('${s}', used!==1?'s':'')}</span>`:''}</div>
           </div>
         `;}).join('')}
       </div>
@@ -2727,17 +2728,18 @@ function renderPromoIdeas(){
   } else {
     const c = CONTENT_IDEAS[promoIdeasCategory];
     box.innerHTML = `
-      <button class="btn btn-sm" style="margin-bottom:10px" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> Categorías</button>
-      <h3 style="margin-bottom:10px"><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
+      <button class="btn btn-sm" style="margin-bottom:10px" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> ${t('promo.ideas.categories')}</button>
+      <h3 style="margin-bottom:10px"><i class="ti ${c.icon}"></i> ${escapeHtml(gl(c.cat))}</h3>
       <div class="grid grid-3">
         ${c.ideas.map((idea, ideaIdx) => {
           const usage = promoIdeaUsage(promoIdeasCategory, ideaIdx);
+          const extra = usage.length>1 ? t('promo.ideas.usedMoreTimes').replace('${count}', usage.length-1).replace('${es}', usage.length-1!==1?'es':'') : '';
           return `
           <div class="card">
-            <h3 style="font-size:14px">${escapeHtml(idea.t)}</h3>
-            <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(idea.h)}</div>
-            ${usage.length ? `<div style="font-size:11px;color:var(--brand-orange);margin-bottom:8px"><i class="ti ti-check"></i> Usada el ${escapeHtml(usage[0].fecha)}${usage.length>1?` (y ${usage.length-1} vez${usage.length-1!==1?'es':''} más)`:''}</div>` : ''}
-            <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> Crear acción</button>
+            <h3 style="font-size:14px">${escapeHtml(gl(idea.title))}</h3>
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(gl(idea.description))}</div>
+            ${usage.length ? `<div style="font-size:11px;color:var(--brand-orange);margin-bottom:8px"><i class="ti ti-check"></i> ${t('promo.ideas.usedOn').replace('${date}', escapeHtml(usage[0].fecha)).replace('${extra}', extra)}</div>` : ''}
+            <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> ${t('promo.ideas.createAction')}</button>
           </div>
         `;}).join('')}
       </div>
@@ -2750,20 +2752,20 @@ function openPromoIdeasCategory(i){
 }
 function createPromoFromIdea(catIdx, ideaIdx){
   const idea = CONTENT_IDEAS[catIdx].ideas[ideaIdx];
-  openPromoModal(null, promoDate || todayStr(), {titulo: idea.t, descripcion: idea.h, ideaRef: {cat: catIdx, idx: ideaIdx}});
+  openPromoModal(null, promoDate || todayStr(), {titulo: gl(idea.title), descripcion: gl(idea.description), ideaRef: {cat: catIdx, idx: ideaIdx}});
 }
 
 // Mensajes preconfigurados para la interacción post-servicio con el cliente
 // (cumpleaños, reseñas, clientes que hace tiempo no vienen).
 const PROMO_MESSAGE_TEMPLATES = {
-  cumple: (c, biz) => `¡Feliz cumpleaños, ${c.name}! 🎉 Todo el equipo de ${biz} te desea un día genial. Ven a celebrarlo con nosotros, ¡te invitamos a un postre o una bebida! 🎂🥂`,
-  resena: (c, biz) => `¡Hola ${c.name}! Gracias por tu visita a ${biz} 🙏 Si te ha gustado la experiencia, nos ayudaría mucho que nos dejaras una breve reseña. ¡Gracias de corazón!`,
-  vuelve: (c, biz) => `¡Hola ${c.name}! Hace tiempo que no te vemos por ${biz} y te echamos de menos 😊 Si te apetece volver, nos encantaría tenerte de nuevo por aquí. ¡Un saludo!`
+  cumple: (c, biz) => t('promo.clients.template.cumple').replace('${name}', c.name).replace('${biz}', biz),
+  resena: (c, biz) => t('promo.clients.template.resena').replace('${name}', c.name).replace('${biz}', biz),
+  vuelve: (c, biz) => t('promo.clients.template.vuelve').replace('${name}', c.name).replace('${biz}', biz)
 };
 const PROMO_MESSAGE_SUBJECTS = {
-  cumple: '¡Feliz cumpleaños! 🎉',
-  resena: '¿Nos dejas una reseña?',
-  vuelve: 'Te echamos de menos'
+  cumple: () => t('promo.clients.subject.cumple'),
+  resena: () => t('promo.clients.subject.resena'),
+  vuelve: () => t('promo.clients.subject.vuelve')
 };
 
 // Días que faltan hasta el próximo cumpleaños (cumpleanos en formato YYYY-MM-DD).
@@ -2804,32 +2806,32 @@ function renderPromoClientes(){
     <div class="card">
       <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
       <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
-        <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+        <button class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
-      <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?'Ya registrada hoy':'Registrar como acción'}</button>
+      <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
     </div>
   `;};
 
   box.innerHTML = `
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> Acciones rápidas de fidelización: felicitar cumpleaños, pedir reseñas tras la visita e invitar a volver a clientes que hace tiempo no vienen. Los mensajes ya están escritos, listos para enviar por WhatsApp o email.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> ${t('promo.clients.intro')}</p>
 
-    <h3><i class="ti ti-cake"></i> Próximos cumpleaños (30 días)</h3>
+    <h3><i class="ti ti-cake"></i> ${t('promo.clients.upcomingBirthdays')}</h3>
     <div class="grid grid-3" style="margin-bottom:18px">
-      ${birthdays.length ? birthdays.map(({c,days}) => clientCard(c, 'cumple', days===0 ? '<span class="badge badge-amber">¡Hoy!</span>' : `<span class="badge badge-gray">en ${days} día${days!==1?'s':''}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-cake"></i>Sin cumpleaños en los próximos 30 días.</div>`}
+      ${birthdays.length ? birthdays.map(({c,days}) => clientCard(c, 'cumple', days===0 ? `<span class="badge badge-amber">${t('promo.clients.today')}</span>` : `<span class="badge badge-gray">${t('promo.clients.inDays').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-cake"></i>${t('promo.clients.noBirthdays')}</div>`}
     </div>
 
-    <h3><i class="ti ti-star"></i> Visitas recientes — pedir reseña</h3>
+    <h3><i class="ti ti-star"></i> ${t('promo.clients.recentVisits')}</h3>
     <div class="grid grid-3" style="margin-bottom:18px">
-      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'resena', `<span class="badge badge-green">hace ${days===0?'hoy':days+' día'+(days!==1?'s':'')}</span>`)).join('')
-        : `<div class="empty"><i class="ti ti-star"></i>Sin visitas recientes con datos de contacto.</div>`}
+      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'resena', `<span class="badge badge-green">${days===0?t('promo.clients.agoToday'):t('promo.clients.agoDaysSuffix').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-star"></i>${t('promo.clients.noRecentVisits')}</div>`}
     </div>
 
-    <h3><i class="ti ti-mood-empty"></i> Clientes que hace tiempo no vienen</h3>
+    <h3><i class="ti ti-mood-empty"></i> ${t('promo.clients.inactiveClients')}</h3>
     <div class="grid grid-3">
-      ${inactivos.length ? inactivos.slice(0,12).map(({c,days}) => clientCard(c, 'vuelve', days!=null ? `<span class="badge badge-gray">${days} días</span>` : '<span class="badge badge-gray">sin visitas</span>')).join('')
-        : `<div class="empty"><i class="ti ti-users"></i>No hay clientes inactivos.</div>`}
+      ${inactivos.length ? inactivos.slice(0,12).map(({c,days}) => clientCard(c, 'vuelve', days!=null ? `<span class="badge badge-gray">${t('promo.clients.daysAgo').replace('${n}', days)}</span>` : `<span class="badge badge-gray">${t('promo.clients.noVisits')}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-users"></i>${t('promo.clients.noInactiveClients')}</div>`}
     </div>
   `;
 }
@@ -2839,22 +2841,22 @@ function renderPromoClientes(){
 function openClientMessageModal(clientId, templateKey){
   const c = DB.clients.find(x=>x.id===clientId);
   if(!c) return;
-  const biz = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const biz = (DB.business && DB.business.name) || t('promo.clients.defaultBusinessName');
   const msg = PROMO_MESSAGE_TEMPLATES[templateKey](c, biz);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-message"></i> Mensaje para ${escapeHtml(c.name)}</h3>
+      <h3><i class="ti ti-message"></i> ${t('promo.clients.messageFor').replace('${name}', escapeHtml(c.name))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
       <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
-      <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr(PROMO_MESSAGE_SUBJECTS[templateKey]||'')}')" ${!c.email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cerrar</button>
+      <button class="btn" onclick="closeModal()">${t('promo.clients.close')}</button>
     </div>
   `);
 }
@@ -2878,22 +2880,25 @@ function sendPromoClientEmail(id, subject){
 // fidelización de clientes ya hecha, para que quede en el mismo historial
 // de "hecho/doneAt" que el resto de acciones, y no sea un flujo aislado.
 const CLIENT_OUTREACH_LABELS = {
-  cumple: 'Felicitar cumpleaños a', resena: 'Pedir reseña a', vuelve: 'Recuperar cliente inactivo:'
+  cumple: () => t('promo.clients.outreachLabel.cumple'),
+  resena: () => t('promo.clients.outreachLabel.resena'),
+  vuelve: () => t('promo.clients.outreachLabel.vuelve')
 };
 function registerClientOutreachAsPromo(clientId, templateKey){
   const c = DB.clients.find(x=>x.id===clientId);
   if(!c) return;
   const now = new Date();
+  const label = (CLIENT_OUTREACH_LABELS[templateKey] && CLIENT_OUTREACH_LABELS[templateKey]()) || t('promo.clients.outreachLabel.default');
   DB.promos.push({
     id: genId(), fecha: todayStr(),
-    titulo: `${CLIENT_OUTREACH_LABELS[templateKey]||'Contactar a'} ${c.name}`,
-    descripcion: 'Acción de fidelización de clientes (Promoción → Clientes).',
+    titulo: `${label} ${c.name}`,
+    descripcion: t('promo.clients.outreachDescription'),
     responsableId: null, done: true, doneAt: now.toISOString(), zona: currentArea(),
     clienteId: clientId, ideaRef: {clientTemplate: templateKey}
   });
   saveDB();
   renderPromoClientes();
-  showToast('Acción registrada en el calendario de Promoción');
+  showToast(t('promo.clients.outreachRegistered'));
 }
 
 // Guarda el ideaRef de la idea de contenido con la que se abrió el modal
@@ -2908,30 +2913,30 @@ function openPromoModal(id, fecha, prefill){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id?'Editar':'Nueva'} Acción de Promoción</h3>
+      <h3>${id?t('promo.modal.editTitle'):t('promo.modal.newTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Fecha</label>
+      <label>${t('promo.modal.date')}</label>
       <input type="date" id="promo-date" value="${p.fecha}" ${dis}>
     </div>
     <div class="field">
-      <label>Título</label>
-      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="Ej: Responder reseñas, vídeo de un plato..." ${dis}>
+      <label>${t('promo.modal.title')}</label>
+      <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="${t('promo.modal.titlePlaceholder')}" ${dis}>
     </div>
     <div class="field">
-      <label>Descripción</label>
-      <textarea id="promo-descripcion" placeholder="Detalles de la acción..." ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
+      <label>${t('promo.modal.description')}</label>
+      <textarea id="promo-descripcion" placeholder="${t('promo.modal.descriptionPlaceholder')}" ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
     </div>
     <div class="field">
-      <label>Responsable</label>
+      <label>${t('promo.modal.responsible')}</label>
       <select id="promo-responsable" ${dis}>
-        <option value="">— Sin asignar —</option>
+        <option value="">${t('promo.modal.unassigned')}</option>
         ${DB.employees.filter(e=>(e.area||'cocina')==='sala').map(e=>`<option value="${e.id}" ${p.responsableId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${ro?'Cerrar':'Cancelar'}</button>
+      <button class="btn" onclick="closeModal()">${ro?t('promo.modal.close'):t('promo.modal.cancel')}</button>
       ${ro ? '' : `<button class="btn btn-primary" onclick="savePromo(${id||'null'})">${t("common.save")}</button>`}
     </div>
   `);
@@ -2959,7 +2964,7 @@ function savePromo(id){
   saveDB();
   closeModal();
   renderPromocion();
-  showToast(isDuplicate ? 'Guardado — ya había otra acción igual ese día para esa persona' : t('msg.actionSaved'));
+  showToast(isDuplicate ? t('promo.saved.duplicate') : t('msg.actionSaved'));
 }
 
 function deletePromo(id){
