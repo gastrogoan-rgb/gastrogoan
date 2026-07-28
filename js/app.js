@@ -3894,8 +3894,8 @@ function changeOwnerPin(){
 let manualChapter = 0;
 const MANUAL_CHAPTERS = [
   {
-    title:'<i class="ti ti-rocket"></i> Cómo empezar',
-    content:`<h3>Qué es GastroGoan y cómo está organizado</h3>
+    title:{es:'<i class="ti ti-rocket"></i> Cómo empezar', ca:'<i class="ti ti-rocket"></i> Com començar', en:'<i class="ti ti-rocket"></i> Getting Started'},
+    content:{es:`<h3>Qué es GastroGoan y cómo está organizado</h3>
     <p>GastroGoan es un <strong>kit de gestión integral</strong> para bares y restaurantes: un único sistema donde la información fluye de un módulo a otro sin que tengas que copiar nada a mano. La app está dividida en tres grandes áreas, accesibles desde la pantalla de inicio:</p>
     <ul>
       <li><strong>Cocina</strong> — ingredientes, recetas, escandallos, fichas técnicas, stock, pedidos a proveedores, personal y limpieza del lado de cocina.</li>
@@ -3926,11 +3926,75 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Ordenador (Chrome/Edge):</strong> abre el Kit → busca el icono de instalar (un monitor con una flecha) en el extremo derecho de la barra de direcciones, o entra al menú ⋮ → "Instalar aplicación" o "Aplicaciones" → "Instalar este sitio como aplicación".</div></div>
     <div class="manual-tip">💡 Así tendrás un icono propio de GastroGoan para abrir el Kit al instante, igual que cualquier otra app: en el TPV de la barra, en la tablet de la cocina o en el móvil del encargado. Recomendamos instalarlo en cada dispositivo que vaya a usarse a diario.</div>
     <h4>Roles: quién ve qué</h4>
-    <p>La sección <strong>Gestión</strong> está protegida con un PIN (configurable en Mi Negocio) porque contiene información sensible: finanzas, costes y configuración general. El equipo de cocina y sala puede usar libremente sus respectivos módulos (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...) sin necesidad de ese PIN. Reparte el PIN de Gestión solo a quien deba ver esos datos.</p>`
+    <p>La sección <strong>Gestión</strong> está protegida con un PIN (configurable en Mi Negocio) porque contiene información sensible: finanzas, costes y configuración general. El equipo de cocina y sala puede usar libremente sus respectivos módulos (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...) sin necesidad de ese PIN. Reparte el PIN de Gestión solo a quien deba ver esos datos.</p>`,
+    ca:`<h3>Què és GastroGoan i com està organitzat</h3>
+    <p>GastroGoan és un <strong>kit de gestió integral</strong> per a bars i restaurants: un únic sistema on la informació flueix d'un mòdul a un altre sense que hagis de copiar res a mà. L'app està dividida en tres grans àrees, accessibles des de la pantalla d'inici:</p>
+    <ul>
+      <li><strong>Cuina</strong> — ingredients, receptes, escandalls, fitxes tècniques, estoc, comandes a proveïdors, personal i neteja del costat de cuina.</li>
+      <li><strong>Sala</strong> — els mateixos mòduls però per a l'equip de sala, més TPV, clients, reserves i promoció.</li>
+      <li><strong>Gestió</strong> — la part econòmica i administrativa: finances, panell de control, dades del negoci i aquest manual.</li>
+    </ul>
+    <p>La idea central és que <strong>cada dada s'introdueix una sola vegada</strong> i es reutilitza en cascada: el preu d'un ingredient a la Mega Llista recalcula el cost de la recepta a l'Escandall, aquesta recepta alimenta la Fitxa Tècnica i la Carta, la Carta s'utilitza al TPV, i les vendes del TPV alimenten automàticament la Gestió Econòmica, l'Estoc i el Panell de Control. Si segueixes l'ordre correcte des del principi, t'estalviaràs feina repetida i els números del negoci estaran sempre actualitzats sols.</p>
+    <h4>Ruta recomanada per configurar el teu negoci des de zero</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>El Meu Negoci</strong> (a Gestió) — És el primer pas sempre. Emplena el nom, l'adreça, l'horari setmanal, els tipus de servei (taula/take away/delivery) i la configuració del tiquet. Aquestes dades personalitzen tota l'app: apareixen als tiquets impresos, a la web de comandes en línia i condicionen quina carta s'activa a cada horari.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Mega Llista</strong> (a Cuina) — Dona d'alta tots els ingredients i productes que compres, amb el seu preu de compra, format (quantitat per la qual pagues aquest preu) i unitat. És la base de tots els càlculs de cost posteriors: si aquesta llista no és precisa, cap food cost de la resta de l'app ho serà.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Proveïdors</strong> (a Cuina) — Dona d'alta els teus proveïdors habituals i vincula cada ingredient al proveïdor que te'l subministra. Això et permetrà generar comandes per proveïdor més endavant.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Escandall</strong> (a Cuina i Sala) — Crea cada plat o beguda com una recepta: tria els ingredients de la Mega Llista, indica els gramatges nets i la merma de cadascun. L'app calcula automàticament el cost per ració, el food cost i el marge sobre el preu de venda que tu defineixis.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Fitxes Tècniques</strong> (a Cuina i Sala) — Per a cada recepta de l'Escandall, afegeix els passos d'elaboració, la presentació i els al·lergens. Serveixen com a procediment estàndard perquè qualsevol cuiner o bartender elabori el plat o la beguda sempre igual, i són obligatòries de cara a inspecció sanitària pel tema dels al·lergens.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Carta</strong> (a Cuina i Sala) — Crea una o diverses cartes important els plats o begudes directament de l'Escandall (ja amb el seu preu de venda d'aquell moment — si més tard canvies el preu a l'Escandall, recorda prémer "Actualitzar preu" a la Carta perquè es reflecteixi també allà), organitza'ls per seccions (Entrants, Principals, Postres... o Cerveses, Còctels, Vins...) i marca quins estan disponibles. Pots programar diferents cartes segons l'horari (dinars, sopars, cap de setmana, carta de begudes...).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Estoc i Comandes</strong> (a Cuina i Sala) — Defineix l'estoc mínim de cada ingredient o elaboració. A partir d'aquí, el sistema descompta estoc automàticament amb cada venda del TPV i el reposa automàticament quan marques una comanda a proveïdor com "Rebuda".</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Personal i Pla de Neteja</strong> (a Cuina i Sala) — Dona d'alta el teu equip, organitza torns i reparteix tasques. Configura el pla de neteja APPCC per complir amb la normativa d'higiene alimentària.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>TPV</strong> (a Sala) — Aquí és on el teu equip treballa cada torn: obrir taules (client de pas o amb reserva), prendre la comanda amb les pestanyes de cartes (begudes primer), marxar per grups o amb "Marxar val", seguir l'estat del servei i cobrar quan tot està servit. Cada venda queda registrada i alimenta la resta del sistema sense passos addicionals. (Vegeu el detall a la secció "🆕 Novetats" de dalt.)</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Gestió Econòmica</strong> (a Gestió) — Afegeix les teves despeses fixes (nòmines, lloguer, subministraments...) una sola vegada. A partir d'aquí, el Compte de Resultats, el Punt d'Equilibri i la Tresoreria es calculen sols combinant aquestes despeses amb les vendes reals del TPV.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Panell de Control</strong> (a Gestió) — La teva pantalla de control diari. Un cop els mòduls anteriors estan en marxa, aquí veuràs en segons com va el negoci: vendes, resultat, alertes i properes reserves.</div></div>
+    <div class="manual-tip">💡 No cal completar el 100% de cada mòdul abans de passar al següent. Pots començar amb el bàsic (ingredients i receptes més venudes, per exemple) i anar ampliant a poc a poc mentre ja fas servir el TPV en el dia a dia.</div>
+    <h4>Com es guarden les dades</h4>
+    <p>Tot el que introdueixes es guarda automàticament al teu dispositiu (no cal prémer cap botó de "Desar" excepte en formularis concrets que sí que ho indiquen). Si actives la <strong>llicència i el núvol</strong> des d'El Meu Negoci, a més les dades se sincronitzen entre tots els dispositius del negoci (mòbil del cambrer, tauleta de cuina, ordinador d'oficina) i queden protegides en cas que s'esborri el navegador o es canviï de dispositiu.</p>
+    <div class="manual-warning">⚠️ Si treballes sense el núvol activat, les dades queden només en aquest navegador/dispositiu. Et recomanem activar la llicència com més aviat millor i, a més, fer còpies de seguretat periòdiques des d'El Meu Negoci → Manteniment de dades.</div>
+    <h4>Fer servir el Kit com una app (mòbil, tauleta i ordinador)</h4>
+    <p>El Kit funciona perfectament en qualsevol dispositiu des del navegador, sense instal·lar res d'una botiga d'aplicacions. Per accedir-hi més ràpid, sense escriure l'adreça cada vegada i amb una pantalla més neta (a pantalla completa, sense barra del navegador), pots <strong>ancorar-lo a la pantalla d'inici</strong> com si fos una app nativa:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Mòbil/tauleta Android (Chrome):</strong> obre el Kit → prem el menú de tres punts ⋮ (a dalt a la dreta) → "Afegeix a la pantalla d'inici" o "Instal·la l'app" → confirma. Apareixerà una icona de GastroGoan al costat de les teves altres apps.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>iPhone/iPad (Safari):</strong> obre el Kit → prem el botó de compartir <i class="ti ti-share-2"></i> (el quadrat amb la fletxa cap amunt, a la barra inferior) → desplaça't i tria "Afegeix a la pantalla d'inici" → confirma el nom i prem "Afegeix".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Ordinador (Chrome/Edge):</strong> obre el Kit → busca la icona d'instal·lar (un monitor amb una fletxa) a l'extrem dret de la barra d'adreces, o entra al menú ⋮ → "Instal·la l'aplicació" o "Aplicacions" → "Instal·la aquest lloc com a aplicació".</div></div>
+    <div class="manual-tip">💡 Així tindràs una icona pròpia de GastroGoan per obrir el Kit a l'instant, igual que qualsevol altra app: al TPV de la barra, a la tauleta de la cuina o al mòbil de l'encarregat. Recomanem instal·lar-lo a cada dispositiu que s'utilitzi diàriament.</div>
+    <h4>Rols: qui veu què</h4>
+    <p>La secció <strong>Gestió</strong> està protegida amb un PIN (configurable a El Meu Negoci) perquè conté informació sensible: finances, costos i configuració general. L'equip de cuina i sala pot fer servir lliurement els seus respectius mòduls (TPV, comandes, fitxes tècniques, neteja, personal, xat intern...) sense necessitat d'aquest PIN. Reparteix el PIN de Gestió només a qui hagi de veure aquestes dades.</p>`,
+    en:`<h3>What GastroGoan is and how it's organized</h3>
+    <p>GastroGoan is an <strong>all-in-one management kit</strong> for bars and restaurants: a single system where information flows from one module to the next without you having to copy anything by hand. The app is split into three main areas, accessible from the home screen:</p>
+    <ul>
+      <li><strong>Kitchen</strong> — ingredients, recipes, costing, technical sheets, stock, supplier orders, staff and cleaning on the kitchen side.</li>
+      <li><strong>Floor</strong> — the same modules but for the floor/bar team, plus POS, customers, reservations and promotion.</li>
+      <li><strong>Management</strong> — the financial and administrative side: finances, dashboard, business data and this manual.</li>
+    </ul>
+    <p>The core idea is that <strong>each piece of data is entered only once</strong> and reused downstream: an ingredient's price in the Master List recalculates the recipe cost in Costing, that recipe feeds the Technical Sheet and the Menu, the Menu is used in the POS, and POS sales automatically feed Financial Management, Stock and the Dashboard. If you follow the right order from the start, you'll save repeated work and your business numbers will always stay up to date on their own.</p>
+    <h4>Recommended path to set up your business from scratch</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>My Business</strong> (in Management) — Always the first step. Fill in the name, address, weekly hours, service types (table/take away/delivery) and receipt settings. This data personalises the whole app: it appears on printed receipts, on the online ordering website, and determines which menu is active at each time slot.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Master List</strong> (in Kitchen) — Register every ingredient and product you buy, with its purchase price, pack size (the quantity you pay that price for) and unit. It's the foundation for every cost calculation that follows: if this list isn't accurate, no food cost anywhere else in the app will be either.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Suppliers</strong> (in Kitchen) — Register your regular suppliers and link each ingredient to the supplier who provides it. This is what lets you later generate orders per supplier.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Costing</strong> (in Kitchen and Floor) — Create each dish or drink as a recipe: pick ingredients from the Master List, and enter the net weight and waste percentage for each. The app automatically calculates the cost per serving, the food cost and the margin against the selling price you set.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Technical Sheets</strong> (in Kitchen and Floor) — For each recipe in Costing, add the preparation steps, plating and allergens. These act as a standard procedure so any cook or bartender makes the dish or drink the same way every time, and they're mandatory for health inspections regarding allergens.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Menu</strong> (in Kitchen and Floor) — Create one or more menus by importing dishes or drinks straight from Costing (already carrying the selling price at that moment — if you later change the price in Costing, remember to press "Update price" in the Menu so it's reflected there too), organise them into sections (Starters, Mains, Desserts... or Beers, Cocktails, Wines...) and mark which ones are available. You can schedule different menus by time slot (lunch, dinner, weekend, drinks menu...).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Stock and Orders</strong> (in Kitchen and Floor) — Set the minimum stock for each ingredient or preparation. From here, the system automatically deducts stock with every POS sale and replenishes it automatically when you mark a supplier order as "Received".</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st"><strong>Staff and Cleaning Plan</strong> (in Kitchen and Floor) — Register your team, organise shifts and assign tasks. Set up the HACCP cleaning plan to comply with food-hygiene regulations.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st"><strong>POS</strong> (in Floor) — This is where your team works every shift: opening tables (walk-in or with a reservation), taking the order using the menu tabs (drinks first), firing by course or with "Fire ticket", tracking service status and charging once everything has been served. Every sale is logged and feeds the rest of the system with no extra steps. (See the details in the "🆕 What's new" section above.)</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st"><strong>Financial Management</strong> (in Management) — Add your fixed costs (payroll, rent, utilities...) just once. From there, the Profit & Loss statement, the Break-even Point and Cash Flow are calculated automatically by combining these costs with real POS sales.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st"><strong>Dashboard</strong> (in Management) — Your daily control screen. Once the modules above are up and running, here you'll see in seconds how the business is doing: sales, results, alerts and upcoming reservations.</div></div>
+    <div class="manual-tip">💡 You don't need to fully complete every module before moving to the next. You can start with the basics (ingredients and best-selling recipes, for example) and expand little by little while already using the POS day to day.</div>
+    <h4>How data is saved</h4>
+    <p>Everything you enter is saved automatically on your device (no need to press any "Save" button except in specific forms that say so). If you activate the <strong>licence and the cloud</strong> from My Business, data is also synced across all the business's devices (the waiter's phone, the kitchen tablet, the office computer) and backed up in case the browser is cleared or the device is changed.</p>
+    <div class="manual-warning">⚠️ If you work without the cloud enabled, data stays only on that browser/device. We recommend activating the licence as soon as possible, and also making periodic backups from My Business → Data Maintenance.</div>
+    <h4>Using the Kit as an app (phone, tablet and computer)</h4>
+    <p>The Kit works perfectly on any device straight from the browser, with nothing to install from an app store. To open it faster, without typing the address every time and with a cleaner screen (full-screen, no browser bar), you can <strong>pin it to your home screen</strong> as if it were a native app:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Android phone/tablet (Chrome):</strong> open the Kit → tap the three-dot menu ⋮ (top right) → "Add to Home screen" or "Install app" → confirm. A GastroGoan icon will appear next to your other apps.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>iPhone/iPad (Safari):</strong> open the Kit → tap the share button <i class="ti ti-share-2"></i> (the square with an upward arrow, in the bottom bar) → scroll and choose "Add to Home Screen" → confirm the name and tap "Add".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Computer (Chrome/Edge):</strong> open the Kit → look for the install icon (a monitor with an arrow) at the right end of the address bar, or open the ⋮ menu → "Install app" or "Apps" → "Install this site as an app".</div></div>
+    <div class="manual-tip">💡 That way you'll have your own GastroGoan icon to open the Kit instantly, just like any other app: on the bar's POS, on the kitchen tablet, or on the manager's phone. We recommend installing it on every device that will be used daily.</div>
+    <h4>Roles: who sees what</h4>
+    <p>The <strong>Management</strong> section is PIN-protected (configurable in My Business) because it contains sensitive information: finances, costs and general settings. The kitchen and floor team can freely use their respective modules (POS, tickets, technical sheets, cleaning, staff, internal chat...) without needing that PIN. Share the Management PIN only with whoever should see that data.</p>`},
   },
   {
-    title:'<i class="ti ti-list"></i> Mega Lista',
-    content:`<h3>Qué es y por qué es el módulo más importante</h3>
+    title:{es:'<i class="ti ti-list"></i> Mega Lista', ca:'<i class="ti ti-list"></i> Mega Llista', en:'<i class="ti ti-list"></i> Master List'},
+    content:{es:`<h3>Qué es y por qué es el módulo más importante</h3>
     <p>La Mega Lista es el <strong>catálogo maestro de todos los ingredientes y productos</strong> que compras: desde materias primas (carne, pescado, verdura) hasta productos ya elaborados que utilizas para montar tus platos (salsas envasadas, panes, bebidas...). Es la primera pieza que debes montar bien, porque <strong>todo lo demás se calcula a partir de los precios que pongas aquí</strong>: el coste de las recetas del Escandallo, el food cost de cada plato, el valor del stock y, en cascada, los informes de la Gestión Económica.</p>
     <p>Piensa en la Mega Lista como la "lista de la compra permanente" de tu negocio: cada vez que un producto nuevo entra en tu cocina o tu barra, debe tener aquí una ficha.</p>
     <h4>Cómo añadir un ingrediente, paso a paso</h4>
@@ -3955,11 +4019,63 @@ const MANUAL_CHAPTERS = [
     <h4>Mantener los precios actualizados: la clave del food cost real</h4>
     <p>Cuando recibas una factura nueva del proveedor con un precio distinto, entra en la Mega Lista, edita ese ingrediente y actualiza el <strong>Precio</strong> (y la Cantidad de compra si el formato ha cambiado). No necesitas tocar nada más.</p>
     <div class="manual-tip">💡 Cuando actualices el precio de un ingrediente, el coste de <strong>todas</strong> las recetas del Escandallo que lo usen se recalcula automáticamente al instante — incluyendo su food cost y su margen. Así, mantener la Mega Lista al día es la forma más rápida de tener un control de costes realista sin recalcular receta por receta.</div>
-    <div class="manual-warning">⚠️ Si un ingrediente aparece con coste 0 o muy bajo en el Escandallo, normalmente es porque su precio o cantidad de compra están mal puestos aquí (por ejemplo, se ha confundido la cantidad de compra en gramos con la cantidad en kilos). Revisa siempre estos dos campos si un coste no te encaja.</div>`
+    <div class="manual-warning">⚠️ Si un ingrediente aparece con coste 0 o muy bajo en el Escandallo, normalmente es porque su precio o cantidad de compra están mal puestos aquí (por ejemplo, se ha confundido la cantidad de compra en gramos con la cantidad en kilos). Revisa siempre estos dos campos si un coste no te encaja.</div>`,
+    ca:`<h3>Què és i per què és el mòdul més important</h3>
+    <p>La Mega Llista és el <strong>catàleg mestre de tots els ingredients i productes</strong> que compres: des de matèries primeres (carn, peix, verdura) fins a productes ja elaborats que fas servir per muntar els teus plats (salses envasades, pans, begudes...). És la primera peça que has de muntar bé, perquè <strong>tota la resta es calcula a partir dels preus que posis aquí</strong>: el cost de les receptes de l'Escandall, el food cost de cada plat, el valor de l'estoc i, en cascada, els informes de la Gestió Econòmica.</p>
+    <p>Pensa en la Mega Llista com la "llista de la compra permanent" del teu negoci: cada vegada que un producte nou entra a la teva cuina o la teva barra, hi ha d'haver una fitxa aquí.</p>
+    <h4>Com afegir un ingredient, pas a pas</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"Nou Ingredient"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escriu el <strong>Nom</strong> tal com l'identifiques habitualment (ex. "Filet de vedella", "Oli d'oliva verge extra", "Coca-Cola llauna 33cl"). Fes servir noms clars: aquest nom apareixerà després als desplegables de l'Escandall.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Tria o crea la <strong>Categoria</strong> (Carns, Peixos, Verdures, Làctics, Begudes, Neteja...) per poder filtrar i organitzar la llista quan creixi.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Selecciona el <strong>Proveïdor</strong> habitual d'aquest producte (si encara no l'has creat, ho pots fer des del mòdul Proveïdors i tornar després a vincular-lo).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Indica la <strong>Unitat</strong> de mesura: fes servir <strong>g</strong> (grams) o <strong>ml</strong> (mil·lilitres) per a tot allò que es pesa, es mesura o se serveix a doll, i <strong>UNITAT</strong> per a productes que comptes per peces (ous, llaunes, llimones, ampolles...).</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Indica la <strong>Quantitat de compra</strong>: la mida del format en què realment el compres, expressada en la unitat anterior. Per exemple, si compres una caixa de tomàquets de 5&nbsp;kg, posa <strong>5000</strong> (g); si compres una ampolla d'oli d'1&nbsp;litre, posa <strong>1000</strong> (ml); si compres ous per dotzenes, posa <strong>12</strong> (UNITAT).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">Indica el <strong>Preu</strong> que pagues per aquesta quantitat de compra completa (el preu de la caixa, de l'ampolla, de la dotzena...), no el preu per gram — l'app fa aquesta divisió automàticament.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Desa. L'app calcularà i mostrarà el <strong>preu unitari</strong> (preu per gram, mil·lilitre o unitat), que és el valor que es farà servir després a l'Escandall per calcular el cost de cada recepta.</div></div>
+    <h4>Exemple pràctic</h4>
+    <p>Compres una garrafa d'oli d'oliva de 5&nbsp;litres per 22&nbsp;€. A la Mega Llista crearies: Nom "Oli d'oliva 0,4º", Unitat "ml", Quantitat de compra "5000", Preu "22". L'app calcula automàticament 22&nbsp;÷&nbsp;5000&nbsp;=&nbsp;0,0044&nbsp;€/ml. Si una recepta fa servir 30&nbsp;ml d'aquest oli, l'Escandall sumarà 0,132&nbsp;€ per aquest ingredient sense que hagis de calcular res a mà.</p>
+    <h4>Cercar, filtrar i mantenir la llista al dia</h4>
+    <ul>
+      <li>Fes servir el <strong>cercador</strong> per localitzar ràpidament un producte quan la llista creixi.</li>
+      <li>Filtra per <strong>categoria</strong> per revisar només, per exemple, les begudes o els làctics.</li>
+      <li>Filtra per <strong>proveïdor</strong> per veure de cop quins productes compres a un proveïdor concret (útil en preparar una comanda o revisar preus d'aquest proveïdor).</li>
+      <li>La icona d'<strong>editar</strong> (llapis) et permet actualitzar preu, proveïdor o qualsevol dada sense haver de crear l'ingredient de nou.</li>
+      <li>La icona d'<strong>eliminar</strong> (paperera) esborra l'ingredient — fes-ho només si no es fa servir a cap recepta activa, perquè les receptes que l'utilitzessin perdrien aquella línia de cost.</li>
+    </ul>
+    <h4>Mantenir els preus actualitzats: la clau del food cost real</h4>
+    <p>Quan rebis una factura nova del proveïdor amb un preu diferent, entra a la Mega Llista, edita aquell ingredient i actualitza el <strong>Preu</strong> (i la Quantitat de compra si el format ha canviat). No cal tocar res més.</p>
+    <div class="manual-tip">💡 Quan actualitzis el preu d'un ingredient, el cost de <strong>totes</strong> les receptes de l'Escandall que el facin servir es recalcula automàticament a l'instant — incloent-hi el food cost i el marge. Així, mantenir la Mega Llista al dia és la manera més ràpida de tenir un control de costos realista sense recalcular recepta per recepta.</div>
+    <div class="manual-warning">⚠️ Si un ingredient apareix amb cost 0 o molt baix a l'Escandall, normalment és perquè el preu o la quantitat de compra estan mal posats aquí (per exemple, s'ha confós la quantitat de compra en grams amb la quantitat en quilos). Revisa sempre aquests dos camps si un cost no et quadra.</div>`,
+    en:`<h3>What it is and why it's the most important module</h3>
+    <p>The Master List is the <strong>master catalogue of every ingredient and product</strong> you buy: from raw materials (meat, fish, vegetables) to already-prepared products you use to build your dishes (bottled sauces, bread, drinks...). It's the first piece you need to get right, because <strong>everything else is calculated from the prices you set here</strong>: the cost of recipes in Costing, the food cost of each dish, the value of stock and, downstream, the Financial Management reports.</p>
+    <p>Think of the Master List as your business's "permanent shopping list": every time a new product enters your kitchen or bar, it should have an entry here.</p>
+    <h4>How to add an ingredient, step by step</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"New Ingredient"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Type the <strong>Name</strong> as you usually identify it (e.g. "Beef sirloin", "Extra virgin olive oil", "Coca-Cola can 33cl"). Use clear names: this name will later appear in Costing's dropdowns.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Choose or create the <strong>Category</strong> (Meat, Fish, Vegetables, Dairy, Beverages, Cleaning...) so you can filter and organise the list as it grows.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Select the usual <strong>Supplier</strong> for that product (if you haven't created it yet, you can do so from the Suppliers module and come back later to link it).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Set the <strong>Unit</strong> of measure: use <strong>g</strong> (grams) or <strong>ml</strong> (millilitres) for anything weighed, measured or served loose, and <strong>UNIT</strong> for products you count by pieces (eggs, cans, lemons, bottles...).</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Enter the <strong>Pack size</strong>: the size of the format you actually buy it in, expressed in the unit above. For example, if you buy a 5&nbsp;kg box of tomatoes, enter <strong>5000</strong> (g); if you buy a 1-litre bottle of oil, enter <strong>1000</strong> (ml); if you buy eggs by the dozen, enter <strong>12</strong> (UNIT).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">Enter the <strong>Price</strong> you pay for that whole pack (the price of the box, the bottle, the dozen...), not the price per gram — the app does that division automatically.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Save. The app will calculate and show the <strong>unit price</strong> (price per gram, millilitre or unit), the value that will later be used in Costing to calculate each recipe's cost.</div></div>
+    <h4>Worked example</h4>
+    <p>You buy a 5-litre jug of olive oil for €22. In the Master List you'd create: Name "Olive oil 0.4º", Unit "ml", Pack size "5000", Price "22". The app automatically calculates 22&nbsp;÷&nbsp;5000&nbsp;=&nbsp;€0.0044/ml. If a recipe uses 30&nbsp;ml of that oil, Costing will add €0.132 for that ingredient without you calculating anything by hand.</p>
+    <h4>Search, filter and keep the list up to date</h4>
+    <ul>
+      <li>Use the <strong>search box</strong> to quickly find a product once the list grows.</li>
+      <li>Filter by <strong>category</strong> to review, say, only drinks or dairy.</li>
+      <li>Filter by <strong>supplier</strong> to see at a glance which products you buy from a given supplier (handy when preparing an order or reviewing that supplier's prices).</li>
+      <li>The <strong>edit</strong> icon (pencil) lets you update the price, supplier or any field without recreating the ingredient.</li>
+      <li>The <strong>delete</strong> icon (bin) removes the ingredient — only do this if it isn't used in any active recipe, since those recipes would lose that cost line.</li>
+    </ul>
+    <h4>Keeping prices up to date: the key to a real food cost</h4>
+    <p>When you receive a new invoice from a supplier with a different price, open the Master List, edit that ingredient and update the <strong>Price</strong> (and the Pack size if the format has changed). You don't need to touch anything else.</p>
+    <div class="manual-tip">💡 When you update an ingredient's price, the cost of <strong>every</strong> Costing recipe that uses it is instantly recalculated — including its food cost and margin. Keeping the Master List up to date is therefore the fastest way to have realistic cost control without recalculating recipe by recipe.</div>
+    <div class="manual-warning">⚠️ If an ingredient shows a cost of 0 or very low in Costing, it's usually because its price or pack size are set incorrectly here (for example, the pack size in grams was mixed up with the quantity in kilos). Always check these two fields if a cost doesn't add up.</div>`},
   },
   {
-    title:'<i class="ti ti-building-factory"></i> Proveedores',
-    content:`<h3>Tu agenda de proveedores centralizada</h3>
+    title:{es:'<i class="ti ti-building-factory"></i> Proveedores', ca:'<i class="ti ti-building-factory"></i> Proveïdors', en:'<i class="ti ti-building-factory"></i> Suppliers'},
+    content:{es:`<h3>Tu agenda de proveedores centralizada</h3>
     <p>Este módulo es la agenda de contactos de todos los proveedores con los que trabajas: desde el mayorista de congelados hasta el repartidor de bebidas o el proveedor de productos de limpieza. Tenerlos bien dados de alta aquí es lo que permite que, más adelante, generar un pedido sea cuestión de un par de clics en lugar de buscar el número de teléfono en una libreta.</p>
     <h4>Cómo dar de alta un proveedor</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"Nuevo Proveedor"</strong>.</div></div>
@@ -3977,11 +4093,49 @@ const MANUAL_CHAPTERS = [
       <li>Si cambias de proveedor para un producto, simplemente edítalo en la Mega Lista y selecciona el nuevo proveedor — no es necesario tocar las recetas, porque el Escandallo solo usa el precio, no el proveedor.</li>
       <li>Mantén actualizada esta lista cuando incorpores nuevos proveedores de temporada (ej. proveedor de marisco solo en Navidad).</li>
     </ul>
-    <div class="manual-tip">💡 Cuantos más ingredientes tengas correctamente vinculados a su proveedor, más útil será el módulo de Pedidos: podrás generar el pedido completo de un proveedor con un solo clic en lugar de añadir línea a línea.</div>`
+    <div class="manual-tip">💡 Cuantos más ingredientes tengas correctamente vinculados a su proveedor, más útil será el módulo de Pedidos: podrás generar el pedido completo de un proveedor con un solo clic en lugar de añadir línea a línea.</div>`,
+    ca:`<h3>La teva agenda de proveïdors centralitzada</h3>
+    <p>Aquest mòdul és l'agenda de contactes de tots els proveïdors amb qui treballes: des del majorista de congelats fins al repartidor de begudes o el proveïdor de productes de neteja. Tenir-los ben donats d'alta aquí és el que permet que, més endavant, generar una comanda sigui qüestió d'un parell de clics en lloc de buscar el número de telèfon en una llibreta.</p>
+    <h4>Com donar d'alta un proveïdor</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"Nou Proveïdor"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Nom</strong> — el nom comercial pel qual el reconeixes (ex. "Marisc Germans López", "Distribucions Begudes Goan").</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Contacte, Telèfon i Email</strong> — la persona de contacte habitual i les seves dades. Aquests camps generen enllaços directes per trucar o escriure sense copiar números.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Condicions de pagament</strong> — anota aquí com i quan pagues (ex. "Comptat", "30 dies data factura", "Transferència setmanal") per tenir-ho sempre a la vista i evitar confusions amb l'administració.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Dia i hora de lliurament</strong> — si el proveïdor té un dia fix de repartiment (ex. "Dimarts i divendres, al matí"), anota-ho. T'ajuda a planificar quan fer la comanda perquè arribi a temps.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Adreça i IBAN</strong> — útils si necessites domiciliar pagaments o enviar correspondència.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Notes</strong> — qualsevol informació addicional: mínims de comanda, descomptes per volum, productes de temporada, incidències habituals...</div></div>
+    <h4>Vincular ingredients al seu proveïdor</h4>
+    <p>Des de la <strong>Mega Llista</strong>, en crear o editar cada ingredient, assigna el proveïdor corresponent d'aquesta llista. Aquesta vinculació és el que permet que, al mòdul <strong>Comandes</strong>, puguis generar una comanda filtrada per proveïdor: l'app et proposa automàticament tots els ingredients d'aquell proveïdor que estan per sota del seu estoc mínim.</p>
+    <h4>Ús en el dia a dia</h4>
+    <ul>
+      <li>Abans de fer una trucada de comanda, obre la fitxa del proveïdor per tenir a mà el telèfon i les condicions acordades.</li>
+      <li>Si canvies de proveïdor per a un producte, simplement edita'l a la Mega Llista i selecciona el nou proveïdor — no cal tocar les receptes, perquè l'Escandall només fa servir el preu, no el proveïdor.</li>
+      <li>Mantén actualitzada aquesta llista quan incorporis nous proveïdors de temporada (ex. proveïdor de marisc només a Nadal).</li>
+    </ul>
+    <div class="manual-tip">💡 Com més ingredients tinguis correctament vinculats al seu proveïdor, més útil serà el mòdul de Comandes: podràs generar la comanda completa d'un proveïdor amb un sol clic en lloc d'afegir línia a línia.</div>`,
+    en:`<h3>Your centralised supplier directory</h3>
+    <p>This module is the contact directory for every supplier you work with: from the frozen-food wholesaler to the drinks delivery driver or the cleaning-products supplier. Registering them properly here is what later lets you generate an order in a couple of clicks instead of hunting for a phone number in a notebook.</p>
+    <h4>How to register a supplier</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"New Supplier"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Name</strong> — the trade name you recognise them by (e.g. "López Bros. Seafood", "Goan Beverage Distribution").</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Contact, Phone and Email</strong> — the usual contact person and their details. These fields generate direct links to call or message without copying numbers.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st"><strong>Payment terms</strong> — note here how and when you pay (e.g. "Cash", "30 days from invoice date", "Weekly transfer") so it's always visible and avoids confusion with admin.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st"><strong>Delivery day and time</strong> — if the supplier has a fixed delivery day (e.g. "Tuesdays and Fridays, morning"), note it down. It helps you plan when to place an order so it arrives on time.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st"><strong>Address and IBAN</strong> — useful if you need to set up direct debits or send correspondence.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st"><strong>Notes</strong> — any extra information: minimum order sizes, volume discounts, seasonal products, recurring issues...</div></div>
+    <h4>Linking ingredients to their supplier</h4>
+    <p>From the <strong>Master List</strong>, when creating or editing each ingredient, assign the matching supplier from this list. This link is what lets you, in the <strong>Orders</strong> module, generate an order filtered by supplier: the app automatically suggests every ingredient from that supplier that's below its minimum stock.</p>
+    <h4>Day-to-day use</h4>
+    <ul>
+      <li>Before making an order call, open the supplier's record to have their phone number and agreed terms at hand.</li>
+      <li>If you switch suppliers for a product, simply edit it in the Master List and select the new supplier — there's no need to touch recipes, since Costing only uses the price, not the supplier.</li>
+      <li>Keep this list updated when you bring on new seasonal suppliers (e.g. a seafood supplier only around Christmas).</li>
+    </ul>
+    <div class="manual-tip">💡 The more ingredients you have properly linked to their supplier, the more useful the Orders module becomes: you'll be able to generate a supplier's full order in a single click instead of adding it line by line.</div>`},
   },
   {
-    title:'<i class="ti ti-calculator"></i> Escandallo',
-    content:`<h3>Qué es un escandallo y para qué sirve</h3>
+    title:{es:'<i class="ti ti-calculator"></i> Escandallo', ca:'<i class="ti ti-calculator"></i> Escandall', en:'<i class="ti ti-calculator"></i> Costing'},
+    content:{es:`<h3>Qué es un escandallo y para qué sirve</h3>
     <p>El escandallo es la <strong>ficha de coste de cada plato</strong>: el desglose de qué ingredientes lleva, en qué cantidad, y cuánto cuesta cada uno según los precios de tu Mega Lista. Con él sabes <strong>cuánto te cuesta realmente producir un plato</strong> y, comparándolo con su precio de venta, si ese plato te da margen o te hace perder dinero. Es la herramienta más directa para fijar precios de carta con criterio en lugar de "a ojo".</p>
     <div class="manual-tip">💡 Al entrar en Escandallo ves primero las <strong>carpetas por categoría</strong>; al pulsar una, la lista de <strong>nombres de platos</strong>; y al pulsar un nombre, su <strong>escandallo completo</strong>. Así no se satura la pantalla cuando tienes muchos platos. (El buscador sigue mostrando los resultados directos.) El Stock funciona igual: carpetas → producto → detalle.</div>
     <h4>Cómo crear una receta paso a paso</h4>
@@ -4018,11 +4172,87 @@ const MANUAL_CHAPTERS = [
     </ul>
     <h4>Elaboraciones propias (semielaborados)</h4>
     <p>Usa <strong>"Nueva Elaboración"</strong> para crear bases que luego se usan dentro de otras recetas (caldos, salsas, masas, mises en place). Defínelas igual que una receta normal, indicando para cuántas raciones o qué cantidad total rinden; después podrás añadirlas como un "ingrediente" más dentro de otras recetas del Escandallo, y su coste por unidad se calculará y propagará igual que el de cualquier ingrediente de la Mega Lista.</p>
-    <div class="manual-tip">💡 Una vez creado el escandallo de un plato, ya no tienes que volver a calcular nada manualmente: si cambia el precio de un ingrediente en la Mega Lista, este plato (y su food cost y margen) se actualizan solos. Revisa el Escandallo periódicamente, sobre todo tras subidas de precios de proveedores, para detectar platos que han pasado a zona ámbar o roja.</div>`
+    <div class="manual-tip">💡 Una vez creado el escandallo de un plato, ya no tienes que volver a calcular nada manualmente: si cambia el precio de un ingrediente en la Mega Lista, este plato (y su food cost y margen) se actualizan solos. Revisa el Escandallo periódicamente, sobre todo tras subidas de precios de proveedores, para detectar platos que han pasado a zona ámbar o roja.</div>`,
+    ca:`<h3>Què és un escandall i per a què serveix</h3>
+    <p>L'escandall és la <strong>fitxa de cost de cada plat</strong>: el desglossament de quins ingredients porta, en quina quantitat, i quant costa cadascun segons els preus de la teva Mega Llista. Amb ell saps <strong>quant et costa realment produir un plat</strong> i, comparant-ho amb el seu preu de venda, si aquest plat et dona marge o et fa perdre diners. És l'eina més directa per fixar preus de carta amb criteri en lloc de "a ull".</p>
+    <div class="manual-tip">💡 En entrar a Escandall veus primer les <strong>carpetes per categoria</strong>; en prémer-ne una, la llista de <strong>noms de plats</strong>; i en prémer un nom, el seu <strong>escandall complet</strong>. Així no se satura la pantalla quan tens molts plats. (El cercador continua mostrant els resultats directes.) L'Estoc funciona igual: carpetes → producte → detall.</div>
+    <h4>Com crear una recepta pas a pas</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"Nou Plat"</strong> (o "Nova Elaboració" si és un semielaborat que faràs servir dins d'altres receptes, com una salsa o un brou base).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Posa-li <strong>nom</strong> (el mateix que apareixerà després a la Carta) i tria la <strong>categoria</strong> (Entrants, Principals, Postres, Còctels...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Indica els <strong>comensals/racions</strong> que rendeix la recepta tal com l'estàs introduint — això és clau si introdueixes, per exemple, una recepta de sofregit per a 10 racions: el sistema calcularà el cost per ració dividint entre 10.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Afegeix línies d'<strong>ingredients</strong>: selecciona cadascun del desplegable (prové directament de la teva Mega Llista — si no apareix el que busques, primer l'has de crear allà).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Per a cada ingredient indica la <strong>quantitat neta</strong> que porta el plat en la unitat corresponent (grams, mil·lilitres o unitats): la quantitat que realment queda al plat servit, ja neta i llesta.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Indica la <strong>merma</strong> d'aquest ingredient: el percentatge de producte que es perd en netejar, pelar, desossar o cuinar (per exemple, un peix sencer pot tenir un 30-40% de merma entre espines, pell i cap; una verdura pelada pot tenir un 10-15%).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">El sistema calcula automàticament la <strong>quantitat bruta</strong> (el que realment has de comprar/treure del magatzem) i el <strong>cost</strong> d'aquesta línia, multiplicant la quantitat bruta pel preu unitari de la Mega Llista.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Repeteix per a tots els ingredients del plat. El <strong>cost total</strong> de la recepta és la suma de totes les línies, i el <strong>cost per ració</strong> és aquest total dividit entre els comensals indicats.</div></div>
+    <h4>La fórmula de la merma, explicada amb un exemple</h4>
+    <p>La relació és: <strong>quantitat bruta = quantitat neta × (1 + merma%)</strong>.</p>
+    <p>Exemple: la teva recepta necessita <strong>100&nbsp;g nets</strong> de llom de lluç ja net per al plat. Si en netejar el lluç sencer perds un 20% (espines, pell, retalls), necessites comprar/fer servir <strong>100 × (1 + 0,20) = 120&nbsp;g bruts</strong> de lluç per obtenir aquests 100&nbsp;g nets. L'escandall calcularà el cost de la recepta fent servir aquests 120&nbsp;g al preu per gram de la Mega Llista — no els 100&nbsp;g, perquè aquells 20&nbsp;g de merma també els has pagat.</p>
+    <div class="manual-warning">⚠️ Si deixes la merma a 0% en productes que sí que tenen rebuig (peixos amb pell/espina, verdures sense pelar, carns amb greix o os), el teu cost real estarà infravalorat i el food cost que veuràs serà més baix que el real. Revisa la merma de cada ingredient amb cura, especialment en peixos i carns.</div>
+    <h4>Consumibles: l'"extra" que no es mesura plat a plat</h4>
+    <p>El camp <strong>Consumibles (%)</strong> afegeix un percentatge sobre el cost de la recepta per cobrir ingredients que serien impossibles o molt feixucs de mesurar línia a línia: el rajolí d'oli per saltejar, la sal, les espècies, l'aigua, el gas o l'electricitat del forn, el paper de forn, etc. Un valor habitual és entre el <strong>5% i el 8%</strong> del cost de la recepta, tot i que pot variar segons el tipus de plat (un plat molt elaborat amb moltes coccions pot justificar un % una mica més gran).</p>
+    <h4>PVP (preu de venda) i food cost</h4>
+    <p>Al camp <strong>PVP</strong> introdueix el preu al qual vens (o vols vendre) aquest plat al client, IVA inclòs o sense segons com treballis habitualment — sigues consistent amb la resta dels teus càlculs. L'app calcula automàticament el <strong>food cost</strong> com: <em>cost de la recepta (amb consumibles) ÷ PVP × 100</em>.</p>
+    <p>El resultat es pinta com un semàfor perquè el vegis d'un cop d'ull:</p>
+    <table>
+      <tr><th>Color</th><th>Food cost</th><th>Què significa</th></tr>
+      <tr><td>🟢 Verd</td><td>menys del 30%</td><td>Marge saludable, plat molt rendible</td></tr>
+      <tr><td>🟡 Ambre</td><td>entre 30% i 35%</td><td>Marge acceptable, vigila'l</td></tr>
+      <tr><td>🔴 Vermell</td><td>més del 35%</td><td>Marge ajustat o negatiu — revisa preu, ració o proveïdor</td></tr>
+    </table>
+    <h4>Què fer quan un plat surt en vermell</h4>
+    <ul>
+      <li><strong>Puja el PVP</strong> si el mercat ho permet (compara amb la competència).</li>
+      <li><strong>Ajusta la ració</strong> — potser la quantitat neta és més gran del necessari per al tipus de plat.</li>
+      <li><strong>Busca un altre proveïdor o format de compra</strong> més econòmic per als ingredients que més pesen en el cost.</li>
+      <li><strong>Revisa la merma real</strong> — de vegades una millor tècnica de neteja/tall redueix el rebuig.</li>
+      <li>Si res d'això és viable, valora si aquest plat ha de seguir a la carta o substituir-lo per un altre amb millor marge.</li>
+    </ul>
+    <h4>Elaboracions pròpies (semielaborats)</h4>
+    <p>Fes servir <strong>"Nova Elaboració"</strong> per crear bases que després es fan servir dins d'altres receptes (brous, salses, masses, mises en place). Defineix-les igual que una recepta normal, indicant per a quantes racions o quina quantitat total rendeixen; després les podràs afegir com un "ingredient" més dins d'altres receptes de l'Escandall, i el seu cost per unitat es calcularà i es propagarà igual que el de qualsevol ingredient de la Mega Llista.</p>
+    <div class="manual-tip">💡 Un cop creat l'escandall d'un plat, ja no has de tornar a calcular res manualment: si canvia el preu d'un ingredient a la Mega Llista, aquest plat (i el seu food cost i marge) s'actualitzen sols. Revisa l'Escandall periòdicament, sobretot després de pujades de preus de proveïdors, per detectar plats que han passat a zona ambre o vermella.</div>`,
+    en:`<h3>What a costing sheet is and what it's for</h3>
+    <p>Costing is the <strong>cost record for each dish</strong>: the breakdown of which ingredients go into it, in what quantity, and how much each one costs based on your Master List prices. With it, you know <strong>how much a dish really costs you to make</strong> and, comparing it with its selling price, whether it earns you a margin or loses you money. It's the most direct tool for setting menu prices with judgement instead of guesswork.</p>
+    <div class="manual-tip">💡 When you open Costing you first see <strong>folders by category</strong>; tapping one shows the list of <strong>dish names</strong>; and tapping a name shows its <strong>full costing sheet</strong>. This keeps the screen from getting cluttered when you have many dishes. (The search box still shows direct results.) Stock works the same way: folders → product → detail.</div>
+    <h4>How to create a recipe step by step</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"New Dish"</strong> (or "New Preparation" if it's a semi-finished item you'll use inside other recipes, such as a sauce or a base stock).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Give it a <strong>name</strong> (the same one that will later appear in the Menu) and choose the <strong>category</strong> (Starters, Mains, Desserts, Cocktails...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Enter the <strong>servings</strong> the recipe yields as you're entering it — this is key if, for example, you enter a tomato-sauce-base recipe for 10 servings: the system will calculate the cost per serving by dividing by 10.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Add <strong>ingredient</strong> lines: pick each one from the dropdown (it comes straight from your Master List — if the one you want isn't there, create it there first).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">For each ingredient, enter the <strong>net quantity</strong> the dish contains in the matching unit (grams, millilitres or units): the amount that's actually left on the served plate, already cleaned and ready.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Enter that ingredient's <strong>waste %</strong>: the percentage of product lost while cleaning, peeling, boning or cooking (for example, a whole fish can lose 30-40% to bones, skin and head; a peeled vegetable can lose 10-15%).</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">The system automatically calculates the <strong>gross quantity</strong> (what you actually need to buy/pull from storage) and the <strong>cost</strong> of that line, by multiplying the gross quantity by the Master List's unit price.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">Repeat for every ingredient in the dish. The recipe's <strong>total cost</strong> is the sum of all lines, and the <strong>cost per serving</strong> is that total divided by the number of servings entered.</div></div>
+    <h4>The waste formula, explained with an example</h4>
+    <p>The relationship is: <strong>gross quantity = net quantity × (1 + waste%)</strong>.</p>
+    <p>Example: your recipe needs <strong>100&nbsp;g net</strong> of already-cleaned hake loin for the dish. If cleaning the whole hake loses 20% (bones, skin, trimmings), you need to buy/use <strong>100 × (1 + 0.20) = 120&nbsp;g gross</strong> of hake to get those 100&nbsp;g net. Costing will calculate the recipe's cost using those 120&nbsp;g at the Master List's price per gram — not the 100&nbsp;g, because you also paid for that 20&nbsp;g of waste.</p>
+    <div class="manual-warning">⚠️ If you leave waste at 0% for products that do have waste (fish with skin/bones, unpeeled vegetables, meat with fat or bone), your real cost will be understated and the food cost you see will be lower than the real one. Check each ingredient's waste carefully, especially for fish and meat.</div>
+    <h4>Consumables: the "extra" that isn't measured dish by dish</h4>
+    <p>The <strong>Consumables (%)</strong> field adds a percentage on top of the recipe cost to cover ingredients that would be impossible or too tedious to measure line by line: the splash of oil for sautéing, salt, spices, water, oven gas or electricity, baking paper, etc. A typical value is between <strong>5% and 8%</strong> of the recipe's cost, though it can vary by dish type (a very elaborate dish with many cooking steps may justify a slightly higher %).</p>
+    <h4>Selling price and food cost</h4>
+    <p>In the <strong>Selling price</strong> field, enter the price you sell (or want to sell) that dish to the customer for, VAT included or not depending on how you usually work — be consistent with the rest of your calculations. The app automatically calculates the <strong>food cost</strong> as: <em>recipe cost (with consumables) ÷ selling price × 100</em>.</p>
+    <p>The result is colour-coded like a traffic light so you can see it at a glance:</p>
+    <table>
+      <tr><th>Colour</th><th>Food cost</th><th>What it means</th></tr>
+      <tr><td>🟢 Green</td><td>under 30%</td><td>Healthy margin, very profitable dish</td></tr>
+      <tr><td>🟡 Amber</td><td>between 30% and 35%</td><td>Acceptable margin, keep an eye on it</td></tr>
+      <tr><td>🔴 Red</td><td>over 35%</td><td>Tight or negative margin — review price, portion size or supplier</td></tr>
+    </table>
+    <h4>What to do when a dish shows red</h4>
+    <ul>
+      <li><strong>Raise the selling price</strong> if the market allows it (compare with competitors).</li>
+      <li><strong>Adjust the portion size</strong> — the net quantity may be larger than needed for that type of dish.</li>
+      <li><strong>Look for a cheaper supplier or pack size</strong> for the ingredients that weigh most on the cost.</li>
+      <li><strong>Review the actual waste</strong> — sometimes a better cleaning/cutting technique reduces waste.</li>
+      <li>If none of this is viable, consider whether that dish should stay on the menu or be replaced with one with a better margin.</li>
+    </ul>
+    <h4>In-house preparations (semi-finished items)</h4>
+    <p>Use <strong>"New Preparation"</strong> to create bases that are later used inside other recipes (stocks, sauces, doughs, mise en place). Define them just like a normal recipe, stating how many servings or what total quantity they yield; afterwards you can add them as another "ingredient" inside other Costing recipes, and their cost per unit will be calculated and propagated just like any Master List ingredient.</p>
+    <div class="manual-tip">💡 Once a dish's costing sheet is created, you never have to recalculate anything manually again: if an ingredient's price changes in the Master List, this dish (and its food cost and margin) update automatically. Review Costing periodically, especially after supplier price rises, to spot dishes that have moved into the amber or red zone.</div>`},
   },
   {
-    title:'<i class="ti ti-file-text"></i> Fichas Técnicas',
-    content:`<h3>El "manual de instrucciones" de cada plato</h3>
+    title:{es:'<i class="ti ti-file-text"></i> Fichas Técnicas', ca:'<i class="ti ti-file-text"></i> Fitxes Tècniques', en:'<i class="ti ti-file-text"></i> Technical Sheets'},
+    content:{es:`<h3>El "manual de instrucciones" de cada plato</h3>
     <p>Mientras que el Escandallo se centra en el <strong>coste</strong> de un plato, la Ficha Técnica se centra en su <strong>ejecución</strong>: cómo se prepara paso a paso, cómo se presenta y qué alérgenos contiene. Es la herramienta que garantiza que un plato salga igual sin importar quién esté ese día en la partida, y es también el documento que necesitas tener a mano (y a veces mostrar) ante una inspección de seguridad alimentaria por el control de alérgenos.</p>
     <h4>Creación automática desde el Escandallo</h4>
     <p>Para no tener que volver a escribir nombre, comensales e ingredientes, al entrar en Fichas Técnicas la app te muestra automáticamente la lista de <strong>recetas del Escandallo que todavía no tienen ficha creada</strong>. Pulsa sobre una de ellas y se generará una ficha nueva pre-rellenada con:</p>
@@ -4049,11 +4279,67 @@ const MANUAL_CHAPTERS = [
       <li>Mantener la consistencia cuando hay varios turnos o varios cocineros rotando</li>
       <li>Tener a mano la información de alérgenos para responder con seguridad a un cliente que pregunte</li>
     </ul>
-    <div class="manual-tip">💡 Dedica un rato a completar las fichas de los platos más vendidos primero — son los que más impacto tienen en la consistencia del servicio y en las preguntas de alérgenos de los clientes.</div>`
+    <div class="manual-tip">💡 Dedica un rato a completar las fichas de los platos más vendidos primero — son los que más impacto tienen en la consistencia del servicio y en las preguntas de alérgenos de los clientes.</div>`,
+    ca:`<h3>El "manual d'instruccions" de cada plat</h3>
+    <p>Mentre que l'Escandall se centra en el <strong>cost</strong> d'un plat, la Fitxa Tècnica se centra en la seva <strong>execució</strong>: com es prepara pas a pas, com es presenta i quins al·lergens conté. És l'eina que garanteix que un plat surti igual sigui qui sigui qui estigui aquell dia a la partida, i és també el document que necessites tenir a mà (i de vegades mostrar) davant una inspecció de seguretat alimentària pel control d'al·lergens.</p>
+    <h4>Creació automàtica des de l'Escandall</h4>
+    <p>Per no haver de tornar a escriure nom, comensals i ingredients, en entrar a Fitxes Tècniques l'app et mostra automàticament la llista de <strong>receptes de l'Escandall que encara no tenen fitxa creada</strong>. Prem sobre una i es generarà una fitxa nova preomplerta amb:</p>
+    <ul>
+      <li>El nom del plat</li>
+      <li>El nombre de comensals/racions</li>
+      <li>La llista d'ingredients amb els seus gramatges (nets i bruts) tal com estan a l'Escandall</li>
+    </ul>
+    <p>A partir d'aquesta base, només has de completar la part que no és a l'Escandall: els passos i els al·lergens.</p>
+    <h4>Com redactar els passos d'elaboració</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Afegeix els passos <strong>en l'ordre real de treball</strong>, des de la preparació d'ingredients (mise en place) fins a l'emplatat final.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Sigues concret amb temps, temperatures i tècniques: per exemple, "Segellar el filet a la planxa molt calenta, 1 minut per cada costat" en lloc de "cuinar la carn".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Separa els passos en unitats petites i numerades — és més fàcil de seguir durant el servei que un paràgraf llarg.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Si hi ha punts crítics de seguretat alimentària (temperatures mínimes de cocció, temps de regeneració, etc.), indica'ls explícitament al pas corresponent.</div></div>
+    <h4>Al·lergens: els 14 reglamentaris de la UE</h4>
+    <p>La normativa europea obliga a informar de la presència de 14 al·lergens i intoleràncies als aliments que se serveixen: <strong>cereals amb gluten, crustacis, ous, peix, cacauets, soja, llet/làctics, fruits de closca, api, mostassa, sèsam, diòxid de sofre/sulfits, tramussos i mol·luscos</strong>. A la Fitxa Tècnica marca tots els que apliquin al plat, revisant també els ingredients "ocults" (per exemple, moltes salses comercials porten gluten o làctics com a espessidor).</p>
+    <div class="manual-warning">⚠️ Revisa els al·lergens cada vegada que canviïs un ingredient d'una recepta a l'Escandall (per exemple, si substitueixes un brou casolà per un de comercial). Un canvi de proveïdor o de producte pot introduir un al·lergen que abans no hi era present.</div>
+    <h4>Presentació / emplatat</h4>
+    <p>Descriu com ha de veure's el plat en el moment de servir: tipus de plat o recipient, disposició dels elements, salses i la seva col·locació, guarnicions, decoració i temperatura de servei. Si és possible, complementa la descripció amb una foto de referència que l'equip pugui consultar.</p>
+    <h4>Imprimir i fer servir a cuina</h4>
+    <p>El botó <strong>Imprimir</strong> genera un full net amb tota la informació de la fitxa (ingredients, passos, al·lergens i presentació), a punt per imprimir, plastificar i penjar a la partida corresponent de la cuina. És especialment útil per:</p>
+    <ul>
+      <li>Formar personal nou sense dependre que algú li "ensenyi de memòria"</li>
+      <li>Mantenir la consistència quan hi ha diversos torns o diversos cuiners rotant</li>
+      <li>Tenir a mà la informació d'al·lergens per respondre amb seguretat a un client que pregunti</li>
+    </ul>
+    <div class="manual-tip">💡 Dedica una estona a completar les fitxes dels plats més venuts primer — són els que més impacte tenen en la consistència del servei i en les preguntes d'al·lergens dels clients.</div>`,
+    en:`<h3>The "instruction manual" for each dish</h3>
+    <p>While Costing focuses on a dish's <strong>cost</strong>, the Technical Sheet focuses on its <strong>execution</strong>: how it's prepared step by step, how it's plated and which allergens it contains. It's the tool that ensures a dish comes out the same regardless of who's on that station that day, and it's also the document you need to have on hand (and sometimes show) during a food-safety inspection for allergen control.</p>
+    <h4>Automatic creation from Costing</h4>
+    <p>So you don't have to re-type the name, servings and ingredients, when you open Technical Sheets the app automatically shows you the list of <strong>Costing recipes that don't have a sheet yet</strong>. Tap one and a new sheet is generated, pre-filled with:</p>
+    <ul>
+      <li>The dish's name</li>
+      <li>The number of servings</li>
+      <li>The ingredient list with its weights (net and gross) as they appear in Costing</li>
+    </ul>
+    <p>From that base, you only need to fill in what isn't in Costing: the steps and the allergens.</p>
+    <h4>How to write the preparation steps</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Add the steps <strong>in the actual working order</strong>, from ingredient prep (mise en place) to final plating.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Be specific about times, temperatures and techniques: for example, "Sear the sirloin on a very hot griddle, 1 minute per side" instead of "cook the meat".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Split the steps into small, numbered units — easier to follow during service than one long paragraph.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">If there are critical food-safety points (minimum cooking temperatures, reheating times, etc.), state them explicitly in the relevant step.</div></div>
+    <h4>Allergens: the EU's 14 regulated allergens</h4>
+    <p>EU regulations require disclosing the presence of 14 allergens and intolerances in food served: <strong>cereals containing gluten, crustaceans, eggs, fish, peanuts, soybeans, milk/dairy, tree nuts, celery, mustard, sesame, sulphur dioxide/sulphites, lupin and molluscs</strong>. In the Technical Sheet, tick every one that applies to the dish, also checking for "hidden" ingredients (for example, many commercial sauces contain gluten or dairy as a thickener).</p>
+    <div class="manual-warning">⚠️ Review the allergens every time you change an ingredient in a Costing recipe (for example, if you swap a homemade stock for a commercial one). A change of supplier or product can introduce an allergen that wasn't there before.</div>
+    <h4>Plating / presentation</h4>
+    <p>Describe how the dish should look when served: type of plate or dish, layout of the elements, sauces and their placement, garnishes, decoration and serving temperature. If possible, add a reference photo the team can check.</p>
+    <h4>Print and use in the kitchen</h4>
+    <p>The <strong>Print</strong> button generates a clean sheet with all the sheet's information (ingredients, steps, allergens and plating), ready to print, laminate and hang at the relevant kitchen station. It's especially useful for:</p>
+    <ul>
+      <li>Training new staff without relying on someone "teaching from memory"</li>
+      <li>Keeping consistency when there are several shifts or several cooks rotating</li>
+      <li>Having allergen information at hand to answer a customer's question confidently</li>
+    </ul>
+    <div class="manual-tip">💡 Spend some time completing the sheets for your best-selling dishes first — they have the biggest impact on service consistency and on customers' allergen questions.</div>`},
   },
   {
-    title:'<i class="ti ti-tools-kitchen-2"></i> Carta',
-    content:`<h3>De las recetas a lo que ve el cliente</h3>
+    title:{es:'<i class="ti ti-tools-kitchen-2"></i> Carta', ca:'<i class="ti ti-tools-kitchen-2"></i> Carta', en:'<i class="ti ti-tools-kitchen-2"></i> Menu'},
+    content:{es:`<h3>De las recetas a lo que ve el cliente</h3>
     <p>La Carta es la traducción de tu Escandallo en algo que el cliente puede pedir: una colección de platos organizados por secciones, con su precio de venta, agrupados en una o varias "cartas" que se activan según el día y la hora. Es el puente entre tu trabajo de cocina (recetas con coste calculado) y la operativa de sala (TPV y pedidos online).</p>
     <h4>Por qué tener varias cartas</h4>
     <p>Muchos negocios no ofrecen siempre lo mismo: el menú del mediodía no es la carta de la noche, el fin de semana hay platos especiales, o existe una carta de bebidas distinta a la de comida. GastroGoan permite crear <strong>tantas cartas como necesites</strong> (Carta de Mediodía, Carta de Noche, Carta de Bebidas, Carta de Fin de Semana...) y programarlas para que se activen solas según el horario.</p>
@@ -4081,11 +4367,69 @@ const MANUAL_CHAPTERS = [
     <h4>La carta y los pedidos online</h4>
     <p>La carta activa en el TPV es exactamente la misma que se muestra en la página pública de pedidos online (Take Away/Delivery) y en el QR de las mesas. Esto significa que cualquier cambio que hagas aquí (disponibilidad, precios, secciones) se refleja también de cara al cliente, normalmente en pocos segundos.</p>
     <div class="manual-warning">⚠️ Si tus clientes ven el mensaje "La carta no está disponible" en la web de pedidos online, comprueba: (1) que exista una carta programada para el día y hora actuales en su horario de activación, y (2) que esa carta tenga al menos un plato marcado como Disponible. Si ambas cosas están en orden, el aviso desaparecerá en cuanto entréis en ese tramo horario.</div>
-    <div class="manual-tip">💡 Organiza las secciones en el mismo orden en que aparecen físicamente en tu carta de papel o pizarra — facilita que el equipo encuentre rápido los platos durante el servicio, sobre todo en horas de mucho ritmo.</div>`
+    <div class="manual-tip">💡 Organiza las secciones en el mismo orden en que aparecen físicamente en tu carta de papel o pizarra — facilita que el equipo encuentre rápido los platos durante el servicio, sobre todo en horas de mucho ritmo.</div>`,
+    ca:`<h3>De les receptes al que veu el client</h3>
+    <p>La Carta és la traducció del teu Escandall en alguna cosa que el client pot demanar: una col·lecció de plats organitzats per seccions, amb el seu preu de venda, agrupats en una o diverses "cartes" que s'activen segons el dia i l'hora. És el pont entre la teva feina de cuina (receptes amb cost calculat) i l'operativa de sala (TPV i comandes en línia).</p>
+    <h4>Per què tenir diverses cartes</h4>
+    <p>Molts negocis no ofereixen sempre el mateix: el menú del migdia no és la carta de la nit, el cap de setmana hi ha plats especials, o hi ha una carta de begudes diferent de la de menjar. GastroGoan permet crear <strong>tantes cartes com necessitis</strong> (Carta de Migdia, Carta de Nit, Carta de Begudes, Carta de Cap de Setmana...) i programar-les perquè s'activin soles segons l'horari.</p>
+    <h4>Cartes de menjar (Cuina) i cartes de begudes (Sala)</h4>
+    <p>El mòdul Carta és tant a <strong>Cuina</strong> com a <strong>Sala</strong>. Qualsevol carta o menú que creïs entrant des de <strong>Sala es considera carta de begudes</strong>; les que crees des de <strong>Cuina són de menjar</strong>. Això és important perquè les <strong>begudes no apareixen a la pantalla de Cuina</strong> (allà només surt el menjar a elaborar), i al TPV les pestanyes de carta surten sempre amb les begudes primer. No cal que marquis res: se sap per l'àrea des de la qual crees la carta.</p>
+    <h4>Traducció automàtica de la carta</h4>
+    <p>Els noms de seccions i plats es <strong>tradueixen sols</strong> (castellà, català i anglès) en segon pla en desar la carta, fent servir un traductor automàtic. Quan canviïs l'idioma de l'app (selector de dalt), la carta es mostrarà en aquell idioma tant a l'equip com, a la web pública, als teus clients.</p>
+    <h4>Com crear una carta pas a pas</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"Nova Carta"</strong> i posa-li un nom descriptiu (ex. "Carta Migdia", "Carta Begudes").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Configura l'<strong>horari d'activació</strong>: tria el <strong>Torn</strong> (Torn 1, Torn 2, o "tot l'horari d'obertura") i marca els <strong>dies de la setmana</strong> en què aquesta carta ha d'estar activa. Les hores concretes de cada torn es prenen de l'<strong>Horari d'obertura</strong> que hagis configurat a El Meu Negoci — així no cal repetir horaris a cada carta.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Crea <strong>seccions</strong> per organitzar la carta (ex. Entrants, Arrossos, Carns, Peixos, Postres, Còctels, Refrescos...). Prem <strong>"Nova Secció"</strong> i posa-li nom.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Dins de cada secció, prem <strong>"Importar de l'Escandall"</strong> per afegir plats que ja tens definits amb la seva recepta i cost. S'importen amb el nom i pots ajustar el preu de venda si encara no l'havies fixat a l'Escandall.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Si necessites un plat que no té recepta a l'Escandall (per exemple, un producte envasat que revens tal qual, com una llauna de refresc o una postres comprada), afegeix-lo com a <strong>plat manual</strong> directament des de la Carta, indicant nom i preu.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repeteix per a totes les seccions fins a tenir la carta completa.</div></div>
+    <h4>Disponibilitat de plats: l'interruptor més usat del dia a dia</h4>
+    <p>Cada plat de la carta té un interruptor <strong>Disponible / No disponible</strong>. Quan se t'acabi un producte durant el servei (per exemple, "s'ha acabat el rap"), simplement desactiva aquell plat:</p>
+    <ul>
+      <li>Deixa d'aparèixer immediatament al <strong>TPV</strong>, així l'equip de sala no el pot comandar per error.</li>
+      <li>Deixa d'aparèixer a la <strong>web de comandes en línia</strong> (Take Away/Delivery), evitant que un client demani alguna cosa que no pots servir.</li>
+    </ul>
+    <p>L'endemà, quan tornis a tenir el producte, simplement reactiva l'interruptor — no cal tornar a crear el plat.</p>
+    <h4>Com es decideix quina carta està activa al TPV</h4>
+    <p>Amb l'opció <strong>"Canvi automàtic segons horari"</strong> activada (que és el comportament per defecte), GastroGoan revisa contínuament el dia i l'hora actuals i activa automàticament la carta (i la carta de begudes, si la tens separada) que hagis programat per a aquell moment segons el pas 2. L'equip de sala no ha de fer res: en entrar al TPV, la carta correcta ja està activa.</p>
+    <p>Si per algun motiu necessites forçar manualment una altra carta (per exemple, un esdeveniment especial), pots <strong>desactivar el canvi automàtic</strong> des de la configuració i triar tu mateix la carta activa des del desplegable corresponent al TPV. Recorda tornar-lo a activar després si vols que el sistema recuperi el control automàtic.</p>
+    <h4>La carta i les comandes en línia</h4>
+    <p>La carta activa al TPV és exactament la mateixa que es mostra a la pàgina pública de comandes en línia (Take Away/Delivery) i al QR de les taules. Això significa que qualsevol canvi que facis aquí (disponibilitat, preus, seccions) es reflecteix també de cara al client, normalment en pocs segons.</p>
+    <div class="manual-warning">⚠️ Si els teus clients veuen el missatge "La carta no està disponible" a la web de comandes en línia, comprova: (1) que hi hagi una carta programada per al dia i l'hora actuals en el seu horari d'activació, i (2) que aquesta carta tingui almenys un plat marcat com a Disponible. Si totes dues coses estan en ordre, l'avís desapareixerà tan bon punt entreu en aquell tram horari.</div>
+    <div class="manual-tip">💡 Organitza les seccions en el mateix ordre en què apareixen físicament a la teva carta de paper o pissarra — facilita que l'equip trobi ràpid els plats durant el servei, sobretot en hores de molt ritme.</div>`,
+    en:`<h3>From recipes to what the customer sees</h3>
+    <p>The Menu translates your Costing into something the customer can order: a collection of dishes organised into sections, with their selling price, grouped into one or more "menus" that activate depending on the day and time. It's the bridge between your kitchen work (recipes with a calculated cost) and floor operations (POS and online ordering).</p>
+    <h4>Why have several menus</h4>
+    <p>Many businesses don't always offer the same thing: the lunch menu isn't the dinner menu, there are weekend specials, or there's a separate drinks menu from the food one. GastroGoan lets you create <strong>as many menus as you need</strong> (Lunch Menu, Dinner Menu, Drinks Menu, Weekend Menu...) and schedule them to activate on their own by time slot.</p>
+    <h4>Food menus (Kitchen) and drinks menus (Floor)</h4>
+    <p>The Menu module exists in both <strong>Kitchen</strong> and <strong>Floor</strong>. Any menu you create while in <strong>Floor is treated as a drinks menu</strong>; the ones you create from <strong>Kitchen are food menus</strong>. This matters because <strong>drinks don't show up on the Kitchen screen</strong> (only food to prepare appears there), and in the POS, menu tabs always show drinks first. You don't need to flag anything: it's inferred from the area you create the menu from.</p>
+    <h4>Automatic menu translation</h4>
+    <p>Section and dish names are <strong>translated automatically</strong> (Spanish, Catalan and English) in the background when you save the menu, using an automatic translator. When you change the app's language (selector at the top), the menu will be shown in that language both to the team and, on the public website, to your customers.</p>
+    <h4>How to create a menu step by step</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"New Menu"</strong> and give it a descriptive name (e.g. "Lunch Menu", "Drinks Menu").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Set the <strong>activation schedule</strong>: choose the <strong>Time slot</strong> (Slot 1, Slot 2, or "the whole opening schedule") and tick the <strong>days of the week</strong> this menu should be active on. The exact hours for each slot are taken from the <strong>Opening hours</strong> you set up in My Business — so you don't have to repeat times in every menu.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Create <strong>sections</strong> to organise the menu (e.g. Starters, Rice Dishes, Meat, Fish, Desserts, Cocktails, Soft Drinks...). Press <strong>"New Section"</strong> and name it.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Inside each section, press <strong>"Import from Costing"</strong> to add dishes you've already defined with their recipe and cost. They're imported with their name, and you can adjust the selling price if you hadn't set it in Costing yet.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">If you need a dish that has no recipe in Costing (for example, a packaged product you resell as-is, like a canned drink or a bought-in dessert), add it as a <strong>manual dish</strong> directly from the Menu, entering a name and price.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Repeat for every section until the menu is complete.</div></div>
+    <h4>Dish availability: the most-used switch day to day</h4>
+    <p>Every dish on the menu has an <strong>Available / Unavailable</strong> toggle. When you run out of a product mid-service (for example, "we're out of monkfish"), simply switch that dish off:</p>
+    <ul>
+      <li>It stops appearing immediately in the <strong>POS</strong>, so the floor team can't order it by mistake.</li>
+      <li>It stops appearing on the <strong>online ordering website</strong> (Take Away/Delivery), preventing a customer from ordering something you can't serve.</li>
+    </ul>
+    <p>The next day, once you have the product again, simply switch it back on — no need to recreate the dish.</p>
+    <h4>How the app decides which menu is active in the POS</h4>
+    <p>With the <strong>"Automatic schedule switching"</strong> option enabled (the default behaviour), GastroGoan continuously checks the current day and time and automatically activates the menu (and the drinks menu, if you keep it separate) you scheduled for that moment in step 2. The floor team doesn't have to do anything: when they open the POS, the right menu is already active.</p>
+    <p>If for some reason you need to manually force a different menu (for example, for a special event), you can <strong>turn off automatic switching</strong> in the settings and choose the active menu yourself from the corresponding dropdown in the POS. Remember to turn it back on afterwards if you want the system to resume automatic control.</p>
+    <h4>The menu and online ordering</h4>
+    <p>The menu active in the POS is exactly the same one shown on the public online ordering page (Take Away/Delivery) and on the table QR codes. This means any change you make here (availability, prices, sections) is also reflected to the customer, usually within seconds.</p>
+    <div class="manual-warning">⚠️ If your customers see the message "The menu isn't available" on the online ordering website, check: (1) that a menu is scheduled for the current day and time within its activation hours, and (2) that menu has at least one dish marked as Available. If both are in order, the message will disappear as soon as you enter that time slot.</div>
+    <div class="manual-tip">💡 Organise sections in the same order they physically appear on your paper menu or blackboard — it helps the team find dishes quickly during service, especially at busy times.</div>`},
   },
   {
-    title:'<i class="ti ti-box"></i> Stock',
-    content:`<h3>Saber qué tienes y cuándo se te va a acabar</h3>
+    title:{es:'<i class="ti ti-box"></i> Stock', ca:'<i class="ti ti-box"></i> Estoc', en:'<i class="ti ti-box"></i> Stock'},
+    content:{es:`<h3>Saber qué tienes y cuándo se te va a acabar</h3>
     <p>El módulo de Stock mantiene el inventario de cantidades disponibles de cada ingrediente de tu Mega Lista, y te avisa cuando algo está a punto de agotarse. Su gran ventaja es que <strong>no tienes que actualizarlo manualmente cada vez que vendes o recibes algo</strong>: se mueve solo en función de lo que pasa en el TPV y en Pedidos.</p>
     <h4>Configurar el stock mínimo</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Para cada ingrediente, indica la <strong>cantidad actual</strong> que tienes (puedes hacer un inventario inicial contando lo que hay físicamente en cocina, almacén o barra).</div></div>
@@ -4099,11 +4443,41 @@ const MANUAL_CHAPTERS = [
     <p>Esto significa que el stock que ves aquí es una <strong>estimación calculada</strong>, no necesariamente el conteo físico exacto en cada momento (las mermas reales, roturas, autoconsumo del personal, etc. no se descuentan automáticamente). Por eso es recomendable hacer recuentos físicos periódicos — puedes imprimir una <strong>hoja de recuento</strong> con el botón correspondiente en la parte superior de Stock — y ajustar el stock manualmente cuando detectes diferencias importantes. Cada ajuste manual queda guardado en el <strong>Historial</strong>, con fecha y cantidad antes/después, para poder investigar mermas o descuadres.</p>
     <h4>Elaboraciones propias en el stock</h4>
     <p>Las elaboraciones propias (caldos, salsas, almíbares, infusiones...) creadas en el Escandallo también pueden tener su propio stock y mínimo, igual que los ingredientes comprados — útil para controlar, por ejemplo, cuánto caldo casero o almíbar preparado te queda para el servicio. Si un plato o bebida usa una elaboración como ingrediente, vender ese plato descuenta automáticamente el stock de la elaboración, no el de sus ingredientes por separado.</p>
-    <div class="manual-tip">💡 Revisa la pestaña de alertas de stock bajo justo antes de planificar el pedido de la semana — así generas pedidos completos y evitas rotos de producto durante el servicio.</div>`
+    <div class="manual-tip">💡 Revisa la pestaña de alertas de stock bajo justo antes de planificar el pedido de la semana — así generas pedidos completos y evitas rotos de producto durante el servicio.</div>`,
+    ca:`<h3>Saber què tens i quan se t'acabarà</h3>
+    <p>El mòdul d'Estoc manté l'inventari de quantitats disponibles de cada ingredient de la teva Mega Llista, i t'avisa quan alguna cosa està a punt d'esgotar-se. El seu gran avantatge és que <strong>no has d'actualitzar-lo manualment cada vegada que vens o reps alguna cosa</strong>: es mou sol en funció del que passa al TPV i a Comandes.</p>
+    <h4>Configurar l'estoc mínim</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Per a cada ingredient, indica la <strong>quantitat actual</strong> que tens (pots fer un inventari inicial comptant el que hi ha físicament a cuina, magatzem o barra).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Indica l'<strong>estoc mínim</strong>: la quantitat per sota de la qual vols rebre un avís perquè hi ha risc de quedar-te sense aquest producte abans de la propera comanda. Pensa en el teu ritme de consum i en quants dies trigues a rebre una comanda nova d'aquest proveïdor.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Activa el filtre <strong>"Només alertes"</strong> per veure d'un cop d'ull només els ingredients que estan en (o per sota de) el seu mínim — és la llista que has de repassar abans de fer una comanda.</div></div>
+    <h4>Com es mou l'estoc automàticament</h4>
+    <ul>
+      <li><strong>Baixen les existències</strong> quan es tanca una comanda al TPV: l'app descompta de cada ingredient la quantitat bruta que indica l'Escandall del plat venut, multiplicada per les unitats venudes.</li>
+      <li><strong>Pugen les existències</strong> quan marques una comanda a proveïdor com <strong>"Rebuda"</strong> al mòdul Comandes: s'afegeixen a l'estoc les quantitats d'aquella comanda.</li>
+    </ul>
+    <p>Això significa que l'estoc que veus aquí és una <strong>estimació calculada</strong>, no necessàriament el recompte físic exacte en cada moment (les mermes reals, trencaments, autoconsum del personal, etc. no es descompten automàticament). Per això és recomanable fer recomptes físics periòdics — pots imprimir un <strong>full de recompte</strong> amb el botó corresponent a la part superior d'Estoc — i ajustar l'estoc manualment quan detectis diferències importants. Cada ajust manual queda desat a l'<strong>Historial</strong>, amb data i quantitat abans/després, per poder investigar mermes o descaptaments.</p>
+    <h4>Elaboracions pròpies a l'estoc</h4>
+    <p>Les elaboracions pròpies (brous, salses, xarops, infusions...) creades a l'Escandall també poden tenir el seu propi estoc i mínim, igual que els ingredients comprats — útil per controlar, per exemple, quant brou casolà o xarop preparat et queda per al servei. Si un plat o beguda fa servir una elaboració com a ingredient, vendre aquell plat descompta automàticament l'estoc de l'elaboració, no el dels seus ingredients per separat.</p>
+    <div class="manual-tip">💡 Revisa la pestanya d'alertes d'estoc baix just abans de planificar la comanda de la setmana — així generes comandes completes i evites trencaments de producte durant el servei.</div>`,
+    en:`<h3>Knowing what you have and when it'll run out</h3>
+    <p>The Stock module keeps track of the quantities available for each ingredient in your Master List, and warns you when something is about to run out. Its big advantage is that <strong>you don't have to update it manually every time you sell or receive something</strong>: it moves on its own based on what happens in the POS and in Orders.</p>
+    <h4>Setting the minimum stock</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">For each ingredient, enter the <strong>current quantity</strong> you have (you can do an initial count by physically checking what's in the kitchen, storeroom or bar).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Enter the <strong>minimum stock</strong>: the quantity below which you want to get a warning because there's a risk of running out before the next order. Think about your consumption rate and how many days it takes to get a new order from that supplier.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Turn on the <strong>"Alerts only"</strong> filter to see at a glance just the ingredients that are at (or below) their minimum — this is the list you should review before placing an order.</div></div>
+    <h4>How stock moves automatically</h4>
+    <ul>
+      <li><strong>Stock goes down</strong> when an order is closed in the POS: the app deducts from each ingredient the gross quantity Costing states for the dish sold, multiplied by the units sold.</li>
+      <li><strong>Stock goes up</strong> when you mark a supplier order as <strong>"Received"</strong> in the Orders module: that order's quantities are added to stock.</li>
+    </ul>
+    <p>This means the stock you see here is a <strong>calculated estimate</strong>, not necessarily the exact physical count at every moment (real waste, breakages, staff self-consumption, etc. aren't deducted automatically). That's why it's a good idea to do periodic physical counts — you can print a <strong>count sheet</strong> using the button at the top of Stock — and adjust stock manually when you spot significant differences. Every manual adjustment is saved in the <strong>History</strong>, with the date and the quantity before/after, so you can investigate waste or mismatches.</p>
+    <h4>In-house preparations in stock</h4>
+    <p>In-house preparations (stocks, sauces, syrups, infusions...) created in Costing can also have their own stock and minimum, just like purchased ingredients — useful for tracking, for example, how much homemade stock or prepared syrup you have left for service. If a dish or drink uses a preparation as an ingredient, selling that dish automatically deducts the preparation's stock, not its individual ingredients.</p>
+    <div class="manual-tip">💡 Check the low-stock alerts tab right before planning the week's order — that way you generate complete orders and avoid running out of product during service.</div>`},
   },
   {
-    title:'<i class="ti ti-shopping-cart"></i> Pedidos',
-    content:`<h3>El ciclo completo de una compra a proveedor</h3>
+    title:{es:'<i class="ti ti-shopping-cart"></i> Pedidos', ca:'<i class="ti ti-shopping-cart"></i> Comandes', en:'<i class="ti ti-shopping-cart"></i> Orders'},
+    content:{es:`<h3>El ciclo completo de una compra a proveedor</h3>
     <p>El módulo de Pedidos te permite preparar, enviar y recibir pedidos a tus proveedores, y es el paso que conecta el aviso de "stock bajo" con la reposición real de producto — y de ahí, automáticamente, con el Stock y con la Gestión Económica (gastos variables).</p>
     <h4>Los tres estados de un pedido</h4>
     <table>
@@ -4127,11 +4501,61 @@ const MANUAL_CHAPTERS = [
       <li>Genera un pedido por proveedor para mantener cada pedido claro y fácil de comunicar.</li>
       <li>Si el proveedor entrega menos cantidad de la pedida (rotura de stock en su almacén, por ejemplo), ajusta las cantidades del pedido antes de marcarlo como Recibido, para que el Stock refleje lo que realmente ha entrado.</li>
       <li>Revisa periódicamente los pedidos "Enviados" que lleven mucho tiempo sin marcarse como Recibidos — puede ser una señal de que se olvidó actualizar el estado tras la entrega.</li>
-    </ul>`
+    </ul>`,
+    ca:`<h3>El cicle complet d'una compra a proveïdor</h3>
+    <p>El mòdul de Comandes et permet preparar, enviar i rebre comandes als teus proveïdors, i és el pas que connecta l'avís d'"estoc baix" amb la reposició real de producte — i d'aquí, automàticament, amb l'Estoc i amb la Gestió Econòmica (despeses variables).</p>
+    <h4>Els tres estats d'una comanda</h4>
+    <table>
+      <tr><th>Estat</th><th>Què significa</th><th>Què pots fer</th></tr>
+      <tr><td><strong>Esborrany</strong></td><td>Estàs preparant la comanda, encara no s'ha comunicat a ningú</td><td>Afegir, treure o modificar línies i quantitats lliurement</td></tr>
+      <tr><td><strong>Enviada</strong></td><td>La comanda ja s'ha comunicat al proveïdor (per telèfon, email, etc.)</td><td>Serveix com a registre del "demanat", a l'espera de recepció</td></tr>
+      <tr><td><strong>Rebuda</strong></td><td>La mercaderia ha arribat físicament</td><td>En marcar-la, l'Estoc s'actualitza automàticament sumant les quantitats de la comanda</td></tr>
+    </table>
+    <h4>Dues pestanyes: Fer Comanda i Historial</h4>
+    <p>El mòdul Comandes té dues pestanyes: a <strong>"Fer Comanda"</strong> compons la comanda (tries proveïdor, data i quantitats, amb suggeriment per dèficit d'estoc) i l'envies per <strong>WhatsApp o Email</strong> o la imprimeixes. A <strong>"Historial de Comandes"</strong> tens totes les comandes fetes amb el seu estat. En enviar una comanda, passa automàticament a l'historial.</p>
+    <h4>Com crear i gestionar una comanda</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">A la pestanya <strong>"Fer Comanda"</strong>, tria el <strong>proveïdor</strong> al qual va dirigida.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Afegeix línies amb els <strong>ingredients</strong> que necessites reposar (la pantalla d'Estoc amb el filtre d'alertes activat t'ajuda a saber què incloure) i la <strong>quantitat</strong> que demanaràs de cadascun.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Revisa la comanda completa — en estat <strong>Esborrany</strong> pots continuar ajustant quantitats o treure línies fins que estigui tal com la comunicaràs.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Quan hagis parlat amb el proveïdor (trucada, email, app del proveïdor...) i la comanda estigui confirmada, canvia l'estat a <strong>Enviada</strong>. Això et serveix de recordatori de "comanda pendent d'arribar".</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Quan la mercaderia arribi físicament a la teva cuina, marca la comanda com a <strong>Rebuda</strong>. En aquell moment, i només en aquell moment, l'Estoc de cada ingredient de la comanda augmenta amb les quantitats indicades.</div></div>
+    <h4>Connexió amb Estoc i Gestió Econòmica</h4>
+    <div class="manual-warning">⚠️ Només les comandes marcades com a <strong>Rebuda</strong> afecten l'Estoc i es comptabilitzen com a despesa a la Gestió Econòmica (Despeses Variables). Una comanda en Esborrany o Enviada no mou cap número econòmic — és important recordar passar la comanda a Rebuda quan arribi la mercaderia, o els teus informes d'estoc i de despeses no reflectiran la realitat.</div>
+    <h4>Bones pràctiques</h4>
+    <ul>
+      <li>Genera una comanda per proveïdor per mantenir cada comanda clara i fàcil de comunicar.</li>
+      <li>Si el proveïdor lliura menys quantitat de la demanada (trencament d'estoc al seu magatzem, per exemple), ajusta les quantitats de la comanda abans de marcar-la com a Rebuda, perquè l'Estoc reflecteixi el que realment ha entrat.</li>
+      <li>Revisa periòdicament les comandes "Enviades" que portin molt de temps sense marcar-se com a Rebudes — pot ser un senyal que es va oblidar actualitzar l'estat després del lliurament.</li>
+    </ul>`,
+    en:`<h3>The full cycle of a supplier purchase</h3>
+    <p>The Orders module lets you prepare, send and receive orders to your suppliers, and it's the step that connects the "low stock" warning with actually restocking product — and from there, automatically, with Stock and with Financial Management (variable costs).</p>
+    <h4>An order's three statuses</h4>
+    <table>
+      <tr><th>Status</th><th>What it means</th><th>What you can do</th></tr>
+      <tr><td><strong>Draft</strong></td><td>You're preparing the order, it hasn't been sent to anyone yet</td><td>Freely add, remove or change lines and quantities</td></tr>
+      <tr><td><strong>Sent</strong></td><td>The order has already been communicated to the supplier (by phone, email, etc.)</td><td>Acts as a record of "what was ordered", awaiting receipt</td></tr>
+      <tr><td><strong>Received</strong></td><td>The goods have physically arrived</td><td>Marking it automatically updates Stock, adding the order's quantities</td></tr>
+    </table>
+    <h4>Two tabs: Place Order and History</h4>
+    <p>The Orders module has two tabs: in <strong>"Place Order"</strong> you build the order (choose supplier, date and quantities, with a suggestion based on stock shortfall) and send it by <strong>WhatsApp or Email</strong> or print it. In <strong>"Order History"</strong> you have every order placed with its status. Sending an order automatically moves it to history.</p>
+    <h4>How to create and manage an order</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">In the <strong>"Place Order"</strong> tab, choose the <strong>supplier</strong> it's addressed to.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Add lines with the <strong>ingredients</strong> you need to restock (the Stock screen with the alerts filter turned on helps you know what to include) and the <strong>quantity</strong> you'll order of each.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Review the full order — while in <strong>Draft</strong> status you can keep adjusting quantities or removing lines until it's exactly as you'll communicate it.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Once you've spoken with the supplier (call, email, supplier app...) and the order is confirmed, change the status to <strong>Sent</strong>. This acts as a reminder of "order pending arrival".</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">When the goods physically arrive at your kitchen, mark the order as <strong>Received</strong>. At that point, and only then, the Stock of every ingredient in the order increases by the stated quantities.</div></div>
+    <h4>Connection with Stock and Financial Management</h4>
+    <div class="manual-warning">⚠️ Only orders marked as <strong>Received</strong> affect Stock and are counted as an expense in Financial Management (Variable Costs). A Draft or Sent order doesn't move any financial figure — it's important to remember to switch the order to Received once the goods arrive, or your stock and expense reports won't reflect reality.</div>
+    <h4>Best practices</h4>
+    <ul>
+      <li>Generate one order per supplier to keep each order clear and easy to communicate.</li>
+      <li>If the supplier delivers less than what was ordered (out of stock at their warehouse, for example), adjust the order's quantities before marking it as Received, so Stock reflects what actually came in.</li>
+      <li>Periodically review "Sent" orders that have gone a long time without being marked as Received — it may be a sign the status update after delivery was forgotten.</li>
+    </ul>`},
   },
   {
-    title:'<i class="ti ti-calendar"></i> Horario del Personal',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-calendar"></i> Horario del Personal', ca:'<i class="ti ti-calendar"></i> Horari del Personal', en:'<i class="ti ti-calendar"></i> Staff Schedule'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Este módulo es el corazón de la gestión de tu equipo: aquí das de alta a cada trabajador, organizas sus turnos semana a semana en formato calendario, controlas las horas que ficha cada persona y mantienes sus datos de contacto a mano. Tener el horario bien planificado evita los dos problemas más típicos de un restaurante: quedarte corto de personal en una hora punta, o pagar horas de más porque "nadie sabía quién tenía que venir".</p>
 
     <h4>Pestaña Personal: dar de alta a un empleado</h4>
@@ -4155,14 +4579,65 @@ const MANUAL_CHAPTERS = [
 
     <h4>Control de horas: Fichar</h4>
     <p>En la pestaña <strong>Fichar</strong>, cada empleado puede registrar su entrada y salida con su PIN. La app suma automáticamente las horas trabajadas y muestra el total de <strong>"Horas este mes"</strong> por empleado, para que puedas comparar las horas planificadas con las horas reales fichadas.</p>
-    <div class="manual-tip">💡 Si ves que un empleado acumula muchas más horas de las que tenía asignadas en el calendario, revisa si hubo turnos extra, sustituciones o si simplemente se olvidó de fichar la salida.</div>`
+    <div class="manual-tip">💡 Si ves que un empleado acumula muchas más horas de las que tenía asignadas en el calendario, revisa si hubo turnos extra, sustituciones o si simplemente se olvidó de fichar la salida.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Aquest mòdul és el cor de la gestió del teu equip: aquí dones d'alta cada treballador, organitzes els seus torns setmana a setmana en format calendari, controles les hores que fitxa cada persona i mantens les seves dades de contacte a mà. Tenir l'horari ben planificat evita els dos problemes més típics d'un restaurant: quedar-te curt de personal en una hora punta, o pagar hores de més perquè "ningú sabia qui havia de venir".</p>
+
+    <h4>Pestanya Personal: donar d'alta un empleat</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nou empleat"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escriu el seu <strong>nom</strong> i tria un <strong>rol</strong> (Cambrer/a, Cuiner/a, Ajudant, Encarregat/da...). El rol és només descriptiu, t'ajuda a identificar qui fa què.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Tria un <strong>color identificatiu</strong>. Aquest color es farà servir a tot el calendari de torns per reconèixer aquesta persona d'un cop d'ull, sense haver de llegir el nom cada vegada.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Emplena <strong>telèfon</strong> i <strong>email</strong> si els tens. Apareixeran com a enllaços directes per trucar/escriure per WhatsApp o enviar un correu sense haver de copiar el número.</div></div>
+    <p><strong>L'àrea (Cuina o Sala) ja no es pregunta:</strong> l'empleat s'assigna automàticament a l'àrea des de la qual el crees. Si entres a Personal des de <strong>Cuina</strong>, veus i dones d'alta personal de cuina; des de <strong>Sala</strong>, personal de sala. El mateix aplica a Distribució del treball, Fitxar i els torns.</p>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Defineix un <strong>PIN de 4 dígits</strong> perquè l'empleat pugui fitxar i, si el teu pla ho permet, accedir a la seva pròpia vista de l'app. El PIN per defecte és "1234"; demana-li que el canviï la primera vegada que el faci servir.</div></div>
+    <div class="manual-warning">⚠️ No repeteixis el mateix PIN per a dos empleats diferents: el PIN identifica la persona a Fitxar, al Xat intern i en qualsevol acció que quedi registrada al seu nom.</div>
+
+    <h4>Assignar torns: des de Dia, Setmana o Mes</h4>
+    <p>Els torns s'assignen des de les vistes <strong>Dia, Setmana o Mes</strong>: prem sobre l'empleat/dia i tria el torn. (L'assignació massiva per període s'ha retirat de la pestanya Personal perquè tot el repartiment de torns estigui en un sol lloc, el calendari.)</p>
+    <h4>Pestanya Horari: el calendari setmanal</h4>
+    <p>Aquí veus la setmana en columnes (Dilluns a Diumenge) i una fila per cada empleat.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Fes clic a la cel·la del dia i empleat que vulguis editar.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Tria el tipus de torn: <strong>Matí</strong>, <strong>Tarda</strong>, <strong>Partit</strong> (matí i tarda amb descans entre mig), <strong>Lliure</strong>, <strong>Vacances</strong> o <strong>Baixa</strong>. Indica també l'hora d'inici i fi si vols que consti a l'horari.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">El calendari pinta cada torn amb el color de l'empleat, així pots veure d'un cop d'ull si un dia està ben cobert o si et falta algú a sala o a cuina.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Fes servir les fletxes de navegació per moure't a la setmana anterior o següent i planificar amb antelació.</div></div>
+    <div class="manual-tip">💡 Planifica l'horari amb almenys una setmana d'antelació i avisa l'equip. Així evites canvis d'última hora i reclamacions per torns no comunicats.</div>
+
+    <h4>Control d'hores: Fitxar</h4>
+    <p>A la pestanya <strong>Fitxar</strong>, cada empleat pot registrar la seva entrada i sortida amb el seu PIN. L'app suma automàticament les hores treballades i mostra el total d'<strong>"Hores aquest mes"</strong> per empleat, perquè puguis comparar les hores planificades amb les hores reals fitxades.</p>
+    <div class="manual-tip">💡 Si veus que un empleat acumula moltes més hores de les que tenia assignades al calendari, revisa si hi va haver torns extra, substitucions o si simplement es va oblidar de fitxar la sortida.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>This module is the heart of managing your team: here you register each worker, organise their shifts week by week in a calendar format, track the hours each person clocks in, and keep their contact details at hand. A well-planned schedule avoids the two most typical restaurant problems: being short-staffed at a busy time, or paying extra hours because "nobody knew who was supposed to come in".</p>
+
+    <h4>Staff tab: registering an employee</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New employee"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Enter their <strong>name</strong> and choose a <strong>role</strong> (Waiter/Waitress, Cook, Assistant, Manager...). The role is just descriptive, it helps you identify who does what.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Choose an <strong>identifying colour</strong>. This colour is used throughout the shift calendar to recognise that person at a glance, without reading the name every time.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Fill in <strong>phone</strong> and <strong>email</strong> if you have them. They'll appear as direct links to call/message on WhatsApp or send an email without copying the number.</div></div>
+    <p><strong>The area (Kitchen or Floor) is no longer asked:</strong> the employee is automatically assigned to the area you create them from. If you open Staff from <strong>Kitchen</strong>, you see and register kitchen staff; from <strong>Floor</strong>, floor staff. The same applies to Work Distribution, Clock-in and shifts.</p>
+    <div class="manual-step"><div class="sn">6</div><div class="st">Set a <strong>4-digit PIN</strong> so the employee can clock in and, if your plan allows it, access their own view of the app. The default PIN is "1234"; ask them to change it the first time they use it.</div></div>
+    <div class="manual-warning">⚠️ Don't reuse the same PIN for two different employees: the PIN identifies the person in Clock-in, in the internal Chat and in any action logged under their name.</div>
+
+    <h4>Assigning shifts: from Day, Week or Month</h4>
+    <p>Shifts are assigned from the <strong>Day, Week or Month</strong> views: tap the employee/day and pick the shift. (Bulk assignment by period has been removed from the Staff tab so all shift assignment lives in one place, the calendar.)</p>
+    <h4>Schedule tab: the weekly calendar</h4>
+    <p>Here you see the week in columns (Monday to Sunday) and one row per employee.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Click the cell for the day and employee you want to edit.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Choose the shift type: <strong>Morning</strong>, <strong>Afternoon</strong>, <strong>Split</strong> (morning and afternoon with a break in between), <strong>Off</strong>, <strong>Holiday</strong> or <strong>Sick leave</strong>. Also enter the start and end time if you want it to appear on the schedule.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">The calendar colours each shift with the employee's colour, so you can see at a glance whether a day is well covered or you're short-staffed on the floor or in the kitchen.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Use the navigation arrows to move to the previous or next week and plan ahead.</div></div>
+    <div class="manual-tip">💡 Plan the schedule at least a week ahead and let the team know. This avoids last-minute changes and complaints about uncommunicated shifts.</div>
+
+    <h4>Hours tracking: Clock-in</h4>
+    <p>In the <strong>Clock-in</strong> tab, each employee can log their entry and exit time with their PIN. The app automatically adds up worked hours and shows the total <strong>"Hours this month"</strong> per employee, so you can compare planned hours with actual clocked hours.</p>
+    <div class="manual-tip">💡 If you see an employee racking up far more hours than they were assigned on the calendar, check whether there were extra shifts, cover shifts, or whether they simply forgot to clock out.</div>`},
   },
   {
-    title:'<i class="ti ti-clipboard-list"></i> Distribución del Trabajo',
+    title:{es:'<i class="ti ti-clipboard-list"></i> Distribución del Trabajo', ca:'<i class="ti ti-clipboard-list"></i> Distribució del Treball', en:'<i class="ti ti-clipboard-list"></i> Work Distribution'},
     // El Manual se abre desde Gestión, que no es ni Cocina ni Sala, así que
     // currentArea() aquí siempre daría 'cocina' por defecto; se usa la
     // última área en la que el usuario trabajó de verdad (lastArea).
-    content: () => lastArea==='sala' ? `<h3>Qué es y para qué sirve</h3>
+    content: {
+    es: () => lastArea==='sala' ? `<h3>Qué es y para qué sirve</h3>
     <p>Una cosa es saber <strong>cuándo</strong> trabaja cada empleado (eso lo controla Horario del Personal) y otra muy distinta es saber <strong>qué tiene que hacer exactamente</strong> durante ese turno. En Sala este módulo es el <strong>calendario de tareas</strong> de cada persona: no habla de "platos a su cargo" (eso es cosa de Cocina), sino de todo lo que tiene que hacer día a día en barra/sala.</p>
 
     <h4>Vista maestro-detalle</h4>
@@ -4201,11 +4676,92 @@ const MANUAL_CHAPTERS = [
     <h4>Imprimir y repartir</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Con la ficha de un empleado abierta, pulsa <strong>Imprimir</strong> para generar una hoja solo con su asignación (platos a su cargo + plan de producción).</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si quieres la hoja de todo el equipo de golpe, usa la opción de imprimir todo: genera una hoja por empleado, lista para repartir o pegar en el tablón de cocina.</div></div>
-    <div class="manual-warning">⚠️ Si cambias la carta o el escandallo (por ejemplo, eliminas un plato), revisa este módulo: los platos "a cargo" de cada empleado no se actualizan solos si el plato ya no existe.</div>`
+    <div class="manual-warning">⚠️ Si cambias la carta o el escandallo (por ejemplo, eliminas un plato), revisa este módulo: los platos "a cargo" de cada empleado no se actualizan solos si el plato ya no existe.</div>`,
+    ca: () => lastArea==='sala' ? `<h3>Què és i per a què serveix</h3>
+    <p>Una cosa és saber <strong>quan</strong> treballa cada empleat (això ho controla Horari del Personal) i una altra molt diferent és saber <strong>què ha de fer exactament</strong> durant aquell torn. A Sala aquest mòdul és el <strong>calendari de tasques</strong> de cada persona: no parla de "plats a càrrec seu" (això és cosa de Cuina), sinó de tot el que ha de fer dia a dia a la barra/sala.</p>
+
+    <h4>Vista mestre-detall</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip de Sala (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir el seu calendari de tasques a la dreta.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
+
+    <h4>Tasques de la setmana</h4>
+    <p>Aquí veus, dia per dia, tot el que té assignat aquella persona — i ve de tres llocs diferents, unificat en un sol calendari:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Tasques pròpies</strong> que afegeixis a mà: "Reposar barra", "Revisar carta de begudes", "Preparar gel i guarnicions"... Escriu la tasca al dia corresponent i prem "+".</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Tasques de Pla de Neteja</strong> que tinguin aquella persona com a responsable aquell dia del mes (barra, aixetes de cervesa, cafetera...) apareixen aquí soles, amb l'etiqueta "Neteja" — no cal duplicar-les a mà.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Accions de Promoció</strong> assignades a aquella persona per a aquella data exacta també apareixen aquí, amb l'etiqueta "Promo".</div></div>
+    <div class="manual-tip">💡 Marca cada tasca com a feta amb la seva casella — el comptador de "Tasques d'aquesta setmana" et diu d'un cop d'ull quant porta completat cada persona.</div>
+
+    <h4>Imprimir i repartir</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Amb la fitxa d'un empleat oberta, prem <strong>Imprimir</strong> per generar un full només amb les seves tasques de la setmana.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si vols el full de tot l'equip de cop, fes servir l'opció d'imprimir-ho tot: genera un full per empleat, a punt per repartir o enganxar a la barra.</div></div>` : `<h3>Què és i per a què serveix</h3>
+    <p>Una cosa és saber <strong>quan</strong> treballa cada empleat (això ho controla Horari del Personal) i una altra molt diferent és saber <strong>què ha de fer exactament</strong> durant aquell torn. Aquest mòdul resol el segon problema: et permet repartir responsabilitats concretes — quins plats prepara cada cuiner, quines tasques de neteja o mise en place li toquen cada dia — i deixar-ho tot per escrit perquè no hi hagi confusions ni "jo pensava que allò ho feies tu".</p>
+
+    <h4>Vista mestre-detall</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">A l'esquerra veuràs la llista del teu equip (els empleats que vas donar d'alta a Horari del Personal). Fes clic en un per obrir la seva fitxa de treball a la dreta.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Tot el que editis es desa associat a aquell empleat, així que pots anar passant d'un a l'altre per repartir la feina de tot l'equip.</div></div>
+
+    <h4>Plats a càrrec seu</h4>
+    <p>Aquí defineixes quins plats prepara habitualment aquell empleat.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Afegir plat"</strong> i tria'n un del teu Escandall o Carta (així queda enllaçat a la fitxa tècnica real), o escriu el nom a mà si és una cosa puntual.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repeteix per a tots els plats dels quals sigui responsable. Per exemple, al teu pastisser li assignes totes les postres; al teu cuiner de partida freda, les amanides i entrants freds.</div></div>
+    <div class="manual-tip">💡 Aquesta llista és molt útil per formar un empleat nou: així que entra, ja sap quins plats ha de dominar.</div>
+
+    <h4>Pla de producció setmanal</h4>
+    <p>Aquí afegeixes tasques concretes, dia per dia, a més de l'elaboració de plats.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Tria el dia de la setmana (Dilluns a Diumenge).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Escriu la tasca: per exemple "Mise en place de salses", "Netejar cambra freda", "Fer comanda a proveïdor de peix", "Revisar caducitats de la nevera de postres".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Afegeix tantes tasques com necessitis per dia. Queden llistades sota cada jornada, així l'empleat veu d'un cop d'ull el seu pla complet de la setmana.</div></div>
+    <div class="manual-tip">💡 Reparteix també les tasques "menys agraïdes" (neteja profunda, control de caducitats) de forma rotativa entre l'equip fent servir aquest pla, així queda constància de qui la té assignada cada setmana.</div>
+
+    <h4>Imprimir i repartir</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Amb la fitxa d'un empleat oberta, prem <strong>Imprimir</strong> per generar un full només amb la seva assignació (plats a càrrec seu + pla de producció).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si vols el full de tot l'equip de cop, fes servir l'opció d'imprimir-ho tot: genera un full per empleat, a punt per repartir o enganxar al tauler de cuina.</div></div>
+    <div class="manual-warning">⚠️ Si canvies la carta o l'escandall (per exemple, elimines un plat), revisa aquest mòdul: els plats "a càrrec" de cada empleat no s'actualitzen sols si el plat ja no existeix.</div>`,
+    en: () => lastArea==='sala' ? `<h3>What it is and what it's for</h3>
+    <p>Knowing <strong>when</strong> each employee works is one thing (that's handled by Staff Schedule) and knowing <strong>exactly what they need to do</strong> during that shift is quite another. On the Floor side, this module is each person's <strong>task calendar</strong>: it doesn't talk about "dishes in charge" (that's a Kitchen thing), but about everything they need to do day to day at the bar/floor.</p>
+
+    <h4>Master-detail view</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your Floor team list (the employees you registered in Staff Schedule). Click one to open their task calendar on the right.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
+
+    <h4>This week's tasks</h4>
+    <p>Here you see, day by day, everything assigned to that person — pulled from three different sources, unified into a single calendar:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Own tasks</strong> you add by hand: "Restock the bar", "Check the drinks menu", "Prepare ice and garnishes"... Type the task on the right day and press "+".</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Cleaning Plan tasks</strong> that have that person as the responsible party for that day of the month (bar, beer taps, coffee machine...) show up here on their own, tagged "Cleaning" — no need to duplicate them by hand.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Promotion actions</strong> assigned to that person for that exact date also appear here, tagged "Promo".</div></div>
+    <div class="manual-tip">💡 Tick each task as done with its checkbox — the "This week's tasks" counter tells you at a glance how much each person has completed.</div>
+
+    <h4>Print and hand out</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">With an employee's record open, press <strong>Print</strong> to generate a sheet with just their tasks for the week.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you want the whole team's sheets at once, use the print-all option: it generates one sheet per employee, ready to hand out or stick up at the bar.</div></div>` : `<h3>What it is and what it's for</h3>
+    <p>Knowing <strong>when</strong> each employee works is one thing (that's handled by Staff Schedule) and knowing <strong>exactly what they need to do</strong> during that shift is quite another. This module solves the second problem: it lets you assign concrete responsibilities — which dishes each cook prepares, which cleaning or mise en place tasks fall to them each day — and put it all in writing so there's no confusion or "I thought you were doing that".</p>
+
+    <h4>Master-detail view</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">On the left you'll see your team list (the employees you registered in Staff Schedule). Click one to open their work record on the right.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Everything you edit is saved against that employee, so you can move from one to another to distribute work across the whole team.</div></div>
+
+    <h4>Dishes in charge</h4>
+    <p>Here you define which dishes that employee usually prepares.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ Add dish"</strong> and pick one from your Costing or Menu (so it stays linked to the real technical sheet), or type the name by hand if it's a one-off.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repeat for every dish they're responsible for. For example, assign all desserts to your pastry cook, or cold starters and salads to your cold-station cook.</div></div>
+    <div class="manual-tip">💡 This list is very useful for training a new employee: as soon as they start, they already know which dishes they need to master.</div>
+
+    <h4>Weekly production plan</h4>
+    <p>Here you add specific tasks, day by day, on top of preparing dishes.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Choose the day of the week (Monday to Sunday).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Type the task: for example "Prep sauces", "Clean the walk-in fridge", "Order fish from the supplier", "Check expiry dates in the dessert fridge".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Add as many tasks per day as you need. They're listed under each day, so the employee sees their whole week's plan at a glance.</div></div>
+    <div class="manual-tip">💡 Also distribute the "less pleasant" tasks (deep cleaning, checking expiry dates) on a rotating basis among the team using this plan, so there's a record of who has it assigned each week.</div>
+
+    <h4>Print and hand out</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">With an employee's record open, press <strong>Print</strong> to generate a sheet with just their assignment (dishes in charge + production plan).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you want the whole team's sheets at once, use the print-all option: it generates one sheet per employee, ready to hand out or pin on the kitchen board.</div></div>
+    <div class="manual-warning">⚠️ If you change the menu or Costing (for example, you remove a dish), check this module: each employee's "in charge" dishes don't update automatically if the dish no longer exists.</div>`,
+    },
   },
   {
-    title:'<i class="ti ti-spray"></i> Plan de Limpieza',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-spray"></i> Plan de Limpieza', ca:'<i class="ti ti-spray"></i> Pla de Neteja', en:'<i class="ti ti-spray"></i> Cleaning Plan'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 6 hojas de registro más habituales que pide Sanidad, ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. Si te visita un inspector, aquí tienes el historial completo.</p>
 
     <h4>1. Manos — registro de lavado de manos</h4>
@@ -4243,11 +4799,89 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">2</div><div class="st">Cuando se repare o revise, marca la incidencia como resuelta y anota qué se hizo. Así tienes el historial completo de cada equipo, útil para decidir si conviene repararlo otra vez o sustituirlo.</div></div>
 
     <div class="manual-tip">💡 La rutina ganadora es: dedica 5 minutos al abrir y 5 minutos al cerrar para repasar estas 6 pestañas y registrar lo que toque. En un mes tendrás un historial completo, sin esfuerzo añadido en tu día a día.</div>
-    <div class="manual-warning">⚠️ Mantener estos registros al día no es opcional: es un requisito legal y lo primero que se revisa en una inspección sanitaria. Un registro vacío o desactualizado puede acarrear sanciones aunque tu cocina esté impecable.</div>`
+    <div class="manual-warning">⚠️ Mantener estos registros al día no es opcional: es un requisito legal y lo primero que se revisa en una inspección sanitaria. Un registro vacío o desactualizado puede acarrear sanciones aunque tu cocina esté impecable.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Tot restaurant està obligat per llei a tenir un sistema d'<strong>APPCC</strong> (Anàlisi de Perills i Punts de Control Crític) i a poder demostrar, amb registres datats, que es compleix. Aquest mòdul et dona els 6 fulls de registre més habituals que demana Sanitat, ja organitzats i a punt per emplenar des del mòbil o la tauleta de cuina, sense papers que es taquen o es perden. Si et visita un inspector, aquí tens l'historial complet.</p>
+
+    <h4>1. Mans — registre de rentat de mans</h4>
+    <p>Cada vegada que un empleat es renta les mans en moments crítics (en començar el torn, després de tocar aliments crus, després d'anar al lavabo, després de tocar diners o escombraries), registra l'hora i la persona.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem "+ Registrar" a la pestanya Mans.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Selecciona l'empleat i, si vols, el motiu (canvi de tasca, després del lavabo...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Queda desat amb data i hora automàtiques.</div></div>
+
+    <h4>2. Neteja — calendari per zona i freqüència</h4>
+    <p>Defineix les zones del teu local (cuina, cambres, lavabos, sala, magatzem...) i la freqüència de neteja de cadascuna (diària, setmanal, mensual).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Crea cada zona/tasca amb la seva freqüència.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Quan es fa la neteja, marca-la com a feta: queda registrada la data i qui la va fer.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Si una tasca porta diversos dies sense marcar-se i ja toca, es destaca visualment perquè no se t'oblidi.</div></div>
+
+    <h4>3. Temperatures — control de cambres i equips de fred</h4>
+    <p>Registra periòdicament la temperatura de cada cambra, congelador o vitrina.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Dona d'alta cada equip de fred amb un nom (ex. "Cambra peix", "Congelador 1").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Cada dia (o diverses vegades al dia), anota la temperatura llegida al termòmetre de l'equip.</div></div>
+    <div class="manual-warning">⚠️ Si una temperatura surt fora de rang (cambres normalment entre 0-4ºC, congeladors a -18ºC o menys), anota-ho igualment i registra l'acció correctiva (es va avisar el tècnic, es va traslladar el gènere...). Aquesta traça és justament el que demana una inspecció.</div>
+
+    <h4>4. Al·lergens — control d'al·lergens</h4>
+    <p>Registra quins al·lergens conté cada plat o matèria primera i mantén actualitzada aquesta informació, especialment si canvies proveïdors o receptes.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Revisa periòdicament que la llista d'al·lergens dels teus plats continua sent correcta (sobretot després de canvis de recepta o de marca d'un ingredient).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si treballes amb Fitxes Tècniques, pots recolzar-te en els ingredients allà indicats per no oblidar-ne cap.</div></div>
+    <div class="manual-tip">💡 La informació d'al·lergens ha d'estar disponible per al client que la demani (a la carta, en un cartell o verbalment). Tingues-la sempre actualitzada, no només registrada.</div>
+
+    <h4>5. Plagues — control de plagues</h4>
+    <p>Registra les visites de la teva empresa de control de plagues, els tractaments fets i qualsevol incidència detectada (presència d'insectes, rosegadors...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Cada vegada que vingui el tècnic de plagues, registra la data, el que es va fer i, si et lliura un certificat, guarda'l com a referència.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si tu mateix detectes algun indici entre visites, registra-ho també: ajuda a justificar visites extra si calgués.</div></div>
+
+    <h4>6. Manteniment — incidències i revisions d'equips</h4>
+    <p>Registra avaries, reparacions i revisions periòdiques dels teus equips (forns, cambres, rentavaixelles, extractors...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Quan detectis una avaria, registra-la aquí: equip afectat, descripció del problema i data.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Quan es repari o revisi, marca la incidència com a resolta i anota què es va fer. Així tens l'historial complet de cada equip, útil per decidir si convé reparar-lo una altra vegada o substituir-lo.</div></div>
+
+    <div class="manual-tip">💡 La rutina guanyadora és: dedica 5 minuts en obrir i 5 minuts en tancar per repassar aquestes 6 pestanyes i registrar el que toqui. En un mes tindràs un historial complet, sense esforç afegit en el teu dia a dia.</div>
+    <div class="manual-warning">⚠️ Mantenir aquests registres al dia no és opcional: és un requisit legal i el primer que es revisa en una inspecció sanitària. Un registre buit o desactualitzat pot comportar sancions encara que la teva cuina estigui impecable.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>Every restaurant is legally required to have a <strong>HACCP</strong> system (Hazard Analysis and Critical Control Points) and to be able to prove, with dated records, that it's being followed. This module gives you the 6 record sheets Health Authorities most commonly ask for, already organised and ready to fill in from the kitchen phone or tablet, with no paper that gets dirty or lost. If an inspector visits, you have the full history right here.</p>
+
+    <h4>1. Hands — hand-washing log</h4>
+    <p>Every time an employee washes their hands at critical moments (starting a shift, after handling raw food, after using the toilet, after handling money or rubbish), log the time and the person.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press "+ Log" in the Hands tab.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Select the employee and, if you like, the reason (task change, after the toilet...).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">It's saved with an automatic date and time.</div></div>
+
+    <h4>2. Cleaning — schedule by zone and frequency</h4>
+    <p>Define your premises' zones (kitchen, walk-ins, toilets, dining room, storeroom...) and how often each one needs cleaning (daily, weekly, monthly).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Create each zone/task with its frequency.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">When cleaning is carried out, mark it as done: the date and who did it are logged.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">If a task has gone several days unmarked and it's due, it's visually highlighted so you don't forget.</div></div>
+
+    <h4>3. Temperatures — cold-storage equipment control</h4>
+    <p>Periodically log the temperature of each fridge, freezer or display cabinet.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Register each cold-storage unit with a name (e.g. "Fish fridge", "Freezer 1").</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Every day (or several times a day), note the temperature read off the unit's thermometer.</div></div>
+    <div class="manual-warning">⚠️ If a temperature is out of range (fridges are usually 0-4ºC, freezers -18ºC or below), log it anyway and record the corrective action (technician called, stock moved...). That trace is exactly what an inspection asks for.</div>
+
+    <h4>4. Allergens — allergen control</h4>
+    <p>Log which allergens each dish or raw ingredient contains and keep that information up to date, especially if you change suppliers or recipes.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Periodically check that your dishes' allergen list is still correct (especially after recipe changes or a change of ingredient brand).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you work with Technical Sheets, you can rely on the ingredients listed there so you don't miss any.</div></div>
+    <div class="manual-tip">💡 Allergen information must be available to any customer who asks for it (on the menu, on a sign, or verbally). Keep it up to date, not just logged.</div>
+
+    <h4>5. Pests — pest control</h4>
+    <p>Log your pest-control company's visits, the treatments carried out and any incident detected (presence of insects, rodents...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Every time the pest technician comes, log the date, what was done and, if they give you a certificate, keep it as a reference.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you notice any sign yourself between visits, log it too: it helps justify extra visits if needed.</div></div>
+
+    <h4>6. Maintenance — equipment incidents and check-ups</h4>
+    <p>Log breakdowns, repairs and periodic check-ups of your equipment (ovens, walk-ins, dishwashers, extractor hoods...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">When you spot a breakdown, log it here: affected equipment, description of the problem and date.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Once it's repaired or checked, mark the incident as resolved and note what was done. That way you have the full history for each piece of equipment, useful for deciding whether it's worth repairing again or replacing.</div></div>
+
+    <div class="manual-tip">💡 The winning routine is: spend 5 minutes on opening and 5 minutes on closing to go through these 6 tabs and log whatever's due. In a month you'll have a full history, with no extra effort added to your day.</div>
+    <div class="manual-warning">⚠️ Keeping these records up to date isn't optional: it's a legal requirement and the first thing checked during a health inspection. An empty or outdated record can lead to penalties even if your kitchen is spotless.</div>`},
   },
   {
-    title:'<i class="ti ti-user"></i> Clientes',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-user"></i> Clientes', ca:'<i class="ti ti-user"></i> Clients', en:'<i class="ti ti-user"></i> Customers'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Conocer a tus clientes habituales es una de las formas más baratas de aumentar tus ventas: cuesta mucho menos conseguir que un cliente que ya te conoce vuelva, que atraer a uno nuevo. Este módulo es tu base de datos de clientes: guarda sus datos de contacto y calcula automáticamente, a partir de las ventas registradas en el TPV, cómo se está comportando cada uno (cuánto gasta, con qué frecuencia viene y cuándo fue la última vez).</p>
 
     <h4>Dar de alta a un cliente</h4>
@@ -4278,11 +4912,75 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">2</div><div class="st">Pulsa el icono de <strong>email</strong> para abrir tu gestor de correo con la dirección del cliente ya puesta en el destinatario.</div></div>
 
     <div class="manual-tip">💡 Filtra por clientes en ámbar o rojo una vez al mes y dedica 15 minutos a escribirles. Es la lista de clientes con más probabilidad de responder a una promoción, porque ya te conocen.</div>
-    <div class="manual-tip">💡 Combina este módulo con la pestaña "Clientes" de Promoción: desde ahí puedes lanzar campañas dirigidas a estos grupos.</div>`
+    <div class="manual-tip">💡 Combina este módulo con la pestaña "Clientes" de Promoción: desde ahí puedes lanzar campañas dirigidas a estos grupos.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Conèixer els teus clients habituals és una de les maneres més barates d'augmentar les teves vendes: costa molt menys aconseguir que un client que ja et coneix torni, que atraure'n un de nou. Aquest mòdul és la teva base de dades de clients: desa les seves dades de contacte i calcula automàticament, a partir de les vendes registrades al TPV, com es comporta cadascun (quant gasta, amb quina freqüència ve i quan va ser l'última vegada).</p>
+
+    <h4>Donar d'alta un client</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nou client"</strong> i emplena nom, telèfon i email (almenys un dels dos per poder contactar-lo).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si vols, afegeix notes: al·lèrgies, preferències ("sempre demana taula a la terrassa"), data d'aniversari, etc. Aquesta informació et permet donar un tracte més personal.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Quan crees una reserva nova amb un telèfon que no és a la base de dades, l'app t'oferirà afegir-lo directament des d'allà, sense haver de venir a aquest mòdul.</div></div>
+
+    <h4>Mètriques automàtiques</h4>
+    <p>Cada vegada que es registra una venda al TPV associada a un client, l'app actualitza per si sola:</p>
+    <ul>
+      <li><strong>Nombre de visites</strong> — quantes vegades ha vingut en total</li>
+      <li><strong>Tiquet mitjà</strong> — quant gasta de mitjana cada vegada</li>
+      <li><strong>Última visita</strong> — la data de la seva última compra/reserva</li>
+    </ul>
+    <p>No has de calcular ni actualitzar res a mà: simplement fes servir el TPV amb normalitat i aquest mòdul es manté al dia sol.</p>
+
+    <h4>Semàfor d'activitat</h4>
+    <p>Cada client porta un indicador de color segons la seva freqüència de visita recent:</p>
+    <table>
+      <tr><th>Color</th><th>Significat</th><th>Què fer</th></tr>
+      <tr><td>🟢 Verd</td><td>Client actiu, ve amb normalitat</td><td>Res d'especial, mantén el bon servei</td></tr>
+      <tr><td>🟡 Ambre</td><td>Client en risc, triga més del que és habitual a tornar</td><td>Una trucada, un missatge o una oferta personalitzada el pot recuperar</td></tr>
+      <tr><td>🔴 Vermell</td><td>Client inactiu, fa temps que no ve</td><td>Campanya de reactivació: descompte de benvinguda, novetats de carta...</td></tr>
+    </table>
+
+    <h4>Contactar directament</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem la icona de <strong>WhatsApp</strong> al costat del telèfon d'un client per obrir directament una conversa amb ell, sense copiar números.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Prem la icona d'<strong>email</strong> per obrir el teu gestor de correu amb l'adreça del client ja posada al destinatari.</div></div>
+
+    <div class="manual-tip">💡 Filtra per clients en ambre o vermell un cop al mes i dedica 15 minuts a escriure'ls. És la llista de clients amb més probabilitat de respondre a una promoció, perquè ja et coneixen.</div>
+    <div class="manual-tip">💡 Combina aquest mòdul amb la pestanya "Clients" de Promoció: des d'allà pots llançar campanyes dirigides a aquests grups.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>Knowing your regular customers is one of the cheapest ways to boost sales: it costs far less to get a customer who already knows you to come back than to attract a new one. This module is your customer database: it stores their contact details and automatically calculates, from sales logged in the POS, how each one is behaving (how much they spend, how often they visit and when they last came).</p>
+
+    <h4>Registering a customer</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New customer"</strong> and fill in name, phone and email (at least one of the two so you can contact them).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you like, add notes: allergies, preferences ("always asks for a terrace table"), birthday, etc. That information lets you give more personal service.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">When you create a new reservation with a phone number that's not in the database, the app will offer to add it right there, without having to come to this module.</div></div>
+
+    <h4>Automatic metrics</h4>
+    <p>Every time a POS sale linked to a customer is logged, the app updates on its own:</p>
+    <ul>
+      <li><strong>Number of visits</strong> — how many times they've come in total</li>
+      <li><strong>Average ticket</strong> — how much they spend on average each time</li>
+      <li><strong>Last visit</strong> — the date of their last purchase/reservation</li>
+    </ul>
+    <p>You don't need to calculate or update anything by hand: just use the POS as normal and this module stays up to date on its own.</p>
+
+    <h4>Activity traffic light</h4>
+    <p>Each customer carries a colour indicator based on how recently they've been visiting:</p>
+    <table>
+      <tr><th>Colour</th><th>Meaning</th><th>What to do</th></tr>
+      <tr><td>🟢 Green</td><td>Active customer, visiting as usual</td><td>Nothing special, keep up the good service</td></tr>
+      <tr><td>🟡 Amber</td><td>At-risk customer, taking longer than usual to come back</td><td>A call, a message or a personalised offer might win them back</td></tr>
+      <tr><td>🔴 Red</td><td>Inactive customer, hasn't visited in a long time</td><td>Reactivation campaign: welcome-back discount, menu news...</td></tr>
+    </table>
+
+    <h4>Contacting directly</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press the <strong>WhatsApp</strong> icon next to a customer's phone number to open a chat with them directly, without copying numbers.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Press the <strong>email</strong> icon to open your mail client with the customer's address already in the recipient field.</div></div>
+
+    <div class="manual-tip">💡 Filter for amber or red customers once a month and spend 15 minutes writing to them. They're the customers most likely to respond to a promotion, since they already know you.</div>
+    <div class="manual-tip">💡 Combine this module with Promotion's "Customers" tab: from there you can launch campaigns targeted at these groups.</div>`},
   },
   {
-    title:'<i class="ti ti-calendar-event"></i> Reservas',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-calendar-event"></i> Reservas', ca:'<i class="ti ti-calendar-event"></i> Reserves', en:'<i class="ti ti-calendar-event"></i> Reservations'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Este módulo es tu libro de reservas digital. Te permite ver y gestionar todas las reservas de tu negocio en tres vistas (Día, Semana, Mes), controlar el aforo de cada turno y atender automáticamente las reservas que tus clientes hagan desde tu web pública (módulo Reservas y Pedidos Online).</p>
 
     <h4>Vistas disponibles</h4>
@@ -4317,11 +5015,83 @@ const MANUAL_CHAPTERS = [
 
     <h4>En el Panel de Control</h4>
     <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>
-    <div class="manual-warning">⚠️ Si cancelas o cambias una reserva confirmada desde la web pública, recuerda avisar al cliente por teléfono o WhatsApp: la cancelación no le envía un mensaje automático.</div>`
+    <div class="manual-warning">⚠️ Si cancelas o cambias una reserva confirmada desde la web pública, recuerda avisar al cliente por teléfono o WhatsApp: la cancelación no le envía un mensaje automático.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Aquest mòdul és el teu llibre de reserves digital. Et permet veure i gestionar totes les reserves del teu negoci en tres vistes (Dia, Setmana, Mes), controlar l'aforament de cada torn i atendre automàticament les reserves que els teus clients facin des de la teva web pública (mòdul Reserves i Comandes en Línia).</p>
+
+    <h4>Vistes disponibles</h4>
+    <ul>
+      <li><strong>Dia</strong> — la més usada en el servei: llista de reserves d'avui, hora a hora, amb l'aforament de cada torn.</li>
+      <li><strong>Setmana</strong> — visió general dels propers 7 dies, útil per planificar personal i compres.</li>
+      <li><strong>Mes</strong> — calendari complet, ideal per veure d'un cop d'ull dies fluixos o dates amb moltes reserves (festius, esdeveniments...).</li>
+    </ul>
+
+    <h4>Crear una reserva manualment</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nova reserva"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Indica data, hora, nombre de comensals i, opcionalment, la taula a assignar.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Escriu el nom i telèfon del client. Si aquell telèfon no és a la teva base de dades de Clients, l'app et preguntarà si el vols afegir: digues que sí per començar a acumular el seu historial de visites.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Afegeix notes si cal (al·lèrgies, celebració, cadira per a nadó, taula al costat de la finestra...).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Desa. La reserva apareixerà a la vista Dia corresponent.</div></div>
+    <p>Les taules que pots assignar són les que tinguis configurades a <strong>El Meu Negoci → Operativa</strong> (amb el nom/número que els hagis posat). Una mateixa taula <strong>no es pot reservar dues vegades amb menys d'1 hora i mitja de diferència</strong>: per exemple, si està reservada a les 13:30, torna a aparèixer com a disponible a partir de les 15:00. El desplegable només mostra les taules lliures per a aquella hora.</p>
+    <div class="manual-tip">💡 Quan un client amb reserva s'asseu i obres la seva taula al TPV, la seva reserva es marca automàticament com a "arribada" i desapareix de la llista de reserves del dia per no destorbar la vista.</div>
+
+    <h4>Aforament per torn</h4>
+    <p>Si a El Meu Negoci vas configurar l'<strong>Aforament (places per torn)</strong>, la vista del dia mostra per a cada torn quantes persones hi ha reservades enfront del màxim:</p>
+    <table>
+      <tr><th>Color</th><th>Situació</th></tr>
+      <tr><td>🟢 Verd</td><td>Hi ha lloc de sobra</td></tr>
+      <tr><td>🟡 Ambre</td><td>El torn està a prop de completar-se</td></tr>
+      <tr><td>🔴 Vermell</td><td>El torn està complet</td></tr>
+    </table>
+    <p>Si en crear o confirmar una reserva se supera l'aforament, l'app t'avisa amb els números exactes (per exemple "ja hi ha 38 de 40 places, aquesta reserva n'afegeix 6") i et pregunta si la vols confirmar igualment, per si pots habilitar taules extra.</p>
+
+    <h4>Sol·licituds en línia pendents</h4>
+    <p>Les reserves que un client fa des de la teva pàgina web pública no es confirmen soles: arriben a la secció <strong>"Sol·licituds en línia pendents"</strong>, on pots revisar-les i decidir si les acceptes, les modifiques (per exemple canviar la taula) o les rebutges si no tens disponibilitat real.</p>
+    <div class="manual-tip">💡 Revisa les sol·licituds pendents diverses vegades al dia, especialment abans de cada servei, per no deixar un client esperant confirmació.</div>
+
+    <h4>Al Panell de Control</h4>
+    <p>Les reserves d'<strong>avui i de demà</strong> apareixen automàticament al Panell de Control, perquè en obrir l'app al matí ja sàpigues quants comensals esperes i puguis avisar cuina i sala amb temps.</p>
+    <div class="manual-warning">⚠️ Si cancel·les o canvies una reserva confirmada des de la web pública, recorda avisar el client per telèfon o WhatsApp: la cancel·lació no li envia cap missatge automàtic.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>This module is your digital reservation book. It lets you view and manage every reservation for your business in three views (Day, Week, Month), control each time slot's capacity, and automatically handle reservations your customers make from your public website (Reservations and Online Ordering module).</p>
+
+    <h4>Available views</h4>
+    <ul>
+      <li><strong>Day</strong> — the most used during service: today's reservations, hour by hour, with each slot's capacity.</li>
+      <li><strong>Week</strong> — an overview of the next 7 days, useful for planning staff and purchases.</li>
+      <li><strong>Month</strong> — a full calendar, ideal for spotting quiet days or dates with many reservations (holidays, events...) at a glance.</li>
+    </ul>
+
+    <h4>Creating a reservation manually</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New reservation"</strong>.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Enter the date, time, number of guests and, optionally, the table to assign.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Enter the customer's name and phone number. If that phone isn't in your Customers database, the app will ask if you want to add it: say yes to start building their visit history.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Add notes if needed (allergies, celebration, high chair, table by the window...).</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Save. The reservation will appear in the corresponding Day view.</div></div>
+    <p>The tables you can assign are the ones set up in <strong>My Business → Operations</strong> (with whatever name/number you gave them). The same table <strong>can't be booked twice less than 1.5 hours apart</strong>: for example, if it's booked at 1:30pm, it becomes available again from 3:00pm. The dropdown only shows tables free at that time.</p>
+    <div class="manual-tip">💡 When a customer with a reservation sits down and you open their table in the POS, their reservation is automatically marked as "arrived" and disappears from the day's reservation list so it doesn't clutter the view.</div>
+
+    <h4>Capacity per time slot</h4>
+    <p>If you set up <strong>Capacity (seats per slot)</strong> in My Business, the day view shows, for each slot, how many people are booked against the maximum:</p>
+    <table>
+      <tr><th>Colour</th><th>Situation</th></tr>
+      <tr><td>🟢 Green</td><td>Plenty of room</td></tr>
+      <tr><td>🟡 Amber</td><td>The slot is close to full</td></tr>
+      <tr><td>🔴 Red</td><td>The slot is full</td></tr>
+    </table>
+    <p>If creating or confirming a reservation would exceed capacity, the app warns you with the exact numbers (for example "already 38 of 40 seats, this reservation adds 6") and asks if you want to confirm it anyway, in case you can open up extra tables.</p>
+
+    <h4>Pending online requests</h4>
+    <p>Reservations a customer makes from your public website don't confirm themselves: they land in the <strong>"Pending online requests"</strong> section, where you can review them and decide whether to accept them, modify them (for example changing the table), or reject them if you don't have real availability.</p>
+    <div class="manual-tip">💡 Check pending requests several times a day, especially before each service, so you don't leave a customer waiting for confirmation.</div>
+
+    <h4>On the Dashboard</h4>
+    <p><strong>Today's and tomorrow's</strong> reservations show up automatically on the Dashboard, so when you open the app in the morning you already know how many guests to expect and can give the kitchen and floor advance notice.</p>
+    <div class="manual-warning">⚠️ If you cancel or change a reservation confirmed from the public website, remember to notify the customer by phone or WhatsApp: cancelling doesn't send them an automatic message.</div>`},
   },
   {
-    title:'<i class="ti ti-device-desktop"></i> TPV',
-    content:`<h3>Comandas, mesas y tickets</h3>
+    title:{es:'<i class="ti ti-device-desktop"></i> TPV', ca:'<i class="ti ti-device-desktop"></i> TPV', en:'<i class="ti ti-device-desktop"></i> POS'},
+    content:{es:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
     <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada muestra de un vistazo en qué <strong>fase del servicio</strong> está (📝 Tomando nota, ⏳ Marchado, 🔥 En cocina, ✅ Servido), su número de comensales y el total.</p>
     <h4>Abrir una mesa: cliente de paso o con reserva</h4>
@@ -4350,11 +5120,71 @@ const MANUAL_CHAPTERS = [
       <li>Puedes añadir notas y se genera un <strong>ticket imprimible</strong> con el resumen del cierre</li>
     </ul>
     <p>Puedes hacer varios cierres al día (por turnos) o uno solo al final del día. Consulta cierres anteriores en <strong>Historial de arqueos</strong>.</p>
-    <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`
+    <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`,
+    ca:`<h3>Comandes, taules i tiquets</h3>
+    <h4>Plànol de sala</h4>
+    <p>Les taules que apareixen al TPV són <strong>exactament les que configures a El Meu Negoci → Operativa</strong>, agrupades per zona (Interior, Terrassa, Barra). Allà pots posar a cada taula el nom o número que vulguis, afegir o eliminar taules. Cada taula ocupada mostra d'un cop d'ull en quina <strong>fase del servei</strong> està (📝 Prenent nota, ⏳ Marxat, 🔥 A cuina, ✅ Servit), el seu nombre de comensals i el total.</p>
+    <h4>Obrir una taula: client de pas o amb reserva</h4>
+    <p>En prémer una taula lliure, tries si el client és <strong>"de pas"</strong> (indiques el nombre de comensals) o <strong>"té reserva"</strong> (tries la reserva del dia i s'omple sol). El cambrer/a que s'assigna a la comanda només pot ser <strong>personal de l'àrea Sala</strong>.</p>
+    <h4>Prendre la comanda (selector a dues columnes)</h4>
+    <ul>
+      <li>A dalt apareixen les <strong>pestanyes de cartes i menús</strong> disponibles, sempre amb les <strong>begudes primer</strong> (així no s'oblida demanar la beguda).</li>
+      <li>A l'<strong>esquerra</strong> tries els plats: veus totes les seccions (Entrants, Principals...) amb els seus plats a la vista. En prémer un plat se suma a la comanda.</li>
+      <li>A la <strong>dreta</strong> es va formant la <strong>comanda en viu</strong>, en el mateix ordre en què tries els plats (a dalt el primer que es menja, a baix l'últim). De cada plat veus el nom, la quantitat, hi pots posar <strong>notes</strong> o treure'l.</li>
+    </ul>
+    <h4>Marxar i seguiment del servei</h4>
+    <ul>
+      <li>Cada grup de plats (secció) té el seu botó <strong>Marxar</strong>, i mostra el seu estat, sincronitzat amb la pantalla de Cuina: <strong>⏳ Marxat → 🔥 En preparació → 🍽️ Llest per recollir → ✅ Recollit</strong>. Quan a Cuina marquen un plat com a llest/recollit, a Sala s'actualitza sol.</li>
+      <li>El botó <strong>"Marxar val"</strong> envia de cop <strong>totes les begudes a sala/barra i el primer grup de menjar a cuina</strong>. Els grups següents (segons, postres...) es marxen amb el seu propi botó quan el client estigui llest.</li>
+      <li>Quan <strong>tots els plats estan servits</strong>, apareix a baix el botó <strong>Cobrar</strong>, que obre el desglossament de pagament, genera el tiquet, registra la venda i allibera la taula.</li>
+    </ul>
+    <div class="manual-tip">💡 Pots triar a <strong>El Meu Negoci → Comandes de cuina i sala</strong> si les comandes es veuen a la <strong>pantalla de Cuina/Sala</strong> o s'<strong>imprimeixen en un val</strong> en marxar (un val de cuina amb el menjar i un altre de sala/barra amb les begudes).</div>
+    <h4>Per emportar / Delivery</h4>
+    <p>També pots registrar vendes per emportar o a domicili sense assignar-les a una taula.</p>
+    <h4>Tancament de caixa / Arqueig</h4>
+    <p>En finalitzar un torn o el dia, prem <strong>Tancar caixa</strong>:</p>
+    <ul>
+      <li>El sistema calcula automàticament el total de vendes per <strong>mètode de pagament</strong> (Efectiu, Targeta, Altre) des de l'últim tancament del dia (o des de l'inici del dia si és el primer)</li>
+      <li>Indica el <strong>fons de caixa inicial</strong> (si n'hi ha) i l'<strong>efectiu comptat</strong> físicament a caixa</li>
+      <li>L'app calcula l'<strong>efectiu esperat</strong> i la <strong>diferència</strong> (sobra/falta)</li>
+      <li>Pots afegir notes i es genera un <strong>tiquet imprimible</strong> amb el resum del tancament</li>
+    </ul>
+    <p>Pots fer diversos tancaments al dia (per torns) o un de sol al final del dia. Consulta tancaments anteriors a l'<strong>Historial d'arqueigs</strong>.</p>
+    <div class="manual-tip">💡 Les vendes registrades al TPV alimenten automàticament la Gestió Econòmica, l'Estoc i el Panell de Control.</div>`,
+    en:`<h3>Orders, tables and receipts</h3>
+    <h4>Floor plan</h4>
+    <p>The tables shown in the POS are <strong>exactly the ones you set up in My Business → Operations</strong>, grouped by zone (Indoor, Terrace, Bar). There you can give each table whatever name or number you like, and add or remove tables. Every occupied table shows at a glance which <strong>service phase</strong> it's in (📝 Taking order, ⏳ Fired, 🔥 In the kitchen, ✅ Served), its number of guests and the total.</p>
+    <h4>Opening a table: walk-in or reservation</h4>
+    <p>Tapping a free table, you choose whether the customer is a <strong>"walk-in"</strong> (you enter the number of guests) or <strong>"has a reservation"</strong> (you pick the day's reservation and it fills in on its own). The waiter/waitress assigned to the order can only be <strong>Floor-area staff</strong>.</p>
+    <h4>Taking the order (two-column selector)</h4>
+    <ul>
+      <li>At the top are the <strong>menu tabs</strong> available, always with <strong>drinks first</strong> (so ordering a drink never gets forgotten).</li>
+      <li>On the <strong>left</strong> you pick the dishes: you see every section (Starters, Mains...) with its dishes visible. Tapping a dish adds it to the order.</li>
+      <li>On the <strong>right</strong>, the <strong>live order</strong> builds up, in the same order you pick the dishes (top = eaten first, bottom = eaten last). For each dish you see the name, the quantity, and you can add <strong>notes</strong> or remove it.</li>
+    </ul>
+    <h4>Firing and tracking service</h4>
+    <ul>
+      <li>Each group of dishes (section) has its own <strong>Fire</strong> button, and shows its status, synced with the Kitchen screen: <strong>⏳ Fired → 🔥 Being prepared → 🍽️ Ready to collect → ✅ Collected</strong>. When Kitchen marks a dish as ready/collected, Floor updates on its own.</li>
+      <li>The <strong>"Fire ticket"</strong> button sends, all at once, <strong>every drink to the floor/bar and the first food course to the kitchen</strong>. Later courses (mains, desserts...) are fired with their own button once the customer is ready.</li>
+      <li>Once <strong>every dish has been served</strong>, the <strong>Charge</strong> button appears at the bottom, opening the payment breakdown, generating the receipt, logging the sale and freeing the table.</li>
+    </ul>
+    <div class="manual-tip">💡 In <strong>My Business → Kitchen and floor tickets</strong> you can choose whether orders are shown on the <strong>Kitchen/Floor screen</strong> or <strong>printed on a ticket</strong> when fired (a kitchen ticket with the food and a separate floor/bar ticket with the drinks).</div>
+    <h4>Take away / Delivery</h4>
+    <p>You can also log take-away or delivery sales without assigning them to a table.</p>
+    <h4>Till closing / Cash count</h4>
+    <p>At the end of a shift or the day, press <strong>Close till</strong>:</p>
+    <ul>
+      <li>The system automatically calculates total sales by <strong>payment method</strong> (Cash, Card, Other) since the last closing of the day (or since the start of the day if it's the first)</li>
+      <li>Enter the <strong>starting float</strong> (if any) and the <strong>cash physically counted</strong> in the till</li>
+      <li>The app calculates the <strong>expected cash</strong> and the <strong>difference</strong> (over/short)</li>
+      <li>You can add notes, and a <strong>printable receipt</strong> with the closing summary is generated</li>
+    </ul>
+    <p>You can do several closings a day (per shift) or just one at the end of the day. Check past closings in <strong>Cash Count History</strong>.</p>
+    <div class="manual-tip">💡 Sales logged in the POS automatically feed Financial Management, Stock and the Dashboard.</div>`},
   },
   {
-    title:'<i class="ti ti-speakerphone"></i> Promoción',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-speakerphone"></i> Promoción', ca:'<i class="ti ti-speakerphone"></i> Promoció', en:'<i class="ti ti-speakerphone"></i> Promotion'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Este módulo es exclusivo de Sala y sirve para planificar de verdad el marketing del negocio: qué acción hacer, cuándo y quién es responsable — en vez de dejarlo en buenas intenciones. Tiene 5 pestañas.</p>
 
     <h4>Día / Semana / Mes</h4>
@@ -4371,11 +5201,47 @@ const MANUAL_CHAPTERS = [
     <p>Una biblioteca de más de 250 ideas de contenido para redes sociales y de gestión online, organizadas por categorías (detrás de cámaras, producto, temporada, Google Business y reseñas, redes sociales...).</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Elige una categoría y, cuando tengas clara una idea, pulsa <strong>"Crear acción"</strong> para planificarla con fecha y responsable — queda enlazada a esa idea, así sabrás que ya la usaste (y cuándo) la próxima vez que mires esa categoría.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si no tienes tiempo de mirar todas las categorías, pulsa <strong>"Sorpréndeme"</strong>: elige una idea al azar (priorizando las que nunca has probado) y la abre directamente lista para planificar.</div></div>
-    <div class="manual-tip">💡 Las categorías "Google Business y reseñas" y "Redes sociales — gestión y mantenimiento" no son contenido creativo, sino tareas de mantenimiento real (responder reseñas, actualizar horario en Google...) igual de importantes para que la publicidad del negocio funcione.</div>`
+    <div class="manual-tip">💡 Las categorías "Google Business y reseñas" y "Redes sociales — gestión y mantenimiento" no son contenido creativo, sino tareas de mantenimiento real (responder reseñas, actualizar horario en Google...) igual de importantes para que la publicidad del negocio funcione.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Aquest mòdul és exclusiu de Sala i serveix per planificar de veritat el màrqueting del negoci: quina acció fer, quan i qui n'és responsable — en lloc de deixar-ho en bones intencions. Té 5 pestanyes.</p>
+
+    <h4>Dia / Setmana / Mes</h4>
+    <p>El calendari d'accions de promoció. Cada acció té un títol, una descripció, un responsable (del teu equip de Sala) i una casella per marcar-la com a feta (queda registrada la data i hora exacta en què es va completar).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nova Acció"</strong> des de qualsevol de les tres vistes, o el "+" d'un dia concret a la vista setmanal.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">A la vista de Dia pots filtrar per responsable i per estat (fetes/pendents), i marcar directament la casella de "feta".</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">A la vista de Mes tens un resum ràpid: quantes accions hi ha planificades, quantes completades, i quantes categories de la biblioteca d'idees ja has fet servir.</div></div>
+    <div class="manual-tip">💡 Prem "Imprimir" a la vista de mes per tenir el pla del mes en un full, útil per repassar-lo en una reunió d'equip.</div>
+
+    <h4>Clients</h4>
+    <p>Accions ràpides de fidelització amb missatges ja escrits, a punt per enviar per WhatsApp o email: felicitar aniversaris propers, demanar ressenya a qui ha visitat recentment, o intentar recuperar un client que fa temps que no ve. El botó <strong>"Registrar com a acció"</strong> de cada targeta l'apunta també al calendari de Dia/Mes, ja marcada com a feta.</p>
+
+    <h4>Idees de contingut</h4>
+    <p>Una biblioteca de més de 250 idees de contingut per a xarxes socials i de gestió en línia, organitzades per categories (darrere les càmeres, producte, temporada, Google Business i ressenyes, xarxes socials...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Tria una categoria i, quan tinguis clara una idea, prem <strong>"Crear acció"</strong> per planificar-la amb data i responsable — queda enllaçada a aquella idea, així sabràs que ja la vas fer servir (i quan) la propera vegada que miris aquella categoria.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si no tens temps de mirar totes les categories, prem <strong>"Sorprèn-me"</strong>: tria una idea a l'atzar (prioritzant les que mai has provat) i l'obre directament a punt per planificar.</div></div>
+    <div class="manual-tip">💡 Les categories "Google Business i ressenyes" i "Xarxes socials — gestió i manteniment" no són contingut creatiu, sinó tasques de manteniment real (respondre ressenyes, actualitzar horari a Google...) igual d'importants perquè la publicitat del negoci funcioni.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>This module is exclusive to Floor and is for genuinely planning the business's marketing: what action to take, when, and who's responsible — instead of leaving it as good intentions. It has 5 tabs.</p>
+
+    <h4>Day / Week / Month</h4>
+    <p>The promotional actions calendar. Each action has a title, a description, a person responsible (from your Floor team) and a checkbox to mark it done (the exact date and time it was completed is logged).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New Action"</strong> from any of the three views, or the "+" on a specific day in the week view.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">In the Day view you can filter by person responsible and by status (done/pending), and tick the "done" checkbox directly.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">In the Month view you get a quick summary: how many actions are planned, how many completed, and how many categories from the idea library you've already used.</div></div>
+    <div class="manual-tip">💡 Press "Print" in the month view to get the month's plan on a single sheet, handy for going over in a team meeting.</div>
+
+    <h4>Customers</h4>
+    <p>Quick loyalty actions with pre-written messages, ready to send by WhatsApp or email: wishing an upcoming birthday, asking for a review from someone who visited recently, or trying to win back a customer who hasn't been in for a while. The <strong>"Log as action"</strong> button on each card also adds it to the Day/Month calendar, already marked as done.</p>
+
+    <h4>Content ideas</h4>
+    <p>A library of more than 250 content ideas for social media and online management, organised into categories (behind the scenes, product, seasonal, Google Business and reviews, social media...).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Choose a category and, once you've settled on an idea, press <strong>"Create action"</strong> to schedule it with a date and person responsible — it stays linked to that idea, so you'll know you've already used it (and when) next time you look at that category.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you don't have time to browse every category, press <strong>"Surprise me"</strong>: it picks a random idea (prioritising ones you've never tried) and opens it directly, ready to schedule.</div></div>
+    <div class="manual-tip">💡 The "Google Business and reviews" and "Social media — management and maintenance" categories aren't creative content, but real maintenance tasks (replying to reviews, updating your Google hours...) just as important for the business's advertising to actually work.</div>`},
   },
   {
-    title:'<i class="ti ti-chart-bar"></i> Gestión Económica',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-chart-bar"></i> Gestión Económica', ca:'<i class="ti ti-chart-bar"></i> Gestió Econòmica', en:'<i class="ti ti-chart-bar"></i> Financial Management'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 7 pestañas que conviene rellenar en este orden.</p>
 
     <h4>1. Gastos Fijos</h4>
@@ -4432,11 +5298,127 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">1</div><div class="st">Da de alta la inversión con su importe total y fecha.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">Si la has financiado a plazos, marca la opción correspondiente e indica la <strong>cuota mensual</strong> y el <strong>número de cuotas</strong>. Esa cuota se sumará como gasto mensual mientras dure la financiación, y desaparecerá sola cuando termine.</div></div>
 
-    <div class="manual-tip">💡 El ranking de platos más/menos vendidos y más/menos rentables (Análisis de Platos) se encuentra ahora en el Panel de Control.</div>`
+    <div class="manual-tip">💡 El ranking de platos más/menos vendidos y más/menos rentables (Análisis de Platos) se encuentra ahora en el Panel de Control.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>Aquesta secció és la "comptabilitat de gestió" del teu negoci: ajunta el que vens (dades del TPV) amb el que gastes (el que tu registres aquí) per dir-te, sense esperar a final d'any ni que t'ho digui la gestoria, si el teu negoci guanya diners, quant, i quants comensals necessites vendre per no perdre. Té 7 pestanyes que convé emplenar en aquest ordre.</p>
+
+    <h4>1. Despeses Fixes</h4>
+    <p>Aquí van totes les despeses mensuals que <strong>no canvien</strong> tot i que venguis més o menys: nòmines (inclosa la teva si et pagues un sou), lloguer, assegurances, quotes d'autònom, llum/aigua/internet si són més o menys estables, programari, etc.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Prem "+ Afegir despesa fixa", escriu el concepte (ex. "Lloguer local") i l'import mensual.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repeteix amb totes les teves despeses fixes. Revisa-les cada vegada que canviï alguna cosa (nova contractació, pujada de lloguer, nova assegurança...).</div></div>
+    <p>Aquests imports alimenten automàticament el Punt d'Equilibri i el Compte de Resultats.</p>
+
+    <h4>2. Despeses Variables</h4>
+    <p>Aquí registres les compres a proveïdors, mes a mes: menjar, beguda, deixalles... tot el que varia segons quant produeixes i vens.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Registra cada compra amb el seu import i mes. Si ja gestiones les teves compres al mòdul Proveïdors/Comandes, procura mantenir tots dos coherents.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">L'app calcula el teu <strong>food cost real</strong> (cost de matèria primera real sobre facturació, sigui menjar o beguda) i el compara amb el teu <strong>food cost objectiu</strong>, que configures a Punt d'Equilibri.</div></div>
+    <div class="manual-warning">⚠️ Si el teu food cost real està molt per sobre de l'objectiu, revisa: escandalls sense actualitzar, mermes, robatoris/descontrol d'estoc, o preus de carta/carta de begudes desactualitzats respecte al que et costa ara la matèria primera.</div>
+
+    <h4>3. Compte de Resultats</h4>
+    <p>Vista mensual automàtica: <strong>Facturació</strong> (sumada del TPV) menys <strong>Despeses</strong> (de les dues pestanyes anteriors) = <strong>Resultat del mes</strong>. Fes servir les fletxes per moure't entre mesos i anys i veure la teva evolució històrica d'un cop d'ull.</p>
+    <div class="manual-tip">💡 Revisa aquesta pestanya el dia 1 o 2 de cada mes, així que tinguis tancat el mes anterior. Et dona una foto ràpida de com t'ha anat.</div>
+
+    <h4>4. Resultat (P&amp;L)</h4>
+    <p>Compte de pèrdues i guanys trimestral i anual, calculat en cascada:</p>
+    <table>
+      <tr><th>Pas</th><th>Què és</th></tr>
+      <tr><td>Vendes</td><td>Tota la teva facturació del període</td></tr>
+      <tr><td>− Cost de vendes</td><td>El que t'ha costat produir el que has venut (food cost)</td></tr>
+      <tr><td>= Marge Brut</td><td>El que et queda per pagar la resta</td></tr>
+      <tr><td>− Despeses fixes i d'estructura</td><td>Personal, lloguer, subministraments...</td></tr>
+      <tr><td>= EBITDA</td><td>Resultat abans de finançament, amortitzacions i impostos</td></tr>
+      <tr><td>− Amortitzacions / finançament (CAPEX)</td><td>Quotes d'equipament finançat</td></tr>
+      <tr><td>= Resultat Abans d'Impostos</td><td>El que "guanyaries" abans de pagar IRPF/Societats</td></tr>
+      <tr><td>− Impost sobre beneficis</td><td>Segons el % que configuris (IRPF si ets autònom, IS si ets societat)</td></tr>
+      <tr><td>= Resultat Net</td><td>El que realment et queda</td></tr>
+    </table>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Configura el % d'impost sobre beneficis que et correspon segons la teva forma de tributació (consulta el teu gestor si no ho saps amb exactitud).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Revisa el P&amp;L cada trimestre per detectar tendències (el marge brut baixa? les despeses fixes pesen cada vegada més sobre les vendes?).</div></div>
+
+    <h4>5. Tresoreria: a on va cada euro que entra</h4>
+    <p>Aquesta pestanya reparteix la teva facturació en partides perquè sàpigues, de cada 100€ que entren a caixa, quant és realment "teu" i quant està compromès.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Configura el % objectiu de cada partida: Personal, Despeses Fixes, Despeses Variables, Altres i Benefici (han de sumar el 100% de la facturació).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">L'app calcula també quant has de reservar d'IVA (normalment repercutit a les teves vendes i que no és "teu") i quant d'impost sobre el benefici (IRPF/IS).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">El resultat final és el teu <strong>benefici net realment disponible</strong>: els diners que pots fer servir sense sorpreses, després d'apartar el d'Hisenda.</div></div>
+    <div class="manual-tip">💡 Molts negocis "guanyen diners sobre el paper" però van escanyats perquè es gasten l'IVA cobrat com si fos seu. Si separes mentalment (o en un compte a part) el % d'IVA que indica aquesta pestanya, evites aquest problema.</div>
+
+    <h4>6. Punt d'Equilibri</h4>
+    <p>Et diu quants comensals al mes necessites vendre com a mínim perquè els teus ingressos cobreixin les teves despeses (ni guanyes ni perds).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Introdueix el teu <strong>tiquet mitjà</strong> (el que gasta de mitjana un client).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Introdueix els <strong>dies d'obertura al mes</strong>.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Introdueix el teu <strong>food cost objectiu</strong> (% que vols que representi la matèria primera sobre les teves vendes, normalment 28-35% segons el tipus de negoci).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">L'app creua aquestes dades amb les teves Despeses Fixes i et retorna els <strong>comensals/mes</strong> i <strong>comensals/dia</strong> que necessites per cobrir despeses. Tot el que venguis per sobre d'aquesta xifra és el que comença a generar benefici real.</div></div>
+    <p><strong>Exemple:</strong> si les teves despeses fixes són 6.000€/mes, el teu tiquet mitjà és 18€ i el teu food cost objectiu és 30% (és a dir, cada 18€ de venda deixen 12,60€ de marge brut), necessitaries uns 6.000 / 12,60 ≈ 476 comensals al mes per cobrir despeses. Si obres 26 dies, són uns 18-19 comensals al dia com a mínim.</p>
+    <div class="manual-tip">💡 Compara cada mes els teus comensals reals (els pots estimar dividint la facturació entre el tiquet mitjà) amb aquest mínim. El Panell de Control et mostra aquesta comparació automàticament.</div>
+
+    <h4>7. CAPEX (inversions i equipament)</h4>
+    <p>Registra aquí les inversions grans: forn nou, cambra, obra, mobiliari...</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Dona d'alta la inversió amb el seu import total i data.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Si l'has finançat a terminis, marca l'opció corresponent i indica la <strong>quota mensual</strong> i el <strong>nombre de quotes</strong>. Aquesta quota se sumarà com a despesa mensual mentre duri el finançament, i desapareixerà sola quan acabi.</div></div>
+
+    <div class="manual-tip">💡 El rànquing de plats més/menys venuts i més/menys rendibles (Anàlisi de Plats) es troba ara al Panell de Control.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>This section is your business's "management accounting": it combines what you sell (POS data) with what you spend (what you record here) to tell you, without waiting until year-end or for your accountant to tell you, whether your business makes money, how much, and how many covers you need to sell to break even. It has 7 tabs, best filled in in this order.</p>
+
+    <h4>1. Fixed Costs</h4>
+    <p>This is where every monthly cost that <strong>doesn't change</strong> regardless of how much you sell goes: payroll (including your own if you pay yourself a salary), rent, insurance, self-employment contributions, electricity/water/internet if fairly stable, software, etc.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Press "+ Add fixed cost", type the item (e.g. "Premises rent") and the monthly amount.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Repeat for all your fixed costs. Review them whenever something changes (a new hire, a rent increase, a new insurance policy...).</div></div>
+    <p>These amounts automatically feed the Break-even Point and the Profit & Loss statement.</p>
+
+    <h4>2. Variable Costs</h4>
+    <p>Here you log purchases from suppliers, month by month: food, drink, disposables... anything that varies with how much you produce and sell.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Log each purchase with its amount and month. If you already manage purchases in the Suppliers/Orders module, try to keep both consistent.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">The app calculates your <strong>real food cost</strong> (real raw-material cost against revenue, whether food or drink) and compares it with your <strong>target food cost</strong>, set in Break-even Point.</div></div>
+    <div class="manual-warning">⚠️ If your real food cost is well above target, check for: outdated costing sheets, waste, theft/stock control issues, or menu/drinks-menu prices that haven't kept up with current raw-material costs.</div>
+
+    <h4>3. Profit & Loss Statement</h4>
+    <p>Automatic monthly view: <strong>Revenue</strong> (totalled from the POS) minus <strong>Costs</strong> (from the two previous tabs) = <strong>Result for the month</strong>. Use the arrows to move between months and years and see your historical trend at a glance.</p>
+    <div class="manual-tip">💡 Check this tab on the 1st or 2nd of each month, as soon as the previous month is closed. It gives you a quick snapshot of how you did.</div>
+
+    <h4>4. Result (P&amp;L)</h4>
+    <p>Quarterly and annual profit-and-loss statement, calculated top to bottom:</p>
+    <table>
+      <tr><th>Step</th><th>What it is</th></tr>
+      <tr><td>Sales</td><td>All your revenue for the period</td></tr>
+      <tr><td>− Cost of sales</td><td>What it cost you to produce what you sold (food cost)</td></tr>
+      <tr><td>= Gross Margin</td><td>What's left to pay for everything else</td></tr>
+      <tr><td>− Fixed and overhead costs</td><td>Staff, rent, utilities...</td></tr>
+      <tr><td>= EBITDA</td><td>Result before financing, depreciation and taxes</td></tr>
+      <tr><td>− Depreciation / financing (CAPEX)</td><td>Instalments on financed equipment</td></tr>
+      <tr><td>= Result Before Tax</td><td>What you'd "earn" before paying income/corporate tax</td></tr>
+      <tr><td>− Tax on profit</td><td>Based on the % you set (personal income tax if self-employed, corporate tax if a company)</td></tr>
+      <tr><td>= Net Result</td><td>What's actually left for you</td></tr>
+    </table>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Set the profit tax % that applies to you based on how you're taxed (ask your accountant if you're not sure of the exact figure).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Review the P&amp;L every quarter to spot trends (is gross margin dropping? are fixed costs weighing more and more on sales?).</div></div>
+
+    <h4>5. Cash Flow: where every euro that comes in goes</h4>
+    <p>This tab splits your revenue into categories so you know, out of every €100 that comes into the till, how much is really "yours" and how much is already committed.</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Set the target % for each category: Staff, Fixed Costs, Variable Costs, Other and Profit (they must add up to 100% of revenue).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">The app also calculates how much VAT you should set aside (usually passed on through your sales and not really "yours") and how much profit tax (income/corporate tax).</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">The final result is your <strong>actually available net profit</strong>: the money you can use with no surprises, after setting aside what's owed to the tax office.</div></div>
+    <div class="manual-tip">💡 Many businesses "make money on paper" but end up strapped for cash because they spend collected VAT as if it were their own. If you mentally set aside (or keep in a separate account) the VAT % this tab shows, you avoid that problem.</div>
+
+    <h4>6. Break-even Point</h4>
+    <p>Tells you the minimum number of covers you need to sell per month for your revenue to cover your costs (breaking even, neither profit nor loss).</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Enter your <strong>average ticket</strong> (what a customer spends on average).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Enter your <strong>opening days per month</strong>.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Enter your <strong>target food cost</strong> (the % you want raw materials to represent of sales, typically 28-35% depending on the type of business).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">The app cross-references this with your Fixed Costs and gives you the <strong>covers/month</strong> and <strong>covers/day</strong> you need to cover costs. Anything you sell above that figure is what starts generating real profit.</div></div>
+    <p><strong>Example:</strong> if your fixed costs are €6,000/month, your average ticket is €18 and your target food cost is 30% (i.e. every €18 sale leaves €12.60 of gross margin), you'd need around 6,000 / 12.60 ≈ 476 covers a month to cover costs. If you're open 26 days, that's about 18-19 covers a day at minimum.</p>
+    <div class="manual-tip">💡 Compare your actual covers each month (you can estimate them by dividing revenue by the average ticket) against this minimum. The Dashboard shows you this comparison automatically.</div>
+
+    <h4>7. CAPEX (investments and equipment)</h4>
+    <p>Log big investments here: a new oven, a walk-in, refurbishment work, furniture...</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Register the investment with its total amount and date.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">If you financed it in instalments, tick the corresponding option and enter the <strong>monthly instalment</strong> and the <strong>number of instalments</strong>. That instalment will be added as a monthly cost for as long as the financing lasts, and will disappear on its own once it ends.</div></div>
+
+    <div class="manual-tip">💡 The ranking of best/worst-selling and most/least profitable dishes (Dish Analysis) is now found in the Dashboard.</div>`},
   },
   {
-    title:'<i class="ti ti-dashboard"></i> Panel de Control',
-    content:`<h3>Qué es y para qué sirve</h3>
+    title:{es:'<i class="ti ti-dashboard"></i> Panel de Control', ca:'<i class="ti ti-dashboard"></i> Panell de Control', en:'<i class="ti ti-dashboard"></i> Dashboard'},
+    content:{es:`<h3>Qué es y para qué sirve</h3>
     <p>El Panel de Control es la primera pantalla que deberías mirar cada día. No introduces nada aquí: simplemente reúne y resume datos de todos los demás módulos (TPV, Gestión Económica, Stock, Reservas, Fichas Técnicas...) para darte, de un vistazo, el estado de salud de tu negocio. Si solo tuvieras un minuto al día para "mirar" la app, sería este.</p>
 
     <h4>Qué encontrarás y cómo interpretarlo</h4>
@@ -4457,11 +5439,55 @@ const MANUAL_CHAPTERS = [
       <li>Revisa el <strong>Resultado del mes</strong> y el <strong>Punto de equilibrio</strong> para saber si vas camino de cubrir gastos o necesitas reaccionar.</li>
       <li>Echa un ojo al <strong>Análisis de Platos</strong> para detectar qué platos o bebidas potenciar o revisar.</li>
     </ol>
-    <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las ventas y el resultado van en línea con los meses anteriores y por encima del punto de equilibrio, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`
+    <div class="manual-tip">💡 En 30 segundos sabes cómo está tu negocio: si las ventas y el resultado van en línea con los meses anteriores y por encima del punto de equilibrio, todo va bien. Si algo destaca en rojo, ahí está tu prioridad del día.</div>`,
+    ca:`<h3>Què és i per a què serveix</h3>
+    <p>El Panell de Control és la primera pantalla que hauries de mirar cada dia. No hi introdueixes res: simplement reuneix i resumeix dades de tots els altres mòduls (TPV, Gestió Econòmica, Estoc, Reserves, Fitxes Tècniques...) per donar-te, d'un cop d'ull, l'estat de salut del teu negoci. Si només tinguessis un minut al dia per "mirar" l'app, seria aquest.</p>
+
+    <h4>Què hi trobaràs i com interpretar-ho</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Vendes avui / últims 7 dies / mes en curs</strong> — el ritme de facturació en temps real, en tres xifres.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Comparació de vendes de l'any</strong> — gràfic amb la facturació de cadascun dels últims 12 mesos. T'ajuda a detectar estacionalitat (mesos forts i fluixos) i a veure l'evolució del teu negoci mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Despeses avui / últims 7 dies / mes en curs</strong> — inclou les compres registrades amb data a Gestió Econòmica (despeses variables) més una part proporcional de les teves despeses fixes mensuals (lloguer, personal, subministraments...), repartida dia a dia. Així pots veure quant et costa el negoci al mateix ritme que veus les vendes.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Comparació de despeses de l'any</strong> — gràfic amb el total de despeses (fixes + variables) de cadascun dels últims 12 mesos, per comparar amb el gràfic de vendes i veure si els teus costos creixen al mateix ritme que la teva facturació.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Resultat del mes (P&amp;L)</strong> — facturació, despeses variables, despeses fixes i resultat (benefici o pèrdua) del mes en curs, més el <strong>marge sobre vendes</strong> i el <strong>% Food Cost mitjà</strong> respecte al teu objectiu. Si el resultat està en vermell a mitja mes no és necessàriament dolent, però convé vigilar l'evolució.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Comparació del resultat mensual de l'any</strong> — gràfic amb el resultat (vendes menys despeses) de cadascun dels últims 12 mesos. Les barres en vermell assenyalen els mesos amb pèrdues i les taronges els mesos amb benefici, per veure d'un cop d'ull la rendibilitat real mes a mes.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Anàlisi de vendes (últims 30 dies)</strong> — tiquet mitjà, nombre de vendes, plats/begudes més venuts, plats/begudes de més marge brut i la distribució de vendes per hora del dia. Et diu què funciona ara mateix i a quines hores es concentra la teva facturació.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Punt d'equilibri</strong> — compara els comensals/vendes reals del mes amb el mínim que vas calcular a Gestió Econòmica. Si vas per sota de l'objectiu, aquest és el primer avís per reaccionar abans que acabi el mes.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Anàlisi de Plats</strong> — rànquing dels plats i begudes més i menys venuts, i més i menys rendibles, pel període que triïs. Creua aquesta informació amb l'Escandall: un plat o beguda que ven molt però deixa poc marge és candidat a pujar de preu o redissenyar; un que ven poc i deixa molt marge és candidat a promocionar més.</div></div>
+
+    <h4>Rutina recomanada</h4>
+    <p>Cada matí, abans d'obrir:</p>
+    <ol>
+      <li>Mira les <strong>vendes i despeses d'avui/setmana/mes</strong> i compara-les amb els gràfics dels últims 12 mesos per saber si vas en línia amb l'esperat.</li>
+      <li>Revisa el <strong>Resultat del mes</strong> i el <strong>Punt d'equilibri</strong> per saber si vas camí de cobrir despeses o necessites reaccionar.</li>
+      <li>Fes un cop d'ull a l'<strong>Anàlisi de Plats</strong> per detectar quins plats o begudes potenciar o revisar.</li>
+    </ol>
+    <div class="manual-tip">💡 En 30 segons saps com està el teu negoci: si les vendes i el resultat van en línia amb els mesos anteriors i per sobre del punt d'equilibri, tot va bé. Si alguna cosa destaca en vermell, aquí tens la teva prioritat del dia.</div>`,
+    en:`<h3>What it is and what it's for</h3>
+    <p>The Dashboard is the first screen you should check every day. You don't enter anything here: it simply gathers and summarises data from every other module (POS, Financial Management, Stock, Reservations, Technical Sheets...) to give you, at a glance, your business's health status. If you only had one minute a day to "look at" the app, this would be it.</p>
+
+    <h4>What you'll find and how to read it</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">💰 <strong>Sales today / last 7 days / current month</strong> — your real-time revenue pace, in three figures.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">📈 <strong>Yearly sales comparison</strong> — a chart with revenue for each of the last 12 months. It helps you spot seasonality (strong and weak months) and see your business's month-by-month trend.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🧾 <strong>Costs today / last 7 days / current month</strong> — includes purchases logged with a date in Financial Management (variable costs) plus a proportional share of your monthly fixed costs (rent, staff, utilities...), spread out day by day. This lets you see what the business is costing you at the same pace as sales.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">📊 <strong>Yearly cost comparison</strong> — a chart with total costs (fixed + variable) for each of the last 12 months, to compare with the sales chart and see whether your costs are growing at the same pace as revenue.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📋 <strong>Result for the month (P&amp;L)</strong> — revenue, variable costs, fixed costs and result (profit or loss) for the current month, plus the <strong>margin on sales</strong> and the <strong>average Food Cost %</strong> against your target. Being in the red mid-month isn't necessarily bad, but the trend is worth watching.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">📉 <strong>Yearly monthly result comparison</strong> — a chart with the result (sales minus costs) for each of the last 12 months. Red bars flag loss-making months and orange bars profitable ones, so you can see real month-by-month profitability at a glance.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">🥧 <strong>Sales analysis (last 30 days)</strong> — average ticket, number of sales, best-selling dishes/drinks, highest gross-margin dishes/drinks, and the distribution of sales by hour of day. It tells you what's working right now and at what times your revenue is concentrated.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">⚖️ <strong>Break-even point</strong> — compares this month's real covers/sales with the minimum you calculated in Financial Management. If you're below target, this is your first warning to react before the month ends.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🍽️ <strong>Dish Analysis</strong> — ranking of your best and worst-selling, and most and least profitable, dishes and drinks over whatever period you choose. Cross-reference this with Costing: a dish or drink that sells a lot but leaves little margin is a candidate for a price rise or a redesign; one that sells little but leaves a big margin is a candidate to promote more.</div></div>
+
+    <h4>Recommended routine</h4>
+    <p>Every morning, before opening:</p>
+    <ol>
+      <li>Look at <strong>today's/this week's/this month's sales and costs</strong> and compare them with the last 12 months' charts to see if you're on track.</li>
+      <li>Check the <strong>Result for the month</strong> and the <strong>Break-even Point</strong> to see whether you're on course to cover costs or need to react.</li>
+      <li>Glance at the <strong>Dish Analysis</strong> to spot which dishes or drinks to push or review.</li>
+    </ol>
+    <div class="manual-tip">💡 In 30 seconds you know how your business is doing: if sales and results are in line with previous months and above the break-even point, everything's fine. If something stands out in red, that's your priority for the day.</div>`},
   },
   {
-    title:'<i class="ti ti-building-store"></i> Mi Negocio',
-    content:`<h3>Datos del establecimiento</h3>
+    title:{es:'<i class="ti ti-building-store"></i> Mi Negocio', ca:'<i class="ti ti-building-store"></i> El Meu Negoci', en:'<i class="ti ti-building-store"></i> My Business'},
+    content:{es:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">🏢 <strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
@@ -4526,11 +5552,143 @@ const MANUAL_CHAPTERS = [
     <p>Con la licencia y la nube activadas, esta tarjeta te da el <strong>enlace público</strong> y el <strong>código QR</strong> general de tu negocio para que los clientes reserven mesa o pidan take away/delivery desde el móvil.</p>
 
     <h4>🔳 QR auto pedido</h4>
-    <p>Muestra un botón pequeño por cada <strong>mesa</strong> que hayas configurado en Operativa (interior, exterior/terraza y barra). Al pulsar sobre el nombre de una mesa (ej. "Mesa 3 (Interior)" o "Barra 1") se abre su <strong>código QR</strong>, listo para descargar e imprimir. Cuando un cliente lo escanea desde esa mesa, el pedido que haga llegará directamente asignado a ese número de mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`
+    <p>Muestra un botón pequeño por cada <strong>mesa</strong> que hayas configurado en Operativa (interior, exterior/terraza y barra). Al pulsar sobre el nombre de una mesa (ej. "Mesa 3 (Interior)" o "Barra 1") se abre su <strong>código QR</strong>, listo para descargar e imprimir. Cuando un cliente lo escanea desde esa mesa, el pedido que haga llegará directamente asignado a ese número de mesa en el TPV, sin pasar por la bandeja de pedidos pendientes.</p>`,
+    ca:`<h3>Dades de l'establiment</h3>
+    <p>Aquesta secció reuneix tota la configuració del teu negoci, organitzada en targetes. L'ordre actual és:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Accés propietari</strong> — canvia el PIN que protegeix la secció de Gestió.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🏢 <strong>Dades del negoci</strong> — identitat (logo, nom, propietari, tipus, any), descripció, contacte i xarxes socials. Aquí hi ha el botó <strong>Desar-ho tot</strong>, que desa les dades de totes les targetes d'aquesta pantalla de cop.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🏬 <strong>Operativa</strong> — aforament per torn i nombre de taules d'interior, exterior/terrassa i barra.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">🔁 <strong>Tipus de servei</strong> — activa/desactiva Taula, Take Away i Delivery.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📅 <strong>Horari d'obertura</strong> — horari general del negoci, configurable dia per dia.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">🧾 <strong>Configuració del tiquet</strong> — dades que apareixen impreses als tiquets.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">💳 <strong>TPV virtual</strong> — cobrament en línia amb targeta (Redsys).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">🥡 <strong>Comandes per emportar/domicili</strong> — antelació, cost d'enviament i zona de repartiment.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🛵 <strong>Plataformes de delivery i repartidors propis</strong> — Glovo, Uber Eats, Just Eat... amb la seva comissió, i el teu propi equip de repartiment.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">📱 <strong>Reserva i comandes en línia</strong> — enllaç i QR perquè els teus clients reservin o demanin des del mòbil.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">🔳 <strong>QR autocomanda</strong> — un botó amb QR per cada taula configurada.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🗄️ <strong>Manteniment de dades</strong> — còpies de seguretat i arxivament.</div></div>
+
+    <h4>🔒 Accés propietari (PIN)</h4>
+    <p>Tota la secció de Gestió està protegida per PIN (per defecte <strong>1234</strong>). La primera vegada que hi entris se't demanarà crear un PIN nou. Després el pots canviar des d'aquí. Fes servir el botó <strong>Bloquejar</strong> de la capçalera per tornar a tancar l'accés.</p>
+
+    <h4>🏢 Dades del negoci</h4>
+    <p>És la targeta principal amb tota la informació d'identitat i contacte, dividida en quatre blocs:</p>
+    <ul>
+      <li><strong>Identitat</strong> — logo, nom del negoci, <strong>propietari</strong>, tipus de negoci i any d'obertura.</li>
+      <li><strong>Descripció</strong> — el concepte del teu local (apareix a la web de comandes en línia).</li>
+      <li><strong>Contacte</strong> — adreça, telèfon, email, web i CIF/NIF.</li>
+      <li><strong>Xarxes socials</strong> — Instagram i Facebook.</li>
+    </ul>
+    <p>Al final d'aquesta targeta hi ha el botó <strong>Desar-ho tot</strong>, que desa els canvis de <em>totes</em> les targetes d'El Meu Negoci de cop.</p>
+
+    <h4>🏬 Operativa</h4>
+    <p>Aquí defineixes la capacitat i distribució física del teu local:</p>
+    <ul>
+      <li><strong>Aforament (places per torn)</strong> — nombre màxim de comensals que pots atendre en cada torn de dinar/sopar. S'utilitza a Reserves per avisar-te si un torn s'omple.</li>
+      <li><strong>Taules d'interior</strong>, <strong>taules d'exterior/terrassa</strong> i <strong>taules/tamborets de barra</strong> — indica quantes tens de cada tipus.</li>
+    </ul>
+    <p>Aquestes tres quantitats són les que veuràs organitzades per zones (<strong>Interior</strong>, <strong>Terrassa</strong>, <strong>Barra</strong>) al plànol de taules del TPV.</p>
+    <div class="manual-tip">💡 <strong>Crear taules automàticament</strong>: crea les taules que faltin fins arribar a les quantitats indicades. Després, a la llista <strong>"Taules configurades"</strong> de més avall pots <strong>posar a cada taula el nom o número que vulguis</strong>, canviar-li la zona, o afegir/eliminar taules una a una. Aquestes taules són exactament les que apareixen al TPV, a les reserves i als QR d'autocomanda (un QR per taula).</div>
+
+    <h4>🖨️ Comandes de cuina i sala</h4>
+    <p>Tria com rep l'equip les comandes en marxar: <strong>veure-les en pantalla</strong> (la pantalla de Cuina/Sala) o <strong>imprimir un val</strong> automàticament (un val de cuina amb el menjar i un altre de sala/barra amb les begudes). Si tries imprimir, indica l'amplada del paper (58 o 80 mm) i fes servir "Imprimir val de prova". La impressora concreta es tria al quadre d'impressió del navegador/sistema; si tens una impressora tèrmica de tiquets, configura-la com a impressora del dispositiu.</p>
+
+    <h4>🔁 Tipus de servei</h4>
+    <p>Activa o desactiva amb les caselles els serveis que ofereixes: <strong>Taula/Sala</strong>, <strong>Take Away</strong> i <strong>Delivery</strong>. Això controla quins botons i opcions apareixen al TPV i a la pàgina de comandes en línia (per exemple, si desactives Delivery, els teus clients ja no podran triar aquesta opció en demanar des del mòbil). <strong>Cada canvi es desa a l'instant</strong> en marcar/desmarcar (n'ha de quedar almenys un d'actiu).</p>
+
+    <h4>📅 Horari d'obertura</h4>
+    <p>És l'horari general del teu negoci, configurat <strong>dia per dia</strong> perquè no tots els dies han de ser iguals. Per a cada dia de la setmana (<strong>Dilluns a Diumenge</strong>), primer decideixes si aquell dia obres (casella) i després tries el <strong>mode d'horari</strong>:</p>
+    <ul>
+      <li><strong>Horari seguit</strong> — un únic tram (obertura i tancament), per exemple si el teu local obre sense descans de 12:00 a 00:00.</li>
+      <li><strong>Per torns</strong> — fins a dos trams (ex. dinars de 12:00 a 16:00 i sopars de 20:00 a 23:30), típic de l'horari partit. Si un dia tens horari partit, emplena també el "Torn 2".</li>
+    </ul>
+    <p>Marca com a <strong>tancat</strong> els dies que no obris.</p>
+    <p>Aquest horari té dos usos:</p>
+    <ul>
+      <li>Calcula l'<strong>aforament disponible per torn</strong> a Reserves (quantes persones hi ha reservades enfront del màxim de cada torn).</li>
+      <li>Limita les hores que els teus clients poden triar en <strong>reservar taula</strong> o fer una <strong>comanda per emportar/domicili</strong> en línia: només podran triar hores dins dels trams que hagis obert aquí.</li>
+    </ul>
+    <p>Dins de cada franja horària, la <strong>carta concreta</strong> que veuran els teus clients (tant al TPV com a les comandes en línia) és la que tinguis marcada com a <strong>disponible</strong> en cada moment des de la secció <strong>Carta</strong> — allà decideixes quins plats i cartes estan actius en cada horari, sense haver de repetir aquesta configuració aquí.</p>
+
+    <h4>🛵 Plataformes de delivery i repartidors propis</h4>
+    <p>Si treballes amb apps com Glovo, Uber Eats o Just Eat, afegeix-les a <strong>Plataformes de delivery</strong> amb la comissió que et cobren: així, quan registris una venda de delivery a través d'aquella plataforma, aquella comissió es restarà automàticament com a despesa a Gestió Econòmica.</p>
+    <p>Si a més (o en lloc d'això) reparteixes les comandes a domicili amb el teu <strong>propi personal</strong>, fes servir la secció <strong>Repartidors propis</strong> per anotar els teus repartidors (nom i telèfon). Tindràs un accés directe per <strong>WhatsApp</strong> per localitzar-los ràpid i coordinar qui porta cada comanda.</p>
+
+    <h4>📱 Reserva i comandes en línia</h4>
+    <p>Amb la llicència i el núvol activats, aquesta targeta et dona l'<strong>enllaç públic</strong> i el <strong>codi QR</strong> general del teu negoci perquè els clients reservin taula o demanin take away/delivery des del mòbil.</p>
+
+    <h4>🔳 QR autocomanda</h4>
+    <p>Mostra un botó petit per cada <strong>taula</strong> que hagis configurat a Operativa (interior, exterior/terrassa i barra). En prémer sobre el nom d'una taula (ex. "Taula 3 (Interior)" o "Barra 1") s'obre el seu <strong>codi QR</strong>, a punt per descarregar i imprimir. Quan un client l'escaneja des d'aquella taula, la comanda que faci arribarà directament assignada a aquell número de taula al TPV, sense passar per la safata de comandes pendents.</p>`,
+    en:`<h3>Business details</h3>
+    <p>This section brings together your entire business configuration, organised into cards. The current order is:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Owner access</strong> — change the PIN that protects the Management section.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🏢 <strong>Business details</strong> — identity (logo, name, owner, type, year), description, contact and social media. This is where the <strong>Save all</strong> button lives, which saves every card on this screen at once.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🏬 <strong>Operations</strong> — capacity per time slot and number of indoor, outdoor/terrace and bar tables.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">🔁 <strong>Service types</strong> — enable/disable Table, Take Away and Delivery.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">📅 <strong>Opening hours</strong> — the business's general schedule, configurable day by day.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">🧾 <strong>Receipt settings</strong> — the details printed on receipts.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">💳 <strong>Virtual POS</strong> — online card payment (Redsys).</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">🥡 <strong>Take away/delivery orders</strong> — lead time, delivery fee and delivery zone.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🛵 <strong>Delivery platforms and in-house couriers</strong> — Glovo, Uber Eats, Just Eat... with their commission, and your own delivery team.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">📱 <strong>Reservations and online ordering</strong> — the link and QR code for customers to book or order from their phone.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">🔳 <strong>Table self-order QR</strong> — one QR button per configured table.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🗄️ <strong>Data maintenance</strong> — backups and archiving.</div></div>
+
+    <h4>🔒 Owner access (PIN)</h4>
+    <p>The whole Management section is PIN-protected (default <strong>1234</strong>). The first time you enter you'll be asked to create a new PIN. You can change it here afterwards. Use the header's <strong>Lock</strong> button to close access again.</p>
+
+    <h4>🏢 Business details</h4>
+    <p>This is the main card with all your identity and contact information, split into four blocks:</p>
+    <ul>
+      <li><strong>Identity</strong> — logo, business name, <strong>owner</strong>, business type and year opened.</li>
+      <li><strong>Description</strong> — your venue's concept (shown on the online ordering website).</li>
+      <li><strong>Contact</strong> — address, phone, email, website and tax ID.</li>
+      <li><strong>Social media</strong> — Instagram and Facebook.</li>
+    </ul>
+    <p>At the bottom of this card is the <strong>Save all</strong> button, which saves changes across <em>every</em> card in My Business at once.</p>
+
+    <h4>🏬 Operations</h4>
+    <p>Here you define your venue's physical capacity and layout:</p>
+    <ul>
+      <li><strong>Capacity (seats per slot)</strong> — the maximum number of guests you can serve in each lunch/dinner slot. Used in Reservations to warn you when a slot is filling up.</li>
+      <li><strong>Indoor tables</strong>, <strong>outdoor/terrace tables</strong> and <strong>bar tables/stools</strong> — enter how many you have of each.</li>
+    </ul>
+    <p>These three numbers are what you'll see organised by zone (<strong>Indoor</strong>, <strong>Terrace</strong>, <strong>Bar</strong>) on the POS's table plan.</p>
+    <div class="manual-tip">💡 <strong>Create tables automatically</strong>: creates whatever tables are missing to reach the stated numbers. Afterwards, in the <strong>"Configured tables"</strong> list below, you can <strong>give each table whatever name or number you like</strong>, change its zone, or add/remove tables one by one. These tables are exactly the ones that show up in the POS, in reservations and on the self-order QR codes (one QR per table).</div>
+
+    <h4>🖨️ Kitchen and floor tickets</h4>
+    <p>Choose how the team receives orders when fired: <strong>viewing them on screen</strong> (the Kitchen/Floor screen) or <strong>automatically printing a ticket</strong> (one kitchen ticket with the food and a separate floor/bar ticket with the drinks). If you choose printing, set the paper width (58 or 80 mm) and use "Print test ticket". The specific printer is chosen in your browser/system's print dialog; if you have a thermal receipt printer, set it up as your device's printer.</p>
+
+    <h4>🔁 Service types</h4>
+    <p>Enable or disable, with the checkboxes, the services you offer: <strong>Table/Floor</strong>, <strong>Take Away</strong> and <strong>Delivery</strong>. This controls which buttons and options show up in the POS and on the online ordering page (for example, if you disable Delivery, your customers will no longer be able to choose that option when ordering from their phone). <strong>Every change saves instantly</strong> as you check/uncheck (at least one service must stay active).</p>
+
+    <h4>📅 Opening hours</h4>
+    <p>This is your business's general schedule, configured <strong>day by day</strong> because not every day has to be the same. For each day of the week (<strong>Monday to Sunday</strong>), you first decide whether you open that day (checkbox) and then choose the <strong>schedule mode</strong>:</p>
+    <ul>
+      <li><strong>Continuous hours</strong> — a single block (opening and closing), for example if your venue runs non-stop from 12:00 to midnight.</li>
+      <li><strong>By shift</strong> — up to two blocks (e.g. lunch 12:00-16:00 and dinner 20:00-23:30), typical of split hours. If a day has split hours, also fill in "Slot 2".</li>
+    </ul>
+    <p>Mark as <strong>closed</strong> the days you don't open.</p>
+    <p>This schedule serves two purposes:</p>
+    <ul>
+      <li>It calculates the <strong>available capacity per slot</strong> in Reservations (how many people are booked against each slot's maximum).</li>
+      <li>It limits the times customers can choose when <strong>booking a table</strong> or placing a <strong>take-away/delivery order</strong> online: they'll only be able to pick times within the hours you've opened here.</li>
+    </ul>
+    <p>Within each time slot, the <strong>specific menu</strong> your customers see (both in the POS and in online orders) is whichever one you have marked as <strong>available</strong> at that moment from the <strong>Menu</strong> section — that's where you decide which dishes and menus are active at each time, without having to repeat that setup here.</p>
+
+    <h4>🛵 Delivery platforms and in-house couriers</h4>
+    <p>If you work with apps like Glovo, Uber Eats or Just Eat, add them under <strong>Delivery platforms</strong> with the commission they charge you: that way, when you log a delivery sale through that platform, the commission is automatically deducted as an expense in Financial Management.</p>
+    <p>If you also (or instead) deliver orders with your <strong>own staff</strong>, use the <strong>In-house couriers</strong> section to note down your delivery riders (name and phone). You'll get a direct <strong>WhatsApp</strong> link to reach them quickly and coordinate who's carrying each order.</p>
+
+    <h4>📱 Reservations and online ordering</h4>
+    <p>With the licence and cloud enabled, this card gives you your business's general <strong>public link</strong> and <strong>QR code</strong> so customers can book a table or order take away/delivery from their phone.</p>
+
+    <h4>🔳 Table self-order QR</h4>
+    <p>Shows a small button for every <strong>table</strong> you've set up in Operations (indoor, outdoor/terrace and bar). Tapping a table's name (e.g. "Table 3 (Indoor)" or "Bar 1") opens its <strong>QR code</strong>, ready to download and print. When a customer scans it from that table, whatever they order arrives in the POS directly assigned to that table number, without going through the pending-orders tray.</p>`},
   },
   {
-    title:'<i class="ti ti-world"></i> Reservas y Pedidos Online',
-    content:`<h3>Tu web pública para clientes</h3>
+    title:{es:'<i class="ti ti-world"></i> Reservas y Pedidos Online', ca:'<i class="ti ti-world"></i> Reserves i Comandes en Línia', en:'<i class="ti ti-world"></i> Online Reservations and Ordering'},
+    content:{es:`<h3>Tu web pública para clientes</h3>
     <p>GastroGoan genera automáticamente una página web (y un código QR) donde tus clientes pueden reservar mesa o hacer pedidos para recoger/delivery, sin que tengas que programar nada.</p>
     <h4>Activar la nube</h4>
     <div class="manual-step"><div class="sn">1</div><div class="st">Ve a <strong>Mi Negocio</strong> y activa tu licencia de GastroGoan (te conecta a la nube compartida).</div></div>
@@ -4552,7 +5710,53 @@ const MANUAL_CHAPTERS = [
       <li>Si al crear o confirmar una reserva se supera el aforo del turno, la app te avisa con los números exactos y te pregunta si quieres confirmarla igualmente (por ejemplo, si puedes habilitar mesas extra)</li>
       <li>En la <strong>web pública de reservas</strong>, si un turno ya está completo, el cliente recibe un aviso para elegir otro horario, reducir comensales o llamar al restaurante — así evitas sobre-reservas automáticas</li>
     </ul>
-    <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios, aforo o reservas), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`
+    <div class="manual-tip">💡 Tras cambiar datos importantes (carta, disponibilidad, horarios, aforo o reservas), espera unos segundos: los cambios se sincronizan automáticamente con la web pública.</div>`,
+    ca:`<h3>La teva web pública per a clients</h3>
+    <p>GastroGoan genera automàticament una pàgina web (i un codi QR) on els teus clients poden reservar taula o fer comandes per recollir/delivery, sense que hagis de programar res.</p>
+    <h4>Activar el núvol</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Vés a <strong>El Meu Negoci</strong> i activa la teva llicència de GastroGoan (et connecta al núvol compartit).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Un cop activada, a <strong>El Meu Negoci</strong> apareix el teu <strong>enllaç públic</strong> i un <strong>codi QR</strong>. Comparteix-los amb els teus clients (a les taules, a la carta, a les xarxes socials...).</div></div>
+    <h4>Perquè aparegui la carta a les comandes en línia</h4>
+    <ul>
+      <li>Al <strong>TPV</strong>, selecciona la carta que vols fer servir com a <strong>carta activa</strong>.</li>
+      <li>En aquella carta, marca cada plat com a <strong>Disponible</strong> (a la secció Carta).</li>
+      <li>Si no hi ha carta activa o cap plat disponible, els clients veuran l'avís "La carta no està disponible per a comandes en línia".</li>
+    </ul>
+    <h4>Horari de reserves i comandes</h4>
+    <p>A <strong>El Meu Negoci</strong>, configura l'<strong>Horari d'obertura</strong> (dia per dia, amb torns). La web de reserves i comandes només permetrà triar data/hora dins del teu horari d'aquell dia. Si no configures cap horari, no s'aplica cap límit.</p>
+    <h4>Sol·licituds de clients</h4>
+    <p>Les reserves i comandes que facin els clients des de la web pública arriben al teu Kit automàticament: les reserves apareixen a <strong>Reserves → Sol·licituds en línia pendents</strong>, i les comandes a <strong>TPV</strong> com a comandes pendents en línia.</p>
+    <h4>Aforament per torn</h4>
+    <p>A <strong>El Meu Negoci</strong> indica el teu <strong>Aforament (places per torn)</strong>: el nombre màxim de comensals que pots atendre en cada torn de dinar/sopar (segons el teu Horari d'obertura).</p>
+    <ul>
+      <li>A <strong>Reserves → vista del dia</strong> veuràs, per a cada torn, quantes persones hi ha reservades enfront de l'aforament (verd = hi ha lloc, ambre = a prop del límit, vermell = aforament complet)</li>
+      <li>Si en crear o confirmar una reserva se supera l'aforament del torn, l'app t'avisa amb els números exactes i et pregunta si la vols confirmar igualment (per exemple, si pots habilitar taules extra)</li>
+      <li>A la <strong>web pública de reserves</strong>, si un torn ja està complet, el client rep un avís per triar un altre horari, reduir comensals o trucar al restaurant — així evites sobrereserves automàtiques</li>
+    </ul>
+    <div class="manual-tip">💡 Després de canviar dades importants (carta, disponibilitat, horaris, aforament o reserves), espera uns segons: els canvis se sincronitzen automàticament amb la web pública.</div>`,
+    en:`<h3>Your public website for customers</h3>
+    <p>GastroGoan automatically generates a website (and a QR code) where your customers can book a table or place pickup/delivery orders, with nothing for you to build.</p>
+    <h4>Activating the cloud</h4>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>My Business</strong> and activate your GastroGoan licence (it connects you to the shared cloud).</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Once activated, your <strong>public link</strong> and a <strong>QR code</strong> appear in <strong>My Business</strong>. Share them with your customers (on tables, on the menu, on social media...).</div></div>
+    <h4>Getting the menu to show up in online orders</h4>
+    <ul>
+      <li>In the <strong>POS</strong>, select the menu you want to use as the <strong>active menu</strong>.</li>
+      <li>In that menu, mark each dish as <strong>Available</strong> (in the Menu section).</li>
+      <li>If there's no active menu or no dish is available, customers will see the message "The menu isn't available for online orders".</li>
+    </ul>
+    <h4>Reservation and ordering hours</h4>
+    <p>In <strong>My Business</strong>, set up the <strong>Opening hours</strong> (day by day, with time slots). The reservations and ordering website will only allow choosing a date/time within that day's hours. If you don't set any schedule, no limit is applied.</p>
+    <h4>Customer requests</h4>
+    <p>Reservations and orders customers place from the public website reach your Kit automatically: reservations appear in <strong>Reservations → Pending online requests</strong>, and orders in the <strong>POS</strong> as pending online orders.</p>
+    <h4>Capacity per time slot</h4>
+    <p>In <strong>My Business</strong>, set your <strong>Capacity (seats per slot)</strong>: the maximum number of guests you can serve in each lunch/dinner slot (based on your Opening hours).</p>
+    <ul>
+      <li>In <strong>Reservations → day view</strong> you'll see, for each slot, how many people are booked against capacity (green = room available, amber = close to the limit, red = full)</li>
+      <li>If creating or confirming a reservation would exceed a slot's capacity, the app warns you with the exact numbers and asks whether you want to confirm it anyway (for example, if you can open up extra tables)</li>
+      <li>On the <strong>public reservations website</strong>, if a slot is already full, the customer is prompted to choose another time, reduce the party size, or call the restaurant — this way you avoid automatic overbooking</li>
+    </ul>
+    <div class="manual-tip">💡 After changing important data (menu, availability, hours, capacity or reservations), wait a few seconds: changes sync automatically with the public website.</div>`},
   },
 ];
 
@@ -4565,15 +5769,25 @@ function setManualSearch(val){
   const newEl = document.getElementById('manual-search-input');
   if(newEl && pos != null){ newEl.focus(); newEl.setSelectionRange(pos, pos); }
 }
+// El título/contenido de cada capítulo es un {es,ca,en}; el valor de cada
+// idioma puede ser directamente el HTML o una función (para el único
+// capítulo que depende de lastArea). Si el idioma actual no existe (no
+// debería pasar), se cae a español.
+function manualChapterTitle(ch){
+  const lang = getLang();
+  const raw = ch.title[lang] !== undefined ? ch.title[lang] : ch.title.es;
+  return typeof raw === 'function' ? raw() : raw;
+}
 function manualChapterText(ch){
-  const content = typeof ch.content === 'function' ? ch.content() : ch.content;
-  return content;
+  const lang = getLang();
+  const raw = ch.content[lang] !== undefined ? ch.content[lang] : ch.content.es;
+  return typeof raw === 'function' ? raw() : raw;
 }
 // Busca en el título y en el texto (sin etiquetas HTML) de cada capítulo,
 // no solo en los títulos de la lista lateral.
 function manualChapterMatches(ch, q){
   if(!q) return true;
-  if(ch.title.toLowerCase().includes(q)) return true;
+  if(manualChapterTitle(ch).toLowerCase().includes(q)) return true;
   const plain = manualChapterText(ch).replace(/<[^>]+>/g,' ').toLowerCase();
   return plain.includes(q);
 }
@@ -4583,7 +5797,7 @@ function renderManual(){
   const q = manualSearch.trim().toLowerCase();
   const matches = MANUAL_CHAPTERS.map((ch,i) => ({ch,i})).filter(({ch}) => manualChapterMatches(ch, q));
   nav.innerHTML = matches.length ? matches.map(({ch,i}) => `
-    <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${ch.title}</div>
+    <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${manualChapterTitle(ch)}</div>
   `).join('') : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
   detail.innerHTML = manualChapterText(MANUAL_CHAPTERS[manualChapter]);
 }
@@ -4595,13 +5809,13 @@ function printManualChapter(){
   const ch = MANUAL_CHAPTERS[manualChapter];
   const win = window.open('', '_blank', 'width=800,height=1000');
   if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${ch.title.replace(/<[^>]+>/g,'')}</title>
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${manualChapterTitle(ch).replace(/<[^>]+>/g,'')}</title>
   <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:15mm 12mm;max-width:180mm;margin:0 auto}
   h3{font-size:15pt}h4{font-size:12.5pt;color:#555;margin-top:16px}
   .manual-step{display:flex;gap:10px;margin-bottom:8px}.sn{flex:none;width:22px;height:22px;border-radius:50%;background:#DF7039;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
   .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid #DF7039;border-radius:6px;padding:8px 12px;margin:10px 0;font-size:10.5pt}
   @media print{body{padding:8mm}}</style></head><body>
-  <h2>${ch.title.replace(/<[^>]+>/g,'')}</h2>
+  <h2>${manualChapterTitle(ch).replace(/<[^>]+>/g,'')}</h2>
   ${manualChapterText(ch)}
   </body></html>`);
   win.document.close();
