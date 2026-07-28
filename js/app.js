@@ -2252,6 +2252,13 @@ function renderPromoMes(){
   const counts = {};
   DB.promos.forEach(p => { counts[p.fecha] = (counts[p.fecha]||0) + 1; });
 
+  // Estadísticas rápidas del mes visible: cuánto se ha planificado/hecho, y
+  // cuánta biblioteca de ideas queda aún por explorar.
+  const monthPrefix = `${year}-${String(month+1).padStart(2,'0')}`;
+  const monthPromos = DB.promos.filter(p => p.fecha.startsWith(monthPrefix));
+  const monthDone = monthPromos.filter(p => p.done).length;
+  const usedCategories = CONTENT_IDEAS.filter((_, i) => categoryUsedCount(i) > 0).length;
+
   let cells = '';
   for(let i=0; i<startOffset; i++) cells += `<div></div>`;
   for(let day=1; day<=daysInMonth; day++){
@@ -2278,6 +2285,11 @@ function renderPromoMes(){
         <button class="btn" onclick="printPromoMes(${year},${month})"><i class="ti ti-printer"></i> Imprimir</button>
         <button class="owner-only btn btn-primary" onclick="openPromoModal()"><i class="ti ti-plus"></i> Nueva Acción</button>
       </div>
+    </div>
+    <div class="grid grid-3" style="margin-bottom:12px">
+      <div class="kpi"><div class="label">Acciones este mes</div><div class="value">${monthPromos.length}</div></div>
+      <div class="kpi ok"><div class="label">Completadas</div><div class="value">${monthDone} / ${monthPromos.length}</div></div>
+      <div class="kpi"><div class="label">Categorías de ideas usadas</div><div class="value">${usedCategories} / ${CONTENT_IDEAS.length}</div></div>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
@@ -2631,10 +2643,64 @@ const CONTENT_IDEAS = [
     { t: 'Apertura especial un día que normalmente cerráis', h: 'Aviso puntual de un cambio de horario excepcional.' },
     { t: 'Reacción con humor a un titular de actualidad gastronómica', h: 'Contenido oportunista y ligero, siempre con cuidado.' },
   ]},
+  { cat: 'Google Business y reseñas', icon: 'ti-brand-google', ideas: [
+    { t: 'Responder las reseñas nuevas de Google', h: 'Tarea de mantenimiento (no contenido creativo): revisa y contesta lo que dejen esta semana.' },
+    { t: 'Responder a una reseña negativa con profesionalidad', h: 'Sin discutir: agradecer, pedir disculpas si procede y ofrecer solucionarlo fuera de la reseña.' },
+    { t: 'Actualizar el horario en Google si cambia', h: 'Festivos, vacaciones o cambios de temporada — evita que llegue gente con el negocio cerrado.' },
+    { t: 'Subir fotos nuevas al perfil de Google Business', h: 'Fotos recientes de platos, sala o fachada; los perfiles con fotos actualizadas destacan más.' },
+    { t: 'Publicar una novedad como "Google Post"', h: 'Oferta, evento o plato nuevo publicado directamente en la ficha de Google.' },
+    { t: 'Revisar que los datos del perfil sean correctos', h: 'Teléfono, dirección, web y enlace de reservas al día.' },
+    { t: 'Comprobar la carta/menú de Google', h: 'Que los platos, precios y fotos del menú en Google coincidan con la carta real.' },
+    { t: 'Pedir reseña a los últimos clientes', h: 'Mensaje directo (WhatsApp/email) a quien ha visitado recientemente, con el enlace directo a Google.' },
+    { t: 'Revisar preguntas y respuestas públicas del perfil', h: 'La gente pregunta cosas ahí (horario, aparcamiento...); contestar rápido da buena imagen.' },
+    { t: 'Comprobar atributos del negocio en Google', h: 'Pet-friendly, accesible en silla de ruedas, terraza, wifi... marcados correctamente.' },
+    { t: 'Verificar que el local aparece bien situado en Google Maps', h: 'Un pin mal ubicado hace perder clientes que no encuentran el sitio.' },
+    { t: 'Responder mensajes recibidos por Google', h: 'El chat de Google Business Profile también necesita revisión periódica.' },
+  ]},
+  { cat: 'Redes sociales — gestión y mantenimiento', icon: 'ti-share', ideas: [
+    { t: 'Actualizar biografía y enlace de Instagram/Facebook', h: 'Que el enlace de la bio lleve a la web, carta o reservas actuales, no a algo desactualizado.' },
+    { t: 'Revisar y responder mensajes directos pendientes', h: 'Tarea de mantenimiento: vaciar la bandeja de DMs sin contestar.' },
+    { t: 'Comprobar que el horario esté al día en Facebook', h: 'Facebook tiene su propio horario, independiente del de Google.' },
+    { t: 'Planificar las publicaciones de la semana', h: 'Bloque de tiempo fijo para programar contenido con antelación, no improvisar cada día.' },
+    { t: 'Responder comentarios pendientes en publicaciones antiguas', h: 'Revisión periódica de comentarios que se quedaron sin respuesta.' },
+    { t: 'Actualizar los destacados de Instagram (Stories)', h: 'Menú, horario, ubicación y promos siempre visibles y actualizados en el perfil.' },
+    { t: 'Repostear contenido en el que os etiquetan clientes', h: 'Aprovechar el contenido que generan los propios clientes (UGC).' },
+    { t: 'Comprobar que los enlaces de reserva/pedido funcionan', h: 'Revisión rápida de que el botón de reservar o pedir online no esté roto.' },
+    { t: 'Revisar qué publicaciones han funcionado mejor', h: 'Repasar estadísticas del mes para repetir lo que mejor funciona.' },
+    { t: 'Actualizar el catálogo de Instagram/Facebook Shop', h: 'Si vendéis productos propios (salsas, mercancía...) mantenerlo al día.' },
+  ]},
 ];
 
 function contentIdeasTotalCount(){
   return CONTENT_IDEAS.reduce((sum, c) => sum + c.ideas.length, 0);
+}
+
+// Promos (de cualquier fecha) creadas a partir de una idea concreta, para
+// saber si ya se usó y cuándo por última vez, y no repetirla sin darse cuenta.
+function promoIdeaUsage(catIdx, ideaIdx){
+  return DB.promos.filter(p => p.ideaRef && p.ideaRef.cat===catIdx && p.ideaRef.idx===ideaIdx)
+    .sort((a,b) => b.fecha.localeCompare(a.fecha));
+}
+function categoryUsedCount(catIdx){
+  const c = CONTENT_IDEAS[catIdx];
+  return c.ideas.filter((_, idx) => promoIdeaUsage(catIdx, idx).length > 0).length;
+}
+// Elige una idea al azar para el botón "Sorpréndeme": prioriza las que nunca
+// se han usado; si ya se han probado todas, elige cualquiera.
+function pickRandomIdea(){
+  const all = [];
+  const unused = [];
+  CONTENT_IDEAS.forEach((c, catIdx) => c.ideas.forEach((_, ideaIdx) => {
+    all.push({catIdx, ideaIdx});
+    if(promoIdeaUsage(catIdx, ideaIdx).length === 0) unused.push({catIdx, ideaIdx});
+  }));
+  const pool = unused.length ? unused : all;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function surprisePromoIdea(){
+  const pick = pickRandomIdea();
+  if(!pick) return;
+  createPromoFromIdea(pick.catIdx, pick.ideaIdx);
 }
 
 let promoIdeasCategory = null;
@@ -2643,16 +2709,19 @@ function renderPromoIdeas(){
   const box = document.getElementById('promo-tab-content');
   if(promoIdeasCategory === null){
     box.innerHTML = `
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
-        <i class="ti ti-bulb"></i> ${contentIdeasTotalCount()} ideas de contenido para redes sociales, listas para grabar. Elige una categoría, y cuando tengas clara una idea, pulsa "Crear acción" para planificarla con fecha y responsable.
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">
+        <i class="ti ti-bulb"></i> ${contentIdeasTotalCount()} ideas de contenido y gestión online, listas para usar. Elige una categoría, y cuando tengas clara una, pulsa "Crear acción" para planificarla con fecha y responsable.
       </p>
+      <button class="owner-only btn btn-primary" style="margin-bottom:14px" onclick="surprisePromoIdea()"><i class="ti ti-dice"></i> Sorpréndeme (idea rápida para hoy)</button>
       <div class="grid grid-3">
-        ${CONTENT_IDEAS.map((c, i) => `
+        ${CONTENT_IDEAS.map((c, i) => {
+          const used = categoryUsedCount(i);
+          return `
           <div class="card" style="cursor:pointer" onclick="openPromoIdeasCategory(${i})">
             <h3><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
-            <div style="font-size:12px;color:var(--muted)">${c.ideas.length} ideas</div>
+            <div style="font-size:12px;color:var(--muted)">${c.ideas.length} ideas${used?` · <span style="color:var(--brand-orange)">${used} usada${used!==1?'s':''}</span>`:''}</div>
           </div>
-        `).join('')}
+        `;}).join('')}
       </div>
     `;
   } else {
@@ -2661,13 +2730,16 @@ function renderPromoIdeas(){
       <button class="btn btn-sm" style="margin-bottom:10px" onclick="promoIdeasCategory=null;renderPromoIdeas()"><i class="ti ti-arrow-left"></i> Categorías</button>
       <h3 style="margin-bottom:10px"><i class="ti ${c.icon}"></i> ${escapeHtml(c.cat)}</h3>
       <div class="grid grid-3">
-        ${c.ideas.map((idea, ideaIdx) => `
+        ${c.ideas.map((idea, ideaIdx) => {
+          const usage = promoIdeaUsage(promoIdeasCategory, ideaIdx);
+          return `
           <div class="card">
             <h3 style="font-size:14px">${escapeHtml(idea.t)}</h3>
             <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${escapeHtml(idea.h)}</div>
+            ${usage.length ? `<div style="font-size:11px;color:var(--brand-orange);margin-bottom:8px"><i class="ti ti-check"></i> Usada el ${escapeHtml(usage[0].fecha)}${usage.length>1?` (y ${usage.length-1} vez${usage.length-1!==1?'es':''} más)`:''}</div>` : ''}
             <button class="owner-only btn btn-sm btn-primary" style="width:100%" onclick="createPromoFromIdea(${promoIdeasCategory},${ideaIdx})"><i class="ti ti-plus"></i> Crear acción</button>
           </div>
-        `).join('')}
+        `;}).join('')}
       </div>
     `;
   }
@@ -2678,7 +2750,7 @@ function openPromoIdeasCategory(i){
 }
 function createPromoFromIdea(catIdx, ideaIdx){
   const idea = CONTENT_IDEAS[catIdx].ideas[ideaIdx];
-  openPromoModal(null, promoDate || todayStr(), {titulo: idea.t, descripcion: idea.h});
+  openPromoModal(null, promoDate || todayStr(), {titulo: idea.t, descripcion: idea.h, ideaRef: {cat: catIdx, idx: ideaIdx}});
 }
 
 // Mensajes preconfigurados para la interacción post-servicio con el cliente
@@ -2726,15 +2798,18 @@ function renderPromoClientes(){
     .filter(x => x.days === null || x.days >= 60)
     .sort((a,b) => (b.days ?? 999999) - (a.days ?? 999999));
 
-  const clientCard = (c, templateKey, badge) => `
+  const clientCard = (c, templateKey, badge) => {
+    const registered = DB.promos.some(p => p.clienteId===c.id && p.ideaRef && p.ideaRef.clientTemplate===templateKey && p.fecha===todayStr());
+    return `
     <div class="card">
       <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
       </div>
+      <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?'Ya registrada hoy':'Registrar como acción'}</button>
     </div>
-  `;
+  `;};
 
   box.innerHTML = `
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> Acciones rápidas de fidelización: felicitar cumpleaños, pedir reseñas tras la visita e invitar a volver a clientes que hace tiempo no vienen. Los mensajes ya están escritos, listos para enviar por WhatsApp o email.</p>
@@ -2799,8 +2874,35 @@ function sendPromoClientEmail(id, subject){
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+encodeURIComponent(subject)+'&body='+body;
 }
 
+// Deja constancia en el calendario de Promoción (Día/Mes) de una acción de
+// fidelización de clientes ya hecha, para que quede en el mismo historial
+// de "hecho/doneAt" que el resto de acciones, y no sea un flujo aislado.
+const CLIENT_OUTREACH_LABELS = {
+  cumple: 'Felicitar cumpleaños a', resena: 'Pedir reseña a', vuelve: 'Recuperar cliente inactivo:'
+};
+function registerClientOutreachAsPromo(clientId, templateKey){
+  const c = DB.clients.find(x=>x.id===clientId);
+  if(!c) return;
+  const now = new Date();
+  DB.promos.push({
+    id: genId(), fecha: todayStr(),
+    titulo: `${CLIENT_OUTREACH_LABELS[templateKey]||'Contactar a'} ${c.name}`,
+    descripcion: 'Acción de fidelización de clientes (Promoción → Clientes).',
+    responsableId: null, done: true, doneAt: now.toISOString(), zona: currentArea(),
+    clienteId: clientId, ideaRef: {clientTemplate: templateKey}
+  });
+  saveDB();
+  renderPromoClientes();
+  showToast('Acción registrada en el calendario de Promoción');
+}
+
+// Guarda el ideaRef de la idea de contenido con la que se abrió el modal
+// (si viene de "Crear acción"/"Sorpréndeme"), para que savePromo lo adjunte
+// al crear la promo y así poder marcar esa idea como ya usada.
+let pendingPromoIdeaRef = null;
 function openPromoModal(id, fecha, prefill){
   const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null};
+  pendingPromoIdeaRef = (!id && prefill && prefill.ideaRef) ? prefill.ideaRef : null;
   const ro = !editUnlocked;
   const dis = ro ? 'disabled' : '';
 
@@ -2851,8 +2953,9 @@ function savePromo(id){
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
     Object.assign(promo, {fecha, titulo, descripcion, responsableId});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false, doneAt:null, zona:'sala'});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false, doneAt:null, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
+  pendingPromoIdeaRef = null;
   saveDB();
   closeModal();
   renderPromocion();
