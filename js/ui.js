@@ -797,7 +797,7 @@ const FOLDERS = {
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
       {id:'clientes', icon:'ti-address-book'},
-      {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'carta', icon:'ti-glass-cocktail'},
       {id:'proveedores', icon:'ti-building-factory-2'},
       {id:'megalista', icon:'ti-list-details'},
       {id:'escandallo', icon:'ti-calculator'},
