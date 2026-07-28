@@ -610,10 +610,22 @@
       <div class="view-title" data-i18n="view.clientes.title">Clientes</div>
       <div class="view-subtitle" data-i18n="view.clientes.subtitle">Fichas de cliente y fidelización</div>
       <div class="toolbar">
-        <div class="left">
+        <div class="left" style="display:flex;gap:8px;flex-wrap:wrap">
           <input type="text" class="search-input" id="clientes-search" data-i18n-ph="ph.searchClient" placeholder="Buscar cliente..." oninput="renderClientes()">
+          <select id="clientes-filter" onchange="renderClientes()">
+            <option value="" data-i18n="filter.allClients">Todos</option>
+            <option value="inactive" data-i18n="filter.inactiveClients">Inactivos (60+ días)</option>
+            <option value="allergies" data-i18n="filter.withAllergies">Con alergias</option>
+            <option value="vip" data-i18n="filter.vip">VIP (7+ puntos)</option>
+            <option value="noshows" data-i18n="filter.withNoShows">Con no-shows</option>
+            <option value="noconsent" data-i18n="filter.noConsent">Sin consentimiento marketing</option>
+          </select>
         </div>
-        <button class="btn btn-primary" onclick="openClientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newClient">Nuevo Cliente</span></button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="openBirthdaysModal()"><i class="ti ti-cake"></i> <span data-i18n="btn.upcomingBirthdays">Cumpleaños próximos</span></button>
+          <button class="btn" onclick="exportClientsCSV()"><i class="ti ti-file-export"></i> <span data-i18n="btn.exportCSV">Exportar CSV</span></button>
+          <button class="btn btn-primary" onclick="openClientModal()"><i class="ti ti-plus"></i> <span data-i18n="title.newClient">Nuevo Cliente</span></button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>

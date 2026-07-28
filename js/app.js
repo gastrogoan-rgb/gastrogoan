@@ -957,8 +957,15 @@ function printDistribucion(empId){
 /* ============================================================
    CLIENTES — Fichas de cliente y fidelización
    ============================================================ */
+// Ventas de un cliente: por clientId siempre que la venta lo tenga guardado
+// (así un cambio de nombre o dos clientes con el mismo nombre no mezclan ni
+// pierden el historial); solo si la venta es antigua y no tiene clientId se
+// cae al criterio anterior de comparar el nombre en texto.
+function clientSales(c){
+  return DB.sales.filter(s => s.clientId != null ? s.clientId === c.id : (s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase()));
+}
 function clientSalesStats(c){
-  const matches = DB.sales.filter(s => s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase());
+  const matches = clientSales(c);
   const visitas = matches.length;
   const total = matches.reduce((sum,s)=>sum+s.total,0);
   const ticketMedio = visitas ? total/visitas : 0;
@@ -972,7 +979,13 @@ function clientSalesStats(c){
 
 function renderClientes(){
   const search = document.getElementById('clientes-search').value.toLowerCase();
-  const items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
+  const filter = document.getElementById('clientes-filter')?.value || '';
+  let items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
+  if(filter === 'inactive') items = items.filter(c => { const r = clientSalesStats(c).recency; return r === null || r > 60; });
+  else if(filter === 'allergies') items = items.filter(c => (c.allergies||'').trim());
+  else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
+  else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
+  else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
   const tbody = document.getElementById('clientes-tbody');
 
   if(!items.length){
@@ -993,13 +1006,13 @@ function renderClientes(){
     }
     return `
     <tr>
-      <td><strong>${escapeHtml(c.name)}</strong>${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td><strong>${escapeHtml(c.name)}</strong>${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
       <td>
         ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
         ${!c.phone && !c.email ? '—' : ''}
       </td>
-      <td><span class="badge badge-blue">${stats.visitas}</span></td>
+      <td><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas}</span></button></td>
       <td>${fmtMoney(stats.ticketMedio)}</td>
       <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
@@ -1114,6 +1127,11 @@ function openClientModal(id){
       <label>${t('th.notes')}</label>
       <textarea id="client-notes" placeholder="${t('ph.additionalNotes')}">${escapeHtml(c.notes||'')}</textarea>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="client-marketing-consent" ${c.marketingConsent!==false?'checked':''} style="width:auto">
+      ${t('label.marketingConsent')}
+    </label>
+    ${id ? `<button class="btn btn-sm" style="margin-bottom:14px" onclick="openClientHistoryModal(${id})"><i class="ti ti-receipt"></i> ${t('btn.viewOrderHistory')}</button>` : ''}
     ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
     <div class="field">
       <label>${t('label.rewardHistory')}</label>
@@ -1138,13 +1156,26 @@ function saveClient(id){
   const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
   const allergies = document.getElementById('client-allergies').value.trim();
   const notes = document.getElementById('client-notes').value.trim();
+  const marketingConsent = document.getElementById('client-marketing-consent').checked;
+
+  // Aviso (no bloqueante) de posible cliente duplicado: mismo teléfono/email
+  // ya dado de alta, o mismo nombre exacto, para no partir sus puntos e
+  // historial en dos fichas sin querer.
+  const dupe = DB.clients.find(x =>
+    x.id !== id && (
+      (phone && x.phone && x.phone.replace(/\D/g,'') === phone.replace(/\D/g,'')) ||
+      (email && x.email && x.email.trim().toLowerCase() === email.trim().toLowerCase()) ||
+      x.name.trim().toLowerCase() === name.trim().toLowerCase()
+    )
+  );
+  if(dupe && !confirm(t('msg.confirmDuplicateClient').replace('${name}', dupe.name))) return;
 
   if(id){
     const client = DB.clients.find(x=>x.id===id);
     if(!client) return;
-    Object.assign(client, {name, phone, email, cp, cumpleanos, ultimoContacto, allergies, notes});
+    Object.assign(client, {name, phone, email, cp, cumpleanos, ultimoContacto, allergies, notes, marketingConsent});
   }else{
-    DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points:0, allergies, notes});
+    DB.clients.push({id: genId(), name, phone, email, cp, cumpleanos, ultimoContacto, points:0, allergies, notes, marketingConsent});
   }
   saveDB();
   closeModal();
@@ -1166,12 +1197,132 @@ function registerClientVisit(id){
 }
 
 function clientFavoriteItem(c){
-  const matches = DB.sales.filter(s => s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase());
+  const matches = clientSales(c);
   const counts = {};
   matches.forEach(s => (s.items||[]).forEach(it => { counts[it.name] = (counts[it.name]||0) + (it.qty||1); }));
   let best = null, bestQty = 0;
   Object.entries(counts).forEach(([name,qty]) => { if(qty > bestQty){ best = name; bestQty = qty; } });
   return best;
+}
+
+// Historial de pedidos de un cliente: cada venta con su fecha, platos y total.
+function openClientHistoryModal(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  const sales = [...clientSales(c)].sort((a,b) => (b.createdAt||b.date).localeCompare(a.createdAt||a.date));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-receipt"></i> ${t('title.orderHistoryOf')} ${escapeHtml(c.name)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${sales.length ? `<div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.total')}</th></tr></thead>
+        <tbody>${sales.map(s => `<tr><td>${escapeHtml(s.date)}</td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty"><i class="ti ti-receipt"></i>${t('empty.noOrderHistory')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
+// Exporta la lista de clientes visible (respetando el buscador/filtro activo) a CSV.
+function exportClientsCSV(){
+  const search = document.getElementById('clientes-search').value.toLowerCase();
+  const filter = document.getElementById('clientes-filter')?.value || '';
+  let items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
+  if(filter === 'inactive') items = items.filter(c => { const r = clientSalesStats(c).recency; return r === null || r > 60; });
+  else if(filter === 'allergies') items = items.filter(c => (c.allergies||'').trim());
+  else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
+  else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
+  else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
+  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket'), t('label.lastVisit'), t('label.loyaltyPoints'), t('label.noShowCount'), t('label.allergiesPrefs'), t('th.notes')]];
+  items.forEach(c => {
+    const stats = clientSalesStats(c);
+    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio, stats.lastDate||'', c.points||0, c.noShows||0, c.allergies||'', c.notes||'']);
+  });
+  downloadCSV(rows, `clientes-${todayStr()}.csv`);
+}
+
+// Cumpleaños en los próximos 14 días (por día/mes, sin importar el año), para
+// poder felicitar a los clientes sin tener que acordarte tú de mirarlo cada día.
+function getUpcomingBirthdays(days){
+  const today = new Date();
+  const upcoming = [];
+  DB.clients.forEach(c => {
+    if(!c.cumpleanos) return;
+    const parts = c.cumpleanos.split('-');
+    if(parts.length !== 3) return;
+    const month = parseInt(parts[1]) - 1, day = parseInt(parts[2]);
+    for(let offset = 0; offset <= days; offset++){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+      if(d.getMonth() === month && d.getDate() === day){
+        upcoming.push({client: c, date: d, inDays: offset});
+        break;
+      }
+    }
+  });
+  return upcoming.sort((a,b) => a.inDays - b.inDays);
+}
+function openBirthdaysModal(){
+  const upcoming = getUpcomingBirthdays(14);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cake"></i> ${t('title.upcomingBirthdays')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${upcoming.length ? upcoming.map(({client:c, inDays}) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <strong>${escapeHtml(c.name)}</strong>
+          <div style="font-size:12px;color:var(--muted)">${inDays===0?t('label.today'):inDays===1?t('label.tomorrow'):t('label.inNDays').replace('${n}', inDays)}</div>
+        </div>
+        <button class="btn btn-sm" onclick="openBirthdayGreetingModal(${c.id})" ${(!c.phone && !c.email)?'disabled':''}><i class="ti ti-bell"></i> ${t('btn.sendGreeting')}</button>
+      </div>
+    `).join('') : `<div class="empty"><i class="ti ti-cake"></i>${t('empty.noUpcomingBirthdays')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function birthdayGreetingText(c){
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  return `¡Feliz cumpleaños, ${c.name}! 🎂 Todo el equipo de ${bizName} te desea un día genial. ¡Esperamos verte pronto para celebrarlo!`;
+}
+function openBirthdayGreetingModal(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  const msg = birthdayGreetingText(c);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cake"></i> ${escapeHtml(c.name)}</h3>
+      <button class="modal-close" onclick="openBirthdaysModal()">&times;</button>
+    </div>
+    <div class="field"><textarea id="birthday-greeting-text" rows="4">${escapeHtml(msg)}</textarea></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendBirthdayWhatsapp(${id})" ${!c.phone?'disabled':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1" onclick="sendBirthdayEmail(${id})" ${!c.email?'disabled':''}><i class="ti ti-mail"></i> Email</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openBirthdaysModal()">${t('common.back')}</button>
+    </div>
+  `);
+}
+function sendBirthdayWhatsapp(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
+  const tel = c.phone.replace(/\D/g,'');
+  const txt = encodeURIComponent(document.getElementById('birthday-greeting-text').value);
+  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+}
+function sendBirthdayEmail(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
+  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
+  const subject = encodeURIComponent('¡Feliz cumpleaños de parte de ' + bizName + '!');
+  const body = encodeURIComponent(document.getElementById('birthday-greeting-text').value);
+  window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
 
 function openRewardModal(id){
@@ -1273,12 +1424,21 @@ function sendRewardEmail(id){
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
 
+// Borrar un cliente exige el PIN del negocio (no un simple "¿seguro?", como
+// el resto de acciones sensibles de la app). Las reservas y ventas que lo
+// referenciaban no se borran: solo se desvinculan (quedan como estaban,
+// sin cliente asociado), para no perder ese historial.
 function deleteClient(id){
-  if(!confirm(t('msg.confirmDeleteClient'))) return;
-  DB.clients = DB.clients.filter(c=>c.id!==id);
-  DB.reservations = DB.reservations.filter(r=>r.clientId!==id);
-  saveDB();
-  renderClientes();
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  requestBusinessPinAction(t('title.deleteClient'), t('msg.confirmDeleteClient'), () => {
+    DB.clients = DB.clients.filter(x=>x.id!==id);
+    DB.reservations.forEach(r => { if(r.clientId===id) r.clientId = null; });
+    DB.sales.forEach(s => { if(s.clientId===id) s.clientId = null; });
+    saveDB();
+    renderClientes();
+    showToast(t('msg.clientDeleted'));
+  });
 }
 
 /* ============================================================
