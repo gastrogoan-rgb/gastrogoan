@@ -1297,6 +1297,17 @@ function reservationStatusBadge(status){
     : `<span class="badge badge-blue">${t('status.completed')}</span>`;
 }
 
+// Busca un cliente ya dado de alta por teléfono (comparando solo dígitos),
+// para vincular reservas online que no traen clientId. Un único punto para
+// esta normalización: si algún día cambia (p.ej. prefijos internacionales),
+// se corrige aquí una vez en vez de en cada sitio que la repetía por su cuenta.
+function findClientByPhone(phone){
+  if(!phone) return null;
+  const digits = phone.replace(/\D/g,'');
+  if(!digits) return null;
+  return DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === digits) || null;
+}
+
 // Marca una reserva confirmada como "no presentado" (el cliente no vino) y
 // suma un aviso al historial del cliente, para detectar quién falla a menudo.
 function markReservationNoShow(id){
@@ -1306,7 +1317,7 @@ function markReservationNoShow(id){
   r.status = 'no_show';
   let cid = r.clientId;
   if(!cid && r.clientPhone){
-    const match = DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === r.clientPhone.replace(/\D/g,''));
+    const match = findClientByPhone(r.clientPhone);
     if(match) cid = match.id;
   }
   if(cid){
@@ -1386,7 +1397,7 @@ function setReservationStatus(id, status){
   if(status === 'confirmada' && !yaConfirmada){
     let cid = r.clientId;
     if(!cid && r.clientPhone){
-      const match = DB.clients.find(c => c.phone && c.phone.replace(/\D/g,'') === r.clientPhone.replace(/\D/g,''));
+      const match = findClientByPhone(r.clientPhone);
       if(match) cid = match.id;
     }
     if(cid) registerClientVisit(cid);
@@ -2584,7 +2595,10 @@ function addZonaConMesas(){
 function addTableToZona(zona){
   const tablesInZone = DB.tables.filter(t => t.zona === zona);
   const plazasSet = new Set(tablesInZone.map(t => t.plazas||null));
-  const plazas = plazasSet.size === 1 ? [...plazasSet][0] : null;
+  let plazas = plazasSet.size === 1 ? [...plazasSet][0] : null;
+  // Misma validación que addZonaConMesas, por si algún dato heredado quedara
+  // fuera de rango (p.ej. importado de otra fuente).
+  if(plazas != null) plazas = Math.max(1, Math.min(50, parseInt(plazas)||0)) || null;
   DB.tables.push({id: genId(), name: `Mesa ${tablesInZone.length+1}`, zona, plazas});
   saveDB();
   renderMesasConfigList();
