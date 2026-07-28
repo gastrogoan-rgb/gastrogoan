@@ -3,7 +3,7 @@
    CAPEX, resultado y tesorería (7 pestañas)
    ============================================================ */
 const GE = (function(){
-  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MESES = t('months.short');
   const TABS = ['fijos','variables','cdr','resultado','tesoreria','pe','capex'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
@@ -132,10 +132,10 @@ const GE = (function(){
     const tpN = totalPersonalNeto(), tgN = totalGFNeto(), totN = tpN+tgN;
     const ivFijos = totalFijos() - totalFijosNeto();
     document.getElementById('gf-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Personal (sin IVA)</div><div class="val">${fmtMoney(tpN)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Gastos fijos (sin IVA)</div><div class="val">${fmtMoney(tgN)}</div></div>
-      <div class="ge-kpi"><div class="lbl">IVA soportado fijos</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Coste real mensual</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.personalNoVat')}</div><div class="val">${fmtMoney(tpN)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.fixedNoVat')}</div><div class="val">${fmtMoney(tgN)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupportedFixed')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
     renderGFList('gf-personal', personal);
     const gfNames = new Set(personal.map(g => g.nombre.trim().toLowerCase()));
     const empSuggestions = DB.employees.filter(e => !gfNames.has(e.name.trim().toLowerCase()));
@@ -143,12 +143,12 @@ const GE = (function(){
     if(empSuggestions.length){
       sugBox.insertAdjacentHTML('beforeend', `
         <div style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <span style="font-size:12px;color:var(--muted)"><i class="ti ti-users"></i> Empleados sin coste asignado:</span>
+          <span style="font-size:12px;color:var(--muted)"><i class="ti ti-users"></i> ${t('hr.gf.employeesNoCost')}</span>
           ${empSuggestions.map(e => `<button class="btn btn-sm" onclick="GE.newGFFromEmployee('${escapeJsAttr(e.name)}')" style="font-weight:600"><i class="ti ti-plus"></i> ${escapeHtml(e.name)}</button>`).join('')}
         </div>`);
     }
     renderGFList('gf-fijos', generales);
-    document.getElementById('gf-total-val').innerHTML = `${fmtMoney(totN)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ IVA ${fmtMoney(ivFijos)} = ${fmtMoney(totalFijos())}</span>`;
+    document.getElementById('gf-total-val').innerHTML = `${fmtMoney(totN)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivFijos)} = ${fmtMoney(totalFijos())}</span>`;
 
     const facNeta12 = MESES.map((_,i)=>facturacionNetaMes(i)).reduce((s,v)=>s+v,0)/12;
     const visEl = document.getElementById('gf-dist-visual');
@@ -156,14 +156,14 @@ const GE = (function(){
     if(facNeta12 > 0){
       visEl.style.display = 'block';
       const items = [
-        {lbl:'Personal (sin IVA)', v:tpN, pct:tpN/facNeta12*100, color:'var(--blue)'},
-        {lbl:'Gastos Fijos (sin IVA)', v:tgN, pct:tgN/facNeta12*100, color:'var(--purple)'},
+        {lbl:t('hr.lbl.personalNoVat'), v:tpN, pct:tpN/facNeta12*100, color:'var(--blue)'},
+        {lbl:t('hr.lbl.fixedNoVat'), v:tgN, pct:tgN/facNeta12*100, color:'var(--purple)'},
       ];
       visContent.innerHTML = items.map(it=>`
         <div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
             <span style="font-weight:600">${it.lbl}</span>
-            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--teal-d)'}">${it.pct.toFixed(1)}% ventas</span></span>
+            <span style="font-family:monospace">${fmtMoney(it.v)} · <span style="color:${it.pct>35?'var(--red)':'var(--teal-d)'}">${it.pct.toFixed(1)}% ${t('hr.lbl.ofSales')}</span></span>
           </div>
           <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
             <div style="height:100%;width:${Math.min(it.pct/50*100,100)}%;background:${it.color};border-radius:4px;transition:width .4s"></div>
@@ -174,19 +174,19 @@ const GE = (function(){
     }
   }
   const GF_PERIODOS = [
-    {v:1, lbl:'Mensual'}, {v:2, lbl:'Cada 2 meses (bimestral)'}, {v:3, lbl:'Cada 3 meses (trimestral)'},
-    {v:4, lbl:'Cada 4 meses (cuatrimestral)'}, {v:6, lbl:'Cada 6 meses (semestral)'}, {v:12, lbl:'Cada 12 meses (anual)'}
+    {v:1, lbl:t('hr.periodo.monthly')}, {v:2, lbl:t('hr.periodo.bimonthly')}, {v:3, lbl:t('hr.periodo.quarterly')},
+    {v:4, lbl:t('hr.periodo.fourMonthly')}, {v:6, lbl:t('hr.periodo.semiannual')}, {v:12, lbl:t('hr.periodo.annual')}
   ];
   function renderGFList(elId, items){
     document.getElementById(elId).innerHTML = items.length ? items.map(g=>{
       const periodoMeses = parseInt(g.periodicidadMeses)||1;
       const mensual = gfMonthlyImporte(g);
       const detalles = [];
-      if(g.diaPago) detalles.push(`día ${g.diaPago}`);
+      if(g.diaPago) detalles.push(t('hr.gf.payDay').replace('${d}', g.diaPago));
       const gIva = g.iva!=null ? parseFloat(g.iva) : 0;
-      if(gIva > 0){ const neto=mensual/(1+gIva/100); detalles.push(`Base ${fmtMoney(neto)} + IVA ${gIva}% (${fmtMoney(mensual-neto)})`); }
-      if(periodoMeses>1) detalles.push(`cada ${periodoMeses} meses · ${fmtMoney(parseFloat(g.importe||0))}/pago`);
-      if(g.autoCalc) detalles.push(`Neto ${fmtMoney(parseFloat(g.sueldoNeto||0))} + retenciones = Bruto ${fmtMoney(g.sueldoBruto||0)} + SS Empresa ${fmtMoney(g.ssEmpresa||0)}`);
+      if(gIva > 0){ const neto=mensual/(1+gIva/100); detalles.push(`${t('hr.lbl.base')} ${fmtMoney(neto)} + ${t('common.vat')} ${gIva}% (${fmtMoney(mensual-neto)})`); }
+      if(periodoMeses>1) detalles.push(`${t('hr.gf.everyMonths').replace('${n}', periodoMeses)} · ${fmtMoney(parseFloat(g.importe||0))}${t('hr.gf.perPayment')}`);
+      if(g.autoCalc) detalles.push(t('hr.gf.autoCalcSummary').replace('${neto}', fmtMoney(parseFloat(g.sueldoNeto||0))).replace('${bruto}', fmtMoney(g.sueldoBruto||0)).replace('${ss}', fmtMoney(g.ssEmpresa||0)));
       return `
       <div class="ge-item" style="flex-wrap:wrap">
         <span style="flex:1;font-size:14px;font-weight:500;min-width:140px">${escapeHtml(g.nombre)}</span>
@@ -196,20 +196,20 @@ const GE = (function(){
         ${detalles.length || g.notas ? `<div style="flex-basis:100%;font-size:11.5px;color:var(--muted)">${detalles.join(' · ')}${g.notas?`${detalles.length?' · ':''}<i class="ti ti-note"></i> ${escapeHtml(g.notas)}`:''}</div>` : ''}
       </div>`;
     }).join('')
-    : `<div class="empty" style="padding:12px 16px">Sin gastos. Añade el primero.</div>`;
+    : `<div class="empty" style="padding:12px 16px">${t('hr.gf.emptyList')}</div>`;
   }
   function newGF(cat){
     editingGF = null;
-    openGFModal(cat==='PERSONAL'?'Personal (nómina/SS)':'Gasto fijo', {nombre:'',importe:'',diaPago:'',categoria:cat, periodicidadMeses:1});
+    openGFModal(cat==='PERSONAL'?t('hr.gf.titlePersonal'):t('hr.gf.titleFixed'), {nombre:'',importe:'',diaPago:'',categoria:cat, periodicidadMeses:1});
   }
   function newGFFromEmployee(name){
     editingGF = null;
-    openGFModal('Personal (nómina/SS)', {nombre:name,importe:'',diaPago:'',categoria:'PERSONAL', periodicidadMeses:1});
+    openGFModal(t('hr.gf.titlePersonal'), {nombre:name,importe:'',diaPago:'',categoria:'PERSONAL', periodicidadMeses:1});
   }
   function editGF(id){
     const g = fijos().find(x=>x.id===id); if(!g) return;
     editingGF = id;
-    openGFModal('Editar gasto', g);
+    openGFModal(t('hr.gf.titleEdit'), g);
   }
   function openGFModal(title, g){
     const sugerencias = (g.categoria==='PERSONAL'?GF_PERSONAL:GF_FIJOS).map(s=>`<option value="${s}">`).join('');
@@ -217,49 +217,49 @@ const GE = (function(){
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
-        <label>Concepto</label>
+        <label>${t('hr.lbl.concept')}</label>
         <input type="text" id="gf-f-nombre" list="gf-sugerencias" value="${escapeHtml(g.nombre)}">
         <datalist id="gf-sugerencias">${sugerencias}</datalist>
       </div>
       ${g.categoria==='PERSONAL' ? `
       <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:10px;cursor:pointer">
         <input type="checkbox" id="gf-f-autocalc" ${autoCalc?'checked':''} onchange="GE.toggleGFAutoCalc()" style="width:auto">
-        Calcular el coste total a partir del sueldo neto (incluye Seguridad Social a cargo de la empresa)
+        ${t('hr.gf.autoCalcCheckbox')}
       </label>
       <div id="gf-autocalc-fields" style="display:${autoCalc?'block':'none'}">
         <div class="field-row">
-          <div class="field"><label>Sueldo neto mensual (€)</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
-          <div class="field"><label>% Retenciones (IRPF + SS trabajador)</label><input type="number" id="gf-f-retpct" min="0" max="99" step="0.1" value="${g.retPct!=null?g.retPct:15}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.netMonthlySalary')}</label><input type="number" id="gf-f-neto" min="0" step="0.01" value="${g.sueldoNeto||''}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.retentionsPct')}</label><input type="number" id="gf-f-retpct" min="0" max="99" step="0.1" value="${g.retPct!=null?g.retPct:15}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>% Seguridad Social empresa (sobre el bruto)</label><input type="number" id="gf-f-sspct" min="0" max="100" step="0.1" value="${g.ssPct!=null?g.ssPct:30}" oninput="GE.recalcGFAuto()"></div>
+          <div class="field"><label>${t('hr.gf.companySsPct')}</label><input type="number" id="gf-f-sspct" min="0" max="100" step="0.1" value="${g.ssPct!=null?g.ssPct:30}" oninput="GE.recalcGFAuto()"></div>
         </div>
         <div class="ge-kpi-grid" style="margin-bottom:10px">
-          <div class="ge-kpi"><div class="lbl">Sueldo bruto</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
-          <div class="ge-kpi"><div class="lbl">SS Empresa</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
-          <div class="ge-kpi"><div class="lbl">Coste total empresa</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.grossSalary')}</div><div class="val" id="gf-auto-bruto">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.companySs')}</div><div class="val" id="gf-auto-ss">0,00 €</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.gf.totalCompanyCost')}</div><div class="val" id="gf-auto-total" style="color:var(--teal)">0,00 €</div></div>
         </div>
       </div>
       ` : ''}
       <div class="field-row">
-        <div class="field"><label>Importe (€) ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
-        <div class="field"><label>Día de pago</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
+        <div class="field"><label>${t('hr.lbl.amount')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
+        <div class="field"><label>${t('hr.gf.payDayLabel')}</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
       </div>
       <div class="field">
-        <label>Periodicidad del pago</label>
+        <label>${t('hr.gf.payPeriodicity')}</label>
         <select id="gf-f-periodo">
           ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
         </select>
       </div>
-      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>Tipo de IVA</label>${ivaSelect('gf-f-iva', g.iva!=null?g.iva:21)}</div>` : ''}
+      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva!=null?g.iva:21)}</div>` : ''}
       <div class="field">
-        <label>Comentario (opcional)</label>
-        <textarea id="gf-f-notas" rows="2" placeholder="Notas internas sobre este gasto...">${escapeHtml(g.notas||'')}</textarea>
+        <label>${t('hr.lbl.commentOptional')}</label>
+        <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
       </div>
       <input type="hidden" id="gf-f-cat" value="${g.categoria}">
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="GE.saveGF()">Guardar</button>
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="GE.saveGF()">${t('common.save')}</button>
       </div>
     `);
     if(autoCalc) recalcGFAuto();
@@ -338,12 +338,12 @@ const GE = (function(){
     const mes = activeMonth, tvMes = totalVariablesMes(mes), tvNeto = totalVariablesNetoMes(mes), ivaSop = tvMes - tvNeto;
     const facNeta = facturacionNetaMes(mes), fac = facturacionMes(mes);
     const fcPct = facNeta>0 ? (tvNeto/facNeta*100) : 0;
-    document.getElementById('gv-sec-title').textContent = `Compras — ${MESES[mes]} ${currentYear}`;
+    document.getElementById('gv-sec-title').textContent = `${t('hr.lbl.purchases')} — ${MESES[mes]} ${currentYear}`;
     document.getElementById('gv-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Coste real (sin IVA)</div><div class="val">${fmtMoney(tvNeto)}</div></div>
-      <div class="ge-kpi"><div class="lbl">IVA soportado</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Facturación neta <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Food cost real</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">Objetivo: ${config().foodCostObj||35}%</div></div>`;
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${config().foodCostObj||35}%</div></div>`;
     const items = variablesMes(mes);
     const list = document.getElementById('gv-list');
     const empty = document.getElementById('gv-empty');
@@ -363,8 +363,8 @@ const GE = (function(){
           const totalIva = total - totalBase;
           const ids = vs.map(v=>v.id).join(',');
           return `<div class="ge-item" style="flex-wrap:wrap">
-            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> Pedidos recibidos</span></span>
-            <span style="font-size:11px;color:var(--muted);margin-right:4px">Base ${fmtMoney(totalBase)} + IVA ${fmtMoney(totalIva)}</span>
+            <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
+            <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(totalBase)} + ${t('common.vat')} ${fmtMoney(totalIva)}</span>
             <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
             <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGVGroup('${ids}')"><i class="ti ti-trash"></i></button>
           </div>`;
@@ -377,37 +377,37 @@ const GE = (function(){
           return `<div class="ge-item" style="flex-wrap:wrap">
           <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
-          <span style="font-size:11px;color:var(--muted);margin-right:4px">Base ${fmtMoney(base)} + IVA ${pct}% (${fmtMoney(ivaAmt)})</span>
+          <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
           <span style="font-family:monospace;font-weight:700">${fmtMoney(imp)}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
         </div>`; }).join('');
         return `<div style="padding:8px 16px;background:var(--bg);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(cat)}</div>${autoHtml}${manualHtml}`;
       }).join('');
     }
-    document.getElementById('gv-total-lbl').textContent = `TOTAL VARIABLES ${MESES[mes].toUpperCase()}`;
-    document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ IVA ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
+    document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${MESES[mes].toUpperCase()}`;
+    document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
   }
   function setMonth(m){ activeMonth = m; renderVariables(); }
   function newGV(){
     const provs = proveedores().map(p=>`<option value="${escapeHtml(p)}">`).join('');
     const fecha = `${currentYear}-${String(activeMonth+1).padStart(2,'0')}-01`;
     openModal(`
-      <div class="modal-header"><h3>Añadir compra</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-header"><h3>${t('hr.gv.addPurchase')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
-        <label>Categoría</label>
+        <label>${t('common.category')}</label>
         <select id="gv-f-cat">${VARIABLE_CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
       </div>
       <div class="field">
-        <label>Proveedor</label>
+        <label>${t('common.supplier')}</label>
         <input type="text" id="gv-f-prov" list="gv-prov-list" onchange="var p=getProviderByName(this.value);if(p&&p.iva!=null){document.getElementById('gv-f-iva').value=p.iva}">
         <datalist id="gv-prov-list">${provs}</datalist>
       </div>
       <div class="field-row">
-        <div class="field"><label>Importe (€)</label><input type="number" id="gv-f-imp" min="0" step="0.01"></div>
-        <div class="field"><label>Tipo de IVA</label>${ivaSelect('gv-f-iva', 10)}</div>
+        <div class="field"><label>${t('hr.lbl.amount')}</label><input type="number" id="gv-f-imp" min="0" step="0.01"></div>
+        <div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gv-f-iva', 10)}</div>
       </div>
       <div class="field">
-        <label>Fecha</label><input type="date" id="gv-f-fecha" value="${fecha}">
+        <label>${t('common.date')}</label><input type="date" id="gv-f-fecha" value="${fecha}">
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
@@ -454,20 +454,20 @@ const GE = (function(){
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     const rows = [
-      {lbl:'Facturación (TPV, IVA incl.)', vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
-      {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, vals:MESES.map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
-      {lbl:'Facturación neta', vals:MESES.map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
-      {lbl:'Gastos Variables (sin IVA)', vals:MESES.map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
-      {lbl:'Gastos Fijos (sin IVA)', vals:MESES.map(()=>-tfN), auto:true},
-      {lbl:'Comisiones Apps Delivery', vals:MESES.map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
-      {lbl:'Cuotas inversión financiada', vals:MESES.map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
-      {lbl:'Resultado Antes de Impuestos', vals:MESES.map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
-      {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, vals:MESES.map((_,i)=>{ const r=resultadoAntesImpMes(i,cdrYear); return r>0?-(r*pctImp):0; }), auto:true},
-      {lbl:'Resultado Neto', vals:MESES.map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true},
-      {lbl:'IVA a liquidar con Hacienda (modelo 303)', vals:MESES.map((_,i)=>ivaLiquidarMes(i,cdrYear)), auto:true, ivaRow:true},
+      {lbl:t('hr.cdr.revenue'), vals:MESES.map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true},
+      {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), vals:MESES.map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
+      {lbl:t('hr.cdr.netRevenue'), vals:MESES.map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
+      {lbl:t('hr.lbl.variableExpensesNoVat'), vals:MESES.map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
+      {lbl:t('hr.lbl.fixedNoVat'), vals:MESES.map(()=>-tfN), auto:true},
+      {lbl:t('hr.lbl.deliveryCommissions'), vals:MESES.map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
+      {lbl:t('hr.lbl.financedInvestmentInstallments'), vals:MESES.map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
+      {lbl:t('hr.cdr.resultBeforeTax'), vals:MESES.map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
+      {lbl:`${t('hr.cdr.profitTax')} (${(pctImp*100).toFixed(0)}%)`, vals:MESES.map((_,i)=>{ const r=resultadoAntesImpMes(i,cdrYear); return r>0?-(r*pctImp):0; }), auto:true},
+      {lbl:t('hr.cdr.netResult'), vals:MESES.map((_,i)=>resultadoMes(i,cdrYear)), auto:true, highlight:true, isResult:true},
+      {lbl:t('hr.cdr.vatToSettle'), vals:MESES.map((_,i)=>ivaLiquidarMes(i,cdrYear)), auto:true, ivaRow:true},
     ];
     const quarters = ['T1','T2','T3','T4'];
-    let html = `<thead><tr><th>Concepto</th>${MESES.map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">AÑO</th></tr></thead><tbody>`;
+    let html = `<thead><tr><th>${t('hr.lbl.concept')}</th>${MESES.map(m=>`<th>${m}</th>`).join('')}${quarters.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}<th style="background:var(--dark);color:#fff">${t('hr.lbl.yearAbbrev')}</th></tr></thead><tbody>`;
     rows.forEach(r=>{
       const total = r.vals.reduce((s,v)=>s+v,0);
       const q = [0,1,2,3].map(qi=>r.vals.slice(qi*3,qi*3+3).reduce((s,v)=>s+v,0));
@@ -476,11 +476,11 @@ const GE = (function(){
       if(r.ivaRow){
         r.vals.forEach(v=>{
           const c = v>0?'neg':(v<0?'pos':'');
-          const suf = v>0?' a pagar':(v<0?' a tu favor':'');
+          const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):'');
           html += `<td class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`;
         });
-        q.forEach(v=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' a pagar':(v<0?' a tu favor':''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
-        const c = total>0?'neg':(total<0?'pos':''); const suf = total>0?' a pagar':(total<0?' a tu favor':'');
+        q.forEach(v=>{ const c = v>0?'neg':(v<0?'pos':''); const suf = v>0?' '+t('hr.lbl.toPay'):(v<0?' '+t('hr.lbl.inYourFavor'):''); html += `<td style="background:rgba(0,0,0,.05)" class="${c}">${v!==0?fmtMoney(Math.abs(v))+suf:'—'}</td>`; });
+        const c = total>0?'neg':(total<0?'pos':''); const suf = total>0?' '+t('hr.lbl.toPay'):(total<0?' '+t('hr.lbl.inYourFavor'):'');
         html += `<td style="background:rgba(0,0,0,.1)" class="${c}">${total!==0?fmtMoney(Math.abs(total))+suf:'—'}</td></tr>`;
       } else {
         r.vals.forEach(v=>{
@@ -521,19 +521,19 @@ const GE = (function(){
     }
     const cvCub = tick*(fc/100);
     const contribCub = tick - cvCub;
-    if(contribCub<=0){ document.getElementById('pe-r3').textContent='No calculable'; return; }
+    if(contribCub<=0){ document.getElementById('pe-r3').textContent=t('hr.pe.notCalculable'); return; }
     const cubNec = Math.ceil(fij/contribCub);
     const cubDia = Math.ceil(cubNec/dias);
     const ventasMin = cubNec*tick;
-    document.getElementById('pe-r1').textContent = fmtMoney(cvCub)+'/cubierto';
-    document.getElementById('pe-r2').textContent = fmtMoney(contribCub)+'/cubierto';
-    document.getElementById('pe-r3').textContent = cubNec+' cubiertos/mes';
-    document.getElementById('pe-r4').textContent = cubDia+' cubiertos/día';
+    document.getElementById('pe-r1').textContent = fmtMoney(cvCub)+t('hr.pe.perCover');
+    document.getElementById('pe-r2').textContent = fmtMoney(contribCub)+t('hr.pe.perCover');
+    document.getElementById('pe-r3').textContent = t('hr.pe.coversPerMonth').replace('${n}', cubNec);
+    document.getElementById('pe-r4').textContent = t('hr.pe.coversPerDay').replace('${n}', cubDia);
     document.getElementById('pe-r5').textContent = fmtMoney(ventasMin);
     const diff = cub - cubNec;
-    document.getElementById('pe-r6').textContent = (diff>=0?'+':'')+diff+' cubiertos';
+    document.getElementById('pe-r6').textContent = (diff>=0?'+':'')+diff+t('hr.pe.coversSuffix');
     const estadoEl = document.getElementById('pe-estado');
-    estadoEl.textContent = diff>=0 ? '✅ Por encima del equilibrio' : '⚠️ Por debajo del equilibrio';
+    estadoEl.textContent = diff>=0 ? t('hr.pe.aboveBreakeven') : t('hr.pe.belowBreakeven');
     estadoEl.style.color = diff>=0 ? 'var(--green)' : 'var(--red)';
     peGauge(cub, cubNec);
   }
@@ -545,15 +545,15 @@ const GE = (function(){
     const ok = cub >= cubNec;
     el.innerHTML = `
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between">
-        <span>0</span><span style="color:var(--amber-dark);font-weight:600">Equilibrio: ${cubNec} cub.</span><span>${Math.ceil(max)}</span>
+        <span>0</span><span style="color:var(--amber-dark);font-weight:600">${t('hr.pe.breakevenGauge').replace('${n}', cubNec)}</span><span>${Math.ceil(max)}</span>
       </div>
       <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
         <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
-        <div style="position:absolute;left:${pctNec}%;top:34px;transform:translateX(-50%);font-size:10px;color:var(--amber-dark);font-weight:700;white-space:nowrap">← equilibrio</div>
+        <div style="position:absolute;left:${pctNec}%;top:34px;transform:translateX(-50%);font-size:10px;color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
       </div>
       <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
-        ${ok?'✅ Estás por encima del equilibrio':'⚠️ Estás por debajo del equilibrio'} · ${cub} cubiertos actuales
+        ${ok?t('hr.pe.aboveBreakevenLong'):t('hr.pe.belowBreakevenLong')} · ${t('hr.pe.currentCovers').replace('${n}', cub)}
       </div>`;
   }
 
@@ -584,7 +584,7 @@ const GE = (function(){
         const cuotas = parseInt(c.cuotas)||0;
         const pagadas = Math.min(Math.max(elapsed,0), cuotas);
         const restantes = Math.max(cuotas-pagadas, 0);
-        financInfo = `${fmtMoney(c.cuotaMensual||0)}/mes · ${restantes>0?restantes+' cuotas restantes':'pagado'}`;
+        financInfo = `${fmtMoney(c.cuotaMensual||0)}${t('hr.capex.perMonth')} · ${restantes>0?t('hr.capex.installmentsRemaining').replace('${n}', restantes):t('hr.capex.paidOff')}`;
       }
       return `<tr>
         <td style="text-align:left;font-weight:600">${escapeHtml(c.descripcion)}</td>
@@ -592,7 +592,7 @@ const GE = (function(){
         <td>${fmtMoney(imp)}</td>
         <td>${fmtMoney(ivaAmt)}</td>
         <td>${fmtMoney(tot)}</td>
-        <td><span class="badge" style="background:${cs.bg};color:${cs.tx}">${c.estadoPago}</span></td>
+        <td><span class="badge" style="background:${cs.bg};color:${cs.tx}">${estadoPagoLabel(c.estadoPago)}</span></td>
         <td style="font-size:12px">${financInfo}</td>
         <td style="text-align:left">
           <button class="btn btn-sm btn-icon" onclick="GE.editCapex(${c.id})"><i class="ti ti-edit"></i></button>
@@ -604,14 +604,16 @@ const GE = (function(){
     document.getElementById('capex-iva').textContent = fmtMoney(ivaT);
     document.getElementById('capex-total').textContent = fmtMoney(base+ivaT);
   }
+  const ESTADO_PAGO_KEYS = {PAGADO:'hr.capex.paid', PENDIENTE:'hr.capex.pending', PARCIAL:'hr.capex.partial'};
+  function estadoPagoLabel(code){ return t(ESTADO_PAGO_KEYS[code]||code); }
   function newCapex(){
     editingCX = null;
-    openCapexModal('Nueva inversión', {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
+    openCapexModal(t('hr.capex.newInvestment'), {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
   }
   function editCapex(id){
     const c = capex().find(x=>x.id===id); if(!c) return;
     editingCX = id;
-    openCapexModal('Editar inversión', c);
+    openCapexModal(t('hr.capex.editInvestment'), c);
   }
   function toggleCapexFinanciado(){
     const checked = document.getElementById('cx-f-financiado').checked;
@@ -620,26 +622,26 @@ const GE = (function(){
   function openCapexModal(title, c){
     openModal(`
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <div class="field"><label>Descripción</label><input type="text" id="cx-f-desc" value="${escapeHtml(c.descripcion)}"></div>
+      <div class="field"><label>${t('hr.lbl.description')}</label><input type="text" id="cx-f-desc" value="${escapeHtml(c.descripcion)}"></div>
       <div class="field-row">
-        <div class="field"><label>Importe (€)</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
-        <div class="field"><label>IVA (%)</label><input type="number" id="cx-f-iva" min="0" max="100" value="${c.iva||21}"></div>
+        <div class="field"><label>${t('hr.lbl.amount')}</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
+        <div class="field"><label>${t('common.vat')} (%)</label><input type="number" id="cx-f-iva" min="0" max="100" value="${c.iva||21}"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Fecha</label><input type="date" id="cx-f-fecha" value="${c.fecha||''}"></div>
-        <div class="field"><label>Estado</label>
+        <div class="field"><label>${t('common.date')}</label><input type="date" id="cx-f-fecha" value="${c.fecha||''}"></div>
+        <div class="field"><label>${t('hr.lbl.status')}</label>
           <select id="cx-f-estado">
-            ${['PAGADO','PENDIENTE','PARCIAL'].map(s=>`<option ${c.estadoPago===s?'selected':''}>${s}</option>`).join('')}
+            ${['PAGADO','PENDIENTE','PARCIAL'].map(s=>`<option value="${s}" ${c.estadoPago===s?'selected':''}>${estadoPagoLabel(s)}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="field" style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="cx-f-financiado" style="width:auto" ${c.financiado?'checked':''} onchange="GE.toggleCapexFinanciado()">
-        <label style="margin:0">Inversión pagada a plazos (financiada)</label>
+        <label style="margin:0">${t('hr.capex.financedCheckbox')}</label>
       </div>
       <div class="field-row" id="cx-f-cuotas-row" style="display:${c.financiado?'flex':'none'}">
-        <div class="field"><label>Cuota mensual (€)</label><input type="number" id="cx-f-cuota" min="0" step="0.01" value="${c.cuotaMensual||''}"></div>
-        <div class="field"><label>Nº de cuotas</label><input type="number" id="cx-f-numcuotas" min="1" step="1" value="${c.cuotas||''}"></div>
+        <div class="field"><label>${t('hr.capex.monthlyInstallment')}</label><input type="number" id="cx-f-cuota" min="0" step="0.01" value="${c.cuotaMensual||''}"></div>
+        <div class="field"><label>${t('hr.capex.numInstallments')}</label><input type="number" id="cx-f-numcuotas" min="1" step="1" value="${c.cuotas||''}"></div>
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
@@ -688,7 +690,7 @@ const GE = (function(){
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
 
     const tf = totalFijosNeto();
-    const qLabels = ['T1 (Ene-Mar)','T2 (Abr-Jun)','T3 (Jul-Sep)','T4 (Oct-Dic)','TOTAL AÑO'];
+    const qLabels = [`T1 (${MESES[0]}-${MESES[2]})`, `T2 (${MESES[3]}-${MESES[5]})`, `T3 (${MESES[6]}-${MESES[8]})`, `T4 (${MESES[9]}-${MESES[11]})`, t('hr.lbl.totalYear')];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
     const ivaPct = ivaVentasPct();
@@ -699,20 +701,20 @@ const GE = (function(){
     const resAntesImp = m => resultadoAntesImpMes(m);
 
     const conceptos = [
-      {lbl:'Facturación (TPV, IVA incl.)', fn:m=>facturacionMes(m), bold:true},
-      {lbl:`IVA repercutido (ventas, ${ivaPct}%)`, fn:m=>ivaVentasMes(m), auto:true},
-      {lbl:'Ventas Netas', fn:m=>facturacionNetaMes(m), highlight:true, bold:true},
-      {lbl:'Coste de Ventas (sin IVA)', fn:m=>totalVariablesNetoMes(m)},
-      {lbl:'Margen Bruto', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m), highlight:true, bold:true},
-      {lbl:'Comisiones Apps Delivery', fn:m=>comisionesMes(m), auto:true},
-      {lbl:'Gastos Explotación (sin IVA)', fn:()=>tf},
-      {lbl:'EBITDA Operativo', fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
-      {lbl:'Cuotas inversión financiada', fn:m=>capexCuotaMes(m), auto:true},
-      {lbl:'Resultado Antes Impuestos', fn:resAntesImp, isResult:true, bold:true},
-      {lbl:`Impuesto sobre beneficios (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
-      {lbl:'Resultado Neto', fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
+      {lbl:t('hr.cdr.revenue'), fn:m=>facturacionMes(m), bold:true},
+      {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), fn:m=>ivaVentasMes(m), auto:true},
+      {lbl:t('hr.res.netSales'), fn:m=>facturacionNetaMes(m), highlight:true, bold:true},
+      {lbl:t('hr.res.costOfSales'), fn:m=>totalVariablesNetoMes(m)},
+      {lbl:t('hr.res.grossMargin'), fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m), highlight:true, bold:true},
+      {lbl:t('hr.lbl.deliveryCommissions'), fn:m=>comisionesMes(m), auto:true},
+      {lbl:t('hr.res.operatingExpenses'), fn:()=>tf},
+      {lbl:t('hr.res.operatingEbitda'), fn:m=>facturacionNetaMes(m)-totalVariablesNetoMes(m)-tf-comisionesMes(m), highlight:true, bold:true},
+      {lbl:t('hr.lbl.financedInvestmentInstallments'), fn:m=>capexCuotaMes(m), auto:true},
+      {lbl:t('hr.cdr.resultBeforeTax'), fn:resAntesImp, isResult:true, bold:true},
+      {lbl:`${t('hr.cdr.profitTax')} (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
+      {lbl:t('hr.cdr.netResult'), fn:m=>{ const r=resAntesImp(m); return r>0?r*(1-pctImp):r; }, isResult:true, bold:true},
     ];
-    let html = `<thead><tr><th style="text-align:left">Concepto</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
+    let html = `<thead><tr><th style="text-align:left">${t('hr.lbl.concept')}</th>${qLabels.map(q=>`<th style="background:var(--dark);color:#fff">${q}</th>`).join('')}</tr></thead><tbody>`;
     conceptos.forEach(c=>{
       html += `<tr class="${c.isResult?'total':c.highlight?'highlight':''}"><td>${c.lbl}${c.auto?'<span class="ge-auto">AUTO</span>':''}</td>`;
       qMonths.forEach(months=>{
@@ -755,9 +757,9 @@ const GE = (function(){
     const ivaVentas = facBruta - facNeta;
 
     document.getElementById('te-kpis').innerHTML = `
-      <div class="kpi-mini"><div class="l">Facturación bruta</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">Ventas con IVA</div></div>
-      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">IVA repercutido</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">IVA incluido en ventas</div></div>
-      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">Facturación neta</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">Base para distribuir</div></div>`;
+      <div class="kpi-mini"><div class="l">${t('hr.te.grossRevenue')}</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.salesWithVat')}</div></div>
+      <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${t('hr.te.vatPassedOn')}</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.vatIncludedInSales')}</div></div>
+      <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
 
     const realPer = totalPersonalNeto();
     const realGF = totalGFNeto();
@@ -768,12 +770,12 @@ const GE = (function(){
     const ivaReserva = ivaLiquidar >= 0 ? ivaLiquidar : 0;
 
     const rows = [
-      {lbl:'Personal (sin IVA)', pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
-      {lbl:'Gastos Fijos (sin IVA)', pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
-      {lbl:'Gastos Variables', pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
-      {lbl:'Otros Gastos (CAPEX + comisiones)', pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
-      {lbl:'Beneficio / Ahorro', pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
-      {lbl:'Reserva IVA (modelo 303)', obj:null, real:ivaReserva, color:'var(--amber)', isIva:true},
+      {lbl:t('hr.lbl.personalNoVat'), pct:pctPer, obj:facNeta*pctPer, real:realPer, color:'var(--blue)'},
+      {lbl:t('hr.lbl.fixedNoVat'), pct:pctGF, obj:facNeta*pctGF, real:realGF, color:'var(--purple)'},
+      {lbl:t('hr.lbl.variableExpenses'), pct:pctMP, obj:facNeta*pctMP, real:realMP, color:'var(--red)'},
+      {lbl:t('hr.te.otherExpenses'), pct:pctOG, obj:facNeta*pctOG, real:realOG, color:'var(--amber)'},
+      {lbl:t('hr.te.profitSavings'), pct:pctBen, obj:facNeta*pctBen, real:realBen, color:'var(--teal)', isBen:true},
+      {lbl:t('hr.te.vatReserve'), obj:null, real:ivaReserva, color:'var(--amber)', isIva:true},
     ];
 
     document.getElementById('te-rows').innerHTML = rows.map(r=>{
@@ -783,7 +785,7 @@ const GE = (function(){
           <span></span>
           <span></span>
           <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
-          <span style="text-align:right;font-size:11px;color:var(--muted)">Apartar cada mes</span>
+          <span style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideMonthly')}</span>
           <span style="text-align:center;font-size:16px">💰</span>
         </div>`;
       }
@@ -879,9 +881,9 @@ const GE = (function(){
         if(!map[key]){
           const recipe = line.recipeId ? getRecipe(line.recipeId) : null;
           map[key] = {
-            name: line.name || '(sin nombre)',
+            name: line.name || t('hr.platos.noName'),
             recipeId: line.recipeId || null,
-            category: recipe ? (recipe.category||'Sin categoría') : 'Sin escandallo',
+            category: recipe ? (recipe.category||t('hr.platos.noCategory')) : t('hr.platos.noCosting'),
             unitCost: recipe ? recipeCost(recipe) : null,
             units: 0, revenue: 0
           };
@@ -900,12 +902,12 @@ const GE = (function(){
   }
 
   function renderPlatosPeriodSel(){
-    const periods = [{k:'hoy',l:'Hoy'},{k:'semana',l:'Últimos 7 días'},{k:'mes',l:'Este mes'},{k:'año',l:'Este año'},{k:'todo',l:'Todo'}];
+    const periods = [{k:'hoy',l:t('common.today')},{k:'semana',l:t('hr.platos.last7Days')},{k:'mes',l:t('hr.platos.thisMonth')},{k:'año',l:t('hr.platos.thisYear')},{k:'todo',l:t('hr.platos.allTime')}];
     document.getElementById('platos-period-sel').innerHTML = periods.map(p=>`
       <div class="month-pill${platosPeriod===p.k?' active':''}" onclick="GE.setPlatosPeriod('${p.k}')">${p.l}</div>
     `).join('') + `
       <input type="date" id="platos-from-input" value="${platosFrom}" style="border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px" onchange="GE.setPlatosCustom()">
-      <span style="font-size:12px;color:var(--muted);align-self:center">a</span>
+      <span style="font-size:12px;color:var(--muted);align-self:center">${t('hr.lbl.toDate')}</span>
       <input type="date" id="platos-to-input" value="${platosTo}" style="border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:12px" onchange="GE.setPlatosCustom()">
     `;
   }
@@ -918,9 +920,9 @@ const GE = (function(){
 
   function renderPlatosRankingTable(elId, list, totalIngresos){
     const tbl = document.getElementById(elId);
-    if(!list.length){ tbl.innerHTML = `<tr><td colspan="5"><div class="empty" style="padding:14px">Sin ventas en este periodo.</div></td></tr>`; return; }
+    if(!list.length){ tbl.innerHTML = `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('hr.platos.noSalesPeriod')}</div></td></tr>`; return; }
     tbl.innerHTML = `
-      <thead><tr><th>Plato</th><th style="text-align:left">Categoría</th><th>Uds.</th><th>Ingresos</th><th>% del total</th></tr></thead>
+      <thead><tr><th>${t('hr.platos.dish')}</th><th style="text-align:left">${t('common.category')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.lbl.revenue')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
       <tbody>${list.map(i=>`
         <tr>
           <td>${escapeHtml(i.name)}</td>
@@ -934,9 +936,9 @@ const GE = (function(){
 
   function renderPlatosRentabilidadTable(elId, list){
     const tbl = document.getElementById(elId);
-    if(!list.length){ tbl.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:14px">Vincula los platos vendidos a recetas del Escandallo para ver su rentabilidad.</div></td></tr>`; return; }
+    if(!list.length){ tbl.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('hr.platos.linkRecipesHint')}</div></td></tr>`; return; }
     tbl.innerHTML = `
-      <thead><tr><th>Plato</th><th>Uds.</th><th>Ingresos</th><th>Coste</th><th>Margen</th><th>% Margen</th></tr></thead>
+      <thead><tr><th>${t('hr.platos.dish')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.lbl.revenue')}</th><th>${t('hr.lbl.cost')}</th><th>${t('hr.lbl.margin')}</th><th>${t('hr.platos.pctMargin')}</th></tr></thead>
       <tbody>${list.map(i=>`
         <tr>
           <td>${escapeHtml(i.name)}</td>
@@ -961,18 +963,18 @@ const GE = (function(){
     const ticketMedio = totalUnidades>0 ? totalIngresos/totalUnidades : 0;
 
     document.getElementById('platos-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">Platos vendidos (uds.)</div><div class="val">${fmtNum(totalUnidades,0)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Ingresos totales</div><div class="val">${fmtMoney(totalIngresos)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Margen total</div><div class="val" style="color:${totalMargen>=0?'var(--green)':'var(--red)'}">${conReceta.length?fmtMoney(totalMargen):'—'}</div><div class="sub">${conReceta.length?'Platos con escandallo':'Crea escandallos para ver el margen'}</div></div>
-      <div class="ge-kpi"><div class="lbl">% Margen medio</div><div class="val">${conReceta.length?margenPct.toFixed(1)+'%':'—'}</div></div>
-      <div class="ge-kpi"><div class="lbl">Ticket medio / línea</div><div class="val">${fmtMoney(ticketMedio)}</div></div>
-      <div class="ge-kpi"><div class="lbl">Referencias vendidas</div><div class="val">${items.length}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.dishesSold')}</div><div class="val">${fmtNum(totalUnidades,0)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.totalRevenue')}</div><div class="val">${fmtMoney(totalIngresos)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.totalMargin')}</div><div class="val" style="color:${totalMargen>=0?'var(--green)':'var(--red)'}">${conReceta.length?fmtMoney(totalMargen):'—'}</div><div class="sub">${conReceta.length?t('hr.platos.dishesWithCosting'):t('hr.platos.createCostingHint')}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.avgMarginPct')}</div><div class="val">${conReceta.length?margenPct.toFixed(1)+'%':'—'}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.avgTicketPerLine')}</div><div class="val">${fmtMoney(ticketMedio)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('hr.platos.referencesSold')}</div><div class="val">${items.length}</div></div>
     `;
 
     const top5 = [...items].sort((a,b)=>b.revenue-a.revenue).slice(0,5);
     document.getElementById('platos-chart').innerHTML = top5.length
       ? barChartHTML(top5.map(i=>({lbl: i.name.length>10 ? i.name.slice(0,9)+'…' : i.name, v:i.revenue})))
-      : `<div class="empty">Sin ventas en este periodo.</div>`;
+      : `<div class="empty">${t('hr.platos.noSalesPeriod')}</div>`;
 
     renderPlatosRankingTable('platos-mas-vendidos', [...items].sort((a,b)=>b.units-a.units).slice(0,10), totalIngresos);
     renderPlatosRankingTable('platos-menos-vendidos', [...items].sort((a,b)=>a.units-b.units).slice(0,10), totalIngresos);
@@ -983,34 +985,34 @@ const GE = (function(){
     const sinVentas = DB.recipes.filter(r => !r.isBase && !soldRecipeIds.has(r.id));
     document.getElementById('platos-sin-ventas').innerHTML = sinVentas.length
       ? `<div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">${sinVentas.map(r=>`<span class="badge badge-gray">${escapeHtml(r.name)}</span>`).join('')}</div>`
-      : `<div class="empty" style="padding:12px 16px">Todos los platos del Escandallo se han vendido en este periodo. 🎉</div>`;
+      : `<div class="empty" style="padding:12px 16px">${t('hr.platos.allSoldThisPeriod')} 🎉</div>`;
   }
 
   /* -- EXPORTAR CONTABILIDAD PARA EL GESTOR -- */
   function openExportModal(){
     const now = new Date();
     openModal(`
-      <div class="modal-header"><h3><i class="ti ti-file-export"></i> Exportar contabilidad mensual</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <p style="font-size:13px;color:var(--muted)">Genera un archivo CSV (compatible con Excel) con el libro de ventas, los gastos y el resultado del mes, listo para enviar a tu gestor o asesoría.</p>
+      <div class="modal-header"><h3><i class="ti ti-file-export"></i> ${t('hr.export.title')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="font-size:13px;color:var(--muted)">${t('hr.export.description')}</p>
       <div class="field-row">
         <div class="field">
-          <label>Mes</label>
+          <label>${t('common.month')}</label>
           <select id="exp-mes">${MESES.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('')}</select>
         </div>
         <div class="field">
-          <label>Año</label>
+          <label>${t('common.year')}</label>
           <input type="number" id="exp-anyo" value="${now.getFullYear()}" min="2000" max="2100">
         </div>
       </div>
       <div class="field">
-        <label>Email del gestor / asesoría</label>
+        <label>${t('hr.export.accountantEmail')}</label>
         <input type="email" id="exp-email" value="${escapeHtml((DB.business||{}).gestorEmail||'')}" placeholder="gestoria@ejemplo.com">
-        <small style="color:var(--muted)">Se recordará para próximas exportaciones. Al pulsar "Enviar al gestor" se abrirá tu programa de correo con un mensaje preparado: descarga primero el CSV y adjúntalo antes de enviarlo.</small>
+        <small style="color:var(--muted)">${t('hr.export.emailHint')}</small>
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-        <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> Descargar CSV</button>
-        <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> Enviar al gestor</button>
+        <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> ${t('hr.export.downloadCsv')}</button>
+        <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> ${t('hr.export.sendToAccountant')}</button>
       </div>
     `);
   }
@@ -1023,15 +1025,15 @@ const GE = (function(){
     const ventas = DB.sales.filter(v => (v.date||'').startsWith(mesStr)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
     const rows = [];
-    rows.push(['INFORME CONTABLE MENSUAL - GASTROGOAN']);
-    rows.push(['Negocio', b.name || '']);
-    if(b.cif) rows.push(['CIF/NIF', b.cif]);
-    rows.push(['Periodo', `${MESES[mes]} ${año}`]);
-    rows.push(['Generado el', new Date().toLocaleString('es-ES')]);
+    rows.push([t('hr.csv.reportTitle')]);
+    rows.push([t('hr.csv.business'), b.name || '']);
+    if(b.cif) rows.push([t('hr.csv.taxId'), b.cif]);
+    rows.push([t('hr.csv.period'), `${MESES[mes]} ${año}`]);
+    rows.push([t('hr.csv.generatedOn'), new Date().toLocaleString('es-ES')]);
     rows.push([]);
 
-    rows.push(['LIBRO DE VENTAS']);
-    rows.push(['Fecha','Nº Factura','Tipo','Cliente','Forma de pago','Base imponible (€)','IVA %','Cuota IVA (€)','Total (€)']);
+    rows.push([t('hr.csv.salesLedger')]);
+    rows.push([t('common.date'), t('hr.csv.invoiceNo'), t('hr.lbl.type'), t('hr.csv.client'), t('hr.csv.paymentMethod'), t('hr.csv.taxBase'), t('hr.csv.vatPct'), t('hr.csv.vatAmount'), t('hr.csv.totalEur')]);
     let sumBase=0, sumIva=0, sumTotal=0;
     ventas.forEach(v => {
       const total = parseFloat(v.total||0);
@@ -1040,12 +1042,12 @@ const GE = (function(){
       sumBase += base; sumIva += iva; sumTotal += total;
       rows.push([v.date||'', v.facturaNum||'', v.tipo||'', v.clienteNombre||'', v.metodoPago||'', base, ivaVentas, iva, total]);
     });
-    if(!ventas.length) rows.push(['Sin ventas registradas este mes.']);
-    rows.push(['','','','','TOTAL', sumBase, '', sumIva, sumTotal]);
+    if(!ventas.length) rows.push([t('hr.csv.noSalesThisMonth')]);
+    rows.push(['','','','',t('common.total'), sumBase, '', sumIva, sumTotal]);
     rows.push([]);
 
-    rows.push(['GASTOS FIJOS MENSUALES (recurrentes)']);
-    rows.push(['Concepto','Categoría','Día de pago','Periodicidad','Base (€)','IVA %','IVA (€)','Total (€)']);
+    rows.push([t('hr.csv.monthlyFixedExpenses')]);
+    rows.push([t('hr.lbl.concept'), t('common.category'), t('hr.gf.payDayLabel'), t('hr.gf.payPeriodicity'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     let sumFijos = 0, sumFijosBase = 0, sumFijosIva = 0;
     fijos().forEach(g => {
       const imp = gfMonthlyImporte(g);
@@ -1053,15 +1055,15 @@ const GE = (function(){
       const base = imp / (1 + pct/100);
       const ivaAmt = imp - base;
       sumFijos += imp; sumFijosBase += base; sumFijosIva += ivaAmt;
-      const periodo = (parseInt(g.periodicidadMeses)||1)===1 ? 'Mensual' : `Cada ${g.periodicidadMeses} meses`;
+      const periodo = (parseInt(g.periodicidadMeses)||1)===1 ? t('hr.periodo.monthly') : t('hr.gf.everyMonths').replace('${n}', g.periodicidadMeses);
       rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, base, pct, ivaAmt, imp]);
     });
-    if(!fijos().length) rows.push(['Sin gastos fijos registrados.']);
-    rows.push(['','','','TOTAL', sumFijosBase, '', sumFijosIva, sumFijos]);
+    if(!fijos().length) rows.push([t('hr.csv.noFixedExpenses')]);
+    rows.push(['','','',t('common.total'), sumFijosBase, '', sumFijosIva, sumFijos]);
     rows.push([]);
 
-    rows.push(['GASTOS VARIABLES DEL MES']);
-    rows.push(['Fecha','Categoría','Proveedor','Base (€)','IVA %','IVA (€)','Total (€)']);
+    rows.push([t('hr.csv.variableExpensesMonth')]);
+    rows.push([t('common.date'), t('common.category'), t('common.supplier'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     let sumVar = 0, sumVarBase = 0, sumVarIva = 0;
     const variablesDelMes = variablesMes(mes, año).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
     variablesDelMes.forEach(v => {
@@ -1072,13 +1074,13 @@ const GE = (function(){
       sumVar += imp; sumVarBase += base; sumVarIva += ivaAmt;
       rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', base, pct, ivaAmt, imp]);
     });
-    if(!variablesDelMes.length) rows.push(['Sin gastos variables registrados este mes.']);
-    rows.push(['','','TOTAL', sumVarBase, '', sumVarIva, sumVar]);
+    if(!variablesDelMes.length) rows.push([t('hr.csv.noVariableExpenses')]);
+    rows.push(['','',t('common.total'), sumVarBase, '', sumVarIva, sumVar]);
     rows.push([]);
 
     const capexMes = capex().filter(c => (c.fecha||'').startsWith(mesStr));
-    rows.push(['INVERSIONES (CAPEX) DEL MES']);
-    rows.push(['Descripción','Fecha','Base (€)','IVA %','Cuota IVA (€)','Total (€)','Estado de pago']);
+    rows.push([t('hr.csv.capexMonth')]);
+    rows.push([t('hr.lbl.description'), t('common.date'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatAmount'), t('hr.csv.totalEur'), t('hr.lbl.status')]);
     let sumCapexBase=0, sumCapexIva=0, sumCapexTotal=0;
     capexMes.forEach(c => {
       const imp = parseFloat(c.importe||0);
@@ -1086,27 +1088,27 @@ const GE = (function(){
       const ivaAmt = imp * ivaPct/100;
       const total = imp + ivaAmt;
       sumCapexBase += imp; sumCapexIva += ivaAmt; sumCapexTotal += total;
-      rows.push([c.descripcion||'', c.fecha||'', imp, ivaPct, ivaAmt, total, c.estadoPago||'']);
+      rows.push([c.descripcion||'', c.fecha||'', imp, ivaPct, ivaAmt, total, c.estadoPago?estadoPagoLabel(c.estadoPago):'']);
     });
-    if(!capexMes.length) rows.push(['Sin inversiones registradas este mes.']);
-    rows.push(['','','TOTAL', sumCapexBase, '', sumCapexIva, sumCapexTotal, '']);
+    if(!capexMes.length) rows.push([t('hr.csv.noInvestments')]);
+    rows.push(['','',t('common.total'), sumCapexBase, '', sumCapexIva, sumCapexTotal, '']);
     rows.push([]);
 
     const comisiones = comisionesMes(mes);
     const resultado = sumBase - sumVarBase - sumFijosBase - comisiones - capexCuotaMes(mes);
     const totalIvaSoportado = sumVarIva + sumFijosIva + sumCapexIva;
-    rows.push(['RESUMEN DEL MES']);
-    rows.push(['Concepto','Importe (€)']);
-    rows.push(['Total facturación (con IVA)', sumTotal]);
-    rows.push(['Base imponible ventas', sumBase]);
-    rows.push(['IVA repercutido (ventas)', sumIva]);
-    rows.push(['Comisiones plataformas de delivery', comisiones]);
-    rows.push(['Gastos variables (base sin IVA)', sumVarBase]);
-    rows.push(['Gastos fijos (base sin IVA)', sumFijosBase]);
-    rows.push(['Inversiones CAPEX (base)', sumCapexBase]);
-    rows.push(['Total IVA soportado (variables + fijos + CAPEX)', totalIvaSoportado]);
-    rows.push(['IVA a liquidar (repercutido - soportado)', sumIva - totalIvaSoportado]);
-    rows.push(['Resultado del mes (antes de impuestos)', resultado]);
+    rows.push([t('hr.csv.monthSummary')]);
+    rows.push([t('hr.lbl.concept'), t('hr.lbl.amountEur')]);
+    rows.push([t('hr.csv.totalRevenueWithVat'), sumTotal]);
+    rows.push([t('hr.csv.salesTaxBase'), sumBase]);
+    rows.push([t('hr.csv.vatOnSalesLabel'), sumIva]);
+    rows.push([t('hr.lbl.deliveryCommissions'), comisiones]);
+    rows.push([t('hr.csv.variableExpensesBase'), sumVarBase]);
+    rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBase]);
+    rows.push([t('hr.csv.capexBase'), sumCapexBase]);
+    rows.push([t('hr.csv.totalVatSupported'), totalIvaSoportado]);
+    rows.push([t('hr.csv.vatToSettleShort'), sumIva - totalIvaSoportado]);
+    rows.push([t('hr.csv.monthResult'), resultado]);
 
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado};
@@ -1133,23 +1135,24 @@ const GE = (function(){
 
     const report = buildMonthReport(mes, año);
     const fmt = n => (Math.round(n*100)/100).toFixed(2).replace('.', ',') + ' €';
-    const subject = `Contabilidad ${MESES[mes]} ${año} - ${b.name||'GastroGoan'}`;
+    const subject = t('hr.email.subject').replace('${month}', MESES[mes]).replace('${year}', año).replace('${business}', b.name||'GastroGoan');
+    const csvName = `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`;
     const body = [
-      `Hola,`,
+      t('hr.email.greeting'),
       ``,
-      `Adjunto el informe contable de ${MESES[mes]} ${año} de ${b.name||'el negocio'}.`,
+      t('hr.email.intro').replace('${month}', MESES[mes]).replace('${year}', año).replace('${business}', b.name||t('hr.email.theBusiness')),
       ``,
-      `Resumen del mes:`,
-      `- Total facturación (con IVA): ${fmt(report.sumTotal)}`,
-      `- Base imponible ventas: ${fmt(report.sumBase)}`,
-      `- IVA repercutido: ${fmt(report.sumIva)}`,
-      `- Gastos fijos: ${fmt(report.sumFijos)}`,
-      `- Gastos variables: ${fmt(report.sumVar)}`,
-      `- Resultado del mes: ${fmt(report.resultado)}`,
+      t('hr.email.summaryTitle'),
+      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumTotal)}`,
+      `- ${t('hr.csv.salesTaxBase')}: ${fmt(report.sumBase)}`,
+      `- ${t('hr.te.vatPassedOn')}: ${fmt(report.sumIva)}`,
+      `- ${t('hr.lbl.fixedExpenses')}: ${fmt(report.sumFijos)}`,
+      `- ${t('hr.lbl.variableExpenses')}: ${fmt(report.sumVar)}`,
+      `- ${t('hr.csv.monthResult')}: ${fmt(report.resultado)}`,
       ``,
-      `Recuerda adjuntar el archivo CSV descargado (contabilidad-${report.nombreNegocio}-${report.mesStr}.csv) antes de enviar este correo.`,
+      t('hr.email.attachReminder').replace('${filename}', csvName),
       ``,
-      `Un saludo.`
+      t('hr.email.signoff')
     ].join('\n');
 
     downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
