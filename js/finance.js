@@ -85,9 +85,9 @@ function renderDashboard(){
   const monthSales = salesTotalForRange(monthStart, todayDate);
 
   document.getElementById('dashboard-period-kpis').innerHTML = `
-    <div class="kpi ok"><div class="label"><i class="ti ti-cash"></i> Ventas hoy</div><div class="value">${fmtMoney(todaySales)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> Ventas últimos 7 días</div><div class="value">${fmtMoney(weekSales)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Ventas mes en curso</div><div class="value">${fmtMoney(monthSales)}</div></div>
+    <div class="kpi ok"><div class="label"><i class="ti ti-cash"></i> ${t('label.salesToday')}</div><div class="value">${fmtMoney(todaySales)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.salesLast7Days')}</div><div class="value">${fmtMoney(weekSales)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> ${t('dash.salesCurrentMonth')}</div><div class="value">${fmtMoney(monthSales)}</div></div>
   `;
 
   // Resultado del mes (P&L)
@@ -123,9 +123,9 @@ function renderDashboard(){
   const monthGastos = geGastosTotalForRange(monthStart, todayDate);
 
   document.getElementById('dashboard-gastos-kpis').innerHTML = `
-    <div class="kpi"><div class="label"><i class="ti ti-receipt-2"></i> Gastos hoy</div><div class="value">${fmtMoney(todayGastos)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> Gastos últimos 7 días</div><div class="value">${fmtMoney(weekGastos)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> Gastos mes en curso</div><div class="value">${fmtMoney(monthGastos)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-receipt-2"></i> ${t('dash.expensesToday')}</div><div class="value">${fmtMoney(todayGastos)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.expensesLast7Days')}</div><div class="value">${fmtMoney(weekGastos)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> ${t('dash.expensesCurrentMonth')}</div><div class="value">${fmtMoney(monthGastos)}</div></div>
   `;
 
   // Resultado del mes (P&L)
@@ -133,14 +133,14 @@ function renderDashboard(){
   const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
-      <div class="kpi"><div class="label">Facturación (mes)</div><div class="value">${fmtMoney(facturacion)}</div></div>
-      <div class="kpi"><div class="label">Gastos variables (sin IVA)</div><div class="value">${fmtMoney(variables)}</div></div>
-      <div class="kpi"><div class="label">Gastos fijos (sin IVA)</div><div class="value">${fmtMoney(fijos)}</div></div>
-      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">Resultado</div><div class="value">${fmtMoney(resultado)}</div></div>
+      <div class="kpi"><div class="label">${t('dash.revenueMonth')}</div><div class="value">${fmtMoney(facturacion)}</div></div>
+      <div class="kpi"><div class="label">${t('hr.lbl.variableExpensesNoVat')}</div><div class="value">${fmtMoney(variables)}</div></div>
+      <div class="kpi"><div class="label">${t('hr.lbl.fixedNoVat')}</div><div class="value">${fmtMoney(fijos)}</div></div>
+      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">${t('dash.result')}</div><div class="value">${fmtMoney(resultado)}</div></div>
     </div>
     <div style="margin-top:8px;font-size:13px;color:var(--muted)">
-      Margen sobre ventas: <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
-      &nbsp;·&nbsp; % Food Cost medio: <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> (objetivo ${DB.ge.config.foodCostObj||35}%)
+      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
+      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
     </div>
   `;
 
@@ -192,25 +192,25 @@ function renderDashboard(){
 
   document.getElementById('dashboard-sales-analysis').innerHTML = `
     <div class="grid grid-3" style="margin-bottom:14px">
-      <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> Ticket medio</div><div class="value">${fmtMoney(avgTicket)}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> Nº ventas</div><div class="value">${salesLast30.length}</div></div>
-      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> Total periodo</div><div class="value">${fmtMoney(totalLast30)}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-receipt"></i> ${t('dash.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-shopping-cart"></i> ${t('dash.numSales')}</div><div class="value">${salesLast30.length}</div></div>
+      <div class="kpi"><div class="label"><i class="ti ti-cash"></i> ${t('dash.periodTotal')}</div><div class="value">${fmtMoney(totalLast30)}</div></div>
     </div>
     <div class="grid grid-3">
       <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Platos más vendidos</h4>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topSellingDishes')}</h4>
         ${topProducts.length ? `<div class="table-wrap"><table><tbody>
           ${topProducts.map(([name,total]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
-        </tbody></table></div>` : `<div class="empty">Sin ventas registradas</div>`}
+        </tbody></table></div>` : `<div class="empty">${t('dash.noSalesRegistered')}</div>`}
       </div>
       <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Mayor margen bruto</h4>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topGrossMargin')}</h4>
         ${topMargins.length ? `<div class="table-wrap"><table><tbody>
           ${topMargins.map(([name,v]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
-        </tbody></table></div>` : `<div class="empty">Sin datos de coste suficientes</div>`}
+        </tbody></table></div>` : `<div class="empty">${t('dash.noCostDataEnough')}</div>`}
       </div>
       <div>
-        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">Ventas por hora del día</h4>
+        <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.salesByHour')}</h4>
         <div style="display:flex;align-items:flex-end;gap:2px;height:120px">
           ${hourTotals.map((v,h) => `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
@@ -231,7 +231,7 @@ function renderDashboard(){
   const fc = parseFloat(cfg.foodCostObj) || 35;
   let breakevenHtml;
   if(!tick || !dias){
-    breakevenHtml = `<div class="empty">Configura el ticket medio y los días de apertura en Gestión Económica → Punto de Equilibrio.</div>`;
+    breakevenHtml = `<div class="empty">${t('dash.configureBreakeven')}</div>`;
   }else{
     const cvCub = tick * (fc/100);
     const contribCub = tick - cvCub;
@@ -240,14 +240,14 @@ function renderDashboard(){
       const diff = cub - cubNec;
       breakevenHtml = `
         <div class="grid grid-3">
-          <div class="kpi"><div class="label">Cubiertos necesarios/mes</div><div class="value">${cubNec}</div></div>
-          <div class="kpi"><div class="label">Cubiertos actuales/mes</div><div class="value">${cub}</div></div>
-          <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">Diferencia</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
+          <div class="kpi"><div class="label">${t('dash.coversNeededMonth')}</div><div class="value">${cubNec}</div></div>
+          <div class="kpi"><div class="label">${t('dash.coversCurrentMonth')}</div><div class="value">${cub}</div></div>
+          <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">${t('dash.difference')}</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
         </div>
-        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'✅ Por encima del punto de equilibrio':'⚠️ Por debajo del punto de equilibrio'}</div>
+        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?t('hr.pe.aboveBreakeven'):t('hr.pe.belowBreakeven')}</div>
       `;
     }else{
-      breakevenHtml = `<div class="empty">No se puede calcular: revisa el % food cost.</div>`;
+      breakevenHtml = `<div class="empty">${t('dash.cantCalculateFoodCost')}</div>`;
     }
   }
   document.getElementById('dashboard-breakeven').innerHTML = breakevenHtml;
@@ -274,7 +274,7 @@ function populateProviderFilter(){
   DB.ingredients.filter(i => (i.area||'cocina') === currentArea())
     .forEach(i => { if(i.supplier) names.add(i.supplier); });
   const sorted = [...names].sort((a,b)=>a.localeCompare(b));
-  sel.innerHTML = '<option value="">Todos los proveedores</option>' +
+  sel.innerHTML = `<option value="">${t('megalista.allProviders')}</option>` +
     sorted.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
   sel.value = current;
 }
@@ -284,12 +284,12 @@ function populateProviderFilter(){
 let megalistaSortKey = 'name';
 let megalistaSortDir = 1;
 const MEGALISTA_COLUMNS = [
-  {key:'name', label:'Ingrediente'},
-  {key:'category', label:'Categoría'},
-  {key:'supplier', label:'Proveedor'},
-  {key:'unit', label:'Unidad'},
-  {key:'price', label:'Compra'},
-  {key:null, label:'Alérgenos'},
+  {key:'name', label:t('megalista.colIngredient')},
+  {key:'category', label:t('common.category')},
+  {key:'supplier', label:t('common.supplier')},
+  {key:'unit', label:t('common.unit')},
+  {key:'price', label:t('megalista.colPurchase')},
+  {key:null, label:t('label.allergens')},
   {key:null, label:''}
 ];
 function setMegalistaSort(key){
@@ -440,7 +440,7 @@ function openIngredientModal(id, overrideState){
     </div>
     <div class="field-row">
       <div class="field">
-        <label id="ing-pack-qty-label">Cantidad por compra (en ${escapeHtml(ing.unit)}${ingPackQtyHint(ing.unit)})</label>
+        <label id="ing-pack-qty-label">${t('megalista.purchaseQtyLabel').replace('${unit}', escapeHtml(ing.unit)).replace('${hint}', ingPackQtyHint(ing.unit))}</label>
         <input type="number" id="ing-pack-qty" value="${ing.packQty!=null?ing.packQty:1000}" step="0.01" min="0.01" oninput="updateIngPackPrice()">
       </div>
       <div class="field">
@@ -449,7 +449,7 @@ function openIngredientModal(id, overrideState){
       </div>
     </div>
     <div class="field">
-      <label>Alérgenos</label>
+      <label>${t('label.allergens')}</label>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px">
         ${allergenChecks}
       </div>
@@ -464,14 +464,14 @@ function openIngredientModal(id, overrideState){
 // Ejemplo aclaratorio para la cantidad por compra, según la unidad elegida
 // (kg/L a partir de la unidad "pequeña" — g/ml —, cl como fracción de litro).
 function ingPackQtyHint(unit){
-  if(unit === 'g') return ', ej. 1000 = 1 kg';
-  if(unit === 'ml') return ', ej. 1000 = 1 L';
-  if(unit === 'cl') return ', ej. 100 = 1 L';
+  if(unit === 'g') return t('megalista.hintKg');
+  if(unit === 'ml') return t('megalista.hintL');
+  if(unit === 'cl') return t('megalista.hintCl');
   return '';
 }
 function updateIngPackPrice(){
   const unit = document.getElementById('ing-unit').value;
-  document.getElementById('ing-pack-qty-label').textContent = `Cantidad por compra (en ${unit}${ingPackQtyHint(unit)})`;
+  document.getElementById('ing-pack-qty-label').textContent = t('megalista.purchaseQtyLabel').replace('${unit}', unit).replace('${hint}', ingPackQtyHint(unit));
 }
 
 let ingredientFormStateBeforeCategory = null;
@@ -636,7 +636,7 @@ function renderStock(){
     const matchSearch = !search || ing.name.toLowerCase().includes(search);
     const matchAlert = !onlyAlerts || s.qty <= s.min;
     return matchArea && matchSearch && matchAlert;
-  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || 'Otros', ...getStockEntry(ing.id)}));
+  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}));
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
@@ -880,7 +880,7 @@ function openStockLogModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('label.stockQty')} antes</th><th>${t('label.stockQty')} después</th><th>Cambio</th></tr></thead>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('megalista.qtyBefore')}</th><th>${t('megalista.qtyAfter')}</th><th>${t('megalista.change')}</th></tr></thead>
         <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.name)}</td><td>${fmtNum(e.before)}</td><td>${fmtNum(e.after)}</td><td style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td></tr>`).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
       </table>
     </div>
@@ -896,14 +896,14 @@ function openStockLogModal(){
 function printStockCountSheet(){
   const area = currentArea();
   const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area)
-    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category||'Otros', qty: getStockEntry(ing.id).qty}))
+    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category||t('label.noCategory'), qty: getStockEntry(ing.id).qty}))
     .sort((a,b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
   const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
     .map(e => ({name: e.name, unit: e.unit, category: t('label.elaborations'), qty: e.qty||0}))
     .sort((a,b) => a.name.localeCompare(b.name));
   const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td>${fmtNum(x.qty)}</td><td></td></tr>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!win){ showToast(t('megalista.popupBlocked')); return; }
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printStockSheet')}</title>
   <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:15mm 12mm}
   h1{font-size:16pt;margin:0 0 12px}
@@ -912,7 +912,7 @@ function printStockCountSheet(){
   th{background:#f5f5f3}
   @media print{body{padding:10mm}}</style></head><body>
   <h1>${t('btn.printStockSheet')} — ${new Date().toLocaleDateString('es-ES')}</h1>
-  <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>Estimado</th><th>Real</th></tr></thead>
+  <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>${t('megalista.estimated')}</th><th>${t('megalista.real')}</th></tr></thead>
   <tbody>${rows || `<tr><td colspan="5">${t('common.noResults')}</td></tr>`}</tbody></table>
   </body></html>`);
   win.document.close();
