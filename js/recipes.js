@@ -767,12 +767,32 @@ function confirmDeleteRecipe(id){
 /* ============================================================
    FICHAS TÉCNICAS — Elaboración estándar y alérgenos
    ============================================================ */
-const ALLERGEN_LIST = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
+const ALLERGEN_LIST = ALLERGENS;
 const FICHA_TEMPS = ['CALIENTE','FRÍO','AMBIENTE'];
 
 let fichaModalState = null;
 
 function getFicha(id){ return DB.fichas.find(f => f.id === id); }
+
+// La receta vinculada (si sigue existiendo) para leer siempre sus datos actuales
+// (comensales, alérgenos) en vez de una foto fija tomada al vincular la ficha.
+function getFichaLiveRecipe(f){ return f.recipeId ? getRecipe(f.recipeId) : null; }
+
+// Comensales/raciones "base" de la ficha: si hay receta vinculada se usa siempre
+// su valor actual (evita que el factor de escalado quede desfasado si luego se
+// edita el escandallo), si no la última base guardada en la propia ficha.
+function getFichaBaseComensales(f){
+  const r = getFichaLiveRecipe(f);
+  return (r && r.comensales) ? r.comensales : (f.baseComensales || f.comensales || 1);
+}
+
+// Alérgenos a mostrar/imprimir: unión de los que vienen automáticamente del
+// escandallo vinculado (siempre al día) más los añadidos manualmente en la
+// propia ficha (para casos sin escandallo o alérgenos por manipulación).
+function getFichaAllergens(f){
+  const r = getFichaLiveRecipe(f);
+  return Array.from(new Set([...(r?r.allergens||[]:[]), ...(f.allergens||[])]));
+}
 
 let fichasView = 'grid'; // 'grid' | 'list'
 let fichasTab = 'platos'; // 'platos' | 'elaboraciones'
@@ -866,6 +886,7 @@ function renderFichas(){
         <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(f.name)}</span></div>
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -874,6 +895,7 @@ function renderFichas(){
         <h3 style="justify-content:space-between"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
           <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${f.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       </div>
@@ -892,6 +914,7 @@ function renderFichaRow(r){
       ${ficha ? `
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i></button>
+          <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i></button>
         </div>
       ` : ''}
@@ -910,6 +933,7 @@ function renderFichaCard(r){
       ${ficha ? `
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+          <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${ficha.id})"><i class="ti ti-copy"></i></button>
           <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();deleteFicha(${ficha.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       ` : `<div style="font-size:12px;color:var(--muted)">${t('title.newTechSheet')}</div>`}
@@ -952,7 +976,7 @@ function openFichaModal(id, recipeId){
         return ing ? `${fmtNum(line.qty)} ${ing.unit} — ${ing.name}` : '';
       }).filter(Boolean),
       pasos: r.steps ? r.steps.split('\n').filter(Boolean) : [''],
-      allergens: [...(r.allergens||[])],
+      allergens: [],
       presentation: r.presentation || ''
     };
     if(!fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
@@ -965,7 +989,7 @@ function openFichaModal(id, recipeId){
 
 function updateFichaProduccion(value){
   syncFichaModalFields();
-  fichaModalState.produccion = Math.max(1, parseFloat(value)||1);
+  fichaModalState.produccion = Math.min(100000, Math.max(1, parseFloat(value)||1));
   if(fichaModalState.id){
     const ficha = getFicha(fichaModalState.id);
     if(ficha){ ficha.produccion = fichaModalState.produccion; saveDB(); }
@@ -979,21 +1003,30 @@ function renderFichaModal(){
   const isSala = fArea === 'sala';
   const ro = !editUnlocked;
   const roAttr = ro ? 'disabled' : '';
-  // Los datos que vienen del escandallo (nombre, vinculación, comensales e ingredientes)
-  // siempre quedan bloqueados: la ficha técnica solo aporta información de elaboración.
-  const lockedAttr = 'disabled';
+  // Cuando la ficha está vinculada a un escandallo, el nombre/comensales vienen de
+  // ahí y quedan bloqueados; una ficha sin vincular permite editarlos a mano.
+  const lockedAttr = (ro || f.recipeId) ? 'disabled' : '';
 
   const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
-    `<option value="${r.id}"${r.id===f.recipeId?' selected':''}>${escapeHtml(r.name)}</option>`
+    `<option value="${r.id}"${r.id===f.recipeId?' selected':''}${(r.id!==f.recipeId && DB.fichas.some(other=>other.id!==f.id && other.recipeId===r.id))?' disabled':''}>${escapeHtml(r.name)}</option>`
   ).join('');
 
-  const baseComensales = f.baseComensales || f.comensales || 1;
+  const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;
   const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
-  const ingredientLines = getFichaIngredientLines(f);
-  const ingredientsHtml = ingredientLines.map(l => `
+  const ingredientsHtml = f.recipeId ? getFichaIngredientLines(f).map(l => `
     <div class="ingredient-pill">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</div>
-  `).join('');
+  `).join('') : `
+    <div style="width:100%">
+      ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).map((ing, idx) => `
+        <div class="step-row" style="margin-bottom:6px">
+          <input type="text" value="${escapeHtml(ing)}" placeholder="Ej. 50 ml — Ron blanco" style="flex:1" oninput="updateFichaIngredientText(${idx}, this.value)" ${roAttr}>
+          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredientText(${idx})" ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+        </div>
+      `).join('')}
+      <button class="owner-only btn btn-sm" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
+    </div>
+  `;
 
   const stepsHtml = f.pasos.map((p, idx) => `
     <div class="step-row">
@@ -1003,9 +1036,13 @@ function renderFichaModal(){
     </div>
   `).join('');
 
-  const allergenHtml = ALLERGEN_LIST.map(a => `
-    <div class="alg-pill${(f.allergens||[]).includes(a)?' on':''}" ${ro?'':`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`} style="${ro?'cursor:default':''}">${a}</div>
-  `).join('');
+  const liveRecipeAllergens = (getFichaLiveRecipe(f)||{}).allergens || [];
+  const allergenHtml = ALLERGEN_LIST.map(a => {
+    const fromRecipe = liveRecipeAllergens.includes(a);
+    const on = fromRecipe || (f.allergens||[]).includes(a);
+    const clickable = !ro && !fromRecipe;
+    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?'Detectado automáticamente desde el escandallo':''}">${a}</div>`;
+  }).join('');
 
   openModal(`
     <div class="modal-header">
@@ -1019,7 +1056,7 @@ function renderFichaModal(){
       </div>
       <div class="field">
         <label>${t('label.linkToCosting')}</label>
-        <select id="ficha-recipe" ${lockedAttr}>${recipeOptions}</select>
+        <select id="ficha-recipe" onchange="onFichaRecipeChange(this.value)" ${roAttr}>${recipeOptions}</select>
       </div>
     </div>
     <div class="field-row">
@@ -1029,7 +1066,7 @@ function renderFichaModal(){
       </div>
       <div class="field">
         <label>${t('label.production')}</label>
-        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" onchange="updateFichaProduccion(this.value)">
+        <input type="number" id="ficha-produccion" value="${produccion}" step="1" min="1" max="100000" onchange="updateFichaProduccion(this.value)">
       </div>
       <div class="field">
         <label>${t('label.prepTime')}</label>
@@ -1097,6 +1134,40 @@ function syncFichaModalFields(){
 }
 
 
+function onFichaRecipeChange(value){
+  syncFichaModalFields();
+  const f = fichaModalState;
+  const recipeId = value ? parseInt(value) : '';
+  if(recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === recipeId)){
+    showToast('Esa receta ya tiene una ficha técnica vinculada');
+    renderFichaModal();
+    return;
+  }
+  f.recipeId = recipeId;
+  if(recipeId){
+    const r = getRecipe(recipeId);
+    if(r){
+      f.name = r.name;
+      f.comensales = r.comensales || 2;
+      f.baseComensales = r.comensales || 1;
+      f.produccion = r.comensales || 1;
+      if(!(f.pasos||[]).filter(Boolean).length) f.pasos = r.steps ? r.steps.split('\n').filter(Boolean) : [''];
+      if(!f.pasos.length) f.pasos = [''];
+      if(!f.presentation) f.presentation = r.presentation || '';
+    }
+  }
+  renderFichaModal();
+}
+
+function updateFichaIngredientText(idx, value){ fichaModalState.ingredients[idx] = value; }
+function addFichaIngredientText(){ syncFichaModalFields(); fichaModalState.ingredients.push(''); renderFichaModal(); }
+function removeFichaIngredientText(idx){
+  if(fichaModalState.ingredients.length<=1) return;
+  syncFichaModalFields();
+  fichaModalState.ingredients.splice(idx,1);
+  renderFichaModal();
+}
+
 function updateFichaStep(idx, value){ fichaModalState.pasos[idx] = value; }
 function addFichaStep(){ syncFichaModalFields(); fichaModalState.pasos.push(''); renderFichaModal(); }
 function removeFichaStep(idx){
@@ -1109,6 +1180,7 @@ function removeFichaStep(idx){
 function handleFichaPhotoUpload(input){
   const file = input.files[0];
   if(!file) return;
+  if(!file.type || !file.type.startsWith('image/')){ showToast('Selecciona un archivo de imagen válido'); return; }
   if(file.size > 2 * 1024 * 1024){ showToast(t('msg.photoTooLarge')); return; }
   syncFichaModalFields();
   const reader = new FileReader();
@@ -1136,6 +1208,10 @@ function saveFicha(){
   const f = fichaModalState;
   const name = (f.name||'').trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
+  if(f.recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === f.recipeId)){
+    showToast('Esa receta ya tiene una ficha técnica vinculada');
+    return;
+  }
   const data = {
     name,
     recipeId: f.recipeId || '',
@@ -1171,13 +1247,28 @@ function deleteFicha(id){
   showToast(t('msg.techSheetDeleted'));
 }
 
+// Duplica una ficha como plantilla suelta (sin vincular, para no chocar con la
+// protección de una sola ficha por escandallo); útil para variantes similares.
+function duplicateFicha(id){
+  const f = getFicha(id);
+  if(!f) return;
+  const copy = JSON.parse(JSON.stringify(f));
+  copy.id = genId();
+  copy.name = f.name + ' (copia)';
+  copy.recipeId = '';
+  DB.fichas.push(copy);
+  saveDB();
+  renderFichas();
+  showToast(t('msg.techSheetSaved'));
+}
+
 function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
-  const algs = (f.allergens||[]).length
-    ? f.allergens.map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
+  const algs = getFichaAllergens(f).length
+    ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
     : 'Ninguno';
-  const baseComensales = f.baseComensales || f.comensales || 1;
+  const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;
   const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
   const ingredientLines = getFichaIngredientLines(f);
