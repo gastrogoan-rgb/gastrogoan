@@ -335,7 +335,7 @@ function openProviderModal(id){
       <h3>${id?t('title.editSupplier'):t('title.newSupplier')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="field"><label>${t('common.name')}</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="Ej. Makro"></div>
+    <div class="field"><label>${t('common.name')}</label><input type="text" id="prov-nombre" value="${escapeHtml(p.nombre)}" placeholder="${t('ph.egSupplierName')}"></div>
     <div class="field-row">
       <div class="field"><label>${t('label.contactPerson')}</label><input type="text" id="prov-contacto" value="${escapeHtml(p.contacto)}"></div>
       <div class="field"><label>${t('label.paymentMethod')}</label>
@@ -345,7 +345,7 @@ function openProviderModal(id){
       </div>
     </div>
     <div class="field-row">
-      <div class="field"><label>${t('common.phone')}</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="Ej. 600123456"></div>
+      <div class="field"><label>${t('common.phone')}</label><input type="text" id="prov-tel" value="${escapeHtml(p.tel)}" placeholder="${t('ph.egPhone')}"></div>
       <div class="field"><label>${t('common.email')}</label><input type="email" id="prov-email" value="${escapeHtml(p.email)}"></div>
     </div>
     <div class="field">
@@ -423,11 +423,15 @@ function getProviderByName(name){
    ============================================================ */
 const PEDIDO_ESTADOS = ['BORRADOR','ENVIADO','RECIBIDO'];
 const PEDIDO_BADGE = {BORRADOR:'badge-gray', ENVIADO:'badge-amber', RECIBIDO:'badge-green'};
-const PEDIDO_COMPROBACION = {
-  ok:    {label:'<i class="ti ti-check"></i> Todo correcto', cls:'badge-green'},
-  falta: {label:'<i class="ti ti-alert-triangle"></i> Ha faltado algo', cls:'badge-amber'},
-  mal:   {label:'<i class="ti ti-x"></i> Algo en mal estado', cls:'badge-red'},
-};
+// Función (no constante estática) para que las etiquetas se traduzcan siempre
+// en el idioma activo en el momento de pintar, no en el de cargar el script.
+function getPedidoComprobacionMap(){
+  return {
+    ok:    {label:`<i class="ti ti-check"></i> ${t('label.orderCheckOk')}`, cls:'badge-green'},
+    falta: {label:`<i class="ti ti-alert-triangle"></i> ${t('label.orderCheckMissing')}`, cls:'badge-amber'},
+    mal:   {label:`<i class="ti ti-x"></i> ${t('label.orderCheckBad')}`, cls:'badge-red'},
+  };
+}
 let pedidoDetailId = null;
 
 function getPurchaseOrder(id){ return DB.purchaseOrders.find(o => o.id === id); }
@@ -483,15 +487,15 @@ function renderPedidoList(){
 
   const kpiHtml = `
     <div class="grid grid-4" style="margin-bottom:14px">
-      <div class="kpi"><div class="label">Borradores</div><div class="value">${counts.BORRADOR}</div></div>
-      <div class="kpi warn"><div class="label">Enviados</div><div class="value">${counts.ENVIADO}</div></div>
-      <div class="kpi ok"><div class="label">Recibidos</div><div class="value">${counts.RECIBIDO}</div></div>
-      <div class="kpi"><div class="label">Total</div><div class="value">${allOrders.length}</div></div>
+      <div class="kpi"><div class="label">${t('label.drafts')}</div><div class="value">${counts.BORRADOR}</div></div>
+      <div class="kpi warn"><div class="label">${t('label.sentOrders')}</div><div class="value">${counts.ENVIADO}</div></div>
+      <div class="kpi ok"><div class="label">${t('label.receivedOrders')}</div><div class="value">${counts.RECIBIDO}</div></div>
+      <div class="kpi"><div class="label">${t('common.total')}</div><div class="value">${allOrders.length}</div></div>
     </div>
   `;
 
   if(!allOrders.length){
-    box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>No hay pedidos. Crea uno nuevo.</div>`;
+    box.innerHTML = kpiHtml + `<div class="empty"><i class="ti ti-shopping-cart"></i>${t('empty.noOrders')}</div>`;
     return;
   }
 
@@ -529,16 +533,16 @@ function renderPedidoList(){
   box.innerHTML = kpiHtml + filterHtml + sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
-    const comp = PEDIDO_COMPROBACION[o.comprobacion];
+    const comp = getPedidoComprobacionMap()[o.comprobacion];
     return `
       <div class="card" style="cursor:pointer;position:relative" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between">
           <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
           <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
         </h3>
-        <div style="color:var(--muted);font-size:13px">${itemCount} producto${itemCount!==1?'s':''} · ${withQty} con cantidad</div>
+        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')}</div>
         ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
-        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="Eliminar pedido"><i class="ti ti-trash"></i></button>` : ''}
+        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
       </div>
     `;
   }).join('');
@@ -589,7 +593,7 @@ function renderPedidoDetail(){
         <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
       </h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
-        ${itemsHtml || '<div class="empty" style="padding:10px">Sin items</div>'}
+        ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
       </div>
       ${(()=>{
         const prov = getProviderByName(o.supplier);
@@ -604,9 +608,9 @@ function renderPedidoDetail(){
         const iva = totalBruto - base;
         return totalBruto > 0 ? `
         <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
-          <div><span style="color:var(--muted)">Base imponible:</span> <strong>${fmtMoney(base)}</strong></div>
-          <div><span style="color:var(--muted)">IVA ${ivaPct}%:</span> <strong>${fmtMoney(iva)}</strong></div>
-          <div><span style="color:var(--muted)">Total:</span> <strong style="color:var(--teal)">${fmtMoney(totalBruto)}</strong></div>
+          <div><span style="color:var(--muted)">${t('label.taxBase')}:</span> <strong>${fmtMoney(base)}</strong></div>
+          <div><span style="color:var(--muted)">${t('label.vat')} ${ivaPct}%:</span> <strong>${fmtMoney(iva)}</strong></div>
+          <div><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBruto)}</strong></div>
         </div>` : '';
       })()}
 
@@ -617,49 +621,49 @@ function renderPedidoDetail(){
 
       ${showRecepcion ? `
       <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
-        <h3><i class="ti ti-clipboard-check"></i> Comprobación del pedido</h3>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Cuando llegue el pedido, marca si todo está correcto o si hay algo que reclamar al proveedor.</p>
+        <h3><i class="ti ti-clipboard-check"></i> ${t('title.orderCheck')}</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.orderCheckHelp')}</p>
         <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
-          ${Object.entries(PEDIDO_COMPROBACION).map(([key, c]) => `
+          ${Object.entries(getPedidoComprobacionMap()).map(([key, c]) => `
             <button class="btn btn-sm ${o.comprobacion===key?'btn-primary':''}" onclick="setPedidoComprobacion('${key}')">${c.label}</button>
           `).join('')}
         </div>
       </div>
       <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
-        <h3><i class="ti ti-clipboard-check"></i> Recepción / APPCC</h3>
+        <h3><i class="ti ti-clipboard-check"></i> ${t('title.receptionAppcc')}</h3>
         <div class="field-row">
-          <div class="field"><label>Fecha</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
-          <div class="field"><label>Hora</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
+          <div class="field"><label>${t('common.date')}</label><input type="date" id="rec-fecha" value="${r.fecha||todayStr()}"></div>
+          <div class="field"><label>${t('common.time')}</label><input type="time" id="rec-hora" value="${r.hora||''}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Temperatura (°C)</label><input type="number" step="0.1" id="rec-temp" value="${r.temp!=null?r.temp:''}"></div>
-          <div class="field"><label>Condición del producto</label>
+          <div class="field"><label>${t('label.tempC')}</label><input type="number" step="0.1" id="rec-temp" value="${r.temp!=null?r.temp:''}"></div>
+          <div class="field"><label>${t('label.productCondition')}</label>
             <select id="rec-condicion">
-              <option ${r.condicion==='OK'||!r.condicion?'selected':''}>OK</option>
-              <option ${r.condicion==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+              <option value="OK" ${r.condicion==='OK'||!r.condicion?'selected':''}>${t('label.ok')}</option>
+              <option value="NO CONFORME" ${r.condicion==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
             </select>
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Caducidad / fecha consumo</label>
+          <div class="field"><label>${t('label.expiryConsumeDate')}</label>
             <select id="rec-caducidad">
-              <option ${r.caducidad==='OK'||!r.caducidad?'selected':''}>OK</option>
-              <option ${r.caducidad==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+              <option value="OK" ${r.caducidad==='OK'||!r.caducidad?'selected':''}>${t('label.ok')}</option>
+              <option value="NO CONFORME" ${r.caducidad==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
             </select>
           </div>
-          <div class="field"><label>Cuadre con albarán</label>
+          <div class="field"><label>${t('label.matchesDeliveryNote')}</label>
             <select id="rec-albaran">
-              <option ${r.albaran==='OK'||!r.albaran?'selected':''}>OK</option>
-              <option ${r.albaran==='NO CONFORME'?'selected':''}>NO CONFORME</option>
+              <option value="OK" ${r.albaran==='OK'||!r.albaran?'selected':''}>${t('label.ok')}</option>
+              <option value="NO CONFORME" ${r.albaran==='NO CONFORME'?'selected':''}>${t('label.nonConforming')}</option>
             </select>
           </div>
         </div>
         <div class="field">
-          <label>Responsable</label>
+          <label>${t('label.responsible')}</label>
           <input type="text" id="rec-resp" value="${escapeHtml(r.responsable||'')}">
         </div>
         <div class="field">
-          <label>Observaciones</label>
+          <label>${t('label.observations')}</label>
           <textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea>
         </div>
         <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> ${t('btn.saveReception')}</button>
@@ -667,11 +671,11 @@ function renderPedidoDetail(){
       ` : ''}
 
       <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
-        ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> Marcar enviado</button>` : ''}
-        ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> Marcar recibido</button>` : ''}
+        ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
+        ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
-        <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> Imprimir</button>
+        <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
         <button class="owner-only btn btn-danger" onclick="deleteOrder(${o.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
       </div>
@@ -789,7 +793,7 @@ function changePedidoEstado(estado){
   }
   saveDB();
   renderPedidoDetail();
-  showToast(estado === 'RECIBIDO' ? 'Pedido recibido, stock actualizado y compra registrada en Gestión Económica' : 'Pedido marcado como enviado');
+  showToast(estado === 'RECIBIDO' ? t('msg.orderReceivedStockUpdated') : t('msg.orderMarkedSent'));
 }
 
 function pedidoTexto(o){
@@ -797,7 +801,7 @@ function pedidoTexto(o){
     const ing = getIngredient(line.ingredientId);
     return ing ? `  • ${ing.name}: ${fmtNum(line.cantidad)} ${ing.unit}` : '';
   }).join('\n');
-  return `🛒 PEDIDO A ${o.supplier}\nFecha: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
+  return `🛒 ${t('label.orderTo')} ${o.supplier}\n${t('common.date')}: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
 }
 
 function sendPedidoWhatsapp(order){
@@ -824,8 +828,8 @@ function printPedido(){
   if(!o) return;
   const txt = pedidoTexto(o);
   const win = window.open('', '_blank', 'width=400,height=500');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('label.order')}</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
   win.document.close();
   win.print();
 }
@@ -847,7 +851,7 @@ function openOrderModal(){
 // compartido por la versión inline (pestaña Realizar Pedido) y el modal.
 function orderFormBodyHtml(){
   const suppliers = pedidoSuppliers();
-  const supplierOptions = `<option value="">— Selecciona proveedor —</option>` +
+  const supplierOptions = `<option value="">— ${t('label.selectSupplier')} —</option>` +
     suppliers.map(s => `<option value="${escapeHtml(s)}" ${orderModalSupplier===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
 
   const dateField = document.getElementById('order-date');
@@ -860,7 +864,7 @@ function orderFormBodyHtml(){
   if(orderModalSupplier){
     const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier && (i.area||'cocina') === currentArea());
     if(!ings.length){
-      itemsHtml = `<div class="empty" style="padding:10px">Este proveedor no tiene ingredientes asociados en Mega Lista</div>`;
+      itemsHtml = `<div class="empty" style="padding:10px">${t('empty.supplierNoIngredients')}</div>`;
     }else{
       const search = orderModalSearch.toLowerCase();
       // Sin búsqueda no se lista nada: con proveedores de muchos artículos,
@@ -874,21 +878,21 @@ function orderFormBodyHtml(){
         return `
           <div class="list-row">
             <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
-            <span style="font-size:14px;font-weight:600;color:var(--muted)">Stock: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · Mín: ${fmtNum(s.min)}</span>
-            <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="Cantidad" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
+            <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
+            <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
             <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
           </div>
         `;
       }).join('');
       const emptyMsg = !search
         ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
-        : `<div class="empty" style="padding:10px">Sin resultados</div>`;
+        : `<div class="empty" style="padding:10px">${t('common.noResults')}</div>`;
       itemsHtml = `
-        <input type="text" class="search-input" id="order-item-search" placeholder="Buscar artículo..." value="${escapeHtml(orderModalSearch)}" oninput="refreshOrderForm()" style="margin-bottom:8px;width:100%">
+        <input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="refreshOrderForm()" style="margin-bottom:8px;width:100%">
         <div style="max-height:480px;overflow:auto;margin-bottom:8px">
           ${rows || emptyMsg}
         </div>
-        <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> Sugerir por déficit de stock</button>
+        <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> ${t('btn.suggestByStockDeficit')}</button>
       `;
     }
   }
@@ -896,22 +900,22 @@ function orderFormBodyHtml(){
   const html = `
     <div class="field-row">
       <div class="field">
-        <label>Proveedor</label>
+        <label>${t('common.supplier')}</label>
         <select id="order-supplier" onchange="selectOrderSupplier(this.value)">${supplierOptions}</select>
       </div>
       <div class="field">
-        <label>Fecha de entrega</label>
+        <label>${t('label.deliveryDate')}</label>
         <input type="date" id="order-date" value="${dateVal || todayStr()}" onchange="validateOrderDate(this)">
         <div id="order-date-hint" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
       </div>
     </div>
     <div style="display:flex;gap:16px;flex-wrap:wrap">
       <div class="field" id="order-items-field" style="flex:2;min-width:280px">
-        <label>Artículos del proveedor</label>
-        ${itemsHtml || '<div class="empty" style="padding:10px">Selecciona un proveedor para cargar sus artículos</div>'}
+        <label>${t('label.supplierArticles')}</label>
+        ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.selectSupplierToLoadArticles')}</div>`}
       </div>
       <div class="field" style="flex:1;min-width:220px">
-        <label>Resumen del pedido</label>
+        <label>${t('label.orderSummary')}</label>
         <div id="order-summary" style="max-height:480px;overflow:auto">${orderSummaryHtml()}</div>
       </div>
     </div>
@@ -922,9 +926,9 @@ function orderFormBodyHtml(){
 // Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
 function orderFormButtonsHtml(){
   return `
-    <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> Imprimir</button>
-    <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
-    <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> Enviar por Email</button>
+    <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
+    <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
+    <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
   `;
 }
 
@@ -950,7 +954,7 @@ function renderPedidoCrear(){
   const {dateVal, html} = orderFormBodyHtml();
   box.innerHTML = `
     <div class="card">
-      <h3><i class="ti ti-shopping-cart-plus"></i> Realizar Pedido</h3>
+      <h3><i class="ti ti-shopping-cart-plus"></i> ${t('title.makeOrder')}</h3>
       ${html}
       <div class="actions-cell" style="flex-wrap:wrap;gap:8px;margin-top:10px">
         ${orderFormButtonsHtml()}
@@ -965,12 +969,12 @@ function renderOrderModal(){
   const {dateVal, html} = orderFormBodyHtml();
   openModal(`
     <div class="modal-header">
-      <h3>Nuevo Pedido</h3>
+      <h3>${t('title.newOrder')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     ${html}
     <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
-      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       ${orderFormButtonsHtml()}
     </div>
   `, {xl:true});
@@ -980,7 +984,7 @@ function renderOrderModal(){
 // Resumen en vivo de los artículos con cantidad > 0 mientras se compone el pedido.
 function orderSummaryHtml(){
   const items = orderModalLines.filter(l => l.cantidad > 0);
-  if(!items.length) return `<div class="empty" style="padding:10px">Sin artículos todavía</div>`;
+  if(!items.length) return `<div class="empty" style="padding:10px">${t('empty.noArticlesYet')}</div>`;
   return items.map(l => {
     const ing = getIngredient(l.ingredientId);
     return `<div class="list-row"><div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div><strong>${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}</strong></div>`;
@@ -1061,8 +1065,8 @@ function printPedidoBorrador(){
   const date = document.getElementById('order-date').value || todayStr();
   const txt = pedidoTexto({supplier: orderModalSupplier, date, items, notas:''});
   const win = window.open('', '_blank', 'width=400,height=500');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pedido</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('label.order')}</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
   win.document.close();
   win.print();
 }

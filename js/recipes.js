@@ -49,9 +49,9 @@ function populateRecipeCategoryFilter(selectId){
   const sel = document.getElementById(selectId);
   if(!sel) return;
   const current = sel.value;
-  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+  sel.innerHTML = `<option value="">${t('label.allCategories')}</option>` +
     areaRecipeCategories().map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`; }).join('') +
-    '<option value="__none__">Sin categoría</option>';
+    `<option value="__none__">${t('label.noCategory')}</option>`;
   sel.value = current;
 }
 
@@ -70,7 +70,7 @@ function groupRecipesByCategory(recipes){
   Object.keys(groups).forEach(cat => {
     if(cat && !catNames.includes(cat)) ordered.push([cat, groups[cat]]);
   });
-  if(groups['']) ordered.push(['Sin categoría', groups['']]);
+  if(groups['']) ordered.push([t('label.noCategory'), groups['']]);
   return ordered;
 }
 
@@ -124,7 +124,7 @@ function getEscandalloFolders(recipes){
   const catNames = areaRecipeCategories().map(c => typeof c==='object'?c.name:c);
   catNames.forEach(c => { if(groups[c]) result.push([c, c, groups[c]]); });
   Object.keys(groups).forEach(c => { if(c !== '__none__' && !catNames.includes(c)) result.push([c, c, groups[c]]); });
-  if(groups['__none__']) result.push(['__none__', 'Sin categoría', groups['__none__']]);
+  if(groups['__none__']) result.push(['__none__', t('label.noCategory'), groups['__none__']]);
   return result;
 }
 
@@ -187,7 +187,7 @@ function renderEscandallo(){
     ? recipes.filter(r => (r.category || '__none__') === escandalloFolder)
     : recipes;
 
-  const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> Categorías</button>` : '';
+  const backBtn = (!searching && escandalloFolder !== null) ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloFolders()"><i class="ti ti-arrow-left"></i> ${t('common.category')}</button>` : '';
 
   if(!visibleRecipes.length){
     box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
@@ -205,13 +205,13 @@ function renderEscandallo(){
     // Dentro de la carpeta, con un plato seleccionado: escandallo completo.
     const sel = visibleRecipes.find(r => r.id === escandalloRecipe);
     if(!sel){ escandalloRecipe = null; renderEscandallo(); return; }
-    const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${escapeHtml(escandalloFolder==='__none__'?'Sin categoría':escandalloFolder)}</button>`;
+    const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${escapeHtml(escandalloFolder==='__none__'?t('label.noCategory'):escandalloFolder)}</button>`;
     box.innerHTML = recBackBtn + renderEscandalloFull(sel);
   } else {
     // Dentro de la carpeta, sin plato seleccionado: solo nombres clicables.
     box.innerHTML = backBtn + `<div class="table-wrap"><table><tbody>${visibleRecipes.map(r => `
       <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
-        <td><strong><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</td>
+        <td><strong><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</td>
         <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
       </tr>
     `).join('')}</tbody></table></div>`;
@@ -226,7 +226,7 @@ function renderEscandalloRow(r){
       return `
         <div class="list-row">
           <div class="list-row-name"><i class="ti ti-soup"></i> <span>${escapeHtml(r.name)}</span></div>
-          <span style="font-size:12px;color:var(--muted)">Coste total ${fmtMoney(cost)} · Rendimiento ${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</span>
+          <span style="font-size:12px;color:var(--muted)">${t('label.totalCost')} ${fmtMoney(cost)} · ${t('label.yieldShort')} ${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</span>
           <span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>
           <div class="actions-cell">
             <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
@@ -237,14 +237,14 @@ function renderEscandalloRow(r){
     }
     const pct = recipeFoodCostPct(r);
     const margin = (r.price||0) - cost;
-    const pctBadge = !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
+    const pctBadge = !isFinite(pct) ? `<span class="badge badge-gray">${t('label.noSalePrice')}</span>`
       : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
       : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
       : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
     return `
       <div class="list-row">
         <div class="list-row-name"><i class="ti ${(r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i> <span>${escapeHtml(r.name)}</span></div>
-        <span style="font-size:12px;color:var(--muted)">Coste ${fmtMoney(cost)} · PVP ${fmtMoney(r.price||0)} · Margen ${fmtMoney(margin)}</span>
+        <span style="font-size:12px;color:var(--muted)">${t('common.cost')} ${fmtMoney(cost)} · ${t('label.salePriceShort')} ${fmtMoney(r.price||0)} · ${t('label.margin')} ${fmtMoney(margin)}</span>
         ${pctBadge}
         <div class="actions-cell">
           <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
@@ -270,7 +270,7 @@ function renderEscandalloFull(r){
     const margin = (r.price||0) - cost;
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
     const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
-    const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? 'Sin PVP' : `${pct.toFixed(1)}% FC`;
+    const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
 
     const lines = (r.ingredients||[]).map(line => {
       const label = renderEscandalloLineLabel(line);
@@ -284,28 +284,28 @@ function renderEscandalloFull(r){
     return `
       <div class="card" style="max-width:100%">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:12px;color:var(--muted);font-weight:400">(Elaboración base)</span>':''}</h3>
+          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
           <span class="badge badge-${pctClass}">${pctText}</span>
         </div>
         <div class="grid grid-4" style="margin-bottom:14px">
-          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
           ${r.isBase ? `
-          <div class="kpi"><div class="label">Rendimiento</div><div class="value" style="font-size:18px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
-          <div class="kpi"><div class="label">Coste/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(perUnit)}</div></div>
+          <div class="kpi"><div class="label">${t('label.yieldShort')}</div><div class="value" style="font-size:18px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
+          <div class="kpi"><div class="label">${t('common.cost')}/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(perUnit)}</div></div>
           ` : `
-          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
-          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:18px;color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</div></div>
-          <div class="kpi"><div class="label">Food Cost</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
+          <div class="kpi"><div class="label">${t('label.salePriceShort')}</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">${t('label.margin')}</div><div class="value" style="font-size:18px;color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</div></div>
+          <div class="kpi"><div class="label">${t('label.foodCost')}</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
           `}
         </div>
         ${r.comensales || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ración${r.comensales!==1?'es':''}` : `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}`) : ''}
-          ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
+          ${r.consumiblesPct ? ` · ${t('label.consumablesInline')}: ${r.consumiblesPct}%` : ''}
         </div>` : ''}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th><th>% del total</th></tr></thead>
-            <tbody>${lines || '<tr><td colspan="5"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+            <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
+            <tbody>${lines || `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('empty.noIngredients')}</div></td></tr>`}</tbody>
           </table>
         </div>
         <div class="actions-cell" style="margin-top:10px">
@@ -323,7 +323,7 @@ function renderEscandalloCard(r){
     const margin = (r.price||0) - cost;
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
     const pctBadge = r.isBase ? `<span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>`
-      : !isFinite(pct) ? '<span class="badge badge-gray">Sin PVP</span>'
+      : !isFinite(pct) ? `<span class="badge badge-gray">${t('label.noSalePrice')}</span>`
       : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
       : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
       : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
@@ -339,32 +339,32 @@ function renderEscandalloCard(r){
     return `
       <div class="card card-compact">
         <h3 style="justify-content:space-between">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?' <span style="font-size:11px;color:var(--muted);font-weight:400">(Base)</span>':''}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</span>
           ${pctBadge}
         </h3>
         <div class="grid grid-3" style="margin-bottom:6px">
-          <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
+          <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
           ${r.isBase ? `
-          <div class="kpi"><div class="label">Rendimiento</div><div class="value" style="font-size:14px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
-          <div class="kpi"><div class="label">Coste/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:14px">${fmtMoney(perUnit)}</div></div>
+          <div class="kpi"><div class="label">${t('label.yieldShort')}</div><div class="value" style="font-size:14px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
+          <div class="kpi"><div class="label">${t('common.cost')}/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:14px">${fmtMoney(perUnit)}</div></div>
           ` : `
-          <div class="kpi"><div class="label">PVP</div><div class="value" style="font-size:14px">${fmtMoney(r.price||0)}</div></div>
-          <div class="kpi"><div class="label">Margen</div><div class="value" style="font-size:14px">${fmtMoney(margin)}</div></div>
+          <div class="kpi"><div class="label">${t('label.salePriceShort')}</div><div class="value" style="font-size:14px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">${t('label.margin')}</div><div class="value" style="font-size:14px">${fmtMoney(margin)}</div></div>
           `}
         </div>
         <div style="font-size:12px;color:var(--muted);margin:6px 0">
-          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ración${r.comensales!==1?'es':''}` : `👥 ${r.comensales} comensal${r.comensales!==1?'es':''}`) : ''}
-          ${r.consumiblesPct ? ` · Consumibles: ${r.consumiblesPct}%` : ''}
+          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
+          ${r.consumiblesPct ? ` · ${t('label.consumablesInline')}: ${r.consumiblesPct}%` : ''}
         </div>
         <div class="table-wrap" style="margin-bottom:6px">
           <table>
-            <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Merma</th><th>Coste</th></tr></thead>
-            <tbody>${lines || '<tr><td colspan="4"><div class="empty" style="padding:14px">Sin ingredientes</div></td></tr>'}</tbody>
+            <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th></tr></thead>
+            <tbody>${lines || `<tr><td colspan="4"><div class="empty" style="padding:14px">${t('empty.noIngredients')}</div></td></tr>`}</tbody>
           </table>
         </div>
         <div class="actions-cell">
-          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> Editar</button>
-          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> Eliminar</button>
+          <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
+          <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       </div>
     `;
@@ -389,7 +389,7 @@ function renderRecipeModal(id, r){
     const label = renderEscandalloLineLabel(line);
     return `
       <tr>
-        <td>${label ? escapeHtml(label.name) + (line.type==='base'?' <span style="font-size:11px;color:var(--muted)">(base)</span>':'') : '—'}</td>
+        <td>${label ? escapeHtml(label.name) + (line.type==='base'?` <span style="font-size:11px;color:var(--muted)">(${t('label.baseShort2Lower')})</span>`:'') : '—'}</td>
         <td><input type="number" value="${line.qty}" step="0.01" min="0" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineQty(${idx}, this.value, ${id||'null'})"></td>
         <td>${label ? escapeHtml(label.unit) : ''}</td>
         <td><input type="number" value="${line.merma||0}" step="1" min="0" max="99" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateRecipeLineMerma(${idx}, this.value, ${id||'null'})"></td>
@@ -426,7 +426,7 @@ function renderRecipeModal(id, r){
       <div class="field">
         <label>${t('common.category')}</label>
         <select id="recipe-category" onchange="onRecipeCategoryChange(${id||'null'})">
-          <option value="">Sin categoría</option>
+          <option value="">${t('label.noCategory')}</option>
           ${areaRecipeCategories().map(c=>{ const cn=typeof c==='object'?c.name:c; return `<option value="${escapeHtml(cn)}" ${(r.category||'')===cn?'selected':''}>${escapeHtml(cn)}</option>`; }).join('')}
           <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
@@ -437,7 +437,7 @@ function renderRecipeModal(id, r){
     <div class="field">
       <label style="display:flex;align-items:center;gap:8px;cursor:${id?'default':'pointer'};font-weight:400;${id?'opacity:.7':''}">
         <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} ${id?'disabled':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
-        Es una elaboración base (caldo, sofrito, masa...) que se puede usar como ingrediente en otros platos
+        ${t('label.isBaseElaborationCheckbox')}
       </label>
       ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.isBaseLockedAfterCreation')}</p>` : ''}
     </div>
@@ -461,35 +461,35 @@ function renderRecipeModal(id, r){
       <label>${t('label.ingredients')}</label>
       <div class="table-wrap" style="margin-bottom:8px">
         <table>
-          <thead><tr><th>Ingrediente</th><th>Cantidad neta</th><th>Ud</th><th>Merma %</th><th>Coste</th><th></th></tr></thead>
-          <tbody>${linesHtml || '<tr><td colspan="6"><div class="empty" style="padding:10px">Añade ingredientes</div></td></tr>'}</tbody>
+          <thead><tr><th>${t('label.ingredient')}</th><th>${t('label.netQty')}</th><th>${t('th.unitAbbr')}</th><th>${t('th.mermaPct')}</th><th>${t('common.cost')}</th><th></th></tr></thead>
+          <tbody>${linesHtml || `<tr><td colspan="6"><div class="empty" style="padding:10px">${t('empty.addIngredients')}</div></td></tr>`}</tbody>
         </table>
       </div>
       ${areaIngredients.length ? `
       <div class="field-row">
         <div class="field" style="margin-bottom:0;position:relative">
-          <input type="text" id="recipe-add-ingredient-search" placeholder="Buscar ingrediente..." autocomplete="off" oninput="filterRecipeIngredientResults(${id||'null'})" onfocus="filterRecipeIngredientResults(${id||'null'})" onblur="setTimeout(()=>hideRecipeIngredientResults(${id||'null'}), 150)">
+          <input type="text" id="recipe-add-ingredient-search" placeholder="${t('ph.searchIngredient')}" autocomplete="off" oninput="filterRecipeIngredientResults(${id||'null'})" onfocus="filterRecipeIngredientResults(${id||'null'})" onblur="setTimeout(()=>hideRecipeIngredientResults(${id||'null'}), 150)">
           <input type="hidden" id="recipe-add-ingredient">
           <div id="recipe-add-ingredient-results" style="display:none;position:absolute;z-index:10;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
         </div>
         <div class="field" style="margin-bottom:0">
-          <input type="number" id="recipe-add-qty" placeholder="Cantidad" step="0.01" min="0" value="1">
+          <input type="number" id="recipe-add-qty" placeholder="${t('common.qty')}" step="0.01" min="0" value="1">
         </div>
         <div class="field" style="margin-bottom:0">
-          <button class="btn" style="width:100%" onclick="addRecipeLine(${id||'null'})"><i class="ti ti-plus"></i> Añadir</button>
+          <button class="btn" style="width:100%" onclick="addRecipeLine(${id||'null'})"><i class="ti ti-plus"></i> ${t('common.add')}</button>
         </div>
       </div>
-      ` : `<p style="font-size:13px;color:var(--muted)">Añade primero ingredientes en la Mega Lista.</p>`}
+      ` : `<p style="font-size:13px;color:var(--muted)">${t('msg.addIngredientsToMegaListFirst')}</p>`}
     </div>
 
     <div class="grid grid-3" style="margin-bottom:10px">
-      <div class="kpi"><div class="label">Coste ingredientes</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeIng)}</div></div>
-      <div class="kpi"><div class="label">Consumibles</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeCons)}</div></div>
-      <div class="kpi"><div class="label">Coste total</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total)}</div></div>
+      <div class="kpi"><div class="label">${t('label.ingredientsCost')}</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeIng)}</div></div>
+      <div class="kpi"><div class="label">${t('label.consumablesInline')}</div><div class="value" style="font-size:16px">${fmtMoney(breakdown.costeCons)}</div></div>
+      <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total)}</div></div>
     </div>
     ${r.isBase ? `
     <div class="grid grid-2" style="margin-bottom:10px">
-      <div class="kpi ok"><div class="label">Coste por ${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total / (parseFloat(r.baseYield)||1))}</div></div>
+      <div class="kpi ok"><div class="label">${t('label.costPer')} ${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(breakdown.total / (parseFloat(r.baseYield)||1))}</div></div>
     </div>
     ` : ''}
 
@@ -520,13 +520,13 @@ function filterRecipeIngredientResults(id){
   } else {
     const renderItem = m => `
       <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
-        ${m.type==='base' ? '<i class="ti ti-soup"></i> ' : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`Base — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
+        ${m.type==='base' ? '<i class="ti ti-soup"></i> ' : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`${t('label.baseShort')} — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
       </div>
     `;
     const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#f4f5f7)">${label}</div>`;
     results.innerHTML =
-      (baseLimited.length ? sectionHeader('Elaboraciones') + baseLimited.map(renderItem).join('') : '') +
-      (ingLimited.length ? sectionHeader('Ingredientes') + ingLimited.map(renderItem).join('') : '');
+      (baseLimited.length ? sectionHeader(t('label.elaborations')) + baseLimited.map(renderItem).join('') : '') +
+      (ingLimited.length ? sectionHeader(t('label.ingredients')) + ingLimited.map(renderItem).join('') : '');
   }
   results.style.display = 'block';
 }
@@ -768,7 +768,13 @@ function confirmDeleteRecipe(id){
    FICHAS TÉCNICAS — Elaboración estándar y alérgenos
    ============================================================ */
 const ALLERGEN_LIST = ALLERGENS;
+// Los valores internos de temperatura de servicio se guardan siempre en español
+// (es el valor interno/histórico); esto solo traduce la etiqueta que se le muestra.
 const FICHA_TEMPS = ['CALIENTE','FRÍO','AMBIENTE'];
+const FICHA_TEMP_LABEL_KEYS = {'CALIENTE':'temp.hot','FRÍO':'temp.cold','AMBIENTE':'temp.roomTemp'};
+function fichaTempLabel(value){
+  return FICHA_TEMP_LABEL_KEYS[value] ? t(FICHA_TEMP_LABEL_KEYS[value]) : (value||'');
+}
 
 let fichaModalState = null;
 
@@ -881,7 +887,7 @@ function renderFichas(){
 
   const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
   if(orphanFichas.length){
-    html += `<h3 class="cat-heading">${currentArea()==='sala' ? 'Fichas sin vincular a una bebida' : 'Fichas sin vincular a un plato'}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
+    html += `<h3 class="cat-heading">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
       <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
         <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(f.name)}</span></div>
         <div class="actions-cell">
@@ -910,7 +916,7 @@ function renderFichaRow(r){
   return `
     <div class="list-row" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
       <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(r.name)}</span></div>
-      ${ficha ? '<span class="badge badge-green">Vinculada</span>' : '<span class="badge badge-amber">Sin ficha</span>'}
+      ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
       ${ficha ? `
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${ficha.id})"><i class="ti ti-printer"></i></button>
@@ -928,7 +934,7 @@ function renderFichaCard(r){
     <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
       <h3 style="justify-content:space-between">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
-        ${ficha ? '<span class="badge badge-green">Vinculada</span>' : '<span class="badge badge-amber">Sin ficha</span>'}
+        ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
       </h3>
       ${ficha ? `
         <div class="actions-cell">
@@ -1007,7 +1013,7 @@ function renderFichaModal(){
   // ahí y quedan bloqueados; una ficha sin vincular permite editarlos a mano.
   const lockedAttr = (ro || f.recipeId) ? 'disabled' : '';
 
-  const recipeOptions = `<option value="">— Sin vincular —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
+  const recipeOptions = `<option value="">— ${t('label.notLinked')} —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
     `<option value="${r.id}"${r.id===f.recipeId?' selected':''}${(r.id!==f.recipeId && DB.fichas.some(other=>other.id!==f.id && other.recipeId===r.id))?' disabled':''}>${escapeHtml(r.name)}</option>`
   ).join('');
 
@@ -1024,7 +1030,7 @@ function renderFichaModal(){
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredientText(${idx})" ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
-      <button class="owner-only btn btn-sm" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> Añadir ingrediente</button>
+      <button class="owner-only btn btn-sm" onclick="addFichaIngredientText()"><i class="ti ti-plus"></i> ${t('btn.addIngredient')}</button>
     </div>
   `;
 
@@ -1041,7 +1047,7 @@ function renderFichaModal(){
     const fromRecipe = liveRecipeAllergens.includes(a);
     const on = fromRecipe || (f.allergens||[]).includes(a);
     const clickable = !ro && !fromRecipe;
-    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?'Detectado automáticamente desde el escandallo':''}">${a}</div>`;
+    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${a}</div>`;
   }).join('');
 
   openModal(`
@@ -1074,7 +1080,7 @@ function renderFichaModal(){
       </div>
       <div class="field">
         <label>${t('label.servingTemp')}</label>
-        <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(t=>`<option value="${t}"${t===f.temp?' selected':''}>${t}</option>`).join('')}</select>
+        <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>
       </div>
     </div>
 
@@ -1086,7 +1092,7 @@ function renderFichaModal(){
     <div class="field">
       <label>${t('label.preparation')}</label>
       <div id="ficha-steps">${stepsHtml}</div>
-      <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> Añadir paso</button>
+      <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
     </div>
 
     <div class="field">
@@ -1094,7 +1100,7 @@ function renderFichaModal(){
       <textarea id="ficha-presentation" placeholder="Notas de presentación..." ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
       <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
         ${f.photo ? `
-          <img src="${f.photo}" alt="Foto de emplatado" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
           ${ro ? '' : `<button class="btn btn-sm btn-danger" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
         ` : (ro ? '' : `
           <label class="btn btn-sm" style="cursor:pointer">
@@ -1139,7 +1145,7 @@ function onFichaRecipeChange(value){
   const f = fichaModalState;
   const recipeId = value ? parseInt(value) : '';
   if(recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === recipeId)){
-    showToast('Esa receta ya tiene una ficha técnica vinculada');
+    showToast(t('msg.recipeAlreadyHasTechSheet'));
     renderFichaModal();
     return;
   }
@@ -1180,7 +1186,7 @@ function removeFichaStep(idx){
 function handleFichaPhotoUpload(input){
   const file = input.files[0];
   if(!file) return;
-  if(!file.type || !file.type.startsWith('image/')){ showToast('Selecciona un archivo de imagen válido'); return; }
+  if(!file.type || !file.type.startsWith('image/')){ showToast(t('msg.selectValidImageFile')); return; }
   if(file.size > 2 * 1024 * 1024){ showToast(t('msg.photoTooLarge')); return; }
   syncFichaModalFields();
   const reader = new FileReader();
@@ -1209,7 +1215,7 @@ function saveFicha(){
   const name = (f.name||'').trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   if(f.recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === f.recipeId)){
-    showToast('Esa receta ya tiene una ficha técnica vinculada');
+    showToast(t('msg.recipeAlreadyHasTechSheet'));
     return;
   }
   const data = {
@@ -1267,7 +1273,7 @@ function printFicha(id){
   if(!f) return;
   const algs = getFichaAllergens(f).length
     ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
-    : 'Ninguno';
+    : t('label.none');
   const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;
   const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
@@ -1276,23 +1282,23 @@ function printFicha(id){
   const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${escapeHtml(f.name)}</title>
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${escapeHtml(f.name)}</title>
   <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
   h1{font-size:18pt;margin:0 0 4px}h2{font-size:11pt;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}
   .meta{display:flex;gap:20px;font-size:10pt;color:#555;margin-bottom:16px}.meta span{background:#f5f5f3;padding:4px 10px;border-radius:4px}
   ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
   <h1>${escapeHtml(f.name)}</h1>
   <div class="meta">
-    ${produccion?`<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ración${produccion!==1?'es':''}</span>`:''}
+    ${produccion?`<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>`:''}
     ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}
-    ${f.temp?`<span>${escapeHtml(f.temp)}</span>`:''}
+    ${f.temp?`<span>${escapeHtml(fichaTempLabel(f.temp))}</span>`:''}
   </div>
-  <h2>Ingredientes</h2><ul>${ings || '<li>Sin ingredientes</li>'}</ul>
-  <h2>Modo de elaboración</h2>${steps || '<p>Sin especificar</p>'}
-  <h2>Presentación</h2><p>${escapeHtml(f.presentation) || 'Sin especificar'}</p>
-  ${f.photo ? `<img src="${f.photo}" alt="Foto de emplatado" style="max-width:100%;max-height:80mm;border-radius:6px;margin-top:6px">` : ''}
-  <h2>Alérgenos</h2><div>${algs}</div>
+  <h2>${t('label.ingredients')}</h2><ul>${ings || `<li>${t('empty.noIngredients')}</li>`}</ul>
+  <h2>${t('label.prepMethod')}</h2>${steps || `<p>${t('label.notSpecified')}</p>`}
+  <h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>
+  ${f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:80mm;border-radius:6px;margin-top:6px">` : ''}
+  <h2>${t('label.allergens')}</h2><div>${algs}</div>
   </body></html>`);
   win.document.close();
   win.focus();
