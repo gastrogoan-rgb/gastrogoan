@@ -81,9 +81,30 @@ function renderLimpiezaAlergenos(){
 const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
 const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
 const LIMPIEZA_DEFAULT_CIERRE = ['Limpiar y desinfectar todas las superficies','Barrer y fregar suelos','Vaciar cubos de basura','Verificar que todo el equipamiento está apagado','Cerrar cámaras y comprobar temperaturas','Activar alarma y cerrar con llave'];
+// Checklists propias de Sala: barra/grifos/cafetera en vez de cámaras/plancha de cocina.
+const LIMPIEZA_DEFAULT_APERTURA_SALA = ['Encender luces y música ambiente','Comprobar temperatura de neveras y grifos de cerveza','Preparar hielo, guarniciones y cristalería','Revisar stock de bebidas en barra','Limpiar barra y mesas','Verificar que los baños están limpios y equipados'];
+const LIMPIEZA_DEFAULT_CIERRE_SALA = ['Limpiar y desinfectar la barra y mesas','Lavar y guardar la cristalería','Vaciar posos de cafetera/molinillo y limpiar grifos de cerveza','Verificar que todo el equipamiento está apagado','Cerrar neveras y comprobar temperaturas','Activar alarma y cerrar con llave'];
 
 let limpiezaTab = 'protocolo';
 let limpiezaMonthOffset = 0;
+
+// Devuelve la lista de pasos (apertura o cierre) del área actual, creándola
+// con sus valores por defecto propios si aún no existe para esa área.
+function limpiezaProtocoloPasos(type){
+  const l = DB.limpieza;
+  const key = _protocoloKey(type);
+  if(!l[key] || Array.isArray(l[key])){
+    // Migración: antes era un array plano (siempre pensado para Cocina).
+    const legacy = Array.isArray(l[key]) ? l[key] : null;
+    l[key] = {
+      cocina: legacy || [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA : LIMPIEZA_DEFAULT_CIERRE)],
+      sala: [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA_SALA : LIMPIEZA_DEFAULT_CIERRE_SALA)]
+    };
+  }
+  const area = currentArea();
+  if(!l[key][area]) l[key][area] = [...(type==='apertura' ? (area==='sala'?LIMPIEZA_DEFAULT_APERTURA_SALA:LIMPIEZA_DEFAULT_APERTURA) : (area==='sala'?LIMPIEZA_DEFAULT_CIERRE_SALA:LIMPIEZA_DEFAULT_CIERRE))];
+  return l[key][area];
+}
 
 function ensureLimpiezaData(){
   if(!DB.limpieza) DB.limpieza = {};
@@ -96,8 +117,8 @@ function ensureLimpiezaData(){
   if(!l.alergenos) l.alergenos = [];
   if(!l.plagas) l.plagas = [];
   if(!l.mantenimiento) l.mantenimiento = [];
-  if(!l.aperturaPasos) l.aperturaPasos = [...LIMPIEZA_DEFAULT_APERTURA];
-  if(!l.cierrePasos) l.cierrePasos = [...LIMPIEZA_DEFAULT_CIERRE];
+  limpiezaProtocoloPasos('apertura');
+  limpiezaProtocoloPasos('cierre');
   if(!l.aperturaLog) l.aperturaLog = [];
   if(!l.cierreLog) l.cierreLog = [];
 }
@@ -180,12 +201,12 @@ function removeManosPaso(i){
 }
 function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
-  const ap = DB.limpieza.aperturaPasos;
-  const ci = DB.limpieza.cierrePasos;
+  const ap = limpiezaProtocoloPasos('apertura');
+  const ci = limpiezaProtocoloPasos('cierre');
   const empOptions = areaEmployees().map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   const renderBlock = (title, icon, pasos, type) => {
     const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
-    const log = DB.limpieza[logKey] || [];
+    const log = (DB.limpieza[logKey] || []).filter(e => (e.area||'cocina')===currentArea());
     const logEntries = [...log].reverse().slice(0, 5);
     return `
     <div class="card">
@@ -224,9 +245,9 @@ function renderLimpiezaProtocolo(){
   box.innerHTML = `<div class="grid grid-2">${renderBlock(t('title.openingProtocol'),'sunrise',ap,'apertura')}${renderBlock(t('title.closingProtocol'),'sunset',ci,'cierre')}</div>`;
 }
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
-function updateProtocoloPaso(type,i,val){ DB.limpieza[_protocoloKey(type)][i] = val; saveDB(); }
+function updateProtocoloPaso(type,i,val){ limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
 function moveProtocoloPaso(type,i,dir){
-  moveArrayItem(DB.limpieza[_protocoloKey(type)], i, dir);
+  moveArrayItem(limpiezaProtocoloPasos(type), i, dir);
   saveDB();
   renderLimpiezaProtocolo();
 }
@@ -235,7 +256,7 @@ function registerProtocoloCompliance(type){
   const sel = document.getElementById(`protocolo-resp-${type}`);
   const responsableId = sel && sel.value ? parseInt(sel.value) : null;
   const now = new Date();
-  DB.limpieza[logKey].push({id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5), responsableId});
+  DB.limpieza[logKey].push({id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5), responsableId, area: currentArea()});
   saveDB();
   renderLimpiezaProtocolo();
   showToast(t('msg.complianceRegistered'));
@@ -246,20 +267,22 @@ function deleteProtocoloComplianceEntry(type, id){
   saveDB();
   renderLimpiezaProtocolo();
 }
-function addProtocoloPaso(type){ DB.limpieza[_protocoloKey(type)].push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
+function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
 function removeProtocoloPaso(type,i){
-  const key = _protocoloKey(type);
-  if(DB.limpieza[key].length<=1) return;
-  DB.limpieza[key].splice(i,1);
+  const pasos = limpiezaProtocoloPasos(type);
+  if(pasos.length<=1) return;
+  pasos.splice(i,1);
   saveDB();
   renderLimpiezaProtocolo();
 }
 function resetProtocoloPasos(type){
-  DB.limpieza[_protocoloKey(type)] = [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA : LIMPIEZA_DEFAULT_CIERRE)];
+  const area = currentArea();
+  const isSala = area === 'sala';
+  DB.limpieza[_protocoloKey(type)][area] = [...(type==='apertura' ? (isSala?LIMPIEZA_DEFAULT_APERTURA_SALA:LIMPIEZA_DEFAULT_APERTURA) : (isSala?LIMPIEZA_DEFAULT_CIERRE_SALA:LIMPIEZA_DEFAULT_CIERRE))];
   saveDB(); renderLimpiezaProtocolo(); showToast(t('msg.stepsReset'));
 }
 function printProtocolo(type){
-  const pasos = DB.limpieza[_protocoloKey(type)];
+  const pasos = limpiezaProtocoloPasos(type);
   const title = type==='apertura' ? t('title.openingProtocol') : t('title.closingProtocol');
   const w = window.open('','_blank');
   w.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:40px}h2{margin-bottom:20px}ol li{padding:6px 0;font-size:16px}</style></head><body><h2>${title}</h2><ol>${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ol></body></html>`);
@@ -285,7 +308,7 @@ function deleteLimpiezaTarea(id){
 
 function renderLimpiezaMes(){
   const box = document.getElementById('limpieza-tab-content');
-  const tareasMes = DB.limpieza.tareas.filter(t => t.tipo === 'mensual');
+  const tareasMes = DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea());
   const today = new Date();
   const base = new Date(today.getFullYear(), today.getMonth() + limpiezaMonthOffset, 1);
   const year = base.getFullYear(), month = base.getMonth();
@@ -308,11 +331,12 @@ function renderLimpiezaMes(){
         <div style="font-weight:700;margin-bottom:4px">${day}</div>
         ${tareasDelDia.map(t => {
           const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
+          const info = limpiezaCheckInfo(checks, t.id);
           return `
           <div style="margin-bottom:4px;cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
-            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" onclick="event.stopPropagation()">
-              <input type="checkbox" ${checks[t.id]?'checked':''} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
-              <span style="${checks[t.id]?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" onclick="event.stopPropagation()" title="${info?`Hecho el ${escapeHtml(info.fecha||'')} ${escapeHtml(info.hora||'')}`:''}">
+              <input type="checkbox" ${info?'checked':''} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
+              <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
             </label>
             ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-left:20px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
           </div>
@@ -338,17 +362,27 @@ function renderLimpiezaMes(){
     </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
   `;
 }
+// Una tarea marcada como hecha guarda quién y cuándo (no solo un booleano
+// reversible), para dejar traza APPCC de verdad; los valores antiguos (un
+// simple true/false) se siguen leyendo bien vía limpiezaCheckInfo().
+function limpiezaCheckInfo(checks, taskId){
+  const v = checks ? checks[taskId] : null;
+  if(v && typeof v === 'object') return v;
+  return v ? {done:true} : null;
+}
 function toggleLimpiezaCheckMes(monthKey, tareaId, val){
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
-  DB.limpieza.checksMes[monthKey][tareaId] = val;
+  const now = new Date();
+  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5)} : null;
   saveDB();
   renderLimpiezaMes();
 }
 function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
-  DB.limpieza.checksMes[monthKey][tareaId] = val;
+  const now = new Date();
+  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5)} : null;
   saveDB();
   renderDistDetail();
 }
@@ -363,7 +397,7 @@ function openLimpiezaTareaMesModal(id){
     </div>
     <div class="field">
       <label>Área o tarea de limpieza</label>
-      <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="Ej. Campana extractora, Cámara frigorífica...">
+      <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="${currentArea()==='sala' ? 'Ej. Grifos de cerveza, Cafetera, Cristalería...' : 'Ej. Campana extractora, Cámara frigorífica...'}">
     </div>
     <div class="field">
       <label>Producto limpiador (opcional)</label>
@@ -402,7 +436,10 @@ function confirmLimpiezaTareaMes(id){
     const tarea = DB.limpieza.tareas.find(x=>x.id===id);
     Object.assign(tarea, {area: area.trim(), producto: producto.trim(), diaMes: dia, responsableId});
   } else {
-    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId});
+    // Ojo: "area" aquí es el campo de texto libre ("Campana extractora"...);
+    // el área de negocio (cocina/sala) se guarda aparte como zona, para poder
+    // filtrar sin chocar con ese nombre de campo ya existente.
+    DB.limpieza.tareas.push({id: genId(), area: area.trim(), producto: producto.trim(), tipo:'mensual', diaMes: dia, responsableId, zona: currentArea()});
   }
   saveDB();
   closeModal();
@@ -412,7 +449,7 @@ function confirmLimpiezaTareaMes(id){
 function renderLimpiezaLog(key){
   const box = document.getElementById('limpieza-tab-content');
   const cfg = limpiezaLogConfig(key);
-  const entries = DB.limpieza[key];
+  const entries = DB.limpieza[key].filter(e => (e.zona||'cocina')===currentArea());
 
   const formFields = cfg.fields.map((f,i) => {
     let input;
@@ -462,6 +499,7 @@ function addLimpiezaLogEntry(key){
   if(key === 'temperaturas'){
     entry.estado = computeTempEstado(entry.tipo, parseFloat(entry.temp)) || null;
   }
+  entry.zona = currentArea();
   DB.limpieza[key].push(entry);
   saveDB();
   renderLimpiezaLog(key);
@@ -483,7 +521,7 @@ function limpiezaMantenimientoDueStatus(e){
 }
 function renderLimpiezaMantenimiento(){
   const box = document.getElementById('limpieza-tab-content');
-  const equipos = DB.limpieza.mantenimiento;
+  const equipos = DB.limpieza.mantenimiento.filter(e => (e.zona||'cocina')===currentArea());
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
@@ -523,7 +561,7 @@ function addMantenimientoEquipo(){
     </div>
     <div class="field">
       <label>${t('label.equipmentName')}</label>
-      <input type="text" id="new-mantenimiento-equipo" placeholder="${t('ph.equipmentExample')}">
+      <input type="text" id="new-mantenimiento-equipo" placeholder="${currentArea()==='sala' ? t('ph.equipmentExampleSala') : t('ph.equipmentExample')}">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
@@ -535,7 +573,7 @@ function addMantenimientoEquipo(){
 function confirmAddMantenimientoEquipo(){
   const nombre = document.getElementById('new-mantenimiento-equipo').value;
   if(!nombre || !nombre.trim()){ showToast(t('msg.writeEquipName')); return; }
-  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:''});
+  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:'', zona: currentArea()});
   saveDB();
   closeModal();
   renderLimpiezaMantenimiento();
@@ -800,11 +838,11 @@ function renderDistDetail(){
 
     // Limpieza mensual: la tarea "toca" ese día si el día del mes coincide
     // con la fecha real de esta semana.
-    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.tipo==='mensual' && lt.responsableId===emp.id && lt.diaMes===date.getDate());
+    const tareasLimpiezaDia = DB.limpieza.tareas.filter(lt => lt.tipo==='mensual' && lt.responsableId===emp.id && lt.diaMes===date.getDate() && (lt.zona||'cocina')===(emp.area||'cocina'));
     const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
     const checksMes = DB.limpieza.checksMes[monthKey] || {};
     const limpiezaHtml = tareasLimpiezaDia.map(lt => {
-      const done = !!checksMes[lt.id];
+      const done = !!limpiezaCheckInfo(checksMes, lt.id);
       nTareasTotal++; if(done) nTareasHechas++;
       return `
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
