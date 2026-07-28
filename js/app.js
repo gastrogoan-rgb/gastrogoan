@@ -392,26 +392,26 @@ function openLimpiezaTareaMesModal(id){
   const empOptions = DB.employees.filter(e=>(e.area||'cocina')===currentArea()).map(e=>`<option value="${e.id}"${tarea&&tarea.responsableId===e.id?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   openModal(`
     <div class="modal-header">
-      <h3>${tarea?'Editar':'Nueva'} tarea de limpieza mensual</h3>
+      <h3>${tarea?t('common.edit'):t('common.newF')} ${t('limpieza.monthlyTask')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Área o tarea de limpieza</label>
-      <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="${currentArea()==='sala' ? 'Ej. Grifos de cerveza, Cafetera, Cristalería...' : 'Ej. Campana extractora, Cámara frigorífica...'}">
+      <label>${t('limpieza.areaOrTask')}</label>
+      <input type="text" id="new-limpieza-area" value="${tarea?escapeHtml(tarea.area):''}" placeholder="${currentArea()==='sala' ? t('limpieza.areaPhSala') : t('limpieza.areaPhCocina')}">
     </div>
     <div class="field">
-      <label>Producto limpiador (opcional)</label>
-      <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="Ej. Desengrasante">
+      <label>${t('limpieza.cleaningProduct')}</label>
+      <input type="text" id="new-limpieza-producto" value="${tarea?escapeHtml(tarea.producto||''):''}" placeholder="${t('limpieza.productPh')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Día del mes</label>
+        <label>${t('limpieza.dayOfMonth')}</label>
         <input type="number" id="new-limpieza-diames" min="1" max="31" value="${tarea?tarea.diaMes:1}">
       </div>
       <div class="field">
-        <label>Responsable</label>
+        <label>${t('label.responsible')}</label>
         <select id="new-limpieza-responsable">
-          <option value="">Sin asignar</option>
+          <option value="">${t('common.unassigned')}</option>
           ${empOptions}
         </select>
       </div>
@@ -419,7 +419,7 @@ function openLimpiezaTareaMesModal(id){
     <div class="modal-footer">
       ${tarea ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})">${tarea?'Guardar':'Añadir'}</button>
+      <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})">${tarea?t('common.save'):t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-limpieza-area')?.focus(), 50);
@@ -1002,7 +1002,7 @@ function printDistribucion(empId){
     const d = getDistEmpData(emp.id);
     html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
       <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
-    if(!isSala && d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>Platos:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
+    if(!isSala && d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>${t('common.dishes')}:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
@@ -1381,8 +1381,8 @@ function sendBirthdayWhatsapp(id){
 function sendBirthdayEmail(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  const subject = encodeURIComponent('¡Feliz cumpleaños de parte de ' + bizName + '!');
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.birthdaySubject').replace('${name}', bizName));
   const body = encodeURIComponent(document.getElementById('birthday-greeting-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
@@ -1460,7 +1460,7 @@ function openRewardNotifyModal(id, reward){
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?'disabled title="Este cliente no tiene teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?'disabled title="Este cliente no tiene email guardado"':''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -1480,8 +1480,8 @@ function sendRewardWhatsapp(id){
 function sendRewardEmail(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  const subject = encodeURIComponent('¡Tienes un premio en ' + bizName + '!');
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.rewardSubject').replace('${name}', bizName));
   const body = encodeURIComponent(document.getElementById('reward-notify-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
@@ -1679,11 +1679,11 @@ function renderReservasDia(){
   const aforoInfo = getAforoInfoForDate(date);
   const aforoHtml = (aforoInfo && aforoInfo.length) ? `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      ${aforoInfo.map((t,i) => {
-        const lleno = t.aforo>0 && t.reservados >= t.aforo;
-        const cerca = t.aforo>0 && t.reservados >= t.aforo*0.8 && !lleno;
+      ${aforoInfo.map((tr,i) => {
+        const lleno = tr.aforo>0 && tr.reservados >= tr.aforo;
+        const cerca = tr.aforo>0 && tr.reservados >= tr.aforo*0.8 && !lleno;
         const cls = lleno ? 'badge-red' : cerca ? 'badge-amber' : 'badge-green';
-        return `<span class="badge ${cls}"><i class="ti ti-users"></i> Turno ${i+1} (${t.abre}-${t.cierra}): ${t.reservados}${t.aforo?'/'+t.aforo:''} personas${lleno?' · AFORO COMPLETO':''}</span>`;
+        return `<span class="badge ${cls}"><i class="ti ti-users"></i> ${t('mn.schedule.slotN').replace('${n}', i+1)} (${tr.abre}-${tr.cierra}): ${tr.reservados}${tr.aforo?'/'+tr.aforo:''} ${t('common.people')}${lleno?' · '+t('label.fullCapacity'):''}</span>`;
       }).join('')}
     </div>
   ` : '';
@@ -2076,7 +2076,7 @@ function openReservationReminderModal(id){
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?'disabled title="Sin teléfono guardado"':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
