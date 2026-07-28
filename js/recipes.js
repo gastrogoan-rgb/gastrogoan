@@ -401,7 +401,7 @@ function renderRecipeModal(id, r){
 
   openModal(`
     <div class="modal-header">
-      <h3>${id ? (isSala ? t('title.editDrink') : t('title.editDish')) : (isSala ? t('title.newDrink') : t('title.newDish'))}</h3>
+      <h3>${r.isBase ? (id ? t('title.editElaboration') : t('title.newElaboration')) : (id ? (isSala ? t('title.editDrink') : t('title.editDish')) : (isSala ? t('title.newDrink') : t('title.newDish')))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
