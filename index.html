@@ -457,9 +457,16 @@
       <div id="ge-variables" class="ge-tab-panel">
         <div class="month-sel" id="gv-months"></div>
         <div class="ge-kpi-grid" id="gv-kpis"></div>
+        <div class="vis-section" style="margin-bottom:14px">
+          <h4><span data-i18n="ge.gvCategoryChart">Gasto por categoría (mes)</span></h4>
+          <div id="gv-cat-chart" class="bar-chart"></div>
+        </div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
             <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div>
+          <div style="padding:8px 16px;border-bottom:1px solid var(--border)">
+            <input type="text" class="search-input" id="gv-search" data-i18n-ph="hr.gv.searchPlaceholder" placeholder="Buscar por proveedor o categoría..." oninput="GE.setGVSearch(this.value)">
+          </div>
           <div style="padding:8px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)"><i class="ti ti-info-circle"></i> <span data-i18n="ge.autoPurchaseNote">Los pedidos a proveedores marcados como "Recibido" en Cocina/Sala se añaden aquí automáticamente. Usa "Añadir compra extra" para otras compras (material, limpieza, gastos puntuales...).</span></div>
           <div id="gv-list"></div>
           <div id="gv-empty" class="empty" style="display:none" data-i18n="empty.noPurchasesMonth">Sin compras registradas este mes.</div>
@@ -486,6 +493,11 @@
 
       <!-- RESULTADO -->
       <div id="ge-resultado" class="ge-tab-panel">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px">
+          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:16px;font-weight:700" id="res-year"></span>
+          <button class="btn btn-sm btn-icon" onclick="GE.setCDRYear(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
         <div style="margin-bottom:14px">
           <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.linkedResultNote">Calculado automáticamente de Cuenta de Resultados + CAPEX</span></span>
         </div>
@@ -501,6 +513,7 @@
       <div id="ge-tesoreria" class="ge-tab-panel">
         <div class="month-sel" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
+        <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div class="dist-config">
           <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
           <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
@@ -528,10 +541,19 @@
         <div style="margin-bottom:14px">
           <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.fixedCostsLinkedNote">Costes fijos vinculados a Gastos Fijos</span></span>
         </div>
+        <div class="dist-config" style="margin-bottom:14px;align-items:center">
+          <span style="font-weight:600;font-size:13px;margin-right:4px">🗂️ <span data-i18n="hr.pe.scenarioLabel">Escenario</span></span>
+          <select id="pe-scenario-sel" onchange="GE.peLoadScenario(this.value)" style="min-width:160px"></select>
+          <button class="btn btn-sm" onclick="GE.peSaveScenario()"><i class="ti ti-device-floppy"></i> <span data-i18n="hr.pe.saveScenarioBtn">Guardar como escenario</span></button>
+          <button class="btn btn-sm btn-danger" onclick="GE.peDeleteScenario()"><i class="ti ti-trash"></i> <span data-i18n="hr.pe.deleteScenarioBtn">Eliminar escenario</span></button>
+        </div>
         <div class="grid grid-2">
           <div>
             <div class="ge-section">
-              <div class="ge-sec-head"><h4 data-i18n="ge.inputData">Datos de entrada</h4></div>
+              <div class="ge-sec-head">
+                <h4 data-i18n="ge.inputData">Datos de entrada</h4>
+                <button class="btn btn-sm" onclick="GE.peUseRealData()"><i class="ti ti-report-money"></i> <span data-i18n="hr.pe.useRealDataBtn">Usar datos del último mes</span></button>
+              </div>
               <div class="ge-input-row">
                 <label><span data-i18n="label.fixedCosts">Costes fijos totales</span> <span class="ge-auto">AUTO</span></label>
                 <input type="number" id="pe-fijos" readonly style="background:var(--teal-l);color:var(--teal-d);border-color:var(--teal)">
@@ -578,6 +600,9 @@
 
       <!-- CAPEX -->
       <div id="ge-capex" class="ge-tab-panel">
+        <div class="ge-kpi-grid" style="margin-bottom:14px">
+          <div class="ge-kpi"><div class="lbl"><span data-i18n="hr.capex.debtPending">Deuda pendiente</span></div><div class="val" id="capex-deuda-val" style="color:var(--red)">—</div></div>
+        </div>
         <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
           <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> <span data-i18n="hr.capex.newInvestment">Nueva inversión</span></button>
         </div>
