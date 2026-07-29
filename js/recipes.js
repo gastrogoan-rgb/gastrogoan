@@ -1026,7 +1026,7 @@ function renderFichaModal(){
     <div style="width:100%">
       ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).map((ing, idx) => `
         <div class="step-row" style="margin-bottom:6px">
-          <input type="text" value="${escapeHtml(ing)}" placeholder="Ej. 50 ml — Ron blanco" style="flex:1" oninput="updateFichaIngredientText(${idx}, this.value)" ${roAttr}>
+          <input type="text" value="${escapeHtml(ing)}" placeholder="${t('ph.egIngredientLine')}" style="flex:1" oninput="updateFichaIngredientText(${idx}, this.value)" ${roAttr}>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaIngredientText(${idx})" ${(f.ingredients&&f.ingredients.length?f.ingredients:['']).length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
@@ -1097,7 +1097,7 @@ function renderFichaModal(){
 
     <div class="field">
       <label>${t('label.plating')}</label>
-      <textarea id="ficha-presentation" placeholder="Notas de presentación..." ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
+      <textarea id="ficha-presentation" placeholder="${t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
       <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
         ${f.photo ? `
           <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">

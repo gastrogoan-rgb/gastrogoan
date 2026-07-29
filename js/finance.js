@@ -319,11 +319,11 @@ function renderMegalistaTable(items){
     : items.map(ing => `
       <tr>
         <td><strong>${escapeHtml(ing.name)}</strong></td>
-        <td><span class="badge badge-gray">${escapeHtml(ing.category||'—')}</span></td>
+        <td><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
         <td>${escapeHtml(ing.supplier||'—')}</td>
         <td>${escapeHtml(ing.unit)}</td>
         <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
-        <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') || '—'}</td>
+        <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
         <td class="actions-cell">
           <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
@@ -369,7 +369,7 @@ function renderMegalista(){
   if(megalistaFolder === null){
     box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(ingredientCategoryLabel(cat))}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -418,7 +418,7 @@ function openIngredientModal(id, overrideState){
       <div class="field">
         <label>${t('common.category')}</label>
         <select id="ing-category" onchange="onIngredientCategoryChange(${id||'null'})">
-          ${ingredientCategories().map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${c}</option>`).join('')}
+          ${ingredientCategories().map(c=>`<option value="${c}" ${ing.category===c?'selected':''}>${escapeHtml(ingredientCategoryLabel(c))}</option>`).join('')}
           ${DB.ingredientCategories.map(c=>`<option value="${escapeHtml(c)}" ${ing.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
           <option value="__new__">+ ${t('btn.newCategory')}...</option>
         </select>
@@ -706,7 +706,7 @@ function renderStock(){
   } else if(searching){
     // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
     groupsWrap.innerHTML = cats.map(cat => `
-      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
+      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(ingredientCategoryLabel(cat))}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
         ${byCat[cat].map(renderRow).join('')}
       </div>
@@ -715,7 +715,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(ingredientCategoryLabel(cat))}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -896,7 +896,7 @@ function openStockLogModal(){
 function printStockCountSheet(){
   const area = currentArea();
   const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area)
-    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category||t('label.noCategory'), qty: getStockEntry(ing.id).qty}))
+    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category?ingredientCategoryLabel(ing.category):t('label.noCategory'), qty: getStockEntry(ing.id).qty}))
     .sort((a,b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
   const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
     .map(e => ({name: e.name, unit: e.unit, category: t('label.elaborations'), qty: e.qty||0}))

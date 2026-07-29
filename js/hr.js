@@ -1449,7 +1449,7 @@ function printWeeklySchedule(){
     return `<tr><td><strong>${escapeHtml(emp.name)}</strong>${emp.rol?` <span style="color:#888">(${escapeHtml(emp.rol)})</span>`:''}</td>${cells}</tr>`;
   }).join('');
   const win = window.open('', '_blank', 'width=900,height=1000');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printSchedule')}</title>
   <style>body{font-family:Arial,sans-serif;font-size:9.5pt;color:#111;padding:12mm}
   h1{font-size:15pt;margin:0 0 10px}
@@ -1833,7 +1833,7 @@ function applyBulkTurno(){
   saveDB();
   closeModal();
   renderHorariosTab();
-  showToast(`${count} turno${count!==1?'s':''} asignado${count!==1?'s':''}`);
+  showToast(count===1 ? t('hr2.oneShiftAssigned') : t('hr2.nShiftsAssigned').replace('${n}', count));
 }
 
 function openEmployeeModal(id){
@@ -1860,7 +1860,7 @@ function openEmployeeModal(id){
     <div class="field-row">
       <div class="field">
         <label>${t('common.phone')}</label>
-        <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="Ej. 600123456">
+        <input type="tel" id="emp-phone" value="${escapeHtml(e.phone||'')}" placeholder="${t('ph.egPhone')}">
       </div>
       <div class="field">
         <label>${t('common.email')}</label>
@@ -2149,15 +2149,15 @@ function openEditFichajeModal(fichajeId){
   const salidaTime = f.salida ? new Date(f.salida).toTimeString().slice(0,5) : '';
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-edit"></i> Corregir fichaje — ${escapeHtml(f.fecha)}</h3>
+      <h3><i class="ti ti-edit"></i> ${t('hr2.fixClockIn')} — ${escapeHtml(f.fecha)}</h3>
       <button class="modal-close" onclick="openFichajeHistoryModal(${f.employeeId})">&times;</button>
     </div>
     <div class="field-row">
-      <div class="field"><label>Hora de entrada</label><input type="time" id="edit-fichaje-entrada" value="${entradaTime}"></div>
-      <div class="field"><label>Hora de salida</label><input type="time" id="edit-fichaje-salida" value="${salidaTime}"></div>
+      <div class="field"><label>${t('hr2.clockInTime')}</label><input type="time" id="edit-fichaje-entrada" value="${entradaTime}"></div>
+      <div class="field"><label>${t('hr2.clockOutTime')}</label><input type="time" id="edit-fichaje-salida" value="${salidaTime}"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="openFichajeHistoryModal(${f.employeeId})">Cancelar</button>
+      <button class="btn" onclick="openFichajeHistoryModal(${f.employeeId})">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="saveEditedFichaje(${fichajeId})">${t('common.save')}</button>
     </div>
   `);

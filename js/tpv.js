@@ -337,7 +337,7 @@ function renderTpvToGo(tiposServicio){
   if(!toGoOrders.length) return '';
   return `
     <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
-    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">Estos pedidos llegan automáticamente desde la web de Pedidos y Reservas.</p>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('tpv.onlineOrdersAutoArrive')}</p>
     <div class="grid grid-4">
       ${toGoOrders.map(o => {
         const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
@@ -1555,7 +1555,7 @@ function openAddItemModal(orderId, secId, platoId){
     </div>
     ${mods.length ? `
       <div class="field">
-        <label>Extras</label>
+        <label>${t('title.extras')}</label>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${mods.map(m => `
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -1567,8 +1567,8 @@ function openAddItemModal(orderId, secId, platoId){
       </div>
     ` : ''}
     <div class="field">
-      <label>Notas / comentarios (opcional)</label>
-      <textarea id="add-item-notas" rows="2" placeholder="Ej. sin cebolla, poco hecho..."></textarea>
+      <label>${t('label.notesOptional')}</label>
+      <textarea id="add-item-notas" rows="2" placeholder="${t('ph.egOrderNote')}"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
@@ -1757,16 +1757,16 @@ function openLineNotesModal(orderId, idx){
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     <div class="field">
-      <label>Momento de servicio (tanda)</label>
+      <label>${t('label.serviceMoment')}</label>
       <select id="line-tanda-input">
-        <option value="">Sin tanda / plato único</option>
-        ${options.map(t => `<option value="${escapeHtml(t)}" ${line.tanda===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+        <option value="">${t('label.noTandaSingleDish')}</option>
+        ${options.map(opt => `<option value="${escapeHtml(opt)}" ${line.tanda===opt?'selected':''}>${escapeHtml(opt)}</option>`).join('')}
       </select>
-      <small style="color:var(--muted)">Elige cuándo se debe servir este plato (al ritmo del cliente: primeros, segundos, postres...).</small>
+      <small style="color:var(--muted)">${t('label.serviceMomentHint')}</small>
     </div>
     <div class="field">
-      <label>Notas / comentarios para cocina</label>
-      <textarea id="line-notas-input" rows="3" placeholder="Ej. sin cebolla, poco hecho...">${escapeHtml(line.notas||'')}</textarea>
+      <label>${t('label.kitchenNotes')}</label>
+      <textarea id="line-notas-input" rows="3" placeholder="${t('ph.egOrderNote')}">${escapeHtml(line.notas||'')}</textarea>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
@@ -2095,7 +2095,7 @@ function renderEqualSplitTab(order){
   if(!order.splitPayments || order.splitMode !== 'equal'){
     return `
       <div class="field">
-        <label>¿Entre cuántas personas se divide la cuenta?</label>
+        <label>${t('label.howManySplitBill')}</label>
         <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
       </div>
       <div class="modal-footer" style="padding:0;border:none">
@@ -2136,7 +2136,7 @@ function renderItemsSplitTab(order){
     }
     return `
       <div class="field">
-        <label>Nº de comensales</label>
+        <label>${t('label.numDiners')}</label>
         <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" oninput="updateItemsSplitDiners(${order.id})">
       </div>
       <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Asigna cada unidad al comensal que la ha consumido (si hay 3 ensaladas, cada una puede ir a un comensal distinto):</p>
@@ -2565,10 +2565,10 @@ function printInvoice(saleId){
 function sendTicketByEmail(saleId){
   const sale = DB.sales.find(s => s.id === saleId);
   if(!sale) return;
-  const email = (prompt('Email del cliente para enviarle el ticket:', '')||'').trim();
+  const email = (prompt(t('ticket.promptClientEmail'), '')||'').trim();
   if(!email) return;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast(t('msg.invalidEmail')); return; }
-  const subject = `Ticket de tu compra en ${DB.business.name || 'GastroGoan'}`;
+  const subject = t('ticket.emailSubject').replace('${biz}', DB.business.name || 'GastroGoan');
   const body = buildTicketText(sale);
   window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   showToast(t('msg.openingEmail'));

@@ -818,7 +818,7 @@ function sendPedidoEmail(order){
   if(!o) return;
   const prov = getProviderByName(o.supplier);
   const to = prov && prov.email ? prov.email : '';
-  const subject = encodeURIComponent('Pedido '+o.supplier+' — '+o.date);
+  const subject = encodeURIComponent(t('msg.supplierOrderSubject').replace('${supplier}', o.supplier).replace('${date}', o.date));
   const body = encodeURIComponent(pedidoTexto(o));
   window.location.href = 'mailto:'+to+'?subject='+subject+'&body='+body;
 }

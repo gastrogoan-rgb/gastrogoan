@@ -106,10 +106,10 @@ async function addSucursal(parentSlotId){
   parentSlotId = parentSlotId || ACTIVE_SLOT;
   const slots = getBusinessSlots();
   const parentSlot = slots.find(s => s.id === parentSlotId);
-  const parentName = parentSlot?.name || 'Negocio';
+  const parentName = parentSlot?.name || t('gate.branchDefaultName');
   const sucursalesExistentes = slots.filter(s => s.parentId === parentSlotId).length;
-  const nombreSugerido = `${parentName} — Sucursal ${sucursalesExistentes + 2}`;
-  const nombre = prompt(`Nueva sucursal de "${parentName}":`, nombreSugerido);
+  const nombreSugerido = t('gate.branchSuggestedName').replace('${parent}', parentName).replace('${n}', sucursalesExistentes + 2);
+  const nombre = prompt(t('gate.newBranchPrompt').replace('${parent}', parentName), nombreSugerido);
   if(!nombre) return;
 
   // Leer datos del padre (puede ser el activo u otro slot)
@@ -178,7 +178,7 @@ function removeBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
   if(!slot) return;
-  if(!confirm(`¿Quitar "${slot.name}" de la lista de negocios de este dispositivo? Esto borrará sus datos guardados en este navegador (no afecta a la licencia ni a la nube; podrás volver a activarla cuando quieras).`)) return;
+  if(!confirm(t('gate.confirmRemoveBusiness').replace('${name}', slot.name))) return;
 
   indexedDB.deleteDatabase(slotIdbName(slotId));
   localStorage.removeItem(slotLicenseKey(slotId));
@@ -1727,6 +1727,15 @@ function openCloudWizard(){
 // (Carnes, Pescados...). "Otros" es común a ambas.
 const CATEGORIES_COCINA = ['Carnes','Pescados','Lácteos','Verduras','Frutas','Cereales y Panadería','Bebidas','Condimentos y Especias','Congelados','Otros'];
 const CATEGORIES_SALA = ['Cervezas','Vinos y Cavas','Licores y Destilados','Refrescos y Mixers','Café e Infusiones','Hielo y Guarniciones','Otros'];
+// Igual que allergenLabel()/businessTypeLabel(): el valor guardado de las
+// categorías predefinidas es siempre el nombre en español (clave estable
+// usada también para ordenar), pero se muestra traducido. Las categorías
+// que el propio negocio crea (DB.ingredientCategories) NO están en este
+// diccionario y se muestran tal cual, porque son su propio texto.
+function ingredientCategoryLabel(name){
+  const dict = t('ingredientCategories.map');
+  return (dict && dict[name]) || name;
+}
 function ingredientCategories(){
   return currentArea()==='sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
 }

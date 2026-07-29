@@ -884,7 +884,7 @@ function renderDistDetail(){
         ${tareasHtml}
         ${!tareasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
         <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
-          <input type="text" id="dist-tarea-${idx}" placeholder="Nueva tarea..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
+          <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
         </div>
       </div>
@@ -916,7 +916,7 @@ function renderDistDetail(){
           <option value="">— Selecciona plato —</option>
           ${platosOptions}
         </select>
-        <button class="btn btn-default" onclick="addDistPlato()">Asignar</button>
+        <button class="btn btn-default" onclick="addDistPlato()">${t('btn.assign')}</button>
       </div>
       <div class="owner-only field-row" style="margin-top:6px">
         <input type="text" id="dist-plato-manual" placeholder="O escribe un plato manualmente..." style="flex:1" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
@@ -2114,8 +2114,8 @@ function sendReservationReminderEmail(id){
   if(!r) return;
   const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
   if(!client || !client.email){ showToast(t('msg.noEmail')); return; }
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  const subject = encodeURIComponent('Recordatorio de tu reserva en ' + bizName);
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const subject = encodeURIComponent(t('msg.reservationReminderSubject').replace('${biz}', bizName));
   const body = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(client.email)+'?subject='+subject+'&body='+body;
 }
@@ -3621,7 +3621,7 @@ function toggleTipoServicio(tipo, checked){
   }
   DB.business = {...DB.business, tiposServicio: nuevo};
   saveDB();
-  showToast(`Servicio ${checked?'activado':'desactivado'}`);
+  showToast(checked ? t('msg.serviceEnabled') : t('msg.serviceDisabled'));
 }
 
 function saveBusiness(silent){
@@ -3719,11 +3719,11 @@ function openOwnCourierModal(title, c){
     <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="field">
       <label>${t('common.name')}</label>
-      <input type="text" id="oc-f-nombre" value="${escapeHtml(c.nombre)}" placeholder="Ej. Juan">
+      <input type="text" id="oc-f-nombre" value="${escapeHtml(c.nombre)}" placeholder="${t('ph.egCourierName')}">
     </div>
     <div class="field">
       <label>${t('mn.couriers.phoneLabel')}</label>
-      <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="Ej. +34 600 000 000">
+      <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="${t('ph.egPhone')}">
       <div style="font-size:12px;color:var(--muted);margin-top:4px">${t('mn.couriers.phoneHint')}</div>
     </div>
     <input type="hidden" id="oc-f-id" value="${c.id||''}">
@@ -3772,7 +3772,7 @@ function openDeliveryPlatformModal(title, p){
     <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="field">
       <label>${t('mn.delivery.platformName')}</label>
-      <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="Ej. Glovo">
+      <input type="text" id="dp-f-nombre" list="dp-sugerencias" value="${escapeHtml(p.nombre)}" placeholder="${t('ph.egDeliveryPlatform')}">
       <datalist id="dp-sugerencias">${sugerencias}</datalist>
     </div>
     <div class="field-row">
@@ -3843,7 +3843,7 @@ function renderTicketConfigCard(){
       </div>
       <div class="field">
         <label>${t('mn.ticket.footerMessage')}</label>
-        <textarea id="tk-pie" placeholder="Ej. ¡Gracias por su visita! Síguenos en @milocal">${escapeHtml(tc.pie||'')}</textarea>
+        <textarea id="tk-pie" placeholder="${t('ph.egTicketFooter')}">${escapeHtml(tc.pie||'')}</textarea>
       </div>
       <div class="field">
         <label>${t('mn.ticket.vatPct')}</label>
@@ -5882,7 +5882,7 @@ function goManualChapter(i){
 function printManualChapter(){
   const ch = MANUAL_CHAPTERS[manualChapter];
   const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast('Permite las ventanas emergentes para imprimir'); return; }
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${manualChapterTitle(ch).replace(/<[^>]+>/g,'')}</title>
   <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:15mm 12mm;max-width:180mm;margin:0 auto}
   h3{font-size:15pt}h4{font-size:12.5pt;color:#555;margin-top:16px}

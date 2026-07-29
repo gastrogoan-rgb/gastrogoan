@@ -567,8 +567,8 @@ function appendHelpMessage(html, who){
   box.scrollTop = box.scrollHeight;
 }
 function openHelpContactEmail(){
-  const subject = encodeURIComponent('Soporte GastroGoan' + ((DB.business && DB.business.name) ? ' - ' + DB.business.name : ''));
-  const body = encodeURIComponent('Hola,\n\nTengo una duda sobre GastroGoan' + ((DB.business && DB.business.name) ? ' (negocio: ' + DB.business.name + ')' : '') + ':\n\n');
+  const subject = encodeURIComponent(t('help.contact.subject') + ((DB.business && DB.business.name) ? ' - ' + DB.business.name : ''));
+  const body = encodeURIComponent(t('help.contact.bodyIntro') + ((DB.business && DB.business.name) ? ' ' + t('help.contact.businessSuffix').replace('${name}', DB.business.name) : '') + ':\n\n');
   window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject + '&body=' + body;
 }
 // Copia el email de soporte al portapapeles, por si el cliente de correo
@@ -696,7 +696,7 @@ function confirmChatAuthorPin(){
   chatVerifiedAuthors.add(target);
   setChatAuthor(target);
   closeModal();
-  showToast('Identidad verificada');
+  showToast(t('msg.identityVerified'));
   if(sel) sel.value = target;
 }
 function toggleChatPanel(){

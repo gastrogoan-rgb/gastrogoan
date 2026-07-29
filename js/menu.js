@@ -398,7 +398,7 @@ function newCartaSection(){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewCartaSection()">Añadir</button>
+      <button class="btn btn-primary" onclick="confirmNewCartaSection()">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-carta-section-name')?.focus(), 50);
@@ -704,7 +704,7 @@ function saveMenu(){
   if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
   if(!menuEdit.grupos.length){ showToast(t('msg.menuNeedsGroup')); return; }
   for(const g of menuEdit.grupos){
-    if(!g.opciones.length){ showToast(`El grupo "${g.nombre}" necesita al menos una opción`); return; }
+    if(!g.opciones.length){ showToast(t('msg.groupNeedsOneOption').replace('${name}', g.nombre)); return; }
   }
   menuEdit.nombre = nombre;
   menuEdit.precio = precio;
@@ -807,11 +807,11 @@ function newMenuGrupo(){
     </div>
     <div class="field">
       <label>${t('ph.sectionName')}</label>
-      <input type="text" id="new-menu-grupo-name" placeholder="Ej. Primero, Segundo, Postre, Bebida...">
+      <input type="text" id="new-menu-grupo-name" placeholder="${t('ph.egMenuGroups')}">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewMenuGrupo()">Añadir</button>
+      <button class="btn btn-primary" onclick="confirmNewMenuGrupo()">${t('common.add')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-menu-grupo-name')?.focus(), 50);
@@ -859,30 +859,30 @@ function addMenuOpcion(grupoId){
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       <div class="field">
-        <label>Origen de la bebida</label>
+        <label>${t('label.drinkOrigin')}</label>
         <select id="new-menu-opcion-tipo" onchange="toggleMenuOpcionTipo()">
-          <option value="carta">Bebida de la Carta (Sala)</option>
-          <option value="manual">Escribir nombre manualmente</option>
+          <option value="carta">${t('label.drinkFromCartaSala')}</option>
+          <option value="manual">${t('label.typeNameManually')}</option>
         </select>
       </div>
       <div class="field" id="new-menu-opcion-recipe-field" style="display:${bebidas.length?'':'none'}">
-        <label>Bebida (Carta de Sala)</label>
+        <label>${t('label.drinkCartaSala')}</label>
         <select id="new-menu-opcion-plato">
           ${bebidas.map(b=>`<option value="${b.platoId}">${escapeHtml(b.nombre)}</option>`).join('')}
         </select>
-        <p style="font-size:12px;color:var(--muted);margin-top:4px">Se copia solo el nombre; el precio no se enlaza porque el menú tiene precio fijo.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">${t('label.onlyNameCopiedNote')}</p>
       </div>
       <div class="field" id="new-menu-opcion-manual-field" style="display:${bebidas.length?'none':''}">
-        <label>Nombre de la bebida</label>
-        <input type="text" id="new-menu-opcion-nombre" placeholder="Ej. Copa de vino tinto">
+        <label>${t('label.drinkName')}</label>
+        <input type="text" id="new-menu-opcion-nombre" placeholder="${t('ph.egDrinkOption')}">
       </div>
       <div class="field">
-        <label>Suplemento (€) <span style="color:var(--muted);font-weight:400">opcional, extra sobre el precio del menú</span></label>
+        <label>${t('label.supplementEur')} <span style="color:var(--muted);font-weight:400">${t('label.supplementHint')}</span></label>
         <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">Añadir</button>
+        <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
       </div>
     `);
     if(!bebidas.length) document.getElementById('new-menu-opcion-tipo').value = 'manual';
@@ -896,29 +896,29 @@ function addMenuOpcion(grupoId){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Origen del plato</label>
+      <label>${t('label.dishOrigin')}</label>
       <select id="new-menu-opcion-tipo" onchange="toggleMenuOpcionTipo()">
-        <option value="escandallo">Plato del Escandallo</option>
-        <option value="manual">Escribir nombre manualmente</option>
+        <option value="escandallo">${t('label.dishFromEscandallo')}</option>
+        <option value="manual">${t('label.typeNameManually')}</option>
       </select>
     </div>
     <div class="field" id="new-menu-opcion-recipe-field" style="display:${areaRecipes.length?'':'none'}">
-      <label>Plato (Escandallo)</label>
+      <label>${t('label.dishEscandallo')}</label>
       <select id="new-menu-opcion-recipe">
         ${areaRecipes.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="new-menu-opcion-manual-field" style="display:${areaRecipes.length?'none':''}">
-      <label>Nombre del plato</label>
-      <input type="text" id="new-menu-opcion-nombre" placeholder="Ej. Ensalada de la casa">
+      <label>${t('label.dishName')}</label>
+      <input type="text" id="new-menu-opcion-nombre" placeholder="${t('ph.dishNameExample')}">
     </div>
     <div class="field">
-      <label>Suplemento (€) <span style="color:var(--muted);font-weight:400">opcional, extra sobre el precio del menú</span></label>
+      <label>${t('label.supplementEur')} <span style="color:var(--muted);font-weight:400">${t('label.supplementHint')}</span></label>
       <input type="number" id="new-menu-opcion-suplemento" step="0.01" min="0" value="0">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">Añadir</button>
+      <button class="btn btn-primary" onclick="confirmAddMenuOpcion(${grupoId})">${t('common.add')}</button>
     </div>
   `);
   if(!areaRecipes.length) document.getElementById('new-menu-opcion-tipo').value = 'manual';
