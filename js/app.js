@@ -3253,6 +3253,7 @@ function renderMiNegocio(){
       <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')}</h4>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.configuredTablesDesc')}</p>
       <div id="mn-mesas-list"></div>
+      <div id="mn-aforo-warning"></div>
     </div>
 
     <div class="card" style="max-width:720px">
@@ -3329,6 +3330,28 @@ function renderMesasConfigList(){
     }).join('');
   });
   box.innerHTML = html;
+  checkAforoWarning();
+}
+
+// Compara la suma de plazas de las mesas configuradas con el aforo indicado
+// en "Operativa" y muestra un aviso suave (no bloqueante) si no cuadran, para
+// detectar aforos desactualizados o mesas sin plazas indicadas.
+function checkAforoWarning(){
+  const box = document.getElementById('mn-aforo-warning');
+  if(!box) return;
+  const aforo = parseInt(DB.business?.aforo);
+  const seats = DB.tables.reduce((sum,t2) => sum + (t2.plazas||0), 0);
+  let msg = '';
+  if(aforo > 0 && DB.tables.length){
+    if(seats === 0){
+      msg = t('mn.aforo.warningNoSeats').replace('${aforo}', aforo);
+    }else if(seats > aforo * 1.15){
+      msg = t('mn.aforo.warningExceeded').replace('${seats}', seats).replace('${aforo}', aforo);
+    }else if(seats < aforo * 0.5){
+      msg = t('mn.aforo.warningLow').replace('${seats}', seats).replace('${aforo}', aforo);
+    }
+  }
+  box.innerHTML = msg ? `<p style="font-size:12px;color:var(--brand-orange);margin-top:8px"><i class="ti ti-alert-triangle"></i> ${msg}</p>` : '';
 }
 
 // Renombra una zona/rango entera de una vez: se aplica a todas sus mesas y
@@ -3408,6 +3431,7 @@ function addTableToZona(zona){
   DB.tables.push({id: genId(), name: `Mesa ${tablesInZone.length+1}`, zona, plazas});
   saveDB();
   renderMesasConfigList();
+  if(plazas == null && tablesInZone.length) showToast(t('mn.ops.seatsHintSingle'));
 }
 
 function updateTableName(id, val){
@@ -3556,8 +3580,13 @@ function archiveOldData(){
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
   const total = sales.length + reservations.length + cashClosures.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
-  if(!confirm(t('msg.confirmArchiveData').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before))) return;
-  downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+  if(!confirm(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before))) return;
+  try{
+    downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+  }catch(e){
+    showToast(t('msg.backupFailedNoDelete'));
+    return;
+  }
   DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
   DB.reservations = DB.reservations.filter(r => !(r.date && r.date < before && (r.status==='completada'||r.status==='cancelada')));
   DB.cashClosures = DB.cashClosures.filter(c => !(c.fecha && c.fecha < before));
@@ -3621,7 +3650,24 @@ function toggleTipoServicio(tipo, checked){
   }
   DB.business = {...DB.business, tiposServicio: nuevo};
   saveDB();
-  showToast(checked ? t('msg.serviceEnabled') : t('msg.serviceDisabled'));
+  const warn = businessTypeServiceMismatchWarning(DB.business.tipo, nuevo);
+  showToast(warn || (checked ? t('msg.serviceEnabled') : t('msg.serviceDisabled')));
+}
+
+// Tipos de negocio que normalmente trabajan solo para llevar/delivery (sin
+// servicio de mesa). Es solo una guía orientativa para el aviso, no bloquea
+// nada: cualquier negocio puede combinar los servicios que quiera.
+const TAKEAWAY_ONLY_BUSINESS_TYPES = ['Food truck', 'Catering'];
+function businessTypeServiceMismatchWarning(tipo, tiposServicio){
+  if(!tipo || !tiposServicio) return null;
+  const esSoloLlevar = TAKEAWAY_ONLY_BUSINESS_TYPES.includes(tipo);
+  if(esSoloLlevar && !tiposServicio.takeaway && !tiposServicio.delivery){
+    return t('mn.serviceTypes.warnTakeawayOnlyNoToggle');
+  }
+  if(!esSoloLlevar && tipo !== 'Otro' && !tiposServicio.mesa && (tiposServicio.takeaway || tiposServicio.delivery)){
+    return t('mn.serviceTypes.warnTableOnlyButTakeaway');
+  }
+  return null;
 }
 
 function saveBusiness(silent){
@@ -3655,12 +3701,41 @@ function saveBusiness(silent){
   }
   DB.business.horario = readHorarioFromForm();
   const horarioWarnings = validateHorario(DB.business.horario);
+  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMin);
   saveDB();
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
+  checkAforoWarning();
+  const serviceMismatchWarning = businessTypeServiceMismatchWarning(DB.business.tipo, DB.business.tiposServicio);
   if(horarioWarnings.length) showToast(horarioWarnings[0]);
+  else if(leadTimeWarning) showToast(leadTimeWarning);
+  else if(serviceMismatchWarning) showToast(serviceMismatchWarning);
   else if(!silent) showToast(t('msg.businessSaved'));
+}
+
+// Compara el tiempo mínimo de antelación (lead time) con la duración del
+// horario de apertura de cada día abierto: si algún día el negocio abre
+// menos tiempo del que exige la antelación configurada, el pedido nunca
+// podría prepararse a tiempo ese día, así que avisamos (sin bloquear).
+function leadTimeVsHorarioWarning(horario, leadTimeMin){
+  if(!leadTimeMin || !Array.isArray(horario)) return null;
+  const toMin = s => { if(!s) return null; const p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]||0); };
+  for(let i=0;i<horario.length;i++){
+    const d = horario[i];
+    if(!d || d.abierto === false) continue;
+    const tramos = d.modo === 'seguido' ? [d.seguido] : (d.turnos||[]);
+    let maxWindow = 0;
+    (tramos||[]).forEach(tr => {
+      if(!tr || !tr.ini || !tr.fin) return;
+      const ini = toMin(tr.ini), fin = toMin(tr.fin);
+      if(fin != null && ini != null && fin > ini) maxWindow = Math.max(maxWindow, fin - ini);
+    });
+    if(maxWindow > 0 && maxWindow < leadTimeMin){
+      return t('mn.leadtime.warning').replace('${lead}', leadTimeMin).replace('${day}', weekDayFull(i)).replace('${window}', maxWindow);
+    }
+  }
+  return null;
 }
 
 /* ============================================================
@@ -3725,6 +3800,7 @@ function openOwnCourierModal(title, c){
       <label>${t('mn.couriers.phoneLabel')}</label>
       <input type="text" id="oc-f-telefono" value="${escapeHtml(c.telefono||'')}" placeholder="${t('ph.egPhone')}">
       <div style="font-size:12px;color:var(--muted);margin-top:4px">${t('mn.couriers.phoneHint')}</div>
+      <button type="button" class="btn btn-sm" style="margin-top:6px" onclick="const p=document.getElementById('oc-f-telefono').value.replace(/[^0-9]/g,'');if(p)window.open('https://wa.me/'+p,'_blank')"><i class="ti ti-brand-whatsapp"></i> ${t('mn.couriers.testWhatsapp')}</button>
     </div>
     <input type="hidden" id="oc-f-id" value="${c.id||''}">
     <div class="modal-footer">
@@ -3738,7 +3814,9 @@ function saveOwnCourier(){
   const telefono = document.getElementById('oc-f-telefono').value.trim();
   if(!nombre){ showToast(t('msg.nameRequired')); return; }
   if(!telefono){ showToast(t('msg.phoneRequired')); return; }
-  if(telefono.replace(/[^0-9]/g,'').length < 10){ showToast(t('msg.includePrefix')); return; }
+  const telefonoDigits = telefono.replace(/[^0-9]/g,'');
+  if(telefonoDigits.length < 10){ showToast(t('msg.includePrefix')); return; }
+  if(/^(\d)\1+$/.test(telefonoDigits)){ showToast(t('msg.invalidPhoneNumber')); return; }
   if(!DB.business.ownCouriers) DB.business.ownCouriers = [];
   const idVal = document.getElementById('oc-f-id').value;
   if(idVal){
@@ -3776,16 +3854,30 @@ function openDeliveryPlatformModal(title, p){
       <datalist id="dp-sugerencias">${sugerencias}</datalist>
     </div>
     <div class="field-row">
-      <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}"></div>
-      <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}"></div>
+      <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}" oninput="updateDeliveryPlatformExample()"></div>
+      <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}" oninput="updateDeliveryPlatformExample()"></div>
     </div>
     <p style="font-size:12px;color:var(--muted)">${t('mn.delivery.calcHint')}</p>
+    <p style="font-size:13px;font-weight:600" id="dp-example"></p>
     <input type="hidden" id="dp-f-id" value="${p.id||''}">
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="saveDeliveryPlatform()">${t('common.save')}</button>
     </div>
   `);
+  updateDeliveryPlatformExample();
+}
+// Recalcula al vuelo el ejemplo "en un pedido de 20€, recibirías netos X" para
+// que el negocio pueda comprobar los números antes de guardar la plataforma.
+function updateDeliveryPlatformExample(){
+  const el = document.getElementById('dp-example');
+  if(!el) return;
+  const comisionPct = parseFloat(document.getElementById('dp-f-comision').value) || 0;
+  const ivaPct = parseFloat(document.getElementById('dp-f-iva').value) || 0;
+  const ejemplo = 20;
+  const comision = ejemplo * (comisionPct/100) * (1 + ivaPct/100);
+  const neto = ejemplo - comision;
+  el.textContent = t('mn.delivery.exampleLabel') + fmtMoney(neto);
 }
 function saveDeliveryPlatform(){
   const nombre = document.getElementById('dp-f-nombre').value.trim();
@@ -3848,11 +3940,37 @@ function renderTicketConfigCard(){
       <div class="field">
         <label>${t('mn.ticket.vatPct')}</label>
         <input type="number" id="tk-iva" min="0" max="100" step="0.1" value="${tc.ivaPct!=null?tc.ivaPct:10}" style="max-width:120px">
-        <small style="color:var(--muted)">${t('mn.ticket.vatDesc')}</small>
+        <small style="color:var(--muted)">${t('mn.ticket.vatDescLong')}</small>
       </div>
-      <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+        <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
+      </div>
     </div>
   `;
+}
+
+// Vista previa del ticket de cliente con datos de ejemplo, usando el mismo
+// generador de texto que el TPV al cobrar (buildTicketText), para que el
+// dueño vea de verdad el resultado con su configuración actual (dirección,
+// teléfono, web, NIF, pie e IVA) sin tener que hacer una venta de prueba.
+function previewTicketConfig(){
+  const sampleSale = {
+    date: new Date().toLocaleString('es-ES'),
+    tipo: 'mesa',
+    items: [
+      {qty:2, name:'Ejemplo de plato', price:9.5},
+      {qty:1, name:'Bebida de ejemplo', price:2.5},
+    ],
+    total: 21.5,
+    metodoPago: t('mn.ticket.samplePayment'),
+  };
+  const text = buildTicketText(sampleSale);
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-receipt"></i> ${t('mn.ticket.previewTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="background:#fff;color:#111;font-family:monospace;font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">${t('common.close')}</button></div>
+  `);
 }
 
 // Configuración de cómo se gestionan las comandas de cocina y sala: verlas en
@@ -3880,7 +3998,11 @@ function renderComandaPrintCard(){
             <option value="58" ${c.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
           </select>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.comandas.printerHint')}</p>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:10px">
+          <p style="margin:0 0 6px"><strong>${t('mn.comandas.howItWorksTitle')}</strong> ${t('mn.comandas.howItWorks1')}</p>
+          <p style="margin:0 0 6px">${t('mn.comandas.howItWorks2')}</p>
+          <p style="margin:0">${t('mn.comandas.howItWorks3')}</p>
+        </div>
         <button class="btn btn-sm" onclick="testComandaPrint()"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
       </div>
     </div>
@@ -3932,6 +4054,7 @@ function saveTicketConfig(){
     ivaPct: parseFloat(document.getElementById('tk-iva').value) || 0
   };
   saveDB();
+  renderMiNegocio();
   showToast(t('msg.ticketConfigSaved'));
 }
 
@@ -3952,13 +4075,16 @@ function changeOwnerPin(){
   const n2 = document.getElementById('mn-pin-new2').value;
   if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pinMustBe4')); return; }
   if(n1 !== n2){ showToast(t('msg.pinsDontMatch')); return; }
+  if(DB.business.pinSet && n1 === DB.business.pin){ showToast(t('msg.pinSameAsOld')); return; }
+  const WEAK_PINS = ['0000','1111','2222','3333','4444','5555','6666','7777','8888','9999','1234','4321','1212','2580','0123'];
+  const isWeak = WEAK_PINS.includes(n1);
   requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
     DB.business.pin = n1;
     DB.business.pinSet = true;
     logBusinessSettingChange('PIN de acceso a Gestión cambiado');
     saveDB();
     renderMiNegocio();
-    showToast(t('msg.pinUpdated'));
+    showToast(isWeak ? t('msg.pinTooWeak') : t('msg.pinUpdated'));
   });
 }
 

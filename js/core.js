@@ -1378,10 +1378,15 @@ function renderOnlineCard(){
   }
   const link = getPublicClientLink();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
+  const activeCartas = (typeof getActiveCartas === 'function') ? getActiveCartas() : [];
+  const activeCartaLine = activeCartas.length
+    ? `<p style="font-size:12.5px;margin-bottom:12px"><i class="ti ti-book-2"></i> ${t('mn.online.activeCartaLabel')}<strong>${activeCartas.map(c=>escapeHtml(tItem(c))).join(', ')}</strong></p>`
+    : `<p style="font-size:12.5px;margin-bottom:12px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.noActiveCarta')}</p>`;
   return `
     <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
+      ${activeCartaLine}
       <details style="margin-bottom:12px">
         <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)">⚠️ ${t('mn.online.hostingSummary')}</summary>
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
@@ -1416,7 +1421,22 @@ function renderOnlineCard(){
 // el QR no se muestra en pantalla (se genera al vuelo solo para la descarga).
 function renderTableQrCard(){
   if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
-  if(!getTenantId() || !getCloudConfig()) return '';
+  if(!getTenantId()){
+    return `
+      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needLicense')}</p>
+      </div>
+    `;
+  }
+  if(!getCloudConfig()){
+    return `
+      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
+        <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needCloud')}</p>
+      </div>
+    `;
+  }
   const link = getPublicClientLink();
   if(!link) return '';
   // Un QR por cada mesa configurada en Mi Negocio, agrupados por zona. Se
@@ -1581,7 +1601,10 @@ function renderRedsysCard(){
           <input type="checkbox" id="rs-real" style="width:18px;height:18px"> ${t('mn.redsys.realEnv')}
         </label>
       </div>
-      <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveRedsysConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+        <button class="btn btn-sm btn-danger" onclick="disableRedsysConfig()"><i class="ti ti-plug-connected-x"></i> ${t('mn.redsys.disable')}</button>
+      </div>
     </div>
   `;
 }
@@ -1626,6 +1649,28 @@ async function saveRedsysConfig(){
   }catch(e){
     showToast(t('msg.payConfigError'));
   }
+}
+
+// Desactiva el cobro con tarjeta: no hay un endpoint de borrado dedicado en
+// el Worker, así que reenviamos la config marcándola como inactiva (mismo
+// endpoint /config) y, pase lo que pase con la llamada, limpiamos los campos
+// y el estado en pantalla para que quede claro que ya no está configurado.
+async function disableRedsysConfig(){
+  if(!confirm(t('mn.redsys.confirmDisable'))) return;
+  try{
+    await fetch(`${REDSYS_WORKER_URL}/config`, {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({ tenantId: getTenantId(), fuc:'', terminal:'', claveSecreta:'', ambiente:'test', disabled:true })
+    });
+  }catch(e){
+    showToast(t('mn.redsys.disableError'));
+  }
+  ['rs-fuc','rs-terminal','rs-clave'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const realEl = document.getElementById('rs-real'); if(realEl) realEl.checked = false;
+  const el = document.getElementById('redsys-status');
+  if(el) el.innerHTML = t('msg.cardPaymentNotConfigured');
+  showToast(t('mn.redsys.disabled'));
 }
 
 function copyPublicLinkFrom(elId){
