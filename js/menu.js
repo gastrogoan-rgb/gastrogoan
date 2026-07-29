@@ -12,8 +12,8 @@ function moveArrayItem(arr, index, dir){
   [arr[index], arr[j]] = [arr[j], arr[index]];
 }
 function reorderButtons(onUp, onDown, isFirst, isLast){
-  return `<button class="btn btn-sm btn-icon" ${isFirst?'disabled':''} onclick="${onUp}" title="Subir"><i class="ti ti-chevron-up"></i></button>`
-    + `<button class="btn btn-sm btn-icon" ${isLast?'disabled':''} onclick="${onDown}" title="Bajar"><i class="ti ti-chevron-down"></i></button>`;
+  return `<button class="btn btn-sm btn-icon" ${isFirst?'disabled':''} onclick="${onUp}" title="${t('title.moveUp')}"><i class="ti ti-chevron-up"></i></button>`
+    + `<button class="btn btn-sm btn-icon" ${isLast?'disabled':''} onclick="${onDown}" title="${t('title.moveDown')}"><i class="ti ti-chevron-down"></i></button>`;
 }
 
 function migrateCartas(){
@@ -224,7 +224,7 @@ function renderScheduleRows(prefix, horario){
             <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
             <span style="color:var(--muted);font-size:9px">-</span>
             <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
-            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:1px 3px;min-height:20px;min-width:20px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="Quitar"><i class="ti ti-x" style="font-size:11px"></i></button>` : ''}
+            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:1px 3px;min-height:20px;min-width:20px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x" style="font-size:11px"></i></button>` : ''}
           </div>
         `).join('')}
         ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:1px 5px;font-size:10px;margin-top:1px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}
@@ -970,7 +970,7 @@ function openMenuOpcionModsModal(grupoId, opcionId){
       <h3><i class="ti ti-adjustments"></i> ${t('title.extras')} "${escapeHtml(o.nombre)}"</h3>
       <button class="modal-close" onclick="closeModal();renderMenuGrupos()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Configura extras opcionales (ej. "Extra queso" +1€). Se podrán añadir al tomar la comanda.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('msg.extrasDescDish')}</p>
     <div id="menu-opcion-mods-list">
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
@@ -978,11 +978,11 @@ function openMenuOpcionModsModal(grupoId, opcionId){
           <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(m.precio||0)}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') : `<div class="empty" style="padding:10px">Sin extras configurados.</div>`}
+      `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
     </div>
     <div class="field-row" style="margin-top:10px">
-      <input type="text" id="new-menu-mod-nombre" placeholder="Nombre del extra" style="flex:1">
-      <input type="number" id="new-menu-mod-precio" placeholder="Precio" step="0.01" min="0" style="width:90px">
+      <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1">
+      <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px">
       <button class="btn btn-sm" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i></button>
     </div>
   `);

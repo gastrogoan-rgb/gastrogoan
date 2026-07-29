@@ -1731,6 +1731,13 @@ function ingredientCategories(){
   return currentArea()==='sala' ? CATEGORIES_SALA : CATEGORIES_COCINA;
 }
 const ALLERGENS = ['Gluten','Crustáceos','Huevos','Pescado','Cacahuetes','Soja','Lácteos','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
+// Los 14 alérgenos de declaración obligatoria en la UE: el valor guardado
+// siempre es el nombre en español (clave estable de datos), pero se muestra
+// traducido según el idioma activo.
+function allergenLabel(name){
+  const dict = t('allergens.map');
+  return (dict && dict[name]) || name;
+}
 // g/kg para sólidos, ml/cl/L para líquidos (esenciales para escandallar
 // cócteles con precisión), ud para unidades sueltas (botellas, latas...).
 const UNITS = ['g','kg','ud','ml','cl','L'];

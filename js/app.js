@@ -727,10 +727,10 @@ function renderDistList(){
           <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
           <strong>${escapeHtml(emp.name)}</strong>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||'Sin rol')}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
-          ${isSala ? '' : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos} plato${nPlatos!==1?'s':''}</span>`}
-          <span><i class="ti ti-clipboard-list"></i> ${nTareas} tarea${nTareas!==1?'s':''}</span>
+          ${isSala ? '' : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos===1?t('dist.oneDish'):t('dist.nDishes').replace('${n}', nPlatos)}</span>`}
+          <span><i class="ti ti-clipboard-list"></i> ${nTareas===1?t('dist.oneTask'):t('dist.nTasks').replace('${n}', nTareas)}</span>
         </div>
       </div>
     `;
@@ -806,12 +806,12 @@ function renderDistDetail(){
 
   const platosHtml = d.platos.length
     ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
-        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="Ver ficha técnica">
+        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${t('title.viewTechSpec')}">
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(pl)}</span>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') + `</div>`
-    : '<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>Sin platos asignados</div>';
+    : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
 
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
     .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
@@ -835,7 +835,7 @@ function renderDistDetail(){
       nTareasTotal++; if(done) nTareasHechas++;
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="Marcar como hecha">
+        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
@@ -864,7 +864,7 @@ function renderDistDetail(){
       nTareasTotal++; if(done) nTareasHechas++;
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked)" title="Marcar como hecha">
+        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked)" title="${t('title.markAsDone')}">
         <span class="badge badge-amber" style="font-size:10px"><i class="ti ti-speakerphone"></i> Promo</span>
         <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
@@ -897,8 +897,8 @@ function renderDistDetail(){
     </div>
 
     <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
-      ${isSala ? '' : `<div class="kpi"><div class="label">Platos a su cargo</div><div class="value">${d.platos.length}</div></div>`}
-      <div class="kpi"><div class="label">Tareas de esta semana</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
+      ${isSala ? '' : `<div class="kpi"><div class="label">${t('dist.dishesInCharge')}</div><div class="value">${d.platos.length}</div></div>`}
+      <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
 
     ${isSala ? '' : `
@@ -923,9 +923,9 @@ function renderDistDetail(){
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-clipboard-list"></i> Tareas de la semana</span>
         <span style="display:flex;align-items:center;gap:8px">
-          <button class="btn btn-sm btn-icon" onclick="distWeekShift(-1)" title="Semana anterior"><i class="ti ti-chevron-left"></i></button>
+          <button class="btn btn-sm btn-icon" onclick="distWeekShift(-1)" title="${t('title.prevWeek')}"><i class="ti ti-chevron-left"></i></button>
           <span style="font-size:13px;font-weight:600">${weekRangeLabel}</span>
-          <button class="btn btn-sm btn-icon" onclick="distWeekShift(1)" title="Semana siguiente"><i class="ti ti-chevron-right"></i></button>
+          <button class="btn btn-sm btn-icon" onclick="distWeekShift(1)" title="${t('title.nextWeek')}"><i class="ti ti-chevron-right"></i></button>
           ${distWeekOffset!==0 ? `<button class="btn btn-sm" onclick="distWeekOffset=0;renderDistDetail()">${t('common.today')}</button>` : ''}
         </span>
       </h3>
@@ -1349,8 +1349,8 @@ function openBirthdaysModal(){
   `);
 }
 function birthdayGreetingText(c){
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  return `¡Feliz cumpleaños, ${c.name}! 🎂 Todo el equipo de ${bizName} te desea un día genial. ¡Esperamos verte pronto para celebrarlo!`;
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  return t('msg.birthdayGreeting').replace('${name}', c.name).replace('${biz}', bizName);
 }
 function openBirthdayGreetingModal(id){
   const c = DB.clients.find(x=>x.id===id);
@@ -1397,29 +1397,29 @@ function openRewardModal(id){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-gift"></i> Premio de fidelidad</h3>
+      <h3><i class="ti ti-gift"></i> ${t('reward.title')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13.5px;line-height:1.6">¡<strong>${escapeHtml(c.name)}</strong> ha llegado a 10 puntos! Elige el premio que le vas a entregar.</p>
+    <p style="font-size:13.5px;line-height:1.6">${t('reward.reached10pts').replace('${name}', `<strong>${escapeHtml(c.name)}</strong>`)}</p>
     ${suggestion ? `
     <div style="background:var(--cream,#FBF3EA);border-left:3px solid var(--brand-orange);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;line-height:1.5">
-      <i class="ti ti-sparkles"></i> Sugerencia de la app: su producto favorito es <strong>${escapeHtml(fav)}</strong> (el que más ha pedido), así que podrías ofrecerle <strong>"${escapeHtml(suggestion)}"</strong>.
+      <i class="ti ti-sparkles"></i> ${t('reward.suggestion').replace('${fav}', `<strong>${escapeHtml(fav)}</strong>`).replace('${suggestion}', `<strong>"${escapeHtml(suggestion)}"</strong>`)}
     </div>` : ''}
     <div class="field">
-      <label>Premio a entregar</label>
+      <label>${t('reward.rewardToGive')}</label>
       <select id="reward-select" onchange="document.getElementById('reward-custom-wrap').style.display = this.value==='__custom__' ? '' : 'none'">
         ${options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
-        <option value="__custom__">Otro (escribir)...</option>
+        <option value="__custom__">${t('reward.otherWrite')}</option>
       </select>
     </div>
     <div class="field" id="reward-custom-wrap" style="display:none">
-      <label>Premio personalizado</label>
-      <input type="text" id="reward-custom" placeholder="Ej. Postre + café gratis">
+      <label>${t('reward.customReward')}</label>
+      <input type="text" id="reward-custom" placeholder="${t('reward.customRewardPh')}">
     </div>
-    <p style="font-size:12px;color:var(--muted)">Al confirmar, el contador de ${escapeHtml(c.name)} se reiniciará a 0 y empezará una nueva ronda hacia su próximo premio.</p>
+    <p style="font-size:12px;color:var(--muted)">${t('reward.resetNote').replace('${name}', escapeHtml(c.name))}</p>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmClientReward(${id})"><i class="ti ti-gift"></i> Entregar premio y reiniciar</button>
+      <button class="btn btn-primary" onclick="confirmClientReward(${id})"><i class="ti ti-gift"></i> ${t('reward.giveAndReset')}</button>
     </div>
   `);
 }
@@ -1441,8 +1441,8 @@ function confirmClientReward(id){
 
 // Texto preconfigurado para avisar al cliente de su premio de fidelidad.
 function rewardMessageText(c, reward){
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  return `¡Hola ${c.name}! 🎉 Gracias por tu fidelidad en ${bizName}. Has conseguido un premio: ${reward}. ¡Te esperamos para que lo disfrutes en tu próxima visita!`;
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  return t('msg.rewardMessage').replace('${name}', c.name).replace('${biz}', bizName).replace('${reward}', reward);
 }
 
 // Tras dar un premio, ofrece avisar al cliente por WhatsApp/SMS o email con el texto ya preparado.
@@ -1452,19 +1452,19 @@ function openRewardNotifyModal(id, reward){
   const msg = rewardMessageText(c, reward);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-bell"></i> Avisar a ${escapeHtml(c.name)}</h3>
+      <h3><i class="ti ti-bell"></i> ${t('reward.notifyTitle').replace('${name}', escapeHtml(c.name))}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:13.5px;line-height:1.6">Puedes avisar a ${escapeHtml(c.name)} de su premio ahora mismo con un mensaje ya preparado:</p>
+    <p style="font-size:13.5px;line-height:1.6">${t('reward.notifyDesc').replace('${name}', escapeHtml(c.name))}</p>
     <div class="field">
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
-      <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?'disabled title="Este cliente no tiene email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+      <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Ahora no</button>
+      <button class="btn" onclick="closeModal()">${t('common.notNow')}</button>
     </div>
   `);
 }
@@ -2065,8 +2065,9 @@ function openReservationReminderModal(id){
   const name = client ? client.name : (r.clientName || '');
   const phone = (client && client.phone) || r.clientPhone || '';
   const email = client && client.email;
-  const bizName = (DB.business && DB.business.name) || 'nuestro restaurante';
-  const msg = `Hola ${name}, te recordamos tu reserva en ${bizName} el ${r.date} a las ${r.time} para ${r.people} persona${r.people!==1?'s':''}. ¡Te esperamos!`;
+  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
+  const peopleLabel = r.people===1 ? t('label.oneReservationPerson') : t('label.nReservationPeople').replace('${n}', r.people);
+  const msg = t('msg.reservationReminder').replace('${name}', name).replace('${biz}', bizName).replace('${date}', r.date).replace('${time}', r.time).replace('${people}', peopleLabel);
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-bell"></i> ${t('title.sendReminderTo')} ${escapeHtml(name)}</h3>
@@ -2077,7 +2078,7 @@ function openReservationReminderModal(id){
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
-      <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?'disabled title="Sin email guardado"':''}><i class="ti ti-mail"></i> Email</button>
+      <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>

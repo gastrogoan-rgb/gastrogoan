@@ -487,7 +487,7 @@ function renderCamareroFieldHtml(selectId, selectedId){
     <div class="field">
       <label>${t('label.waiter')}</label>
       <select id="${selectId}">
-        <option value="">Sin asignar</option>
+        <option value="">${t('common.unassigned')}</option>
         ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
@@ -531,8 +531,8 @@ function openNewOrderPaxModal(tableId){
     <div class="field">
       <label>${t('label.clientType')}</label>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> Cliente de paso</label>
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> Tiene reserva${pendingReservas.length?` (${pendingReservas.length} hoy)`:''}</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="paso" checked onchange="toggleNewOrderReservaField()" style="width:auto"> ${t('label.walkInClient')}</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="radio" name="new-order-tipo-cliente" value="reserva" onchange="toggleNewOrderReservaField()" style="width:auto" ${!pendingReservas.length?'disabled':''}> ${t('label.hasReservation')}${pendingReservas.length?` (${pendingReservas.length} ${t('common.today')})`:''}</label>
       </div>
     </div>
     <div class="field" id="new-order-reserva-field" style="display:none">
@@ -546,7 +546,7 @@ function openNewOrderPaxModal(tableId){
       </select>
     </div>
     <div class="field" id="new-order-pax-field">
-      <label>¿Cuántas personas?</label>
+      <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
     ${renderCamareroFieldHtml('new-order-camarero-sel')}
@@ -603,12 +603,12 @@ function openNewToGoOrderModal(){
     </div>
     <div class="field">
       <label>${t('label.clientNameOpt')}</label>
-      <input type="text" id="togo-cliente-nombre" placeholder="Nombre">
+      <input type="text" id="togo-cliente-nombre" placeholder="${t('common.name')}">
     </div>
     ${renderCamareroFieldHtml('togo-camarero-sel')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> Crear pedido</button>
+      <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> ${t('btn.createOrder')}</button>
     </div>
   `);
 }
@@ -632,16 +632,16 @@ function openNewTakeawayModal(){
     </div>
     <div class="field">
       <label>${t('label.clientName')}</label>
-      <input type="text" id="togo-ta-nombre" placeholder="Nombre">
+      <input type="text" id="togo-ta-nombre" placeholder="${t('common.name')}">
     </div>
     <div class="field">
       <label>${t('label.phoneOpt')}</label>
-      <input type="text" id="togo-ta-phone" placeholder="Teléfono">
+      <input type="text" id="togo-ta-phone" placeholder="${t('common.phone')}">
     </div>
     ${renderCamareroFieldHtml('togo-ta-camarero')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewTakeaway()"><i class="ti ti-check"></i> Crear pedido</button>
+      <button class="btn btn-primary" onclick="confirmNewTakeaway()"><i class="ti ti-check"></i> ${t('btn.createOrder')}</button>
     </div>
   `);
 }
@@ -666,28 +666,28 @@ function openNewDeliveryModal(){
     </div>
     <div class="field">
       <label>${t('label.clientName')}</label>
-      <input type="text" id="togo-del-nombre" placeholder="Nombre">
+      <input type="text" id="togo-del-nombre" placeholder="${t('common.name')}">
     </div>
     <div class="field">
-      <label>Teléfono</label>
-      <input type="text" id="togo-del-phone" placeholder="Teléfono">
+      <label>${t('common.phone')}</label>
+      <input type="text" id="togo-del-phone" placeholder="${t('common.phone')}">
     </div>
     <div class="field">
-      <label>Dirección de entrega</label>
-      <input type="text" id="togo-del-address" placeholder="Calle, número, piso...">
+      <label>${t('label.deliveryAddress')}</label>
+      <input type="text" id="togo-del-address" placeholder="${t('mn.business.addressPh')}">
     </div>
     ${platforms.length ? `
     <div class="field">
-      <label>Plataforma (opcional)</label>
+      <label>${t('label.platformOpt')}</label>
       <select id="togo-del-plataforma">
-        <option value="">— Pedido directo —</option>
+        <option value="">${t('label.directOrder')}</option>
         ${platforms.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
       </select>
     </div>` : ''}
     ${renderCamareroFieldHtml('togo-del-camarero')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewDelivery()"><i class="ti ti-check"></i> Crear pedido</button>
+      <button class="btn btn-primary" onclick="confirmNewDelivery()"><i class="ti ti-check"></i> ${t('btn.createOrder')}</button>
     </div>
   `);
 }
@@ -1201,7 +1201,7 @@ function renderOrderComandaPanel(order){
           <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="Notas"><i class="ti ti-note"></i></button>
+          <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
           ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0;color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
           ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         </div>
@@ -1219,7 +1219,7 @@ function openSetCamareroModal(orderId){
   if(!order) return;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-user"></i> Camarero/a</h3>
+      <h3><i class="ti ti-user"></i> ${t('label.waiterShort')}</h3>
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     ${renderCamareroFieldHtml('set-camarero-sel', order.camareroId)}
@@ -1432,7 +1432,7 @@ function renderComandasCocina(){
   });
 
   if(!tickets.length){
-    box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>No hay comandas pendientes. Cuando sala marche un pedido aparecerá aquí al instante.</div>`;
+    box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOrders')}</div>`;
     return;
   }
 
@@ -1810,9 +1810,9 @@ function renderPaymentModal(orderId){
   if(!order || !order.items.length) return;
   const total = orderTotal(order);
   const tabs = [
-    {id:'full', label:'Cuenta completa', icon:'ti-receipt'},
-    {id:'equal', label:'Dividir a partes iguales', icon:'ti-users-group'},
-    {id:'items', label:'Por comensal (platos)', icon:'ti-friends'}
+    {id:'full', labelKey:'label.fullBill', icon:'ti-receipt'},
+    {id:'equal', labelKey:'label.splitEqually', icon:'ti-users-group'},
+    {id:'items', labelKey:'label.splitByDiner', icon:'ti-friends'}
   ];
   openModal(`
     <div class="modal-header">
@@ -1820,17 +1820,17 @@ function renderPaymentModal(orderId){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">Total de la cuenta</div>
+      <div class="label">${t('label.billTotal')}</div>
       <div class="value">${fmtMoney(total)}</div>
     </div>
     <div class="tabs" style="margin-bottom:12px">
-      ${tabs.map(t => `<div class="tab${paymentTab===t.id?' active':''}" onclick="setPaymentTab(${order.id}, '${t.id}')"><i class="ti ${t.icon}"></i> ${t.label}</div>`).join('')}
+      ${tabs.map(tb => `<div class="tab${paymentTab===tb.id?' active':''}" onclick="setPaymentTab(${order.id}, '${tb.id}')"><i class="ti ${tb.icon}"></i> ${t(tb.labelKey)}</div>`).join('')}
     </div>
     <div id="payment-tab-body">
       ${paymentTab === 'equal' ? renderEqualSplitTab(order) : paymentTab === 'items' ? renderItemsSplitTab(order) : renderFullPaymentTab(order, total)}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${order.id})">Volver</button>
+      <button class="btn" onclick="renderTableOrderModal(${order.id})">${t('common.back')}</button>
       ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>` : ''}
     </div>
   `);
@@ -1891,18 +1891,18 @@ function renderFullPaymentTab(order, total){
       <div class="value" id="payment-final-total">${fmtMoney(finalTotal)}</div>
     </div>
     <div class="field">
-      <label>Método de pago</label>
+      <label>${t('label.paymentMethod')}</label>
       <select id="payment-method" onchange="togglePaymentCash()">
         ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
         <option value="Mixto">${t('pay.mixed')}</option>
       </select>
     </div>
     <div class="field" id="payment-cash-field">
-      <label>Importe entregado (€)</label>
+      <label>${t('label.amountGiven')}</label>
       <input type="number" id="payment-cash" step="0.01" min="0" value="${finalTotal.toFixed(2)}" oninput="updatePaymentChange(${order.id})">
     </div>
     <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
-      <div class="label">Cambio</div>
+      <div class="label">${t('label.change')}</div>
       <div class="value" id="payment-change">${fmtMoney(0)}</div>
     </div>
     <div id="payment-mixed-fields" style="display:none">
@@ -2268,21 +2268,21 @@ function openSplitPartPayment(orderId, partId){
       <div class="value">${fmtMoney(part.amount)}</div>
     </div>
     <div class="field">
-      <label>Método de pago</label>
+      <label>${t('label.paymentMethod')}</label>
       <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
         ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="split-part-cash-field">
-      <label>Importe entregado (€)</label>
+      <label>${t('label.amountGiven')}</label>
       <input type="number" id="split-part-cash" step="0.01" min="0" value="${part.amount.toFixed(2)}" oninput="updateSplitPartChange(${part.amount})">
     </div>
     <div class="kpi" id="split-part-change-kpi" style="margin-bottom:12px">
-      <div class="label">Cambio</div>
+      <div class="label">${t('label.change')}</div>
       <div class="value" id="split-part-change">${fmtMoney(0)}</div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderPaymentModal(${order.id})">Volver</button>
+      <button class="btn" onclick="renderPaymentModal(${order.id})">${t("common.back")}</button>
       <button class="btn btn-primary" onclick="confirmSplitPartPayment(${order.id}, ${part.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>
     </div>
   `);
@@ -2578,15 +2578,15 @@ function sendTicketByEmail(saleId){
 function openTicketDeliveryModal(saleId){
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-receipt"></i> Cobro registrado</h3>
+      <h3><i class="ti ti-receipt"></i> ${t('ticket.chargeRegistered')}</h3>
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">¿Qué quieres hacer con el ticket?</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">${t('ticket.whatToDo')}</p>
     <div class="modal-footer" style="flex-wrap:wrap">
-      <button class="btn" onclick="closeModal();renderTPV()"><i class="ti ti-x"></i> No imprimir</button>
-      <button class="btn" onclick="sendTicketByEmail(${saleId})"><i class="ti ti-mail"></i> Enviar por email</button>
-      <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> Factura</button>
-      <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> Imprimir ticket</button>
+      <button class="btn" onclick="closeModal();renderTPV()"><i class="ti ti-x"></i> ${t('ticket.dontPrint')}</button>
+      <button class="btn" onclick="sendTicketByEmail(${saleId})"><i class="ti ti-mail"></i> ${t('ticket.sendByEmail')}</button>
+      <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> ${t('ticket.invoiceBtn')}</button>
+      <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> ${t('ticket.printTicket')}</button>
     </div>
   `);
 }

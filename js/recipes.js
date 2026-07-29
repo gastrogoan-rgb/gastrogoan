@@ -859,7 +859,7 @@ function renderFichas(){
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
         <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
-        <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? `${group.length} bebida${group.length===1?'':'s'}` : `${group.length} plato${group.length===1?'':'s'}`}</div>
+        <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
       </div>
     `).join('')}</div>`;
     return;
@@ -1037,7 +1037,7 @@ function renderFichaModal(){
   const stepsHtml = f.pasos.map((p, idx) => `
     <div class="step-row">
       <div class="step-num">${idx+1}</div>
-      <textarea placeholder="Describe el paso de elaboración..." style="flex:1" oninput="updateFichaStep(${idx}, this.value)" ${roAttr}>${escapeHtml(p)}</textarea>
+      <textarea placeholder="${t('ficha.stepPlaceholder')}" style="flex:1" oninput="updateFichaStep(${idx}, this.value)" ${roAttr}>${escapeHtml(p)}</textarea>
       <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeFichaStep(${idx})" ${f.pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
     </div>
   `).join('');
@@ -1047,7 +1047,7 @@ function renderFichaModal(){
     const fromRecipe = liveRecipeAllergens.includes(a);
     const on = fromRecipe || (f.allergens||[]).includes(a);
     const clickable = !ro && !fromRecipe;
-    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${a}</div>`;
+    return `<div class="alg-pill${on?' on':''}" ${clickable?`onclick="toggleFichaAllergen('${escapeHtml(a)}')"`:''} style="${clickable?'':'cursor:default'}" title="${fromRecipe?t('title.autoDetectedFromCosting'):''}">${escapeHtml(allergenLabel(a))}</div>`;
   }).join('');
 
   openModal(`
@@ -1272,7 +1272,7 @@ function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
   const algs = getFichaAllergens(f).length
-    ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(a)}</span>`).join('')
+    ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
     : t('label.none');
   const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;

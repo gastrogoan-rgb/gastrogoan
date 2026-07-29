@@ -1472,53 +1472,53 @@ function openTurnoModal(id, employeeId, fecha){
 
   openModal(`
     <div class="modal-header">
-      <h3>${state.id ? 'Editar' : 'Nuevo'} Turno</h3>
+      <h3>${state.id ? t('common.edit') : t('common.new')} ${t('hr2.shift')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field-row">
       <div class="field">
-        <label>Empleado</label>
+        <label>${t('hr2.employee')}</label>
         <select id="turno-employee">${empOptions}</select>
       </div>
       <div class="field">
-        <label>Fecha</label>
+        <label>${t('common.date')}</label>
         <input type="date" id="turno-fecha" value="${state.fecha}">
       </div>
     </div>
     <div class="field">
-      <label>Tipo de turno</label>
+      <label>${t('hr2.shiftType')}</label>
       <select id="turno-tipo" onchange="turnoTipoChanged()">${tipoOptions}</select>
     </div>
     <div id="turno-horarios" style="display:${noHorario?'none':'block'}">
       <div class="field-row">
         <div class="field">
-          <label>${isPartido?'Entrada (mañana)':'Entrada'}</label>
+          <label>${isPartido?t('hr2.entryMorning'):t('hr2.clockIn')}</label>
           <input type="time" id="turno-entrada" value="${state.entrada}">
         </div>
         <div class="field">
-          <label>${isPartido?'Salida (mañana)':'Salida'}</label>
+          <label>${isPartido?t('hr2.exitMorning'):t('hr2.clockOut')}</label>
           <input type="time" id="turno-salida" value="${state.salida}">
         </div>
       </div>
       <div id="turno-partido" style="display:${isPartido?'block':'none'}">
         <div class="field-row">
           <div class="field">
-            <label>Entrada (tarde)</label>
+            <label>${t('hr2.entryAfternoon')}</label>
             <input type="time" id="turno-entrada2" value="${state.entrada2||'16:00'}">
           </div>
           <div class="field">
-            <label>Salida (tarde)</label>
+            <label>${t('hr2.exitAfternoon')}</label>
             <input type="time" id="turno-salida2" value="${state.salida2||'23:00'}">
           </div>
         </div>
       </div>
     </div>
     <div id="turno-descanso-msg" style="display:${noHorario?'block':'none'};background:#F3F4F6;border-radius:8px;padding:12px;font-size:13px;color:var(--muted);text-align:center;margin-bottom:10px">
-      Este día no tiene horario asignado.
+      ${t('hr2.noScheduleThisDay')}
     </div>
     <div class="field">
-      <label>Notas</label>
-      <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="Notas del turno...">
+      <label>${t('common.notes')}</label>
+      <input type="text" id="turno-notas" value="${escapeHtml(state.notas||'')}" placeholder="${t('hr2.shiftNotesPh')}">
     </div>
     <div class="modal-footer">
       ${state.id ? `<button class="owner-only btn btn-danger" onclick="deleteTurno(${state.id})">${t("common.delete")}</button>` : ''}
@@ -1654,7 +1654,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
-          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="Enviar email"><i class="ti ti-mail"></i></a>` : ''}
+          ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
           <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -2034,18 +2034,18 @@ function openEmployeeFicharModal(employeeId){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div style="text-align:center">
-      ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> Fichado desde las ${fmtHora(open.entrada)}</span>` : `<span class="badge badge-gray">Fuera de servicio</span>`}
+      ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="badge badge-gray">${t('hr2.offDuty')}</span>`}
       <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
-        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> Entrada</button>
-        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> Salida</button>
+        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
+        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
       </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Horas esta semana: <strong>${fmtDuracion(horasSemana)}</strong></div>
-      <div style="font-size:12px;color:var(--muted)">Horas este mes: <strong>${fmtDuracion(horasMes)}</strong></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.hoursThisWeek')}: <strong>${fmtDuracion(horasSemana)}</strong></div>
+      <div style="font-size:12px;color:var(--muted)">${t('hr2.hoursThisMonth')}: <strong>${fmtDuracion(horasMes)}</strong></div>
       ${isSala ? `
-      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Ventas atendidas esta semana: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
-      <div style="font-size:12px;color:var(--muted)">Ventas atendidas este mes: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.salesServedWeek')}: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
+      <div style="font-size:12px;color:var(--muted)">${t('hr2.salesServedMonth')}: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
       ` : ''}
-      <div style="margin-top:10px"><button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> Ver últimos fichajes</button></div>
+      <div style="margin-top:10px"><button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button></div>
     </div>
   `);
 }
@@ -2067,13 +2067,13 @@ function openFichajeHistoryModal(employeeId){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-history"></i> Últimos fichajes — ${escapeHtml(e.name)}</h3>
+      <h3><i class="ti ti-history"></i> ${t('hr2.lastClockIns')} — ${escapeHtml(e.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     ${fichajes.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Turno</th><th></th></tr></thead>
+          <thead><tr><th>${t('common.date')}</th><th>${t('hr2.clockIn')}</th><th>${t('hr2.clockOut')}</th><th>${t('common.hours')}</th><th>${t('mn.schedule.hours')}</th><th></th></tr></thead>
           <tbody>
             ${fichajes.map(f => {
               const turno = turnoForDate(employeeId, f.fecha);
@@ -2084,18 +2084,18 @@ function openFichajeHistoryModal(employeeId){
               <tr>
                 <td>${escapeHtml(f.fecha)}</td>
                 <td>${fmtHora(f.entrada)}</td>
-                <td>${f.salida ? fmtHora(f.salida) : '<span class="badge badge-green">En curso</span>'}</td>
-                <td style="${mismatch?'color:var(--red);font-weight:700':''}">${actual!=null ? fmtDuracion(actual) : '—'}${mismatch?' <i class="ti ti-alert-triangle" title="No coincide con el turno planificado"></i>':''}</td>
+                <td>${f.salida ? fmtHora(f.salida) : `<span class="badge badge-green">${t('hr2.inProgress')}</span>`}</td>
+                <td style="${mismatch?'color:var(--red);font-weight:700':''}">${actual!=null ? fmtDuracion(actual) : '—'}${mismatch?` <i class="ti ti-alert-triangle" title="${t('hr2.shiftMismatch')}"></i>`:''}</td>
                 <td style="color:var(--muted)">${planned!=null ? fmtDuracion(planned) : '—'}</td>
-                <td class="actions-cell">${f.salida ? `<button class="btn btn-sm btn-icon" title="Corregir fichaje (requiere PIN del negocio)" onclick="requestFichajeEditPin(${f.id})"><i class="ti ti-lock-edit"></i></button>` : ''}</td>
+                <td class="actions-cell">${f.salida ? `<button class="btn btn-sm btn-icon" title="${t('hr2.fixClockInTitle')}" onclick="requestFichajeEditPin(${f.id})"><i class="ti ti-lock-edit"></i></button>` : ''}</td>
               </tr>
             `;}).join('')}
           </tbody>
         </table>
       </div>
-    ` : `<div class="empty"><i class="ti ti-clock-play"></i>Sin fichajes registrados todavía.</div>`}
+    ` : `<div class="empty"><i class="ti ti-clock-play"></i>${t('hr2.noClockInsYet')}</div>`}
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">Cerrar</button>
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `, {xl:true});
 }
@@ -2178,16 +2178,16 @@ function openFichajeModal(employeeId, action){
   if(!e) return;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-key"></i> ${escapeHtml(e.name)} — ${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</h3>
+      <h3><i class="ti ti-key"></i> ${escapeHtml(e.name)} — ${action==='entrada' ? t('hr2.clockInAction') : t('hr2.clockOutAction')}</h3>
       <button class="modal-close" onclick="renderHorariosTab();closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>Introduce tu PIN</label>
+      <label>${t('hr2.enterYourPin')}</label>
       <input type="password" id="fichaje-pin" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? 'Fichar Entrada' : 'Fichar Salida'}</button>
+      <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? t('hr2.clockInAction') : t('hr2.clockOutAction')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('fichaje-pin')?.focus(), 50);
