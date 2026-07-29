@@ -1269,16 +1269,19 @@ function marcharComanda(orderId, tanda){
   showToast(t('msg.orderSentToKitchen'));
 }
 
-// Si la impresión de comandas está activada, imprime un vale de cocina (platos)
-// y otro de sala/barra (bebidas) con las líneas recién marchadas.
+// Si hay algún perfil de impresora de comandas activo, imprime un vale por cada
+// uno de ellos con las líneas recién marchadas que le correspondan según su
+// contenido configurado (comida / bebida / todo el pedido).
 function printMarchadasIfEnabled(order, firedLines){
-  if(!comandaPrintEnabled() || !firedLines || !firedLines.length) return;
+  if(!firedLines || !firedLines.length) return;
+  const printers = (typeof ensureComandaPrinters === 'function' ? ensureComandaPrinters() : (DB.business && DB.business.comandas && DB.business.comandas.printers) || []).filter(p => p.activo);
+  if(!printers.length) return;
   const table = order.tableId ? DB.tables.find(t=>t.id===order.tableId) : null;
   const titulo = table ? table.name : togoOrderLabel(order);
-  const comida = firedLines.filter(l => !l.bebida && l.qty > 0);
-  const bebida = firedLines.filter(l => l.bebida && l.qty > 0);
-  if(comida.length) printComandaTicket(t('label.kitchen'), titulo, comida);
-  if(bebida.length) printComandaTicket(t('label.diningBar'), titulo, bebida);
+  printers.forEach(p => {
+    const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
+    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket);
+  });
 }
 
 /* ============================================================

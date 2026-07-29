@@ -3974,58 +3974,99 @@ function previewTicketConfig(){
 }
 
 // Configuración de cómo se gestionan las comandas de cocina y sala: verlas en
-// pantalla (pantalla de Cocina) o imprimir un vale automáticamente al marchar.
+// pantalla o imprimirlas automáticamente al marchar, mediante uno o varios
+// "perfiles de impresora" (uno por cada dispositivo/punto físico con impresora).
+function ensureComandaPrinters(){
+  if(!DB.business) return [];
+  if(!DB.business.comandas) DB.business.comandas = {modo:'pantalla', anchoTicket:80};
+  const c = DB.business.comandas;
+  if(!Array.isArray(c.printers)){
+    const esImpresion = c.modo === 'impresion';
+    const ancho = c.anchoTicket || 80;
+    c.printers = [
+      {id: genId(), nombre: t('mn.comandas.defaultKitchen'), activo: esImpresion, anchoTicket: ancho, contenido: 'comida'},
+      {id: genId(), nombre: t('mn.comandas.defaultDining'), activo: esImpresion, anchoTicket: ancho, contenido: 'bebida'}
+    ];
+    saveDB();
+  }
+  return c.printers;
+}
+function anyComandaPrinterActive(){
+  return ensureComandaPrinters().some(p => p.activo);
+}
 function renderComandaPrintCard(){
-  const c = (DB.business && DB.business.comandas) || {modo:'pantalla', anchoTicket:80};
-  const esImpresion = c.modo === 'impresion';
+  const printers = ensureComandaPrinters();
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-printer"></i> ${t('mn.comandas.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.comandas.desc')}</p>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="radio" name="comanda-modo" value="pantalla" ${!esImpresion?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px"> 🖥️ ${t('mn.comandas.screen')}
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="radio" name="comanda-modo" value="impresion" ${esImpresion?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px"> 🧾 ${t('mn.comandas.print')}
-        </label>
+      <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:10px">
+        <p style="margin:0 0 6px"><strong>${t('mn.comandas.howItWorksTitle')}</strong> ${t('mn.comandas.howItWorks1')}</p>
+        <p style="margin:0 0 6px">${t('mn.comandas.howItWorks2')}</p>
+        <p style="margin:0">${t('mn.comandas.howItWorks3')}</p>
       </div>
-      <div id="comanda-print-opts" style="display:${esImpresion?'block':'none'}">
-        <div class="field">
-          <label>${t('mn.comandas.paperWidth')}</label>
-          <select id="comanda-ancho" onchange="setComandaAncho(this.value)" style="max-width:200px">
-            <option value="80" ${c.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
-            <option value="58" ${c.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
-          </select>
-        </div>
-        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:10px">
-          <p style="margin:0 0 6px"><strong>${t('mn.comandas.howItWorksTitle')}</strong> ${t('mn.comandas.howItWorks1')}</p>
-          <p style="margin:0 0 6px">${t('mn.comandas.howItWorks2')}</p>
-          <p style="margin:0">${t('mn.comandas.howItWorks3')}</p>
-        </div>
-        <button class="btn btn-sm" onclick="testComandaPrint()"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
+      <div id="comanda-printers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+        ${printers.length ? printers.map(p=>`
+          <div class="ge-item" style="flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-right:8px">
+              <input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)" style="width:18px;height:18px">
+            </label>
+            <input type="text" value="${escapeHtml(p.nombre)}" onchange="renameComandaPrinter('${p.id}', this.value)" placeholder="${t('ph.egPrinterName')}" style="flex:1;min-width:120px;font-weight:600">
+            <select onchange="setComandaPrinterAncho('${p.id}', this.value)" style="max-width:170px">
+              <option value="80" ${p.anchoTicket!=58?'selected':''}>80 mm (${t('mn.comandas.standard')})</option>
+              <option value="58" ${p.anchoTicket==58?'selected':''}>58 mm (${t('mn.comandas.compact')})</option>
+            </select>
+            <select onchange="setComandaPrinterContenido('${p.id}', this.value)" style="max-width:170px">
+              <option value="comida" ${p.contenido==='comida'?'selected':''}>${t('mn.comandas.contentFood')}</option>
+              <option value="bebida" ${p.contenido==='bebida'?'selected':''}>${t('mn.comandas.contentDrinks')}</option>
+              <option value="todo" ${p.contenido==='todo'?'selected':''}>${t('mn.comandas.contentAll')}</option>
+            </select>
+            <button class="btn btn-sm" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
+          </div>`).join('')
+        : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
+      <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
     </div>
   `;
 }
-function setComandaModo(modo){
-  DB.business.comandas = {...(DB.business.comandas||{anchoTicket:80}), modo};
+function toggleComandaPrinter(id, activo){
+  const p = ensureComandaPrinters().find(x=>x.id==id); if(!p) return;
+  p.activo = !!activo;
   saveDB();
-  const opts = document.getElementById('comanda-print-opts');
-  if(opts) opts.style.display = modo==='impresion' ? 'block' : 'none';
-  showToast(modo==='impresion' ? t('mn.comandas.willPrint') : t('mn.comandas.willShowScreen'));
+  showToast(anyComandaPrinterActive() ? t('mn.comandas.willPrint') : t('mn.comandas.willShowScreen'));
 }
-function setComandaAncho(val){
-  DB.business.comandas = {...(DB.business.comandas||{modo:'impresion'}), anchoTicket: parseInt(val)||80};
+function renameComandaPrinter(id, nombre){
+  const p = ensureComandaPrinters().find(x=>x.id==id); if(!p) return;
+  p.nombre = nombre.trim();
   saveDB();
 }
-function comandaPrintEnabled(){
-  return (DB.business && DB.business.comandas && DB.business.comandas.modo === 'impresion');
+function setComandaPrinterAncho(id, val){
+  const p = ensureComandaPrinters().find(x=>x.id==id); if(!p) return;
+  p.anchoTicket = parseInt(val)||80;
+  saveDB();
 }
-// Imprime un vale de comanda (cocina o sala) con las líneas marchadas.
-function printComandaTicket(destino, titulo, lineas){
+function setComandaPrinterContenido(id, val){
+  const p = ensureComandaPrinters().find(x=>x.id==id); if(!p) return;
+  p.contenido = val;
+  saveDB();
+}
+function addComandaPrinter(){
+  const printers = ensureComandaPrinters();
+  printers.push({id: genId(), nombre: t('mn.comandas.newPrinterName'), activo:true, anchoTicket:80, contenido:'todo'});
+  saveDB();
+  renderMiNegocio();
+}
+function deleteComandaPrinter(id){
+  if(!confirm(t('msg.confirmDeletePrinter'))) return;
+  DB.business.comandas.printers = ensureComandaPrinters().filter(p=>p.id!=id);
+  saveDB();
+  renderMiNegocio();
+}
+// Imprime un vale de comanda (cocina, sala, barra...) con las líneas marchadas.
+function printComandaTicket(destino, titulo, lineas, anchoTicket){
   if(!lineas || !lineas.length) return;
-  const ancho = (DB.business && DB.business.comandas && DB.business.comandas.anchoTicket) || 80;
+  const ancho = anchoTicket || 80;
   const widthPx = ancho == 58 ? 200 : 280;
   const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
   const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
@@ -4040,8 +4081,13 @@ function printComandaTicket(destino, titulo, lineas){
     </body></html>`);
   win.document.close();
 }
-function testComandaPrint(){
-  printComandaTicket('COCINA', 'Mesa de prueba', [{qty:2, name:'Ejemplo de plato', notas:'sin sal'}, {qty:1, name:'Otro plato'}]);
+function testComandaPrint(printerId){
+  const sample = [{qty:2, name:'Ejemplo de plato', notas:'sin sal', bebida:false}, {qty:1, name:'Ejemplo de bebida', bebida:true}];
+  let printer = printerId ? ensureComandaPrinters().find(p=>p.id==printerId) : null;
+  if(!printer) printer = {nombre:'COCINA', anchoTicket:80, contenido:'todo'};
+  const lineas = printer.contenido==='todo' ? sample : sample.filter(l => printer.contenido==='comida' ? !l.bebida : l.bebida);
+  if(!lineas.length){ showToast(t('mn.comandas.testNoLines')); return; }
+  printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket);
 }
 
 function saveTicketConfig(){
