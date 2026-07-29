@@ -78,12 +78,18 @@ function renderLimpiezaAlergenos(){
     </div>
   `;
 }
-const LIMPIEZA_DEFAULT_MANOS = ['Mójate las manos con agua tibia','Aplica jabón bactericida (mínimo 3ml)','Frota palmas, dorso, dedos y muñecas durante 20 segundos','Aclara con agua','Seca con papel de un solo uso','Cierra el grifo con el papel'];
-const LIMPIEZA_DEFAULT_APERTURA = ['Encender luces y climatización','Verificar temperaturas de cámaras frigoríficas','Comprobar stock de materia prima','Preparar mise en place','Limpiar superficies de trabajo','Verificar que los baños están limpios y equipados'];
-const LIMPIEZA_DEFAULT_CIERRE = ['Limpiar y desinfectar todas las superficies','Barrer y fregar suelos','Vaciar cubos de basura','Verificar que todo el equipamiento está apagado','Cerrar cámaras y comprobar temperaturas','Activar alarma y cerrar con llave'];
+// Checklists por defecto que la app sugiere al crear el plan de limpieza por
+// primera vez: son contenido de la app (de serie), no texto escrito por el
+// negocio, así que se traducen igual que el resto de la interfaz. Como
+// cualquier t('lang.xxx'), esto se recalcula en cada carga de página y un
+// cambio de idioma siempre recarga la página (ver setLang()), así que es
+// seguro leerlo aquí una sola vez a nivel de módulo.
+function getLimpiezaDefaultManos(){ return t('limpieza.defaultManos'); }
+function getLimpiezaDefaultApertura(){ return t('limpieza.defaultAperturaCocina'); }
+function getLimpiezaDefaultCierre(){ return t('limpieza.defaultCierreCocina'); }
 // Checklists propias de Sala: barra/grifos/cafetera en vez de cámaras/plancha de cocina.
-const LIMPIEZA_DEFAULT_APERTURA_SALA = ['Encender luces y música ambiente','Comprobar temperatura de neveras y grifos de cerveza','Preparar hielo, guarniciones y cristalería','Revisar stock de bebidas en barra','Limpiar barra y mesas','Verificar que los baños están limpios y equipados'];
-const LIMPIEZA_DEFAULT_CIERRE_SALA = ['Limpiar y desinfectar la barra y mesas','Lavar y guardar la cristalería','Vaciar posos de cafetera/molinillo y limpiar grifos de cerveza','Verificar que todo el equipamiento está apagado','Cerrar neveras y comprobar temperaturas','Activar alarma y cerrar con llave'];
+function getLimpiezaDefaultAperturaSala(){ return t('limpieza.defaultAperturaSala'); }
+function getLimpiezaDefaultCierreSala(){ return t('limpieza.defaultCierreSala'); }
 
 let limpiezaTab = 'protocolo';
 let limpiezaMonthOffset = 0;
@@ -97,19 +103,19 @@ function limpiezaProtocoloPasos(type){
     // Migración: antes era un array plano (siempre pensado para Cocina).
     const legacy = Array.isArray(l[key]) ? l[key] : null;
     l[key] = {
-      cocina: legacy || [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA : LIMPIEZA_DEFAULT_CIERRE)],
-      sala: [...(type==='apertura' ? LIMPIEZA_DEFAULT_APERTURA_SALA : LIMPIEZA_DEFAULT_CIERRE_SALA)]
+      cocina: legacy || [...(type==='apertura' ? getLimpiezaDefaultApertura() : getLimpiezaDefaultCierre())],
+      sala: [...(type==='apertura' ? getLimpiezaDefaultAperturaSala() : getLimpiezaDefaultCierreSala())]
     };
   }
   const area = currentArea();
-  if(!l[key][area]) l[key][area] = [...(type==='apertura' ? (area==='sala'?LIMPIEZA_DEFAULT_APERTURA_SALA:LIMPIEZA_DEFAULT_APERTURA) : (area==='sala'?LIMPIEZA_DEFAULT_CIERRE_SALA:LIMPIEZA_DEFAULT_CIERRE))];
+  if(!l[key][area]) l[key][area] = [...(type==='apertura' ? (area==='sala'?getLimpiezaDefaultAperturaSala():getLimpiezaDefaultApertura()) : (area==='sala'?getLimpiezaDefaultCierreSala():getLimpiezaDefaultCierre()))];
   return l[key][area];
 }
 
 function ensureLimpiezaData(){
   if(!DB.limpieza) DB.limpieza = {};
   const l = DB.limpieza;
-  if(!l.manosPasos) l.manosPasos = [...LIMPIEZA_DEFAULT_MANOS];
+  if(!l.manosPasos) l.manosPasos = [...getLimpiezaDefaultManos()];
   if(!l.tareas) l.tareas = [];
   if(!l.checks) l.checks = {};
   if(!l.checksMes) l.checksMes = {};
@@ -190,7 +196,7 @@ function renderLimpiezaManos(){
     </div>
   `;
 }
-function resetManosPasos(){ DB.limpieza.manosPasos = [...LIMPIEZA_DEFAULT_MANOS]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
+function resetManosPasos(){ DB.limpieza.manosPasos = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function updateManosPaso(i, val){ DB.limpieza.manosPasos[i] = val; saveDB(); }
 function addManosPaso(){ DB.limpieza.manosPasos.push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
 function removeManosPaso(i){
@@ -278,7 +284,7 @@ function removeProtocoloPaso(type,i){
 function resetProtocoloPasos(type){
   const area = currentArea();
   const isSala = area === 'sala';
-  DB.limpieza[_protocoloKey(type)][area] = [...(type==='apertura' ? (isSala?LIMPIEZA_DEFAULT_APERTURA_SALA:LIMPIEZA_DEFAULT_APERTURA) : (isSala?LIMPIEZA_DEFAULT_CIERRE_SALA:LIMPIEZA_DEFAULT_CIERRE))];
+  DB.limpieza[_protocoloKey(type)][area] = [...(type==='apertura' ? (isSala?getLimpiezaDefaultAperturaSala():getLimpiezaDefaultApertura()) : (isSala?getLimpiezaDefaultCierreSala():getLimpiezaDefaultCierre()))];
   saveDB(); renderLimpiezaProtocolo(); showToast(t('msg.stepsReset'));
 }
 function printProtocolo(type){
@@ -1114,12 +1120,20 @@ function showLoyaltyInfo(){
   `);
 }
 
+// Los 5 premios de fidelización por defecto son texto sugerido por la app
+// (no escrito por el negocio), así que se traduce su etiqueta mostrada igual
+// que allergenLabel()/businessTypeLabel(). Cualquier premio personalizado
+// que el negocio añada no está en el diccionario y se muestra tal cual.
+function rewardLabel(name){
+  const dict = t('loyaltyRewards.map');
+  return (dict && dict[name]) || name;
+}
 function renderLoyaltyRewardsList(){
   const rewards = DB.loyaltyRewards||[];
   if(!rewards.length) return `<p style="font-size:12px;color:var(--muted)">${t('empty.noRewardsDefined')}</p>`;
   return rewards.map((r,i) => `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px">${escapeHtml(r)}</span>
+      <span style="font-size:13px">${escapeHtml(rewardLabel(r))}</span>
       <button class="btn btn-sm btn-icon btn-danger" onclick="removeLoyaltyReward(${i})"><i class="ti ti-trash"></i></button>
     </div>
   `).join('');
@@ -1408,7 +1422,7 @@ function openRewardModal(id){
     <div class="field">
       <label>${t('reward.rewardToGive')}</label>
       <select id="reward-select" onchange="document.getElementById('reward-custom-wrap').style.display = this.value==='__custom__' ? '' : 'none'">
-        ${options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
+        ${options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(rewardLabel(o))}</option>`).join('')}
         <option value="__custom__">${t('reward.otherWrite')}</option>
       </select>
     </div>
@@ -2979,6 +2993,12 @@ function deletePromo(id){
    MI NEGOCIO — Datos del establecimiento
    ============================================================ */
 const BUSINESS_TIPOS = ['Restaurante','Bar','Cafetería','Brasería','Cervecería','Gastrobar','Catering','Food truck','Otro'];
+// El valor guardado (b.tipo) siempre es el nombre en español (clave estable),
+// pero se muestra traducido según el idioma activo — mismo patrón que allergenLabel().
+function businessTypeLabel(name){
+  const dict = t('businessTypes.map');
+  return (dict && dict[name]) || name;
+}
 
 // Renderiza los campos de un tramo (seguido o turno): horas de apertura/cierre.
 function renderTramoFields(prefix, tramo, label){
@@ -3139,7 +3159,7 @@ function renderMiNegocio(){
         <div class="field">
           <label>${t('mn.business.type')}</label>
           <select id="mn-tipo" onchange="saveBusiness(true)">
-            ${BUSINESS_TIPOS.map(bt=>`<option ${b.tipo===bt?'selected':''}>${bt}</option>`).join('')}
+            ${BUSINESS_TIPOS.map(bt=>`<option value="${bt}" ${b.tipo===bt?'selected':''}>${escapeHtml(businessTypeLabel(bt))}</option>`).join('')}
           </select>
         </div>
         <div class="field">
