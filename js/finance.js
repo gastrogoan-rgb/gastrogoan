@@ -27,6 +27,9 @@ function salesTotalForMonth(year, month){
   const end = `${year}-${String(month+1).padStart(2,'0')}-31`;
   return salesTotalForRange(start, end);
 }
+function salesTotalForDate(dateStr){
+  return salesTotalForRange(dateStr, dateStr);
+}
 function daysInMonth(year, month){
   return new Date(year, month+1, 0).getDate();
 }
@@ -69,28 +72,116 @@ function renderDashboardBarTrend(elId, trend, allowNegative){
 }
 
 function renderDashboard(){
+  const today = new Date();
+  const todayDate = todayStr();
+  const yesterdayDate = dateStr(new Date(today.getTime() - 86400000));
+  const lastWeekSameDayDate = dateStr(new Date(today.getTime() - 7*86400000));
+  const weekAgo = dateStr(new Date(today.getTime() - 6*86400000));
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+
+  const hasAnySales = DB.sales.length > 0;
+
+  // Sales analysis (last 30 days): avg ticket, top products, sales by hour
+  const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
+  const salesLast30 = DB.sales.filter(s=>s.date>=last30Start && s.date<=todayDate);
+  const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
+  const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
+
+  // % Food Cost medio ponderado por unidades vendidas en los últimos 30 días,
+  // para que un plato sin ventas no distorsione el indicador frente al objetivo.
+  const recipeUnits30 = {};
+  salesLast30.forEach(s=>{
+    (s.items||[]).forEach(it=>{
+      if(it.recipeId) recipeUnits30[it.recipeId] = (recipeUnits30[it.recipeId]||0) + (it.qty||1);
+    });
+  });
   let avgFoodCost = 0;
-  if(DB.recipes.length){
+  const weightedFc = DB.recipes
+    .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnits30[r.id]||0}))
+    .filter(e => isFinite(e.pct) && e.units>0);
+  const weightedFcUnits = weightedFc.reduce((s,e)=>s+e.units,0);
+  if(weightedFcUnits > 0){
+    avgFoodCost = weightedFc.reduce((s,e)=>s+e.pct*e.units,0) / weightedFcUnits;
+  } else if(DB.recipes.length){
     const pcts = DB.recipes.map(r => recipeFoodCostPct(r)).filter(p => isFinite(p));
     if(pcts.length) avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length;
   }
 
-  const today = new Date();
-  const todayDate = todayStr();
-  const weekAgo = dateStr(new Date(today.getTime() - 6*86400000));
-  const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+  /* ---------- Hoy — Atención (acciones a un vistazo) ---------- */
+  const openOrders = DB.tpvOrders.filter(o => o.status==='abierta').length;
+  const clockedIn = DB.employees.filter(e => getOpenFichaje(e.id)).length;
+  const pendingReservations = DB.reservations.filter(r => r.date===todayDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
+  const lowStockCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
 
-  const todaySales = salesTotalForRange(todayDate, todayDate);
-  const weekSales = salesTotalForRange(weekAgo, todayDate);
-  const monthSales = salesTotalForRange(monthStart, todayDate);
-
-  document.getElementById('dashboard-period-kpis').innerHTML = `
-    <div class="kpi ok"><div class="label"><i class="ti ti-cash"></i> ${t('label.salesToday')}</div><div class="value">${fmtMoney(todaySales)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.salesLast7Days')}</div><div class="value">${fmtMoney(weekSales)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> ${t('dash.salesCurrentMonth')}</div><div class="value">${fmtMoney(monthSales)}</div></div>
+  const attentionItems = [
+    {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
+    {count: clockedIn, icon:'ti-clock-check', label: t('dash.att.clockedIn'), onclick: `navigate('horarios')`},
+    {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
+    {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
+  ];
+  const anyAttention = attentionItems.some(i => i.count > 0);
+  document.getElementById('dashboard-attention').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      ${attentionItems.map(i => `
+        <div onclick="${i.onclick}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);${i.count===0?'opacity:.45':''}${i.count>0 && i.warn?';border-color:var(--red);color:var(--red)':''}">
+          <i class="ti ${i.icon}" style="font-size:18px"></i>
+          <strong style="font-size:16px">${i.count}</strong>
+          <span style="font-size:12.5px;color:${i.count>0 && i.warn?'var(--red)':'var(--muted)'}">${i.label}</span>
+        </div>
+      `).join('')}
+    </div>
+    ${anyAttention ? '' : `<div style="font-size:12.5px;color:var(--muted);margin-top:4px">${t('dash.att.allQuiet')}</div>`}
   `;
 
-  // Resultado del mes (P&L)
+  /* ---------- Hero: venta de hoy + comparativas ---------- */
+  const todaySales = salesTotalForDate(todayDate);
+  const salesToday = DB.sales.filter(s=>s.date===todayDate);
+  const todayTicketCount = salesToday.length;
+  const todayAvgTicket = todayTicketCount ? todaySales / todayTicketCount : 0;
+
+  function heroDelta(compareDate){
+    const compareSales = salesTotalForDate(compareDate);
+    if(compareSales <= 0) return todaySales>0 ? null : 0; // null = sin referencia real para comparar
+    return ((todaySales - compareSales) / compareSales) * 100;
+  }
+  const deltaYesterday = heroDelta(yesterdayDate);
+  const deltaLastWeek = heroDelta(lastWeekSameDayDate);
+  function deltaBadge(delta, label){
+    if(delta===null) return `<span class="badge badge-gray">${label}: —</span>`;
+    const cls = delta>=0 ? 'badge-green' : 'badge-red';
+    const sign = delta>=0 ? '+' : '';
+    return `<span class="badge ${cls}"><i class="ti ${delta>=0?'ti-arrow-up':'ti-arrow-down'}"></i> ${sign}${delta.toFixed(1)}% ${label}</span>`;
+  }
+
+  document.getElementById('dashboard-hero').innerHTML = !hasAnySales ? `
+    <div class="card" style="text-align:center;padding:32px 20px">
+      <i class="ti ti-chart-line" style="font-size:32px;color:var(--border);display:block;margin-bottom:8px"></i>
+      <div style="font-size:15px;color:var(--muted)">${t('dash.noSalesYet')}</div>
+    </div>
+  ` : `
+    <div class="card" style="text-align:center">
+      <div style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600">${t('dash.hero.salesToday')}</div>
+      <div style="font-size:44px;font-weight:800;margin:6px 0;line-height:1">${fmtMoney(todaySales)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px">
+        ${deltaBadge(deltaYesterday, t('dash.hero.vsYesterday'))}
+        ${deltaBadge(deltaLastWeek, t('dash.hero.vsLastWeek'))}
+      </div>
+      <div style="display:flex;gap:24px;justify-content:center;font-size:13px;color:var(--muted)">
+        <div>${t('dash.hero.ticketsToday')}: <strong style="color:var(--text)">${todayTicketCount}</strong></div>
+        <div>${t('dash.avgTicket')}: <strong style="color:var(--text)">${fmtMoney(todayAvgTicket)}</strong></div>
+      </div>
+    </div>
+  `;
+
+  // Esta semana (ventas y gastos): datos que no se muestran en ningún otro sitio del dashboard.
+  const weekSales = salesTotalForRange(weekAgo, todayDate);
+  const weekGastos = geGastosTotalForRange(weekAgo, todayDate);
+  document.getElementById('dashboard-period-kpis').innerHTML = `
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.salesLast7Days')}</div><div class="value">${fmtMoney(weekSales)}</div></div>
+    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.expensesLast7Days')}</div><div class="value">${fmtMoney(weekGastos)}</div></div>
+  `;
+
+  // Resultado del mes (P&L) — única fuente de verdad para las cifras del mes en curso.
   const year = today.getFullYear();
   const month = today.getMonth();
   const facturacion = salesTotalForMonth(year, month);
@@ -98,7 +189,22 @@ function renderDashboard(){
   const fijos = geTotalFijosNeto();
   const resultado = facturacion - variables - fijos;
 
-  // Comparación de ventas del año (12 meses)
+  const fcPct = avgFoodCost;
+  const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
+  document.getElementById('dashboard-resultado').innerHTML = `
+    <div class="grid grid-4">
+      <div class="kpi"><div class="label">${t('dash.revenueMonth')}</div><div class="value">${fmtMoney(facturacion)}</div></div>
+      <div class="kpi"><div class="label">${t('hr.lbl.variableExpensesNoVat')}</div><div class="value">${fmtMoney(variables)}</div></div>
+      <div class="kpi"><div class="label">${t('hr.lbl.fixedNoVat')}</div><div class="value">${fmtMoney(fijos)}</div></div>
+      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">${t('dash.result')}</div><div class="value">${fmtMoney(resultado)}</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:13px;color:var(--muted)">
+      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
+      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${weightedFcUnits>0||DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
+    </div>
+  `;
+
+  // Comparación de ventas / gastos / resultado del año (12 meses)
   const ventasTrend = [];
   const gastosTrend = [];
   const resultadoTrend = [];
@@ -113,42 +219,16 @@ function renderDashboard(){
     gastosTrend.push({label, value: variablesM + fijosM});
     resultadoTrend.push({label, value: sales - variablesM - fijosM});
   }
-  renderDashboardBarTrend('dashboard-trend-ventas', ventasTrend);
-  renderDashboardBarTrend('dashboard-trend-gastos', gastosTrend);
-  renderDashboardBarTrend('dashboard-trend-resultado', resultadoTrend, true);
-
-  // Gastos hoy / últimos 7 días / mes en curso (variables con fecha + fijos prorrateados)
-  const todayGastos = geGastosTotalForRange(todayDate, todayDate);
-  const weekGastos = geGastosTotalForRange(weekAgo, todayDate);
-  const monthGastos = geGastosTotalForRange(monthStart, todayDate);
-
-  document.getElementById('dashboard-gastos-kpis').innerHTML = `
-    <div class="kpi"><div class="label"><i class="ti ti-receipt-2"></i> ${t('dash.expensesToday')}</div><div class="value">${fmtMoney(todayGastos)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.expensesLast7Days')}</div><div class="value">${fmtMoney(weekGastos)}</div></div>
-    <div class="kpi"><div class="label"><i class="ti ti-calendar-month"></i> ${t('dash.expensesCurrentMonth')}</div><div class="value">${fmtMoney(monthGastos)}</div></div>
-  `;
-
-  // Resultado del mes (P&L)
-  const fcPct = facturacion > 0 ? (avgFoodCost) : 0;
-  const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
-  document.getElementById('dashboard-resultado').innerHTML = `
-    <div class="grid grid-4">
-      <div class="kpi"><div class="label">${t('dash.revenueMonth')}</div><div class="value">${fmtMoney(facturacion)}</div></div>
-      <div class="kpi"><div class="label">${t('hr.lbl.variableExpensesNoVat')}</div><div class="value">${fmtMoney(variables)}</div></div>
-      <div class="kpi"><div class="label">${t('hr.lbl.fixedNoVat')}</div><div class="value">${fmtMoney(fijos)}</div></div>
-      <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">${t('dash.result')}</div><div class="value">${fmtMoney(resultado)}</div></div>
-    </div>
-    <div style="margin-top:8px;font-size:13px;color:var(--muted)">
-      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
-      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
-    </div>
-  `;
-
-  // Sales analysis (last 30 days): avg ticket, top products, sales by hour
-  const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
-  const salesLast30 = DB.sales.filter(s=>s.date>=last30Start && s.date<=todayDate);
-  const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
-  const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
+  if(hasAnySales){
+    renderDashboardBarTrend('dashboard-trend-ventas', ventasTrend);
+    renderDashboardBarTrend('dashboard-trend-gastos', gastosTrend);
+    renderDashboardBarTrend('dashboard-trend-resultado', resultadoTrend, true);
+  } else {
+    const emptyMsg = `<div class="empty">${t('dash.noSalesYet')}</div>`;
+    document.getElementById('dashboard-trend-ventas').innerHTML = emptyMsg;
+    document.getElementById('dashboard-trend-gastos').innerHTML = emptyMsg;
+    document.getElementById('dashboard-trend-resultado').innerHTML = emptyMsg;
+  }
 
   const productTotals = {};
   salesLast30.forEach(s=>{
@@ -200,13 +280,13 @@ function renderDashboard(){
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topSellingDishes')}</h4>
         ${topProducts.length ? `<div class="table-wrap"><table><tbody>
-          ${topProducts.map(([name,total]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
+          ${topProducts.map(([name,total]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600">${fmtMoney(total)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noSalesRegistered')}</div>`}
       </div>
       <div>
         <h4 style="margin:0 0 8px;font-size:13px;color:var(--muted)">${t('dash.topGrossMargin')}</h4>
         ${topMargins.length ? `<div class="table-wrap"><table><tbody>
-          ${topMargins.map(([name,v]) => `<tr><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
+          ${topMargins.map(([name,v]) => `<tr style="cursor:pointer" onclick="goToEscandalloForDish('${escapeJsAttr(name)}')" title="${t('title.viewTechSpec')}"><td>${escapeHtml(name)}</td><td style="text-align:right;font-weight:600;color:var(--green)">${fmtMoney(v.margin)}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="empty">${t('dash.noCostDataEnough')}</div>`}
       </div>
       <div>
@@ -244,7 +324,9 @@ function renderDashboard(){
           <div class="kpi"><div class="label">${t('dash.coversCurrentMonth')}</div><div class="value">${cub}</div></div>
           <div class="kpi ${diff>=0?'ok':'warn'}"><div class="label">${t('dash.difference')}</div><div class="value">${diff>=0?'+':''}${diff}</div></div>
         </div>
-        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?t('hr.pe.aboveBreakeven'):t('hr.pe.belowBreakeven')}</div>
+        <div style="margin-top:8px;font-weight:600;color:${diff>=0?'var(--green)':'var(--red)'}">
+          ${diff>=0?t('hr.pe.aboveBreakeven'):`${t('hr.pe.belowBreakeven')} <span style="cursor:pointer;text-decoration:underline;font-weight:600" onclick="navigate('economia');GE.tab('fijos')">${t('dash.reviewFixedExpenses')}</span>`}
+        </div>
       `;
     }else{
       breakevenHtml = `<div class="empty">${t('dash.cantCalculateFoodCost')}</div>`;
@@ -254,8 +336,17 @@ function renderDashboard(){
 
   GE.renderPlatos();
 }
+// Fecha "hoy" en base local (misma convención que dateStr, usada en toda la
+// app), para evitar desajustes de un día cerca de medianoche por huso horario.
 function todayStr(){
-  return new Date().toISOString().slice(0,10);
+  return dateStr(new Date());
+}
+// Navega a Stock y activa el filtro "Solo alertas" (usado desde el panel
+// Hoy — Atención del Dashboard).
+function dashboardGoToStockAlerts(){
+  navigate('stock');
+  const cb = document.getElementById('stock-only-alerts');
+  if(cb){ cb.checked = true; renderStock(); }
 }
 
 /* ============================================================

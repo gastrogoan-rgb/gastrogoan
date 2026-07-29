@@ -952,7 +952,7 @@ const GE = (function(){
           <td>${fmtMoney(i.revenue)}</td>
           <td>${fmtMoney(i.cost)}</td>
           <td class="${i.margin>=0?'pos':'neg'}">${fmtMoney(i.margin)}</td>
-          <td class="${i.marginPct>=0?(i.marginPct<25?'':'pos'):'neg'}">${i.marginPct.toFixed(1)}%</td>
+          <td class="${i.marginPct>=0?(i.marginPct<25?'':'pos'):'neg'}">${i.marginPct!=null?i.marginPct.toFixed(1)+'%':'—'}</td>
         </tr>`).join('')}</tbody>
     `;
   }

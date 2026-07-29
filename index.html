@@ -81,23 +81,28 @@
       <div class="view-title" data-i18n="view.dashboard.title">Panel de Control</div>
       <div class="view-subtitle" data-i18n="view.dashboard.subtitle">Resumen general de tu negocio</div>
 
-      <div class="grid grid-3" id="dashboard-period-kpis" style="margin-bottom:14px"></div>
+      <div class="card" style="margin-top:16px">
+        <h3 data-i18n="title.todayAttention"><i class="ti ti-bell"></i> Hoy — Atención</h3>
+        <div id="dashboard-attention"></div>
+      </div>
+
+      <div id="dashboard-hero" style="margin-top:16px"></div>
+
+      <div class="grid grid-2" id="dashboard-period-kpis" style="margin-top:16px"></div>
+
+      <div class="card" style="margin-top:16px">
+        <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
+        <div id="dashboard-resultado"></div>
+      </div>
 
       <div class="card" style="margin-top:16px">
         <h3 data-i18n="title.salesComparison"><i class="ti ti-trending-up"></i> Comparación de ventas del año</h3>
         <div id="dashboard-trend-ventas"></div>
       </div>
 
-      <div class="grid grid-3" id="dashboard-gastos-kpis" style="margin:16px 0"></div>
-
       <div class="card" style="margin-top:16px">
         <h3 data-i18n="title.expenseComparison"><i class="ti ti-receipt-2"></i> Comparación de gastos del año</h3>
         <div id="dashboard-trend-gastos"></div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
-        <div id="dashboard-resultado"></div>
       </div>
 
       <div class="card" style="margin-top:16px">
@@ -115,35 +120,41 @@
         <div id="dashboard-breakeven"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
-        <h3 data-i18n="title.dishAnalysis"><i class="ti ti-toolsKitchen"></i> Análisis de Platos</h3>
-        <div class="month-sel" id="platos-period-sel"></div>
-        <div class="ge-kpi-grid" id="platos-kpis"></div>
-        <div class="vis-section" style="margin-bottom:14px">
-          <h4><span data-i18n="dash.top5DishesByRevenue">Top 5 platos por ingresos</span> <span class="ge-auto">AUTO</span></h4>
-          <div id="platos-chart" class="bar-chart"></div>
+      <details class="card" style="margin-top:16px">
+        <summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px">
+          <i class="ti ti-chevron-right" style="transition:transform .15s"></i>
+          <i class="ti ti-toolsKitchen"></i> <span data-i18n="title.dishAnalysis">Análisis de Platos</span>
+          <span style="font-weight:400;font-size:12px;color:var(--muted)" data-i18n="dash.deepDiveHint">(detalle avanzado — click para desplegar)</span>
+        </summary>
+        <div style="margin-top:14px">
+          <div class="month-sel" id="platos-period-sel"></div>
+          <div class="ge-kpi-grid" id="platos-kpis"></div>
+          <div class="vis-section" style="margin-bottom:14px">
+            <h4><span data-i18n="dash.top5DishesByRevenue">Top 5 platos por ingresos</span> <span class="ge-auto">AUTO</span></h4>
+            <div id="platos-chart" class="bar-chart"></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> <span data-i18n="dash.mostSoldByUnits">Más vendidos (por unidades)</span></h4></div>
+            <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
+            <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
+            <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> <span data-i18n="dash.leastProfitable">Menos rentables</span></h4></div>
+            <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4>👻 <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
+            <div id="platos-sin-ventas"></div>
+          </div>
         </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> <span data-i18n="dash.mostSoldByUnits">Más vendidos (por unidades)</span></h4></div>
-          <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
-          <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
-          <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> <span data-i18n="dash.leastProfitable">Menos rentables</span></h4></div>
-          <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
-        </div>
-        <div class="ge-section">
-          <div class="ge-sec-head"><h4>👻 <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
-          <div id="platos-sin-ventas"></div>
-        </div>
-      </div>
+      </details>
     </section>
 
     <!-- ========== MEGA LISTA ========== -->

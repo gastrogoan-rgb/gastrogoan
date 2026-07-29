@@ -112,6 +112,17 @@ function backToEscandalloRecipes(){
   renderEscandallo();
 }
 
+// Navega directo al Escandallo completo de un plato por nombre (usado desde
+// el Dashboard, mismo patrón que goToFichaForDish en js/app.js).
+function goToEscandalloForDish(name){
+  const r = DB.recipes.find(rec => rec.name === name && (rec.area||'cocina') === currentArea());
+  if(!r){ showToast(t('msg.techSheetNotFound')); return; }
+  escandalloTab = r.isBase ? 'elaboraciones' : 'platos';
+  escandalloFolder = r.category || '__none__';
+  escandalloRecipe = r.id;
+  navigate('escandallo');
+}
+
 // Agrupa los platos por categoría para la vista de carpetas, devolviendo
 // [claveCategoria, etiqueta, platos] (clave '__none__' para sin categoría).
 function getEscandalloFolders(recipes){
