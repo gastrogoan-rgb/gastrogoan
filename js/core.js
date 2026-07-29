@@ -1052,6 +1052,7 @@ function updateSyncBadge(state){
 
 function refreshAfterRemoteChange(){
   renderHeader();
+  renderModuleBadges();
   const overlay = document.getElementById('modal-overlay');
   if(overlay && overlay.classList.contains('active')) return; // no interrumpir al usuario mientras edita
   const active = document.querySelector('.view.active');
@@ -1122,6 +1123,76 @@ function getPlatformFirebaseApp(){
    COMPARTIDO de la plataforma (no en el Firebase propio del negocio), así
    que esta escucha se conecta ahí independientemente de si el negocio tiene
    configurada su propia nube. */
+// Pitido corto y discreto (generado con la Web Audio API, sin ficheros de
+// audio) para avisar de que ha llegado una reserva o pedido online nuevo,
+// independientemente de la vista que el personal tenga abierta en ese momento.
+function playNewRequestAlert(){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.28);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+    osc.onended = () => ctx.close();
+  }catch(e){ /* audio no disponible en este navegador/pestaña: no bloquea nada */ }
+}
+
+// Cuenta de reservas/pedidos públicos aún no vistos por el personal, para el
+// badge en los iconos de módulo de Reservas y TPV. "Visto" se recuerda por
+// fecha (DB.business.lastSeenReservasTs / lastSeenTpvTs), actualizada al abrir
+// cada vista correspondiente.
+function getUnseenReservasCount(){
+  const since = (DB.business && DB.business.lastSeenReservasTs) || '';
+  return DB.reservations.filter(r => r.origen === 'publico' && r.status === 'pendiente' && (r.createdAt || '') > since).length;
+}
+function getUnseenTpvRequestsCount(){
+  const since = (DB.business && DB.business.lastSeenTpvTs) || '';
+  return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (o.createdAt || '') > since).length;
+}
+function markReservasSeen(){
+  if(!DB.business || !getUnseenReservasCount()) return;
+  DB.business.lastSeenReservasTs = new Date().toISOString();
+  saveDB();
+  renderModuleBadges();
+}
+function markTpvSeen(){
+  if(!DB.business || !getUnseenTpvRequestsCount()) return;
+  DB.business.lastSeenTpvTs = new Date().toISOString();
+  saveDB();
+  renderModuleBadges();
+}
+// Pinta (o quita) el circulito rojo con el número de solicitudes nuevas sobre
+// las tarjetas de módulo "Reservas" y "TPV", estén o no visibles ahora mismo.
+function renderModuleBadges(){
+  const counts = {reservas: getUnseenReservasCount(), tpv: getUnseenTpvRequestsCount()};
+  Object.entries(counts).forEach(([id, count]) => {
+    document.querySelectorAll(`.module-card[onclick="navigate('${id}')"]`).forEach(card => {
+      let badge = card.querySelector('.module-new-badge');
+      if(count > 0){
+        if(!badge){
+          badge = document.createElement('span');
+          badge.className = 'module-new-badge';
+          badge.style.cssText = 'position:absolute;top:8px;right:8px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--red,#e5484d);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 0 2px var(--surface,#fff)';
+          card.style.position = card.style.position || 'relative';
+          card.appendChild(badge);
+        }
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else if(badge){
+        badge.remove();
+      }
+    });
+  });
+}
+
 let publicRequestsListenerAttached = false;
 function initPublicRequestsListener(){
   if(publicRequestsListenerAttached) return;
@@ -1136,13 +1207,16 @@ function initPublicRequestsListener(){
       const req = snap.val();
       const reqRef = snap.ref;
       if(!req || !req.type){ reqRef.remove(); return; }
+      let notifyNewRequest = false;
       if(req.type === 'reserva'){
         DB.reservations.push({
           id: genId(), clientId: null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '',
           date: req.date, time: req.time, people: req.people || 1,
-          tableId: null, notes: req.notes || '', status: 'pendiente'
+          tableId: null, notes: req.notes || '', status: 'pendiente',
+          origen: 'publico', createdAt: new Date().toISOString()
         });
+        notifyNewRequest = true;
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
@@ -1169,8 +1243,10 @@ function initPublicRequestsListener(){
           date: req.date || '', time: req.time || '',
           costeEnvio: req.costeEnvio || 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
-          clientRef: req.clientRef || null
+          clientRef: req.clientRef || null,
+          pendienteVerificarZona: !!req.pendienteVerificarZona
         });
+        notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
         // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
         // automáticamente a través del Worker. Marca el pedido como pagado.
@@ -1183,6 +1259,7 @@ function initPublicRequestsListener(){
       }
       saveDB();
       refreshAfterRemoteChange();
+      if(notifyNewRequest) playNewRequestAlert();
       reqRef.remove();
     }, err => console.error('Error escuchando pedidos públicos', err));
   }).catch(e => console.error('Error escuchando pedidos públicos', e));

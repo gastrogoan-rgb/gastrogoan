@@ -335,23 +335,43 @@ function renderTpvMesas(tiposServicio){
 function renderTpvToGo(tiposServicio){
   const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && (!o.date || o.date <= todayStr()));
   if(!toGoOrders.length) return '';
+  // Los pedidos sin hora programada (ASAP) van primero; el resto, por hora
+  // programada ascendente, para que el personal vea antes lo más urgente.
+  toGoOrders.sort((a,b) => {
+    const ma = a.time ? (reservaTimeToMinutes(a.time) ?? 9999) : -1;
+    const mb = b.time ? (reservaTimeToMinutes(b.time) ?? 9999) : -1;
+    return ma - mb;
+  });
   return `
-    <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> Para Llevar / Delivery</h3>
+    <h3 style="margin-top:16px"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')}</h3>
     <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('tpv.onlineOrdersAutoArrive')}</p>
     <div class="grid grid-4">
       ${toGoOrders.map(o => {
         const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
+        const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
+        const urgent = dueMins !== null && dueMins <= 30;
         return `
-        <div class="card" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
+        <div class="card" style="text-align:center;cursor:pointer${urgent?';border:2px solid var(--brand-orange)':''}" onclick="openTableOrder(null, ${o.id})">
           <h3 style="justify-content:center"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
-          <span class="badge badge-amber">Abierto</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-walk'}"></i> ${o.tipo==='delivery'?'Para llevar (delivery)':o.express?'Pedido Express':'Para recoger'}</span> ${o.pagado ? '<span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online</span>' : ''}
-          ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> Programado ${escapeHtml(o.time)}</span></div>` : ''}
+          <span class="badge badge-amber">${t('status.openF')}</span> <span class="badge ${o.tipo==='delivery'?'badge-blue':'badge-gray'}"><i class="ti ${o.tipo==='delivery'?'ti-moped':o.express?'ti-bolt':'ti-walk'}"></i> ${o.tipo==='delivery'?t('label.takeawayDelivery'):o.express?t('title.expressOrder'):t('label.pickupOrder')}</span> ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
+          ${urgent ? `<div style="margin-top:6px"><span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span></div>` : ''}
+          ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
           ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
           <div style="margin-top:8px;font-weight:700;font-size:18px">${fmtMoney(orderTotal(o))}</div>
         </div>
       `}).join('')}
     </div>
   `;
+}
+
+// Minutos que faltan para la hora programada de un pedido (hoy); null si no
+// se puede calcular. Se usa para ordenar y para marcar como "urgente" los
+// pedidos para llevar/delivery cuya hora programada está cerca.
+function minutesUntilScheduled(time){
+  const mins = reservaTimeToMinutes ? reservaTimeToMinutes(time) : null;
+  if(mins == null) return null;
+  const now = new Date();
+  return mins - (now.getHours()*60 + now.getMinutes());
 }
 
 function renderTpvPendingOnline(){
@@ -366,6 +386,7 @@ function renderTpvPendingOnline(){
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
+          ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--brand-orange);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
           ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
           ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
@@ -386,6 +407,7 @@ function renderTpvPendingOnline(){
 }
 
 function renderTPV(){
+  markTpvSeen();
   migrateCartas();
   const box = document.getElementById('tpv-content');
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
@@ -408,13 +430,43 @@ function renderTPV(){
   `;
 }
 
+// Busca un plato por nombre (comparación insensible a mayúsculas/tildes) en
+// las cartas activas ahora mismo, para poder avisar si un pedido online se
+// pidió con un precio o disponibilidad que ya no coincide con la carta.
+function findActiveDishByName(name){
+  const norm = stripAccents(String(name||'').trim().toLowerCase());
+  if(!norm) return null;
+  for(const c of getActiveCartas()){
+    for(const sec of (c.secciones||[])){
+      for(const p of (sec.platos||[])){
+        if(stripAccents(String(p.nombre||'').trim().toLowerCase()) === norm) return p;
+      }
+    }
+  }
+  return null;
+}
+
 function acceptOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   order.status = 'abierta';
   if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
     const ahora = new Date().toISOString();
+    let anyMismatch = false;
     (order.items||[]).forEach(l => {
+      // Comprobación (no bloqueante) de precio/disponibilidad frente a la
+      // carta activa actual: se marca la línea con un aviso visual, pero el
+      // pedido se acepta igualmente para que el personal decida si ajusta.
+      const dish = findActiveDishByName(l.name);
+      l.priceMismatch = false;
+      l.unavailableNow = false;
+      if(!dish){
+        l.unavailableNow = true;
+        anyMismatch = true;
+      }else{
+        if(dish.disponible === false){ l.unavailableNow = true; anyMismatch = true; }
+        if(typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001){ l.priceMismatch = true; anyMismatch = true; }
+      }
       if(!l.estado){
         l.estado = 'cocina';
         l.enviadoAt = ahora;
@@ -422,6 +474,10 @@ function acceptOnlineOrder(orderId){
       }
     });
     order.cerrada = false;
+    saveDB();
+    renderTPV();
+    showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted'));
+    return;
   }
   saveDB();
   renderTPV();
@@ -500,8 +556,8 @@ function orderTotal(order){
 
 // Etiqueta del pedido para TPV, cocina y ticket: los tickets rápidos de mostrador se llaman "Pedido Express".
 function togoOrderLabel(order){
-  if(order.express) return 'Pedido Express';
-  return order.tipo==='delivery' ? 'Delivery' : 'Take Away';
+  if(order.express) return t('title.expressOrder');
+  return order.tipo==='delivery' ? t('label.deliveryShort') : t('label.takeawayShort');
 }
 
 function openTableOrder(tableId, orderId){
@@ -674,7 +730,8 @@ function openNewDeliveryModal(){
     </div>
     <div class="field">
       <label>${t('label.deliveryAddress')}</label>
-      <input type="text" id="togo-del-address" placeholder="${t('mn.business.addressPh')}">
+      <input type="text" id="togo-del-address" placeholder="${t('mn.business.addressPh')}" oninput="checkNewDeliveryZoneHint()">
+      <small id="togo-del-zone-hint" style="color:var(--brand-orange);display:none"><i class="ti ti-alert-triangle"></i> ${t('msg.postalCodeOutsideZone')}</small>
     </div>
     ${platforms.length ? `
     <div class="field">
@@ -692,6 +749,20 @@ function openNewDeliveryModal(){
   `);
 }
 
+// Aviso simple e informativo (no bloqueante) si en la dirección escrita se
+// detecta un código postal que no está en la lista configurada para reparto.
+// No hace geolocalización ni comprueba el radio (eso solo lo hace la web
+// pública), es solo una pista rápida para el personal al crear el pedido a mano.
+function checkNewDeliveryZoneHint(){
+  const input = document.getElementById('togo-del-address');
+  const hint = document.getElementById('togo-del-zone-hint');
+  if(!input || !hint) return;
+  const cpList = (DB.business?.pedidos?.cpList) || [];
+  const match = input.value.match(/\b\d{5}\b/);
+  const show = !!(cpList.length && match && !cpList.includes(match[0]));
+  hint.style.display = show ? '' : 'none';
+}
+
 function confirmNewDelivery(){
   const camareroSel = document.getElementById('togo-del-camarero');
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
@@ -700,7 +771,7 @@ function confirmNewDelivery(){
   const clienteAddress = document.getElementById('togo-del-address').value.trim();
   const plataformaEl = document.getElementById('togo-del-plataforma');
   const plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
-  const costeEnvio = parseFloat(DB.business?.pedidosConfig?.deliveryFee) || 0;
+  const costeEnvio = parseFloat(DB.business?.pedidos?.deliveryFee) || 0;
   const order = {id: genId(), tableId: null, tipo:'delivery', clienteNombre, clientePhone, clienteAddress, plataformaId, costeEnvio, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
@@ -1197,7 +1268,7 @@ function renderOrderComandaPanel(order){
         else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
         return `
         <div style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)">
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
           <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm btn-icon" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>

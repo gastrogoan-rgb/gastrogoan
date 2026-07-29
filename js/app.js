@@ -1571,6 +1571,10 @@ function setReservasTab(t){
 }
 
 function renderReservas(){
+  markReservasSeen();
+  const searchInput = document.getElementById('reservas-search-input');
+  if(searchInput && searchInput.value.trim()){ renderReservasSearch(); return; }
+
   document.querySelectorAll('#view-reservas .ge-tab').forEach(b => b.classList.remove('active'));
   const tabBtn = document.getElementById('reservas-tab-'+reservasTab);
   if(tabBtn) tabBtn.classList.add('active');
@@ -1579,6 +1583,56 @@ function renderReservas(){
   if(reservasTab === 'semana') renderReservasSemana();
   else if(reservasTab === 'mes') renderReservasMes();
   else renderReservasDia();
+}
+
+// Búsqueda de reservas por nombre de cliente o teléfono, a través de TODAS
+// las fechas (no solo el día/semana/mes que se esté viendo), para encontrar
+// reservas pasadas o futuras sin tener que navegar el calendario.
+function renderReservasSearch(){
+  const input = document.getElementById('reservas-search-input');
+  const query = (input ? input.value : '').trim().toLowerCase();
+  const resultsBox = document.getElementById('reservas-search-results');
+  const tabsRow = document.getElementById('reservas-tabs-row');
+  const tabContent = document.getElementById('reservas-tab-content');
+  if(!query){
+    resultsBox.style.display = 'none';
+    resultsBox.innerHTML = '';
+    if(tabsRow) tabsRow.style.display = '';
+    if(tabContent) tabContent.style.display = '';
+    renderReservas();
+    return;
+  }
+  if(tabsRow) tabsRow.style.display = 'none';
+  if(tabContent) tabContent.style.display = 'none';
+  const normQuery = stripAccents(query);
+  const matches = DB.reservations.filter(r => {
+    const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+    const name = stripAccents(((client?client.name:'') || r.clientName || '').toLowerCase());
+    const phone = ((client && client.phone) || r.clientPhone || '').replace(/\D/g,'');
+    return (name && name.includes(normQuery)) || (phone && query.replace(/\D/g,'') && phone.includes(query.replace(/\D/g,'')));
+  }).sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+
+  resultsBox.style.display = '';
+  if(!matches.length){
+    resultsBox.innerHTML = `<div class="empty"><i class="ti ti-search"></i>${t('empty.noReservationsMatch')}</div>`;
+    return;
+  }
+  resultsBox.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('th.client')}</th><th>${t('label.numberOfPeople')}</th><th>${t('th.status')}</th></tr></thead>
+        <tbody>
+          ${matches.map(r => {
+            const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+            const name = client ? client.name : (r.clientName || '—');
+            return `<tr style="cursor:pointer" onclick="openReservationModal(${r.id})">
+              <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.time||'')}</td><td>${escapeHtml(name)}</td><td>${r.people}</td><td>${reservationStatusBadge(r.status)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function renderReservasPendingOnline(){
@@ -1598,14 +1652,34 @@ function renderReservasPendingOnline(){
           <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
           ${r.clientPhone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
+          ${(() => {
+            const turnoIdx = getTurnoIndexForTime(r.date, r.time);
+            if(turnoIdx === null) return '';
+            const info = getAforoInfoForDate(r.date);
+            const turno = info && info[turnoIdx];
+            if(!turno || !turno.aforo) return '';
+            const wouldBe = turno.reservados + (r.people||0);
+            const full = wouldBe > turno.aforo;
+            return `<div style="font-size:12px;margin-top:4px;color:${full?'var(--red)':'var(--muted)'}"><i class="ti ti-users"></i> ${t('label.turnoOccupancy').replace('${used}', turno.reservados).replace('${cap}', turno.aforo).replace('${range}', turno.abre+'–'+turno.cierra)}</div>`;
+          })()}
           <div style="display:flex;gap:8px;margin-top:10px">
             <button class="btn btn-sm btn-primary" style="flex:1" onclick="setReservationStatus(${r.id}, 'confirmada')"><i class="ti ti-check"></i> ${t('common.confirm')}</button>
-            <button class="btn btn-sm btn-danger" style="flex:1" onclick="setReservationStatus(${r.id}, 'cancelada')"><i class="ti ti-x"></i> ${t('common.reject')}</button>
+            <button class="btn btn-sm btn-danger" style="flex:1" onclick="rejectOnlineReservation(${r.id})"><i class="ti ti-x"></i> ${t('common.reject')}</button>
           </div>
         </div>
       `).join('')}
     </div>
   `;
+}
+
+// Rechazar una reserva PENDIENTE que llegó desde la web pública exige el PIN
+// del negocio, igual que rechazar un pedido online en el TPV (rejectOnlineOrder):
+// es una acción sensible de cara al cliente, no un simple cambio de estado
+// interno como sí lo es la gestión normal de reservas ya creadas por el personal.
+function rejectOnlineReservation(id){
+  requestBusinessPinAction(t('title.rejectReservation'), t('msg.confirmRejectReservation'), () => {
+    setReservationStatus(id, 'cancelada');
+  });
 }
 
 function setReservationStatus(id, status){
@@ -1847,6 +1921,19 @@ function getAvailableTablesForReservation(dateStr, time, excludeId, people){
       .map(r => r.tableId)
       .filter(Boolean)
   );
+  // Si la reserva es para hoy y a una hora cercana a la actual, también se
+  // excluyen las mesas ocupadas ahora mismo por una comanda de TPV abierta
+  // (walk-in sentado), para no ofrecer como "disponible" una mesa que en
+  // realidad está ocupada en este momento.
+  if(dateStr === todayStr()){
+    const nowMin = (() => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); })();
+    const ventanaAhora = reservaVentanaMin(people||1);
+    if(reqMin == null || Math.abs(reqMin - nowMin) < ventanaAhora){
+      DB.tables.forEach(tb => {
+        if(getOpenOrderForTable(tb.id)) occupied.add(tb.id);
+      });
+    }
+  }
   return DB.tables.filter(t => !occupied.has(t.id));
 }
 
@@ -1859,9 +1946,18 @@ function reservationTimeFieldHtml(r){
   if(r.time && !options.includes(r.time)) options.push(r.time);
   options.sort();
   if(!options.length) return `<select id="reservation-time" disabled><option>${t('label.closedThisDay')}</option></select>`;
+  // Pista visual (no bloqueante) de ocupación del turno junto a cada hora, para
+  // que el personal vea de un vistazo si esa franja está cerca de completarse
+  // antes de elegirla; sigue pudiendo seleccionar cualquier hora igualmente.
+  const aforoInfo = getAforoInfoForDate(r.date);
   return `
     <select id="reservation-time" onchange="updateReservationTableOptions()">
-      ${options.map(t=>`<option value="${t}" ${r.time===t?'selected':''}>${t}</option>`).join('')}
+      ${options.map(slot => {
+        const turnoIdx = getTurnoIndexForTime(r.date, slot);
+        const turno = aforoInfo && turnoIdx !== null ? aforoInfo[turnoIdx] : null;
+        const hint = turno && turno.aforo ? ` (${turno.reservados}/${turno.aforo} ${t('label.full')})` : '';
+        return `<option value="${slot}" ${r.time===slot?'selected':''}>${slot}${hint}</option>`;
+      }).join('')}
     </select>
   `;
 }
@@ -1936,7 +2032,7 @@ function openReservationModal(id){
     <div class="field-row">
       <div class="field">
         <label>${t('common.date')}</label>
-        <input type="date" id="reservation-date" value="${r.date}" onchange="updateReservationTimeOptions()">
+        <input type="date" id="reservation-date" value="${r.date}" min="${todayStr()}" onchange="updateReservationTimeOptions()">
       </div>
       <div class="field">
         <label>${t('th.time')}</label>
@@ -2000,7 +2096,7 @@ function saveReservation(id){
   // duplicada por error, no dos reservas distintas).
   const dupe = DB.reservations.find(r => {
     if(r.id === id || r.date !== date || r.status === 'cancelada' || r.status === 'no_show') return false;
-    const isSameClient = (clientId && r.clientId === clientId) || (!clientId && clientName && (r.clientName||'').trim().toLowerCase() === clientName.toLowerCase());
+    const isSameClient = (clientId && r.clientId === clientId) || (!clientId && clientName && stripAccents((r.clientName||'').trim().toLowerCase()) === stripAccents(clientName.toLowerCase()));
     if(!isSameClient) return false;
     const rMin = reservaTimeToMinutes(r.time), reqMin = reservaTimeToMinutes(time);
     if(rMin == null || reqMin == null) return r.time === time;
@@ -2035,7 +2131,10 @@ function saveReservation(id){
   saveDB();
   closeModal();
   renderReservas();
-  showToast(t('msg.reservationSaved'));
+  // Aviso no bloqueante (no se impide guardar, el personal puede necesitar
+  // registrar reservas de fechas pasadas para el historial) si la fecha
+  // elegida es anterior a hoy.
+  showToast(date < todayStr() ? t('msg.reservationSavedPastDate') : t('msg.reservationSaved'));
 }
 
 // Marca (o desmarca) la llegada de una reserva, actualizando su estado a la
@@ -2064,8 +2163,20 @@ function toggleReservaLlegada(id){
 }
 
 function deleteReservation(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  // Borrar una solicitud PENDIENTE que vino de la web pública exige el PIN del
+  // negocio (misma lógica que rechazarla); una reserva normal creada/gestionada
+  // por el personal sigue usando el confirm() de siempre, sin fricción extra.
+  if(r && r.origen === 'publico' && r.status === 'pendiente'){
+    requestBusinessPinAction(t('title.rejectReservation'), t('msg.confirmDeleteReservation'), () => {
+      DB.reservations = DB.reservations.filter(x=>x.id!==id);
+      saveDB();
+      renderReservas();
+    });
+    return;
+  }
   if(!confirm(t('msg.confirmDeleteReservation'))) return;
-  DB.reservations = DB.reservations.filter(r=>r.id!==id);
+  DB.reservations = DB.reservations.filter(x=>x.id!==id);
   saveDB();
   renderReservas();
 }

@@ -653,27 +653,38 @@ function haversineKm(lat1, lon1, lat2, lon2){
 
 // Comprueba si una dirección/código postal de entrega está dentro de la
 // zona de reparto configurada (código postal aceptado o dentro del radio).
+// Devuelve {ok, pendienteVerificar}: si el geocodificador falla dos veces
+// (red caída, timeout de Nominatim...) no bloqueamos un pedido potencialmente
+// válido; lo dejamos pasar marcado para que el negocio revise la dirección
+// manualmente antes de aceptarlo.
 async function checkDeliveryZone(p, codigoPostal, direccion){
   const cpList = p.cpList || [];
-  if(cpList.length && cpList.includes(codigoPostal)) return true;
+  if(cpList.length && cpList.includes(codigoPostal)) return {ok:true};
 
   if(p.radiusKm > 0 && p.lat != null && p.lng != null){
-    try{
+    const geocode = async () => {
       const q = encodeURIComponent(direccion + ', ' + codigoPostal);
       const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
       const data = await res.json();
-      if(data && data[0]){
-        const dist = haversineKm(p.lat, p.lng, parseFloat(data[0].lat), parseFloat(data[0].lon));
-        if(dist <= p.radiusKm) return true;
-      }
-    }catch(e){
-      console.error(e);
+      return (data && data[0]) ? data[0] : null;
+    };
+    let point = null;
+    try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
+    if(!point){
+      // Un único reintento tras una breve espera antes de darnos por vencidos.
+      await new Promise(r => setTimeout(r, 1200));
+      try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
     }
+    if(point){
+      const dist = haversineKm(p.lat, p.lng, parseFloat(point.lat), parseFloat(point.lon));
+      return {ok: dist <= p.radiusKm};
+    }
+    if(!cpList.length) return {ok:true, pendienteVerificar:true};
   }
 
   // Si no hay ninguna zona configurada, no se restringe.
-  if(!cpList.length && !(p.radiusKm > 0)) return true;
-  return false;
+  if(!cpList.length && !(p.radiusKm > 0)) return {ok:true};
+  return {ok:false};
 }
 
 /* ============ RESERVA ============ */
@@ -956,12 +967,14 @@ async function submitOrder(){
     }
   }
 
+  let pendienteVerificarZona = false;
   if(zoneRestricted){
-    const enZona = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
-    if(!enZona){
+    const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
+    if(!zoneCheck.ok){
       alert(t('error.zona'));
       return;
     }
+    pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
   }
 
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
@@ -974,6 +987,7 @@ async function submitOrder(){
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
+  if(pendienteVerificarZona) req.pendienteVerificarZona = true;
 
   const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
   if(pagoTarjeta){

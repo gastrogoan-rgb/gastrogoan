@@ -1073,6 +1073,7 @@ function renderFolder(){
       <div class="module-open"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.open'))}</div>
     </div>
   `).join('');
+  if(typeof renderModuleBadges === 'function') renderModuleBadges();
 }
 
 /* ============== Modal helpers ============== */

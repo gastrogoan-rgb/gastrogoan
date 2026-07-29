@@ -85,7 +85,10 @@ function getTurnosForDate(dateStr){
 function getTurnoIndexForTime(dateStr, time){
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return null;
-  const idx = turnos.findIndex(t => time >= t.abre && time <= t.cierra);
+  // Límite de cierre exclusivo (para no solapar con el turno siguiente),
+  // salvo en el último turno del día, donde se mantiene inclusivo: una
+  // reserva justo a la hora de cierre debe seguir contando en ese turno.
+  const idx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
   return idx === -1 ? null : idx;
 }
 

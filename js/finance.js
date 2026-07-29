@@ -111,12 +111,15 @@ function renderDashboard(){
   const openOrders = DB.tpvOrders.filter(o => o.status==='abierta').length;
   const clockedIn = DB.employees.filter(e => getOpenFichaje(e.id)).length;
   const pendingReservations = DB.reservations.filter(r => r.date===todayDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
+  const tomorrowDate = dateStr(new Date(today.getTime() + 86400000));
+  const tomorrowReservations = DB.reservations.filter(r => r.date===tomorrowDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
   const lowStockCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
 
   const attentionItems = [
     {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
     {count: clockedIn, icon:'ti-clock-check', label: t('dash.att.clockedIn'), onclick: `navigate('horarios')`},
     {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
+    {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
   ];
   const anyAttention = attentionItems.some(i => i.count > 0);

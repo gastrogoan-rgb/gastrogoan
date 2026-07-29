@@ -8,6 +8,12 @@ function fmtNum(v, dec=2){
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+// Quita tildes/diacríticos de un texto para comparar nombres de forma más
+// tolerante ("Núñez" y "Nunez", o "María" y "Maria", deben considerarse el
+// mismo nombre en comprobaciones de duplicados/no-shows).
+function stripAccents(str){
+  return String(str||'').normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
 
 // Para insertar texto dentro de un literal JS '...' embebido en un atributo onclick="...".
 // Escapa primero las barras invertidas y comillas simples para el JS, y luego escapa para HTML.
@@ -1437,6 +1443,26 @@ const I18N = {
     'hr.csv.vatRatePct': 'Tipo de IVA',
     'msg.csvDownloadedAttachManually': '📎 Archivo descargado — adjúntalo manualmente en el email que se va a abrir',
     'ge.gvCategoryChart': 'Gasto por categoría (mes)',
+    'msg.postalCodeOutsideZone': 'Este código postal no está en tu lista de reparto configurada (aviso informativo, no bloquea el pedido).',
+    'title.togoDelivery': 'Para Llevar / Delivery',
+    'label.takeawayDelivery': 'Para llevar (delivery)',
+    'label.pickupOrder': 'Para recoger',
+    'label.dueSoon': 'Vence pronto',
+    'label.zoneNotVerified': 'No se pudo verificar automáticamente la zona de entrega: revisa la dirección antes de confirmar.',
+    'label.deliveryShort': 'Delivery',
+    'label.takeawayShort': 'Take Away',
+    'msg.orderAcceptedWithMismatch': 'Pedido aceptado. Alguna línea ha cambiado de precio o ya no está en la carta activa: revísalo antes de servir.',
+    'msg.priceChangedSinceOrder': 'El precio ha cambiado desde que se hizo el pedido',
+    'msg.dishNoLongerInCarta': 'Este plato ya no está en la carta activa',
+    'dash.att.tomorrowReservations': 'Reservas de mañana',
+    'title.rejectReservation': 'Rechazar reserva',
+    'msg.confirmRejectReservation': 'Vas a rechazar esta solicitud de reserva online. Introduce el PIN del negocio para confirmar.',
+    'ph.searchReservationClient': 'Buscar por nombre o teléfono del cliente (todas las fechas)…',
+    'empty.noReservationsMatch': 'No se han encontrado reservas con ese nombre o teléfono',
+    'label.turnoOccupancy': '${used}/${cap} comensales en el turno ${range}',
+    'label.full': 'llenos',
+    'msg.reservationSavedPastDate': 'Reserva guardada. Ojo: la fecha elegida es anterior a hoy.',
+    'status.openF': 'Abierto',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -2754,6 +2780,26 @@ const I18N = {
     'hr.csv.vatRatePct': 'Tipus d\'IVA',
     'msg.csvDownloadedAttachManually': '📎 Fitxer descarregat — adjunta\'l manualment a l\'email que s\'obrirà',
     'ge.gvCategoryChart': 'Despesa per categoria (mes)',
+    'msg.postalCodeOutsideZone': 'Aquest codi postal no és a la teva llista de repartiment configurada (avís informatiu, no bloqueja la comanda).',
+    'title.togoDelivery': 'Per Emportar / Delivery',
+    'label.takeawayDelivery': 'Per emportar (delivery)',
+    'label.pickupOrder': 'Per recollir',
+    'label.dueSoon': 'Venç aviat',
+    'label.zoneNotVerified': 'No s\'ha pogut verificar automàticament la zona de repartiment: revisa l\'adreça abans de confirmar.',
+    'label.deliveryShort': 'Delivery',
+    'label.takeawayShort': 'Take Away',
+    'msg.orderAcceptedWithMismatch': 'Comanda acceptada. Alguna línia ha canviat de preu o ja no és a la carta activa: revisa-ho abans de servir.',
+    'msg.priceChangedSinceOrder': 'El preu ha canviat des que es va fer la comanda',
+    'msg.dishNoLongerInCarta': 'Aquest plat ja no és a la carta activa',
+    'dash.att.tomorrowReservations': 'Reserves de demà',
+    'title.rejectReservation': 'Rebutjar reserva',
+    'msg.confirmRejectReservation': 'Rebutjaràs aquesta sol·licitud de reserva en línia. Introdueix el PIN del negoci per confirmar.',
+    'ph.searchReservationClient': 'Cerca per nom o telèfon del client (totes les dates)…',
+    'empty.noReservationsMatch': 'No s\'han trobat reserves amb aquest nom o telèfon',
+    'label.turnoOccupancy': '${used}/${cap} comensals en el torn ${range}',
+    'label.full': 'plens',
+    'msg.reservationSavedPastDate': 'Reserva desada. Compte: la data triada és anterior a avui.',
+    'status.openF': 'Obert',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4071,6 +4117,26 @@ const I18N = {
     'hr.csv.vatRatePct': 'VAT rate',
     'msg.csvDownloadedAttachManually': '📎 File downloaded — attach it manually to the email that\'s about to open',
     'ge.gvCategoryChart': 'Spend by category (month)',
+    'msg.postalCodeOutsideZone': 'This postal code is not in your configured delivery list (informational only, does not block the order).',
+    'title.togoDelivery': 'Takeaway / Delivery',
+    'label.takeawayDelivery': 'Takeaway (delivery)',
+    'label.pickupOrder': 'For pickup',
+    'label.dueSoon': 'Due soon',
+    'label.zoneNotVerified': 'Delivery zone could not be verified automatically: check the address before confirming.',
+    'label.deliveryShort': 'Delivery',
+    'label.takeawayShort': 'Take Away',
+    'msg.orderAcceptedWithMismatch': 'Order accepted. Some line has changed price or is no longer in the active menu: check it before serving.',
+    'msg.priceChangedSinceOrder': 'Price has changed since the order was placed',
+    'msg.dishNoLongerInCarta': 'This dish is no longer in the active menu',
+    'dash.att.tomorrowReservations': 'Tomorrow\'s reservations',
+    'title.rejectReservation': 'Reject reservation',
+    'msg.confirmRejectReservation': 'You are about to reject this online reservation request. Enter the business PIN to confirm.',
+    'ph.searchReservationClient': 'Search by client name or phone (all dates)…',
+    'empty.noReservationsMatch': 'No reservations found with that name or phone',
+    'label.turnoOccupancy': '${used}/${cap} covers in the ${range} shift',
+    'label.full': 'full',
+    'msg.reservationSavedPastDate': 'Reservation saved. Note: the chosen date is before today.',
+    'status.openF': 'Open',
   }
 };
 function getLang(){
