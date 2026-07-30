@@ -310,9 +310,9 @@ td.wrap{white-space:normal}
 .help-tabs{display:flex;border-bottom:1px solid var(--border)}
 .help-tab{flex:1;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
 .help-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
-.help-tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.help-tab-panel{display:none;flex:1;flex-direction:column;min-height:0}
 .help-tab-panel.active{display:flex}
-.help-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.help-chat-messages{flex:1;overflow-y:auto;min-height:0;padding:12px;display:flex;flex-direction:column;gap:8px}
 .help-msg{max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.4}
 .help-msg.bot{align-self:flex-start;background:var(--teal-l);color:var(--teal-d);border-bottom-left-radius:2px}
 .help-msg.user{align-self:flex-end;background:var(--dark2);color:#fff;border-bottom-right-radius:2px}
@@ -331,7 +331,7 @@ td.wrap{white-space:normal}
 .help-contact-fallback p{font-size:12px;margin-bottom:8px}
 .help-contact-email-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .help-contact-email-row code{background:var(--surface-2,var(--teal-l));border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px}
-.help-topics{padding:10px 14px;overflow-y:auto;flex:1}
+.help-topics{padding:10px 14px;overflow-y:auto;flex:1;min-height:0}
 .help-topic-group{margin-bottom:14px}
 .help-topic-group-title{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px 2px}
 .help-topic-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:9px 4px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit}
