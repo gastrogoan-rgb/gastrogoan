@@ -2678,29 +2678,65 @@ function openTodaySalesModal(){
    al cerrar cada venta. GastroGoan no interviene en el pago, no es el
    titular del contrato, y no tiene coste propio por esto.
 
-   ⚠️ IMPORTANTE — ESTADO DE ESTA INTEGRACIÓN:
-   El proveedor "facturahub" usa el flujo real y los endpoints documentados
-   públicamente por FacturaHub (github.com/FacturaHub-com/facturahub-verifactu):
-   crear factura → emitir a VeriFactu → consultar estado. Es gratis e
-   ilimitado para la parte de facturación VeriFactu, y el modelo es de
-   cuenta propia por negocio (API key desde su propio panel "Ajustes →
-   Integraciones"), justo el modelo que necesitamos. Lo NO confirmado
-   todavía (su documentación pública no lo detalla): el nombre exacto de
-   los campos de hash/QR dentro de la respuesta de /api/einvoice/status —
-   están asumidos por convención (verifactuHash, qrUrl) y hay que
-   verificarlos con una prueba real antes de usarlo con clientes de
-   verdad. Tampoco hay una declaración responsable explícita publicada en
-   su repositorio: confirmar con ellos que cumplen el RD 1007/2023 antes
-   de activarlo en producción.
-   Los proveedores "facturadirecta" y "contasimple" quedan como
-   alternativas de pago con el mismo aviso de siempre: su endpoint/campos
-   siguen sin confirmar contra documentación real.
+   ⚠️ IMPORTANTE — ESTADO DE ESTA INTEGRACIÓN, LEER ANTES DE ACTIVAR NADA:
+
+   "facturahub" — NO RECOMENDADO. Se implementó inicialmente por tener
+   documentación pública fácil de encontrar en GitHub, pero una revisión
+   posterior encontró señales serias de que no es un proveedor de
+   producción fiable: todos sus repos se crearon el mismo fin de semana
+   (junio 2026), con 0 estrellas/forks/issues, y según su propio README lo
+   opera una persona física en Países Bajos, sin declaración responsable
+   publicada. Un proveedor gratuito así puede desaparecer en cualquier
+   momento, dejando la cadena de huellas de tus clientes rota. Se deja el
+   código por si en el futuro se confirma que es fiable, pero NO debe
+   usarse con clientes reales sin volver a verificarlo a fondo.
+
+   "verifactuapi" — proveedor recomendado por ahora. Opera como
+   Colaborador Social AEAT (figura legal reconocida para representar a
+   terceros ante Hacienda), tiene un SDK con actividad real en GitHub
+   (github.com/NemonInvocash/verifactu-php, con forks genuinos), soporta
+   explícitamente multi-negocio (un emisor = un NIF = su propia clave de
+   API, mediante sus métodos crearEmisor/generarApiKey), y sus campos de
+   petición siguen el esquema oficial de la AEAT (IDEmisorFactura,
+   NumSerieFactura, Desglose...), no una simplificación propia — buena
+   señal de que están integrados de verdad con la especificación real, no
+   solo de cara a la galería. Aun así, la respuesta exacta y la
+   declaración responsable de este proveedor tampoco se han podido
+   verificar en el entorno donde se escribió este código (su web devuelve
+   403): confirmar con ellos antes de producción.
+
+   "facturadirecta" y "contasimple" quedan como alternativas de pago sin
+   confirmar contra documentación real.
+
+   NÚMERO DE FACTURA (NumSerieFactura): lo genera GastroGoan, no el
+   proveedor. Si el negocio usa la app desde más de un dispositivo/TPV a
+   la vez, cada dispositivo necesita su PROPIA serie (p.ej. "T1-", "T2-")
+   para que dos dispositivos nunca puedan generar el mismo número — es la
+   práctica estándar en varios puntos de venta, no un parche. Por eso la
+   serie se guarda en localStorage (por dispositivo), no en DB.business
+   (que se sincroniza entre dispositivos). Configurar la serie de este
+   dispositivo en Mi Negocio → VeriFactu antes de activarlo.
 */
 const VERIFACTU_PROVIDERS = {
-  facturahub: {label: 'FacturaHub (gratis)', apiBase: 'https://api.facturahub.com'},
+  verifactuapi: {label: 'VeriFactuAPI (recomendado)', apiBase: 'https://api.verifactuapi.es'},
+  facturahub: {label: 'FacturaHub (NO recomendado, ver aviso en el código)', apiBase: 'https://api.facturahub.com'},
   facturadirecta: {label: 'FacturaDirecta', apiBase: 'https://api.facturadirecta.com/v1'},
   contasimple: {label: 'Contasimple', apiBase: 'https://api.contasimple.com/v1'},
 };
+
+function verifactuSerie(){
+  return localStorage.getItem('gg_verifactu_serie') || '';
+}
+function setVerifactuSerie(serie){
+  localStorage.setItem('gg_verifactu_serie', serie.trim());
+}
+function nextVerifactuNumSerieFactura(){
+  const serie = verifactuSerie() || 'T1';
+  const counterKey = 'gg_verifactu_counter_' + serie;
+  const next = (parseInt(localStorage.getItem(counterKey)) || 0) + 1;
+  localStorage.setItem(counterKey, next);
+  return `${serie}-${String(next).padStart(6,'0')}`;
+}
 
 // Cuánto tiempo esperar entre reintentos de envío pendientes (la normativa
 // permite remitir "de forma inmediata o inmediatamente después", así que un
@@ -2734,8 +2770,51 @@ function verifactuIvaPct(){
 async function submitSaleToVerifactuProvider(sale, cfg){
   const provider = VERIFACTU_PROVIDERS[cfg.provider];
   if(!provider) throw new Error('Proveedor VeriFactu no reconocido: ' + cfg.provider);
+  if(cfg.provider === 'verifactuapi') return submitSaleToVerifactuApi(sale, cfg, provider);
   if(cfg.provider === 'facturahub') return submitSaleToFacturaHub(sale, cfg, provider);
   return submitSaleToGenericProvider(sale, cfg, provider);
+}
+
+// VeriFactuAPI (Invocash) — usa el esquema de campos oficial de la AEAT
+// (no una simplificación propia), confirmado vía su SDK público
+// (github.com/NemonInvocash/verifactu-php). Autenticación por clave de
+// emisor (limitada al NIF de este negocio, generada por el propio negocio
+// desde su cuenta). ⚠️ La forma exacta de la respuesta (dónde vienen la
+// huella y el QR) no se ha podido confirmar en este entorno — ajustar tras
+// una prueba real contra su sandbox.
+async function submitSaleToVerifactuApi(sale, cfg, provider){
+  const ivaPct = verifactuIvaPct();
+  const nif = (DB.business && DB.business.cif) || '';
+  const numSerieFactura = sale.verifactuNumSerie || (sale.verifactuNumSerie = nextVerifactuNumSerieFactura());
+  const fecha = new Date(sale.date);
+  const fechaExpedicion = `${String(fecha.getDate()).padStart(2,'0')}-${String(fecha.getMonth()+1).padStart(2,'0')}-${fecha.getFullYear()}`;
+  const base = sale.total / (1 + ivaPct/100);
+  const cuota = sale.total - base;
+  const body = {
+    IDEmisorFactura: nif,
+    NumSerieFactura: numSerieFactura,
+    FechaExpedicionFactura: fechaExpedicion,
+    TipoFactura: 'F2', // factura simplificada (tique), el caso normal de un restaurante
+    DescripcionOperacion: sale.items.map(l => `${l.qty}x ${l.name}`).join(', ').slice(0, 500),
+    Desglose: [{
+      Impuesto: '01', ClaveRegimen: '01', CalificacionOperacion: 'S1',
+      TipoImpositivo: ivaPct, BaseImponibleOImporteNoSujeto: Math.round(base*100)/100, CuotaRepercutida: Math.round(cuota*100)/100,
+    }],
+    CuotaTotal: Math.round(cuota*100)/100,
+    ImporteTotal: Math.round(sale.total*100)/100,
+  };
+  const res = await fetch(`${provider.apiBase}/alta-registro-facturacion`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`},
+    body: JSON.stringify(body),
+  });
+  if(!res.ok) throw new Error(`VeriFactuAPI respondió ${res.status}`);
+  const data = await res.json();
+  return {
+    invoiceId: numSerieFactura,
+    hash: data.Huella || data.huella || null,
+    qrData: data.QR || data.qr || data.qrUrl || null,
+  };
 }
 
 // FacturaHub: flujo documentado públicamente (crear factura → emitir a

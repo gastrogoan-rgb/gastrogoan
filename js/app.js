@@ -4195,6 +4195,11 @@ function renderVerifactuConfigCard(){
         <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:monospace;font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.apiKeyHint')}</small>
       </div>
+      <div class="field">
+        <label>${t('mn.verifactu.serie')}</label>
+        <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.verifactu.serieHint')}</small>
+      </div>
       ${pendingCount ? `<p style="font-size:12.5px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingCount)}</p>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveVerifactuConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
@@ -4206,7 +4211,12 @@ function saveVerifactuConfig(){
   const enabled = document.getElementById('vf-enabled').checked;
   const provider = document.getElementById('vf-provider').value;
   const apiKey = document.getElementById('vf-apikey').value.trim();
+  const serie = document.getElementById('vf-serie').value.trim();
   if(enabled && (!provider || !apiKey)){ showToast(t('msg.verifactuMissingFields')); return; }
+  if(enabled && !serie){ showToast(t('msg.verifactuMissingSerie')); return; }
+  // La serie es POR DISPOSITIVO (localStorage), no se sincroniza entre
+  // aparatos del mismo negocio — ver aviso en js/tpv.js sobre por qué.
+  setVerifactuSerie(serie);
   DB.business.verifactu = {...(DB.business.verifactu||{}), enabled, provider, apiKey};
   saveDB();
   renderMiNegocio();
