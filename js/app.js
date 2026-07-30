@@ -115,7 +115,7 @@ function limpiezaProtocoloPasos(type){
 function ensureLimpiezaData(){
   if(!DB.limpieza) DB.limpieza = {};
   const l = DB.limpieza;
-  if(!l.manosPasos) l.manosPasos = [...getLimpiezaDefaultManos()];
+  if(!l.manosPasos || !l.manosPasos.length) l.manosPasos = [...getLimpiezaDefaultManos()];
   if(!l.tareas) l.tareas = [];
   if(!l.checks) l.checks = {};
   if(!l.checksMes) l.checksMes = {};
@@ -479,7 +479,7 @@ function renderLimpiezaLog(key){
       if(f === 'tipo' && key === 'temperaturas') return `<td>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
       return `<td>${escapeHtml(String(e[f]||'—'))}</td>`;
     }).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
-  `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">Sin registros todavía.</div></td></tr>`;
+  `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">${t('empty.noLogEntries')}</div></td></tr>`;
 
   box.innerHTML = `
     <div class="card" style="margin-bottom:16px">
@@ -811,7 +811,7 @@ function renderDistDetail(){
   const isSala = currentArea() === 'sala';
 
   const platosHtml = d.platos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
         <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${t('title.viewTechSpec')}">
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(pl)}</span>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
@@ -909,25 +909,25 @@ function renderDistDetail(){
 
     ${isSala ? '' : `
     <div class="card">
-      <h3><i class="ti ti-tools-kitchen-2"></i> Platos a su cargo</h3>
+      <h3><i class="ti ti-tools-kitchen-2"></i> ${t('dist.dishesInChargeTitle')}</h3>
       ${platosHtml}
-      <div class="owner-only field-row" style="margin-top:8px">
-        <select id="dist-plato-sel" style="flex:1">
-          <option value="">— Selecciona plato —</option>
+      <div class="owner-only" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <select id="dist-plato-sel" style="flex:1;min-width:140px">
+          <option value="">${t('dist.selectDish')}</option>
           ${platosOptions}
         </select>
-        <button class="btn btn-default" onclick="addDistPlato()">${t('btn.assign')}</button>
+        <button class="btn btn-default" style="flex:none" onclick="addDistPlato()">${t('btn.assign')}</button>
       </div>
-      <div class="owner-only field-row" style="margin-top:6px">
-        <input type="text" id="dist-plato-manual" placeholder="O escribe un plato manualmente..." style="flex:1" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
-        <button class="btn btn-default" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> Añadir</button>
+      <div class="owner-only" style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
+        <input type="text" id="dist-plato-manual" placeholder="${t('dist.manualDishPlaceholder')}" style="flex:1;min-width:140px" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
+        <button class="btn btn-default" style="flex:none" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> ${t('common.add')}</button>
       </div>
     </div>
     `}
 
     <div class="card">
       <h3 style="justify-content:space-between">
-        <span><i class="ti ti-clipboard-list"></i> Tareas de la semana</span>
+        <span><i class="ti ti-clipboard-list"></i> ${t('dist.weekTasksTitle')}</span>
         <span style="display:flex;align-items:center;gap:8px">
           <button class="btn btn-sm btn-icon" onclick="distWeekShift(-1)" title="${t('title.prevWeek')}"><i class="ti ti-chevron-left"></i></button>
           <span style="font-size:13px;font-weight:600">${weekRangeLabel}</span>
@@ -3596,7 +3596,7 @@ function renderDataMaintenanceCard(){
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB)}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 ${t('mn.data.archiveTitle')}</p>
@@ -6156,7 +6156,7 @@ function renderManual(){
   nav.innerHTML = matches.length ? matches.map(({ch,i}) => `
     <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${manualChapterTitle(ch)}</div>
   `).join('') : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
-  detail.innerHTML = manualChapterText(MANUAL_CHAPTERS[manualChapter]);
+  detail.innerHTML = matches.length ? manualChapterText(MANUAL_CHAPTERS[manualChapter]) : '';
 }
 function goManualChapter(i){
   manualChapter = i;

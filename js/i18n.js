@@ -1480,6 +1480,12 @@ const I18N = {
     'msg.oneDrinkImported': '1 bebida importada', 'msg.oneDishImported': '1 plato importado',
     'msg.nDrinksImported': '${n} bebidas importadas', 'msg.nDishesImported': '${n} platos importados',
     'label.drinksTh': 'Bebidas',
+    'hr2.checkedIn': 'Fichado', 'hr2.oneShift': '1 turno', 'hr2.nShifts': '${n} turnos',
+    'hr2.plannedHours': 'Horas previstas', 'empty.noLogEntries': 'Sin registros todavía.',
+    'dist.dishesInChargeTitle': 'Platos a su cargo', 'dist.selectDish': '— Selecciona plato —',
+    'dist.manualDishPlaceholder': 'O escribe un plato manualmente...', 'dist.weekTasksTitle': 'Tareas de la semana',
+    'label.ordered': 'Pedido', 'label.receivedAbbrev': 'Recib.',
+    'pedidoEstados.map': {BORRADOR:'Borrador', ENVIADO:'Enviado', RECIBIDO:'Recibido'},
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -1817,7 +1823,7 @@ const I18N = {
     'li.afterHandlingWaste': 'Després de manipular residus', 'li.afterTouchingFaceHair': 'Després de tocar la cara o els cabells',
     'li.afterUsingRestroom': 'Després d\'utilitzar els lavabos', 'li.rawToCookedProduct': 'En canviar de producte cru a cuinat',
     'li.afterEatingSmoking': 'Després de menjar o fumar', 'title.minimumDuration': 'Durada mínima',
-    'label.20seconds': '20 segons', 'msg.happyBirthdayEquivalent': 'Equival a cantar "Cumpleaños feliz" dues vegades',
+    'label.20seconds': '20 segons', 'msg.happyBirthdayEquivalent': 'Equival a cantar "Per molts anys" dues vegades',
     'common.reset': 'Restablir', 'title.openingProtocol': 'Protocol d\'Obertura', 'title.closingProtocol': 'Protocol de Tancament',
     'btn.addEquipment': 'Afegir equip', 'label.lastMaintenance': 'Últim manteniment', 'label.next': 'Proper',
     'status.ok': 'OK', 'status.pendingM': 'Pendent', 'status.urgent': 'Urgent',
@@ -2834,6 +2840,12 @@ const I18N = {
     'msg.oneDrinkImported': '1 beguda importada', 'msg.oneDishImported': '1 plat importat',
     'msg.nDrinksImported': '${n} begudes importades', 'msg.nDishesImported': '${n} plats importats',
     'label.drinksTh': 'Begudes',
+    'hr2.checkedIn': 'Fitxat', 'hr2.oneShift': '1 torn', 'hr2.nShifts': '${n} torns',
+    'hr2.plannedHours': 'Hores previstes', 'empty.noLogEntries': 'Sense registres encara.',
+    'dist.dishesInChargeTitle': 'Plats a càrrec seu', 'dist.selectDish': '— Selecciona plat —',
+    'dist.manualDishPlaceholder': 'O escriu un plat manualment...', 'dist.weekTasksTitle': 'Tasques de la setmana',
+    'label.ordered': 'Demanat', 'label.receivedAbbrev': 'Rebut',
+    'pedidoEstados.map': {BORRADOR:'Esborrany', ENVIADO:'Enviat', RECIBIDO:'Rebut'},
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4188,6 +4200,12 @@ const I18N = {
     'msg.oneDrinkImported': '1 drink imported', 'msg.oneDishImported': '1 dish imported',
     'msg.nDrinksImported': '${n} drinks imported', 'msg.nDishesImported': '${n} dishes imported',
     'label.drinksTh': 'Drinks',
+    'hr2.checkedIn': 'Checked in', 'hr2.oneShift': '1 shift', 'hr2.nShifts': '${n} shifts',
+    'hr2.plannedHours': 'Planned hours', 'empty.noLogEntries': 'No entries yet.',
+    'dist.dishesInChargeTitle': 'Dishes in charge', 'dist.selectDish': '— Select dish —',
+    'dist.manualDishPlaceholder': 'Or type a dish manually...', 'dist.weekTasksTitle': 'Tasks for the week',
+    'label.ordered': 'Ordered', 'label.receivedAbbrev': 'Recv.',
+    'pedidoEstados.map': {BORRADOR:'Draft', ENVIADO:'Sent', RECIBIDO:'Received'},
   }
 };
 function getLang(){

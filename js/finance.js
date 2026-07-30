@@ -801,7 +801,7 @@ function renderStock(){
     // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
     groupsWrap.innerHTML = cats.map(cat => `
       <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(ingredientCategoryLabel(cat))}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
         ${byCat[cat].map(renderRow).join('')}
       </div>
     `).join('');
@@ -878,7 +878,7 @@ function renderStock(){
     if(searching){
       elabGroupsWrap.innerHTML = elabCats.map(cat => `
         <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${elabByCat[cat].length})</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
           ${elabByCat[cat].map(renderRow).join('')}
         </div>
       `).join('');
@@ -998,14 +998,15 @@ function printStockCountSheet(){
   const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td>${fmtNum(x.qty)}</td><td></td></tr>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
   if(!win){ showToast(t('megalista.popupBlocked')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printStockSheet')}</title>
+  const printLocale = getLang()==='en' ? 'en-GB' : getLang()==='ca' ? 'ca-ES' : 'es-ES';
+  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('btn.printStockSheet')}</title>
   <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:15mm 12mm}
   h1{font-size:16pt;margin:0 0 12px}
   table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}
   th{background:#f5f5f3}
   @media print{body{padding:10mm}}</style></head><body>
-  <h1>${t('btn.printStockSheet')} — ${new Date().toLocaleDateString('es-ES')}</h1>
+  <h1>${t('btn.printStockSheet')} — ${new Date().toLocaleDateString(printLocale)}</h1>
   <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>${t('megalista.estimated')}</th><th>${t('megalista.real')}</th></tr></thead>
   <tbody>${rows || `<tr><td colspan="5">${t('common.noResults')}</td></tr>`}</tbody></table>
   </body></html>`);

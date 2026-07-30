@@ -1282,6 +1282,11 @@ function duplicateFicha(id){
 function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
+  // Si la ficha está vinculada a un plato del Escandallo, el nombre mostrado
+  // en el impreso siempre es el actual del plato (por si se renombró desde
+  // que se vinculó), no el que se guardó en la ficha en su momento.
+  const liveRecipe = getFichaLiveRecipe(f);
+  const displayName = liveRecipe ? liveRecipe.name : f.name;
   const algs = getFichaAllergens(f).length
     ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
     : t('label.none');
@@ -1294,12 +1299,12 @@ function printFicha(id){
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
   const win = window.open('', '_blank', 'width=800,height=1000');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${escapeHtml(f.name)}</title>
+  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${escapeHtml(displayName)}</title>
   <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
   h1{font-size:18pt;margin:0 0 4px}h2{font-size:11pt;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}
   .meta{display:flex;gap:20px;font-size:10pt;color:#555;margin-bottom:16px}.meta span{background:#f5f5f3;padding:4px 10px;border-radius:4px}
   ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
-  <h1>${escapeHtml(f.name)}</h1>
+  <h1>${escapeHtml(displayName)}</h1>
   <div class="meta">
     ${produccion?`<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>`:''}
     ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}

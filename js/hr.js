@@ -394,7 +394,7 @@ const GE = (function(){
     if(chartEl){
       const catTotals = {};
       allItems.forEach(v=>{ catTotals[v.categoria] = (catTotals[v.categoria]||0) + parseFloat(v.importe||0); });
-      const chartData = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>({lbl:variableCategoryLabel(cat).length>10?variableCategoryLabel(cat).slice(0,9)+'…':variableCategoryLabel(cat), v}));
+      const chartData = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>({lbl:variableCategoryLabel(cat).length>18?variableCategoryLabel(cat).slice(0,17)+'…':variableCategoryLabel(cat), v}));
       chartEl.innerHTML = chartData.length ? barChartHTML(chartData) : `<div class="empty">${t('hr.gf.emptyList')}</div>`;
     }
     const searchLower = gvSearch.trim().toLowerCase();
@@ -985,13 +985,20 @@ const GE = (function(){
       const diff = r.real - r.obj;
       const absDiff = Math.abs(diff);
       const pctDev = r.obj ? Math.abs(diff)/r.obj : 0;
-      const isGood = diff >= 0;
+      // Para el Beneficio, gastar/ganar por encima del objetivo es bueno (diff>=0).
+      // Para las filas de gasto (Personal, Fijos, Variables, Otros), es al revés:
+      // superar el objetivo de gasto es MALO, así que se invierte el criterio.
+      const isGood = r.isBen ? diff >= 0 : diff <= 0;
       const estado = !r.real ? '—' : (pctDev < 0.1 ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
       const barPct = r.obj>0 ? Math.min(r.real/r.obj*100, 150) : 0;
-      const barColor = barPct>110?'var(--red)':barPct>90?'var(--green)':'var(--amber)';
+      // Igual que en isGood: para el Beneficio, más del objetivo es mejor
+      // (barra verde al superarlo); para las filas de gasto es al revés.
+      const barColor = r.isBen
+        ? (barPct<90?'var(--red)':barPct>=100?'var(--green)':'var(--amber)')
+        : (barPct>110?'var(--red)':barPct>90?'var(--green)':'var(--amber)');
       return `<div class="te-row">
         <span style="font-size:14px;font-weight:600">${r.lbl}</span>
         <span style="text-align:right;font-weight:600;color:${r.color}">${(r.pct*100).toFixed(0)}%</span>
@@ -1597,7 +1604,7 @@ function renderHorariosMes(){
     cells += `
       <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToHorariosDia('${ds}')">
         <div style="font-weight:700">${day}</div>
-        ${count ? `<span class="badge badge-blue">${count} turno${count!==1?'s':''}</span>` : ''}
+        ${count ? `<span class="badge badge-blue">${count===1?t('hr2.oneShift'):t('hr2.nShifts').replace('${n}', count)}</span>` : ''}
       </div>
     `;
   }
@@ -1606,7 +1613,7 @@ function renderHorariosMes(){
     <div class="toolbar">
       <div class="left">
         <button class="btn btn-sm" onclick="horariosMonthOffset--;renderHorarios()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="horariosMonthOffset=0;renderHorarios()">Hoy</button>
+        <button class="btn btn-sm" onclick="horariosMonthOffset=0;renderHorarios()">${t('common.today')}</button>
         <button class="btn btn-sm" onclick="horariosMonthOffset++;renderHorarios()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
@@ -1664,7 +1671,7 @@ function renderHorariosSemana(){
         <button class="btn btn-sm" onclick="horariosWeekOffset--; renderHorariosSemana()"><i class="ti ti-chevron-left"></i></button>
         <strong style="margin:0 8px">${label}</strong>
         <button class="btn btn-sm" onclick="horariosWeekOffset++; renderHorariosSemana()"><i class="ti ti-chevron-right"></i></button>
-        <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">Hoy</button>
+        <button class="btn btn-sm" onclick="horariosWeekOffset=0; renderHorariosSemana()">${t('common.today')}</button>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="printWeeklySchedule()"><i class="ti ti-printer"></i> ${t('btn.printSchedule')}</button>
@@ -1901,9 +1908,9 @@ function renderHorariosPersonal(){
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
           <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)}</strong>
-          <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||'Sin rol')}</div>
+          <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
-        ${open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> Fichado</span>` : ''}
+        ${open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       <div style="text-align:center;margin-bottom:10px">
         <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
@@ -2223,8 +2230,11 @@ function getOpenFichaje(employeeId){
   return (DB.fichajes||[]).find(f => f.employeeId===employeeId && !f.salida);
 }
 function fichajeHoras(f){
-  if(!f.entrada || !f.salida) return 0;
-  return (new Date(f.salida) - new Date(f.entrada)) / 3600000;
+  if(!f.entrada) return 0;
+  // Si el fichaje sigue abierto (sin salida), cuenta hasta ahora mismo, para
+  // que las horas de esta semana/mes no ignoren un turno que está en curso.
+  const salida = f.salida ? new Date(f.salida) : new Date();
+  return (salida - new Date(f.entrada)) / 3600000;
 }
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
@@ -2330,7 +2340,7 @@ function openFichajeHistoryModal(employeeId){
     ${fichajes.length ? `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>${t('common.date')}</th><th>${t('hr2.clockIn')}</th><th>${t('hr2.clockOut')}</th><th>${t('common.hours')}</th><th>${t('mn.schedule.hours')}</th><th></th></tr></thead>
+          <thead><tr><th>${t('common.date')}</th><th>${t('hr2.clockIn')}</th><th>${t('hr2.clockOut')}</th><th>${t('common.hours')}</th><th>${t('hr2.plannedHours')}</th><th></th></tr></thead>
           <tbody>
             ${fichajes.map(f => {
               const turno = turnoForDate(employeeId, f.fecha);

@@ -278,7 +278,7 @@ function renderProveedores(){
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
-      ${p.iva!=null ? `<span class="badge badge-gray">IVA ${p.iva}%</span>` : ''}
+      ${p.iva!=null ? `<span class="badge badge-gray">${t('common.vat')} ${p.iva}%</span>` : ''}
       <div style="margin-top:6px">
         ${ings.length
           ? `<button class="btn btn-sm" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
@@ -423,6 +423,13 @@ function getProviderByName(name){
    ============================================================ */
 const PEDIDO_ESTADOS = ['BORRADOR','ENVIADO','RECIBIDO'];
 const PEDIDO_BADGE = {BORRADOR:'badge-gray', ENVIADO:'badge-amber', RECIBIDO:'badge-green'};
+// El valor guardado (o.estado) es siempre esta clave fija en español (se usa
+// para comparar/filtrar), pero se muestra traducida — mismo patrón que
+// allergenLabel()/businessTypeLabel().
+function pedidoEstadoLabel(estado){
+  const dict = t('pedidoEstados.map');
+  return (dict && dict[estado]) || estado;
+}
 // Función (no constante estática) para que las etiquetas se traduzcan siempre
 // en el idioma activo en el momento de pintar, no en el de cargar el script.
 function getPedidoComprobacionMap(){
@@ -535,14 +542,16 @@ function renderPedidoList(){
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     const comp = getPedidoComprobacionMap()[o.comprobacion];
     return `
-      <div class="card" style="cursor:pointer;position:relative" onclick="openPedido(${o.id})">
-        <h3 style="justify-content:space-between">
-          <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-          <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
+      <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
+        <h3 style="justify-content:space-between;gap:8px">
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
+          <span style="display:flex;align-items:center;gap:6px;flex:none">
+            <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
+            ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
+          </span>
         </h3>
         <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')}</div>
         ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
-        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
       </div>
     `;
   }).join('');
@@ -574,10 +583,10 @@ function renderPedidoDetail(){
     return `
       <div class="list-row" style="padding:6px 10px">
         <div class="list-row-name"><span>${ing ? escapeHtml(ing.name) : '—'}</span></div>
-        <span style="font-size:11.5px;color:var(--muted)">Pedido</span>
+        <span style="font-size:11.5px;color:var(--muted)">${t('label.ordered')}</span>
         <input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">
         ${isRecibido ? `
-        <span style="font-size:11.5px;color:var(--muted)">Recib.</span>
+        <span style="font-size:11.5px;color:var(--muted)">${t('label.receivedAbbrev')}</span>
         <input type="number" value="${line.cantidadRecibida||0}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidadRecibida', this.value)">
         ` : ''}
         <span style="font-size:12px;color:var(--muted);min-width:22px">${ing ? escapeHtml(ing.unit) : ''}</span>
@@ -590,7 +599,7 @@ function renderPedidoDetail(){
     <div class="card" style="margin-top:10px">
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-        <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${o.estado}</span>
+        <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
       </h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
         ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
