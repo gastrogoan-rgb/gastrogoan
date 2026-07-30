@@ -1486,6 +1486,7 @@ const I18N = {
     'dist.manualDishPlaceholder': 'O escribe un plato manualmente...', 'dist.weekTasksTitle': 'Tareas de la semana',
     'label.ordered': 'Pedido', 'label.receivedAbbrev': 'Recib.',
     'pedidoEstados.map': {BORRADOR:'Borrador', ENVIADO:'Enviado', RECIBIDO:'Recibido'},
+    'msg.clockInRegistered': 'Entrada registrada', 'msg.clockOutRegistered': 'Salida registrada',
   },
   ca: {
     'home.heroBadge': 'Kit professional de gestió hostalera',
@@ -2846,6 +2847,7 @@ const I18N = {
     'dist.manualDishPlaceholder': 'O escriu un plat manualment...', 'dist.weekTasksTitle': 'Tasques de la setmana',
     'label.ordered': 'Demanat', 'label.receivedAbbrev': 'Rebut',
     'pedidoEstados.map': {BORRADOR:'Esborrany', ENVIADO:'Enviat', RECIBIDO:'Rebut'},
+    'msg.clockInRegistered': 'Entrada registrada', 'msg.clockOutRegistered': 'Sortida registrada',
   },
   en: {
     'home.heroBadge': 'Professional hospitality management kit',
@@ -4206,6 +4208,7 @@ const I18N = {
     'dist.manualDishPlaceholder': 'Or type a dish manually...', 'dist.weekTasksTitle': 'Tasks for the week',
     'label.ordered': 'Ordered', 'label.receivedAbbrev': 'Recv.',
     'pedidoEstados.map': {BORRADOR:'Draft', ENVIADO:'Sent', RECIBIDO:'Received'},
+    'msg.clockInRegistered': 'Clock-in recorded', 'msg.clockOutRegistered': 'Clock-out recorded',
   }
 };
 function getLang(){

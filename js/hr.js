@@ -2534,6 +2534,6 @@ function doFichaje(employeeId, action){
   saveDB();
   closeModal();
   renderHorariosTab();
-  showToast(action === 'entrada' ? 'Entrada registrada' : 'Salida registrada');
+  showToast(action === 'entrada' ? t('msg.clockInRegistered') : t('msg.clockOutRegistered'));
 }
 
