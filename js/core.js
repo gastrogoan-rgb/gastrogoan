@@ -856,50 +856,45 @@ function hideFirebaseSetupGate(){
   if(g) g.remove();
 }
 
-/* Paso guiado obligatorio después de configurar la nube: subir la app a un
-   hosting público (Netlify) para que el QR de reservas/pedidos funcione.
-   Solo se muestra al propietario y hasta que confirma que ya está subida. */
+/* Paso guiado: solo hace falta si la app se abre desde un archivo local
+   (file://) o localhost, donde el QR de reservas/pedidos no puede
+   funcionar. Desde que GastroGoan se sirve desde un hosting centralizado
+   (una única dirección que mantenemos nosotros, no una copia que sube
+   cada negocio a su propia cuenta), esto ya está resuelto de fábrica para
+   cualquiera que abra la app desde esa dirección: se detecta como
+   "hosted" automáticamente y el aviso ni se muestra. Solo aparece como
+   recordatorio en el caso residual de que alguien abra el archivo local. */
 function showNetlifySetupGate(){
   if(document.getElementById('netlify-gate')) return;
   const hosted = (location.protocol === 'http:' || location.protocol === 'https:') &&
                  !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if(hosted){
+    // Ya se sirve desde una URL pública real (el hosting centralizado, o
+    // en su día la propia cuenta de Netlify de un negocio ya migrado): no
+    // hace falta interrumpir con el asistente, se da por resuelto.
+    DB.business.netlifySetupDone = true;
+    saveDB();
+    if(!getCloudConfig()) showFirebaseSetupGate();
+    else if(!getLicense()) showActivationGate();
+    else if(!DB.business.tourSeen) promptAppTour();
+    return;
+  }
+  // A partir de aquí, hosted es siempre false (el caso hosted=true ya
+  // volvió arriba): alguien está abriendo la app desde un archivo local,
+  // no desde la dirección centralizada. Mensaje simple, sin el antiguo
+  // tutorial paso a paso de "crea tu cuenta de Netlify" (ya no aplica).
   const g = document.createElement('div');
   g.id = 'netlify-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px';
-  const step = (n, title, body) => `
-    <div style="display:flex;gap:12px;margin-bottom:16px">
-      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
-      <div style="flex:1;min-width:0">
-        <p style="font-weight:700;font-size:13.5px;margin-bottom:4px">${title}</p>
-        <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
-      </div>
-    </div>`;
-  const stepsHtml = `
-    ${step(1, t('gate.nt.step1Title'), t('gate.nt.step1Body'))}
-    ${step(2, t('gate.nt.step2Title'), t('gate.nt.step2Body'))}
-    ${step(3, t('gate.nt.step3Title'), t('gate.nt.step3Body'))}
-    ${step(4, t('gate.nt.step4Title'), t('gate.nt.step4Body'))}
-    ${step(5, t('gate.nt.step5Title'), t('gate.nt.step5Body'))}`;
-
-  const hostedBox = hosted
-    ? `<div style="background:#EDF1EC;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">✅ <strong>${t('gate.nt.goodTitle')}</strong> ${t('gate.nt.hostedBody').replace('${host}', escapeHtml(location.hostname))}</div>`
-    : `<div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;text-align:left">⚠️ ${t('gate.nt.notHostedBody')}</div>`;
-
   const showBackBtnNt = getBusinessSlots().length > 1;
   g.innerHTML = `
-    <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
+    <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       ${showBackBtnNt ? `<button onclick="hideNetlifySetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
         <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
-        <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${t('gate.nt.stepLabel')}</p>
       </div>
-      ${hostedBox}
-      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        ${t('gate.nt.explain')}
-      </div>
-      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 ${t('gate.followSteps')}</h3>
-      ${stepsHtml}
+      <div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">⚠️ ${t('gate.nt.notHostedBody')}</div>
       <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px">✅ ${t('gate.nt.doneBtn')}</button>
     </div>`;
   document.body.appendChild(g);
