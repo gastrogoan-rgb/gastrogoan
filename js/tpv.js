@@ -2249,6 +2249,7 @@ function finalizeCharge(orderId){
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
+  enqueueVerifactuSubmission(sale);
   if(order.clientId) registerClientVisit(order.clientId);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -2494,6 +2495,7 @@ function finalizeSplitOrder(orderId){
   };
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
+  enqueueVerifactuSubmission(sale);
   if(order.clientId) registerClientVisit(order.clientId);
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
@@ -2666,6 +2668,122 @@ function openTodaySalesModal(){
   `);
 }
 
+/* ============================================================
+   VeriFactu — envío a proveedor certificado (cuenta propia del negocio)
+   ============================================================
+
+   MODELO: cada negocio contrata y paga SU PROPIA cuenta con uno de estos
+   proveedores certificados (no una cuenta de GastroGoan). Aquí solo se
+   guarda su clave de API (Mi Negocio → VeriFactu) y se llama a su servicio
+   al cerrar cada venta. GastroGoan no interviene en el pago, no es el
+   titular del contrato, y no tiene coste propio por esto.
+
+   ⚠️ IMPORTANTE — ESTADO DE ESTA INTEGRACIÓN:
+   La función submitSaleToVerifactuProvider() de más abajo tiene el
+   endpoint, los nombres de campo y el formato de respuesta marcados como
+   PENDIENTES DE CONFIRMAR contra la documentación oficial/entorno de
+   pruebas del proveedor elegido. NO se ha podido verificar el contrato
+   exacto de su API en el entorno donde se escribió este código (acceso
+   de red bloqueado a las webs de los proveedores). Todo lo demás —
+   pantalla de configuración, cola de reintento sin conexión, guardado del
+   resultado en la venta, impresión del QR en el ticket — es la
+   arquitectura definitiva y no debería cambiar. Antes de dar esto por
+   operativo en producción: (1) confirmar con el proveedor elegido el
+   endpoint/campos exactos usando su documentación o su entorno de
+   pruebas ("sandbox"), (2) actualizar SOLO el cuerpo de
+   submitSaleToVerifactuProvider() con esos datos reales, (3) probar con
+   una venta de prueba contra su sandbox antes de activarlo con clientes
+   reales.
+*/
+const VERIFACTU_PROVIDERS = {
+  facturadirecta: {label: 'FacturaDirecta', apiBase: 'https://api.facturadirecta.com/v1'},
+  contasimple: {label: 'Contasimple', apiBase: 'https://api.contasimple.com/v1'},
+};
+
+// Cuánto tiempo esperar entre reintentos de envío pendientes (la normativa
+// permite remitir "de forma inmediata o inmediatamente después", así que un
+// reintento cada pocos minutos si no hay conexión es correcto, no un parche).
+const VERIFACTU_RETRY_MS = 3 * 60 * 1000;
+let verifactuRetryTimer = null;
+
+function verifactuConfig(){
+  return (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
+}
+
+// Se llama justo después de guardar cada venta. Si VeriFactu no está
+// activado para este negocio, no hace nada (comportamiento actual sin
+// cambios). Si está activado, marca la venta como pendiente e intenta
+// enviarla ya mismo; si falla (sin conexión, error del proveedor), queda en
+// la cola y se reintentará solo, sin bloquear el cobro ni la impresión del
+// ticket — el ticket se imprime igual, con o sin el QR de VeriFactu ya
+// confirmado (ver nota en buildTicketText).
+function enqueueVerifactuSubmission(sale){
+  const cfg = verifactuConfig();
+  if(!cfg.enabled || !cfg.provider || !cfg.apiKey) return;
+  sale.verifactu = {status: 'pending'};
+  saveDB();
+  processVerifactuQueue();
+}
+
+async function submitSaleToVerifactuProvider(sale, cfg){
+  const provider = VERIFACTU_PROVIDERS[cfg.provider];
+  if(!provider) throw new Error('Proveedor VeriFactu no reconocido: ' + cfg.provider);
+
+  // ⚠️ PENDIENTE DE CONFIRMAR (ver cabecera del bloque): endpoint, nombres de
+  // campo del cuerpo de la petición, y forma exacta de la respuesta. Lo de
+  // abajo sigue el patrón documentado en público (API key en cabecera,
+  // POST con líneas/importes/IVA) pero NO ha sido probado contra la API
+  // real — hazlo contra su entorno de pruebas antes de usarlo en producción.
+  const ivaPct = (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
+  const body = {
+    fecha: sale.date,
+    cliente: sale.clienteNombre || null,
+    lineas: sale.items.map(l => ({descripcion: l.name, cantidad: l.qty, precioUnitario: l.price, ivaPct})),
+    total: sale.total,
+  };
+  const res = await fetch(`${provider.apiBase}/facturas`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`},
+    body: JSON.stringify(body),
+  });
+  if(!res.ok) throw new Error(`Proveedor VeriFactu respondió ${res.status}`);
+  const data = await res.json();
+  // Campos de la respuesta asumidos por convención habitual en este tipo de
+  // API (número de factura, huella/hash, y URL o contenido del QR) —
+  // confirmar y ajustar contra la respuesta real del proveedor elegido.
+  return {invoiceId: data.numeroFactura || data.id, hash: data.huella || data.hash || null, qrData: data.qr || data.qrUrl || null};
+}
+
+// Procesa todas las ventas con envío pendiente (recién cerradas, o de una
+// sesión anterior que se quedó sin conexión). Se puede llamar tantas veces
+// como haga falta: las que ya estén enviadas o en curso no se reintentan.
+let verifactuProcessing = false;
+async function processVerifactuQueue(){
+  if(verifactuProcessing) return;
+  const cfg = verifactuConfig();
+  if(!cfg.enabled || !cfg.provider || !cfg.apiKey) return;
+  const pending = DB.sales.filter(s => s.verifactu && s.verifactu.status === 'pending');
+  if(!pending.length) return;
+  verifactuProcessing = true;
+  for(const sale of pending){
+    try{
+      const result = await submitSaleToVerifactuProvider(sale, cfg);
+      sale.verifactu = {status: 'sent', ...result, sentAt: new Date().toISOString()};
+    }catch(e){
+      sale.verifactu = {status: 'pending', lastError: e.message, lastAttemptAt: new Date().toISOString()};
+    }
+  }
+  saveDB();
+  verifactuProcessing = false;
+  clearTimeout(verifactuRetryTimer);
+  if(DB.sales.some(s => s.verifactu && s.verifactu.status === 'pending')){
+    verifactuRetryTimer = setTimeout(processVerifactuQueue, VERIFACTU_RETRY_MS);
+  }
+}
+if(typeof window !== 'undefined'){
+  window.addEventListener('online', () => processVerifactuQueue());
+}
+
 /* ------------------ Ticket: contenido, impresión, email y factura ------------------ */
 function buildTicketHeaderLines(){
   const b = DB.business || {};
@@ -2701,15 +2819,26 @@ function buildTicketText(sale, opts={}){
     lines.push(`${t('ticket.payment')}: ${sale.metodoPago||''}`);
   }
   lines.push('');
+  if(sale.verifactu && sale.verifactu.status === 'sent'){
+    lines.push('VERI*FACTU');
+  } else if(DB.business && DB.business.verifactu && DB.business.verifactu.enabled){
+    // Venta hecha con VeriFactu activado pero todavía sin confirmar por el
+    // proveedor (p.ej. sin conexión en el momento del cobro): se avisa en el
+    // propio ticket en vez de fingir que ya está confirmada.
+    lines.push(t('ticket.verifactuPending'));
+  }
   lines.push(tc.pie || t('ticket.thanksVisit'));
   return lines.join('\n');
 }
 
 function printTicket(sale, opts={}){
   const text = buildTicketText(sale, opts);
+  const qrHtml = (sale.verifactu && sale.verifactu.status === 'sent' && sale.verifactu.qrData)
+    ? `<div style="text-align:center;margin-top:10px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(sale.verifactu.qrData)}" style="width:120px;height:120px"></div>`
+    : '';
   const win = window.open('', '_blank', 'width=320,height=520');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}</body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}${qrHtml}</body></html>`);
   win.document.close();
   win.print();
 }

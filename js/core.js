@@ -1959,6 +1959,11 @@ function defaultData(){
       cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
       ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
+      // Configuración de envío a un proveedor certificado VeriFactu (cada
+      // negocio contrata y paga su propia cuenta con ese proveedor; GastroGoan
+      // solo guarda su clave de API y llama a su servicio). Ver VERIFACTU_PROVIDERS
+      // en js/tpv.js para la lista de proveedores soportados.
+      verifactu: {enabled: false, provider: '', apiKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,

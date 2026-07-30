@@ -3466,6 +3466,8 @@ function renderMiNegocio(){
 
     ${renderTicketConfigCard()}
 
+    ${renderVerifactuConfigCard()}
+
     ${renderComandaPrintCard()}
 
     ${renderRedsysCard()}
@@ -4156,6 +4158,59 @@ function previewTicketConfig(){
     <div style="background:#fff;color:#111;font-family:monospace;font-size:12.5px;white-space:pre-wrap;padding:16px;border:1px solid var(--border);border-radius:8px;max-width:320px;margin:0 auto">${escapeHtml(text)}</div>
     <div class="modal-footer"><button class="btn" onclick="closeModal()">${t('common.close')}</button></div>
   `);
+}
+
+// Configuración de VeriFactu: cada negocio contrata y paga SU PROPIA cuenta
+// con un proveedor de facturación certificado (no una cuenta de GastroGoan),
+// y aquí solo pega su clave de API — igual que "conecta tu propia nube" con
+// Firebase. GastroGoan no cobra ni gestiona nada de ese servicio, solo llama
+// a su API al cerrar cada venta. Ver VERIFACTU_PROVIDERS (js/tpv.js) para la
+// lista de proveedores soportados y submitSaleToVerifactu() para el envío.
+function renderVerifactuConfigCard(){
+  const vf = (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
+  const pendingCount = (DB.sales||[]).filter(s => s.verifactu && s.verifactu.status === 'pending').length;
+  const providerOptions = Object.keys(VERIFACTU_PROVIDERS).map(k =>
+    `<option value="${k}" ${vf.provider===k?'selected':''}>${escapeHtml(VERIFACTU_PROVIDERS[k].label)}</option>`
+  ).join('');
+  return `
+    <div class="card" style="max-width:720px">
+      <h3><i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}</h3>
+      <p style="font-size:13px;color:var(--muted)">${t('mn.verifactu.desc')}</p>
+      <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
+        <p style="margin:0 0 6px"><strong>${t('mn.verifactu.howItWorksTitle')}</strong> ${t('mn.verifactu.howItWorks1')}</p>
+        <p style="margin:0">${t('mn.verifactu.howItWorks2')}</p>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;margin-bottom:10px">
+        <input type="checkbox" id="vf-enabled" ${vf.enabled?'checked':''} style="width:18px;height:18px"> ${t('mn.verifactu.enable')}
+      </label>
+      <div class="field">
+        <label>${t('mn.verifactu.provider')}</label>
+        <select id="vf-provider">
+          <option value="">${t('mn.verifactu.selectProvider')}</option>
+          ${providerOptions}
+        </select>
+      </div>
+      <div class="field">
+        <label>${t('mn.verifactu.apiKey')}</label>
+        <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:monospace;font-size:12px">
+        <small style="color:var(--muted)">${t('mn.verifactu.apiKeyHint')}</small>
+      </div>
+      ${pendingCount ? `<p style="font-size:12.5px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingCount)}</p>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveVerifactuConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+      </div>
+    </div>
+  `;
+}
+function saveVerifactuConfig(){
+  const enabled = document.getElementById('vf-enabled').checked;
+  const provider = document.getElementById('vf-provider').value;
+  const apiKey = document.getElementById('vf-apikey').value.trim();
+  if(enabled && (!provider || !apiKey)){ showToast(t('msg.verifactuMissingFields')); return; }
+  DB.business.verifactu = {...(DB.business.verifactu||{}), enabled, provider, apiKey};
+  saveDB();
+  renderMiNegocio();
+  showToast(t('msg.verifactuConfigSaved'));
 }
 
 // Configuración de cómo se gestionan las comandas de cocina y sala: verlas en
