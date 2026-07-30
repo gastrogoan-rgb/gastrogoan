@@ -2679,23 +2679,25 @@ function openTodaySalesModal(){
    titular del contrato, y no tiene coste propio por esto.
 
    ⚠️ IMPORTANTE — ESTADO DE ESTA INTEGRACIÓN:
-   La función submitSaleToVerifactuProvider() de más abajo tiene el
-   endpoint, los nombres de campo y el formato de respuesta marcados como
-   PENDIENTES DE CONFIRMAR contra la documentación oficial/entorno de
-   pruebas del proveedor elegido. NO se ha podido verificar el contrato
-   exacto de su API en el entorno donde se escribió este código (acceso
-   de red bloqueado a las webs de los proveedores). Todo lo demás —
-   pantalla de configuración, cola de reintento sin conexión, guardado del
-   resultado en la venta, impresión del QR en el ticket — es la
-   arquitectura definitiva y no debería cambiar. Antes de dar esto por
-   operativo en producción: (1) confirmar con el proveedor elegido el
-   endpoint/campos exactos usando su documentación o su entorno de
-   pruebas ("sandbox"), (2) actualizar SOLO el cuerpo de
-   submitSaleToVerifactuProvider() con esos datos reales, (3) probar con
-   una venta de prueba contra su sandbox antes de activarlo con clientes
-   reales.
+   El proveedor "facturahub" usa el flujo real y los endpoints documentados
+   públicamente por FacturaHub (github.com/FacturaHub-com/facturahub-verifactu):
+   crear factura → emitir a VeriFactu → consultar estado. Es gratis e
+   ilimitado para la parte de facturación VeriFactu, y el modelo es de
+   cuenta propia por negocio (API key desde su propio panel "Ajustes →
+   Integraciones"), justo el modelo que necesitamos. Lo NO confirmado
+   todavía (su documentación pública no lo detalla): el nombre exacto de
+   los campos de hash/QR dentro de la respuesta de /api/einvoice/status —
+   están asumidos por convención (verifactuHash, qrUrl) y hay que
+   verificarlos con una prueba real antes de usarlo con clientes de
+   verdad. Tampoco hay una declaración responsable explícita publicada en
+   su repositorio: confirmar con ellos que cumplen el RD 1007/2023 antes
+   de activarlo en producción.
+   Los proveedores "facturadirecta" y "contasimple" quedan como
+   alternativas de pago con el mismo aviso de siempre: su endpoint/campos
+   siguen sin confirmar contra documentación real.
 */
 const VERIFACTU_PROVIDERS = {
+  facturahub: {label: 'FacturaHub (gratis)', apiBase: 'https://api.facturahub.com'},
   facturadirecta: {label: 'FacturaDirecta', apiBase: 'https://api.facturadirecta.com/v1'},
   contasimple: {label: 'Contasimple', apiBase: 'https://api.contasimple.com/v1'},
 };
@@ -2725,16 +2727,66 @@ function enqueueVerifactuSubmission(sale){
   processVerifactuQueue();
 }
 
+function verifactuIvaPct(){
+  return (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
+}
+
 async function submitSaleToVerifactuProvider(sale, cfg){
   const provider = VERIFACTU_PROVIDERS[cfg.provider];
   if(!provider) throw new Error('Proveedor VeriFactu no reconocido: ' + cfg.provider);
+  if(cfg.provider === 'facturahub') return submitSaleToFacturaHub(sale, cfg, provider);
+  return submitSaleToGenericProvider(sale, cfg, provider);
+}
 
-  // ⚠️ PENDIENTE DE CONFIRMAR (ver cabecera del bloque): endpoint, nombres de
-  // campo del cuerpo de la petición, y forma exacta de la respuesta. Lo de
-  // abajo sigue el patrón documentado en público (API key en cabecera,
-  // POST con líneas/importes/IVA) pero NO ha sido probado contra la API
-  // real — hazlo contra su entorno de pruebas antes de usarlo en producción.
-  const ivaPct = (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
+// FacturaHub: flujo documentado públicamente (crear factura → emitir a
+// VeriFactu → consultar estado) en
+// github.com/FacturaHub-com/facturahub-verifactu. Ver el aviso de la
+// cabecera del bloque sobre qué campos de la respuesta de /status siguen
+// sin confirmar.
+async function submitSaleToFacturaHub(sale, cfg, provider){
+  const ivaPct = verifactuIvaPct();
+  const headers = {'Content-Type': 'application/json', 'x-api-key': cfg.apiKey};
+
+  // 1) Crear la factura en FacturaHub. Un ticket de restaurante a consumidor
+  // final no siempre tiene NIF del cliente; se usa un nombre genérico si no
+  // hay uno registrado, como hace ya el resto de la app con las facturas
+  // simplificadas.
+  const createRes = await fetch(`${provider.apiBase}/api/invoices`, {
+    method: 'POST', headers,
+    body: JSON.stringify({
+      client: {name: sale.clienteNombre || t('ticket.finalConsumer')},
+      items: sale.items.map(l => ({description: l.name, quantity: l.qty, unitPrice: l.price, taxRate: ivaPct})),
+    }),
+  });
+  if(!createRes.ok) throw new Error(`FacturaHub (crear factura) respondió ${createRes.status}`);
+  const created = await createRes.json();
+  const invoiceId = created._id || created.id;
+  if(!invoiceId) throw new Error('FacturaHub no devolvió un id de factura');
+
+  // 2) Emitirla a VeriFactu.
+  const emitRes = await fetch(`${provider.apiBase}/api/einvoice/emit`, {
+    method: 'POST', headers, body: JSON.stringify({invoiceId}),
+  });
+  if(!emitRes.ok) throw new Error(`FacturaHub (emitir a VeriFactu) respondió ${emitRes.status}`);
+
+  // 3) Consultar el estado para obtener la huella/hash y el QR ya generados.
+  // ⚠️ Nombres de campo (verifactuHash/qrUrl) asumidos por convención, sin
+  // confirmar contra la respuesta real — ajustar tras una prueba real.
+  const statusRes = await fetch(`${provider.apiBase}/api/einvoice/status/${invoiceId}`, {headers});
+  if(!statusRes.ok) throw new Error(`FacturaHub (consultar estado) respondió ${statusRes.status}`);
+  const status = await statusRes.json();
+  return {
+    invoiceId,
+    hash: status.verifactuHash || status.hash || null,
+    qrData: status.qrUrl || status.qr || null,
+  };
+}
+
+// Proveedores de pago alternativos (FacturaDirecta, Contasimple): sin
+// confirmar todavía contra su documentación/sandbox real (ver aviso de la
+// cabecera del bloque). Estructura genérica de referencia.
+async function submitSaleToGenericProvider(sale, cfg, provider){
+  const ivaPct = verifactuIvaPct();
   const body = {
     fecha: sale.date,
     cliente: sale.clienteNombre || null,
@@ -2748,9 +2800,6 @@ async function submitSaleToVerifactuProvider(sale, cfg){
   });
   if(!res.ok) throw new Error(`Proveedor VeriFactu respondió ${res.status}`);
   const data = await res.json();
-  // Campos de la respuesta asumidos por convención habitual en este tipo de
-  // API (número de factura, huella/hash, y URL o contenido del QR) —
-  // confirmar y ajustar contra la respuesta real del proveedor elegido.
   return {invoiceId: data.numeroFactura || data.id, hash: data.huella || data.hash || null, qrData: data.qr || data.qrUrl || null};
 }
 
