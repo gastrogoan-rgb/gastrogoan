@@ -867,6 +867,37 @@ function lockEditMode(){
 
 function requestEditPin(){
   const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
+  // Igual que requestOwnerPin(): si el negocio todavía usa el PIN de fábrica
+  // sin configurar (pinSet===false), se obliga a fijar uno propio la primera
+  // vez que se desbloquea CUALQUIER acción protegida, no solo al entrar en
+  // Gestión — así el PIN "1234" nunca queda aceptado para siempre sin que
+  // el dueño se dé cuenta.
+  if(!DB.business.pinSet){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-lock"></i> ${t('title.configAccess')}</h3>
+      </div>
+      <p style="font-size:13px;color:var(--muted)">${t('title.configAccessDesc')}</p>
+      <div class="field">
+        <label>${t('label.currentPin')}</label>
+        <input type="password" id="edit-pin-input" ${pinInputAttrs}>
+      </div>
+      <div class="field">
+        <label>${t('label.newPin')}</label>
+        <input type="password" id="edit-pin-new" ${pinInputAttrs}>
+      </div>
+      <div class="field">
+        <label>${t('label.repeatPin')}</label>
+        <input type="password" id="edit-pin-new2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyEditPin()">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="verifyEditPin()">${t('common.continue')}</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('edit-pin-input')?.focus(), 50);
+    return;
+  }
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-lock"></i> ${t('title.editMode')}</h3>
@@ -892,6 +923,16 @@ function verifyEditPin(){
   if(!bMatch){
     showToast(t('msg.pinIncorrect'));
     return;
+  }
+  if(!DB.business.pinSet){
+    const n1 = document.getElementById('edit-pin-new').value;
+    const n2 = document.getElementById('edit-pin-new2').value;
+    if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pin4digits')); return; }
+    if(n1 !== n2){ showToast(t('msg.pinNoMatch')); return; }
+    DB.business.pin = hashPin(n1);
+    DB.business.pinSet = true;
+    saveDB();
+    showToast(t('msg.pinUpdated'));
   }
   editUnlocked = true;
   document.body.classList.add('edit-unlocked');

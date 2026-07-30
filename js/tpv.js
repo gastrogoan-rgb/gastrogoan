@@ -174,7 +174,7 @@ function renderTpvCartaSelector(){
         ${t('label.autoSwitchBySchedule')}
       </label>
       <span style="font-size:12px;color:var(--muted)">
-        ${activeCartas.length ? totalPlatos + ' ' + t('label.dishesAvailable') : t('label.selectAtLeastOneCarta')}
+        ${activeCartas.length ? (totalPlatos===1 ? t('label.oneDishAvailable') : totalPlatos + ' ' + t('label.dishesAvailable')) : t('label.selectAtLeastOneCarta')}
       </span>
     </div>
   `;
@@ -1127,10 +1127,10 @@ function renderTableOrderModal(orderId){
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
   const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
-  const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> Reserva</span>` : '';
-  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> Pagado online${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
+  const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> ${t('label.reservationShort')}</span>` : '';
+  const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
-  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="Cambiar camarero/a"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : 'Asignar camarero/a'}</span>` : '';
+  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : t('label.assignWaiter')}</span>` : '';
 
   const total = orderTotal(order);
   if(order.items.some(l => l.nuevo)){
@@ -1206,7 +1206,7 @@ function renderTableOrderModal(orderId){
 // Selector de platos dentro de una carta concreta (secciones + platos visibles).
 function renderCartaSelectorInline(order, carta){
   const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
-  if(!secciones.length) return `<div class="empty" style="padding:10px">No hay platos disponibles en esta carta.</div>`;
+  if(!secciones.length) return `<div class="empty" style="padding:10px">${t('empty.noDishesInCarta')}</div>`;
   return secciones.map(sec => {
     const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
     const icono = sec.icono || guessSeccionEmoji(sec.nombre);
@@ -1225,7 +1225,7 @@ function renderCartaSelectorInline(order, carta){
 function renderMenuSelectorInline(order, menu){
   return `
     <div style="margin-bottom:8px"><strong>${escapeHtml(tItem(menu))}</strong> · <span style="color:var(--brand-orange);font-weight:700">${fmtMoney(menu.precio)}</span></div>
-    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> Añadir ${escapeHtml(tItem(menu))} al pedido</button>
+    <button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${menu.id})"><i class="ti ti-plus"></i> ${t('btn.addToOrderNamed').replace('${name}', escapeHtml(tItem(menu)))}</button>
   `;
 }
 
@@ -1247,7 +1247,7 @@ function renderOrderComandaPanel(order){
     const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
     const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
     let statusBadge = '';
-    if(allDelivered) statusBadge = '<span class="badge badge-green" style="font-size:10px">✅ Recogido</span>';
+    if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px">✅ ${t('tpv.pickedUp')}</span>`;
     else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px">🍽️ ${t('tpv.readyToPickup')}</span>`;
     else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px">🔥 ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px">⏳ ${t('tpv.fired')}</span>`;
@@ -1397,7 +1397,7 @@ function comandaOrderTitle(order){
 function timeAgo(iso){
   if(!iso) return '';
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  return mins < 1 ? 'ahora' : `hace ${mins} min`;
+  return mins < 1 ? t('time.now') : t('time.minsAgo').replace('${n}', mins);
 }
 
 function minutesSince(iso){
@@ -1471,7 +1471,7 @@ function renderComandasCocina(){
       .sort((a,b) => b.maxMs - a.maxMs);
 
     if(!closed.length){
-      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-history"></i>No hay comandas cerradas todavía.</div>`;
+      box.innerHTML = tabsHtml + `<div class="empty"><i class="ti ti-history"></i>${t('empty.noClosedOrders')}</div>`;
       return;
     }
 
@@ -1479,7 +1479,7 @@ function renderComandasCocina(){
       <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
-          <span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregada</span>
+          <span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>
         </div>
         ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
         ${lines.map(line => `<div style="padding:4px 0"><strong>${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong></div>`).join('')}
@@ -1532,9 +1532,9 @@ function renderComandasCocina(){
         const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
         const allEntregado = g.lines.every(({line}) => line.estado === 'entregado');
         let groupBtn = '';
-        if(allEntregado) groupBtn = `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Todo entregado</span>`;
-        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> Preparar todo</button>`;
-        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> Entregar todo</button>`;
+        if(allEntregado) groupBtn = `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
+        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
+        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.deliverAll')}</button>`;
         return `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1547,10 +1547,10 @@ function renderComandasCocina(){
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
-              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> Sin marchar</span>`
-              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> En espera</button>`
-              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> Preparando</button>`
-              : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> Entregado</span>`}
+              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
+              : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
+              : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
+              : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`}
             </div>
           `).join('')}
         </div>
@@ -2173,7 +2173,7 @@ function renderEqualSplitTab(order){
         <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
       </div>
       <div class="modal-footer" style="padding:0;border:none">
-        <button class="btn btn-primary" onclick="generateEqualSplit(${order.id})"><i class="ti ti-divide"></i> Dividir cuenta</button>
+        <button class="btn btn-primary" onclick="generateEqualSplit(${order.id})"><i class="ti ti-divide"></i> ${t('btn.splitBill')}</button>
       </div>
     `;
   }
@@ -2186,7 +2186,7 @@ function generateEqualSplit(orderId){
   const total = orderTotal(order);
   order.splitMode = 'equal';
   order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
-    id: i+1, label: 'Persona ' + (i+1), amount, paid:false, metodoPago:null
+    id: i+1, label: t('label.personN').replace('${n}', i+1), amount, paid:false, metodoPago:null
   }));
   saveDB();
   renderPaymentModal(orderId);
@@ -2213,7 +2213,7 @@ function renderItemsSplitTab(order){
         <label>${t('label.numDiners')}</label>
         <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" oninput="updateItemsSplitDiners(${order.id})">
       </div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">Asigna cada unidad al comensal que la ha consumido (si hay 3 ensaladas, cada una puede ir a un comensal distinto):</p>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.assignUnitsHint')}</p>
       <div id="split-items-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${order.items.map((line,idx) => `
           <div class="card card-compact">
@@ -2221,9 +2221,9 @@ function renderItemsSplitTab(order){
             <div style="display:flex;flex-wrap:wrap;gap:8px">
               ${Array.from({length:line.qty}, (_,u) => `
                 <div style="display:flex;align-items:center;gap:4px">
-                  <span style="font-size:11px;color:var(--muted)">Ud. ${u+1}</span>
+                  <span style="font-size:11px;color:var(--muted)">${t('label.unitN').replace('${n}', u+1)}</span>
                   <select id="split-item-assign-${idx}-${u}" data-idx="${idx}" data-unit="${u}">
-                    ${Array.from({length:n}, (_,i)=>i+1).map(p => `<option value="${p}"${assignments[idx][u]===p?' selected':''}>Comensal ${p}</option>`).join('')}
+                    ${Array.from({length:n}, (_,i)=>i+1).map(p => `<option value="${p}"${assignments[idx][u]===p?' selected':''}>${t('label.dinerN').replace('${n}', p)}</option>`).join('')}
                   </select>
                 </div>
               `).join('')}
@@ -2232,7 +2232,7 @@ function renderItemsSplitTab(order){
         `).join('')}
       </div>
       <div class="modal-footer" style="padding:0;border:none">
-        <button class="btn btn-primary" onclick="generateItemsSplit(${order.id})"><i class="ti ti-divide"></i> Calcular división</button>
+        <button class="btn btn-primary" onclick="generateItemsSplit(${order.id})"><i class="ti ti-divide"></i> ${t('btn.calcSplit')}</button>
       </div>
     `;
   }
@@ -2276,7 +2276,7 @@ function generateItemsSplit(orderId){
       }
     });
     return {
-      id: personIdx, label: 'Comensal ' + personIdx, amount,
+      id: personIdx, label: t('label.dinerN').replace('${n}', personIdx), amount,
       itemNames, paid:false, metodoPago:null
     };
   });
@@ -2290,14 +2290,14 @@ function renderSplitPartsList(order){
   return `
     <div class="table-wrap" style="margin-bottom:10px">
       <table>
-        <thead><tr><th>Quién paga</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>${t('label.whoPays')}</th><th>${t('label.amount')}</th><th>${t('label.status')}</th><th></th></tr></thead>
         <tbody>
           ${order.splitPayments.map(p => `
             <tr>
               <td>${escapeHtml(p.label)}${p.itemNames && p.itemNames.length ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(p.itemNames.join(', '))}</div>` : ''}</td>
               <td>${fmtMoney(p.amount)}</td>
               <td>${p.paid ? `<span class="badge badge-green"><i class="ti ti-check"></i> ${t('common.paid')}${p.metodoPago ? ' · '+escapeHtml(p.metodoPago) : ''}</span>` : `<span class="badge">${t('common.pending')}</span>`}</td>
-              <td>${p.paid ? '' : `<button class="btn btn-primary" onclick="openSplitPartPayment(${order.id}, ${p.id})"><i class="ti ti-cash"></i> Cobrar</button>`}</td>
+              <td>${p.paid ? '' : `<button class="btn btn-primary" onclick="openSplitPartPayment(${order.id}, ${p.id})"><i class="ti ti-cash"></i> ${t('btn.charge')}</button>`}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -2305,7 +2305,7 @@ function renderSplitPartsList(order){
     </div>
     <div class="modal-footer" style="padding:0;border:none">
       <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> ${t('btn.cancelSplit')}</button>
-      ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> Finalizar cobro</button>` : ''}
+      ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> ${t('btn.finalizeCharge')}</button>` : ''}
     </div>
   `;
 }
@@ -2334,11 +2334,11 @@ function openSplitPartPayment(orderId, partId){
   if(!part) return;
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-cash"></i> Cobrar — ${escapeHtml(part.label)}</h3>
+      <h3><i class="ti ti-cash"></i> ${t('btn.charge')} — ${escapeHtml(part.label)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">Importe</div>
+      <div class="label">${t('label.amount')}</div>
       <div class="value">${fmtMoney(part.amount)}</div>
     </div>
     <div class="field">

@@ -169,7 +169,7 @@ function renderCartaList(){
   box.innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.name')}</th><th>${t('label.schedule')}</th><th>${t('label.sections')}</th><th>${t('label.dishesTh')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.name')}</th><th>${t('label.schedule')}</th><th>${t('label.sections')}</th><th>${currentArea()==='sala' ? t('label.drinksTh') : t('label.dishesTh')}</th><th></th></tr></thead>
         <tbody>
           ${cartas.map(c => {
             const nsec = (c.secciones||[]).length;
@@ -584,7 +584,9 @@ function confirmImportEsc(secId){
   });
   closeModal();
   renderCartaSecciones();
-  showToast(checked.length + ' platos importados');
+  const isDrink = currentArea()==='sala';
+  if(checked.length===1) showToast(isDrink ? t('msg.oneDrinkImported') : t('msg.oneDishImported'));
+  else showToast((isDrink ? t('msg.nDrinksImported') : t('msg.nDishesImported')).replace('${n}', checked.length));
 }
 
 /* ============================================================
@@ -640,7 +642,7 @@ function renderMenuList(){
   const menus = areaMenus();
   const totalGrupos = menus.reduce((s,m)=>s+(m.grupos||[]).length,0);
   const newBtn = document.querySelector('#menu-list-view button[onclick="newMenu()"] span');
-  if(newBtn) newBtn.textContent = isSala ? t('label.newMaridaje') : t('label.menuName');
+  if(newBtn) newBtn.textContent = isSala ? t('label.newMaridaje') : t('btn.newMenu');
   document.getElementById('menu-stats').innerHTML = `
     <div class="kpi"><div class="label">${isSala ? t('tab.maridajes') : t('common.menus')}</div><div class="value">${menus.length}</div></div>
     <div class="kpi"><div class="label">${t('label.totalGroups')}</div><div class="value">${totalGrupos}</div></div>
@@ -767,11 +769,11 @@ function renderMenuGrupos(){
       <div class="ge-sec-head">
         <div style="display:flex;align-items:center;gap:4px">
           ${reorderButtons(`moveMenuGrupo(${gi},-1)`, `moveMenuGrupo(${gi},1)`, gi===0, gi===grupos.length-1)}
-          <h4 style="margin:0">${escapeHtml(g.nombre)}${g.bebida ? ' <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> Sala</span>' : ''}</h4>
+          <h4 style="margin:0">${escapeHtml(g.nombre)}${g.bebida ? ` <span style="font-size:11px;color:var(--muted);font-weight:400"><i class="ti ti-glass-full"></i> ${t('label.sala')}</span>` : ''}</h4>
         </div>
         <div class="actions-cell">
-          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> Bebidas (sala)</label>
-          <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> Opción</button>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.bebidaGroup')}</label>
+          <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -782,10 +784,10 @@ function renderMenuGrupos(){
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
           <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
-          <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> Extras${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
+          <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
-      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : 'Sin opciones en este grupo.'}</div>`}
+      `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
     </div>
   `;
   }).join('');
@@ -822,7 +824,7 @@ function newMenuGrupo(){
 function confirmNewMenuGrupo(){
   const nombre = document.getElementById('new-menu-grupo-name').value;
   if(!nombre || !nombre.trim()){ showToast(t('msg.groupNameRequired')); return; }
-  menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[], bebida: false});
+  menuEdit.grupos.push({id: genId(), nombre: nombre.trim(), opciones:[], bebida: currentArea()==='sala'});
   closeModal();
   renderMenuGrupos();
 }

@@ -1046,8 +1046,8 @@ function updateSyncBadge(state){
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
   if(state === 'online'){ el.textContent = `☁ ${t('gate.cloudConnectedShort')}`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.textContent = `☁ ${t('gate.offline')}`; el.style.background = 'rgba(255,204,0,.2)'; el.style.color = '#FFD60A'; }
-  else { el.textContent = `☁ ${t('gate.cloudError')}`; el.style.background = 'rgba(255,69,58,.2)'; el.style.color = '#FF6B61'; }
+  else if(state === 'offline'){ el.textContent = `☁ ${t('gate.offline')}`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
+  else { el.textContent = `☁ ${t('gate.cloudError')}`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
 }
 
 function refreshAfterRemoteChange(){
