@@ -48,6 +48,9 @@ done
 # Copy reservas page as-is (it's already a single file)
 cp reservagastrogoan.html dist/reservagastrogoan.html
 
+# Copy the offline app-shell service worker (must sit at the site root next to index.html)
+cp sw.js dist/sw.js
+
 LINES=$(wc -l < dist/index.html)
 SIZE=$(du -h dist/index.html | cut -f1)
 

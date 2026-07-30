@@ -1285,6 +1285,7 @@ const GE = (function(){
         <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
         <button class="btn btn-primary" onclick="GE.exportMonth()"><i class="ti ti-download"></i> ${t('hr.export.downloadCsv')}</button>
         <button class="btn btn-primary" onclick="GE.emailMonth()"><i class="ti ti-mail"></i> ${t('hr.export.sendToAccountant')}</button>
+        <button class="btn" onclick="GE.copyMonthSummary()"><i class="ti ti-copy"></i> ${t('hr.export.copySummary')}</button>
       </div>
     `);
   }
@@ -1420,7 +1421,8 @@ const GE = (function(){
     rows.push([t('hr.csv.monthResult'), resultado]);
 
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado};
+    const vatByRate = Object.keys(ivaGroups).map(Number).sort((a,b)=>b-a).map(pct => ({pct, base: ivaGroups[pct].base, iva: ivaGroups[pct].iva}));
+    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado, vatByRate};
   }
 
   function exportMonth(){
@@ -1446,6 +1448,15 @@ const GE = (function(){
     const fmt = n => (Math.round(n*100)/100).toFixed(2).replace('.', ',') + ' €';
     const subject = t('hr.email.subject').replace('${month}', getMeses()[mes]).replace('${year}', año).replace('${business}', b.name||'GastroGoan');
     const csvName = `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`;
+    // El desglose de IVA por tipo (21/10/4/0%) es el dato que más falta suele
+    // hacerle al gestor para el Modelo 303/347, así que va también en el
+    // cuerpo del email en texto plano: si el CSV se queda sin adjuntar (se le
+    // olvida, o su cliente de correo se comporta raro con el mailto), el dato
+    // fiscal más importante llega igualmente.
+    const vatLines = (report.vatByRate||[]).length
+      ? [t('hr.email.vatBreakdownTitle'), ...report.vatByRate.map(v => `- IVA ${v.pct}%: ${t('hr.csv.baseEur')} ${fmt(v.base)} · ${t('hr.csv.vatEur')} ${fmt(v.iva)}`), ``]
+      : [];
+
     const body = [
       t('hr.email.greeting'),
       ``,
@@ -1459,6 +1470,7 @@ const GE = (function(){
       `- ${t('hr.lbl.variableExpenses')}: ${fmt(report.sumVar)}`,
       `- ${t('hr.csv.monthResult')}: ${fmt(report.resultado)}`,
       ``,
+      ...vatLines,
       t('hr.email.attachReminder').replace('${filename}', csvName),
       ``,
       t('hr.email.signoff')
@@ -1475,7 +1487,38 @@ const GE = (function(){
     }, 500);
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth};
+  // Alternativa al email: copiar el mismo resumen (con desglose de IVA) al
+  // portapapeles, para negocios cuyo gestor prefiere WhatsApp, un Drive
+  // compartido u otro canal distinto del correo.
+  function copyMonthSummary(){
+    const mes = parseInt(document.getElementById('exp-mes').value);
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const report = buildMonthReport(mes, año);
+    const b = DB.business || {};
+    const fmt = n => (Math.round(n*100)/100).toFixed(2).replace('.', ',') + ' €';
+    const vatLines = (report.vatByRate||[]).length
+      ? [t('hr.email.vatBreakdownTitle'), ...report.vatByRate.map(v => `- IVA ${v.pct}%: ${t('hr.csv.baseEur')} ${fmt(v.base)} · ${t('hr.csv.vatEur')} ${fmt(v.iva)}`)]
+      : [];
+    const text = [
+      t('hr.email.intro').replace('${month}', getMeses()[mes]).replace('${year}', año).replace('${business}', b.name||t('hr.email.theBusiness')),
+      ``,
+      t('hr.email.summaryTitle'),
+      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumTotal)}`,
+      `- ${t('hr.csv.salesTaxBase')}: ${fmt(report.sumBase)}`,
+      `- ${t('hr.te.vatPassedOn')}: ${fmt(report.sumIva)}`,
+      `- ${t('hr.lbl.fixedExpenses')}: ${fmt(report.sumFijos)}`,
+      `- ${t('hr.lbl.variableExpenses')}: ${fmt(report.sumVar)}`,
+      `- ${t('hr.csv.monthResult')}: ${fmt(report.resultado)}`,
+      ``,
+      ...vatLines,
+    ].join('\n');
+    navigator.clipboard.writeText(text).then(
+      () => showToast(t('msg.summaryCopied')),
+      () => showToast(t('msg.copyFailed'))
+    );
+  }
+
+  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
 })();
 
 /* ============================================================

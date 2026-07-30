@@ -2103,3 +2103,13 @@ function genId(){
   return id;
 }
 
+// Registra el Service Worker del app-shell offline (ver sw.js). Los datos de
+// negocio no dependen de esto en absoluto (ya viven en IndexedDB local); esto
+// solo permite que la propia app cargue aunque no haya conexión a mitad de
+// servicio. file:// y localhost no soportan/necesitan Service Worker.
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
