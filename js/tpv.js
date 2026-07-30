@@ -2698,12 +2698,13 @@ function openTodaySalesModal(){
    explícitamente multi-negocio (un emisor = un NIF = su propia clave de
    API, mediante sus métodos crearEmisor/generarApiKey), y sus campos de
    petición siguen el esquema oficial de la AEAT (IDEmisorFactura,
-   NumSerieFactura, Desglose...), no una simplificación propia — buena
-   señal de que están integrados de verdad con la especificación real, no
-   solo de cara a la galería. Aun así, la respuesta exacta y la
-   declaración responsable de este proveedor tampoco se han podido
-   verificar en el entorno donde se escribió este código (su web devuelve
-   403): confirmar con ellos antes de producción.
+   NumSerieFactura, Desglose...), no una simplificación propia.
+   CONFIRMADO el 31-07-2026 contra su documentación real (aportada por el
+   usuario, app.verifactuapi.es/docs/): endpoint exacto, formato de fecha,
+   códigos de Desglose, y estructura de la respuesta (incluyendo que la
+   huella no llega en la creación sino que hay que consultarla después,
+   ya implementado). Lo único que sigue sin confirmar: su declaración
+   responsable — preguntarles directamente antes de producción.
 
    "facturadirecta" y "contasimple" quedan como alternativas de pago sin
    confirmar contra documentación real.
@@ -2718,7 +2719,7 @@ function openTodaySalesModal(){
    dispositivo en Mi Negocio → VeriFactu antes de activarlo.
 */
 const VERIFACTU_PROVIDERS = {
-  verifactuapi: {label: 'VeriFactuAPI (recomendado)', apiBase: 'https://api.verifactuapi.es'},
+  verifactuapi: {label: 'VeriFactuAPI (recomendado)', apiBase: 'https://app.verifactuapi.es'},
   facturahub: {label: 'FacturaHub (NO recomendado, ver aviso en el código)', apiBase: 'https://api.facturahub.com'},
   facturadirecta: {label: 'FacturaDirecta', apiBase: 'https://api.facturadirecta.com/v1'},
   contasimple: {label: 'Contasimple', apiBase: 'https://api.contasimple.com/v1'},
@@ -2777,44 +2778,60 @@ async function submitSaleToVerifactuProvider(sale, cfg){
 
 // VeriFactuAPI (Invocash) — usa el esquema de campos oficial de la AEAT
 // (no una simplificación propia), confirmado vía su SDK público
-// (github.com/NemonInvocash/verifactu-php). Autenticación por clave de
-// emisor (limitada al NIF de este negocio, generada por el propio negocio
-// desde su cuenta). ⚠️ La forma exacta de la respuesta (dónde vienen la
-// huella y el QR) no se ha podido confirmar en este entorno — ajustar tras
-// una prueba real contra su sandbox.
+// (github.com/NemonInvocash/verifactu-php). CONFIRMADO contra su
+// documentación real (app.verifactuapi.es/docs/, aportada por el usuario
+// el 31-07-2026): endpoint base, nombres de campo, formato de fecha,
+// códigos de Desglose, y estructura de la respuesta (data.items[0]).
+// Autenticación por clave de emisor (Bearer, limitada al NIF de este
+// negocio, generada por el propio negocio desde su cuenta).
+// La huella (Huella) no llega en la respuesta inmediata de creación — la
+// AEAT la procesa de forma asíncrona — así que tras crear el registro se
+// consulta GET /api/alta-registro-facturacion/{id} unas pocas veces con
+// una pequeña espera; si todavía no está lista, la venta queda en la cola
+// normal de reintento (processVerifactuQueue) y se comprueba en la
+// siguiente pasada, sin bloquear nada.
 async function submitSaleToVerifactuApi(sale, cfg, provider){
   const ivaPct = verifactuIvaPct();
   const nif = (DB.business && DB.business.cif) || '';
   const numSerieFactura = sale.verifactuNumSerie || (sale.verifactuNumSerie = nextVerifactuNumSerieFactura());
   const fecha = new Date(sale.date);
-  const fechaExpedicion = `${String(fecha.getDate()).padStart(2,'0')}-${String(fecha.getMonth()+1).padStart(2,'0')}-${fecha.getFullYear()}`;
+  const fechaExpedicion = `${fecha.getFullYear()}-${fecha.getMonth()+1}-${fecha.getDate()}`; // formato confirmado en su doc: "2025-1-1"
   const base = sale.total / (1 + ivaPct/100);
   const cuota = sale.total - base;
+  const headers = {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`};
   const body = {
     IDEmisorFactura: nif,
     NumSerieFactura: numSerieFactura,
     FechaExpedicionFactura: fechaExpedicion,
-    TipoFactura: 'F2', // factura simplificada (tique), el caso normal de un restaurante
+    TipoFactura: 'F2', // factura simplificada (tique), el caso normal de un restaurante; sin Destinatarios
     DescripcionOperacion: sale.items.map(l => `${l.qty}x ${l.name}`).join(', ').slice(0, 500),
+    FacturaSimplificadaArt7273: 'S',
     Desglose: [{
-      Impuesto: '01', ClaveRegimen: '01', CalificacionOperacion: 'S1',
+      Impuesto: '01', ClaveRegimen: 1, CalificacionOperacion: 1,
       TipoImpositivo: ivaPct, BaseImponibleOImporteNoSujeto: Math.round(base*100)/100, CuotaRepercutida: Math.round(cuota*100)/100,
     }],
     CuotaTotal: Math.round(cuota*100)/100,
     ImporteTotal: Math.round(sale.total*100)/100,
   };
-  const res = await fetch(`${provider.apiBase}/alta-registro-facturacion`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`},
-    body: JSON.stringify(body),
-  });
-  if(!res.ok) throw new Error(`VeriFactuAPI respondió ${res.status}`);
-  const data = await res.json();
-  return {
-    invoiceId: numSerieFactura,
-    hash: data.Huella || data.huella || null,
-    qrData: data.QR || data.qr || data.qrUrl || null,
-  };
+  const createRes = await fetch(`${provider.apiBase}/api/alta-registro-facturacion`, {method: 'POST', headers, body: JSON.stringify(body)});
+  if(!createRes.ok) throw new Error(`VeriFactuAPI (crear registro) respondió ${createRes.status}`);
+  const created = await createRes.json();
+  const item = created.data && created.data.items && created.data.items[0];
+  if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de registro');
+
+  // Consulta corta de la huella/QR ya procesados (unos segundos de margen;
+  // si la AEAT tarda más, la cola general lo reintentará más tarde).
+  for(let i=0; i<3; i++){
+    await new Promise(r => setTimeout(r, 1500));
+    const getRes = await fetch(`${provider.apiBase}/api/alta-registro-facturacion/${item.id}`, {headers});
+    if(!getRes.ok) continue;
+    const record = await getRes.json();
+    const data = (record.data && record.data.items ? record.data.items[0] : record.data) || {};
+    if(data.Huella){
+      return {invoiceId: numSerieFactura, hash: data.Huella, qrData: data.url_qr || null};
+    }
+  }
+  throw new Error('VeriFactuAPI: la huella todavía no estaba lista, se reintentará');
 }
 
 // FacturaHub: flujo documentado públicamente (crear factura → emitir a
