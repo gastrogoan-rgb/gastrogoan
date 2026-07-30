@@ -1594,16 +1594,19 @@ function renderReservasSearch(){
   const resultsBox = document.getElementById('reservas-search-results');
   const tabsRow = document.getElementById('reservas-tabs-row');
   const tabContent = document.getElementById('reservas-tab-content');
+  const pendingBox = document.getElementById('reservas-pending-online');
   if(!query){
     resultsBox.style.display = 'none';
     resultsBox.innerHTML = '';
     if(tabsRow) tabsRow.style.display = '';
     if(tabContent) tabContent.style.display = '';
+    if(pendingBox) pendingBox.style.display = '';
     renderReservas();
     return;
   }
   if(tabsRow) tabsRow.style.display = 'none';
   if(tabContent) tabContent.style.display = 'none';
+  if(pendingBox) pendingBox.style.display = 'none';
   const normQuery = stripAccents(query);
   const matches = DB.reservations.filter(r => {
     const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;

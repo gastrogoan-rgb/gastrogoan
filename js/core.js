@@ -1960,7 +1960,7 @@ function defaultData(){
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
       ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
       ticket: {
-        pie: '¡Gracias por su visita!',
+        pie: '',
         mostrarDireccion: true,
         mostrarTelefono: true,
         mostrarNif: true,
