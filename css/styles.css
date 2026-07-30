@@ -200,6 +200,8 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .field textarea{resize:vertical;min-height:70px}
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .search-input{max-width:280px}
+#reservas-search-input{width:100%;min-width:0}
+@media (max-width:480px){#reservas-search-input{font-size:14px}}
 #gv-search{min-width:260px}
 
 /* ===== Table ===== */
@@ -549,8 +551,8 @@ td.wrap{white-space:normal}
   .btn-icon{min-width:36px;min-height:36px;padding:5px}
   .btn-icon i{font-size:16px}
 
-  /* Manual sidebar */
-  .manual-wrap{grid-template-columns:180px 1fr}
+  /* Manual sidebar override moved below to a narrower range so it doesn't
+     fight with the 720px breakpoint that collapses the sidebar on mobile. */
 
   /* Modals — cap width */
   .modal.modal-xl{max-width:95%}
@@ -559,9 +561,14 @@ td.wrap{white-space:normal}
   /* Forms */
   .ge-input-row input{width:90px}
 
-  /* Tabs */
-  .ge-tab-row{-webkit-overflow-scrolling:touch}
+  /* Tabs — scroll horizontal con aviso visual de que hay más pestañas */
+  .ge-tab-row{-webkit-overflow-scrolling:touch;position:relative}
   .ge-tab{padding:8px 14px;font-size:12px}
+  .ge-tab-row::after{content:'';position:absolute;top:0;right:0;bottom:2px;width:22px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
+
+  /* Tablas anchas (CDR y similares) — aviso visual de scroll horizontal */
+  .ge-grid{position:relative}
+  .ge-grid::after{content:'';position:absolute;top:1px;right:1px;bottom:1px;width:22px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
 
   /* Cards */
   .card{padding:12px}
@@ -618,6 +625,12 @@ td.wrap{white-space:normal}
   [id$="-gate"]{overflow:auto;-webkit-overflow-scrolling:touch}
 }
 
+/* Manual sidebar — 2 columnas solo en tablet (721-800px); por debajo de 720px
+   la regla de @media(max-width:720px) ya colapsa .manual-wrap a 1 columna. */
+@media (max-width: 800px) and (min-width: 721px){
+  .manual-wrap{grid-template-columns:180px 1fr}
+}
+
 @media (max-width: 600px){
   /* Header — compact single row, icon-only buttons */
   :root{--header-h:44px}
@@ -669,7 +682,8 @@ td.wrap{white-space:normal}
   .grid{gap:8px}
   .grid-2{grid-template-columns:1fr}
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .grid-mesas{grid-template-columns:repeat(3,1fr);gap:6px}
+  .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
+  .mesa-card{min-height:84px;padding:16px 10px;font-size:12px}
 
   /* Buttons & toolbars */
   .btn{padding:7px 10px;font-size:12px;border-radius:8px}
@@ -682,8 +696,9 @@ td.wrap{white-space:normal}
   .field input,.field select,.field textarea{font-size:16px;padding:10px;border-radius:8px}
   .field label{font-size:12px}
 
-  /* Tables — allow horizontal scroll, tighten spacing */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
+  /* Tables — allow horizontal scroll, tighten spacing, hint that there is more to scroll */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px;position:relative}
+  .table-wrap::after{content:'';position:absolute;top:0;right:10px;bottom:0;width:16px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
   table{font-size:11px}
   th,td{padding:6px 6px}
   .ge-grid th,.ge-grid td{padding:5px 6px;font-size:11px}
@@ -704,6 +719,10 @@ td.wrap{white-space:normal}
   /* Manual */
   .manual-detail{padding:12px}
 
+  /* Promoción — botones de compartir (WhatsApp/Email) apilados en móvil */
+  .promo-share-actions{flex-direction:column !important}
+  .promo-share-actions .btn{width:100% !important}
+
   /* Misc */
   .badge{font-size:10px;padding:2px 6px}
   .te-row{grid-template-columns:1fr 46px 60px 60px 60px 46px;font-size:11px;gap:4px;padding:9px 10px}
@@ -723,6 +742,26 @@ td.wrap{white-space:normal}
   .actions-cell .btn i{font-size:14px}
   .btn-icon{min-width:34px;min-height:34px;padding:5px}
   .btn-icon i{font-size:15px}
+
+  /* Comanda item rows (TPV) — bigger touch targets: qty +/-, notes, delete */
+  .comanda-item-row{gap:8px !important;padding:8px 0 !important;flex-wrap:wrap}
+  .comanda-qty-btn{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;padding:0 !important}
+  .comanda-qty-btn i{font-size:17px !important}
+
+  /* Carta — evitar que el precio se aplaste entre nombre y botones */
+  .ge-item{flex-wrap:wrap !important;row-gap:6px}
+  .carta-plato-name{flex:1 1 100% !important}
+  .carta-plato-price{margin-right:auto !important;white-space:nowrap}
+
+  /* Carta/Menús — horario semanal: más ancho por día para no quedar apretado */
+  .carta-schedule-grid{grid-template-columns:repeat(auto-fit,minmax(102px,1fr)) !important;gap:8px !important}
+  .carta-schedule-day{padding:8px !important}
+  .carta-schedule-time{width:auto !important;min-width:64px;font-size:12px !important;padding:6px 4px !important;min-height:32px !important}
+
+  /* Mi Negocio — horario semanal: 1 columna y campos de hora más tocables */
+  .mn-horario-grid{grid-template-columns:1fr !important}
+  .mn-tramo-row{flex-wrap:wrap !important}
+  .mn-horario-time{min-height:40px !important;font-size:14px !important;padding:8px 8px !important}
 
   /* FORZAR ancho 100% en todo — nada puede desbordar la pantalla */
   body,body *:not(.toast):not([class*="dropdown"]):not([class*="tooltip"]){max-width:100vw}

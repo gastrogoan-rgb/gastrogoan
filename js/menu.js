@@ -213,10 +213,10 @@ function migrateItemHorario(item){
 // Renderiza las filas de días/horario compartidas por el editor de cartas y menús.
 // Diseño compacto: una fila por día, con hasta 2 franjas horarias apilables.
 function renderScheduleRows(prefix, horario){
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,98px));gap:4px">${horario.map((d,i) => {
+  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,98px));gap:4px">${horario.map((d,i) => {
     const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
     return `
-    <div style="padding:5px 6px;border:1px solid var(--border);border-radius:6px;${d.activo===false?'opacity:.5':''}">
+    <div class="carta-schedule-day" style="padding:5px 6px;border:1px solid var(--border);border-radius:6px;${d.activo===false?'opacity:.5':''}">
       <label style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:3px">
         <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})" style="width:12px;height:12px;margin:0">
         ${weekDayShort(i)}
@@ -224,9 +224,9 @@ function renderScheduleRows(prefix, horario){
       <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:3px">
         ${franjas.map((f,j) => `
           <div style="display:flex;align-items:center;gap:2px">
-            <input type="time" id="${prefix}-hor-${i}-${j}-desde" value="${escapeHtml(f.desde||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
             <span style="color:var(--muted);font-size:9px">-</span>
-            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" value="${escapeHtml(f.hasta||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
             ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:1px 3px;min-height:20px;min-width:20px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x" style="font-size:11px"></i></button>` : ''}
           </div>
         `).join('')}
@@ -365,8 +365,8 @@ function renderCartaSecciones(){
         return `
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
-          <span style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
-          <span style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
+          <span class="carta-plato-name" style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
+          <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           ${priceStale ? `<button class="btn btn-sm" style="color:var(--brand-orange);border-color:var(--brand-orange)" onclick="syncCartaPlatoPrice(${sec.id},${p.id})" title="El escandallo tiene un precio de venta distinto (${fmtMoney(linkedRecipe.price||0)})"><i class="ti ti-refresh-alert"></i> ${t('btn.updatePrice')}</button>` : ''}
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>

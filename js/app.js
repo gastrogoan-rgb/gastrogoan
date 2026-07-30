@@ -1376,7 +1376,7 @@ function openBirthdayGreetingModal(id){
       <button class="modal-close" onclick="openBirthdaysModal()">&times;</button>
     </div>
     <div class="field"><textarea id="birthday-greeting-text" rows="4">${escapeHtml(msg)}</textarea></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendBirthdayWhatsapp(${id})" ${!c.phone?'disabled':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendBirthdayEmail(${id})" ${!c.email?'disabled':''}><i class="ti ti-mail"></i> Email</button>
     </div>
@@ -1473,7 +1473,7 @@ function openRewardNotifyModal(id, reward){
     <div class="field">
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
@@ -2201,7 +2201,7 @@ function openReservationReminderModal(id){
     <div class="field">
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
@@ -2977,7 +2977,7 @@ function openClientMessageModal(clientId, templateKey){
     <div class="field">
       <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
@@ -3115,11 +3115,11 @@ function businessTypeLabel(name){
 function renderTramoFields(prefix, tramo, label){
   tramo = tramo || {};
   return `
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+    <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
       <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
-      <input type="time" id="${prefix}-ini" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
       <span style="color:var(--muted);font-size:12px">${t('common.to')}</span>
-      <input type="time" id="${prefix}-fin" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
     </div>
   `;
 }
@@ -3152,7 +3152,7 @@ function renderHorarioRows(horario){
     </div>
   `;
   });
-  return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${cards.join('')}</div>`;
+  return `<div class="mn-horario-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${cards.join('')}</div>`;
 }
 
 function toggleHorarioDia(i){
