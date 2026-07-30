@@ -1156,6 +1156,55 @@ const GE = (function(){
     `;
   }
 
+  // Matriz de "menu engineering": cruza margen % con unidades vendidas para
+  // clasificar cada plato con receta en uno de 4 cuadrantes accionables.
+  function median(nums){
+    if(!nums.length) return 0;
+    const s = [...nums].sort((a,b)=>a-b);
+    const mid = Math.floor(s.length/2);
+    return s.length%2 ? s[mid] : (s[mid-1]+s[mid])/2;
+  }
+  function renderPlatosMatrix(conReceta){
+    const kpisEl = document.getElementById('platos-matrix-kpis');
+    const tbl = document.getElementById('platos-matrix');
+    if(!kpisEl || !tbl) return;
+    if(conReceta.length < 4){
+      kpisEl.innerHTML = '';
+      tbl.innerHTML = `<tr><td><div class="empty" style="padding:14px">${t('dash.menuEngineeringNeedMore')}</div></td></tr>`;
+      return;
+    }
+    const medUnits = median(conReceta.map(i=>i.units));
+    const medMargin = median(conReceta.map(i=>i.marginPct));
+    const classified = conReceta.map(i => {
+      const highUnits = i.units >= medUnits, highMargin = i.marginPct >= medMargin;
+      let cls, label, hint;
+      if(highUnits && highMargin){ cls='star'; label=t('dash.menuEngStar'); hint=t('dash.menuEngStarHint'); }
+      else if(highUnits && !highMargin){ cls='review'; label=t('dash.menuEngReview'); hint=t('dash.menuEngReviewHint'); }
+      else if(!highUnits && highMargin){ cls='promote'; label=t('dash.menuEngPromote'); hint=t('dash.menuEngPromoteHint'); }
+      else { cls='drop'; label=t('dash.menuEngDrop'); hint=t('dash.menuEngDropHint'); }
+      return {...i, cls, label, hint};
+    }).sort((a,b) => b.revenue - a.revenue);
+    const counts = {star:0, review:0, promote:0, drop:0};
+    classified.forEach(i => counts[i.cls]++);
+    const badgeColor = {star:'var(--green)', review:'var(--brand-orange)', promote:'var(--blue)', drop:'var(--red)'};
+    kpisEl.innerHTML = `
+      <div class="ge-kpi"><div class="lbl">⭐ ${t('dash.menuEngStar')}</div><div class="val" style="color:${badgeColor.star}">${counts.star}</div></div>
+      <div class="ge-kpi"><div class="lbl">🔍 ${t('dash.menuEngReview')}</div><div class="val" style="color:${badgeColor.review}">${counts.review}</div></div>
+      <div class="ge-kpi"><div class="lbl">📣 ${t('dash.menuEngPromote')}</div><div class="val" style="color:${badgeColor.promote}">${counts.promote}</div></div>
+      <div class="ge-kpi"><div class="lbl">✂️ ${t('dash.menuEngDrop')}</div><div class="val" style="color:${badgeColor.drop}">${counts.drop}</div></div>
+    `;
+    tbl.innerHTML = `
+      <thead><tr><th>${t('hr.platos.dish')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.platos.pctMargin')}</th><th>${t('dash.menuEngClassification')}</th></tr></thead>
+      <tbody>${classified.map(i => `
+        <tr>
+          <td>${escapeHtml(i.name)}</td>
+          <td>${fmtNum(i.units,0)}</td>
+          <td>${i.marginPct!=null?i.marginPct.toFixed(1)+'%':'—'}</td>
+          <td><span class="badge" style="background:${badgeColor[i.cls]}22;color:${badgeColor[i.cls]}" title="${escapeHtml(i.hint)}">${i.label}</span></td>
+        </tr>`).join('')}</tbody>
+    `;
+  }
+
   function renderPlatosRentabilidadTable(elId, list){
     const tbl = document.getElementById(elId);
     if(!list.length){ tbl.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('hr.platos.linkRecipesHint')}</div></td></tr>`; return; }
@@ -1200,6 +1249,7 @@ const GE = (function(){
 
     renderPlatosRankingTable('platos-mas-vendidos', [...items].sort((a,b)=>b.units-a.units).slice(0,10), totalIngresos);
     renderPlatosRankingTable('platos-menos-vendidos', [...items].sort((a,b)=>a.units-b.units).slice(0,10), totalIngresos);
+    renderPlatosMatrix(conReceta);
     renderPlatosRentabilidadTable('platos-mas-rentables', conReceta.slice().sort((a,b)=>b.margin-a.margin).slice(0,10));
     renderPlatosRentabilidadTable('platos-menos-rentables', conReceta.slice().sort((a,b)=>a.margin-b.margin).slice(0,10));
 

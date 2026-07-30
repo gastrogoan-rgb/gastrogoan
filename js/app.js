@@ -1037,12 +1037,24 @@ function clientSalesStats(c){
   const visitas = matches.length;
   const total = matches.reduce((sum,s)=>sum+s.total,0);
   const ticketMedio = visitas ? total/visitas : 0;
-  const lastDate = matches.length ? matches.map(s=>s.date).sort().slice(-1)[0] : null;
+  const dates = matches.map(s=>s.date).sort();
+  const lastDate = dates.length ? dates[dates.length-1] : null;
+  const firstDate = dates.length ? dates[0] : null;
   let recency = null;
   if(lastDate){
     recency = Math.floor((new Date(todayStr()) - new Date(lastDate)) / 86400000);
   }
-  return {visitas, ticketMedio, lastDate, recency};
+  // Intervalo medio entre visitas, para poder distinguir a un cliente que
+  // "siempre viene poco" (inactivo normal) de uno que venía a menudo y de
+  // repente ha dejado de venir mucho más tiempo del que solía tardar (en riesgo).
+  let avgIntervalDays = null;
+  if(dates.length >= 3){
+    const spanDays = (new Date(lastDate) - new Date(firstDate)) / 86400000;
+    avgIntervalDays = spanDays / (dates.length - 1);
+  }
+  const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
+  const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
+  return {visitas, ticketMedio, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
 }
 
 function renderClientes(){
@@ -1054,6 +1066,8 @@ function renderClientes(){
   else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
   else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
   else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
+  else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
+  else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
   const tbody = document.getElementById('clientes-tbody');
 
   if(!items.length){
@@ -1063,6 +1077,8 @@ function renderClientes(){
 
   tbody.innerHTML = items.map(c => {
     const stats = clientSalesStats(c);
+    const segmentBadge = stats.isNew ? `<span class="badge badge-blue" style="font-size:9px" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
+      : stats.atRisk ? `<span class="badge badge-amber" style="font-size:9px" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
     const points = c.points||0;
     let loyaltyCls, loyaltyBtn;
     if(points >= 10){
@@ -1074,7 +1090,7 @@ function renderClientes(){
     }
     return `
     <tr>
-      <td><strong>${escapeHtml(c.name)}</strong>${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
       <td>
         ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
@@ -1285,16 +1301,27 @@ function clientFavoriteItem(c){
 function openClientHistoryModal(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
-  const sales = [...clientSales(c)].sort((a,b) => (b.createdAt||b.date).localeCompare(a.createdAt||a.date));
+  const sales = clientSales(c).map(s => ({type:'sale', date:s.date, sortKey: s.createdAt||s.date, data:s}));
+  const reservations = DB.reservations.filter(r =>
+    r.clientId === c.id || (r.clientName && r.clientName.trim().toLowerCase() === c.name.trim().toLowerCase())
+  ).map(r => ({type:'reservation', date:r.date, sortKey: r.date+' '+(r.time||''), data:r}));
+  const timeline = [...sales, ...reservations].sort((a,b) => b.sortKey.localeCompare(a.sortKey));
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-receipt"></i> ${t('title.orderHistoryOf')} ${escapeHtml(c.name)}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    ${sales.length ? `<div class="table-wrap">
+    ${timeline.length ? `<div class="table-wrap">
       <table>
         <thead><tr><th>${t('common.date')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.total')}</th></tr></thead>
-        <tbody>${sales.map(s => `<tr><td>${escapeHtml(s.date)}</td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`).join('')}</tbody>
+        <tbody>${timeline.map(entry => {
+          if(entry.type === 'sale'){
+            const s = entry.data;
+            return `<tr><td>${escapeHtml(s.date)} <span class="badge badge-blue" style="font-size:9px">${t('label.orderTag')}</span></td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`;
+          }
+          const r = entry.data;
+          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray" style="font-size:9px">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status)}</td><td>—</td></tr>`;
+        }).join('')}</tbody>
       </table>
     </div>` : `<div class="empty"><i class="ti ti-receipt"></i>${t('empty.noOrderHistory')}</div>`}
     <div class="modal-footer">
@@ -1313,6 +1340,8 @@ function exportClientsCSV(){
   else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
   else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
   else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
+  else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
+  else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
   const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket'), t('label.lastVisit'), t('label.loyaltyPoints'), t('label.noShowCount'), t('label.allergiesPrefs'), t('th.notes')]];
   items.forEach(c => {
     const stats = clientSalesStats(c);
@@ -1580,6 +1609,7 @@ function renderReservas(){
   if(tabBtn) tabBtn.classList.add('active');
 
   renderReservasPendingOnline();
+  renderReservasRemindersDue();
   if(reservasTab === 'semana') renderReservasSemana();
   else if(reservasTab === 'mes') renderReservasMes();
   else renderReservasDia();
@@ -1595,18 +1625,21 @@ function renderReservasSearch(){
   const tabsRow = document.getElementById('reservas-tabs-row');
   const tabContent = document.getElementById('reservas-tab-content');
   const pendingBox = document.getElementById('reservas-pending-online');
+  const remindersBox = document.getElementById('reservas-reminders-due');
   if(!query){
     resultsBox.style.display = 'none';
     resultsBox.innerHTML = '';
     if(tabsRow) tabsRow.style.display = '';
     if(tabContent) tabContent.style.display = '';
     if(pendingBox) pendingBox.style.display = '';
+    if(remindersBox) remindersBox.style.display = '';
     renderReservas();
     return;
   }
   if(tabsRow) tabsRow.style.display = 'none';
   if(tabContent) tabContent.style.display = 'none';
   if(pendingBox) pendingBox.style.display = 'none';
+  if(remindersBox) remindersBox.style.display = 'none';
   const normQuery = stripAccents(query);
   const matches = DB.reservations.filter(r => {
     const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
@@ -2222,6 +2255,9 @@ function sendReservationReminderWhatsapp(id){
   const tel = phone.replace(/\D/g,'');
   const txt = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  r.reminderSentAt = new Date().toISOString();
+  saveDB();
+  renderReservasRemindersDue();
 }
 function sendReservationReminderEmail(id){
   const r = DB.reservations.find(x=>x.id===id);
@@ -2232,6 +2268,41 @@ function sendReservationReminderEmail(id){
   const subject = encodeURIComponent(t('msg.reservationReminderSubject').replace('${biz}', bizName));
   const body = encodeURIComponent(document.getElementById('reservation-reminder-text').value);
   window.location.href = 'mailto:'+encodeURIComponent(client.email)+'?subject='+subject+'&body='+body;
+  r.reminderSentAt = new Date().toISOString();
+  saveDB();
+  renderReservasRemindersDue();
+}
+
+// Recordatorios "automáticos" de reserva: no hay backend para enviarlos solos
+// sin intervención humana (no hay servidor ni API de WhatsApp/SMS propia), así
+// que la app hace el trabajo de detectarlos y prepararlos: cada vez que se
+// abre Reservas, se muestran las reservas de mañana que aún no tienen
+// recordatorio enviado, listas para mandar con un solo click por cliente.
+function renderReservasRemindersDue(){
+  const box = document.getElementById('reservas-reminders-due');
+  if(!box) return;
+  const tomorrowDate = dateStr(new Date(Date.now() + 86400000));
+  const due = DB.reservations.filter(r =>
+    r.date === tomorrowDate && !r.reminderSentAt && !r.llegada &&
+    (r.status==='confirmada' || r.status==='pendiente') &&
+    ((r.clientId && DB.clients.find(c=>c.id===r.clientId)?.phone) || r.clientPhone)
+  );
+  if(!due.length){ box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.remindersDueTomorrow')}</h3>
+    <div class="grid grid-3" style="margin-bottom:16px">
+      ${due.map(r => {
+        const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
+        const name = client ? client.name : (r.clientName || '—');
+        return `
+        <div class="card">
+          <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
+          <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · 👥 ${r.people}</div>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#25D366;color:#fff;border-color:#25D366" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
 }
 
 /* ============================================================

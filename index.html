@@ -116,6 +116,12 @@
       </div>
 
       <div class="card" style="margin-top:16px">
+        <h3 data-i18n="title.salesHeatmap"><i class="ti ti-calendar-stats"></i> Picos de venta (día × hora, últimas 8 semanas)</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px" data-i18n="dash.heatmapHint">Cuanto más oscura la celda, más se vende en ese día y esa franja horaria. Útil para planificar personal y compras.</p>
+        <div id="dashboard-sales-heatmap"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
         <h3 data-i18n="title.breakEven"><i class="ti ti-scale"></i> Punto de equilibrio</h3>
         <div id="dashboard-breakeven"></div>
       </div>
@@ -140,6 +146,12 @@
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
             <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
+          </div>
+          <div class="ge-section">
+            <div class="ge-sec-head"><h4><i class="ti ti-chart-dots"></i> <span data-i18n="dash.menuEngineeringTitle">Matriz de rentabilidad (margen × popularidad)</span> <span class="ge-auto">AUTO</span></h4></div>
+            <p style="font-size:12px;color:var(--muted);margin:0 0 8px" data-i18n="dash.menuEngineeringHint">Cruza el margen de cada plato con cuánto se vende, para ver de un vistazo qué platos empujar, cuáles revisar de precio o receta, y cuáles plantearte quitar de la carta.</p>
+            <div class="ge-kpi-grid" id="platos-matrix-kpis" style="margin-bottom:10px"></div>
+            <div class="ge-grid"><table id="platos-matrix"></table></div>
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
@@ -659,6 +671,8 @@
             <option value="vip" data-i18n="filter.vip">VIP (7+ puntos)</option>
             <option value="noshows" data-i18n="filter.withNoShows">Con no-shows</option>
             <option value="noconsent" data-i18n="filter.noConsent">Sin consentimiento marketing</option>
+            <option value="new" data-i18n="filter.newClients">Nuevos (primera visita &lt;30 días)</option>
+            <option value="atrisk" data-i18n="filter.atRiskClients">En riesgo de fuga</option>
           </select>
         </div>
         <div style="display:flex;gap:8px">
@@ -690,6 +704,7 @@
         <button class="ge-tab" id="reservas-tab-semana" onclick="setReservasTab('semana')" data-i18n="common.week">Semana</button>
         <button class="ge-tab" id="reservas-tab-mes" onclick="setReservasTab('mes')" data-i18n="common.month">Mes</button>
       </nav>
+      <div id="reservas-reminders-due"></div>
       <div id="reservas-pending-online"></div>
       <div id="reservas-search-results" style="display:none"></div>
       <div id="reservas-tab-content"></div>

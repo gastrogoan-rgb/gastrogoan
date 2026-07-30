@@ -306,6 +306,8 @@ function renderDashboard(){
     </div>
   `;
 
+  renderSalesHeatmap();
+
   // Breakeven tracking
   const cfg = DB.ge.config || {};
   const tick = parseFloat(cfg.ticketMedio) || 0;
@@ -338,6 +340,52 @@ function renderDashboard(){
   document.getElementById('dashboard-breakeven').innerHTML = breakevenHtml;
 
   GE.renderPlatos();
+}
+
+// Mapa de calor día de la semana × franja horaria (últimas 8 semanas), para
+// detectar visualmente los picos de venta y ayudar a planificar personal/compras.
+function renderSalesHeatmap(){
+  const el = document.getElementById('dashboard-sales-heatmap');
+  if(!el) return;
+  const today = new Date();
+  const start = dateStr(new Date(today.getTime() - 55*86400000)); // 8 semanas
+  const end = todayStr();
+  const sales = DB.sales.filter(s => s.date >= start && s.date <= end && s.createdAt);
+  if(!sales.length){ el.innerHTML = `<div class="empty">${t('dash.noSalesYet')}</div>`; return; }
+
+  const bands = [
+    {lbl:'8-12h', from:8, to:12}, {lbl:'12-16h', from:12, to:16},
+    {lbl:'16-20h', from:16, to:20}, {lbl:'20-24h', from:20, to:24},
+  ];
+  const dayLabels = t('days.short');
+  const grid = dayLabels.map(()=>bands.map(()=>0));
+  sales.forEach(s => {
+    const d = new Date(s.createdAt);
+    const dow = (d.getDay()+6)%7; // 0=lunes ... 6=domingo
+    const hour = d.getHours();
+    const bandIdx = bands.findIndex(b => hour>=b.from && hour<b.to);
+    if(bandIdx>=0) grid[dow][bandIdx] += s.total;
+  });
+  const maxVal = Math.max(...grid.flat(), 1);
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;width:100%;min-width:420px">
+        <thead><tr><th></th>${bands.map(b=>`<th style="font-size:11px;color:var(--muted);font-weight:600;padding:4px">${b.lbl}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${dayLabels.map((dl,di) => `
+            <tr>
+              <td style="font-size:11px;color:var(--muted);font-weight:600;padding:4px;white-space:nowrap">${dl}</td>
+              ${grid[di].map(v => {
+                const intensity = v/maxVal;
+                const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
+                return `<td style="padding:4px"><div title="${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${intensity>0.5?'#fff':'var(--muted)'}">${v>0?fmtMoney(v):''}</div></td>`;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 // Fecha "hoy" en base local (misma convención que dateStr, usada en toda la
 // app), para evitar desajustes de un día cerca de medianoche por huso horario.
