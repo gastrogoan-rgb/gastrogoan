@@ -246,7 +246,11 @@ td.wrap{white-space:normal}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .modal-header h3{font-size:19px}
 .modal-close{background:none;border:none;font-size:26px;cursor:pointer;color:var(--muted);min-height:44px;min-width:44px}
-.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+/* Sticky de fábrica: el pie de cualquier modal (botones de acción) queda
+   siempre visible aunque el contenido sea más largo que la pantalla, en
+   vez de que el usuario tenga que descubrir que hay que hacer scroll para
+   llegar al botón. Aplica en todos los tamaños de pantalla por igual. */
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;position:sticky;bottom:0;background:var(--surface,#fff);padding-top:10px;z-index:2}
 
 .cat-heading{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal-d);background:var(--teal-l);padding:8px 14px;border-radius:8px;margin:18px 0 10px}
 .cat-heading:first-child{margin-top:0}
