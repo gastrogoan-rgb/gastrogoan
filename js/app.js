@@ -620,6 +620,7 @@ function migrateWorkDistribution(){
     // estado se desplace a otra tarea si se borra o reordena alguna.
     const d = DB.workDistribution[empId];
     if(!d.doneDates) d.doneDates = {};
+    if(!d.tareasUnicas) d.tareasUnicas = {};
     Object.keys(d.produccion||{}).forEach(dayIdx => {
       d.produccion[dayIdx] = (d.produccion[dayIdx]||[]).map(t => typeof t === 'string' ? {id: genId(), text: t} : t);
     });
@@ -627,11 +628,12 @@ function migrateWorkDistribution(){
 }
 
 function getDistEmpData(empId){
-  if(!DB.workDistribution[empId]) DB.workDistribution[empId] = { platos: [], produccion: {}, doneDates: {} };
+  if(!DB.workDistribution[empId]) DB.workDistribution[empId] = { platos: [], produccion: {}, doneDates: {}, tareasUnicas: {} };
   const d = DB.workDistribution[empId];
   if(!d.platos) d.platos = [];
   if(!d.produccion) d.produccion = {};
   if(!d.doneDates) d.doneDates = {};
+  if(!d.tareasUnicas) d.tareasUnicas = {};
   return d;
 }
 
@@ -826,24 +828,41 @@ function renderDistDetail(){
   const weekDates = getWeekDates(distWeekOffset);
   const weekRangeLabel = `${weekDates[0].getDate()} ${monthFull(weekDates[0].getMonth()).slice(0,3)} – ${weekDates[6].getDate()} ${monthFull(weekDates[6].getMonth()).slice(0,3)}`;
 
-  let nTareasTotal = 0, nTareasHechas = 0;
+  let nTareasTotal = 0, nTareasHechas = 0, nTareasAtrasadas = 0;
+  const todayDs = todayStr();
 
   const diasHtml = weekDates.map((date, idx) => {
     const label = weekDayFull(idx);
     const ds = dateStr(date);
     const isToday = ds === todayStr();
+    const isPast = ds < todayDs;
+    let dayHasPending = false;
 
     // Producción: plantilla recurrente por día de la semana, "hecha" se
     // guarda por fecha concreta (con el id propio de cada tarea).
     const tareas = d.produccion[idx] || [];
     const tareasHtml = tareas.map(task => {
       const done = isDistTareaDone(emp.id, ds, task.id);
-      nTareasTotal++; if(done) nTareasHechas++;
+      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
         <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
+      </div>
+    `;}).join('');
+
+    // Tareas únicas: puntuales para esta fecha exacta, no se repiten cada semana.
+    const tareasUnicas = d.tareasUnicas[ds] || [];
+    const tareasUnicasHtml = tareasUnicas.map(task => {
+      const done = isDistTareaDone(emp.id, ds, task.id);
+      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
+      return `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
+        <span class="badge badge-purple" style="font-size:10px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
 
@@ -854,7 +873,7 @@ function renderDistDetail(){
     const checksMes = DB.limpieza.checksMes[monthKey] || {};
     const limpiezaHtml = tareasLimpiezaDia.map(lt => {
       const done = !!limpiezaCheckInfo(checksMes, lt.id);
-      nTareasTotal++; if(done) nTareasHechas++;
+      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
       return `
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
         <input type="checkbox" ${done?'checked':''} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
@@ -867,7 +886,7 @@ function renderDistDetail(){
     const promos = getPromosForEmployeeDate(emp.id, ds);
     const promosHtml = promos.map(p => {
       const done = !!p.done;
-      nTareasTotal++; if(done) nTareasHechas++;
+      nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked)" title="${t('title.markAsDone')}">
@@ -877,14 +896,16 @@ function renderDistDetail(){
     `;}).join('');
 
     return `
-      <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':''}">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10px">${t('common.today')}</span>`:''}</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10px">${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
         ${promosHtml}
         ${limpiezaHtml}
         ${tareasHtml}
-        ${!tareasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
+        ${tareasUnicasHtml}
+        ${!tareasHtml && !tareasUnicasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
         <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
           <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer"><input type="checkbox" id="dist-once-${idx}" style="width:auto">${t('dist.onlyThisWeek')}</label>
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
         </div>
       </div>
@@ -906,6 +927,7 @@ function renderDistDetail(){
       ${isSala ? '' : `<div class="kpi"><div class="label">${t('dist.dishesInCharge')}</div><div class="value">${d.platos.length}</div></div>`}
       <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
+    ${nTareasAtrasadas ? `<div class="badge badge-red" style="font-size:12px;margin:8px 0;padding:6px 10px;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-alert-triangle"></i> ${nTareasAtrasadas===1?t('dist.oneOverdueTask'):t('dist.nOverdueTasks').replace('${n}', nTareasAtrasadas)}</div>` : ''}
 
     ${isSala ? '' : `
     <div class="card">
@@ -976,9 +998,16 @@ function addDistTarea(dayIdx){
   const inp = document.getElementById('dist-tarea-'+dayIdx);
   const val = inp.value.trim();
   if(!val) return;
+  const onlyThisWeek = document.getElementById('dist-once-'+dayIdx)?.checked;
   const d = getDistEmpData(distCurrentEmployeeId);
-  if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
-  d.produccion[dayIdx].push({id: genId(), text: val});
+  if(onlyThisWeek){
+    const ds = dateStr(getWeekDates(distWeekOffset)[dayIdx]);
+    if(!d.tareasUnicas[ds]) d.tareasUnicas[ds] = [];
+    d.tareasUnicas[ds].push({id: genId(), text: val});
+  } else {
+    if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
+    d.produccion[dayIdx].push({id: genId(), text: val});
+  }
   saveDB();
   renderDistDetail();
 }
@@ -994,6 +1023,24 @@ function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   if(d.produccion[dayIdx]){
     d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>t.id!==taskId);
+    saveDB();
+    renderDistDetail();
+  }
+}
+
+// Tareas únicas: puntuales para una fecha concreta, no forman parte de la
+// plantilla recurrente por día de la semana.
+function updateDistTareaUnica(ds, taskId, val){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  const task = (d.tareasUnicas[ds]||[]).find(t=>t.id===taskId);
+  if(task) task.text = val;
+  saveDB();
+}
+
+function removeDistTareaUnica(ds, taskId){
+  const d = getDistEmpData(distCurrentEmployeeId);
+  if(d.tareasUnicas[ds]){
+    d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>t.id!==taskId);
     saveDB();
     renderDistDetail();
   }
