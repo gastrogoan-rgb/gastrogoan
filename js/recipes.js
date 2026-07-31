@@ -154,6 +154,11 @@ function renderEscandallo(){
   const box = document.getElementById('escandallo-list');
   document.getElementById('escandallo-tab-platos').classList.toggle('active', !isElab);
   document.getElementById('escandallo-tab-elaboraciones').classList.toggle('active', isElab);
+  // La pestaña "Platos" pasa a llamarse "Bebidas" en Sala, igual que ya
+  // pasa con el botón de "nuevo", el subtítulo y los mensajes vacíos de
+  // esta misma vista — antes se quedaba fija en "Platos" también en Sala.
+  const platosTabLabel = document.querySelector('#escandallo-tab-platos [data-i18n]');
+  if(platosTabLabel) platosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
 
   const newBtns = document.getElementById('escandallo-new-btns');
   if(newBtns){
@@ -853,6 +858,8 @@ function renderFichas(){
 
   document.getElementById('fichas-tab-platos').classList.toggle('active', !isElab);
   document.getElementById('fichas-tab-elaboraciones').classList.toggle('active', isElab);
+  const fichasPlatosTabLabel = document.querySelector('#fichas-tab-platos [data-i18n]');
+  if(fichasPlatosTabLabel) fichasPlatosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
 
   document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
