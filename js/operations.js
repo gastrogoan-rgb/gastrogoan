@@ -878,31 +878,10 @@ function orderFormBodyHtml(){
     if(!ings.length){
       itemsHtml = `<div class="empty" style="padding:10px">${t('empty.supplierNoIngredients')}</div>`;
     }else{
-      const search = orderModalSearch.toLowerCase();
-      // Sin búsqueda no se lista nada: con proveedores de muchos artículos,
-      // volcarlos todos de golpe abruma. Solo aparecen al buscarlos por nombre.
-      const rows = !search ? '' : orderModalLines.filter(line => {
-        const ing = getIngredient(line.ingredientId);
-        return ing && ing.name.toLowerCase().includes(search);
-      }).map(line => {
-        const ing = getIngredient(line.ingredientId);
-        const s = getStockEntry(ing.id);
-        return `
-          <div class="list-row">
-            <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
-            <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
-            <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
-            <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
-          </div>
-        `;
-      }).join('');
-      const emptyMsg = !search
-        ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
-        : `<div class="empty" style="padding:10px">${t('common.noResults')}</div>`;
       itemsHtml = `
-        <input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="refreshOrderForm()" style="margin-bottom:8px;width:100%">
-        <div style="max-height:480px;overflow:auto;margin-bottom:8px">
-          ${rows || emptyMsg}
+        <input type="text" class="search-input" id="order-item-search" placeholder="${t('ph.searchArticle')}" value="${escapeHtml(orderModalSearch)}" oninput="updateOrderItemSearch(this.value)" style="margin-bottom:8px;width:100%">
+        <div id="order-items-rows" style="max-height:480px;overflow:auto;margin-bottom:8px">
+          ${orderItemsRowsHtml()}
         </div>
         <button class="btn btn-sm" onclick="sugerirPorDeficit()"><i class="ti ti-bulb"></i> ${t('btn.suggestByStockDeficit')}</button>
       `;
@@ -933,6 +912,44 @@ function orderFormBodyHtml(){
     </div>
   `;
   return {dateVal, html};
+}
+
+// Filas de artículos que coinciden con la búsqueda actual (sin el propio
+// campo de búsqueda) — separado de orderFormBodyHtml() para poder
+// refrescar solo esto al escribir, sin recrear el input de búsqueda y que
+// pierda el foco en cada letra (por eso antes solo dejaba escribir de una
+// en una: cada tecla volvía a montar el formulario entero).
+function orderItemsRowsHtml(){
+  const search = orderModalSearch.toLowerCase();
+  // Sin búsqueda no se lista nada: con proveedores de muchos artículos,
+  // volcarlos todos de golpe abruma. Solo aparecen al buscarlos por nombre.
+  const rows = !search ? '' : orderModalLines.filter(line => {
+    const ing = getIngredient(line.ingredientId);
+    return ing && ing.name.toLowerCase().includes(search);
+  }).map(line => {
+    const ing = getIngredient(line.ingredientId);
+    const s = getStockEntry(ing.id);
+    return `
+      <div class="list-row">
+        <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
+        <span style="font-size:14px;font-weight:600;color:var(--muted)">${t('label.stock')}: ${fmtNum(s.qty)} ${escapeHtml(ing.unit)} · ${t('label.minAbbrev')} ${fmtNum(s.min)}</span>
+        <input type="number" value="${line.cantidad}" step="0.01" min="0" placeholder="${t('common.qty')}" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:6px" onchange="updateOrderLineQty(${ing.id}, this.value)">
+        <span style="font-size:12px;color:var(--muted)">${escapeHtml(ing.unit)}</span>
+      </div>
+    `;
+  }).join('');
+  const emptyMsg = !search
+    ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
+    : `<div class="empty" style="padding:10px">${t('common.noResults')}</div>`;
+  return rows || emptyMsg;
+}
+// Al escribir en el buscador de artículos, solo se refresca la lista de
+// filas de abajo — el input de búsqueda en sí no se toca, así conserva el
+// foco y la posición del cursor mientras se escribe seguido.
+function updateOrderItemSearch(val){
+  orderModalSearch = val;
+  const box = document.getElementById('order-items-rows');
+  if(box) box.innerHTML = orderItemsRowsHtml();
 }
 
 // Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
