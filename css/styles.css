@@ -45,6 +45,14 @@ a{color:var(--text)}a:hover{color:var(--olive)}
   overflow-x:auto;overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
 }
+/* Separador visual antes de Chat/Ayuda, para diferenciarlos del resto de
+   botones de la cabecera (acciones del negocio) — son soporte/ayuda, no
+   gestión del negocio en sí. */
+.hdr-divider{width:1px;align-self:stretch;margin:10px 2px;background:rgba(255,255,255,.15);flex-shrink:0}
+/* Chat interno / Centro de ayuda: siempre solo icono (nunca texto, ni en
+   escritorio), con el mismo cuadrado negro que ya tenían de fábrica. */
+.hdr-icon-btn{background:#1C1A17 !important;border-color:#1C1A17 !important;color:#fff !important}
+.hdr-icon-btn:hover{background:var(--olive) !important}
 /* Si en pantallas muy estrechas los botones de la cabecera no caben ni en
    modo solo-icono, se puede hacer scroll horizontal; este degradado avisa
    de que hay más botones fuera de la vista, en vez de que parezca que se
