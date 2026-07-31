@@ -882,6 +882,19 @@ function checkNewDeliveryZoneHint(){
 function confirmNewToGoOrder(){
   const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
   const clientePhone = document.getElementById('togo-cliente-phone').value.trim();
+  // Si el teléfono coincide con un cliente ya dado de alta, se vincula el
+  // pedido a su ficha — igual que ya pasa con mesas y reservas — para que
+  // sume puntos de fidelidad, aparezca en su historial, y el personal pueda
+  // ver sus alergias/notas. Antes esto solo pasaba si venía de una reserva.
+  // Si no hay teléfono o no coincide, se prueba también por nombre exacto
+  // (sin tildes/mayúsculas) para no crear una ficha duplicada de alguien que
+  // ya está dado de alta pero llamó sin dar el mismo teléfono registrado.
+  let matchedClient = clientePhone ? findClientByPhone(clientePhone) : null;
+  if(!matchedClient && clienteNombre){
+    const norm = stripAccents(clienteNombre.toLowerCase());
+    matchedClient = DB.clients.find(c => stripAccents((c.name||'').trim().toLowerCase()) === norm) || null;
+  }
+  const clientId = matchedClient ? matchedClient.id : null;
   // Fecha/hora de recogida o entrega: por defecto es hoy sin hora concreta
   // (se entiende "cuanto antes"), pero si se programa para otro día, el
   // pedido no debe aparecer en el TPV hasta que llegue esa fecha (ver el
@@ -891,7 +904,7 @@ function confirmNewToGoOrder(){
   const date = dateEl && dateEl.value ? dateEl.value : todayStr();
   const time = timeEl && timeEl.value ? timeEl.value : null;
   const isDelivery = toGoOrderTypeSelected === 'delivery';
-  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre, clientePhone, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre: clientId ? matchedClient.name : clienteNombre, clientePhone, clientId, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   if(isDelivery){
     const addressEl = document.getElementById('togo-cliente-address');
     const plataformaEl = document.getElementById('togo-plataforma');

@@ -2202,7 +2202,7 @@ function openReservationModal(id){
   const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: reservasDate || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
   currentReservationId = id || null;
 
-  const clientOptions = `<option value="">${t('label.clientNoRecord')}</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  const clientOptions = `<option value="">${t('label.clientNoRecord')}</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}${c.noShows?` (${c.noShows} no-show${c.noShows===1?'':'s'})`:''}</option>`).join('');
 
   openModal(`
     <div class="modal-header">
@@ -2211,7 +2211,8 @@ function openReservationModal(id){
     </div>
     <div class="field">
       <label>${t('th.client')}</label>
-      <select id="reservation-client">${clientOptions}</select>
+      <select id="reservation-client" onchange="updateReservationClientNoShowHint()">${clientOptions}</select>
+      <div id="reservation-client-noshow-hint"></div>
     </div>
     <div class="field">
       <label>${t('label.nameIfNoClientRecord')}</label>
@@ -2246,6 +2247,21 @@ function openReservationModal(id){
       <button class="btn btn-primary" onclick="saveReservation(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
+  updateReservationClientNoShowHint();
+}
+
+// Aviso (no bloqueante) de cuántas veces ha fallado este cliente antes,
+// justo donde se elige a quién es la reserva — antes ese dato (`c.noShows`)
+// solo se veía en la ficha de Clientes, sin conexión con Reservas.
+function updateReservationClientNoShowHint(){
+  const sel = document.getElementById('reservation-client');
+  const hint = document.getElementById('reservation-client-noshow-hint');
+  if(!sel || !hint) return;
+  const clientId = sel.value ? parseInt(sel.value) : null;
+  const client = clientId ? DB.clients.find(c=>c.id===clientId) : null;
+  hint.innerHTML = (client && client.noShows)
+    ? `<small style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${t('msg.clientHasNoShows').replace('${n}', client.noShows)}</small>`
+    : '';
 }
 
 function saveReservation(id){
