@@ -302,6 +302,24 @@ function mesaWaiterChipHtml(camareroId){
   `;
 }
 
+// Igual que mesaWaiterChipHtml pero para el repartidor de un pedido delivery
+// con reparto propio: mismo estilo de avatar, con un icono de moto delante
+// para no confundirlo con el camarero/a que tomó el pedido.
+function mesaRepartidorChipHtml(repartidorId){
+  if(!repartidorId) return '';
+  const emp = DB.employees.find(e => e.id === repartidorId);
+  if(!emp) return '';
+  const initial = (emp.name||'?').trim().charAt(0).toUpperCase();
+  const firstName = (emp.name||'').trim().split(/\s+/)[0];
+  return `
+    <span class="mesa-waiter-chip" title="${escapeHtml(t('label.deliveryRider'))}: ${escapeHtml(emp.name)}">
+      <i class="ti ti-moped" style="font-size:11px"></i>
+      <span class="mesa-waiter-avatar" style="background:${emp.color||'#DF7039'}">${escapeHtml(initial)}</span>
+      ${escapeHtml(firstName)}
+    </span>
+  `;
+}
+
 // Fase de servicio de una mesa ocupada (la más avanzada de sus platos de
 // comida; las bebidas no cuentan, se gestionan aparte desde Sala). Devuelve
 // también una clave para pintar la mesa con un acento de color propio de esa
@@ -431,6 +449,7 @@ function renderTpvToGo(tiposServicio){
             const urgent = dueMins !== null && dueMins <= 30;
             const isDelivery = o.tipo==='delivery';
             const waiterChip = mesaWaiterChipHtml(o.camareroId);
+            const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId) : '';
             return `
             <div class="card togo-card ${isDelivery?'togo-card-delivery':'togo-card-pickup'}${urgent?' togo-card-urgent':''}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
               <h3 style="justify-content:center"><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
@@ -440,10 +459,13 @@ function renderTpvToGo(tiposServicio){
                 ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
               </div>
               ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
-              ${plat ? `<div style="margin-top:6px"><span class="badge">${escapeHtml(plat.nombre)}</span></div>` : ''}
+              ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
               ${o.clienteAddress ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteAddress)}</div>` : ''}
               <div style="margin-top:8px;font-weight:800;font-size:19px;color:var(--brand-orange)">${fmtMoney(orderTotal(o))}</div>
-              ${waiterChip ? `<div style="margin-top:4px">${waiterChip}</div>` : ''}
+              <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">
+                ${waiterChip}
+                ${repartidorChip}
+              </div>
             </div>
           `}).join('')}</div>`}
     </div>
@@ -636,6 +658,23 @@ function renderCamareroFieldHtml(selectId, selectedId){
   `;
 }
 
+// Repartidor a cargo del reparto propio de un pedido delivery (distinto del
+// camarero/a que tomó el pedido): mismo pool de empleados de Sala, campo
+// aparte y opcional, para no confundir "quién lo atendió" con "quién lo lleva".
+function renderRepartidorFieldHtml(selectId, selectedId){
+  const empleados = DB.employees.filter(e => (e.area||'cocina') === 'sala');
+  if(!empleados.length) return '';
+  return `
+    <div class="field">
+      <label>${t('label.deliveryRider')}</label>
+      <select id="${selectId}">
+        <option value="">${t('common.unassigned')}</option>
+        ${empleados.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
 function orderTotal(order){
   return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
 }
@@ -776,14 +815,14 @@ function openNewToGoOrderModal(){
         <input type="text" id="togo-cliente-address" placeholder="${t('mn.business.addressPh')}" oninput="checkNewDeliveryZoneHint()">
         <small id="togo-del-zone-hint" style="color:var(--brand-orange);display:none"><i class="ti ti-alert-triangle"></i> ${t('msg.postalCodeOutsideZone')}</small>
       </div>
-      ${platforms.length ? `
       <div class="field">
         <label>${t('label.platformOpt')}</label>
         <select id="togo-plataforma">
           <option value="">${t('label.directOrder')}</option>
           ${platforms.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
         </select>
-      </div>` : ''}
+      </div>
+      ${renderRepartidorFieldHtml('togo-repartidor-sel')}
     </div>
     ${renderCamareroFieldHtml('togo-camarero-sel')}
     <div class="modal-footer">
@@ -826,8 +865,10 @@ function confirmNewToGoOrder(){
   if(isDelivery){
     const addressEl = document.getElementById('togo-cliente-address');
     const plataformaEl = document.getElementById('togo-plataforma');
+    const repartidorEl = document.getElementById('togo-repartidor-sel');
     order.clienteAddress = addressEl ? addressEl.value.trim() : '';
     order.plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
+    order.repartidorId = repartidorEl && repartidorEl.value ? parseInt(repartidorEl.value) : null;
     order.costeEnvio = parseFloat(DB.business?.pedidos?.deliveryFee) || 0;
   }
   DB.tpvOrders.push(order);
