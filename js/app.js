@@ -60,8 +60,11 @@ function recipeAllergens(r, visited){
   return result;
 }
 function getAllDishAllergens(){
+  // Solo interesan aquí los platos que SÍ tienen algún alérgeno: es un aviso
+  // de alérgenos, no un listado general de la carta (eso ya está en Escandallo).
   return DB.recipes.filter(r => (r.area||'cocina') === currentArea() && r.name)
     .map(r => ({name: r.name, allergens: [...recipeAllergens(r)]}))
+    .filter(d => d.allergens.length)
     .sort((a,b) => a.name.localeCompare(b.name));
 }
 function renderLimpiezaAlergenos(){
@@ -73,7 +76,7 @@ function renderLimpiezaAlergenos(){
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('msg.dishAllergensOverviewDesc')}</p>
       ${dishes.length ? `<div class="table-wrap"><table>
         <thead><tr><th>${t('label.dishElaboration')}</th><th>${t('label.allergensPresent')}</th></tr></thead>
-        <tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td class="wrap">${d.allergens.length ? d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ') : `<span style="color:var(--muted)">${t('label.noAllergensDetected')}</span>`}</td></tr>`).join('')}</tbody>
+        <tbody>${dishes.map(d => `<tr><td>${escapeHtml(d.name)}</td><td class="wrap">${d.allergens.map(a=>`<span class="badge badge-amber">${escapeHtml(a)}</span>`).join(' ')}</td></tr>`).join('')}</tbody>
       </table></div>` : `<div class="empty" style="padding:14px">${t('empty.noDishesForAllergens')}</div>`}
     </div>
   `;
@@ -127,6 +130,33 @@ function ensureLimpiezaData(){
   limpiezaProtocoloPasos('cierre');
   if(!l.aperturaLog) l.aperturaLog = [];
   if(!l.cierreLog) l.cierreLog = [];
+  pruneLimpiezaLogs();
+}
+
+// El historial de cumplimiento diario (apertura/cierre) y los registros de
+// temperaturas/plagas no son un archivo permanente: si se acumularan para
+// siempre dejarían de ser útiles de un vistazo. El cumplimiento diario se
+// queda solo con los últimos 3 días; temperaturas y plagas se quedan solo
+// con el mes en curso, y al empezar un mes nuevo se vacían solos.
+const LIMPIEZA_COMPLIANCE_KEEP_DAYS = 3;
+function pruneLimpiezaLogs(){
+  const l = DB.limpieza;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - (LIMPIEZA_COMPLIANCE_KEEP_DAYS - 1));
+  const cutoffStr = dateStr(cutoff);
+  let changed = false;
+  ['aperturaLog','cierreLog'].forEach(k => {
+    const before = l[k].length;
+    l[k] = l[k].filter(e => e.fecha >= cutoffStr);
+    if(l[k].length !== before) changed = true;
+  });
+  const monthKey = todayStr().slice(0,7);
+  ['temperaturas','plagas'].forEach(k => {
+    const before = l[k].length;
+    l[k] = l[k].filter(e => (e.fecha||'').slice(0,7) === monthKey);
+    if(l[k].length !== before) changed = true;
+  });
+  if(changed) saveDB();
 }
 
 function renderLimpieza(){
@@ -483,8 +513,10 @@ function renderLimpiezaLog(key){
 
   box.innerHTML = `
     <div class="card" style="margin-bottom:16px">
+      ${editUnlocked ? `
       <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
       <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
+      ` : `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-lock"></i> ${t('msg.editModeRequiredForLog')}</div>`}
     </div>
     <div class="table-wrap">
       <table>
@@ -495,6 +527,7 @@ function renderLimpiezaLog(key){
   `;
 }
 function addLimpiezaLogEntry(key){
+  if(!editUnlocked) return;
   const cfg = limpiezaLogConfig(key);
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
