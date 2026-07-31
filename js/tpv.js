@@ -492,6 +492,8 @@ function renderTPV(){
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
+      ${tiposServicio.takeaway !== false ? `<button class="btn" onclick="openNewTakeawayModal()"><i class="ti ti-shopping-bag"></i> ${t('title.newTakeaway')}</button>` : ''}
+      ${tiposServicio.delivery !== false ? `<button class="btn" onclick="openNewDeliveryModal()"><i class="ti ti-moped"></i> ${t('title.newDelivery')}</button>` : ''}
       ${tiposServicio.takeaway !== false ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
