@@ -206,21 +206,8 @@ function showBusinessSelectScreen(){
 /* IDs de grupos actualmente expandidos en el selector */
 let _bsOpenGroups = new Set();
 
-// Primera vez de verdad: todavía no existe más que el negocio "de fábrica"
-// (sin activar ninguna licencia). Mostrar el selector normal aquí confunde
-// (una entrada genérica "Mi negocio" que el cliente no ha creado él mismo,
-// como si ya tuviera algo configurado). En su lugar, se explica qué hace
-// cada botón y se guía directamente hacia activar la licencia — sin quitar
-// los botones "Nuevo negocio independiente" / "Abrir sucursal", que siguen
-// siendo el camino real para empezar.
-function isFirstRunNoLicense(){
-  const slots = getBusinessSlots();
-  return slots.length === 1 && slots[0].id === 'default' && !slots[0].parentId && !getLicense();
-}
-
 function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
-  if(isFirstRunNoLicense()) return renderFirstRunSelectScreenHtml();
   // Pre-abrir el grupo que contiene el slot activo
   const activeSlot = slots.find(s => s.id === ACTIVE_SLOT);
   if(activeSlot?.parentId) _bsOpenGroups.add(activeSlot.parentId);
@@ -237,26 +224,6 @@ function renderBusinessSelectScreenHtml(){
       ${showSearch ? `<input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
-        <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
-      </div>
-      <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
-    </div>
-  `;
-}
-
-function renderFirstRunSelectScreenHtml(){
-  return `
-    <div class="bs-box">
-      <div class="bs-title">
-        <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff"><i class="ti ti-tools-kitchen-2"></i></div>
-        ${t('bs.welcomeTitle')}
-      </div>
-      <div style="background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6;margin-bottom:16px;text-align:left">
-        <p style="margin:0 0 8px"><strong>${t('bs.firstRunStep1Title')}</strong> ${t('bs.firstRunStep1Body')}</p>
-        <p style="margin:0"><strong>${t('bs.firstRunStep2Title')}</strong> ${t('bs.firstRunStep2Body')}</p>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-primary" style="flex:1" onclick="addNewBusiness()"><i class="ti ti-plus"></i> ${t('btn.newIndependent')}</button>
