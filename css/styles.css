@@ -257,6 +257,7 @@ td.wrap{white-space:normal}
 .modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
   align-items:center;justify-content:center;z-index:300;padding:16px;
+  overflow-y:auto;
 }
 .modal-overlay.active{display:flex}
 /* El propio .modal ya NO hace scroll: es un contenedor flex en columna de
