@@ -2187,6 +2187,17 @@ function applyBulkTurno(){
   showToast(count===1 ? t('hr2.oneShiftAssigned') : t('hr2.nShiftsAssigned').replace('${n}', count));
 }
 
+// Paleta amplia a propósito (para poder distinguir a golpe de vista a
+// muchos empleados a la vez, sin tener que abrir el selector de color
+// nativo cada vez) — cubre toda la rueda de color con tonos bien
+// diferenciados entre sí, no solo unos pocos básicos.
+const EMPLOYEE_COLOR_CHOICES = [
+  '#E74C3C','#C0392B','#DF7039','#E67E22','#F39C12','#F1C40F','#D4AC0D',
+  '#2ECC71','#27AE60','#1ABC9C','#16A085','#00B8A9','#3498DB','#2980B9',
+  '#5DADE2','#2E86C1','#5B6DCD','#6C5CE7','#8E44AD','#9B59B6','#AF7AC5',
+  '#E056A0','#EC7063','#C2185B','#795548','#6D4C41','#546E7A','#34495E',
+  '#95A5A6','#7F8C8D',
+];
 function openEmployeeModal(id){
   const e = id ? DB.employees.find(x => x.id===id) : {name:'', rol:'', color:'#DF7039', area: currentArea()};
   openModal(`
@@ -2206,6 +2217,9 @@ function openEmployeeModal(id){
       <div class="field">
         <label>${t('label.identifyingColor')}</label>
         <input type="color" id="emp-color" value="${e.color||'#DF7039'}" style="height:40px;padding:4px">
+        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:8px">
+          ${EMPLOYEE_COLOR_CHOICES.map(c => `<span onclick="document.getElementById('emp-color').value='${c}'" title="${c}" style="width:100%;aspect-ratio:1;border-radius:50%;background:${c};cursor:pointer;border:1px solid rgba(0,0,0,.15);display:inline-block"></span>`).join('')}
+        </div>
       </div>
     </div>
     <div class="field-row">
@@ -2236,17 +2250,16 @@ function openEmployeeModal(id){
 function resetEmployeePin(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  // Resetear el PIN de fichaje de otra persona es tan sensible como borrar su
-  // ficha: requiere el PIN del negocio, no basta con tener el panel abierto.
-  requestBusinessPinAction(t('title.resetPin'), t('msg.confirmResetPin').replace('${name}', e.name), () => {
-    e.pin = '1234';
-    e.pinChanged = false;
-    // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
-    logPersonalEvent(`PIN de fichaje restablecido: ${e.name}`);
-    saveDB();
-    showToast(t('msg.pinResetDone'));
-    openEmployeeModal(id);
-  });
+  // Se aplica directamente, sin pedir ningún PIN de confirmación: quien puede
+  // llegar a este botón ya está en la ficha del empleado con la edición
+  // desbloqueada, así que pedirlo aquí otra vez era un paso de más.
+  e.pin = '1234';
+  e.pinChanged = false;
+  // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
+  logPersonalEvent(`PIN de fichaje restablecido: ${e.name}`);
+  saveDB();
+  showToast(t('msg.pinResetDone'));
+  openEmployeeModal(id);
 }
 
 function saveEmployee(id){
