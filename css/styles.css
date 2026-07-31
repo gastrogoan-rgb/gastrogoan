@@ -45,6 +45,15 @@ a{color:var(--text)}a:hover{color:var(--olive)}
   overflow-x:auto;overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
 }
+/* Si en pantallas muy estrechas los botones de la cabecera no caben ni en
+   modo solo-icono, se puede hacer scroll horizontal; este degradado avisa
+   de que hay más botones fuera de la vista, en vez de que parezca que se
+   han cortado sin más. */
+.app-header::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:18px;
+  background:linear-gradient(to right,transparent,var(--dark));
+  pointer-events:none;
+}
 .app-header #lock-btn{margin-left:auto}
 .lang-menu-item:hover{background:var(--brand-cream, #F5EFE6)}
 .lang-menu-item.active{font-weight:700}
@@ -501,6 +510,14 @@ td.wrap{white-space:normal}
   /* 4 columnas de 220px mínimo no caben por debajo de ~950px: bajar a 3
      antes de que se produzca desbordamiento horizontal. */
   .grid-modules{grid-template-columns:repeat(3,minmax(200px,1fr))}
+
+  /* Cabecera: con todos los botones (Actualizar, idioma, Negocios, Nube...)
+     y sus etiquetas de texto, se apretaba ya en portátiles pequeños/tablets
+     en horizontal (antes esto solo pasaba por debajo de 800px). Se pasa a
+     solo iconos un poco antes para que no se sienta abarrotada. */
+  .app-header{gap:6px}
+  .app-header .hdr-text{display:none}
+  .app-header .btn{padding:7px 9px;min-height:38px;min-width:38px;justify-content:center}
 }
 
 @media (max-width: 880px){
@@ -655,10 +672,13 @@ td.wrap{white-space:normal}
 
   /* Layout */
   .content{padding:10px}
-  .home-hero{padding:20px 14px 16px;border-radius:0 0 14px 14px;margin:-10px -10px 0}
-  .home-hero .hero-badge{font-size:11px;padding:4px 10px;margin-bottom:10px}
-  .home-hero h1{font-size:19px}
-  .home-hero p{font-size:12px}
+  /* Banner de bienvenida más compacto en móvil: menos padding vertical y
+     menor separación entre badge/título/subtítulo, para dejar sitio a las
+     tarjetas de Cocina/Sala/Gestión sin tener que hacer tanto scroll. */
+  .home-hero{padding:14px 14px 12px;border-radius:0 0 14px 14px;margin:-10px -10px 0}
+  .home-hero .hero-badge{font-size:10.5px;padding:3px 9px;margin-bottom:6px}
+  .home-hero h1{font-size:18px;margin-bottom:3px}
+  .home-hero p{font-size:11.5px}
   .view-title{font-size:17px}
   .view-subtitle{font-size:12px;margin-bottom:10px}
 
