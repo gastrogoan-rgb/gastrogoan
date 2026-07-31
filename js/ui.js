@@ -593,9 +593,16 @@ const CHAT_CHANNELS = ['general', 'cocina', 'sala'];
 const CHAT_CHANNEL_LABEL_KEYS = {general:'label.general', cocina:'folder.cocina.title', sala:'folder.sala.title'};
 function chatChannelLabel(ch){ return t(CHAT_CHANNEL_LABEL_KEYS[ch]) || ch; }
 let currentChatChannel = 'general';
-// Los tres canales están siempre visibles: General (todo el personal),
-// Cocina (jefe/a + personal de cocina) y Sala (jefe/a + personal de sala).
+// Qué canales puede VER cada uno depende del área en la que esté el
+// dispositivo/persona en ese momento (currentFolder), igual que el resto de
+// la app separa Cocina de Sala: en Cocina solo se ve General+Cocina, en
+// Sala solo General+Sala, para que un camarero no pueda leer el chat de
+// cocina ni un cocinero el de sala. El dueño/a, al entrar en Gestión (o en
+// cualquier otro punto sin un área de sala/cocina concreta, como el inicio),
+// ve los tres para poder supervisar ambos.
 function visibleChatChannels(){
+  if(currentFolder === 'cocina') return ['general', 'cocina'];
+  if(currentFolder === 'sala') return ['general', 'sala'];
   return CHAT_CHANNELS.slice();
 }
 // Identidades ya verificadas con PIN en esta sesión (se reinicia al recargar
@@ -640,10 +647,19 @@ function populateChatAuthorSelect(){
   sel.value = eligible ? current : 'owner';
   if(sel.value !== current) setChatAuthor(sel.value);
 }
-// Los tres canales están siempre disponibles; solo se refresca quién puede
-// escribir en el canal activo.
+// Oculta las pestañas de canal que no le corresponden ver a esta área
+// (ver visibleChatChannels), y si el canal activo ya no es visible, cambia
+// al primero que sí lo sea.
 function applyChatAreaRestrictions(){
-  // no-op: mantenido por compatibilidad con las llamadas existentes.
+  const visible = visibleChatChannels();
+  CHAT_CHANNELS.forEach(c => {
+    const btn = document.getElementById('chat-tab-btn-'+c);
+    if(btn) btn.style.display = visible.includes(c) ? '' : 'none';
+  });
+  if(!visible.includes(currentChatChannel)){
+    currentChatChannel = visible[0];
+  }
+  CHAT_CHANNELS.forEach(c => document.getElementById('chat-tab-btn-'+c)?.classList.toggle('active', c===currentChatChannel));
 }
 function onChatAuthorChange(sel){
   const val = sel.value;
@@ -856,6 +872,12 @@ function openFolder(key){
   currentFolder = key;
   rememberLastArea(key);
   navigate('folder');
+  // Si el chat quedó abierto de antes, actualiza qué pestañas puede ver
+  // ahora que ha cambiado de área (Cocina/Sala/Gestión).
+  if(document.getElementById('chat-panel')?.classList.contains('active')){
+    applyChatAreaRestrictions();
+    renderChatMessages();
+  }
 }
 let ownerUnlocked = false;
 let editUnlocked = false;
