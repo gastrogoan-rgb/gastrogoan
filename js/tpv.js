@@ -426,7 +426,7 @@ function renderTpvToGo(tiposServicio){
   // local — no solo cuando hay algún pedido abierto — para que sea un sitio
   // fijo y predecible donde mirar, no algo que aparece y desaparece.
   if(tiposServicio.takeaway === false && tiposServicio.delivery === false) return '';
-  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && (!o.date || o.date <= todayStr()));
+  const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && isTogoOrderVisibleNow(o));
   // Los pedidos sin hora programada (ASAP) van primero; el resto, por hora
   // programada ascendente, para que el personal vea antes lo más urgente.
   toGoOrders.sort((a,b) => {
@@ -480,8 +480,23 @@ function minutesUntilScheduled(time){
   return mins - (now.getHours()*60 + now.getMinutes());
 }
 
+// Un pedido para llevar/delivery (venga de la Central de Pedidos y Reservas
+// o creado a mano en el TPV) solo debe aparecer en pantalla desde una hora
+// antes de su recogida/entrega programada: si alguien lo hizo con dos
+// semanas de antelación, no tiene sentido que ocupe sitio en el TPV todos
+// esos días — debe aparecer justo cuando ya toca prepararlo.
+const TOGO_VISIBILITY_WINDOW_MIN = 60;
+function isTogoOrderVisibleNow(o){
+  const today = todayStr();
+  if(o.date && o.date > today) return false;
+  if(!o.time) return true;
+  if(o.date && o.date < today) return true;
+  const dueMins = minutesUntilScheduled(o.time);
+  return dueMins === null || dueMins <= TOGO_VISIBILITY_WINDOW_MIN;
+}
+
 function renderTpvPendingOnline(){
-  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (!o.date || o.date <= todayStr()));
+  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online' && isTogoOrderVisibleNow(o));
   if(!pendingOnline.length) return '';
   return `
     <h3 style="margin-top:16px"><i class="ti ti-bell-ringing"></i> Pedidos online pendientes</h3>
@@ -882,7 +897,11 @@ function confirmNewToGoOrder(){
     order.clienteAddress = addressEl ? addressEl.value.trim() : '';
     order.plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
     order.repartidorId = repartidorEl && repartidorEl.value ? parseInt(repartidorEl.value) : null;
-    order.costeEnvio = parseFloat(DB.business?.pedidos?.deliveryFee) || 0;
+    // El coste de envío configurado en Mi Negocio solo aplica cuando el
+    // reparto lo hace el propio negocio: si es una plataforma externa
+    // (Glovo, Uber Eats...), esa plataforma ya cobra su propio envío aparte,
+    // fuera de esta cuenta.
+    order.costeEnvio = !order.plataformaId ? (parseFloat(DB.business?.pedidos?.deliveryFee) || 0) : 0;
   }
   DB.tpvOrders.push(order);
   saveDB();
