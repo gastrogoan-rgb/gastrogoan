@@ -357,9 +357,10 @@ function renderMesaCard(table){
   const phase = mesaPhase(order);
   const phaseClass = order ? `mesa-phase-${phase ? phase.key : 'served'}` : '';
   const waiterChip = order ? mesaWaiterChipHtml(order.camareroId) : '';
+  const upcomingRes = !order ? getUpcomingReservationForTable(table.id) : null;
 
   return `
-    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <div class="mesa-icons-row">
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
@@ -375,7 +376,8 @@ function renderMesaCard(table){
             ${waiterChip}
           </div>
         `
-        : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>`}
+        : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>
+           ${upcomingRes ? `<div class="mesa-reservation-hint" title="${escapeHtml(upcomingRes.clientName||'')}"><i class="ti ti-calendar-event"></i> ${t('label.reservedAt').replace('${time}', escapeHtml(upcomingRes.time))} · ${upcomingRes.people} <i class="ti ti-users"></i></div>` : ''}`}
     </div>
   `;
 }

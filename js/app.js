@@ -1670,6 +1670,7 @@ let reservasMonthOffset = 0;
 function reservationStatusBadge(status){
   return status==='pendiente' ? `<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> ${t('status.pending')}</span>`
     : status==='confirmada' ? `<span class="badge badge-green">${t('status.confirmed')}</span>`
+    : status==='lista_espera' ? `<span class="badge badge-amber"><i class="ti ti-clock-hour-4"></i> ${t('status.waitlisted')}</span>`
     : status==='cancelada' ? `<span class="badge badge-red">${t('status.cancelled')}</span>`
     : status==='no_show' ? `<span class="badge badge-red"><i class="ti ti-user-x"></i> ${t('status.noShow')}</span>`
     : `<span class="badge badge-blue">${t('status.completed')}</span>`;
@@ -1831,6 +1832,17 @@ function rejectOnlineReservation(id){
   });
 }
 
+// Cancelar una reserva YA confirmada (a diferencia de borrarla): deja el
+// registro con estado 'cancelada' en vez de eliminarlo, para que quede
+// rastro de que existió y se canceló (auditoría, y para que el hueco de la
+// mesa/turno se libere correctamente en las comprobaciones de disponibilidad
+// que sí distinguen 'cancelada' de "nunca existió"). Borrar sigue existiendo
+// para corregir un duplicado o un error real al crearla.
+function cancelReservation(id){
+  if(!confirm(t('msg.confirmCancelReservation'))) return;
+  setReservationStatus(id, 'cancelada');
+}
+
 function setReservationStatus(id, status){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
@@ -1849,21 +1861,15 @@ function setReservationStatus(id, status){
     }
   }
 
-  const yaConfirmada = r.status === 'confirmada';
+  // Ojo: la visita/punto de fidelidad NO se suma aquí. Confirmar una reserva
+  // no es lo mismo que la visita real — eso ya lo registra registerClientVisit()
+  // cuando se cobra la venta (tpv.js). Sumarlo también al confirmar duplicaba
+  // el punto por una sola visita, y dejaba un punto "fantasma" si el cliente
+  // acababa siendo un no-show.
   r.status = status;
-  // Solo sumar visita/punto de fidelidad en la transición real pendiente→confirmada,
-  // no al reconfirmar una reserva que ya estaba confirmada.
-  if(status === 'confirmada' && !yaConfirmada){
-    let cid = r.clientId;
-    if(!cid && r.clientPhone){
-      const match = findClientByPhone(r.clientPhone);
-      if(match) cid = match.id;
-    }
-    if(cid) registerClientVisit(cid);
-  }
   saveDB();
   renderReservas();
-  showToast(status==='confirmada' ? t('msg.reservationConfirmed') : t('msg.reservationRejected'));
+  showToast(status==='confirmada' ? t('msg.reservationConfirmed') : status==='cancelada' ? t('msg.reservationCancelled') : t('msg.reservationRejected'));
 }
 
 function goToReservasDia(date){
@@ -1903,7 +1909,9 @@ function renderReservasDia(){
                   ` : '—'}
                 </td>
                 <td class="actions-cell">
+                  ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
                   ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
+                  ${r.status==='confirmada' ? `<button class="btn btn-sm btn-icon" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
                   <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
                 </td>
@@ -1943,17 +1951,22 @@ function renderReservasSemana(){
 
   const cardsHtml = dates.map((d, i) => {
     const ds = dateStr(d);
+    // Las canceladas/no-show no cuentan como ocupación real del día: se
+    // muestran igual (tachadas) para que quede constancia, pero no inflan
+    // el número ni dan una idea equivocada de cuán lleno está el día.
     const items = DB.reservations.filter(r => r.date === ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const activeCount = items.filter(r => r.status !== 'cancelada' && r.status !== 'no_show').length;
     const isToday = ds === todayStr();
     return `
       <div class="card" style="cursor:pointer;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToReservasDia('${ds}')">
         <h3 style="justify-content:space-between;font-size:14px">
           <span>${weekDayFull(i)} ${d.getDate()}/${d.getMonth()+1}</span>
-          ${items.length ? `<span class="badge badge-blue">${items.length}</span>` : ''}
+          ${activeCount ? `<span class="badge badge-blue">${activeCount}</span>` : ''}
         </h3>
         ${items.length ? items.map(r => {
           const client = DB.clients.find(c=>c.id===r.clientId);
-          return `<div style="font-size:12px;padding:2px 0">${escapeHtml(r.time)} · ${escapeHtml(client ? client.name : (r.clientName||'—'))} (${r.people}p)</div>`;
+          const cancelled = r.status === 'cancelada' || r.status === 'no_show';
+          return `<div style="font-size:12px;padding:2px 0;${cancelled?'color:var(--muted);text-decoration:line-through':''}">${escapeHtml(r.time)} · ${escapeHtml(client ? client.name : (r.clientName||'—'))} (${r.people}p)</div>`;
         }).join('') : `<div style="font-size:12px;color:var(--muted)">${t('empty.noReservations')}</div>`}
       </div>
     `;
@@ -1984,7 +1997,10 @@ function renderReservasMes(){
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const counts = {};
-  DB.reservations.forEach(r => { counts[r.date] = (counts[r.date]||0) + 1; });
+  DB.reservations.forEach(r => {
+    if(r.status === 'cancelada' || r.status === 'no_show') return;
+    counts[r.date] = (counts[r.date]||0) + 1;
+  });
 
   let cells = '';
   for(let i=0; i<startOffset; i++) cells += `<div></div>`;
@@ -2053,6 +2069,29 @@ function reservaTimeToMinutes(t){
 const RESERVA_VENTANA_MIN = 90;
 function reservaVentanaMin(people){
   return RESERVA_VENTANA_MIN + Math.max(0, (people||1) - 4) * 15;
+}
+
+// La reserva confirmada de hoy más próxima para una mesa concreta, si hay
+// alguna dentro de la próxima hora (o ya debería haber llegado hace poco).
+// Así una mesa que se ve "libre" en el TPV puede avisar de que en realidad
+// está a punto de ocuparse, en vez de que un camarero siente ahí a alguien
+// que no tiene reserva justo antes de que llegue quien sí la tiene.
+const MESA_RESERVA_AVISO_MIN = 60;
+function getUpcomingReservationForTable(tableId){
+  if(!tableId) return null;
+  const today = todayStr();
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  let soonest = null, soonestMin = null;
+  DB.reservations.forEach(r => {
+    if(r.tableId !== tableId || r.date !== today || r.status !== 'confirmada' || r.llegada) return;
+    const mins = reservaTimeToMinutes(r.time);
+    if(mins == null) return;
+    const until = mins - nowMin;
+    if(until < -15 || until > MESA_RESERVA_AVISO_MIN) return;
+    if(soonestMin === null || mins < soonestMin){ soonest = r; soonestMin = mins; }
+  });
+  return soonest;
 }
 
 function getAvailableTablesForReservation(dateStr, time, excludeId, people){
@@ -2257,6 +2296,7 @@ function saveReservation(id){
 
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
   const status = existing ? existing.status : 'confirmada';
+  const data = {id, clientId, clientName, date, time, people, tableId, notes, status};
 
   if(status === 'confirmada' || status === 'pendiente'){
     const turnoIdx = getTurnoIndexForTime(date, time);
@@ -2266,14 +2306,51 @@ function saveReservation(id){
       const turnos = getTurnosForDate(date);
       const turno = turnos[turnoIdx];
       if(yaReservado + people > aforo){
-        const ok = confirm(t('msg.confirmOverbookedShift').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + people).replace('${cap}', aforo));
-        if(!ok) return;
+        // En vez de un simple confirm() de "sí/no" que solo permite forzar
+        // el turno lleno o cancelar, se ofrece una tercera vía: poner en
+        // lista de espera (no cuenta para el aforo hasta que se confirme de
+        // verdad), para no tener que aceptar un turno reventado a ciegas ni
+        // perder al cliente si simplemente no cabe hoy.
+        openOverbookedChoiceModal(data, turno, yaReservado, aforo);
+        return;
       }
     }
   }
 
+  finalizeSaveReservation(data);
+}
+
+let pendingReservationSave = null;
+function openOverbookedChoiceModal(data, turno, yaReservado, aforo){
+  pendingReservationSave = data;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('title.overbookedShift')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.overbookedShiftInfo').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + data.people).replace('${cap}', aforo)}</p>
+    <div class="modal-footer" style="flex-wrap:wrap">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn" onclick="confirmReservationAsWaitlist()"><i class="ti ti-clock-hour-4"></i> ${t('btn.addToWaitlist')}</button>
+      <button class="btn btn-primary" onclick="confirmReservationOverbooked()"><i class="ti ti-check"></i> ${t('btn.confirmAnyway')}</button>
+    </div>
+  `);
+}
+function confirmReservationOverbooked(){
+  if(!pendingReservationSave) return;
+  finalizeSaveReservation(pendingReservationSave);
+  pendingReservationSave = null;
+}
+function confirmReservationAsWaitlist(){
+  if(!pendingReservationSave) return;
+  finalizeSaveReservation({...pendingReservationSave, status: 'lista_espera'});
+  pendingReservationSave = null;
+}
+function finalizeSaveReservation(data){
+  const {id, clientId, clientName, date, time, people, tableId, notes, status} = data;
+  const existing = id ? DB.reservations.find(x=>x.id===id) : null;
   if(existing){
-    Object.assign(existing, {clientId, clientName, date, time, people, tableId, notes});
+    Object.assign(existing, {clientId, clientName, date, time, people, tableId, notes, status});
   }else{
     DB.reservations.push({id: genId(), clientId, clientName, date, time, people, tableId, notes, status});
   }
@@ -2283,7 +2360,7 @@ function saveReservation(id){
   // Aviso no bloqueante (no se impide guardar, el personal puede necesitar
   // registrar reservas de fechas pasadas para el historial) si la fecha
   // elegida es anterior a hoy.
-  showToast(date < todayStr() ? t('msg.reservationSavedPastDate') : t('msg.reservationSaved'));
+  showToast(status === 'lista_espera' ? t('msg.reservationWaitlisted') : date < todayStr() ? t('msg.reservationSavedPastDate') : t('msg.reservationSaved'));
 }
 
 // Marca (o desmarca) la llegada de una reserva, actualizando su estado a la
@@ -2307,7 +2384,47 @@ function setReservationArrival(id, arrived, tableId){
 function toggleReservaLlegada(id){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
-  setReservationArrival(id, !r.llegada);
+  // Al marcar la llegada (no al desmarcarla) se confirma/corrige en qué mesa
+  // se ha sentado el grupo, por si al final se organizó en una distinta a
+  // la reservada — antes esto solo se podía hacer sentando la reserva desde
+  // el TPV; marcar "Llegada" directamente desde Reservas dejaba la mesa
+  // reservada original aunque el grupo se hubiera sentado en otra.
+  if(!r.llegada){
+    openReservaArrivalTableModal(id);
+    return;
+  }
+  setReservationArrival(id, false);
+  renderReservas();
+}
+
+function openReservaArrivalTableModal(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  const sortedTables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-check"></i> ${t('btn.arrived')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.confirmArrivalTable')}</p>
+    <div class="field">
+      <label>${t('th.table')}</label>
+      <select id="reserva-arrival-table-sel">
+        <option value="">${t('label.notAssigned')}</option>
+        ${sortedTables.map(tb => `<option value="${tb.id}" ${tb.id===r.tableId?'selected':''}>${escapeHtml(tb.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmReservaArrival(${id})"><i class="ti ti-check"></i> ${t('btn.arrived')}</button>
+    </div>
+  `);
+}
+function confirmReservaArrival(id){
+  const sel = document.getElementById('reserva-arrival-table-sel');
+  const tableId = sel && sel.value ? parseInt(sel.value) : null;
+  setReservationArrival(id, true, tableId);
+  closeModal();
   renderReservas();
 }
 
