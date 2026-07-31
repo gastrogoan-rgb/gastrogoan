@@ -137,8 +137,12 @@ function ensureLimpiezaData(){
 // temperaturas/plagas no son un archivo permanente: si se acumularan para
 // siempre dejarían de ser útiles de un vistazo. El cumplimiento diario se
 // queda solo con los últimos 3 días; temperaturas y plagas se quedan solo
-// con el mes en curso, y al empezar un mes nuevo se vacían solos.
+// con el trimestre en curso, y al empezar un trimestre nuevo se vacían solos.
 const LIMPIEZA_COMPLIANCE_KEEP_DAYS = 3;
+function quarterKey(fecha){
+  const d = new Date(fecha);
+  return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
+}
 function pruneLimpiezaLogs(){
   const l = DB.limpieza;
   const cutoff = new Date();
@@ -150,10 +154,10 @@ function pruneLimpiezaLogs(){
     l[k] = l[k].filter(e => e.fecha >= cutoffStr);
     if(l[k].length !== before) changed = true;
   });
-  const monthKey = todayStr().slice(0,7);
+  const currentQuarter = quarterKey(todayStr());
   ['temperaturas','plagas'].forEach(k => {
     const before = l[k].length;
-    l[k] = l[k].filter(e => (e.fecha||'').slice(0,7) === monthKey);
+    l[k] = l[k].filter(e => e.fecha && quarterKey(e.fecha) === currentQuarter);
     if(l[k].length !== before) changed = true;
   });
   if(changed) saveDB();
@@ -574,17 +578,17 @@ function renderLimpiezaMantenimiento(){
           return `
           <tr>
             <td><strong>${escapeHtml(e.nombre)}</strong></td>
-            <td><input type="date" value="${e.ultimo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)"></td>
+            <td><input type="date" value="${e.ultimo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'ultimo',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td>
-              <input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)">
+              <input type="date" value="${e.proximo||''}" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'proximo',this.value)" ${editUnlocked?'':'disabled'}>
               ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
               ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
             </td>
-            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)"></td>
-            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)">
+            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
-            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)"></td>
+            <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
@@ -618,6 +622,7 @@ function confirmAddMantenimientoEquipo(){
   renderLimpiezaMantenimiento();
 }
 function updateMantenimientoEquipo(id, field, val){
+  if(!editUnlocked) return;
   const e = DB.limpieza.mantenimiento.find(x => x.id===id);
   if(e) e[field] = val;
   saveDB();
