@@ -6358,10 +6358,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   const alreadySetUp = getLicense() && getCloudConfig();
   if(onbRole === 'owner' && !DB.business.netlifySetupDone && !alreadySetUp){
     showNetlifySetupGate();
-  }else if(!getCloudConfig()){
-    showFirebaseSetupGate();
   }else if(!getLicense()){
     showActivationGate();
+  }else if(!getCloudConfig()){
+    showFirebaseSetupGate();
   }else if(!DB.business.tourSeen){
     promptAppTour();
   }
