@@ -1145,7 +1145,33 @@ function openModal(html, opts){
   box.innerHTML = html;
   box.classList.toggle('modal-xl', !!(opts && opts.xl));
   box.classList.toggle('modal-order', !!(opts && opts.order));
+  wrapModalBody(box);
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+// Envuelve automáticamente todo lo que no sea el header ni el pie de un
+// modal en un contenedor ".modal-body" con su propio scroll independiente.
+// Sin esto, con el pie "sticky" (para que nunca quede inalcanzable) y todo
+// dentro del mismo scroll que el resto del contenido, el pie se queda
+// pegado al fondo visible desde el principio del scroll (por ser el último
+// elemento) y tapa las últimas filas de campos/casillas hasta llegar al
+// final del todo — en formularios largos (p.ej. Nuevo Ingrediente con la
+// rejilla de alérgenos) se veía como si el contenido "desapareciera" detrás
+// del pie. Con el header y el pie fuera del área que hace scroll, nunca
+// puede haber solape: el cuerpo se detiene justo donde empieza el pie.
+// Se aplica en el propio openModal() para que beneficie a todos los
+// modales de la app sin tener que tocar cada uno por separado.
+function wrapModalBody(box){
+  const header = box.querySelector(':scope > .modal-header');
+  const footer = box.querySelector(':scope > .modal-footer');
+  const body = document.createElement('div');
+  body.className = 'modal-body';
+  [...box.childNodes].forEach(node => {
+    if(node === header || node === footer) return;
+    body.appendChild(node);
+  });
+  if(header) header.after(body);
+  else box.prepend(body);
 }
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('active');

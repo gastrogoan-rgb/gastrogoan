@@ -282,12 +282,12 @@ function renderProveedores(){
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
       ${p.iva!=null ? `<span class="badge badge-gray">${t('common.vat')} ${p.iva}%</span>` : ''}
+      ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
       <div style="margin-top:6px">
         ${ings.length
           ? `<button class="btn btn-sm" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
           : `<span style="color:var(--muted);font-size:13px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
       </div>
-      ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
     </div>
   `;}).join('');
 }
