@@ -753,21 +753,14 @@ function stockTab(tab){
   document.getElementById('stock-tab-btn-elab').classList.toggle('active', tab === 'elab');
   document.getElementById('stock-tab-ing').classList.toggle('active', tab === 'ing');
   document.getElementById('stock-tab-elab').classList.toggle('active', tab === 'elab');
-  document.getElementById('stock-new-elab-btn').style.display = tab === 'elab' ? '' : 'none';
 }
 
 let stockFolder = null;   // categoría abierta en la pestaña de ingredientes
-let stockItem = null;     // producto seleccionado dentro de la carpeta
 let elabFolder = null;    // categoría abierta en la pestaña de elaboraciones
-let elabItem = null;      // elaboración seleccionada dentro de la carpeta
-function openStockFolder(cat){ stockFolder = cat; stockItem = null; renderStock(); }
-function openStockItem(id){ stockItem = id; renderStock(); }
-function backToStockFolders(){ stockFolder = null; stockItem = null; renderStock(); }
-function backToStockItems(){ stockItem = null; renderStock(); }
-function openElabFolder(cat){ elabFolder = cat; elabItem = null; renderStock(); }
-function openElabItem(id){ elabItem = id; renderStock(); }
-function backToElabFolders(){ elabFolder = null; elabItem = null; renderStock(); }
-function backToElabItems(){ elabItem = null; renderStock(); }
+function openStockFolder(cat){ stockFolder = cat; renderStock(); }
+function backToStockFolders(){ stockFolder = null; renderStock(); }
+function openElabFolder(cat){ elabFolder = cat; renderStock(); }
+function backToElabFolders(){ elabFolder = null; renderStock(); }
 
 function renderStock(){
   maybeShowCategoryIconHint();
@@ -869,131 +862,55 @@ function renderStock(){
     if(!folderItems.length){
       stockFolder = null; renderStock(); return;
     }
-    if(stockItem !== null){
-      const row = folderItems.find(it => it.id === stockItem);
-      if(!row){ stockItem = null; renderStock(); return; }
-      const low = row.qty <= row.min;
-      const isElab = row.type === 'elab';
-      const backItems = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToStockItems()"><i class="ti ti-arrow-left"></i> ${escapeHtml(stockFolder)}</button>`;
-      groupsWrap.innerHTML = backItems + `
-        <div class="card" style="max-width:420px">
-          <h3 style="margin-bottom:14px">${escapeHtml(row.name)} ${low ? `<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('label.belowMinimum')}</span>` : '<span class="badge badge-green">OK</span>'}</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-            <div style="background:${low?'#FDEEE8':'#E8F8F0'};border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:${low?'#c0392b':'#1a7f4b'};margin-bottom:4px">${t('label.currentStock')}</div>
-              <div style="font-size:28px;font-weight:800;color:${low?'#c0392b':'#1a7f4b'}">${fmtNum(row.qty)}</div>
-              <div style="font-size:12px;color:var(--muted)">${escapeHtml(row.unit)}</div>
-            </div>
-            <div style="background:var(--brand-cream);border-radius:10px;padding:14px;text-align:center">
-              <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.minimumStock')}</div>
-              <div style="font-size:28px;font-weight:800;color:#555">${fmtNum(row.min)}</div>
-              <div style="font-size:12px;color:var(--muted)">${escapeHtml(row.unit)}</div>
-            </div>
-          </div>
-          <div class="field" style="margin-bottom:10px">
-            <label style="font-size:12px">${t('label.changeMinimumStock')}</label>
-            <input type="number" value="${row.min}" step="0.01" min="0" style="max-width:140px" ${editUnlocked?'':'disabled'}
-              onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-sm" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i> ${t('btn.add1')}</button>
-            <button class="btn btn-sm" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i> ${t('btn.remove1')}</button>
-            <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i> ${t('btn.adjustQty')}</button>
-          </div>
-        </div>`;
-    } else {
-      // Carpeta abierta: lista de nombres clicables.
-      groupsWrap.innerHTML = backFolders + `<div class="table-wrap"><table><tbody>${folderItems.map(it => {
-        const low = it.qty <= it.min;
-        return `<tr style="cursor:pointer" onclick="openStockItem(${it.id})">
-          <td><strong>${escapeHtml(it.name)}</strong></td>
-          <td style="text-align:right">${low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>'} <i class="ti ti-chevron-right" style="color:var(--muted)"></i></td>
-        </tr>`;
-      }).join('')}</tbody></table></div>`;
-    }
+    // Carpeta abierta: todo a la vista de golpe (cantidad, mínimo, +/-, ajustar),
+    // sin tener que entrar a cada producto para verlo — mismo detalle que en
+    // los resultados de búsqueda, solo que ya filtrado por esta categoría.
+    groupsWrap.innerHTML = backFolders + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">${folderItems.map(renderRow).join('')}</div>`;
   }
 
-  /* Elaboraciones — misma navegación carpetas que ingredientes */
+  /* Elaboraciones — mismas carpetas por categoría que Escandallo → Elaboraciones
+     (no las que "haya en stock ahora mismo"), para que sea consistente estén o
+     no todavía en stock, y siempre mostrando la vista de carpetas primero
+     (antes, si solo había una categoría con stock, se saltaba directo a la
+     lista plana sin ninguna carpeta a la vista). */
   const elabGroupsWrap = document.getElementById('stock-elab-groups');
+  const baseRecipes = DB.recipes.filter(r => r.isBase && (r.area||'cocina') === currentArea());
+  const elabFolders = getEscandalloFolders(baseRecipes); // [[key, label, recipes], ...]
+  const elabsByRecipeCat = {};
+  elabs.forEach(e => {
+    const cat = e.recipeId ? ((DB.recipes.find(r=>r.id===e.recipeId)||{}).category || '__none__') : '__none__';
+    (elabsByRecipeCat[cat] = elabsByRecipeCat[cat] || []).push(e);
+  });
+  if(!elabFolders.some(([key])=>key==='__none__') && elabsByRecipeCat['__none__']){
+    elabFolders.push(['__none__', t('label.noCategory'), []]);
+  }
+
   if(!elabs.length){
     elabGroupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.elaborations')}</div>`;
+  } else if(searching){
+    elabGroupsWrap.innerHTML = elabFolders.filter(([key]) => (elabsByRecipeCat[key]||[]).length).map(([key, label]) => `
+      <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(label)}</strong> <span style="font-size:12px;color:var(--muted)">(${elabsByRecipeCat[key].length})</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
+        ${elabsByRecipeCat[key].map(renderRow).join('')}
+      </div>
+    `).join('');
+  } else if(elabFolder === null){
+    elabGroupsWrap.innerHTML = `<div class="grid grid-compact">${elabFolders.map(([key, label]) => {
+      const n = (elabsByRecipeCat[key]||[]).length;
+      return `
+      <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
+        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
+        <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
+      </div>`;
+    }).join('')}</div>`;
   } else {
-    const elabByCat = {};
-    elabs.forEach(e => {
-      const cat = (e.recipeId ? ((DB.recipes.find(r=>r.id===e.recipeId)||{}).category)||t('label.noCategory') : t('label.noCategory'));
-      (elabByCat[cat] = elabByCat[cat] || []).push(e);
-    });
-    const elabCats = Object.keys(elabByCat).sort();
-
-    if(searching){
-      elabGroupsWrap.innerHTML = elabCats.map(cat => `
-        <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(cat)}</strong> <span style="font-size:12px;color:var(--muted)">(${elabByCat[cat].length})</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
-          ${elabByCat[cat].map(renderRow).join('')}
-        </div>
-      `).join('');
-    } else if(elabFolder === null){
-      if(elabCats.length === 1){
-        elabFolder = elabCats[0];
-      } else {
-        elabGroupsWrap.innerHTML = `<div class="grid grid-compact">${elabCats.map(cat => `
-          <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${cat.replace(/'/g,"\\'")}')">
-            <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(cat)}</h3>
-            <div style="font-size:12px;color:var(--muted)">${elabByCat[cat].length===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', elabByCat[cat].length)}</div>
-          </div>
-        `).join('')}</div>`;
-        return;
-      }
-    }
-    if(!searching && elabFolder !== null){
-      const folderElabs = elabByCat[elabFolder] || [];
-      const backBtn = elabCats.length > 1 ? `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToElabFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>` : '';
-      if(!folderElabs.length){
-        elabFolder = null; renderStock(); return;
-      }
-      if(elabItem !== null){
-        const row = folderElabs.find(it => it.id === elabItem);
-        if(!row){ elabItem = null; renderStock(); return; }
-        const low = row.qty <= row.min;
-        const isElab = true;
-        const backItems = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToElabItems()"><i class="ti ti-arrow-left"></i> ${escapeHtml(elabFolder)}</button>`;
-        elabGroupsWrap.innerHTML = backItems + `
-          <div class="card" style="max-width:420px">
-            <h3 style="margin-bottom:14px">${escapeHtml(row.name)} ${low ? `<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> ${t('label.belowMinimum')}</span>` : '<span class="badge badge-green">OK</span>'}</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-              <div style="background:${low?'#FDEEE8':'#E8F8F0'};border-radius:10px;padding:14px;text-align:center">
-                <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:${low?'#c0392b':'#1a7f4b'};margin-bottom:4px">${t('label.currentStock')}</div>
-                <div style="font-size:28px;font-weight:800;color:${low?'#c0392b':'#1a7f4b'}">${fmtNum(row.qty)}</div>
-                <div style="font-size:12px;color:var(--muted)">${escapeHtml(row.unit)}</div>
-              </div>
-              <div style="background:var(--brand-cream);border-radius:10px;padding:14px;text-align:center">
-                <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.minimumStock')}</div>
-                <div style="font-size:28px;font-weight:800;color:#555">${fmtNum(row.min)}</div>
-                <div style="font-size:12px;color:var(--muted)">${escapeHtml(row.unit)}</div>
-              </div>
-            </div>
-            <div class="field" style="margin-bottom:10px">
-              <label style="font-size:12px">${t('label.changeMinimumStock')}</label>
-              <input type="number" value="${row.min}" step="0.01" min="0" style="max-width:140px" ${editUnlocked?'':'disabled'}
-                onchange="updateElaboracionMin(${row.id}, this.value)">
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-sm" onclick="adjustElaboracion(${row.id}, 1)"><i class="ti ti-plus"></i> ${t('btn.add1')}</button>
-              <button class="btn btn-sm" onclick="adjustElaboracion(${row.id}, -1)"><i class="ti ti-minus"></i> ${t('btn.remove1')}</button>
-              <button class="btn btn-sm" onclick="setElaboracionQty(${row.id})"><i class="ti ti-edit"></i> ${t('btn.adjustQty')}</button>
-              ${row.recipeId ? `<button class="btn btn-sm" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ti-chef-hat"></i> ${t('btn.viewCostingSheet')}</button>` : ''}
-            </div>
-          </div>`;
-      } else {
-        elabGroupsWrap.innerHTML = backBtn + `<div class="table-wrap"><table><tbody>${folderElabs.map(it => {
-          const low = it.qty <= it.min;
-          return `<tr style="cursor:pointer" onclick="openElabItem(${it.id})">
-            <td><strong>${escapeHtml(it.name)}</strong>${it.recipeId?` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>`:''}</td>
-            <td style="text-align:right">${low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>'} <i class="ti ti-chevron-right" style="color:var(--muted)"></i></td>
-          </tr>`;
-        }).join('')}</tbody></table></div>`;
-      }
-    }
+    const folderElabs = elabsByRecipeCat[elabFolder] || [];
+    const backBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToElabFolders()"><i class="ti ti-arrow-left"></i> ${t('label.categories')}</button>`;
+    // Carpeta abierta: todo a la vista de golpe, igual que Ingredientes — sin
+    // tener que entrar en cada elaboración para ver cantidad/mínimo/ajustar.
+    elabGroupsWrap.innerHTML = backBtn + (folderElabs.length
+      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">${folderElabs.map(renderRow).join('')}</div>`
+      : `<div class="empty" style="padding:10px">${t('empty.elaborations')}</div>`);
   }
 }
 
