@@ -895,11 +895,13 @@ function renderDistDetail(){
     const tareasHtml = tareas.map(task => {
       const done = isDistTareaDone(emp.id, ds, task.id);
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
+      const canEditThis = editUnlocked || task.bySelf;
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
+        ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <button class="${task.bySelf?'':'owner-only'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
 
@@ -908,12 +910,14 @@ function renderDistDetail(){
     const tareasUnicasHtml = tareasUnicas.map(task => {
       const done = isDistTareaDone(emp.id, ds, task.id);
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
+      const canEditThis = editUnlocked || task.bySelf;
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
-        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${editUnlocked?'':'disabled'}>
+        <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
         <span class="badge badge-purple" style="font-size:10px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
+        ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <button class="${task.bySelf?'':'owner-only'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
 
@@ -954,7 +958,7 @@ function renderDistDetail(){
         ${tareasHtml}
         ${tareasUnicasHtml}
         ${!tareasHtml && !tareasUnicasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
-        <div class="owner-only" style="display:flex;gap:6px;margin-top:4px">
+        <div style="display:flex;gap:6px;margin-top:4px">
           <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
           <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer"><input type="checkbox" id="dist-once-${idx}" style="width:auto">${t('dist.onlyThisWeek')}</label>
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
@@ -1051,13 +1055,18 @@ function addDistTarea(dayIdx){
   if(!val) return;
   const onlyThisWeek = document.getElementById('dist-once-'+dayIdx)?.checked;
   const d = getDistEmpData(distCurrentEmployeeId);
+  // Si quien añade la tarea no tiene el modo edición activo, es el propio
+  // empleado auto-organizándose su trabajo (no el jefe asignándoselo), así
+  // que se marca como "suya" para poder editarla/borrarla libremente y
+  // distinguirla visualmente de las tareas que le asigna el jefe.
+  const bySelf = !editUnlocked;
   if(onlyThisWeek){
     const ds = dateStr(getWeekDates(distWeekOffset)[dayIdx]);
     if(!d.tareasUnicas[ds]) d.tareasUnicas[ds] = [];
-    d.tareasUnicas[ds].push({id: genId(), text: val});
+    d.tareasUnicas[ds].push({id: genId(), text: val, bySelf});
   } else {
     if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
-    d.produccion[dayIdx].push({id: genId(), text: val});
+    d.produccion[dayIdx].push({id: genId(), text: val, bySelf});
   }
   saveDB();
   renderDistDetail();
@@ -1066,12 +1075,15 @@ function addDistTarea(dayIdx){
 function updateDistTarea(dayIdx, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.produccion[dayIdx]||[]).find(t=>t.id===taskId);
-  if(task) task.text = val;
+  if(!task || !(editUnlocked || task.bySelf)) return;
+  task.text = val;
   saveDB();
 }
 
 function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
+  const task = (d.produccion[dayIdx]||[]).find(t=>t.id===taskId);
+  if(task && !(editUnlocked || task.bySelf)) return;
   if(d.produccion[dayIdx]){
     d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>t.id!==taskId);
     saveDB();
@@ -1084,12 +1096,15 @@ function removeDistTarea(dayIdx, taskId){
 function updateDistTareaUnica(ds, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.tareasUnicas[ds]||[]).find(t=>t.id===taskId);
-  if(task) task.text = val;
+  if(!task || !(editUnlocked || task.bySelf)) return;
+  task.text = val;
   saveDB();
 }
 
 function removeDistTareaUnica(ds, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
+  const task = (d.tareasUnicas[ds]||[]).find(t=>t.id===taskId);
+  if(task && !(editUnlocked || task.bySelf)) return;
   if(d.tareasUnicas[ds]){
     d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>t.id!==taskId);
     saveDB();
