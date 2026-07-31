@@ -1239,7 +1239,7 @@ function renderTableOrderModal(orderId){
         ${comandaHtml}
       </div>
     </div>
-    <div style="margin-top:10px;position:sticky;bottom:0;background:#fff;padding-top:10px;border-top:1px solid var(--border);z-index:2">
+    <div class="modal-footer" style="width:100%">
       ${actionButtons}
     </div>
   `, {order:true});
