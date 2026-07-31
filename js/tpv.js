@@ -448,7 +448,8 @@ function renderTpvToGo(tiposServicio){
             const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
             const urgent = dueMins !== null && dueMins <= 30;
             const isDelivery = o.tipo==='delivery';
-            const waiterChip = mesaWaiterChipHtml(o.camareroId);
+            // Sin chip de camarero aquí: estos pedidos entran por teléfono o
+            // por la web, no los toma nadie de sala en persona.
             const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId) : '';
             return `
             <div class="card togo-card ${isDelivery?'togo-card-delivery':'togo-card-pickup'}${urgent?' togo-card-urgent':''}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
@@ -462,10 +463,7 @@ function renderTpvToGo(tiposServicio){
               ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
               ${o.clienteAddress ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteAddress)}</div>` : ''}
               <div style="margin-top:8px;font-weight:800;font-size:19px;color:var(--brand-orange)">${fmtMoney(orderTotal(o))}</div>
-              <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">
-                ${waiterChip}
-                ${repartidorChip}
-              </div>
+              ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
             </div>
           `}).join('')}</div>`}
     </div>
@@ -809,6 +807,16 @@ function openNewToGoOrderModal(){
       <label>${t('label.phoneOpt')}</label>
       <input type="text" id="togo-cliente-phone" placeholder="${t('common.phone')}">
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label>${t('common.date')}</label>
+        <input type="date" id="togo-cliente-date" value="${todayStr()}">
+      </div>
+      <div class="field">
+        <label>${t('label.pickupDeliveryTime')}</label>
+        <input type="time" id="togo-cliente-time">
+      </div>
+    </div>
     <div id="togo-delivery-fields" style="display:${canDelivery && toGoOrderTypeSelected==='delivery' ? '' : 'none'}">
       <div class="field">
         <label>${t('label.deliveryAddress')}</label>
@@ -824,7 +832,6 @@ function openNewToGoOrderModal(){
       </div>
       ${renderRepartidorFieldHtml('togo-repartidor-sel')}
     </div>
-    ${renderCamareroFieldHtml('togo-camarero-sel')}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> ${t('btn.createOrder')}</button>
@@ -856,12 +863,18 @@ function checkNewDeliveryZoneHint(){
 }
 
 function confirmNewToGoOrder(){
-  const camareroSel = document.getElementById('togo-camarero-sel');
-  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
   const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
   const clientePhone = document.getElementById('togo-cliente-phone').value.trim();
+  // Fecha/hora de recogida o entrega: por defecto es hoy sin hora concreta
+  // (se entiende "cuanto antes"), pero si se programa para otro día, el
+  // pedido no debe aparecer en el TPV hasta que llegue esa fecha (ver el
+  // filtro `!o.date || o.date <= todayStr()` en renderTpvToGo).
+  const dateEl = document.getElementById('togo-cliente-date');
+  const timeEl = document.getElementById('togo-cliente-time');
+  const date = dateEl && dateEl.value ? dateEl.value : todayStr();
+  const time = timeEl && timeEl.value ? timeEl.value : null;
   const isDelivery = toGoOrderTypeSelected === 'delivery';
-  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre, clientePhone, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre, clientePhone, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   if(isDelivery){
     const addressEl = document.getElementById('togo-cliente-address');
     const plataformaEl = document.getElementById('togo-plataforma');
