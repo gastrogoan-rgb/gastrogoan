@@ -118,9 +118,50 @@ function guessSeccionEmoji(nombre){
 // Así "Carnes" puede tener un icono distinto en cada lado si el negocio quiere,
 // pero se mantiene coherente entre los dos apartados que comparten esa misma
 // taxonomía. Sin icono elegido, se usa 📁 por defecto.
-const CATEGORY_ICON_CHOICES = ['🥩','🐟','🦐','🥬','🍅','🍎','🍌','🧀','🥛','🍞','🥐','🥤','🍷','🍺','☕','🧂','🌶️','🧄','🧅','🧊','🍰','🍫','🥗','🍽️','🥫','🥚','🫒','🍚','🍝','🌾','🍕','🍔','🌮','🍣','📦','🍸','🥃','🍾','🍹','🧋'];
+// Lista amplia a propósito (carnes, pescados/marisco, verduras, frutas,
+// lácteos, panadería, especias, postres, bebidas con y sin alcohol, platos
+// preparados, utensilios...) para que cualquier categoría de negocio
+// encuentre un icono que le encaje, no solo lo más habitual.
+const CATEGORY_ICON_CHOICES = [
+  // Carnes
+  '🥩','🍗','🍖','🥓','🌭','🍤',
+  // Pescados y marisco
+  '🐟','🐠','🐡','🦐','🦀','🦞','🐙','🦑','🍣',
+  // Verduras y hortalizas
+  '🥬','🥦','🥒','🌽','🥕','🍅','🍆','🧄','🧅','🥔','🫑','🌶️','🍄',
+  // Frutas
+  '🍎','🍌','🍇','🍓','🍉','🍊','🍋','🍑','🍒','🍍','🥝','🥭','🍐',
+  // Lácteos y huevos
+  '🥛','🧀','🧈','🥚',
+  // Pan, cereales y pasta
+  '🍞','🥐','🥖','🥨','🥯','🌾','🍚','🍝','🍜',
+  // Especias, condimentos y conservas
+  '🧂','🌿','🍯','🫒','🥫',
+  // Postres y dulces
+  '🍰','🎂','🧁','🍪','🍩','🍫','🍬','🍮',
+  // Bebidas sin alcohol
+  '🥤','☕','🍵','🧃','🧋',
+  // Bebidas con alcohol
+  '🍷','🍺','🍻','🥂','🍸','🍹','🥃','🍾',
+  // Platos preparados
+  '🍕','🍔','🌮','🌯','🥙','🍟','🥪','🍳','🥘','🍲','🥟','🍛','🍱',
+  // Otros / utensilios
+  '📦','🔪','🍽️','🥄','🍴','🧊','🥗',
+];
 function getCategoryIcon(key, ns){
   return (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '📁';
+}
+// Aviso de una sola vez (por negocio) para que se sepa que el icono de cada
+// carpeta se puede cambiar — hoy el único indicio era el cursor y un title
+// al pasar el ratón, poco visible sobre todo en pantallas táctiles. Se
+// llama desde las pantallas que muestran carpetas con icono editable
+// (Mega Lista, Stock, Escandallo, Fichas Técnicas); tras la primera vez que
+// se ve cualquiera de ellas, ya no vuelve a salir.
+function maybeShowCategoryIconHint(){
+  if(!DB.business || DB.business.categoryIconHintSeen) return;
+  DB.business.categoryIconHintSeen = true;
+  saveDB();
+  showToast(t('msg.categoryIconHint'), 6000);
 }
 function openCategoryIconModal(key, label, reRenderFn, ns){
   const safeKey = key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");

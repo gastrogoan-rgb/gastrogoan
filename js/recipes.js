@@ -140,6 +140,7 @@ function getEscandalloFolders(recipes){
 }
 
 function renderEscandallo(){
+  maybeShowCategoryIconHint();
   populateRecipeCategoryFilter('escandallo-filter-cat');
   const search = document.getElementById('escandallo-search').value.toLowerCase();
   const cat = document.getElementById('escandallo-filter-cat').value;
@@ -836,6 +837,7 @@ function backToFichaFolders(){
 }
 
 function renderFichas(){
+  maybeShowCategoryIconHint();
   populateRecipeCategoryFilter('fichas-filter-cat');
   const search = document.getElementById('fichas-search').value.toLowerCase();
   const cat = document.getElementById('fichas-filter-cat').value;

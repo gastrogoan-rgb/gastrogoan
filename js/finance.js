@@ -481,6 +481,7 @@ function openMegalistaFolder(cat){ megalistaFolder = cat; renderMegalista(); }
 function backToMegalistaFolders(){ megalistaFolder = null; renderMegalista(); }
 
 function renderMegalista(){
+  maybeShowCategoryIconHint();
   populateProviderFilter();
   const search = document.getElementById('megalista-search').value.toLowerCase();
   const prov = document.getElementById('megalista-filter-prov').value;
@@ -769,6 +770,7 @@ function backToElabFolders(){ elabFolder = null; elabItem = null; renderStock();
 function backToElabItems(){ elabItem = null; renderStock(); }
 
 function renderStock(){
+  maybeShowCategoryIconHint();
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
 
