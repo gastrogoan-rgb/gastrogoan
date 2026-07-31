@@ -1516,7 +1516,7 @@ function renderOrderComandaPanel(order){
         }
         return `
         <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)">
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
           <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
           <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
           <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
@@ -1862,7 +1862,12 @@ function addOrderItem(orderId, secId, platoId){
   const existing = order.items.find(l => l.platoId === platoId && l.recipeId === p.recipeId && !(l.notas) && (l.tanda||'') === tanda && l.estado !== 'entregado' && (!l.marchada || autoSend));
   let line;
   if(existing){ existing.qty += 1; line = existing; }
-  else{ line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''}; if(isSeccionBebida(secId)) line.bebida = true; order.items.push(line); }
+  else{
+    line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    if(isSeccionBebida(secId)) line.bebida = true;
+    applyActivePromoToLine(line);
+    order.items.push(line);
+  }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   saveDB();
@@ -1933,6 +1938,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;
+    applyActivePromoToLine(line, p.nombre);
     order.items.push(line);
   }
   autoSendTakeawayLine(order, line);
@@ -2198,6 +2204,19 @@ function renderPaymentModalFooterButtons(order){
 // aquí antes de mostrarse o guardarse.
 function roundMoney(x){
   return Math.round((x + Number.EPSILON) * 100) / 100;
+}
+
+// Si hay una promo con descuento real activa hoy para este plato/bebida
+// (getActivePromoForDish, en js/app.js), se aplica el precio rebajado en el
+// momento de añadirlo a la comanda, guardando el precio original para poder
+// mostrar el badge de promo en el panel de comanda.
+function applyActivePromoToLine(line, dishName){
+  const promo = getActivePromoForDish(dishName || line.name);
+  if(!promo) return;
+  line.originalPrice = line.price;
+  line.price = roundMoney(line.price * (1 - promo.discountPct/100));
+  line.promoId = promo.id;
+  line.promoPct = promo.discountPct;
 }
 
 function computeFinalTotal(order){

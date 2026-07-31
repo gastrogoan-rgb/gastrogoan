@@ -688,23 +688,97 @@ function getDistEmpData(empId){
   return d;
 }
 
-// Promociones asignadas a un empleado para una fecha exacta (no solo el
-// mismo día de la semana, que haría reaparecer promos de otras semanas).
+// Una promo puede repetirse cada semana el mismo día (p.ej. "Menú del día
+// todos los martes") en vez de tener que crearla a mano cada vez. `fecha` es
+// la fecha ancla (la primera vez que se creó); si `recurrence==='weekly'`,
+// ocurre también en cualquier fecha posterior que caiga en el mismo día de
+// la semana.
+function promoWeekday(p){ return new Date(p.fecha+'T00:00:00').getDay(); }
+function promoOccursOn(p, ds){
+  if(p.fecha === ds) return true;
+  if(p.recurrence === 'weekly' && ds > p.fecha){
+    return new Date(ds+'T00:00:00').getDay() === promoWeekday(p);
+  }
+  return false;
+}
+function getPromosForDate(ds){
+  return DB.promos.filter(p => promoOccursOn(p, ds));
+}
+// Como cada aparición de una promo recurrente es la misma ficha en varias
+// fechas, "hecha"/canjes se guardan por fecha concreta (igual que ya hacen
+// las tareas de producción de Distribución), no como un booleano único que
+// se compartiría entre todas las semanas.
+function promoDoneInfo(p, ds){
+  if(p.recurrence === 'weekly') return (p.doneDates && p.doneDates[ds]) || null;
+  return p.done ? {done:true, doneAt:p.doneAt, redemptions:p.redemptions||0} : null;
+}
+function setPromoDone(p, ds, checked){
+  const now = new Date().toISOString();
+  if(p.recurrence === 'weekly'){
+    if(!p.doneDates) p.doneDates = {};
+    const prevRedemptions = (p.doneDates[ds] && p.doneDates[ds].redemptions) || 0;
+    p.doneDates[ds] = checked ? {done:true, doneAt:now, redemptions:prevRedemptions} : null;
+  } else {
+    p.done = checked;
+    p.doneAt = checked ? now : null;
+  }
+}
+
+// Promociones asignadas a un empleado para una fecha concreta, incluyendo
+// las que ocurren ese día por ser recurrentes (no solo las creadas
+// exactamente para esa fecha).
 function getPromosForEmployeeDate(empId, dateStr){
-  return DB.promos.filter(p => p.responsableId === empId && p.fecha === dateStr)
+  return DB.promos.filter(p => p.responsableId === empId && promoOccursOn(p, dateStr))
     .sort((a,b)=>a.fecha.localeCompare(b.fecha));
 }
-function togglePromoDone(promoId, checked){
+function togglePromoDone(promoId, checked, ds){
   const p = DB.promos.find(x=>x.id===promoId);
   if(!p) return;
-  p.done = checked;
-  // Traza de cuándo se completó (no solo un booleano reversible sin rastro),
-  // mismo espíritu que la fecha/hora añadida a las tareas de Plan de Limpieza.
-  const now = new Date();
-  p.doneAt = checked ? now.toISOString() : null;
+  setPromoDone(p, ds || p.fecha, checked);
   saveDB();
   if(document.getElementById('distribucion-content')) renderDistDetail();
   if(document.getElementById('promo-tab-content')) renderPromocion();
+}
+
+// Contador de veces que se canjeó la promo ese día (independiente de
+// marcarla como "hecha"), para saber si de verdad tuvo tirón o solo se
+// planificó y nadie la pidió.
+function incrementPromoRedemption(promoId, ds){
+  const p = DB.promos.find(x=>x.id===promoId);
+  if(!p) return;
+  if(p.recurrence === 'weekly'){
+    if(!p.doneDates) p.doneDates = {};
+    if(!p.doneDates[ds]) p.doneDates[ds] = {done:false, doneAt:null, redemptions:0};
+    p.doneDates[ds].redemptions = (p.doneDates[ds].redemptions||0) + 1;
+  } else {
+    p.redemptions = (p.redemptions||0) + 1;
+  }
+  saveDB();
+  renderPromocion();
+}
+
+// Promo con descuento real activa HOY para un plato/bebida concreto (por
+// nombre, insensible a mayúsculas/tildes), si la hay — se usa desde el TPV
+// al añadir el artículo a una comanda para aplicar el precio rebajado solo.
+function getActivePromoForDish(name){
+  if(!name) return null;
+  const norm = stripAccents(name.trim().toLowerCase());
+  const today = todayStr();
+  return DB.promos.find(p => p.discountPct && p.menuItemName && promoOccursOn(p, today) && stripAccents(p.menuItemName.trim().toLowerCase()) === norm) || null;
+}
+
+// Purga las promos NO recurrentes cuya fecha ya pasó hace más de 3 meses:
+// una promo puntual de hace medio año ya no aporta nada y solo ensucia el
+// calendario. Las recurrentes nunca se purgan solas (siguen vigentes
+// indefinidamente hasta que alguien las borra a mano).
+const PROMO_RETENTION_MONTHS = 3;
+function pruneOldPromos(){
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - PROMO_RETENTION_MONTHS);
+  const cutoffStr = dateStr(cutoff);
+  const before = DB.promos.length;
+  DB.promos = DB.promos.filter(p => p.recurrence === 'weekly' || p.fecha >= cutoffStr);
+  if(DB.promos.length !== before) saveDB();
 }
 
 // Tareas de producción: son una plantilla recurrente por día de la semana
@@ -937,14 +1011,14 @@ function renderDistDetail(){
       </label>
     `;}).join('');
 
-    // Promociones: asignadas a esta fecha exacta (no se repiten cada semana).
+    // Promociones: asignadas a esta fecha, incluidas las recurrentes que caen ese día.
     const promos = getPromosForEmployeeDate(emp.id, ds);
     const promosHtml = promos.map(p => {
-      const done = !!p.done;
+      const done = !!(promoDoneInfo(p, ds) || {}).done;
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked)" title="${t('title.markAsDone')}">
+        <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked,'${ds}')" title="${t('title.markAsDone')}">
         <span class="badge badge-amber" style="font-size:10px"><i class="ti ti-speakerphone"></i> Promo</span>
         <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
@@ -2590,37 +2664,48 @@ function setPromoFilter(field, val){
 }
 
 function renderPromoDia(){
+  pruneOldPromos();
   const box = document.getElementById('promo-tab-content');
   const date = promoDate;
   const salaEmployees = DB.employees.filter(e=>(e.area||'cocina')==='sala');
-  const allItems = DB.promos.filter(p => p.fecha === date);
-  const items = allItems.filter(p =>
-    (!promoFilterResponsable || String(p.responsableId||'')===promoFilterResponsable) &&
-    (!promoFilterStatus || (promoFilterStatus==='done' ? p.done : !p.done))
-  );
+  const allItems = getPromosForDate(date);
+  const items = allItems.filter(p => {
+    const info = promoDoneInfo(p, date);
+    return (!promoFilterResponsable || String(p.responsableId||'')===promoFilterResponsable) &&
+      (!promoFilterStatus || (promoFilterStatus==='done' ? !!(info&&info.done) : !(info&&info.done)));
+  });
 
   const listHtml = !allItems.length
     ? `<div class="empty"><i class="ti ti-speakerphone"></i>${t('promo.day.noActions')}</div>`
     : !items.length
     ? `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`
     : `<div class="grid grid-3">
-        ${items.map(p => `
+        ${items.map(p => {
+          const info = promoDoneInfo(p, date);
+          const done = !!(info && info.done);
+          const redemptions = (info && info.redemptions) || (p.recurrence!=='weekly' ? (p.redemptions||0) : 0);
+          return `
           <div class="card">
             <h3 style="justify-content:space-between;font-size:14px">
               <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700">
-                <input type="checkbox" ${p.done?'checked':''} onchange="togglePromoDone(${p.id},this.checked)">
-                <span style="${p.done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
+                <input type="checkbox" ${done?'checked':''} onchange="togglePromoDone(${p.id},this.checked,'${date}')">
+                <span style="${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
               </label>
+              ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
+            ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px"><span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span></div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            ${p.done && p.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(p.doneAt).toLocaleString('es-ES')))}</div>` : ''}
+            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <button class="btn btn-sm" onclick="incrementPromoRedemption(${p.id},'${date}')" title="${t('promo.day.redemptionHint')}"><i class="ti ti-plus"></i> ${t('promo.day.redemptions').replace('${n}', redemptions)}</button>
+            </div>
             <div class="actions-cell owner-only" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
             </div>
           </div>
-        `).join('')}
+        `;}).join('')}
       </div>`;
 
   box.innerHTML = `
@@ -2655,11 +2740,11 @@ function renderPromoSemana(){
 
   const bodyCells = dates.map(d => {
     const ds = dateStr(d);
-    const items = DB.promos.filter(p => p.fecha === ds);
+    const items = getPromosForDate(ds);
     return `
       <td style="vertical-align:top;min-width:140px">
         ${items.map(p => `
-          <div style="display:block;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--brand-orange);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</div>
+          <div style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--bg-2,#fdf1e7);color:var(--brand-orange);font-weight:700;font-size:12px;text-align:left;cursor:pointer;margin-bottom:4px" onclick="openPromoModal(${p.id})">${p.recurrence==='weekly'?'<i class="ti ti-repeat" style="font-size:11px"></i>':''}${escapeHtml(p.titulo)}</div>
         `).join('')}
         <span class="owner-only" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="openPromoModal(null, '${ds}')">+</span>
       </td>
@@ -2695,21 +2780,25 @@ function renderPromoMes(){
   const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const counts = {};
-  DB.promos.forEach(p => { counts[p.fecha] = (counts[p.fecha]||0) + 1; });
-
-  // Estadísticas rápidas del mes visible: cuánto se ha planificado/hecho, y
-  // cuánta biblioteca de ideas queda aún por explorar.
-  const monthPrefix = `${year}-${String(month+1).padStart(2,'0')}`;
-  const monthPromos = DB.promos.filter(p => p.fecha.startsWith(monthPrefix));
-  const monthDone = monthPromos.filter(p => p.done).length;
+  // Contadores por día calculados con getPromosForDate para incluir también
+  // las apariciones de promos recurrentes, no solo las creadas exactamente
+  // ese día.
+  let monthTotal = 0, monthDone = 0;
+  const dayPromos = {};
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = dateStr(new Date(year, month, day));
+    const items = getPromosForDate(ds);
+    dayPromos[ds] = items;
+    monthTotal += items.length;
+    monthDone += items.filter(p => !!(promoDoneInfo(p, ds)||{}).done).length;
+  }
   const usedCategories = CONTENT_IDEAS.filter((_, i) => categoryUsedCount(i) > 0).length;
 
   let cells = '';
   for(let i=0; i<startOffset; i++) cells += `<div></div>`;
   for(let day=1; day<=daysInMonth; day++){
     const ds = dateStr(new Date(year, month, day));
-    const count = counts[ds] || 0;
+    const count = dayPromos[ds].length;
     const isToday = ds === todayStr();
     cells += `
       <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToPromoDia('${ds}')">
@@ -2733,8 +2822,8 @@ function renderPromoMes(){
       </div>
     </div>
     <div class="grid grid-3" style="margin-bottom:12px">
-      <div class="kpi"><div class="label">${t('promo.kpi.actionsThisMonth')}</div><div class="value">${monthPromos.length}</div></div>
-      <div class="kpi ok"><div class="label">${t('promo.kpi.completed')}</div><div class="value">${monthDone} / ${monthPromos.length}</div></div>
+      <div class="kpi"><div class="label">${t('promo.kpi.actionsThisMonth')}</div><div class="value">${monthTotal}</div></div>
+      <div class="kpi ok"><div class="label">${t('promo.kpi.completed')}</div><div class="value">${monthDone} / ${monthTotal}</div></div>
       <div class="kpi"><div class="label">${t('promo.kpi.categoriesUsed')}</div><div class="value">${usedCategories} / ${CONTENT_IDEAS.length}</div></div>
     </div>
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
@@ -2750,10 +2839,11 @@ function printPromoMes(year, month){
   const rows = [];
   for(let day=1; day<=daysInMonth; day++){
     const ds = dateStr(new Date(year, month, day));
-    const items = DB.promos.filter(p => p.fecha === ds);
+    const items = getPromosForDate(ds);
     items.forEach(p => {
       const resp = p.responsableId ? DB.employees.find(e=>e.id===p.responsableId) : null;
-      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${p.done?'✅':'—'}</td></tr>`);
+      const done = !!(promoDoneInfo(p, ds)||{}).done;
+      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'✅':'—'}</td></tr>`);
     });
   }
   const win = window.open('', '_blank', 'width=900,height=1000');
@@ -3352,10 +3442,12 @@ function registerClientOutreachAsPromo(clientId, templateKey){
 // al crear la promo y así poder marcar esa idea como ya usada.
 let pendingPromoIdeaRef = null;
 function openPromoModal(id, fecha, prefill){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null};
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null, recurrence:null, menuItemName:null, discountPct:null};
   pendingPromoIdeaRef = (!id && prefill && prefill.ideaRef) ? prefill.ideaRef : null;
   const ro = !editUnlocked;
   const dis = ro ? 'disabled' : '';
+  const dishNames = getAllDishNames();
+  const hasDiscount = !!p.menuItemName;
 
   openModal(`
     <div class="modal-header">
@@ -3366,6 +3458,11 @@ function openPromoModal(id, fecha, prefill){
       <label>${t('promo.modal.date')}</label>
       <input type="date" id="promo-date" value="${p.fecha}" ${dis}>
     </div>
+    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="promo-recurrence" ${p.recurrence==='weekly'?'checked':''} style="width:auto" ${dis}>
+      ${t('promo.modal.recurrenceLabel')}
+    </label>
+    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('promo.modal.recurrenceHint')}</p>
     <div class="field">
       <label>${t('promo.modal.title')}</label>
       <input type="text" id="promo-titulo" value="${escapeHtml(p.titulo||'')}" placeholder="${t('promo.modal.titlePlaceholder')}" ${dis}>
@@ -3373,6 +3470,26 @@ function openPromoModal(id, fecha, prefill){
     <div class="field">
       <label>${t('promo.modal.description')}</label>
       <textarea id="promo-descripcion" placeholder="${t('promo.modal.descriptionPlaceholder')}" ${dis}>${escapeHtml(p.descripcion||'')}</textarea>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="promo-has-discount" ${hasDiscount?'checked':''} style="width:auto" onchange="togglePromoDiscountFields()" ${dis}>
+      ${t('promo.modal.hasDiscountLabel')}
+    </label>
+    <div id="promo-discount-fields" style="display:${hasDiscount?'':'none'}">
+      <div class="field-row">
+        <div class="field">
+          <label>${t('promo.modal.dish')}</label>
+          <select id="promo-dish" ${dis}>
+            <option value="">${t('label.selectDish')}</option>
+            ${dishNames.map(n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>${t('promo.modal.discountPct')}</label>
+          <input type="number" id="promo-discount-pct" min="1" max="100" step="1" value="${p.discountPct||10}" ${dis}>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.discountHint')}</p>
     </div>
     <div class="field">
       <label>${t('promo.modal.responsible')}</label>
@@ -3387,6 +3504,10 @@ function openPromoModal(id, fecha, prefill){
     </div>
   `);
 }
+function togglePromoDiscountFields(){
+  const checked = document.getElementById('promo-has-discount').checked;
+  document.getElementById('promo-discount-fields').style.display = checked ? '' : 'none';
+}
 
 function savePromo(id){
   const fecha = document.getElementById('promo-date').value || todayStr();
@@ -3394,23 +3515,34 @@ function savePromo(id){
   const descripcion = document.getElementById('promo-descripcion').value.trim();
   const responsableIdRaw = document.getElementById('promo-responsable').value;
   const responsableId = responsableIdRaw ? parseInt(responsableIdRaw) : null;
+  const recurrence = document.getElementById('promo-recurrence').checked ? 'weekly' : null;
+  const hasDiscount = document.getElementById('promo-has-discount').checked;
+  const menuItemName = hasDiscount ? (document.getElementById('promo-dish').value || null) : null;
+  const discountPct = hasDiscount ? Math.max(1, Math.min(100, parseInt(document.getElementById('promo-discount-pct').value)||10)) : null;
 
   if(!titulo){ showToast(t('msg.indicateTitle')); return; }
+  if(hasDiscount && !menuItemName){ showToast(t('msg.selectDish')); return; }
 
-  const isDuplicate = DB.promos.some(p => p.id!==id && p.fecha===fecha && p.titulo.toLowerCase()===titulo.toLowerCase() && p.responsableId===responsableId);
+  // Aviso de posible duplicado: en vez de guardarla igual con solo un toast
+  // distinto, se ofrece abrir la que ya existe en su lugar.
+  const dupe = DB.promos.find(p => p.id!==id && p.fecha===fecha && p.titulo.toLowerCase()===titulo.toLowerCase() && p.responsableId===responsableId);
+  if(dupe && !confirm(t('promo.confirmDuplicate'))){
+    openPromoModal(dupe.id);
+    return;
+  }
 
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
-    Object.assign(promo, {fecha, titulo, descripcion, responsableId});
+    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, done:false, doneAt:null, zona:'sala', ideaRef: pendingPromoIdeaRef});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct, done:false, doneAt:null, redemptions:0, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
   pendingPromoIdeaRef = null;
   saveDB();
   closeModal();
   renderPromocion();
-  showToast(isDuplicate ? t('promo.saved.duplicate') : t('msg.actionSaved'));
+  showToast(t('msg.actionSaved'));
 }
 
 function deletePromo(id){
