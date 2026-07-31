@@ -4266,13 +4266,16 @@ function previewTicketConfig(){
 // lista de proveedores soportados y submitSaleToVerifactu() para el envío.
 function renderVerifactuConfigCard(){
   const vf = (DB.business && DB.business.verifactu) || {enabled:false, provider:'', apiKey:''};
-  const pendingCount = (DB.sales||[]).filter(s => s.verifactu && s.verifactu.status === 'pending').length;
+  const pendingSales = (DB.sales||[]).filter(s => s.verifactu && s.verifactu.status === 'pending');
   const providerOptions = Object.keys(VERIFACTU_PROVIDERS).map(k =>
     `<option value="${k}" ${vf.provider===k?'selected':''}>${escapeHtml(VERIFACTU_PROVIDERS[k].label)}</option>`
   ).join('');
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}</h3>
+      <div style="background:var(--amber-l,#FBF0DD);border:1px solid var(--brand-orange);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
+        <p style="margin:0"><span class="badge badge-amber" style="margin-right:6px"><i class="ti ti-clock"></i> ${t('mn.verifactu.draftBadge')}</span>${t('mn.verifactu.draftNotice')}</p>
+      </div>
       <p style="font-size:13px;color:var(--muted)">${t('mn.verifactu.desc')}</p>
       <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
         <p style="margin:0 0 6px"><strong>${t('mn.verifactu.howItWorksTitle')}</strong> ${t('mn.verifactu.howItWorks1')}</p>
@@ -4298,12 +4301,61 @@ function renderVerifactuConfigCard(){
         <input type="text" id="vf-serie" value="${escapeHtml(verifactuSerie())}" placeholder="T1" style="max-width:120px;font-family:monospace">
         <small style="color:var(--muted)">${t('mn.verifactu.serieHint')}</small>
       </div>
-      ${pendingCount ? `<p style="font-size:12.5px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingCount)}</p>` : ''}
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${pendingSales.length ? `<p style="font-size:12.5px;color:var(--brand-orange);cursor:pointer" onclick="openVerifactuPendingModal()"><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingCount').replace('${n}', pendingSales.length)} <span style="text-decoration:underline">${t('common.viewDetail')}</span></p>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <button class="btn btn-primary" onclick="saveVerifactuConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <h3 style="font-size:14px"><i class="ti ti-file-shield"></i> ${t('mn.verifactu.declarationsTitle')}</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('mn.verifactu.declarationsDesc')}</p>
+        ${renderVerifactuDeclarationRow('ownDeclarationUrl', t('mn.verifactu.ownDeclaration'), t('mn.verifactu.ownDeclarationPending'))}
+        ${renderVerifactuDeclarationRow('providerDeclarationUrl', t('mn.verifactu.providerDeclaration'), t('mn.verifactu.providerDeclarationPending'))}
       </div>
     </div>
   `;
+}
+function renderVerifactuDeclarationRow(field, label, pendingLabel){
+  const vf = (DB.business && DB.business.verifactu) || {};
+  const url = vf[field] || '';
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+      <span style="min-width:170px">${label}</span>
+      ${url
+        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>`
+        : `<span style="color:var(--muted)"><i class="ti ti-hourglass-empty"></i> ${pendingLabel}</span>`}
+      <input type="text" id="vf-${field}" value="${escapeHtml(url)}" placeholder="https://..." style="flex:1;font-size:12px;padding:3px 6px" onchange="setVerifactuDeclarationUrl('${field}', this.value)">
+    </div>
+  `;
+}
+function setVerifactuDeclarationUrl(field, val){
+  if(!DB.business.verifactu) DB.business.verifactu = {enabled:false, provider:'', apiKey:''};
+  DB.business.verifactu[field] = val.trim();
+  saveDB();
+  renderMiNegocio();
+}
+function openVerifactuPendingModal(){
+  const pendingSales = (DB.sales||[]).filter(s => s.verifactu && s.verifactu.status === 'pending');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle"></i> ${t('mn.verifactu.pendingModalTitle')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('common.total')}</th><th>${t('mn.verifactu.incident')}</th></tr></thead>
+        <tbody>${pendingSales.map(s => `
+          <tr>
+            <td>${escapeHtml(s.date||'—')}</td>
+            <td>${fmtMoney(s.total||0)}</td>
+            <td style="color:var(--red)">${escapeHtml(s.verifactu.lastError || t('mn.verifactu.noErrorYet'))}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
 }
 function saveVerifactuConfig(){
   const enabled = document.getElementById('vf-enabled').checked;
