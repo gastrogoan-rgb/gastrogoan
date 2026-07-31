@@ -155,14 +155,29 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
 
-.mesa-card{padding:14px 10px;margin-bottom:0;font-size:11px;border-radius:14px}
-.mesa-card.mesa-free{background:var(--surface);border:1px solid var(--border)}
-.mesa-card.mesa-occupied{background:var(--green-l);border:1px solid var(--green)}
-.mesa-card .mesa-name{font-size:15px;font-weight:800;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center}
+.mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
+.mesa-card.mesa-free:hover{border-color:var(--brand-orange)}
+.mesa-card.mesa-occupied{background:var(--surface);border:1px solid var(--border)}
+/* Acento de color según la fase de servicio: recién sentados (naranja de
+   marca), en cocina (ámbar), preparando (teal), listos para cobrar (verde) —
+   así se distingue de un vistazo una mesa recién abierta de una atascada,
+   en vez del mismo verde plano para cualquier mesa ocupada. */
+.mesa-card.mesa-phase-taking{border-top-color:var(--muted)}
+.mesa-card.mesa-phase-kitchen{border-top-color:var(--amber)}
+.mesa-card.mesa-phase-preparing{border-top-color:var(--purple)}
+.mesa-card.mesa-phase-served{border-top-color:var(--green)}
+.mesa-card .mesa-name{font-size:16px;font-weight:800;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mesa-card .badge{font-size:9.5px;padding:2px 6px;gap:2px}
-.mesa-card .mesa-status-free{font-size:12px;color:var(--muted)}
-.mesa-card .mesa-total{margin-top:2px;font-weight:800;font-size:19px;color:var(--green)}
-.mesa-card .mesa-pax{margin-top:2px;font-size:11px;color:var(--muted)}
+.mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:4px}
+.mesa-card .mesa-status-free .ti{font-size:15px}
+.mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:2px}
+.mesa-card .mesa-total{margin-top:4px;font-weight:800;font-size:20px;color:var(--brand-orange)}
+.mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:5px;flex-wrap:wrap;width:100%}
+.mesa-card .mesa-pax{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
+.mesa-card .mesa-pax .ti{font-size:12px}
+.mesa-card .mesa-waiter-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mesa-card .mesa-waiter-avatar{width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0}
 .mesa-card .mesa-icons-row{position:absolute;top:6px;left:6px;display:flex;gap:3px}
 .mesa-card .mesa-mini-badge{font-size:12px;line-height:1}
 .mesa-card .mesa-mini-badge .ti{font-size:13px;color:var(--brand-orange)}
@@ -998,9 +1013,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 .content .view.active{animation:view-fade-in .28s ease}
 @keyframes view-fade-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
-/* Mesas del TPV: elevación sutil al pasar el ratón, sin sombra (queda plano) */
+/* Mesas del TPV: elevación sutil al pasar el ratón, sin sombra (queda plano).
+   No se toca border-color en :hover (afectaría también al acento de color de
+   la fase en border-top): solo se anima el borde lateral en mesas libres. */
 .mesa-card{transition:transform .15s ease, border-color .15s ease}
-.mesa-card:hover{transform:translateY(-2px); border-color:#1C1A17}
+.mesa-card:hover{transform:translateY(-2px)}
+.mesa-card.mesa-free:hover{border-color:#1C1A17}
 .mesa-card:active{transform:translateY(0)}
 
 /* Aviso de comanda nueva: parpadeo suave para que llame la atención */

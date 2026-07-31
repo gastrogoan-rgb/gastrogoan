@@ -285,6 +285,42 @@ function getZonaOrder(){
   return stored;
 }
 
+// Chip de camarero/a a cargo de la mesa: círculo con su color de identificación
+// (el mismo que en Personal/Distribución) y su nombre de pila, para saber de
+// un vistazo quién atiende cada mesa sin tener que entrar en ella.
+function mesaWaiterChipHtml(camareroId){
+  if(!camareroId) return '';
+  const emp = DB.employees.find(e => e.id === camareroId);
+  if(!emp) return '';
+  const initial = (emp.name||'?').trim().charAt(0).toUpperCase();
+  const firstName = (emp.name||'').trim().split(/\s+/)[0];
+  return `
+    <span class="mesa-waiter-chip" title="${escapeHtml(t('label.waiter'))}: ${escapeHtml(emp.name)}">
+      <span class="mesa-waiter-avatar" style="background:${emp.color||'#DF7039'}">${escapeHtml(initial)}</span>
+      ${escapeHtml(firstName)}
+    </span>
+  `;
+}
+
+// Fase de servicio de una mesa ocupada (la más avanzada de sus platos de
+// comida; las bebidas no cuentan, se gestionan aparte desde Sala). Devuelve
+// también una clave para pintar la mesa con un acento de color propio de esa
+// fase, en vez de un verde plano igual para "recién sentados" que para
+// "listos para cobrar".
+function mesaPhase(order){
+  if(!order) return null;
+  const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
+  const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
+  if(allDelivered) return {key:'served', icon:'✅', label: t('status.served')};
+  const preparing = foodItems.some(l => l.estado === 'preparando');
+  if(preparing) return {key:'preparing', icon:'🔥', label: t('status.inKitchen')};
+  const inKitchen = foodItems.some(l => l.estado === 'cocina');
+  if(inKitchen) return {key:'kitchen', icon:'⏳', label: t('status.sentToKitchen')};
+  const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
+  if(pending) return {key:'taking', icon:'📝', label: t('status.takingOrder')};
+  return null;
+}
+
 function renderMesaCard(table){
   const order = getOpenOrderForTable(table.id);
   const total = order ? orderTotal(order) : 0;
@@ -300,35 +336,28 @@ function renderMesaCard(table){
     elapsedHtml = `<span class="mesa-elapsed ${cls}" title="${t('label.timeOpen')}"><i class="ti ti-clock"></i> ${mins} min</span>`;
   }
 
-  // Icono único de fase de servicio (el más avanzado), como indicador discreto
-  // en vez de una fila de badges apilados.
-  let phaseIcon = '', phaseTitle = '';
-  if(order){
-    const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
-    const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
-    if(allDelivered){ phaseIcon = '✅'; phaseTitle = t('status.served'); }
-    else {
-      const preparing = foodItems.some(l => l.estado === 'preparando');
-      const inKitchen = foodItems.some(l => l.estado === 'cocina');
-      const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
-      if(preparing){ phaseIcon = '🔥'; phaseTitle = t('status.inKitchen'); }
-      else if(inKitchen){ phaseIcon = '⏳'; phaseTitle = t('status.sentToKitchen'); }
-      else if(pending){ phaseIcon = '📝'; phaseTitle = t('status.takingOrder'); }
-    }
-  }
+  const phase = mesaPhase(order);
+  const phaseClass = order ? `mesa-phase-${phase ? phase.key : 'served'}` : '';
+  const waiterChip = order ? mesaWaiterChipHtml(order.camareroId) : '';
 
   return `
-    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <div class="mesa-icons-row">
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
-        ${phaseIcon ? `<span class="mesa-mini-badge" title="${phaseTitle}">${phaseIcon}</span>` : ''}
       </div>
       ${elapsedHtml ? `<div class="mesa-elapsed-row">${elapsedHtml}</div>` : ''}
       <div class="mesa-name">${escapeHtml(displayName)}</div>
       ${order
-        ? `<div class="mesa-total">${fmtMoney(total)}</div>${order.pax ? `<div class="mesa-pax">👥 ${order.pax}</div>` : ''}`
-        : `<div class="mesa-status-free">${t('status.free')}</div>`}
+        ? `
+          ${phase ? `<div class="mesa-phase-row"><span>${phase.icon}</span> <span class="mesa-phase-label">${escapeHtml(phase.label)}</span></div>` : ''}
+          <div class="mesa-total">${fmtMoney(total)}</div>
+          <div class="mesa-meta-row">
+            ${order.pax ? `<span class="mesa-pax"><i class="ti ti-users"></i> ${order.pax}</span>` : ''}
+            ${waiterChip}
+          </div>
+        `
+        : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>`}
     </div>
   `;
 }
