@@ -4281,9 +4281,10 @@ function renderVerifactuConfigCard(){
         <p style="margin:0 0 6px"><strong>${t('mn.verifactu.howItWorksTitle')}</strong> ${t('mn.verifactu.howItWorks1')}</p>
         <p style="margin:0">${t('mn.verifactu.howItWorks2')}</p>
       </div>
-      <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;margin-bottom:10px">
-        <input type="checkbox" id="vf-enabled" ${vf.enabled?'checked':''} style="width:18px;height:18px"> ${t('mn.verifactu.enable')}
+      <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:${vf.lockedOnce?'default':'pointer'};margin-bottom:4px">
+        <input type="checkbox" id="vf-enabled" ${vf.enabled?'checked':''} ${vf.lockedOnce?'disabled':''} style="width:18px;height:18px"> ${t('mn.verifactu.enable')}
       </label>
+      ${vf.lockedOnce ? `<p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-lock"></i> ${t('mn.verifactu.lockedNotice')}</p>` : ''}
       <div class="field">
         <label>${t('mn.verifactu.provider')}</label>
         <select id="vf-provider">
@@ -4358,7 +4359,13 @@ function openVerifactuPendingModal(){
   `);
 }
 function saveVerifactuConfig(){
-  const enabled = document.getElementById('vf-enabled').checked;
+  const vfPrev = (DB.business && DB.business.verifactu) || {};
+  // "Exclusivamente VERI*FACTU": una vez activado no se puede volver a
+  // desactivar, tal como exige declararse en ese modo ante la AEAT (igual
+  // que hace Invocash en su propia Declaración Responsable). Un checkbox
+  // deshabilitado en el HTML ya impide desmarcarlo desde la UI; esta
+  // comprobación es solo el respaldo por si se llama a la función a mano.
+  const enabled = vfPrev.lockedOnce ? true : document.getElementById('vf-enabled').checked;
   const provider = document.getElementById('vf-provider').value;
   const apiKey = document.getElementById('vf-apikey').value.trim();
   const serie = document.getElementById('vf-serie').value.trim();
@@ -4367,7 +4374,7 @@ function saveVerifactuConfig(){
   // La serie es POR DISPOSITIVO (localStorage), no se sincroniza entre
   // aparatos del mismo negocio — ver aviso en js/tpv.js sobre por qué.
   setVerifactuSerie(serie);
-  DB.business.verifactu = {...(DB.business.verifactu||{}), enabled, provider, apiKey};
+  DB.business.verifactu = {...vfPrev, enabled, provider, apiKey, lockedOnce: vfPrev.lockedOnce || enabled};
   saveDB();
   renderMiNegocio();
   showToast(t('msg.verifactuConfigSaved'));
