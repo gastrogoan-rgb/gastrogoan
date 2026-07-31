@@ -47,6 +47,11 @@
   </div>
   <button class="btn btn-sm" id="business-switch-btn" onclick="showBusinessSelectScreen()" style="margin-right:4px" data-i18n-title="hdr.switchBusinessTitle" title="Cambiar de negocio"><i class="ti ti-building-store"></i><span class="hdr-text" data-i18n="hdr.businesses"> Negocios</span></button>
   <button class="btn btn-sm" id="cloud-btn" onclick="openCloudWizard()" style="margin-right:4px"><i class="ti ti-cloud"></i><span class="hdr-text" data-i18n="hdr.cloud"> Nube</span></button>
+  <button class="btn btn-sm" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda" style="margin-right:4px"><i class="ti ti-help-hexagon" id="help-fab-icon"></i><span class="hdr-text" data-i18n="help.title"></span></button>
+  <button class="btn btn-sm" id="chat-fab" onclick="toggleChatPanel()" data-i18n-title="title.internalChat" title="Chat interno" style="margin-right:4px;position:relative">
+    <i class="ti ti-messages"></i><span class="hdr-text" data-i18n="title.internalChat">Chat interno</span>
+    <span class="chat-badge" id="chat-badge" style="display:none"></span>
+  </button>
   <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:4px;background:#8A4A3B;color:#fff;border:none"><i class="ti ti-archive"></i><span class="hdr-text" data-i18n="hdr.archive"> Archivar</span></button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none" data-i18n-title="title.lockGestion" title="Bloquear zona de gestión"><i class="ti ti-lock"></i></button>
 </header>
@@ -767,7 +772,6 @@
 <div class="toast" id="toast"></div>
 
 <!-- ========== AYUDA / ASISTENTE ========== -->
-<button class="help-fab" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
 <div class="help-panel" id="help-panel">
   <div class="help-panel-header">
     <h4><i class="ti ti-lifebuoy"></i> <span data-i18n="help.title"></span></h4>
@@ -807,10 +811,6 @@
 </div>
 
 <!-- ========== CHAT INTERNO ========== -->
-<button class="help-fab chat-fab" id="chat-fab" onclick="toggleChatPanel()" data-i18n-title="title.internalChat" title="Chat interno">
-  <i class="ti ti-messages"></i>
-  <span class="chat-badge" id="chat-badge" style="display:none"></span>
-</button>
 <div class="help-panel" id="chat-panel">
   <div class="help-panel-header">
     <h4><i class="ti ti-messages"></i> <span data-i18n="title.internalChat">Chat interno</span></h4>
