@@ -2117,28 +2117,21 @@ function renderPaymentModalFooterButtons(order){
 // El descuento SIEMPRE se lee de order.descuentoPct (ya aplicado con PIN +
 // motivo), nunca directamente del input, para que no se pueda cobrar un
 // descuento sin haberlo autorizado.
+// Redondea a céntimos evitando el arrastre de errores de coma flotante
+// típico de JS (p.ej. 12.34 - 1.851 = 10.489000000000001): todo cálculo de
+// dinero que se vaya a comparar o restar (cambio, mixto, reparto) pasa por
+// aquí antes de mostrarse o guardarse.
+function roundMoney(x){
+  return Math.round((x + Number.EPSILON) * 100) / 100;
+}
+
 function computeFinalTotal(order){
   const total = orderTotal(order);
   const tipEl = document.getElementById('payment-tip');
   const descuentoPct = order.descuentoPct || 0;
   const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
-  const descuentoImporte = total * descuentoPct / 100;
-  return {total, descuentoPct, descuentoImporte, propina, finalTotal: total - descuentoImporte + propina};
-}
-
-// Vista previa del total mientras se escribe el % de descuento, sin
-// aplicarlo todavía (eso requiere pulsar "Aplicar" + PIN + motivo).
-function previewDiscountTotal(orderId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  const discPctEl = document.getElementById('payment-discount');
-  const pct = Math.max(0, Math.min(100, parseFloat(discPctEl.value)||0));
-  const total = orderTotal(order);
-  const tipEl = document.getElementById('payment-tip');
-  const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
-  const finalTotal = total - (total*pct/100) + propina;
-  const kpiEl = document.getElementById('payment-final-total');
-  if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
+  const descuentoImporte = roundMoney(total * descuentoPct / 100);
+  return {total, descuentoPct, descuentoImporte, propina, finalTotal: roundMoney(total - descuentoImporte + propina)};
 }
 
 function renderFullPaymentTab(order, total){
@@ -2150,7 +2143,7 @@ function renderFullPaymentTab(order, total){
       <div class="field">
         <label>${t('label.discountPct')}</label>
         <div style="display:flex;gap:6px">
-          <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" oninput="previewDiscountTotal(${order.id})" style="flex:1">
+          <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" style="flex:1">
           <button class="btn btn-sm" onclick="requestApplyDiscount(${order.id})">${t('btn.applyDiscount')}</button>
         </div>
         ${descuentoPct > 0 ? `<small style="color:var(--muted)">${t('label.discountAppliedBy')}: ${escapeHtml(order.descuentoResponsableNombre||'—')} — "${escapeHtml(order.descuentoMotivo||'')}"</small>` : ''}
@@ -2215,10 +2208,10 @@ function updatePaymentMixed(orderId, changed){
   const cardEl = document.getElementById('payment-mixed-card');
   if(changed === 'cash'){
     const cash = Math.max(0, Math.min(finalTotal, parseFloat(cashEl.value) || 0));
-    cardEl.value = (finalTotal - cash).toFixed(2);
+    cardEl.value = roundMoney(finalTotal - cash).toFixed(2);
   } else {
     const card = Math.max(0, Math.min(finalTotal, parseFloat(cardEl.value) || 0));
-    cashEl.value = (finalTotal - card).toFixed(2);
+    cashEl.value = roundMoney(finalTotal - card).toFixed(2);
   }
   updatePaymentMixedHint();
 }
@@ -2335,7 +2328,7 @@ function updatePaymentChange(orderId){
   if(!order) return;
   const {finalTotal} = computeFinalTotal(order);
   const cash = parseFloat(document.getElementById('payment-cash').value) || 0;
-  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, cash - finalTotal));
+  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, roundMoney(cash - finalTotal)));
 }
 
 function finalizeCharge(orderId){
@@ -2471,7 +2464,7 @@ function generateItemsSplit(orderId){
       }
     });
     return {
-      id: personIdx, label: t('label.dinerN').replace('${n}', personIdx), amount,
+      id: personIdx, label: t('label.dinerN').replace('${n}', personIdx), amount: roundMoney(amount),
       itemNames, paid:false, metodoPago:null
     };
   });
@@ -2561,7 +2554,7 @@ function toggleSplitPartCash(amount){
 
 function updateSplitPartChange(amount){
   const cash = parseFloat(document.getElementById('split-part-cash').value) || 0;
-  document.getElementById('split-part-change').textContent = fmtMoney(Math.max(0, cash - amount));
+  document.getElementById('split-part-change').textContent = fmtMoney(Math.max(0, roundMoney(cash - amount)));
 }
 
 function confirmSplitPartPayment(orderId, partId){
