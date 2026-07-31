@@ -988,7 +988,10 @@ function openMenuOpcionModsModal(grupoId, opcionId){
     <div class="field-row" style="margin-top:10px">
       <input type="text" id="new-menu-mod-nombre" placeholder="${t('label.extraName')}" style="flex:1">
       <input type="number" id="new-menu-mod-precio" placeholder="${t('common.price')}" step="0.01" min="0" style="width:90px">
-      <button class="btn btn-sm" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i></button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal();renderMenuGrupos()">${t('common.close')}</button>
+      <button class="btn btn-primary" onclick="addMenuOpcionMod(${grupoId},${opcionId})"><i class="ti ti-plus"></i> ${t('btn.addExtra')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('new-menu-mod-nombre')?.focus(), 50);

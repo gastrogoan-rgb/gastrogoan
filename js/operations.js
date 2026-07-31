@@ -231,6 +231,9 @@ function openCashClosureHistory(){
       </table>
     </div>
     ` : `<div class="empty"><i class="ti ti-cash-register"></i>${t('empty.cashClosures')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
   `);
 }
 

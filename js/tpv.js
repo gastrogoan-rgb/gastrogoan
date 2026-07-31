@@ -1363,11 +1363,11 @@ function renderOrderComandaPanel(order){
         <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)">
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
           <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
-          ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0;color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
-          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" style="width:32px;height:32px;min-height:auto;font-size:14px;padding:0" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
+          ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
+          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
         </div>
         ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
       `;}).join('')}
@@ -2002,10 +2002,32 @@ function renderPaymentModal(orderId){
       ${paymentTab === 'equal' ? renderEqualSplitTab(order) : paymentTab === 'items' ? renderItemsSplitTab(order) : renderFullPaymentTab(order, total)}
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${order.id})">${t('common.back')}</button>
-      ${paymentTab === 'full' ? `<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>` : ''}
+      ${renderPaymentModalFooterButtons(order)}
     </div>
   `);
+}
+
+// Único pie de botones del modal de cobro, sea cual sea la pestaña activa
+// (cuenta completa / dividir a partes iguales / por comensal). Antes cada
+// pestaña de división tenía su propio pie de botones aparte, anidado
+// dentro del mismo modal que el pie general — al ser ambos "sticky" al
+// fondo, podían acabar superpuestos visualmente. Centralizarlo aquí en un
+// único pie evita el problema de raíz en vez de parchearlo.
+function renderPaymentModalFooterButtons(order){
+  const backBtn = `<button class="btn" onclick="renderTableOrderModal(${order.id})">${t('common.back')}</button>`;
+  if(paymentTab === 'full'){
+    return `${backBtn}<button class="btn btn-primary" onclick="finalizeCharge(${order.id})"><i class="ti ti-check"></i> ${t('btn.confirmCharge')}</button>`;
+  }
+  const inSplitMode = order.splitPayments && order.splitMode === paymentTab;
+  if(!inSplitMode){
+    // Todavía no se ha generado el reparto: el botón de "repartir/calcular" es la acción principal.
+    const genFn = paymentTab === 'equal' ? `generateEqualSplit(${order.id})` : `generateItemsSplit(${order.id})`;
+    const genLabel = paymentTab === 'equal' ? t('btn.splitBill') : t('btn.calcSplit');
+    return `${backBtn}<button class="btn btn-primary" onclick="${genFn}"><i class="ti ti-divide"></i> ${genLabel}</button>`;
+  }
+  // Reparto ya generado: mostrar cancelar y, si todas las partes están cobradas, finalizar.
+  const allPaid = order.splitPayments.every(p=>p.paid);
+  return `${backBtn}<button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> ${t('btn.cancelSplit')}</button>${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> ${t('btn.finalizeCharge')}</button>` : ''}`;
 }
 
 /* ------------------ Pestaña: cuenta completa ------------------ */
@@ -2271,9 +2293,6 @@ function renderEqualSplitTab(order){
         <label>${t('label.howManySplitBill')}</label>
         <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
       </div>
-      <div class="modal-footer" style="padding:0;border:none">
-        <button class="btn btn-primary" onclick="generateEqualSplit(${order.id})"><i class="ti ti-divide"></i> ${t('btn.splitBill')}</button>
-      </div>
     `;
   }
   return renderSplitPartsList(order);
@@ -2330,9 +2349,6 @@ function renderItemsSplitTab(order){
           </div>
         `).join('')}
       </div>
-      <div class="modal-footer" style="padding:0;border:none">
-        <button class="btn btn-primary" onclick="generateItemsSplit(${order.id})"><i class="ti ti-divide"></i> ${t('btn.calcSplit')}</button>
-      </div>
     `;
   }
   return renderSplitPartsList(order);
@@ -2385,7 +2401,6 @@ function generateItemsSplit(orderId){
 
 /* ------------------ Lista de partes y cobro individual ------------------ */
 function renderSplitPartsList(order){
-  const allPaid = order.splitPayments.every(p=>p.paid);
   return `
     <div class="table-wrap" style="margin-bottom:10px">
       <table>
@@ -2401,10 +2416,6 @@ function renderSplitPartsList(order){
           `).join('')}
         </tbody>
       </table>
-    </div>
-    <div class="modal-footer" style="padding:0;border:none">
-      <button class="btn" onclick="cancelSplit(${order.id})"><i class="ti ti-x"></i> ${t('btn.cancelSplit')}</button>
-      ${allPaid ? `<button class="btn btn-primary" onclick="finalizeSplitOrder(${order.id})"><i class="ti ti-check"></i> ${t('btn.finalizeCharge')}</button>` : ''}
     </div>
   `;
 }

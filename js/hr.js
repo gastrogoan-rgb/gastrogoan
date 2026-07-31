@@ -1744,7 +1744,7 @@ function renderHorariosSemana(){
         if(hh > 0) totalH += hh;
         return `<td><span style="display:inline-block;padding:4px 8px;border-radius:6px;background:${tipo.bg};color:${tipo.tx};font-weight:700;cursor:pointer;font-size:12px;text-align:center" onclick="if(editUnlocked) openTurnoModal(${turno.id})">${turno.tipo}${turno.tipo!=='D'?`<br><span style="font-size:10px;font-weight:400">${escapeHtml(turnoHorarioLabel(turno))}</span>`:''}</span></td>`;
       }
-      return `<td><span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted)" onclick="if(editUnlocked) openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
+      return `<td style="text-align:center;padding:2px"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:16px" onclick="if(editUnlocked) openTurnoModal(null, ${emp.id}, '${ds}')">+</span></td>`;
     }).join('');
     return `<tr>
       <td>
