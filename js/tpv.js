@@ -1396,10 +1396,20 @@ function renderOrderComandaPanel(order){
         </div>
       </div>
       ${allInGroup.map(({line, idx}) => {
+        // Las bebidas no pasan por la pantalla de Cocina (no hay nada que
+        // cocinar), así que aquí en Sala es donde se marca su propio estado
+        // (pedida → preparando → servida) con un botón, no solo un badge de
+        // solo lectura como el resto de platos (que se controlan desde Cocina).
         let lineStatus = '';
-        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
-        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
-        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+        if(line.bebida && line.estado){
+          if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+          else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}">🔥 ${t('kitchen.preparing')}</button>`;
+          else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}">⏳ ${t('kitchen.waiting')}</button>`;
+        } else {
+          if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+          else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
+          else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+        }
         return `
         <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)">
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
