@@ -818,7 +818,7 @@ function renderStock(){
           <button class="btn btn-sm btn-icon" title="${t('common.adjust')}" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i></button>
           ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
-          ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="${t('title.editCostingSheet')}" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ti-chef-hat"></i></button>` : ''}
+          ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="${t('title.editCostingSheet')}" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ${currentArea()==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i></button>` : ''}
         </div>
       </div>
     `;
