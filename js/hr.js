@@ -2396,8 +2396,8 @@ function openEmployeeFicharModal(employeeId){
     <div style="text-align:center">
       ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="badge badge-gray">${t('hr2.offDuty')}</span>`}
       <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
-        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="openFichajeModal(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
-        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="openFichajeModal(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
+        <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="quickFichaje(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
+        <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="quickFichaje(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.hoursThisWeek')}: <strong>${fmtDuracion(horasSemana)}</strong></div>
       <div style="font-size:12px;color:var(--muted)">${t('hr2.hoursThisMonth')}: <strong>${fmtDuracion(horasMes)}</strong></div>
@@ -2533,33 +2533,15 @@ function saveEditedFichaje(fichajeId){
   renderHorariosTab();
 }
 
-function openFichajeModal(employeeId, action){
+// Fichar entrada/salida directamente desde el modal del empleado: el PIN ya
+// se pidió y comprobó una vez al entrar a este modal (confirmEmployeePersonalPin),
+// así que no hace falta volver a pedirlo para cada botón — antes se pedía dos
+// veces seguidas para lo mismo. La única excepción es si el empleado todavía
+// no ha cambiado el PIN de fábrica (1234): ahí sí se le pide, una vez, que
+// elija el suyo propio antes de completar el fichaje.
+function quickFichaje(employeeId, action){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-key"></i> ${escapeHtml(e.name)} — ${action==='entrada' ? t('hr2.clockInAction') : t('hr2.clockOutAction')}</h3>
-      <button class="modal-close" onclick="renderHorariosTab();closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${t('hr2.enterYourPin')}</label>
-      <input type="password" id="fichaje-pin" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="renderHorariosTab();closeModal()">${t("common.cancel")}</button>
-      <button class="btn btn-primary" onclick="confirmFichaje(${employeeId}, '${action}')">${action==='entrada' ? t('hr2.clockInAction') : t('hr2.clockOutAction')}</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('fichaje-pin')?.focus(), 50);
-}
-
-function confirmFichaje(employeeId, action){
-  const e = DB.employees.find(x=>x.id===employeeId);
-  if(!e) return;
-  const pin = document.getElementById('fichaje-pin').value.trim();
-  const storedPin = e.pin || '1234';
-  const match = storedPin.startsWith('H:') ? hashPin(pin) === storedPin : pin === storedPin;
-  if(!match){ showToast(t('msg.pinIncorrect')); return; }
   if(!e.pinChanged){
     openNewPinModal(employeeId, action);
     return;
