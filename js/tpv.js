@@ -1438,6 +1438,11 @@ function marcharComanda(orderId, tanda){
 // contenido configurado (comida / bebida / todo el pedido).
 function printMarchadasIfEnabled(order, firedLines){
   if(!firedLines || !firedLines.length) return;
+  // El interruptor "Mostrar en pantalla" / "Imprimir" es el que manda: si el
+  // negocio eligió pantalla, no se imprime nada aunque queden perfiles de
+  // impresora activos de una configuración anterior.
+  const modo = (DB.business && DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
+  if(modo !== 'impresion') return;
   const printers = (typeof ensureComandaPrinters === 'function' ? ensureComandaPrinters() : (DB.business && DB.business.comandas && DB.business.comandas.printers) || []).filter(p => p.activo);
   if(!printers.length) return;
   const table = order.tableId ? DB.tables.find(t=>t.id===order.tableId) : null;

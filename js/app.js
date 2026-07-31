@@ -4246,6 +4246,7 @@ function anyComandaPrinterActive(){
 }
 function renderComandaPrintCard(){
   const printers = ensureComandaPrinters();
+  const modo = (DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
   return `
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-printer"></i> ${t('mn.comandas.title')}</h3>
@@ -4255,6 +4256,17 @@ function renderComandaPrintCard(){
         <p style="margin:0 0 6px">${t('mn.comandas.howItWorks2')}</p>
         <p style="margin:0">${t('mn.comandas.howItWorks3')}</p>
       </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='pantalla'?'border-color:var(--brand-orange);background:var(--brand-cream)':''}">
+          <input type="radio" name="comanda-modo" value="pantalla" ${modo==='pantalla'?'checked':''} onchange="setComandaModo('pantalla')" style="width:18px;height:18px">
+          <span><strong>${t('mn.comandas.modeScreen')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modeScreenDesc')}</small></span>
+        </label>
+        <label class="ge-item" style="flex:1;min-width:200px;cursor:pointer;gap:10px;${modo==='impresion'?'border-color:var(--brand-orange);background:var(--brand-cream)':''}">
+          <input type="radio" name="comanda-modo" value="impresion" ${modo==='impresion'?'checked':''} onchange="setComandaModo('impresion')" style="width:18px;height:18px">
+          <span><strong>${t('mn.comandas.modePrint')}</strong><br><small style="color:var(--muted)">${t('mn.comandas.modePrintDesc')}</small></span>
+        </label>
+      </div>
+      ${modo === 'impresion' ? `
       <div id="comanda-printers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
         ${printers.length ? printers.map(p=>`
           <div class="ge-item" style="flex-wrap:wrap">
@@ -4277,8 +4289,16 @@ function renderComandaPrintCard(){
         : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
       <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
+      ` : ''}
     </div>
   `;
+}
+function setComandaModo(modo){
+  if(!DB.business.comandas) DB.business.comandas = {modo:'pantalla', anchoTicket:80};
+  DB.business.comandas.modo = modo;
+  saveDB();
+  renderMiNegocio();
+  showToast(modo==='impresion' ? t('mn.comandas.willPrint') : t('mn.comandas.willShowScreen'));
 }
 function toggleComandaPrinter(id, activo){
   const p = ensureComandaPrinters().find(x=>x.id==id); if(!p) return;
