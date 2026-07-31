@@ -155,6 +155,18 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
 
+/* Canal de Para Llevar / Delivery: panel propio, con fondo e independiente
+   de la cuadrícula de mesas, para separar de un vistazo los pedidos del
+   local de los que se sirven fuera (recoger o a domicilio). */
+.togo-panel{margin-top:16px;padding:14px 16px;border-radius:14px;background:var(--brand-cream);border:1px solid var(--border)}
+.togo-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.togo-panel-head h3{margin:0}
+.togo-card{border-top-width:4px;border-top-style:solid;background:var(--surface)}
+.togo-card.togo-card-pickup{border-top-color:var(--amber)}
+.togo-card.togo-card-delivery{border-top-color:var(--blue)}
+.togo-card.togo-card-urgent{border-top-color:var(--red);background:var(--red-l)}
+.togo-card .mesa-waiter-chip{justify-content:center}
+
 .mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center}
 .mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
 .mesa-card.mesa-free:hover{border-color:var(--brand-orange)}
