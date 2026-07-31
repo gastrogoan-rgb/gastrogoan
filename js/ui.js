@@ -942,8 +942,18 @@ function verifyEditPin(){
   const val = document.getElementById('edit-pin-input').value;
   const bp = DB.business.pin;
   const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
-  if(!bMatch){
+  const eligibleEmployee = (DB.employees||[]).find(e => e.area === currentFolder && e.canUnlockEdit);
+  const empMatch = eligibleEmployee && (eligibleEmployee.pin.startsWith('H:') ? hashPin(val) === eligibleEmployee.pin : val === eligibleEmployee.pin);
+  if(!bMatch && !empMatch){
     showToast(t('msg.pinIncorrect'));
+    return;
+  }
+  if(empMatch && !bMatch){
+    editUnlocked = true;
+    document.body.classList.add('edit-unlocked');
+    closeModal();
+    showToast(t('msg.editModeOn'));
+    renderFolder();
     return;
   }
   if(!DB.business.pinSet){

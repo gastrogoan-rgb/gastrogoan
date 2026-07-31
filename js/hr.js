@@ -2233,6 +2233,11 @@ function openEmployeeModal(id){
       </div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
+    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="emp-can-edit" ${e.canUnlockEdit?'checked':''} style="width:auto">
+      ${t('label.canUnlockEditMode').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
+    </label>
+    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('msg.canUnlockEditModeDesc')}</p>
     ${id ? `
     <div class="field">
       <label>${t('label.clockInPin')}</label>
@@ -2269,14 +2274,15 @@ function saveEmployee(id){
   const color = document.getElementById('emp-color').value;
   const phone = document.getElementById('emp-phone').value.trim();
   const email = document.getElementById('emp-email').value.trim();
+  const canUnlockEdit = document.getElementById('emp-can-edit').checked;
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
-    Object.assign(emp, {name, rol, color, phone, email, area: emp.area||currentArea()});
+    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, area: emp.area||currentArea()});
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, area: currentArea(), pin:'1234', pinChanged:false});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false});
   }
   saveDB();
   closeModal();
