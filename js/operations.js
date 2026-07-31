@@ -850,6 +850,11 @@ let orderModalSupplier = '';
 let orderModalLines = [];
 let orderModalSearch = '';
 let orderFormInline = false; // true cuando el formulario se muestra en la pestaña (no en modal)
+// Si se acaba de elegir/cambiar el proveedor, la comprobación de fecha del
+// siguiente render debe avisar con un aviso visible (antes se corregía la
+// fecha en silencio en este caso, y el único indicio era que el campo de
+// fecha cambiaba solo — fácil de no darse cuenta).
+let orderSupplierJustChanged = false;
 
 function openOrderModal(){
   if(!DB.ingredients.some(i => (i.area||'cocina') === currentArea())){ showToast(t('msg.addIngredientsFirst')); return; }
@@ -965,7 +970,8 @@ function orderFormButtonsHtml(){
 function afterOrderFormRender(dateVal){
   const dEl = document.getElementById('order-date');
   if(dEl) dEl.value = dateVal || todayStr();
-  if(dEl) validateOrderDate(dEl, true);
+  if(dEl) validateOrderDate(dEl, !orderSupplierJustChanged);
+  orderSupplierJustChanged = false;
   const sEl = document.getElementById('order-item-search');
   if(sEl) sEl.value = orderModalSearch;
 }
@@ -1056,6 +1062,7 @@ function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
   orderModalSearch = '';
   orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea()).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
+  orderSupplierJustChanged = true;
   refreshOrderForm();
 }
 
