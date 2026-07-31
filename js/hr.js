@@ -1925,7 +1925,7 @@ function saveTurno(id){
     turno = {id: genId(), ...data};
     DB.turnos.push(turno);
   }
-  logPersonalEvent(`${wasNew?'Turno creado':'Turno editado'}: ${emp?emp.name:'?'} — ${data.fecha} (${data.tipo})`);
+  logPersonalEvent(wasNew?'shiftCreated':'shiftEdited', {name: emp?emp.name:'?', fecha: data.fecha, tipo: data.tipo});
   saveDB();
   closeModal();
   renderHorariosTab();
@@ -1937,7 +1937,7 @@ function deleteTurno(id){
   const turno = (DB.turnos||[]).find(t => t.id===id);
   if(turno){
     const emp = DB.employees.find(x=>x.id===turno.employeeId);
-    logPersonalEvent(`Turno eliminado: ${emp?emp.name:'?'} — ${turno.fecha} (${turno.tipo})`);
+    logPersonalEvent('shiftDeleted', {name: emp?emp.name:'?', fecha: turno.fecha, tipo: turno.tipo});
   }
   DB.turnos = (DB.turnos||[]).filter(t => t.id!==id);
   saveDB();
@@ -1954,13 +1954,29 @@ function areaEmployees(){
 // Registro de cambios sensibles de Personal (turnos, reseteos de PIN), para
 // poder consultar quién cambió qué y cuándo — mismo espíritu que el
 // historial de ajustes de Stock.
-function logPersonalEvent(desc){
+function logPersonalEvent(type, params){
   if(!DB.personalLog) DB.personalLog = [];
   DB.personalLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5),
-    createdAt: new Date().toISOString(), desc, area: currentArea()
+    createdAt: new Date().toISOString(), type, params: params||{}, area: currentArea()
   });
   if(DB.personalLog.length > 500) DB.personalLog = DB.personalLog.slice(-500);
+}
+
+// Formatea una entrada del historial en el idioma activo. `desc` (texto ya
+// formateado) se sigue leyendo para entradas antiguas guardadas antes de
+// este cambio, así el historial previo no se rompe ni desaparece.
+function formatPersonalLogEntry(e){
+  if(e.desc && !e.type) return e.desc;
+  const p = e.params || {};
+  const shiftDetail = `${p.name} — ${p.fecha} (${p.tipo})`;
+  switch(e.type){
+    case 'shiftCreated': return t('personalLog.shiftCreated').replace('${detail}', shiftDetail);
+    case 'shiftEdited': return t('personalLog.shiftEdited').replace('${detail}', shiftDetail);
+    case 'shiftDeleted': return t('personalLog.shiftDeleted').replace('${detail}', shiftDetail);
+    case 'pinReset': return t('personalLog.pinReset').replace('${name}', p.name);
+    default: return '';
+  }
 }
 
 function openPersonalLogModal(){
@@ -1972,8 +1988,8 @@ function openPersonalLogModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>Detalle</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.desc)}</td></tr>`).join('') : `<tr><td colspan="3"><div class="empty" style="padding:14px">${t('empty.noPersonalLog')}</div></td></tr>`}</tbody>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('th.detail')}</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(formatPersonalLogEntry(e))}</td></tr>`).join('') : `<tr><td colspan="3"><div class="empty" style="padding:14px">${t('empty.noPersonalLog')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">
@@ -2261,7 +2277,7 @@ function resetEmployeePin(id){
   e.pin = '1234';
   e.pinChanged = false;
   // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
-  logPersonalEvent(`PIN de fichaje restablecido: ${e.name}`);
+  logPersonalEvent('pinReset', {name: e.name});
   saveDB();
   showToast(t('msg.pinResetDone'));
   openEmployeeModal(id);

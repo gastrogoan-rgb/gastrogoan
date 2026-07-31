@@ -481,6 +481,7 @@ function renderPedidos(){
 let pedidoHistorialSupplierFilter = '';
 let pedidoHistorialDateFrom = '';
 let pedidoHistorialDateTo = '';
+let pedidoHistorialSearch = '';
 function setPedidoHistorialSupplierFilter(val){
   pedidoHistorialSupplierFilter = val;
   renderPedidoList();
@@ -488,6 +489,22 @@ function setPedidoHistorialSupplierFilter(val){
 function setPedidoHistorialDateFilter(field, val){
   if(field === 'from') pedidoHistorialDateFrom = val; else pedidoHistorialDateTo = val;
   renderPedidoList();
+}
+// Como en el resto de listados (Proveedores, Stock, Mega Lista, Escandallo,
+// Fichas), solo se repinta la lista de tarjetas de resultados, nunca el
+// propio input, para que no pierda el foco al escribir letra a letra.
+function setPedidoHistorialSearch(val){
+  pedidoHistorialSearch = val.toLowerCase();
+  renderPedidoResultsList();
+}
+function pedidoMatchesSearch(o, q){
+  if(!q) return true;
+  if(o.supplier.toLowerCase().includes(q)) return true;
+  if((o.date||'').includes(q)) return true;
+  return (o.items||[]).some(line => {
+    const ing = getIngredient(line.ingredientId);
+    return ing && ing.name.toLowerCase().includes(q);
+  });
 }
 function renderPedidoList(){
   const box = document.getElementById('pedidos-list');
@@ -512,6 +529,9 @@ function renderPedidoList(){
   const suppliers = [...new Set(allOrders.map(o => o.supplier))].sort((a,b)=>a.localeCompare(b));
   const filterHtml = `
     <div class="field-row" style="margin-bottom:12px;flex-wrap:wrap">
+      <div class="field" style="max-width:220px">
+        <input type="text" class="search-input" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
+      </div>
       <div class="field" style="max-width:280px">
         <select id="pedido-historial-supplier-filter" onchange="setPedidoHistorialSupplierFilter(this.value)">
           <option value="">${t('label.allSuppliers')}</option>
@@ -529,18 +549,27 @@ function renderPedidoList(){
     </div>
   `;
 
+  box.innerHTML = kpiHtml + filterHtml + `<div id="pedido-results"></div>`;
+  renderPedidoResultsList();
+}
+
+function renderPedidoResultsList(){
+  const box = document.getElementById('pedido-results');
+  if(!box) return;
+  const allOrders = DB.purchaseOrders.filter(o => (o.area||'cocina') === currentArea());
   const orders = allOrders.filter(o =>
     (!pedidoHistorialSupplierFilter || o.supplier === pedidoHistorialSupplierFilter) &&
     (!pedidoHistorialDateFrom || o.date >= pedidoHistorialDateFrom) &&
-    (!pedidoHistorialDateTo || o.date <= pedidoHistorialDateTo)
+    (!pedidoHistorialDateTo || o.date <= pedidoHistorialDateTo) &&
+    pedidoMatchesSearch(o, pedidoHistorialSearch)
   );
   if(!orders.length){
-    box.innerHTML = kpiHtml + filterHtml + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
   const sorted = orders.slice().sort((a,b) => b.date.localeCompare(a.date));
-  box.innerHTML = kpiHtml + filterHtml + sorted.map(o => {
+  box.innerHTML = sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     const comp = getPedidoComprobacionMap()[o.comprobacion];
@@ -701,6 +730,14 @@ function updatePedidoItem(idx, field, value){
   const line = o.items[idx];
   const newVal = parseFloat(value) || 0;
   if(field === 'cantidadRecibida' && o.estado === 'RECIBIDO'){
+    // Corregir la cantidad recibida ya registrada (no la primera vez que se
+    // rellena al recibir el pedido) resincroniza stock y gasto retroactivamente:
+    // eso exige modo edición, igual que los registros de temperaturas/plagas.
+    if(line.cantidadRecibida > 0 && !editUnlocked){
+      showToast(t('msg.editModeRequiredForLog'));
+      renderPedidoDetail();
+      return;
+    }
     // El pedido ya sumó stock y registró un gasto con la cantidad recibida
     // original: si se corrige a mano después, hay que resincronizar ambos.
     const ing = getIngredient(line.ingredientId);
@@ -732,6 +769,14 @@ function updatePedidoNotas(value){
 function savePedidoRecepcion(){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
+  // La primera vez que se rellena el control de recepción es un paso normal
+  // del flujo de compra (lo hace quien recibe la mercancía); corregirla
+  // después de guardada sí exige modo edición, para no reescribir en
+  // silencio un control de seguridad alimentaria ya registrado.
+  if(o.recepcion && o.recepcion.fecha && !editUnlocked){
+    showToast(t('msg.editModeRequiredForLog'));
+    return;
+  }
   o.recepcion = {
     fecha: document.getElementById('rec-fecha').value,
     hora: document.getElementById('rec-hora').value,

@@ -81,6 +81,18 @@ function renderLimpiezaAlergenos(){
     </div>
   `;
 }
+// Pasos de lavado de manos, separados por área igual que el protocolo de
+// apertura/cierre: editar desde Cocina no debe cambiar lo que ve Sala.
+function limpiezaManosPasos(){
+  const l = DB.limpieza;
+  if(!l.manosPasos || Array.isArray(l.manosPasos)){
+    const legacy = Array.isArray(l.manosPasos) ? l.manosPasos : null;
+    l.manosPasos = { cocina: legacy || [...getLimpiezaDefaultManos()], sala: [...getLimpiezaDefaultManos()] };
+  }
+  const area = currentArea();
+  if(!l.manosPasos[area]) l.manosPasos[area] = [...getLimpiezaDefaultManos()];
+  return l.manosPasos[area];
+}
 // Checklists por defecto que la app sugiere al crear el plan de limpieza por
 // primera vez: son contenido de la app (de serie), no texto escrito por el
 // negocio, así que se traducen igual que el resto de la interfaz. Como
@@ -118,7 +130,7 @@ function limpiezaProtocoloPasos(type){
 function ensureLimpiezaData(){
   if(!DB.limpieza) DB.limpieza = {};
   const l = DB.limpieza;
-  if(!l.manosPasos || !l.manosPasos.length) l.manosPasos = [...getLimpiezaDefaultManos()];
+  limpiezaManosPasos();
   if(!l.tareas) l.tareas = [];
   if(!l.checks) l.checks = {};
   if(!l.checksMes) l.checksMes = {};
@@ -194,7 +206,7 @@ function renderLimpiezaTab(){
 
 function renderLimpiezaManos(){
   const box = document.getElementById('limpieza-tab-content');
-  const pasos = DB.limpieza.manosPasos;
+  const pasos = limpiezaManosPasos();
   box.innerHTML = `
     <div class="grid grid-2">
       <div class="card">
@@ -230,12 +242,13 @@ function renderLimpiezaManos(){
     </div>
   `;
 }
-function resetManosPasos(){ DB.limpieza.manosPasos = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
-function updateManosPaso(i, val){ DB.limpieza.manosPasos[i] = val; saveDB(); }
-function addManosPaso(){ DB.limpieza.manosPasos.push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
+function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
+function updateManosPaso(i, val){ limpiezaManosPasos()[i] = val; saveDB(); }
+function addManosPaso(){ limpiezaManosPasos().push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
 function removeManosPaso(i){
-  if(DB.limpieza.manosPasos.length<=1) return;
-  DB.limpieza.manosPasos.splice(i,1);
+  const pasos = limpiezaManosPasos();
+  if(pasos.length<=1) return;
+  pasos.splice(i,1);
   saveDB();
   renderLimpiezaManos();
 }
@@ -329,7 +342,7 @@ function printProtocolo(type){
   w.document.close(); w.print();
 }
 function printManosProtocolo(){
-  const pasos = DB.limpieza.manosPasos;
+  const pasos = limpiezaManosPasos();
   const html = `<h2>Protocolo de lavado de manos</h2><ol>${pasos.map(p=>`<li style="margin-bottom:8px">${escapeHtml(p)}</li>`).join('')}</ol>`;
   const w = window.open('', '_blank', 'width=500,height=600');
   if(!w){ showToast(t('msg.allowPopupsPrint')); return; }
