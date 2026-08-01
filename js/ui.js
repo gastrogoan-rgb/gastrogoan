@@ -969,7 +969,7 @@ function verifyEditPin(){
   // Antes solo se comparaba contra el PRIMER empleado habilitado del área —
   // si había varios con canUnlockEdit, el PIN de cualquiera menos el primero
   // no funcionaba. Ahora se comprueba contra todos los habilitados.
-  const eligibleEmployees = (DB.employees||[]).filter(e => e.area === currentFolder && e.canUnlockEdit && e.pin);
+  const eligibleEmployees = (DB.employees||[]).filter(e => e.area === currentFolder && e.canUnlockEdit && e.pin && e.active !== false);
   const empMatch = eligibleEmployees.some(e => e.pin.startsWith('H:') ? hashPin(val) === e.pin : val === e.pin);
   if(!bMatch && !empMatch){
     showToast(t('msg.pinIncorrect'));

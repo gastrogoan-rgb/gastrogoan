@@ -2115,6 +2115,7 @@ function openPersonalLogModal(){
 }
 
 let personalSearch = '';
+let personalShowInactive = false;
 function setPersonalSearch(val){
   personalSearch = val.toLowerCase();
   renderHorariosPersonal();
@@ -2124,27 +2125,35 @@ function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
   const allEmps = areaEmployees();
-  const emps = personalSearch ? allEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : allEmps;
+  const inactiveCount = allEmps.filter(e => e.active === false).length;
+  const visibleEmps = personalShowInactive ? allEmps : allEmps.filter(e => e.active !== false);
+  const emps = personalSearch ? visibleEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : visibleEmps;
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
+    const isInactive = e.active === false;
     return `
-    <div class="card" style="cursor:pointer" onclick="requestEmployeePersonalPin(${e.id})">
+    <div class="card" style="${isInactive?'opacity:.55':'cursor:pointer'}" ${isInactive?'':`onclick="requestEmployeePersonalPin(${e.id})"`}>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
           <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
-        ${open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
+        ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.employeeInactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       <div style="text-align:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
+        ${isInactive
+          ? `<span style="font-size:12px;color:var(--muted)">${t('msg.employeeInactiveHint')}</span>`
+          : `<span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>`}
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
           <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          ${isInactive
+            ? `<button class="owner-only btn btn-sm btn-icon" title="${t('btn.reactivateEmployee')}" onclick="reactivateEmployee(${e.id})"><i class="ti ti-rotate"></i></button>`
+            : `<button class="owner-only btn btn-sm btn-icon" title="${t('btn.deactivateEmployee')}" onclick="deactivateEmployee(${e.id})"><i class="ti ti-user-off"></i></button>`}
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -2156,7 +2165,8 @@ function renderHorariosPersonal(){
       <div class="left">
         <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center">
+        ${inactiveCount ? `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer"><input type="checkbox" ${personalShowInactive?'checked':''} onchange="togglePersonalShowInactive()" style="width:auto"> ${t('label.showInactiveEmployees').replace('${n}', inactiveCount)}</label>` : ''}
         <button class="owner-only btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
         <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
@@ -2378,6 +2388,9 @@ function openEmployeeModal(id){
     </div>` : ''}
     <div class="modal-footer">
       ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
+      ${id ? (e.active === false
+        ? `<button class="owner-only btn" onclick="reactivateEmployee(${id})"><i class="ti ti-rotate"></i> ${t('btn.reactivateEmployee')}</button>`
+        : `<button class="owner-only btn" onclick="deactivateEmployee(${id})"><i class="ti ti-user-off"></i> ${t('btn.deactivateEmployee')}</button>`) : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">${t("common.save")}</button>
     </div>
@@ -2424,6 +2437,44 @@ function saveEmployee(id){
   showToast(t('msg.employeeSaved'));
 }
 
+// Dar de baja a un empleado (p.ej. deja la empresa) sin borrar su historial:
+// a diferencia de deleteEmployee(), esto conserva turnos/fichajes ya
+// registrados (necesarios para nóminas/consultas futuras), pero bloquea su
+// PIN por completo — ya no puede ficharse ni desbloquear Gestión con él, ni
+// siquiera si alguien intentara usar el PIN del negocio como atajo (ver
+// pinMatchesEmployeeOrBusiness) — y deja de aparecer en los selectores para
+// nuevos turnos/fichajes, aunque se puede consultar activando "Ver bajas".
+function deactivateEmployee(id){
+  const e = DB.employees.find(x=>x.id===id);
+  if(!e) return;
+  requestBusinessPinAction(t('title.deactivateEmployee'), t('msg.confirmDeactivateEmployee'), () => {
+    e.active = false;
+    logPersonalEvent('employeeDeactivated', {name: e.name});
+    saveDB();
+    closeModal();
+    renderHorariosPersonal();
+    // Si este empleado podía desbloquear Gestión, el dueño podría querer
+    // cambiar también el PIN de Gestión por si lo llegó a conocer/compartir
+    // — esto NO lo hace el código automáticamente (cambiar el PIN del
+    // negocio es una decisión del dueño, no algo que deba imponerse solo),
+    // pero se avisa explícitamente para que no se le pase por alto.
+    if(e.canUnlockEdit) showToast(t('msg.deactivatedRemindPin'));
+    else showToast(t('msg.employeeDeactivated'));
+  });
+}
+function reactivateEmployee(id){
+  const e = DB.employees.find(x=>x.id===id);
+  if(!e) return;
+  e.active = true;
+  logPersonalEvent('employeeReactivated', {name: e.name});
+  saveDB();
+  renderHorariosPersonal();
+  showToast(t('msg.employeeReactivated'));
+}
+function togglePersonalShowInactive(){
+  personalShowInactive = !personalShowInactive;
+  renderHorariosPersonal();
+}
 function deleteEmployee(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
@@ -2511,7 +2562,11 @@ function requestEmployeePersonalPin(employeeId){
 }
 // Un PIN "coincide" si es el del propio empleado, o si es el PIN del negocio
 // (el dueño siempre puede entrar aunque no sepa el PIN de cada empleado).
+// Un empleado dado de baja (active===false) no puede ficharse NUNCA, ni
+// siquiera con el PIN del negocio como atajo — dar de baja debe bloquear el
+// acceso de verdad, no solo dejar de mostrarlo en los selectores.
 function pinMatchesEmployeeOrBusiness(val, employee){
+  if(employee.active === false) return false;
   const storedPin = employee.pin || '1234';
   const empMatch = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
   if(empMatch) return true;
