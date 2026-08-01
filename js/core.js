@@ -184,7 +184,9 @@ function confirmOwnerAccessSetup(){
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
+  linkBusinessToOwnerProfile(lic.tenantId, lic.tenantId, lic.code, DB.business && DB.business.name);
   showBusinessSelectScreen();
+  syncOwnerBusinessList(lic.code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
 }
 function confirmOwnerAccess(){
   const code = document.getElementById('acc-owner-code').value.trim();
@@ -193,6 +195,7 @@ function confirmOwnerAccess(){
   setAccessSession({type:'owner'});
   hideAccessSelectScreen();
   showBusinessSelectScreen();
+  syncOwnerBusinessList(code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
 }
 // Cambia la contraseña de acceso de propietario de ESTE dispositivo (el
 // código de negocio no cambia, sigue siendo el de la licencia).
@@ -346,6 +349,7 @@ function addNewBusiness(){
   slots.push({ id, name: 'Nuevo negocio', code: lic.code });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(id), JSON.stringify(lic));
+  linkBusinessToOwnerProfile(getPrimaryTenantId(), lic.tenantId, lic.code, 'Nuevo negocio');
   switchToBusiness(id);
 }
 
@@ -445,6 +449,7 @@ async function addSucursal(parentSlotId){
   slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
+  linkBusinessToOwnerProfile(getPrimaryTenantId(), lic.tenantId, lic.code, nombre);
   switchToBusiness(newId);
 }
 
@@ -1660,6 +1665,69 @@ async function fetchRemoteTenantDB(tenantId, fbConfig){
   const snap = await app.database().ref('gastrogoan/tenants/' + tenantId + '/db').once('value');
   try{ await app.delete(); }catch(e){}
   return snap.val();
+}
+
+/* ============================================================
+   PERFIL DE PROPIETARIO — ver todos tus negocios en cualquier dispositivo
+   Registrar un negocio/sucursal nuevo SIEMPRE exige su propio código+
+   contraseña (se demuestra la licencia una vez, al vincularlo). Pero una
+   vez vinculado, no hace falta volver a demostrarlo en cada dispositivo:
+   basta con entrar como propietario con CUALQUIERA de tus negocios para
+   que aparezcan todos, sin tener que "Registrar" cada uno otra vez ahí.
+   Se apoya en la misma nube de plataforma que ya usa el login remoto de
+   empleados — un pequeño índice, nada de datos operativos del negocio.
+   ============================================================ */
+// El negocio con el que activaste "Acceso Propietarios" por primera vez EN
+// ESTE DISPOSITIVO — sirve de "ancla" para vincular el resto de negocios
+// que vayas registrando aquí, da igual con cuál de todos vuelvas a entrar
+// luego (todos apuntan al mismo perfil).
+function getPrimaryTenantId(){
+  const login = getOwnerLogin();
+  return login ? ggBizTenantId(login.code) : null;
+}
+// Vincula (newTenantId, newCode) al perfil de propietario "ancla" en la
+// nube de plataforma: ownerLink permite, dado CUALQUIER tenantId del
+// propietario, encontrar su perfil; ownerProfiles guarda la lista completa.
+function linkBusinessToOwnerProfile(anchorTenantId, tenantId, code, name){
+  if(!anchorTenantId || !tenantId) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/ownerLink/' + tenantId).set(anchorTenantId).catch(()=>{});
+    app.database().ref('gastrogoan/ownerProfiles/' + anchorTenantId + '/businesses/' + tenantId).set({
+      code, name: name || ''
+    }).catch(e => console.error('Error vinculando el negocio al perfil de propietario', e));
+  }).catch(()=>{});
+}
+// Tras un login de propietario válido, mira si este negocio pertenece a un
+// perfil con más negocios vinculados y, si hay alguno que este dispositivo
+// todavía no conozca, lo da de alta aquí como una "ficha" ligera (código +
+// licencia) — sin descargar sus datos todavía: eso ya lo hace la
+// sincronización normal en cuanto se entra de verdad en ese negocio, igual
+// que con cualquier negocio nuevo. No hace falta volver a pedir su
+// contraseña: ya quedó demostrada una vez, al vincularlo.
+async function syncOwnerBusinessList(code){
+  try{
+    const tenantId = ggBizTenantId(code);
+    const app = await getPlatformFirebaseApp();
+    if(!app) return;
+    const linkSnap = await app.database().ref('gastrogoan/ownerLink/' + tenantId).once('value');
+    const anchorTenantId = linkSnap.val() || tenantId;
+    const bizSnap = await app.database().ref('gastrogoan/ownerProfiles/' + anchorTenantId + '/businesses').once('value');
+    const businesses = bizSnap.val() || {};
+    const slots = getBusinessSlots();
+    let changed = false;
+    Object.entries(businesses).forEach(([tId, info]) => {
+      if(!info || !info.code) return;
+      if(slots.some(s => s.code === info.code)) return; // ya lo conoce este dispositivo
+      const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6) + tId.slice(0,3);
+      slots.push({ id: newId, name: info.name || t('bs.defaultBusinessName'), code: info.code });
+      localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code: info.code, tenantId: tId}));
+      changed = true;
+    });
+    if(changed) saveBusinessSlots(slots);
+  }catch(e){
+    console.error('Error sincronizando la lista de negocios del propietario', e);
+  }
 }
 
 function initCloud(){
