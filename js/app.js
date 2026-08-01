@@ -5960,7 +5960,8 @@ const MANUAL_CHAPTERS = [
       <tr><td>🟡 Ámbar</td><td>El turno está cerca de completarse</td></tr>
       <tr><td>🔴 Rojo</td><td>El turno está completo</td></tr>
     </table>
-    <p>Si al crear o confirmar una reserva se supera el aforo, la app te avisa con los números exactos (por ejemplo "ya hay 38 de 40 plazas, esta reserva añade 6") y te pregunta si quieres confirmarla igualmente, por si puedes habilitar mesas extra.</p>
+    <p>Si al crear o confirmar una reserva se supera el aforo, la app te avisa con los números exactos (por ejemplo "ya hay 38 de 40 plazas, esta reserva añade 6") y te da a elegir entre <strong>confirmarla igualmente</strong> (si puedes habilitar mesas extra), <strong>ponerla en lista de espera</strong> (no cuenta para el aforo, y tiene su propio botón para confirmarla en cuanto haya sitio) o cancelarla.</p>
+    <p>Una reserva confirmada se puede <strong>cancelar</strong> (queda registrada como "cancelada", no desaparece sin más) en vez de solo borrarla, y si un cliente ya ha fallado antes, al elegirlo en el desplegable del formulario verás un aviso con el número de no-shows anteriores. Al marcar la "llegada" de una reserva (tanto desde aquí como desde el TPV) puedes confirmar o corregir en qué mesa se ha sentado el grupo, por si al final se organizó en una distinta a la reservada.</p>
 
     <h4>Solicitudes online pendientes</h4>
     <p>Las reservas que un cliente hace desde tu página web pública no se confirman solas: llegan a la sección <strong>"Solicitudes online pendientes"</strong>, donde puedes revisarlas y decidir si las aceptas, las modificas (por ejemplo cambiar la mesa) o las rechazas si no tienes disponibilidad real.</p>
@@ -5996,7 +5997,8 @@ const MANUAL_CHAPTERS = [
       <tr><td>🟡 Ambre</td><td>El torn està a prop de completar-se</td></tr>
       <tr><td>🔴 Vermell</td><td>El torn està complet</td></tr>
     </table>
-    <p>Si en crear o confirmar una reserva se supera l'aforament, l'app t'avisa amb els números exactes (per exemple "ja hi ha 38 de 40 places, aquesta reserva n'afegeix 6") i et pregunta si la vols confirmar igualment, per si pots habilitar taules extra.</p>
+    <p>Si en crear o confirmar una reserva se supera l'aforament, l'app t'avisa amb els números exactes (per exemple "ja hi ha 38 de 40 places, aquesta reserva n'afegeix 6") i et deixa triar entre <strong>confirmar-la igualment</strong> (si pots habilitar taules extra), <strong>posar-la en llista d'espera</strong> (no compta per a l'aforament, i té el seu propi botó per confirmar-la quan hi hagi lloc) o cancel·lar-la.</p>
+    <p>Una reserva confirmada es pot <strong>cancel·lar</strong> (queda registrada com a "cancel·lada", no desapareix sense més) en comptes de només esborrar-la, i si un client ja ha fallat abans, en triar-lo al desplegable del formulari veuràs un avís amb el nombre de no-shows anteriors. En marcar l'"arribada" d'una reserva (tant des d'aquí com des del TPV) pots confirmar o corregir a quina taula s'ha assegut el grup, per si al final es va organitzar en una de diferent a la reservada.</p>
 
     <h4>Sol·licituds en línia pendents</h4>
     <p>Les reserves que un client fa des de la teva pàgina web pública no es confirmen soles: arriben a la secció <strong>"Sol·licituds en línia pendents"</strong>, on pots revisar-les i decidir si les acceptes, les modifiques (per exemple canviar la taula) o les rebutges si no tens disponibilitat real.</p>
@@ -6032,7 +6034,8 @@ const MANUAL_CHAPTERS = [
       <tr><td>🟡 Amber</td><td>The slot is close to full</td></tr>
       <tr><td>🔴 Red</td><td>The slot is full</td></tr>
     </table>
-    <p>If creating or confirming a reservation would exceed capacity, the app warns you with the exact numbers (for example "already 38 of 40 seats, this reservation adds 6") and asks if you want to confirm it anyway, in case you can open up extra tables.</p>
+    <p>If creating or confirming a reservation would exceed capacity, the app warns you with the exact numbers (for example "already 38 of 40 seats, this reservation adds 6") and lets you choose between <strong>confirming it anyway</strong> (if you can open up extra tables), <strong>adding it to the waitlist</strong> (doesn't count towards capacity, with its own button to confirm it once there's room) or cancelling it.</p>
+    <p>A confirmed reservation can be <strong>cancelled</strong> (it's kept on record as "cancelled", not just deleted) instead of only being deleted, and if a client has failed to show up before, picking them from the form's dropdown shows a warning with their previous no-show count. Marking a reservation as "arrived" (from here or from the POS) lets you confirm or correct which table the group actually sat at, in case it ended up being a different one than booked.</p>
 
     <h4>Pending online requests</h4>
     <p>Reservations a customer makes from your public website don't confirm themselves: they land in the <strong>"Pending online requests"</strong> section, where you can review them and decide whether to accept them, modify them (for example changing the table), or reject them if you don't have real availability.</p>
@@ -6046,7 +6049,7 @@ const MANUAL_CHAPTERS = [
     title:{es:'<i class="ti ti-device-desktop"></i> TPV', ca:'<i class="ti ti-device-desktop"></i> TPV', en:'<i class="ti ti-device-desktop"></i> POS'},
     content:{es:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
-    <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada muestra de un vistazo en qué <strong>fase del servicio</strong> está (📝 Tomando nota, ⏳ Marchado, 🔥 En cocina, ✅ Servido), su número de comensales y el total.</p>
+    <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada se pinta con un <strong>color de borde según la fase del servicio</strong> (gris = tomando nota, ámbar = en cocina, morado = preparando, verde = servido/listo para cobrar), muestra el <strong>camarero/a asignado</strong> (avatar con su color de identificación), el número de comensales y el total. Una mesa libre con una reserva confirmada dentro de la próxima hora se marca con un borde discontinuo naranja y la hora, para no sentar ahí a nadie sin reserva justo antes de que llegue quien la reservó.</p>
     <h4>Abrir una mesa: cliente de paso o con reserva</h4>
     <p>Al pulsar una mesa libre, eliges si el cliente es <strong>"de paso"</strong> (indicas el número de comensales) o <strong>"tiene reserva"</strong> (eliges la reserva del día y se rellena solo). El camarero/a que se asigna a la comanda solo puede ser <strong>personal del área Sala</strong>.</p>
     <h4>Tomar la comanda (selector a dos columnas)</h4>
@@ -6063,7 +6066,16 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip">💡 Puedes elegir en <strong>Mi Negocio → Comandas de cocina y sala</strong> si las comandas se ven en la <strong>pantalla de Cocina/Sala</strong> o se <strong>imprimen en un vale</strong> al marchar (un vale de cocina con la comida y otro de sala/barra con las bebidas).</div>
     <h4>Para llevar / Delivery</h4>
-    <p>También puedes registrar ventas para llevar o a domicilio sin asignarlas a una mesa.</p>
+    <p>El botón <strong>"Pedido Express"</strong> es la única forma de crear a mano un pedido que no es de mesa (una llamada por teléfono, un aviso en barra). Al abrirlo, eliges <strong>Para recoger</strong> o <strong>A domicilio</strong>, y el formulario solo pide los datos que corresponden a cada caso:</p>
+    <ul>
+      <li>Nombre y teléfono siempre; si el teléfono coincide con un cliente ya dado de alta, el pedido queda vinculado a su ficha automáticamente (suma puntos de fidelidad y aparece en su historial).</li>
+      <li><strong>Fecha y hora de recogida/entrega</strong> (opcional): si la dejas en blanco se entiende "cuanto antes" y el pedido aparece ya en pantalla. Si programas para más tarde o para otro día, <strong>el pedido no aparece en el TPV hasta una hora antes</strong> de la hora indicada, para no acumular pedidos lejanos en la pantalla.</li>
+      <li>Para "A domicilio": dirección, la plataforma (Glovo, Uber Eats...) o <strong>"Reparto propio"</strong> si lo lleva alguien del propio negocio, y en ese caso puedes asignar qué <strong>repartidor</strong> (empleado de Sala) lo lleva. El coste de envío configurado en Mi Negocio solo se aplica cuando es reparto propio — si es una plataforma externa, esa plataforma ya cobra su propio envío aparte.</li>
+    </ul>
+    <p>Estos pedidos aparecen en su propio panel <strong>"Para Llevar / Delivery"</strong>, separado visualmente de las mesas, siempre visible si tienes alguno de los dos servicios activado en Mi Negocio → Tipos de servicio (aunque no haya ningún pedido abierto en ese momento). Las bebidas de estos pedidos no pasan por la pantalla de Cocina; su estado (pedida/preparando/servida) se marca desde el propio panel de Sala.</p>
+    <h4>Anulaciones y descuentos</h4>
+    <p>Si borras o reduces la cantidad de un plato que <strong>ya se ha marchado a cocina</strong> (incluso si ya está servido), la app pide el <strong>PIN del negocio y un motivo</strong> antes de permitirlo, y queda registrado en <strong>"Anulaciones"</strong> (botón del TPV) con fecha, mesa, plato y quién lo autorizó — para poder auditar después cualquier borrado sospechoso. Si el plato todavía no se ha marchado, se borra libremente sin pedir nada.</p>
+    <p>Al cobrar, puedes aplicar un <strong>% de descuento manual</strong> (exige indicar responsable y motivo) que solo se ve reflejado en el total una vez pulsas "Aplicar" — mientras escribes el porcentaje no se previsualiza para evitar confusiones. Si hay una <strong>promoción activa</strong> ese día para un plato o bebida concreto (configurada desde Promoción), su descuento se aplica automáticamente al añadirlo a la comanda, sin tener que hacer nada más.</p>
     <h4>Cierre de caja / Arqueo</h4>
     <p>Al finalizar un turno o el día, pulsa <strong>Cerrar caja</strong>:</p>
     <ul>
@@ -6076,7 +6088,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Las ventas registradas en el TPV alimentan automáticamente la Gestión Económica, el Stock y el Panel de Control.</div>`,
     ca:`<h3>Comandes, taules i tiquets</h3>
     <h4>Plànol de sala</h4>
-    <p>Les taules que apareixen al TPV són <strong>exactament les que configures a El Meu Negoci → Operativa</strong>, agrupades per zona (Interior, Terrassa, Barra). Allà pots posar a cada taula el nom o número que vulguis, afegir o eliminar taules. Cada taula ocupada mostra d'un cop d'ull en quina <strong>fase del servei</strong> està (📝 Prenent nota, ⏳ Marxat, 🔥 A cuina, ✅ Servit), el seu nombre de comensals i el total.</p>
+    <p>Les taules que apareixen al TPV són <strong>exactament les que configures a El Meu Negoci → Operativa</strong>, agrupades per zona (Interior, Terrassa, Barra). Allà pots posar a cada taula el nom o número que vulguis, afegir o eliminar taules. Cada taula ocupada es pinta amb un <strong>color de vora segons la fase del servei</strong> (gris = prenent nota, ambre = a cuina, morat = preparant, verd = servit/llest per cobrar), mostra el <strong>cambrer/a assignat</strong> (avatar amb el seu color d'identificació), el nombre de comensals i el total. Una taula lliure amb una reserva confirmada dins la propera hora es marca amb una vora discontínua taronja i l'hora, per no asseure-hi ningú sense reserva just abans que arribi qui l'ha reservat.</p>
     <h4>Obrir una taula: client de pas o amb reserva</h4>
     <p>En prémer una taula lliure, tries si el client és <strong>"de pas"</strong> (indiques el nombre de comensals) o <strong>"té reserva"</strong> (tries la reserva del dia i s'omple sol). El cambrer/a que s'assigna a la comanda només pot ser <strong>personal de l'àrea Sala</strong>.</p>
     <h4>Prendre la comanda (selector a dues columnes)</h4>
@@ -6093,7 +6105,16 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip">💡 Pots triar a <strong>El Meu Negoci → Comandes de cuina i sala</strong> si les comandes es veuen a la <strong>pantalla de Cuina/Sala</strong> o s'<strong>imprimeixen en un val</strong> en marxar (un val de cuina amb el menjar i un altre de sala/barra amb les begudes).</div>
     <h4>Per emportar / Delivery</h4>
-    <p>També pots registrar vendes per emportar o a domicili sense assignar-les a una taula.</p>
+    <p>El botó <strong>"Comanda Express"</strong> és l'única forma de crear a mà una comanda que no és de taula (una trucada per telèfon, un avís a la barra). En obrir-lo, tries <strong>Per recollir</strong> o <strong>A domicili</strong>, i el formulari només demana les dades que corresponen a cada cas:</p>
+    <ul>
+      <li>Nom i telèfon sempre; si el telèfon coincideix amb un client ja donat d'alta, la comanda queda vinculada a la seva fitxa automàticament (suma punts de fidelitat i apareix al seu historial).</li>
+      <li><strong>Data i hora de recollida/lliurament</strong> (opcional): si la deixes en blanc s'entén "com més aviat millor" i la comanda apareix ja en pantalla. Si programes per més tard o per un altre dia, <strong>la comanda no apareix al TPV fins una hora abans</strong> de l'hora indicada, per no acumular comandes llunyanes a la pantalla.</li>
+      <li>Per a "A domicili": adreça, la plataforma (Glovo, Uber Eats...) o <strong>"Repartiment propi"</strong> si ho porta algú del propi negoci, i en aquest cas pots assignar quin <strong>repartidor</strong> (empleat de Sala) ho porta. El cost d'enviament configurat a El Meu Negoci només s'aplica quan és repartiment propi — si és una plataforma externa, aquesta plataforma ja cobra el seu propi enviament a part.</li>
+    </ul>
+    <p>Aquestes comandes apareixen al seu propi panell <strong>"Per Emportar / Delivery"</strong>, separat visualment de les taules, sempre visible si tens algun dels dos serveis activat a El Meu Negoci → Tipus de servei (encara que no hi hagi cap comanda oberta en aquell moment). Les begudes d'aquestes comandes no passen per la pantalla de Cuina; el seu estat (demanada/preparant/servida) es marca des del propi panell de Sala.</p>
+    <h4>Anul·lacions i descomptes</h4>
+    <p>Si esborres o redueixes la quantitat d'un plat que <strong>ja s'ha marxat a cuina</strong> (fins i tot si ja està servit), l'app demana el <strong>PIN del negoci i un motiu</strong> abans de permetre-ho, i queda registrat a <strong>"Anul·lacions"</strong> (botó del TPV) amb data, taula, plat i qui ho ha autoritzat — per poder auditar després qualsevol esborrat sospitós. Si el plat encara no s'ha marxat, s'esborra lliurement sense demanar res.</p>
+    <p>En cobrar, pots aplicar un <strong>% de descompte manual</strong> (exigeix indicar responsable i motiu) que només es veu reflectit al total un cop prems "Aplicar" — mentre escrius el percentatge no es previsualitza per evitar confusions. Si hi ha una <strong>promoció activa</strong> aquell dia per a un plat o beguda concreta (configurada des de Promoció), el seu descompte s'aplica automàticament en afegir-lo a la comanda, sense haver de fer res més.</p>
     <h4>Tancament de caixa / Arqueig</h4>
     <p>En finalitzar un torn o el dia, prem <strong>Tancar caixa</strong>:</p>
     <ul>
@@ -6106,7 +6127,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-tip">💡 Les vendes registrades al TPV alimenten automàticament la Gestió Econòmica, l'Estoc i el Panell de Control.</div>`,
     en:`<h3>Orders, tables and receipts</h3>
     <h4>Floor plan</h4>
-    <p>The tables shown in the POS are <strong>exactly the ones you set up in My Business → Operations</strong>, grouped by zone (Indoor, Terrace, Bar). There you can give each table whatever name or number you like, and add or remove tables. Every occupied table shows at a glance which <strong>service phase</strong> it's in (📝 Taking order, ⏳ Fired, 🔥 In the kitchen, ✅ Served), its number of guests and the total.</p>
+    <p>The tables shown in the POS are <strong>exactly the ones you set up in My Business → Operations</strong>, grouped by zone (Indoor, Terrace, Bar). There you can give each table whatever name or number you like, and add or remove tables. Every occupied table is shown with a <strong>border colour matching its service phase</strong> (grey = taking order, amber = in the kitchen, purple = preparing, green = served/ready to charge), the <strong>assigned waiter/waitress</strong> (an avatar in their identification colour), the number of guests and the total. A free table with a confirmed reservation within the next hour is marked with a dashed orange border and the time, so no walk-in gets seated right before the reservation arrives.</p>
     <h4>Opening a table: walk-in or reservation</h4>
     <p>Tapping a free table, you choose whether the customer is a <strong>"walk-in"</strong> (you enter the number of guests) or <strong>"has a reservation"</strong> (you pick the day's reservation and it fills in on its own). The waiter/waitress assigned to the order can only be <strong>Floor-area staff</strong>.</p>
     <h4>Taking the order (two-column selector)</h4>
@@ -6123,7 +6144,16 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip">💡 In <strong>My Business → Kitchen and floor tickets</strong> you can choose whether orders are shown on the <strong>Kitchen/Floor screen</strong> or <strong>printed on a ticket</strong> when fired (a kitchen ticket with the food and a separate floor/bar ticket with the drinks).</div>
     <h4>Take away / Delivery</h4>
-    <p>You can also log take-away or delivery sales without assigning them to a table.</p>
+    <p>The <strong>"Express Order"</strong> button is the only way to manually create an order that isn't for a table (a phone call, a walk-up at the bar). Opening it, you choose <strong>Pickup</strong> or <strong>Delivery</strong>, and the form only asks for what each case needs:</p>
+    <ul>
+      <li>Name and phone always; if the phone matches a client already on file, the order gets linked to their record automatically (earns loyalty points and shows up in their history).</li>
+      <li><strong>Pickup/delivery date and time</strong> (optional): leave it blank and it's treated as "as soon as possible", showing up on screen right away. Schedule it for later or another day, and <strong>the order won't appear in the POS until one hour before</strong> that time, so distant orders don't clutter the screen.</li>
+      <li>For "Delivery": address, the platform (Glovo, Uber Eats...) or <strong>"Own delivery"</strong> if someone from the business delivers it themselves, in which case you can assign which <strong>delivery rider</strong> (Floor-area employee) is doing it. The delivery fee set in My Business only applies for own delivery — an external platform already charges its own delivery fee separately.</li>
+    </ul>
+    <p>These orders show up in their own <strong>"Take Away / Delivery"</strong> panel, visually separated from the tables, always visible if you have either service enabled in My Business → Service Types (even with no order currently open). Drinks on these orders don't go through the Kitchen screen; their status (ordered/preparing/served) is set from the Floor panel itself.</p>
+    <h4>Voids and discounts</h4>
+    <p>Deleting or reducing the quantity of a dish that's <strong>already been fired to the kitchen</strong> (even if already served) requires the <strong>business PIN and a reason</strong> before it's allowed, and gets logged in <strong>"Voids"</strong> (POS button) with date, table, dish and who authorised it — so any suspicious deletion can be audited later. A dish that hasn't been fired yet can be removed freely with no prompt.</p>
+    <p>When charging, you can apply a <strong>manual % discount</strong> (requires naming a responsible person and a reason) that only shows up in the total once you press "Apply" — the percentage isn't previewed live while you type it, to avoid confusion. If there's an <strong>active promotion</strong> that day for a specific dish or drink (set up from Promotion), its discount is applied automatically when it's added to the order, with nothing else to do.</p>
     <h4>Till closing / Cash count</h4>
     <p>At the end of a shift or the day, press <strong>Close till</strong>:</p>
     <ul>
@@ -6142,6 +6172,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Día / Semana / Mes</h4>
     <p>El calendario de acciones de promoción. Cada acción tiene un título, una descripción, un responsable (de tu equipo de Sala) y una casilla para marcarla como hecha (queda registrada la fecha y hora exacta en la que se completó).</p>
+    <p>Una acción puede ser solo un recordatorio, o tener un <strong>efecto real en el TPV</strong>: marca "Aplica un descuento real" y elige un plato/bebida de la carta y un %; ese día, al añadir ese artículo en una comanda, el precio rebajado se aplica solo, sin que nadie tenga que acordarse de hacer nada a mano. También puedes marcar <strong>"Se repite cada semana"</strong> para no tener que recrear la misma acción cada vez (por ejemplo, un 2x1 todos los martes); el estado de "hecha" y el contador de <strong>veces canjeada</strong> (un botón "+1" independiente de marcarla como hecha) se llevan por cada día concreto, no se comparten entre semanas.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nueva Acción"</strong> desde cualquiera de las tres vistas, o el "+" de un día concreto en la vista semanal.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">En la vista de Día puedes filtrar por responsable y por estado (hechas/pendientes), y marcar directamente la casilla de "hecha".</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">En la vista de Mes tienes un resumen rápido: cuántas acciones hay planificadas, cuántas completadas, y cuántas categorías de la biblioteca de ideas has usado ya.</div></div>
@@ -6160,6 +6191,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Dia / Setmana / Mes</h4>
     <p>El calendari d'accions de promoció. Cada acció té un títol, una descripció, un responsable (del teu equip de Sala) i una casella per marcar-la com a feta (queda registrada la data i hora exacta en què es va completar).</p>
+    <p>Una acció pot ser només un recordatori, o tenir un <strong>efecte real al TPV</strong>: marca "Aplica un descompte real" i tria un plat/beguda de la carta i un %; aquell dia, en afegir aquell article en una comanda, el preu rebaixat s'aplica sol, sense que ningú s'hagi de recordar de fer res a mà. També pots marcar <strong>"Es repeteix cada setmana"</strong> per no haver de recrear la mateixa acció cada vegada (per exemple, un 2x1 tots els dimarts); l'estat de "feta" i el comptador de <strong>vegades bescanviada</strong> (un botó "+1" independent de marcar-la com a feta) es porten per cada dia concret, no es comparteixen entre setmanes.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nova Acció"</strong> des de qualsevol de les tres vistes, o el "+" d'un dia concret a la vista setmanal.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">A la vista de Dia pots filtrar per responsable i per estat (fetes/pendents), i marcar directament la casella de "feta".</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">A la vista de Mes tens un resum ràpid: quantes accions hi ha planificades, quantes completades, i quantes categories de la biblioteca d'idees ja has fet servir.</div></div>
@@ -6178,6 +6210,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Day / Week / Month</h4>
     <p>The promotional actions calendar. Each action has a title, a description, a person responsible (from your Floor team) and a checkbox to mark it done (the exact date and time it was completed is logged).</p>
+    <p>An action can be just a reminder, or have a <strong>real effect at the till</strong>: tick "Applies a real discount" and pick a dish/drink from the menu and a %; that day, adding that item to an order applies the discounted price on its own, with nobody having to remember to do anything by hand. You can also tick <strong>"Repeats every week"</strong> so you don't have to recreate the same action every time (e.g. a 2-for-1 every Tuesday); the "done" status and the <strong>redemption count</strong> (a "+1" button separate from marking it done) are tracked per specific day, not shared across weeks.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New Action"</strong> from any of the three views, or the "+" on a specific day in the week view.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">In the Day view you can filter by person responsible and by status (done/pending), and tick the "done" checkbox directly.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">In the Month view you get a quick summary: how many actions are planned, how many completed, and how many categories from the idea library you've already used.</div></div>
