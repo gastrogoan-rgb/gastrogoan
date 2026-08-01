@@ -887,11 +887,15 @@ function rememberLastArea(key){
 function goHome(){
   lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
+  areaUnlocked = {cocina:false, sala:false};
   navigate('home');
 }
 function openFolder(key){
   lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
+  // Igual que Gestión: salir de Cocina/Sala (o simplemente volver a entrar)
+  // vuelve a pedir el PIN del área la próxima vez.
+  areaUnlocked = {cocina:false, sala:false};
   currentFolder = key;
   rememberLastArea(key);
   navigate('folder');
@@ -1029,69 +1033,59 @@ function resolveTargetFolder(view){
 
 // Antes cualquiera con el dispositivo delante podía usar TPV/Cocina/Sala sin
 // identificarse en absoluto — el único PIN real era para Gestión. Esto hace
-// imposible revocar de verdad a un empleado que se marcha: dar de baja
-// bloquea su PIN, pero si nadie tiene que fichar para entrar, la baja no
-// impide a nadie más seguir usando el dispositivo con normalidad. Ahora,
-// para entrar en Cocina o Sala hace falta que alguien de esa área (activo)
-// tenga un fichaje abierto, o que el propietario desbloquee con su PIN.
-// Si esa área no tiene ningún empleado registrado, no se exige fichar (no
-// hay a quién pedírselo — típico de un negocio muy pequeño donde el propio
+// imposible revocar de verdad a un empleado que se marcha: si nadie tiene
+// que identificarse para entrar, borrarlo no impide a nadie más seguir
+// usando el dispositivo con normalidad. Ahora, para entrar en Cocina o Sala
+// hace falta el PIN de alguien de esa área (activo), o el PIN del negocio
+// ("Soy el propietario") — igual de simple que el desbloqueo de Gestión,
+// sin fichar ni elegir nombre de una lista: solo un PIN. areaUnlocked dura
+// mientras se está "dentro" de esa carpeta, igual que ownerUnlocked para
+// Gestión, y se resetea cada vez que se abre una carpeta (ver openFolder).
+// Si esa área no tiene ningún empleado registrado, no se pide PIN (no hay
+// a quién pedírselo — típico de un negocio muy pequeño donde el propio
 // dueño lo hace todo sin dar de alta "empleados").
+let areaUnlocked = {cocina:false, sala:false};
 function isOperationalAreaLocked(view){
   if(ownerUnlocked) return false;
   const targetFolder = view === 'folder' ? currentFolder : resolveTargetFolder(view);
   if(targetFolder !== 'cocina' && targetFolder !== 'sala') return false;
+  if(areaUnlocked[targetFolder]) return false;
   const areaEmps = (DB.employees||[]).filter(e => (e.area||'cocina') === targetFolder);
   if(!areaEmps.length) return false;
-  return !areaEmps.some(e => e.active !== false && getOpenFichaje(e.id));
+  return true;
 }
 
-let fichaGatePendingView = null;
-let fichaGatePendingEmpId = null;
+let areaGatePendingView = null;
 function requestFichaGate(view){
-  fichaGatePendingView = view;
+  areaGatePendingView = view;
   const area = view === 'folder' ? currentFolder : resolveTargetFolder(view);
-  const emps = (DB.employees||[]).filter(e => (e.area||'cocina') === area && e.active !== false);
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-fingerprint"></i> ${t('title.clockInToEnter')}</h3>
+      <h3><i class="ti ti-lock"></i> ${area === 'sala' ? t('folder.sala.title') : t('folder.cocina.title')}</h3>
     </div>
-    <p style="font-size:13px;color:var(--muted)">${t('msg.clockInToEnterDesc')}</p>
-    ${emps.length ? `
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:280px;overflow-y:auto">
-      ${emps.map(e => `<button class="btn" onclick="requestFichaGatePin(${e.id})" style="text-align:left;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(e.name)}</button>`).join('')}
-    </div>` : `<p style="font-size:13px;color:var(--red)">${t('msg.noActiveEmployeesArea')}</p>`}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal();goHome()">${t('common.cancel')}</button>
-      <button class="btn" onclick="requestOwnerPin(fichaGatePendingView)">${t('label.imTheOwner')}</button>
-    </div>
-  `);
-}
-function requestFichaGatePin(employeeId){
-  fichaGatePendingEmpId = employeeId;
-  const e = DB.employees.find(x=>x.id===employeeId);
-  if(!e) return;
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> ${escapeHtml(e.name)}</h3>
-    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.areaPinDesc')}</p>
     <div class="field">
       <label>${t('label.accessPin')}</label>
-      <input type="password" id="ficha-gate-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmFichaGatePin()">
+      <input type="password" id="area-gate-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmAreaGatePin()">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="requestFichaGate(fichaGatePendingView)">${t('common.back')}</button>
-      <button class="btn btn-primary" onclick="confirmFichaGatePin()">${t('hr2.clockIn')}</button>
+      <button class="btn" onclick="closeModal();goHome()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmAreaGatePin()">${t('common.unlock')}</button>
     </div>
   `);
-  setTimeout(()=>document.getElementById('ficha-gate-pin-input')?.focus(), 50);
+  setTimeout(()=>document.getElementById('area-gate-pin-input')?.focus(), 50);
 }
-function confirmFichaGatePin(){
-  const e = DB.employees.find(x=>x.id===fichaGatePendingEmpId);
-  if(!e) return;
-  const val = document.getElementById('ficha-gate-pin-input').value;
-  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
-  quickFichaje(e.id, 'entrada');
+function confirmAreaGatePin(){
+  const view = areaGatePendingView;
+  const area = view === 'folder' ? currentFolder : resolveTargetFolder(view);
+  const val = document.getElementById('area-gate-pin-input').value;
+  const areaEmps = (DB.employees||[]).filter(e => (e.area||'cocina') === area && e.active !== false);
+  const matches = areaEmps.some(e => pinMatchesEmployeeOrBusiness(val, e));
+  if(!matches){ showToast(t('msg.pinIncorrect')); return; }
+  areaUnlocked[area] = true;
+  closeModal();
+  areaGatePendingView = null;
+  navigate(view);
 }
 
 function lockOwnerArea(){
