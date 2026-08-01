@@ -3718,6 +3718,13 @@ function renderMiNegocio(){
         <label>${t('mn.business.name')}</label>
         <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="${t('mn.business.namePh')}" onchange="saveBusiness(true)">
       </div>
+      <div class="field">
+        <label>${t('mn.business.brandColor')}</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" id="mn-brand-color" value="${escapeHtml(b.brandColor||'#4A5D4E')}" style="width:48px;height:36px;padding:2px;cursor:pointer" onchange="saveBusiness(true)">
+          <span style="font-size:12px;color:var(--muted)">${t('mn.business.brandColorHint')}</span>
+        </div>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>${t('mn.business.type')}</label>
@@ -4248,6 +4255,7 @@ function saveBusiness(silent){
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
+  if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-leadtime-min')){
     DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);

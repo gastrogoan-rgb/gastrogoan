@@ -14,6 +14,8 @@
     --red:#8A4A3B; --red-l:#F5EBE7;
   }
   *{box-sizing:border-box;}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--olive);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
   body{
     margin:0;font-family:'Schibsted Grotesk',system-ui,-apple-system,sans-serif;
     background:var(--paper);color:var(--body);font-size:15px;line-height:1.55;
@@ -73,6 +75,13 @@
   .btn-primary{background:var(--ink);color:#fff;}
   .btn-primary:hover:not(:disabled){background:var(--olive);border-color:var(--olive);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
+  #inline-alert{
+    position:fixed;left:16px;right:16px;bottom:16px;z-index:999;
+    background:var(--red-l);color:var(--red);border:1px solid var(--red);
+    padding:14px 16px;font-size:14px;font-weight:600;display:flex;align-items:flex-start;gap:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:480px;margin:0 auto;
+  }
+  #inline-alert button{background:none;border:none;color:var(--red);font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0;margin-left:auto;}
   h2{font-size:17px;margin:0 0 10px;font-weight:700;letter-spacing:-.01em;}
   h3{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;margin:16px 0 8px;}
   .menu-item{
@@ -136,7 +145,7 @@
 </header>
 
 <div class="wrap" id="app">
-  <div class="empty" id="app-loading">Cargando…</div>
+  <div class="empty" id="app-loading"><div class="spinner"></div>Cargando…</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -361,6 +370,20 @@ function getTableIdFromUrl(){
   return null;
 }
 
+// Aviso no bloqueante (sustituye a alert() nativo) para errores que ocurren
+// tras una acción del cliente (p.ej. fallo de pago) sin perder lo que había
+// escrito en el formulario.
+function showInlineError(msg){
+  let box = document.getElementById('inline-alert');
+  if(box) box.remove();
+  box = document.createElement('div');
+  box.id = 'inline-alert';
+  box.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()">&times;</button>`;
+  document.body.appendChild(box);
+  clearTimeout(showInlineError._t);
+  showInlineError._t = setTimeout(()=>{ box.remove(); }, 8000);
+}
+
 let lastErrorKey = null;
 function showError(key){
   lastErrorKey = key;
@@ -444,7 +467,11 @@ function loadBusinessInfo(){
 }
 
 function renderBranchSelector(business, sucursales){
-  if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="Logo">`;
+  if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="${escapeHtml(business.name||'Logo')}">`;
+  if(business.brandColor){
+    document.documentElement.style.setProperty('--olive', business.brandColor);
+    document.documentElement.style.setProperty('--olive-l', business.brandColor);
+  }
   if(business.name){ document.getElementById('biz-name').textContent = business.name; bizNameLoaded = true; }
   const base = location.href.split('?')[0];
   document.getElementById('app').innerHTML = `
@@ -477,8 +504,12 @@ function checkRedsysConfigured(){
 
 function renderHeader(){
   const b = DB.business || {};
-  if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${b.logo}" alt="Logo">`;
+  if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}">`;
   if(b.name){ document.getElementById('biz-name').textContent = b.name; bizNameLoaded = true; }
+  if(b.brandColor){
+    document.documentElement.style.setProperty('--olive', b.brandColor);
+    document.documentElement.style.setProperty('--olive-l', b.brandColor);
+  }
   const parts = [];
   if(b.address) parts.push('📍 ' + b.address);
   if(b.schedule) parts.push('🕐 ' + b.schedule);
@@ -570,9 +601,11 @@ function isTimeAllowed(dateStr, time){
   return turnos.some(t => time >= t.abre && time <= t.cierra);
 }
 
-// Devuelve las plazas disponibles para el turno al que pertenece `time` en `dateStr`,
-// o null si no hay aforo configurado o la hora no encaja en ningún turno.
-function getAforoDisponible(dateStr, time){
+// Devuelve {aforo, turnoIdx, reservados, disponible} o null si no hay aforo
+// configurado o la hora no encaja en ningún turno. reservados es el último
+// recuento SINCRONIZADO desde el panel interno (puede llevar algo de retraso
+// respecto a reservas que otros clientes están completando ahora mismo).
+function getAforoInfo(dateStr, time){
   const aforo = parseInt((DB.business||{}).aforo) || 0;
   if(!aforo) return null;
   const turnos = getTurnosForDate(dateStr);
@@ -581,7 +614,28 @@ function getAforoDisponible(dateStr, time){
   if(turnoIdx === -1) return null;
   const resumen = (DB.reservasResumen||{})[dateStr] || {};
   const reservados = resumen[turnoIdx] || 0;
-  return Math.max(0, aforo - reservados);
+  return {aforo, turnoIdx, reservados, disponible: Math.max(0, aforo - reservados)};
+}
+// Devuelve las plazas disponibles para el turno al que pertenece `time` en `dateStr`,
+// o null si no hay aforo configurado o la hora no encaja en ningún turno.
+function getAforoDisponible(dateStr, time){
+  const info = getAforoInfo(dateStr, time);
+  return info ? info.disponible : null;
+}
+// Reserva de forma ATÓMICA `people` plazas del turno, usando una transacción
+// de Firebase sobre un contador de "holds" independiente del resumen ya
+// sincronizado. Esto evita que dos clientes reservando casi a la vez (antes
+// de que el panel interno vuelva a sincronizar el resumen) puedan juntos
+// superar el aforo sin que ninguno de los dos lo viera en su momento. Si la
+// transacción no se puede completar sin pasarse del aforo, se aborta
+// (result.committed === false) y no se ha reservado nada.
+function reserveAforoAtomic(dateStr, turnoIdx, people, aforo, baseline){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/aforoHold/' + dateStr + '/' + turnoIdx);
+  return ref.transaction(current => {
+    const held = current || 0;
+    if(baseline + held + people > aforo) return; // abort: se pasaría del aforo
+    return held + people;
+  });
 }
 
 function formatTurnos(turnos){
@@ -720,7 +774,7 @@ function renderReservaForm(){
         <label>${t('notas')}</label>
         <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
       </div>
-      <button class="btn btn-primary" onclick="submitReserva()">${t('reserva.submit')}</button>
+      <button class="btn btn-primary" id="r-submit" onclick="submitReserva()">${t('reserva.submit')}</button>
     </div>
   `;
   updateTimeInputRange('r-date','r-time','r-hour-hint');
@@ -760,12 +814,12 @@ function submitReserva(){
     }
   }
 
-  const disponible = getAforoDisponible(date, time);
-  if(disponible !== null && people > disponible){
-    if(disponible <= 0){
+  const aforoInfo = getAforoInfo(date, time);
+  if(aforoInfo && people > aforoInfo.disponible){
+    if(aforoInfo.disponible <= 0){
       alert(t('error.aforo.completo'));
     }else{
-      alert(t('error.aforo.parcial').replace('%d', disponible));
+      alert(t('error.aforo.parcial').replace('%d', aforoInfo.disponible));
     }
     return;
   }
@@ -774,7 +828,33 @@ function submitReserva(){
     type:'reserva', clientName, clientPhone, date, time, people, notes,
     createdAt: new Date().toISOString()
   };
-  sendRequest(req, t('reserva.ok'));
+
+  const btn = document.getElementById('r-submit');
+  if(btn) btn.disabled = true;
+
+  if(!aforoInfo){
+    sendRequest(req, t('reserva.ok'));
+    return;
+  }
+
+  // Comprobación final ATÓMICA justo antes de enviar: cierra la ventana de
+  // carrera en la que dos clientes reservan casi a la vez y el resumen
+  // sincronizado todavía no refleja la reserva del otro.
+  reserveAforoAtomic(date, aforoInfo.turnoIdx, people, aforoInfo.aforo, aforoInfo.reservados).then(result => {
+    if(!result.committed){
+      if(btn) btn.disabled = false;
+      alert(t('error.aforo.completo'));
+      return;
+    }
+    sendRequest(req, t('reserva.ok'));
+  }).catch(e => {
+    console.error(e);
+    if(btn) btn.disabled = false;
+    // Si la transacción falla por un problema de conexión, dejamos seguir
+    // con el envío normal en vez de bloquear al cliente por completo: es
+    // preferible el pequeño riesgo de carrera a que no pueda reservar.
+    sendRequest(req, t('reserva.ok'));
+  });
 }
 
 /* ============ MENÚ (carrito compartido) ============ */
@@ -863,8 +943,8 @@ function renderOrderForm(){
       ${redsysConfigured ? `
       <div class="field">
         <label>${t('pago')}</label>
-        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px"><input type="radio" name="o-pago" value="local" checked style="width:auto"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:auto"> ${t('pago.tarjeta')}</label>
+        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago" value="local" checked style="width:20px;height:20px;flex-shrink:0"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
+        <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjeta')}</label>
       </div>` : ''}
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
     </div>
@@ -989,8 +1069,11 @@ async function submitOrder(){
   };
   if(pendienteVerificarZona) req.pendienteVerificarZona = true;
 
+  req.total = total;
+
   const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
   if(pagoTarjeta){
+    setPaySubmitEnabled(false);
     payWithCard(req, total, isDelivery ? t('order.delivery.title') : t('order.takeaway.title'));
     return;
   }
@@ -1020,7 +1103,8 @@ function payWithCard(req, amount, description){
     });
   }).then(r => r.json()).then(data => {
     if(!data || !data.url || data.error){
-      alert(t('error.pago') + ' ' + (data && data.error ? data.error : ''));
+      showInlineError(t('error.pago') + (data && data.error ? ' ' + data.error : ''));
+      setPaySubmitEnabled(true);
       return;
     }
     const form = document.createElement('form');
@@ -1035,8 +1119,13 @@ function payWithCard(req, amount, description){
     form.submit();
   }).catch(e => {
     console.error(e);
-    alert(t('error.pago.conexion'));
+    showInlineError(t('error.pago.conexion'));
+    setPaySubmitEnabled(true);
   });
+}
+function setPaySubmitEnabled(enabled){
+  const btn = document.getElementById('o-submit');
+  if(btn) btn.disabled = !enabled;
 }
 
 /* ============ PEDIDO EN MESA (auto-pedido) ============ */
@@ -1114,6 +1203,7 @@ function submitMesaOrder(){
     type:'pedido', tipo:'mesa', tableId,
     clienteNombre, notas,
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
+    total: cart.reduce((s,l)=>s+l.price*l.qty,0),
     createdAt: new Date().toISOString()
   };
   sendRequest(req, t('order.ok.mesa'));
