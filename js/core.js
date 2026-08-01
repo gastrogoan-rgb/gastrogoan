@@ -202,35 +202,89 @@ function changeOwnerAccessPassword(newPassword){
   setOwnerLogin(login.code, newPassword);
 }
 
-// Busca en TODOS los negocios del dispositivo (no solo el activo) el que
-// tenga este código, y dentro de él un empleado activo con ese nombre+PIN —
-// así el login no depende de qué negocio estuviera cargado antes. Usa
-// readSlotDB() para "asomarse" a otros negocios sin cambiar de negocio
-// todavía (solo se cambia si las credenciales son correctas).
-async function confirmEmployeeAccess(){
-  const name = document.getElementById('acc-emp-name').value.trim();
-  const pin = document.getElementById('acc-emp-pin').value;
-  const code = document.getElementById('acc-emp-code').value.trim();
-  if(!name || !pin || !code){ showToast(t('msg.completeAllFields')); return; }
-  const slot = getBusinessSlots().find(s => s.code === code);
-  if(!slot){ showToast(t('access.badCredentials')); return; }
-  let slotData;
-  try{ slotData = await readSlotDB(slot.id); }catch(e){ showToast(t('access.badCredentials')); return; }
-  const employees = slotData.employees || [];
-  const match = employees.find(e => {
+function findEmployeeMatch(employees, name, pin){
+  return (employees||[]).find(e => {
     if(e.active === false) return false;
     if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) return false;
     const storedPin = e.pin || '1234';
     return storedPin.startsWith('H:') ? hashPin(pin) === storedPin : pin === storedPin;
   });
-  if(!match){ showToast(t('access.badCredentials')); return; }
-  setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: slot.id});
-  if(slot.id !== ACTIVE_SLOT){
-    switchToBusiness(slot.id); // recarga la app ya con la sesión guardada
+}
+
+// Da de alta localmente, en ESTE dispositivo, un negocio que ya existe en
+// la nube pero que este dispositivo nunca había visto — escribe una copia
+// completa de sus datos (no solo los empleados) para que al entrar ya
+// tenga carta, mesas, etc. y no una app vacía. remoteData es el snapshot
+// completo ya descargado de gastrogoan/tenants/{tenantId}/db.
+async function registerRemoteBusinessLocally(tenantId, code, remoteData){
+  const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  await new Promise((resolve, reject) => {
+    const req = indexedDB.open(slotIdbName(newId), 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(withDefaults(defaultData(), remoteData), DB_KEY);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+    req.onerror = () => reject(req.error);
+  });
+  localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code, tenantId}));
+  const slots = getBusinessSlots();
+  slots.push({ id: newId, name: (remoteData.business && remoteData.business.name) || t('bs.defaultBusinessName'), code });
+  saveBusinessSlots(slots);
+  return newId;
+}
+
+// Busca primero en TODOS los negocios que este dispositivo ya conoce (no
+// solo el activo) el que tenga este código, y dentro de él un empleado
+// activo con ese nombre+PIN — sin tocar la red, instantáneo. Si este
+// dispositivo nunca ha visto ese negocio (p.ej. el móvil de un empleado
+// nuevo, o el primer día de alguien en otra sucursal), busca el negocio en
+// la nube compartida por su código y se trae una copia — así un empleado
+// puede entrar con nombre+PIN+código SIN que el propietario tenga que
+// "presentar" antes ese dispositivo.
+async function confirmEmployeeAccess(){
+  const name = document.getElementById('acc-emp-name').value.trim();
+  const pin = document.getElementById('acc-emp-pin').value;
+  const code = document.getElementById('acc-emp-code').value.trim().toUpperCase();
+  if(!name || !pin || !code){ showToast(t('msg.completeAllFields')); return; }
+
+  const localSlot = getBusinessSlots().find(s => s.code === code);
+  if(localSlot){
+    let slotData;
+    try{ slotData = await readSlotDB(localSlot.id); }catch(e){ showToast(t('access.badCredentials')); return; }
+    const match = findEmployeeMatch(slotData.employees, name, pin);
+    if(!match){ showToast(t('access.badCredentials')); return; }
+    setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
+    if(localSlot.id !== ACTIVE_SLOT){
+      switchToBusiness(localSlot.id); // recarga la app ya con la sesión guardada
+      return;
+    }
+    hideAccessSelectScreen();
+    resumeEmployeeSession();
     return;
   }
-  hideAccessSelectScreen();
-  resumeEmployeeSession();
+
+  // No es ningún negocio conocido en este dispositivo: probamos a
+  // encontrarlo en la nube por su código antes de rendirnos.
+  if(typeof firebase === 'undefined'){ showToast(t('access.badCredentials')); return; }
+  showToast(t('access.connectingFirstTime'));
+  const tenantId = ggBizTenantId(code);
+  const fbConfig = await lookupTenantFirebaseConfig(tenantId);
+  if(!fbConfig || !fbConfig.apiKey){ showToast(t('access.badCredentials')); return; }
+  let remoteData;
+  try{ remoteData = await fetchRemoteTenantDB(tenantId, fbConfig); }
+  catch(e){ console.error('Error conectando con el negocio remoto', e); showToast(t('access.connectFailed')); return; }
+  if(!remoteData){ showToast(t('access.badCredentials')); return; }
+  const match = findEmployeeMatch(remoteData.employees, name, pin);
+  if(!match){ showToast(t('access.badCredentials')); return; }
+  let newSlotId;
+  try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
+  catch(e){ console.error('Error registrando el negocio en este dispositivo', e); showToast(t('access.connectFailed')); return; }
+  setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: newSlotId});
+  switchToBusiness(newSlotId);
 }
 
 // Al arrancar (o justo tras un login de empleado en el mismo negocio ya
@@ -1569,15 +1623,61 @@ function syncPublicMirror(){
   }
 }
 
+// Para que un dispositivo que nunca ha visto este negocio (el móvil de un
+// empleado nuevo, por ejemplo) pueda encontrarlo solo con el código+PIN sin
+// que el propietario tenga que "presentarlo" antes en ese dispositivo, se
+// publica una referencia mínima (qué proyecto Firebase usar) en la nube
+// compartida de la plataforma, indexada por tenantId. El apiKey/databaseURL
+// de Firebase no son secretos (la seguridad la dan las reglas de Firebase,
+// no ocultar esto — así funciona cualquier app web con Firebase), así que
+// publicarlos aquí no reduce la seguridad real de los datos del negocio.
+function publishTenantLookup(tenantId, config){
+  if(!tenantId || !config) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/tenantLookup/' + tenantId).set({
+      apiKey: config.apiKey, databaseURL: config.databaseURL
+    }).catch(e => console.error('Error publicando la referencia del negocio', e));
+  }).catch(()=>{});
+}
+function lookupTenantFirebaseConfig(tenantId){
+  return getPlatformFirebaseApp().then(app => {
+    if(!app) return null;
+    return app.database().ref('gastrogoan/tenantLookup/' + tenantId).once('value').then(snap => snap.val());
+  }).catch(() => null);
+}
+// Se conecta de forma puntual (con una instancia de Firebase aparte, que se
+// cierra al terminar) al proyecto de OTRO negocio para traerse una copia de
+// sus datos — se usa solo la primera vez que un empleado entra desde un
+// dispositivo que nunca ha tenido este negocio localmente.
+async function fetchRemoteTenantDB(tenantId, fbConfig){
+  const appName = 'peek-' + tenantId;
+  let app;
+  try{ app = firebase.app(appName); }catch(e){ app = firebase.initializeApp(fbConfig, appName); }
+  await app.auth().signInAnonymously();
+  const snap = await app.database().ref('gastrogoan/tenants/' + tenantId + '/db').once('value');
+  try{ await app.delete(); }catch(e){}
+  return snap.val();
+}
+
 function initCloud(){
   cloudConfig = getCloudConfig();
   if(!cloudConfig){ updateSyncBadge('local'); return; }
   if(typeof firebase === 'undefined'){ console.error('Firebase no disponible (¿sin internet?)'); updateSyncBadge('error'); return; }
   const tenantId = getTenantId();
   if(!tenantId){ updateSyncBadge('local'); return; } // aún sin licencia activada
+  publishTenantLookup(tenantId, cloudConfig);
   if(cloudRef) return; // ya conectado
   try{
-    if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(cloudConfig);
+    // OJO: antes esto comprobaba "firebase.apps.length" (el total global de
+    // apps ya inicializadas) para decidir si crear la app por defecto — pero
+    // la app nombrada 'platform' (usada para las reservas públicas) casi
+    // siempre se registra ANTES, así que esa cuenta ya valía >=1 y esta
+    // línea nunca llegaba a crear la app por defecto del negocio, dejando
+    // la sincronización realmente rota en cualquier activación de licencia
+    // que no coincidiera con el primer arranque de la página. Se comprueba
+    // ahora específicamente si la app por defecto existe, no el total.
+    try{ firebase.app(); }catch(e){ firebase.initializeApp(cloudConfig); }
     // Autenticación anónima: las reglas de la nube exigen auth != null
     // para poder leer/escribir, así evitamos el acceso directo sin pasar
     // por el SDK de Firebase.
