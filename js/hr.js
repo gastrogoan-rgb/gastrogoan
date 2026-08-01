@@ -364,6 +364,7 @@ const GE = (function(){
     }else{
       fijos().push({id:genId(), ...data});
     }
+    snapshotGeFijosNeto();
     saveDB();
     closeModal();
     renderFijos();
@@ -372,6 +373,7 @@ const GE = (function(){
   function deleteGF(id){
     if(!confirm(t('msg.confirmDeleteGeneric'))) return;
     ge().fijos = fijos().filter(g=>g.id!==id);
+    snapshotGeFijosNeto();
     saveDB();
     renderFijos();
   }

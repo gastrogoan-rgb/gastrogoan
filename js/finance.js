@@ -7,6 +7,40 @@ function geTotalFijos(){
 function geTotalFijosNeto(){
   return (DB.ge.fijos||[]).reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m/(1+p/100);},0);
 }
+// Solo la parte de "gastos fijos" que es coste de personal (nóminas), para
+// poder mostrar el coste de personal como % de la facturación junto al food
+// cost — los dos números de "prime cost" que todo dueño de restaurante mira
+// juntos.
+function geTotalPersonalNeto(){
+  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m/(1+p/100);},0);
+}
+// Registra un punto en el histórico de gastos fijos (uno por día como
+// máximo: si ya se tocó algo hoy, se sobrescribe con el valor final del
+// día en vez de acumular varias entradas). Se llama tras cada alta/edición/
+// baja de un gasto fijo.
+function snapshotGeFijosNeto(){
+  if(!DB.ge.fijosLog) DB.ge.fijosLog = [];
+  const today = todayStr();
+  const total = geTotalFijosNeto();
+  const existing = DB.ge.fijosLog.find(e => e.fecha === today);
+  if(existing) existing.totalNeto = total;
+  else DB.ge.fijosLog.push({fecha: today, totalNeto: total});
+}
+// Gastos fijos netos "vigentes" a fecha de un mes concreto: el último punto
+// del histórico anterior o igual al último día de ese mes. Si no hay ningún
+// punto anterior (el histórico empezó después), se usa el más antiguo
+// conocido en vez de la configuración de hoy, por ser una mejor estimación
+// de lo que probablemente había entonces. Sin histórico todavía (negocio
+// recién empezado a usar la app), se cae en la configuración actual, igual
+// que el comportamiento de siempre.
+function geTotalFijosNetoForMonth(year, month){
+  const log = DB.ge.fijosLog || [];
+  if(!log.length) return geTotalFijosNeto();
+  const endOfMonth = dateStr(new Date(year, month+1, 0));
+  const sorted = [...log].sort((a,b) => a.fecha.localeCompare(b.fecha));
+  const upTo = sorted.filter(e => e.fecha <= endOfMonth);
+  return upTo.length ? upTo[upTo.length-1].totalNeto : sorted[0].totalNeto;
+}
 // Importe mensual equivalente de un gasto fijo: si se paga cada X meses (trimestral, anual...),
 // se reparte el importe entre esos meses para poder sumarlo junto a los gastos mensuales.
 function gfMonthlyImporte(g){
@@ -184,6 +218,37 @@ function renderDashboard(){
     <div class="kpi"><div class="label"><i class="ti ti-calendar-week"></i> ${t('dash.expensesLast7Days')}</div><div class="value">${fmtMoney(weekGastos)}</div></div>
   `;
 
+  // Carga de reservas de los próximos 7 días (comensales esperados por día),
+  // para planificar personal y compras con antelación en vez de reaccionar
+  // solo a hoy/mañana. Igual que en el resto de la app, las canceladas/
+  // no-show/lista de espera no cuentan como cobertura real esperada.
+  {
+    const weekResHtml = document.getElementById('dashboard-reservations-week');
+    const days = Array.from({length:7}, (_,i) => dateStr(new Date(today.getTime() + i*86400000)));
+    const dayCovers = days.map(ds => {
+      const covers = DB.reservations
+        .filter(r => r.date===ds && (r.status==='confirmada'||r.status==='pendiente'))
+        .reduce((s,r) => s+(r.people||0), 0);
+      return {ds, covers};
+    });
+    const maxCovers = Math.max(...dayCovers.map(d=>d.covers), 1);
+    const anyReservations = dayCovers.some(d=>d.covers>0);
+    weekResHtml.innerHTML = !anyReservations ? `<div class="empty">${t('dash.noUpcomingReservations')}</div>` : `
+      <div style="display:flex;align-items:flex-end;gap:6px;height:120px">
+        ${dayCovers.map(({ds,covers},i) => {
+          const d = new Date(ds+'T00:00:00');
+          const isToday = ds === todayDate;
+          return `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer" onclick="navigate('reservas');goToReservasDia('${ds}')" title="${t('dash.viewReservationsDay')}">
+            <div style="font-size:11px;font-weight:700;color:var(--brand-orange);margin-bottom:2px">${covers||''}</div>
+            <div style="width:100%;background:${isToday?'var(--brand-orange)':'var(--teal)'};border-radius:4px 4px 0 0;height:${Math.max(2,(covers/maxCovers*100))}%"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${weekDayShort(d.getDay()===0?6:d.getDay()-1)}<br>${d.getDate()}/${d.getMonth()+1}</div>
+          </div>
+        `;}).join('')}
+      </div>
+    `;
+  }
+
   // Resultado del mes (P&L) — única fuente de verdad para las cifras del mes en curso.
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -194,6 +259,10 @@ function renderDashboard(){
 
   const fcPct = avgFoodCost;
   const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
+  const personalCost = geTotalPersonalNeto();
+  const staffCostPct = facturacion > 0 ? (personalCost/facturacion)*100 : 0;
+  const hasFoodCost = weightedFcUnits>0||DB.recipes.length;
+  const primeCostPct = (hasFoodCost?fcPct:0) + staffCostPct;
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
       <div class="kpi"><div class="label">${t('dash.revenueMonth')}</div><div class="value">${fmtMoney(facturacion)}</div></div>
@@ -203,7 +272,9 @@ function renderDashboard(){
     </div>
     <div style="margin-top:8px;font-size:13px;color:var(--muted)">
       ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
-      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${weightedFcUnits>0||DB.recipes.length?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
+      &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${hasFoodCost?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
+      &nbsp;·&nbsp; ${t('dash.staffCostPct')} <strong style="color:${staffCostPct>30?'var(--red)':'var(--green)'}">${facturacion>0&&personalCost>0?staffCostPct.toFixed(1)+'%':'—'}</strong>
+      ${facturacion>0 && personalCost>0 && hasFoodCost ? `&nbsp;·&nbsp; ${t('dash.primeCost')} <strong style="color:${primeCostPct>65?'var(--red)':'var(--green)'}">${primeCostPct.toFixed(1)}%</strong>` : ''}
     </div>
   `;
 
@@ -216,7 +287,7 @@ function renderDashboard(){
     const y = d.getFullYear(), m = d.getMonth();
     const sales = salesTotalForMonth(y, m);
     const variablesM = geTotalVariablesNetoMes(y, m);
-    const fijosM = geTotalFijosNeto();
+    const fijosM = geTotalFijosNetoForMonth(y, m);
     const label = monthFull(m).slice(0,3);
     ventasTrend.push({label, value: sales});
     gastosTrend.push({label, value: variablesM + fijosM});

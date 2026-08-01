@@ -97,6 +97,11 @@
       <div class="grid grid-2" id="dashboard-period-kpis" style="margin-top:16px"></div>
 
       <div class="card" style="margin-top:16px">
+        <h3 data-i18n="dash.upcomingReservations.title"><i class="ti ti-calendar-stats"></i> Reservas de los próximos 7 días</h3>
+        <div id="dashboard-reservations-week"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
         <h3 data-i18n="title.monthlyPL"><i class="ti ti-chart-bar"></i> Resultado del mes (P&amp;L)</h3>
         <div id="dashboard-resultado"></div>
       </div>
@@ -132,11 +137,11 @@
         <div id="dashboard-breakeven"></div>
       </div>
 
-      <details class="card" style="margin-top:16px">
+      <details class="card" style="margin-top:16px" open>
         <summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px">
           <i class="ti ti-chevron-right" style="transition:transform .15s"></i>
           <i class="ti ti-toolsKitchen"></i> <span data-i18n="title.dishAnalysis">Análisis de Platos</span>
-          <span style="font-weight:400;font-size:12px;color:var(--muted)" data-i18n="dash.deepDiveHint">(detalle avanzado — click para desplegar)</span>
+          <span style="font-weight:400;font-size:12px;color:var(--muted)" data-i18n="dash.deepDiveHint">(rentabilidad y ventas por plato — click para plegar)</span>
         </summary>
         <div style="margin-top:14px">
           <div class="month-sel" id="platos-period-sel"></div>

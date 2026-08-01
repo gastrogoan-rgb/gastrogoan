@@ -1982,7 +1982,13 @@ function defaultData(){
       fijos: [],     // {id, nombre, importe, diaPago, categoria: 'PERSONAL'|'FIJOS'}
       variables: [], // {id, mes, año, categoria, proveedor, importe, fecha}
       capex: [],     // {id, descripcion, importe, iva, fecha, estadoPago}
-      config: {ticketMedio:15, cubiertosActuales:50, diasApertura:26, foodCostObj:35}
+      config: {ticketMedio:15, cubiertosActuales:50, diasApertura:26, foodCostObj:35},
+      // Histórico de cuánto sumaban los gastos fijos cada vez que se tocó algo
+      // (se añade un punto el día que se crea/edita/borra un gasto fijo), para
+      // que las tendencias de meses pasados del Panel de Control no apliquen
+      // silenciosamente la configuración de HOY a un mes en el que los gastos
+      // fijos eran distintos. {fecha, totalNeto}
+      fijosLog: []
     },
     nextId: 1
   };
