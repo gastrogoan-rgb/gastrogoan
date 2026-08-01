@@ -1324,8 +1324,9 @@ function printFicha(id){
   // que se vinculó), no el que se guardó en la ficha en su momento.
   const liveRecipe = getFichaLiveRecipe(f);
   const displayName = liveRecipe ? liveRecipe.name : f.name;
-  const algs = getFichaAllergens(f).length
-    ? getFichaAllergens(f).map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
+  const fichaAllergens = getFichaAllergens(f);
+  const algs = fichaAllergens.length
+    ? fichaAllergens.map(a=>`<span style="background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:4px;font-size:10pt;margin:2px;display:inline-block">${escapeHtml(allergenLabel(a))}</span>`).join('')
     : t('label.none');
   const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;

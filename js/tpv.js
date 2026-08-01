@@ -1323,7 +1323,15 @@ function renderTableOrderModal(orderId){
     if(elegida) comidaCartas = [elegida];
   }
   const allCartas = [...bebidaCartas, ...comidaCartas];
-  const activeMenus = getActiveMenus ? getActiveMenus() : (DB.menus||[]);
+  // Un menú de varios platos ya empezado en ESTE pedido (tiene líneas con su
+  // menuId) debe seguir pudiéndose completar aunque su horario haya
+  // terminado a mitad de servicio y ya no esté en activeMenuIds — si no, su
+  // pestaña desaparecía y el camarero no podía añadir el 2º/3er plato de un
+  // menú que el cliente ya había empezado a comer.
+  const activeMenusBase = getActiveMenus ? getActiveMenus() : (DB.menus||[]);
+  const inProgressMenuIds = new Set(order.items.filter(l=>l.menuId).map(l=>l.menuId));
+  const inProgressExtraMenus = (DB.menus||[]).filter(m => inProgressMenuIds.has(m.id) && !activeMenusBase.some(x=>x.id===m.id));
+  const activeMenus = [...activeMenusBase, ...inProgressExtraMenus];
 
   // Autoseleccionar la primera carta si no hay selección
   if(!tpvSelectedCartaId || !allCartas.some(c=>c.id===tpvSelectedCartaId) && !activeMenus.some(m=>m.id===tpvSelectedCartaId)){

@@ -119,12 +119,21 @@ function geVariablesTotalForRange(startDate, endDate){
 // podía dar un número incorrecto para "ayer"/"hace 7 días" si los gastos fijos cambiaron
 // de un día para otro — el mismo tipo de bug ya corregido esta sesión para Gestión Económica).
 function geFijosForRange(startDate, endDate){
+  // geTotalFijosNetoForMonth() reordena TODO el histórico de gastos fijos en
+  // cada llamada (ver geFijosLogValueForMonth) — para no repetir ese trabajo
+  // en cada día del rango (y para no repetirlo varias veces dentro del mismo
+  // mes, ya que el valor no cambia día a día), se ordena una sola vez aquí y
+  // se cachea el resultado por mes.
+  const monthCache = {};
   let total = 0;
   let d = new Date(startDate+'T00:00:00');
   const end = new Date(endDate+'T00:00:00');
   while(d <= end){
-    const fijosMonth = geTotalFijosNetoForMonth(d.getFullYear(), d.getMonth());
-    if(fijosMonth) total += fijosMonth / daysInMonth(d.getFullYear(), d.getMonth());
+    const year = d.getFullYear(), month = d.getMonth();
+    const cacheKey = `${year}-${month}`;
+    if(!(cacheKey in monthCache)) monthCache[cacheKey] = geTotalFijosNetoForMonth(year, month);
+    const fijosMonth = monthCache[cacheKey];
+    if(fijosMonth) total += fijosMonth / daysInMonth(year, month);
     d.setDate(d.getDate()+1);
   }
   return total;
