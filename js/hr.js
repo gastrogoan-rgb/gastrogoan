@@ -2127,15 +2127,16 @@ function renderHorariosPersonal(){
   const emps = personalSearch ? allEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : allEmps;
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
+    const isInactive = e.active === false;
     return `
-    <div class="card" style="cursor:pointer" onclick="requestEmployeePersonalPin(${e.id})">
+    <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="requestEmployeePersonalPin(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
           <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
-        ${open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
+        ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       <div style="text-align:center;margin-bottom:10px">
         <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
@@ -2365,6 +2366,12 @@ function openEmployeeModal(id){
       </div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
+    ${id ? `
+    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="emp-active" ${e.active!==false?'checked':''} style="width:auto">
+      ${t('label.employeeActive').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
+    </label>
+    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.employeeActiveDesc')}</p>` : ''}
     <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
       <input type="checkbox" id="emp-can-edit" ${e.canUnlockEdit?'checked':''} style="width:auto">
       ${t('label.canUnlockEditMode').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
@@ -2407,14 +2414,16 @@ function saveEmployee(id){
   const phone = document.getElementById('emp-phone').value.trim();
   const email = document.getElementById('emp-email').value.trim();
   const canUnlockEdit = document.getElementById('emp-can-edit').checked;
+  const empActiveEl = document.getElementById('emp-active');
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
     Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, area: emp.area||currentArea()});
+    if(empActiveEl) emp.active = empActiveEl.checked;
   } else {
-    // Nuevo empleado: se asigna automáticamente al área desde la que se crea.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false});
+    // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false, active:true});
   }
   saveDB();
   closeModal();
