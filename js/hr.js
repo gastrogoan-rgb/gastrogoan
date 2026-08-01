@@ -85,13 +85,12 @@ const GE = (function(){
   function ivaSoportadoComprasMes(mes, año=currentYear){
     return totalVariablesMes(mes,año) - totalVariablesNetoMes(mes,año);
   }
-  function ivaSoportadoFijosMes(){
-    return fijos().reduce((s,g) => {
-      const pct = g.iva != null ? parseFloat(g.iva) : 0;
-      if(pct === 0) return s;
-      const mensual = gfMonthlyImporte(g);
-      return s + mensual - mensual / (1 + pct/100);
-    }, 0);
+  // Usa el histórico (DB.ge.fijosLog) en vez de recalcular siempre con la
+  // configuración ACTUAL de gastos fijos, para que un mes/trimestre pasado
+  // no cambie de golpe si después se edita un gasto fijo — clave de cara a
+  // la liquidación real de IVA con Hacienda.
+  function ivaSoportadoFijosMes(mes, año=currentYear){
+    return geIvaSoportadoFijosForMonth(año, mes);
   }
   // IVA soportado en inversiones CAPEX compradas ese mes (deducible en el periodo de la compra).
   function ivaSoportadoCapexMes(mes, año=currentYear){
@@ -104,7 +103,7 @@ const GE = (function(){
   // IVA neto a liquidar con Hacienda (modelo 303): repercutido en ventas menos soportado en compras e inversiones.
   // Si es negativo, Hacienda te lo debe a ti (a tu favor).
   function ivaLiquidarMes(mes, año=currentYear){
-    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes();
+    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes(mes,año);
   }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
   // sobre las ventas del mes que llegaron por esas plataformas.
@@ -123,7 +122,7 @@ const GE = (function(){
   }
   // Resultado antes de impuestos: facturación neta de IVA menos todos los gastos (compras sin IVA, ya que ese IVA es deducible).
   function resultadoAntesImpMes(mes, año=currentYear){
-    return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - totalFijosNeto() - comisionesMes(mes,año) - capexCuotaMes(mes,año);
+    return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - geTotalFijosNetoForMonth(año,mes) - comisionesMes(mes,año) - capexCuotaMes(mes,año);
   }
   // Resultado Neto: lo que realmente te llevas, después de IVA e impuesto sobre beneficios.
   function resultadoMes(mes, año=currentYear){
@@ -523,16 +522,19 @@ const GE = (function(){
   }
   function renderCDR(){
     syncYearLabels();
-    const tfN = totalFijosNeto();
     const ivaPct = ivaVentasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
-    const fijosNote = cdrYear !== currentYear ? ` <span style="font-size:10px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
+    // El aviso solo tiene sentido si TODO el año consultado es anterior al
+    // primer punto del histórico de gastos fijos (no hay ningún dato real
+    // de esas fechas). Si hay histórico, cada mes ya usa su propio valor
+    // real de entonces (geTotalFijosNetoForMonth), no el de hoy.
+    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     const rows = [
       {lbl:t('hr.cdr.revenue'), vals:getMeses().map((_,i)=>facturacionMes(i,cdrYear)), auto:true, bold:true, yoyFn:i=>facturacionMes(i,cdrYear-1)},
       {lbl:t('hr.cdr.vatOnSales').replace('${pct}', ivaPct), vals:getMeses().map((_,i)=>-ivaVentasMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.netRevenue'), vals:getMeses().map((_,i)=>facturacionNetaMes(i,cdrYear)), auto:true, highlight:true, bold:true},
       {lbl:t('hr.lbl.variableExpensesNoVat'), vals:getMeses().map((_,i)=>-totalVariablesNetoMes(i,cdrYear)), auto:true},
-      {lbl:t('hr.lbl.fixedNoVat')+fijosNote, vals:getMeses().map(()=>-tfN), auto:true},
+      {lbl:t('hr.lbl.fixedNoVat')+fijosNote, vals:getMeses().map((_,i)=>-geTotalFijosNetoForMonth(cdrYear,i)), auto:true},
       {lbl:t('hr.lbl.deliveryCommissions'), vals:getMeses().map((_,i)=>-comisionesMes(i,cdrYear)), auto:true},
       {lbl:t('hr.lbl.financedInvestmentInstallments'), vals:getMeses().map((_,i)=>-capexCuotaMes(i,cdrYear)), auto:true},
       {lbl:t('hr.cdr.resultBeforeTax'), vals:getMeses().map((_,i)=>resultadoAntesImpMes(i,cdrYear)), highlight:true, isResult:true},
@@ -872,8 +874,7 @@ const GE = (function(){
     if(pctIvaComprasEl) pctIvaComprasEl.value = ivaComprasPct();
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
 
-    const tf = totalFijosNeto();
-    const fijosNote = cdrYear !== currentYear ? ` <span style="font-size:10px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
+    const fijosNote = geFijosHistoryPredatesYear(cdrYear) ? ` <span style="font-size:10px;font-weight:400;color:var(--muted)">${t('hr.res.currentFijosNote')}</span>` : '';
     const qLabels = [`T1 (${getMeses()[0]}-${getMeses()[2]})`, `T2 (${getMeses()[3]}-${getMeses()[5]})`, `T3 (${getMeses()[6]}-${getMeses()[8]})`, `T4 (${getMeses()[9]}-${getMeses()[11]})`, t('hr.lbl.totalYear')];
     const qMonths = [[0,1,2],[3,4,5],[6,7,8],[9,10,11],[0,1,2,3,4,5,6,7,8,9,10,11]];
     function qVal(months, fn){ return months.reduce((s,m)=>s+fn(m), 0); }
@@ -891,8 +892,8 @@ const GE = (function(){
       {lbl:t('hr.res.costOfSales'), fn:m=>totalVariablesNetoMes(m,cdrYear)},
       {lbl:t('hr.res.grossMargin'), fn:m=>facturacionNetaMes(m,cdrYear)-totalVariablesNetoMes(m,cdrYear), highlight:true, bold:true},
       {lbl:t('hr.lbl.deliveryCommissions'), fn:m=>comisionesMes(m,cdrYear), auto:true},
-      {lbl:t('hr.res.operatingExpenses')+fijosNote, fn:()=>tf},
-      {lbl:t('hr.res.operatingEbitda'), fn:m=>facturacionNetaMes(m,cdrYear)-totalVariablesNetoMes(m,cdrYear)-tf-comisionesMes(m,cdrYear), highlight:true, bold:true},
+      {lbl:t('hr.res.operatingExpenses')+fijosNote, fn:m=>geTotalFijosNetoForMonth(cdrYear,m)},
+      {lbl:t('hr.res.operatingEbitda'), fn:m=>facturacionNetaMes(m,cdrYear)-totalVariablesNetoMes(m,cdrYear)-geTotalFijosNetoForMonth(cdrYear,m)-comisionesMes(m,cdrYear), highlight:true, bold:true},
       {lbl:t('hr.lbl.financedInvestmentInstallments'), fn:m=>capexCuotaMes(m,cdrYear), auto:true},
       {lbl:t('hr.cdr.resultBeforeTax'), fn:resAntesImp, isResult:true, bold:true},
       {lbl:`${t('hr.cdr.profitTax')} (${(pctImp*100).toFixed(0)}%)`, fn:m=>{ const r=resAntesImp(m); return r>0?r*pctImp:0; }, auto:true},
@@ -1325,7 +1326,14 @@ const GE = (function(){
     rows.push(['','','','',t('common.total'), sumBase, '', sumIva, sumTotal]);
     rows.push([]);
 
-    rows.push([t('hr.csv.monthlyFixedExpenses')]);
+    // El desglose línea a línea es siempre la configuración ACTUAL de gastos
+    // fijos (no se guarda un histórico por concepto individual, solo el
+    // total agregado) — si el mes del informe no es el actual, se avisa y
+    // el resumen final usa el total histórico real en vez de este desglose,
+    // para que la cifra que de verdad importa (el resultado/IVA a liquidar)
+    // no dependa de la configuración de hoy.
+    const isHistoricalMonth = !(año===currentYear && mes===new Date().getMonth());
+    rows.push([t('hr.csv.monthlyFixedExpenses') + (isHistoricalMonth ? ` (${t('hr.csv.currentConfigNote')})` : '')]);
     rows.push([t('hr.lbl.concept'), t('common.category'), t('hr.gf.payDayLabel'), t('hr.gf.payPeriodicity'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     let sumFijos = 0, sumFijosBase = 0, sumFijosIva = 0;
     fijos().forEach(g => {
@@ -1340,6 +1348,11 @@ const GE = (function(){
     if(!fijos().length) rows.push([t('hr.csv.noFixedExpenses')]);
     rows.push(['','','',t('common.total'), sumFijosBase, '', sumFijosIva, sumFijos]);
     rows.push([]);
+    // Totales históricos reales de gastos fijos para ESE mes concreto (los
+    // que sí se usan en el resumen final), pueden diferir del desglose de
+    // arriba si la configuración ha cambiado desde entonces.
+    const sumFijosBaseHist = geTotalFijosNetoForMonth(año, mes);
+    const sumFijosIvaHist = geIvaSoportadoFijosForMonth(año, mes);
 
     rows.push([t('hr.csv.variableExpensesMonth')]);
     rows.push([t('common.date'), t('common.category'), t('common.supplier'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
@@ -1406,9 +1419,9 @@ const GE = (function(){
     });
     rows.push([]);
 
-    const comisiones = comisionesMes(mes);
-    const resultado = sumBase - sumVarBase - sumFijosBase - comisiones - capexCuotaMes(mes);
-    const totalIvaSoportado = sumVarIva + sumFijosIva + sumCapexIva;
+    const comisiones = comisionesMes(mes, año);
+    const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuotaMes(mes, año);
+    const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva;
     rows.push([t('hr.csv.monthSummary')]);
     rows.push([t('hr.lbl.concept'), t('hr.lbl.amountEur')]);
     rows.push([t('hr.csv.totalRevenueWithVat'), sumTotal]);
@@ -1416,7 +1429,7 @@ const GE = (function(){
     rows.push([t('hr.csv.vatOnSalesLabel'), sumIva]);
     rows.push([t('hr.lbl.deliveryCommissions'), comisiones]);
     rows.push([t('hr.csv.variableExpensesBase'), sumVarBase]);
-    rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBase]);
+    rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBaseHist]);
     rows.push([t('hr.csv.capexBase'), sumCapexBase]);
     rows.push([t('hr.csv.totalVatSupported'), totalIvaSoportado]);
     rows.push([t('hr.csv.vatToSettleShort'), sumIva - totalIvaSoportado]);

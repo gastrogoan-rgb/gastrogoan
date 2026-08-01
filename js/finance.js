@@ -17,29 +17,56 @@ function geTotalPersonalNeto(){
 // Registra un punto en el histórico de gastos fijos (uno por día como
 // máximo: si ya se tocó algo hoy, se sobrescribe con el valor final del
 // día en vez de acumular varias entradas). Se llama tras cada alta/edición/
-// baja de un gasto fijo.
+// baja de un gasto fijo. Guarda tanto el total neto como el total con IVA,
+// para poder reconstruir después también el IVA soportado histórico (no
+// solo el resultado neto) — importante de cara a la liquidación trimestral.
 function snapshotGeFijosNeto(){
   if(!DB.ge.fijosLog) DB.ge.fijosLog = [];
   const today = todayStr();
-  const total = geTotalFijosNeto();
+  const totalNeto = geTotalFijosNeto();
+  const totalGross = geTotalFijos();
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing) existing.totalNeto = total;
-  else DB.ge.fijosLog.push({fecha: today, totalNeto: total});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross});
 }
-// Gastos fijos netos "vigentes" a fecha de un mes concreto: el último punto
-// del histórico anterior o igual al último día de ese mes. Si no hay ningún
-// punto anterior (el histórico empezó después), se usa el más antiguo
-// conocido en vez de la configuración de hoy, por ser una mejor estimación
-// de lo que probablemente había entonces. Sin histórico todavía (negocio
-// recién empezado a usar la app), se cae en la configuración actual, igual
-// que el comportamiento de siempre.
-function geTotalFijosNetoForMonth(year, month){
+// Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
+// el último punto anterior o igual al último día de ese mes. Si no hay
+// ningún punto anterior (el histórico empezó después), se usa el más
+// antiguo conocido en vez de la configuración de hoy, por ser una mejor
+// estimación de lo que probablemente había entonces. Sin histórico todavía
+// (negocio recién empezado a usar la app), se cae en la configuración
+// actual, igual que el comportamiento de siempre.
+function geFijosLogValueForMonth(year, month, field){
   const log = DB.ge.fijosLog || [];
-  if(!log.length) return geTotalFijosNeto();
+  if(!log.length) return null;
   const endOfMonth = dateStr(new Date(year, month+1, 0));
   const sorted = [...log].sort((a,b) => a.fecha.localeCompare(b.fecha));
   const upTo = sorted.filter(e => e.fecha <= endOfMonth);
-  return upTo.length ? upTo[upTo.length-1].totalNeto : sorted[0].totalNeto;
+  return upTo.length ? upTo[upTo.length-1][field] : sorted[0][field];
+}
+function geTotalFijosNetoForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'totalNeto');
+  return v==null ? geTotalFijosNeto() : v;
+}
+function geTotalFijosGrossForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'totalGross');
+  return v==null ? geTotalFijos() : v;
+}
+// IVA soportado en gastos fijos de un mes concreto, a partir del histórico
+// (gross - neto de ese momento), en vez de recalcularlo siempre con la
+// configuración actual de gastos fijos.
+function geIvaSoportadoFijosForMonth(year, month){
+  return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
+}
+// True si TODO el año consultado es anterior al primer punto del histórico
+// (es decir, no tenemos ningún dato real de cómo eran los gastos fijos en
+// esas fechas y se está usando la estimación más antigua conocida como
+// aproximación) — para poder avisar solo en ese caso, no siempre.
+function geFijosHistoryPredatesYear(year){
+  const log = DB.ge.fijosLog || [];
+  if(!log.length) return true;
+  const earliestYear = parseInt([...log].sort((a,b)=>a.fecha.localeCompare(b.fecha))[0].fecha.slice(0,4));
+  return year < earliestYear;
 }
 // Importe mensual equivalente de un gasto fijo: si se paga cada X meses (trimestral, anual...),
 // se reparte el importe entre esos meses para poder sumarlo junto a los gastos mensuales.
