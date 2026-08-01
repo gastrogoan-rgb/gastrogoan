@@ -79,9 +79,19 @@ function tourClearHighlight(){
 function tourGoToStep(step){
   tourClearHighlight();
   if(step.gestion){
+    if(!ownerUnlocked) tourOwnerUnlockedByTour = true;
     ownerUnlocked = true;
     const lockBtn = document.getElementById('lock-btn');
     if(lockBtn) lockBtn.style.display = '';
+  }else if(tourOwnerUnlockedByTour){
+    // Solo volvemos a bloquear Gestión al salir del paso si fue el propio
+    // tour quien la desbloqueó — antes se quedaba desbloqueada sin PIN
+    // durante el resto del tour aunque ya no se estuviera en un paso de
+    // gestión, y solo se relockeaba al terminar el tour del todo.
+    ownerUnlocked = false;
+    tourOwnerUnlockedByTour = false;
+    const lockBtn = document.getElementById('lock-btn');
+    if(lockBtn) lockBtn.style.display = 'none';
   }
   if(step.folder) currentFolder = step.folder;
   if(step.view) navigate(step.view);
@@ -131,6 +141,7 @@ function finishTour(){
   const b = document.getElementById('tour-bubble');
   if(b) b.remove();
   ownerUnlocked = false;
+  tourOwnerUnlockedByTour = false;
   const lockBtn = document.getElementById('lock-btn');
   if(lockBtn) lockBtn.style.display = 'none';
   goHome();
@@ -887,6 +898,7 @@ function openFolder(key){
   }
 }
 let ownerUnlocked = false;
+let tourOwnerUnlockedByTour = false;
 let editUnlocked = false;
 
 function lockEditMode(){
@@ -949,8 +961,11 @@ function verifyEditPin(){
   const val = document.getElementById('edit-pin-input').value;
   const bp = DB.business.pin;
   const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
-  const eligibleEmployee = (DB.employees||[]).find(e => e.area === currentFolder && e.canUnlockEdit);
-  const empMatch = eligibleEmployee && (eligibleEmployee.pin.startsWith('H:') ? hashPin(val) === eligibleEmployee.pin : val === eligibleEmployee.pin);
+  // Antes solo se comparaba contra el PRIMER empleado habilitado del área —
+  // si había varios con canUnlockEdit, el PIN de cualquiera menos el primero
+  // no funcionaba. Ahora se comprueba contra todos los habilitados.
+  const eligibleEmployees = (DB.employees||[]).filter(e => e.area === currentFolder && e.canUnlockEdit && e.pin);
+  const empMatch = eligibleEmployees.some(e => e.pin.startsWith('H:') ? hashPin(val) === e.pin : val === e.pin);
   if(!bMatch && !empMatch){
     showToast(t('msg.pinIncorrect'));
     return;

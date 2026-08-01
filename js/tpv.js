@@ -77,7 +77,10 @@ function computeAutoActiveCartaIds(){
 function updateAutoActiveCarta(force){
   if(!DB.business || DB.business.cartaAuto === false) return;
   const autoIds = computeAutoActiveCartaIds();
-  if(!autoIds.length) return;
+  // OJO: antes, si ninguna carta coincidía con el horario ahora mismo (autoIds
+  // vacío), se salía sin tocar DB.activeCartaIds — así que la última carta
+  // activa se quedaba "activa" para siempre tras cerrar su franja horaria, en
+  // TPV y en la carta pública. Ahora sí se vacía también en ese caso.
   const current = DB.activeCartaIds||[];
   const changed = force || autoIds.length !== current.length || autoIds.some(id=>!current.includes(id));
   if(changed){
@@ -2574,6 +2577,13 @@ function generateItemsSplit(orderId){
   order.itemAssignments = assignments;
   order.splitItemsN = n;
   order.splitMode = 'items';
+  // El coste de envío es un gasto del pedido entero, no de ningún plato
+  // concreto: antes no se repartía entre los comensales, así que lo cobrado
+  // sumaba menos que orderTotal() (lo que se imprime en ticket/factura) y
+  // faltaba dinero en caja. Se reparte a partes iguales, con el resto de
+  // redondeo en el último comensal para que la suma cuadre exactamente.
+  const costeEnvio = order.costeEnvio || 0;
+  const envioPorComensal = roundMoney(costeEnvio / n);
   order.splitPayments = Array.from({length:n}, (_,i) => {
     const personIdx = i+1;
     let amount = 0;
@@ -2585,6 +2595,12 @@ function generateItemsSplit(orderId){
         itemNames.push(units === line.qty ? line.name : `${units} x ${line.name}`);
       }
     });
+    if(costeEnvio > 0){
+      const esUltimo = personIdx === n;
+      const envioAsignado = esUltimo ? roundMoney(costeEnvio - envioPorComensal * (n-1)) : envioPorComensal;
+      amount += envioAsignado;
+      itemNames.push(`${t('label.deliveryCost')}: ${fmtMoney(envioAsignado)}`);
+    }
     return {
       id: personIdx, label: t('label.dinerN').replace('${n}', personIdx), amount: roundMoney(amount),
       itemNames, paid:false, metodoPago:null

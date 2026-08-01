@@ -2003,14 +2003,19 @@ function saveTurno(id){
   if(!DB.turnos) DB.turnos = [];
   let turno = id ? DB.turnos.find(x => x.id===id) : null;
   if(id && !turno){ showToast(t('msg.shiftNotFound')); return; }
-  if(!turno){
-    // Un empleado solo puede tener un turno por día: si ya había uno para esa
-    // fecha, se sustituye en vez de crear un duplicado que descuadraría las
-    // horas totales (contadas sumando todos los turnos, no solo el visible).
-    turno = DB.turnos.find(x => x.employeeId===data.employeeId && x.fecha===data.fecha);
-  }
+  // Un empleado solo puede tener un turno por día: si ya hay OTRO turno (con
+  // distinto id) para ese empleado+fecha, se sustituye en vez de crear o
+  // dejar un duplicado que descuadraría las horas totales. Esto se comprueba
+  // tanto al crear un turno nuevo como al EDITAR uno existente — antes solo
+  // se comprobaba al crear, así que editar un turno para que coincidiera con
+  // el empleado+fecha de otro ya existente dejaba los dos duplicados.
+  const collision = DB.turnos.find(x => x.employeeId===data.employeeId && x.fecha===data.fecha && x.id !== id);
   const emp = DB.employees.find(x=>x.id===data.employeeId);
   const wasNew = !turno;
+  if(collision){
+    if(turno) DB.turnos = DB.turnos.filter(x => x.id !== turno.id);
+    turno = collision;
+  }
   if(turno){
     Object.assign(turno, data);
   } else {

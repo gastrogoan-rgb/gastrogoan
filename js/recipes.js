@@ -8,13 +8,18 @@ function recipeFoodCostPct(r){
   return (cost / r.price) * 100;
 }
 // Coste de una elaboración base (caldo, sofrito, masa...) por unidad de su rendimiento.
-// `visited` evita bucles infinitos si una base se referencia a sí misma (directa o indirectamente).
+// `visited` evita bucles infinitos si una base se referencia a sí misma (directa o
+// indirectamente) — representa la RUTA actual de la recursión (ancestros), no "todo lo
+// visitado alguna vez". Por eso se borra al volver (backtrack): si no se borrara, una
+// misma base reutilizada en dos ramas distintas del mismo árbol (que no es un ciclo real)
+// se contaría con coste 0 la segunda vez, infravalorando el coste del plato en silencio.
 function recipeBaseCostPerUnit(baseRecipe, visited){
   if(!baseRecipe) return 0;
   visited = visited || new Set();
   if(visited.has(baseRecipe.id)) return 0;
   visited.add(baseRecipe.id);
   const total = recipeCostBreakdown(baseRecipe, visited).total;
+  visited.delete(baseRecipe.id);
   const yieldQty = baseRecipe.baseYield || 1;
   return yieldQty > 0 ? total / yieldQty : 0;
 }
@@ -809,12 +814,35 @@ function getFichaBaseComensales(f){
   return (r && r.comensales) ? r.comensales : (f.baseComensales || f.comensales || 1);
 }
 
+// Alérgenos de una receta recalculados EN VIVO a partir de sus ingredientes y
+// elaboraciones base actuales — a diferencia de r.allergens (guardado como foto
+// fija solo en saveRecipe()), esto refleja el alérgeno de un ingrediente aunque
+// se haya editado después de guardar la receta por última vez.
+function recipeComputedAllergens(r, visited){
+  if(!r) return [];
+  visited = visited || new Set();
+  if(visited.has(r.id)) return [];
+  visited.add(r.id);
+  const allergenSet = new Set();
+  (r.ingredients||[]).forEach(line => {
+    if(line.type === 'base'){
+      const base = getRecipe(line.baseRecipeId);
+      recipeComputedAllergens(base, visited).forEach(a => allergenSet.add(a));
+      return;
+    }
+    const ing = getIngredient(line.ingredientId);
+    (ing && ing.allergens || []).forEach(a => allergenSet.add(a));
+  });
+  visited.delete(r.id);
+  return Array.from(allergenSet);
+}
 // Alérgenos a mostrar/imprimir: unión de los que vienen automáticamente del
-// escandallo vinculado (siempre al día) más los añadidos manualmente en la
-// propia ficha (para casos sin escandallo o alérgenos por manipulación).
+// escandallo vinculado (recalculados en vivo, siempre al día) más los añadidos
+// manualmente en la propia ficha (para casos sin escandallo o alérgenos por
+// manipulación).
 function getFichaAllergens(f){
   const r = getFichaLiveRecipe(f);
-  return Array.from(new Set([...(r?r.allergens||[]:[]), ...(f.allergens||[])]));
+  return Array.from(new Set([...(r?recipeComputedAllergens(r):[]), ...(f.allergens||[])]));
 }
 
 let fichasView = 'grid'; // 'grid' | 'list'

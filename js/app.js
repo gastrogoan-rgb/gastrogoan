@@ -145,15 +145,26 @@ function ensureLimpiezaData(){
   pruneLimpiezaLogs();
 }
 
-// El historial de cumplimiento diario (apertura/cierre) y los registros de
-// temperaturas/plagas no son un archivo permanente: si se acumularan para
-// siempre dejarían de ser útiles de un vistazo. El cumplimiento diario se
-// queda solo con los últimos 3 días; temperaturas y plagas se quedan solo
-// con el trimestre en curso, y al empezar un trimestre nuevo se vacían solos.
+// El historial de cumplimiento diario (apertura/cierre) no es un archivo
+// permanente: si se acumulara para siempre dejaría de ser útil de un
+// vistazo, así que se queda solo con los últimos 3 días.
+//
+// Temperaturas y plagas SÍ son registros de seguridad alimentaria (APPCC) que
+// normalmente hay que poder conservar/consultar durante bastante más tiempo
+// que un simple checklist — antes se borraban solos y sin ningún aviso al
+// cambiar de trimestre (se quedaba solo con el trimestre EN CURSO), lo cual
+// es un riesgo real de cumplimiento normativo. Ahora se conservan 4 trimestres
+// (1 año) en vez de solo el actual, y se avisa la primera vez que de verdad
+// se borra algo para que el dueño sepa que debe exportar/archivar antes.
 const LIMPIEZA_COMPLIANCE_KEEP_DAYS = 3;
+const LIMPIEZA_APPCC_KEEP_QUARTERS = 4;
 function quarterKey(fecha){
   const d = new Date(fecha);
   return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
+}
+function quarterIndex(fecha){
+  const d = new Date(fecha);
+  return d.getFullYear()*4 + Math.floor(d.getMonth()/3);
 }
 function pruneLimpiezaLogs(){
   const l = DB.limpieza;
@@ -166,12 +177,21 @@ function pruneLimpiezaLogs(){
     l[k] = l[k].filter(e => e.fecha >= cutoffStr);
     if(l[k].length !== before) changed = true;
   });
-  const currentQuarter = quarterKey(todayStr());
+  const currentQIdx = quarterIndex(todayStr());
+  let appccPurged = false;
   ['temperaturas','plagas'].forEach(k => {
     const before = l[k].length;
-    l[k] = l[k].filter(e => e.fecha && quarterKey(e.fecha) === currentQuarter);
-    if(l[k].length !== before) changed = true;
+    // Un registro sin fecha (dato incompleto) NO se borra por error de
+    // cumplimiento — antes `e.fecha && ...` hacía que se descartara igual
+    // que uno realmente antiguo, perdiendo el dato en vez de solo dejarlo
+    // sin poder clasificar por trimestre.
+    l[k] = l[k].filter(e => !e.fecha || (currentQIdx - quarterIndex(e.fecha)) < LIMPIEZA_APPCC_KEEP_QUARTERS);
+    if(l[k].length !== before){ changed = true; appccPurged = true; }
   });
+  if(appccPurged && l.appccLastPurgeWarnedQuarter !== currentQIdx){
+    l.appccLastPurgeWarnedQuarter = currentQIdx;
+    showToast(t('msg.appccLogsPurged'));
+  }
   if(changed) saveDB();
 }
 
@@ -4272,8 +4292,17 @@ function saveBusiness(silent){
       delivery: el('mn-serv-delivery').checked,
     };
   }
-  DB.business.horario = readHorarioFromForm();
-  const horarioWarnings = validateHorario(DB.business.horario);
+  const newHorario = readHorarioFromForm();
+  const horarioWarnings = validateHorario(newHorario);
+  // Antes esto se guardaba igual aunque el horario no tuviera sentido (p.ej.
+  // hora de cierre antes que la de apertura): la validación se calculaba
+  // DESPUÉS de asignarlo y de todas formas se persistía siempre, con un
+  // simple toast no bloqueante como único aviso. Ahora, si hay algún aviso
+  // real, se pide confirmación explícita antes de guardar ese horario.
+  if(horarioWarnings.length && !confirm(horarioWarnings[0] + '\n\n' + t('msg.confirmSaveAnyway'))){
+    return;
+  }
+  DB.business.horario = newHorario;
   const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMin);
   saveDB();
   renderHeader();

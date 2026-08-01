@@ -142,7 +142,7 @@ function updateClosureDiffPreview(){
     return;
   }
   const contado = parseFloat(contadoRaw) || 0;
-  const diff = contado - esperado;
+  const diff = roundMoney(contado - esperado);
   box.textContent = `${t('label.expectedCash')}: ${fmtMoney(esperado)} · ${t('label.difference')}: ${diff>0?'+':''}${fmtMoney(diff)}${diff===0?` (${t('label.exactCash')})`:diff>0?` (${t('label.cashSurplus')})`:` (${t('label.cashShortage')})`}`;
   box.style.color = diff===0 ? 'var(--ok, #2e7d32)' : (diff>0 ? 'var(--warn, #b8860b)' : 'var(--danger, #c0392b)');
 }
@@ -156,7 +156,7 @@ function performCashClosure(){
   const contadoRaw = document.getElementById('closure-contado').value;
   const efectivoContado = contadoRaw === '' ? null : (parseFloat(contadoRaw) || 0);
   const efectivoEsperado = fondoInicial + (totales['Efectivo']||0);
-  const diferencia = efectivoContado === null ? null : (efectivoContado - efectivoEsperado);
+  const diferencia = efectivoContado === null ? null : roundMoney(efectivoContado - efectivoEsperado);
   const notas = document.getElementById('closure-notas').value.trim();
   const desde = document.getElementById('closure-desde').value;
   const hasta = document.getElementById('closure-hasta').value;

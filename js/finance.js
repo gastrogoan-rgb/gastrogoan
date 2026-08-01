@@ -114,15 +114,17 @@ function geVariablesTotalForRange(startDate, endDate){
   const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
   return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
 }
-// Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA)
+// Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA).
+// Usa el histórico de gastos fijos vigente en CADA día (no la configuración de HOY, que
+// podía dar un número incorrecto para "ayer"/"hace 7 días" si los gastos fijos cambiaron
+// de un día para otro — el mismo tipo de bug ya corregido esta sesión para Gestión Económica).
 function geFijosForRange(startDate, endDate){
-  const fijosMonth = geTotalFijosNeto();
-  if(!fijosMonth) return 0;
   let total = 0;
   let d = new Date(startDate+'T00:00:00');
   const end = new Date(endDate+'T00:00:00');
   while(d <= end){
-    total += fijosMonth / daysInMonth(d.getFullYear(), d.getMonth());
+    const fijosMonth = geTotalFijosNetoForMonth(d.getFullYear(), d.getMonth());
+    if(fijosMonth) total += fijosMonth / daysInMonth(d.getFullYear(), d.getMonth());
     d.setDate(d.getDate()+1);
   }
   return total;
@@ -190,6 +192,10 @@ function renderDashboard(){
   const tomorrowDate = dateStr(new Date(today.getTime() + 86400000));
   const tomorrowReservations = DB.reservations.filter(r => r.date===tomorrowDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
   const lowStockCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
+  // Antes el mantenimiento vencido (control de plagas, revisiones, etc.) solo
+  // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
+  // aquí se avisa igual que con el stock bajo, para que no pase desapercibido.
+  const overdueMaintenanceCount = ((DB.limpieza && DB.limpieza.mantenimiento) || []).filter(e => limpiezaMantenimientoDueStatus(e) === 'overdue').length;
 
   const attentionItems = [
     {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
@@ -197,6 +203,7 @@ function renderDashboard(){
     {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
     {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
+    {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
   ];
   const anyAttention = attentionItems.some(i => i.count > 0);
   document.getElementById('dashboard-attention').innerHTML = `

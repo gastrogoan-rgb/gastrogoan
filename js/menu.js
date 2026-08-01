@@ -263,6 +263,13 @@ function readScheduleFromForm(prefix){
   });
 }
 
+// True si el horario configurado NO va a coincidir NUNCA con "ahora" (todos
+// los días desactivados) — para poder avisar de una carta/menú que quedaría
+// invisible sin que nadie se dé cuenta.
+function horarioNuncaActivo(horario){
+  return !horario || !horario.length || horario.every(d => d && d.activo === false);
+}
+
 function newCarta(){
   // El área en que se crea la carta determina su tipo: en Sala es carta de
   // bebidas (no aparece en cocina); en Cocina es carta de comida.
@@ -300,6 +307,7 @@ function saveCarta(){
   cartaEdit.horario = readScheduleFromForm('carta');
   delete cartaEdit.turno;
   delete cartaEdit.dias;
+  const nuncaActiva = horarioNuncaActivo(cartaEdit.horario);
   const idx = DB.cartas.findIndex(c=>c.id===cartaEdit.id);
   if(idx>=0) DB.cartas[idx] = cartaEdit;
   else DB.cartas.push(cartaEdit);
@@ -308,7 +316,7 @@ function saveCarta(){
   cartaEdit = null;
   updateAutoActiveCarta(true);
   renderCarta();
-  showToast(t('msg.cartaSaved'));
+  showToast(nuncaActiva ? t('msg.horarioNuncaActivo') : t('msg.cartaSaved'));
 }
 
 function renderCartaEditor(){
@@ -617,7 +625,9 @@ function computeAutoActiveMenuIds(){
 function updateAutoActiveMenu(force){
   if(!DB.business || DB.business.cartaAuto === false) return;
   const autoIds = computeAutoActiveMenuIds();
-  if(!autoIds.length) return;
+  // Igual que en updateAutoActiveCarta(): si ahora mismo no hay ningún menú
+  // que coincida con su horario, hay que vaciar activeMenuIds también, no
+  // dejar el último activo para siempre.
   const current = DB.activeMenuIds||[];
   const changed = force || autoIds.length !== current.length || autoIds.some(id=>!current.includes(id));
   if(changed){
@@ -717,6 +727,7 @@ function saveMenu(){
   delete menuEdit.turno;
   delete menuEdit.dias;
   menuEdit.desglosarPases = true;
+  const nuncaActivo = horarioNuncaActivo(menuEdit.horario);
   const idx = DB.menus.findIndex(m=>m.id===menuEdit.id);
   if(idx>=0) DB.menus[idx] = menuEdit;
   else DB.menus.push(menuEdit);
@@ -725,7 +736,7 @@ function saveMenu(){
   menuEdit = null;
   updateAutoActiveMenu(true);
   renderMenu();
-  showToast(t('msg.menuSaved'));
+  showToast(nuncaActivo ? t('msg.horarioNuncaActivo') : t('msg.menuSaved'));
 }
 
 function renderMenuEditor(){

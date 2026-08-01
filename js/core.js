@@ -1304,7 +1304,14 @@ function syncPublicMirror(){
         tables: DB.tables.map(t => ({id: t.id, name: t.name}))
       };
       if(sucursales) data.sucursales = sucursales;
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set(data).catch(()=>{});
+      // Antes un fallo aquí se tragaba en silencio (".catch(()=>{})"): la
+      // página pública de reservas/pedidos podía quedarse con datos
+      // desactualizados (horario, carta, precios...) sin que nadie se
+      // enterara. Ahora al menos se loguea y se avisa al usuario.
+      app.database().ref('gastrogoan/public/' + publicId + '/info').set(data).catch(e => {
+        console.error('Error publicando el espejo público', e);
+        if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
+      });
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
     console.error('Error publicando el espejo público', e);
@@ -1379,6 +1386,34 @@ function attachCloudChildListeners(){
   }, onErr);
 }
 
+// Fusiona lo que hay en la nube (val) con los datos locales, igual que se
+// hacía siempre que la nube YA tenía datos. Factorizado para poder reutilizarlo
+// también en el caso "nube vacía" cuando otro dispositivo gana la carrera de
+// activación (ver startCloudSync).
+function mergeRemoteIntoLocal(val){
+  const merged = withDefaults(defaultData(), val);
+  let changedLocally = false;
+  const newSnapshot = {};
+  Object.keys(merged).forEach(key => {
+    const remoteJson = JSON.stringify(merged[key]);
+    newSnapshot[key] = remoteJson;
+    if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
+      DB[key] = merged[key];
+      changedLocally = true;
+    }
+  });
+  lastSyncedSnapshot = newSnapshot;
+  if(changedLocally){
+    idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+    if(DB.license && validateLicenseKey(DB.license.key)){
+      localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
+      updateActiveSlotName(DB.license.name);
+      hideActivationGate();
+    }
+    refreshAfterRemoteChange();
+  }
+}
+
 function startCloudSync(tenantId){
   if(cloudRef) return; // ya conectado
   try{
@@ -1387,34 +1422,51 @@ function startCloudSync(tenantId){
       const val = snap.val();
       updateSyncBadge('online');
       if(val === null){
-        // Nube vacía: subir los datos locales como punto de partida
-        lastSyncedSnapshot = {};
-        pushAllToCloud();
-        syncPublicMirror();
-      }else{
-        const merged = withDefaults(defaultData(), val);
-        let changedLocally = false;
-        const newSnapshot = {};
-        Object.keys(merged).forEach(key => {
-          const remoteJson = JSON.stringify(merged[key]);
-          newSnapshot[key] = remoteJson;
-          if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
-            DB[key] = merged[key];
-            changedLocally = true;
+        // Nube vacía: subir los datos locales como punto de partida. Dos
+        // dispositivos activando la misma licencia casi a la vez podían leer
+        // AMBOS "nube vacía" aquí y subir sus datos por separado sin ninguna
+        // coordinación — el segundo pushAllToCloud() sobrescribía
+        // silenciosamente lo que el primero acababa de subir. Se usa una
+        // transacción sobre un pequeño nodo aparte (no sobre toda la base de
+        // datos, que puede pesar mucho y no conviene meter en una
+        // transacción de Firebase) para que solo uno de los dos dispositivos
+        // "reclame" de verdad la inicialización; el que pierde la carrera
+        // espera un momento y se fusiona con lo que el ganador subió, en vez
+        // de pisarlo.
+        const initClaimRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/initClaim');
+        initClaimRef.transaction(current => current === null ? {ts: Date.now()} : undefined).then(result => {
+          if(result.committed){
+            lastSyncedSnapshot = {};
+            pushAllToCloud();
+            syncPublicMirror();
+            attachCloudChildListeners();
+          }else{
+            setTimeout(() => {
+              cloudRef.once('value').then(snap2 => {
+                const remoteVal = snap2.val();
+                if(remoteVal !== null){
+                  mergeRemoteIntoLocal(remoteVal);
+                }else{
+                  // Caso improbable: el ganador reclamó pero aún no ha
+                  // terminado de subir. Subimos nosotros como red de
+                  // seguridad para no dejar la nube vacía para siempre.
+                  lastSyncedSnapshot = {};
+                  pushAllToCloud();
+                  syncPublicMirror();
+                }
+                attachCloudChildListeners();
+              });
+            }, 1500);
           }
+        }).catch(e => {
+          console.error('Error reclamando la inicialización de la nube', e);
+          updateSyncBadge('error');
+          attachCloudChildListeners();
         });
-        lastSyncedSnapshot = newSnapshot;
-        if(changedLocally){
-          idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
-          if(DB.license && validateLicenseKey(DB.license.key)){
-            localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
-            updateActiveSlotName(DB.license.name);
-            hideActivationGate();
-          }
-          refreshAfterRemoteChange();
-        }
+      }else{
+        mergeRemoteIntoLocal(val);
+        attachCloudChildListeners();
       }
-      attachCloudChildListeners();
     }, err => {
       console.error('Error de sincronización', err);
       updateSyncBadge('error');
