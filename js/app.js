@@ -4248,7 +4248,7 @@ function saveBusiness(silent){
   if(el('mn-web')) DB.business.web = el('mn-web').value.trim();
   if(el('mn-cif')) DB.business.cif = el('mn-cif').value.trim();
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
-  if(el('mn-aforo')) DB.business.aforo = el('mn-aforo').value.trim();
+  if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-leadtime-min')){
     DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);
     // Mantener el valor antiguo de pedidos en sincronía para compatibilidad.
@@ -4452,6 +4452,10 @@ function saveDeliveryPlatform(){
   if(isNaN(comisionPct) || comisionPct<0 || comisionPct>100){ showToast(t('msg.enterCommission')); return; }
   if(!DB.business.deliveryPlatforms) DB.business.deliveryPlatforms = [];
   const idVal = document.getElementById('dp-f-id').value;
+  // Evita dos plataformas con el mismo nombre (aunque difieran en mayúsculas),
+  // que darían comisiones ambiguas al atribuir una venta por nombre de plataforma.
+  const dupe = DB.business.deliveryPlatforms.find(p => p.nombre.trim().toLowerCase()===nombre.toLowerCase() && String(p.id)!==idVal);
+  if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
   const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct)};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));

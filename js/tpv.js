@@ -305,16 +305,28 @@ function mesaWaiterChipHtml(camareroId){
 // Igual que mesaWaiterChipHtml pero para el repartidor de un pedido delivery
 // con reparto propio: mismo estilo de avatar, con un icono de moto delante
 // para no confundirlo con el camarero/a que tomó el pedido.
-function mesaRepartidorChipHtml(repartidorId){
-  if(!repartidorId) return '';
-  const emp = DB.employees.find(e => e.id === repartidorId);
-  if(!emp) return '';
-  const initial = (emp.name||'?').trim().charAt(0).toUpperCase();
-  const firstName = (emp.name||'').trim().split(/\s+/)[0];
+function mesaRepartidorChipHtml(repartidorId, repartidorCourierId){
+  // Puede ser un empleado de Sala (con color propio) o un repartidor
+  // externo de Mi Negocio → Delivery (sin color de identificación, se usa
+  // uno neutro fijo).
+  let name, color;
+  if(repartidorId){
+    const emp = DB.employees.find(e => e.id === repartidorId);
+    if(!emp) return '';
+    name = emp.name; color = emp.color || '#DF7039';
+  } else if(repartidorCourierId){
+    const courier = (DB.business && DB.business.ownCouriers || []).find(c => c.id === repartidorCourierId);
+    if(!courier) return '';
+    name = courier.nombre; color = '#6E5A6B';
+  } else {
+    return '';
+  }
+  const initial = (name||'?').trim().charAt(0).toUpperCase();
+  const firstName = (name||'').trim().split(/\s+/)[0];
   return `
-    <span class="mesa-waiter-chip" title="${escapeHtml(t('label.deliveryRider'))}: ${escapeHtml(emp.name)}">
+    <span class="mesa-waiter-chip" title="${escapeHtml(t('label.deliveryRider'))}: ${escapeHtml(name)}">
       <i class="ti ti-moped" style="font-size:11px"></i>
-      <span class="mesa-waiter-avatar" style="background:${emp.color||'#DF7039'}">${escapeHtml(initial)}</span>
+      <span class="mesa-waiter-avatar" style="background:${color}">${escapeHtml(initial)}</span>
       ${escapeHtml(firstName)}
     </span>
   `;
@@ -452,7 +464,7 @@ function renderTpvToGo(tiposServicio){
             const isDelivery = o.tipo==='delivery';
             // Sin chip de camarero aquí: estos pedidos entran por teléfono o
             // por la web, no los toma nadie de sala en persona.
-            const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId) : '';
+            const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId, o.repartidorCourierId) : '';
             return `
             <div class="card togo-card ${isDelivery?'togo-card-delivery':'togo-card-pickup'}${urgent?' togo-card-urgent':''}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
               <h3 style="justify-content:center"><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
@@ -676,18 +688,34 @@ function renderCamareroFieldHtml(selectId, selectedId){
 // Repartidor a cargo del reparto propio de un pedido delivery (distinto del
 // camarero/a que tomó el pedido): mismo pool de empleados de Sala, campo
 // aparte y opcional, para no confundir "quién lo atendió" con "quién lo lleva".
-function renderRepartidorFieldHtml(selectId, selectedId){
+// El repartidor puede ser un empleado de Sala (con PIN/color, ya dado de
+// alta en Personal) o uno de los "repartidores propios" de Mi Negocio
+// (colaboradores externos, solo nombre y teléfono, con acceso rápido a
+// WhatsApp) — antes esa segunda lista se guardaba y editaba en Mi Negocio
+// pero nunca aparecía aquí, así que no tenía ningún efecto real.
+function renderRepartidorFieldHtml(selectId, selectedValue){
   const empleados = DB.employees.filter(e => (e.area||'cocina') === 'sala');
-  if(!empleados.length) return '';
+  const couriers = (DB.business && DB.business.ownCouriers) || [];
+  if(!empleados.length && !couriers.length) return '';
   return `
     <div class="field">
       <label>${t('label.deliveryRider')}</label>
       <select id="${selectId}">
         <option value="">${t('common.unassigned')}</option>
-        ${empleados.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+        ${empleados.length ? `<optgroup label="${t('label.staff')}">${empleados.map(e => `<option value="emp:${e.id}" ${selectedValue===`emp:${e.id}`?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : ''}
+        ${couriers.length ? `<optgroup label="${t('mn.couriers.title')}">${couriers.map(c => `<option value="courier:${c.id}" ${selectedValue===`courier:${c.id}`?'selected':''}>${escapeHtml(c.nombre)}</option>`).join('')}</optgroup>` : ''}
       </select>
     </div>
   `;
+}
+
+// A partir del valor del <select> (emp:123 / courier:456), devuelve
+// {repartidorId, repartidorCourierId} listos para guardar en el pedido.
+function parseRepartidorFieldValue(raw){
+  if(!raw) return {repartidorId:null, repartidorCourierId:null};
+  if(raw.startsWith('emp:')) return {repartidorId: parseInt(raw.slice(4)), repartidorCourierId:null};
+  if(raw.startsWith('courier:')) return {repartidorId:null, repartidorCourierId: parseInt(raw.slice(8))};
+  return {repartidorId:null, repartidorCourierId:null};
 }
 
 function orderTotal(order){
@@ -911,7 +939,7 @@ function confirmNewToGoOrder(){
     const repartidorEl = document.getElementById('togo-repartidor-sel');
     order.clienteAddress = addressEl ? addressEl.value.trim() : '';
     order.plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
-    order.repartidorId = repartidorEl && repartidorEl.value ? parseInt(repartidorEl.value) : null;
+    Object.assign(order, parseRepartidorFieldValue(repartidorEl ? repartidorEl.value : ''));
     // El coste de envío configurado en Mi Negocio solo aplica cuando el
     // reparto lo hace el propio negocio: si es una plataforma externa
     // (Glovo, Uber Eats...), esa plataforma ya cobra su propio envío aparte,
