@@ -19,26 +19,11 @@ function getActiveSlot(){
   return localStorage.getItem(ACTIVE_SLOT_LS) || 'default';
 }
 
-// Código corto que identifica a un negocio concreto para el login de
-// empleados (ver requestEmployeeAccess): sin él, un login de "nombre + PIN"
-// no sabría a qué negocio pertenece si el dispositivo tiene varios. No es
-// secreto criptográfico, es simplemente el dato que el dueño le da de
-// palabra a cada empleado (como una "clave de wifi").
-function generateBusinessCode(existingCodes){
-  let code;
-  do{ code = String(Math.floor(100000 + Math.random()*900000)); }
-  while(existingCodes.includes(code));
-  return code;
-}
-function ensureSlotCodes(slots){
-  const existingCodes = slots.filter(s=>s.code).map(s=>s.code);
-  let changed = false;
-  slots.forEach(s => {
-    if(!s.code){ s.code = generateBusinessCode(existingCodes); existingCodes.push(s.code); changed = true; }
-  });
-  if(changed) saveBusinessSlots(slots);
-  return slots;
-}
+// El código corto de cada negocio (usado tanto para activar la licencia
+// como para el login de empleados) ya no se genera aquí al azar: es el
+// mismo código de la licencia comprada (ver activateBusinessLicense), y se
+// guarda en slot.code en el momento de activarla o de registrar un negocio/
+// sucursal nuevo.
 function getBusinessSlots(){
   let slots;
   try{
@@ -46,16 +31,10 @@ function getBusinessSlots(){
     if(Array.isArray(list) && list.length) slots = list;
   }catch(e){}
   if(!slots){
-    // Primera vez: si ya había una licencia (instalación anterior), registra
-    // el negocio 'default' para que aparezca en el selector.
     slots = [{ id:'default', name:'Mi negocio' }];
-    try{
-      const lic = JSON.parse(localStorage.getItem('gastrogoan_license_v1'));
-      if(lic && lic.name) slots[0].name = lic.name;
-    }catch(e){}
     localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
   }
-  return ensureSlotCodes(slots);
+  return slots;
 }
 
 function saveBusinessSlots(slots){
@@ -85,13 +64,16 @@ const ACCESS_SESSION_LS = 'gastrogoan_access_session';
 function getOwnerLogin(){
   try{ return JSON.parse(localStorage.getItem(OWNER_LOGIN_LS)); }catch(e){ return null; }
 }
-function setOwnerLogin(name, passwordPlain){
-  localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({name, passHash: hashPin(passwordPlain)}));
+// La contraseña del día a día puede ser distinta de la que vino con la
+// licencia (ver confirmOwnerAccessSetup/changeOwnerAccessPassword) — el
+// código en cambio es siempre el de la licencia real, no cambia.
+function setOwnerLogin(code, passwordPlain){
+  localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({code: code.toUpperCase(), passHash: hashPin(passwordPlain)}));
 }
-function verifyOwnerLogin(name, passwordPlain){
+function verifyOwnerLogin(code, passwordPlain){
   const login = getOwnerLogin();
   if(!login) return false;
-  return login.name.trim().toLowerCase() === name.trim().toLowerCase() && login.passHash === hashPin(passwordPlain);
+  return login.code === code.trim().toUpperCase() && login.passHash === hashPin(passwordPlain);
 }
 
 function getAccessSession(){
@@ -154,7 +136,7 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-emp-code" maxlength="6" inputmode="numeric" placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'');confirmEmployeeAccess.busy=false" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+        <input type="text" id="acc-emp-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmEmployeeAccess()">${t('common.unlock')}</button>
     </div>
@@ -168,42 +150,56 @@ function renderOwnerAccessFormHtml(){
       <div class="bs-title">${t('access.ownerBtn')}</div>
       <p style="font-size:13px;color:var(--muted);margin:0 0 14px">${isSetup ? t('access.ownerSetupDesc') : t('access.ownerDesc')}</p>
       <div class="field">
-        <label>${t('common.name')}</label>
-        <input type="text" id="acc-owner-name" placeholder="${t('ph.ownerName')}" value="${isSetup ? '' : escapeHtml(getOwnerLogin()?.name||'')}">
+        <label>${t('access.businessCode')}</label>
+        <input type="text" id="acc-owner-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" value="${isSetup ? '' : escapeHtml(getOwnerLogin()?.code||'')}">
       </div>
       <div class="field">
-        <label>${isSetup ? t('access.newPassword') : t('access.password')}</label>
-        <input type="password" id="acc-owner-pass" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter'&&!${isSetup})confirmOwnerAccess()">
+        <label>${t('access.password')}</label>
+        <input type="password" id="acc-owner-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')${isSetup?'confirmOwnerAccessSetup':'confirmOwnerAccess'}()">
       </div>
-      ${isSetup ? `
-      <div class="field">
-        <label>${t('access.repeatPassword')}</label>
-        <input type="password" id="acc-owner-pass2" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmOwnerAccessSetup()">
-      </div>` : ''}
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${isSetup ? t('common.save') : t('common.unlock')}</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
     </div>
   `;
 }
 
+// Primera vez en este dispositivo: se valida el código+contraseña que se
+// entregó al comprar la licencia (activateBusinessLicense), y esa misma
+// contraseña queda guardada como el acceso de propietario de este
+// dispositivo — se puede cambiar después desde el panel de negocios
+// (changeOwnerAccessPassword), sin tener que volver a escribir la de compra.
 function confirmOwnerAccessSetup(){
-  const name = document.getElementById('acc-owner-name').value.trim();
-  const p1 = document.getElementById('acc-owner-pass').value;
-  const p2 = document.getElementById('acc-owner-pass2').value;
-  if(!name){ showToast(t('msg.nameRequired')); return; }
-  if(!p1 || p1.length < 4){ showToast(t('msg.pin4digits')); return; }
-  if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
-  setOwnerLogin(name, p1);
+  const code = document.getElementById('acc-owner-code').value.trim();
+  const password = document.getElementById('acc-owner-pass').value.trim();
+  const lic = activateBusinessLicense(code, password);
+  if(!lic){ showToast(t('access.badCredentials')); return; }
+  localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
+  DB.license = lic;
+  saveDB();
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === ACTIVE_SLOT);
+  if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
+  setOwnerLogin(lic.code, password);
+  setAccessSession({type:'owner'});
+  hideAccessSelectScreen();
+  initCloud();
+  initPublicRequestsListener();
+  checkLicenseRevocation();
+  showBusinessSelectScreen();
+}
+function confirmOwnerAccess(){
+  const code = document.getElementById('acc-owner-code').value.trim();
+  const password = document.getElementById('acc-owner-pass').value.trim();
+  if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
   setAccessSession({type:'owner'});
   hideAccessSelectScreen();
   showBusinessSelectScreen();
 }
-function confirmOwnerAccess(){
-  const name = document.getElementById('acc-owner-name').value.trim();
-  const pass = document.getElementById('acc-owner-pass').value;
-  if(!verifyOwnerLogin(name, pass)){ showToast(t('msg.pinIncorrect')); return; }
-  setAccessSession({type:'owner'});
-  hideAccessSelectScreen();
-  showBusinessSelectScreen();
+// Cambia la contraseña de acceso de propietario de ESTE dispositivo (el
+// código de negocio no cambia, sigue siendo el de la licencia).
+function changeOwnerAccessPassword(newPassword){
+  const login = getOwnerLogin();
+  if(!login) return;
+  setOwnerLogin(login.code, newPassword);
 }
 
 // Busca en TODOS los negocios del dispositivo (no solo el activo) el que
@@ -276,11 +272,26 @@ function switchToBusiness(slotId){
   location.reload();
 }
 
+// Registrar un negocio o sucursal nuevo exige una licencia nueva (comprada
+// aparte): pide el código+contraseña que se entrega en esa compra, igual
+// que al activar la app por primera vez.
+function promptBusinessLicense(){
+  const code = prompt(t('gate.newBusinessCodePrompt'));
+  if(!code) return null;
+  const password = prompt(t('gate.newBusinessPasswordPrompt'));
+  if(!password) return null;
+  const lic = activateBusinessLicense(code, password);
+  if(!lic){ alert(t('access.badCredentials')); return null; }
+  return lic;
+}
 function addNewBusiness(){
+  const lic = promptBusinessLicense();
+  if(!lic) return;
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
-  slots.push({ id, name: 'Nuevo negocio', code: generateBusinessCode(slots.map(s=>s.code)) });
+  slots.push({ id, name: 'Nuevo negocio', code: lic.code });
   saveBusinessSlots(slots);
+  localStorage.setItem(slotLicenseKey(id), JSON.stringify(lic));
   switchToBusiness(id);
 }
 
@@ -309,6 +320,8 @@ async function readSlotDB(slotId){
    parentSlotId: slot del que se copian los datos (el negocio "padre").
    Si no se pasa, usa el slot activo. */
 async function addSucursal(parentSlotId){
+  const lic = promptBusinessLicense();
+  if(!lic) return;
   parentSlotId = parentSlotId || ACTIVE_SLOT;
   const slots = getBusinessSlots();
   const parentSlot = slots.find(s => s.id === parentSlotId);
@@ -375,8 +388,9 @@ async function addSucursal(parentSlotId){
     req.onerror = () => reject(req.error);
   });
 
-  slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: generateBusinessCode(slots.map(s=>s.code)) });
+  slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code });
   saveBusinessSlots(slots);
+  localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
   switchToBusiness(newId);
 }
 
@@ -446,8 +460,17 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
       <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      <button class="btn" style="width:100%;margin-top:4px;background:none;border:none;color:var(--muted);font-size:12.5px" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('access.changePassword')}</button>
     </div>
   `;
+}
+function promptChangeOwnerPassword(){
+  const login = getOwnerLogin();
+  if(!login) return;
+  const p1 = prompt(t('access.newPasswordPrompt'));
+  if(!p1) return;
+  changeOwnerAccessPassword(p1);
+  showToast(t('msg.pinUpdated'));
 }
 
 function renderBsGroups(allSlots){
@@ -700,29 +723,67 @@ function ggLicSig(name){
   return out.join('-');
 }
 
-/* La clave de licencia incluye, además del nombre y la firma, un token de
-   tenant de 20 caracteres con alta entropía generado al azar por el
-   generador de licencias. Este token (y no el nombre) es el identificador
-   real del negocio en la nube compartida: no se puede deducir a partir del
-   nombre del restaurante. */
-function validateLicenseKey(key){
-  if(!key) return null;
-  const parts = String(key).trim().toUpperCase().split('-').map(p => p.trim()).filter(Boolean);
-  if(parts.length < 9) return null;
-  const tenantId = parts.slice(-5).join('');
-  const sig = parts.slice(-8, -5).join('-');
-  const name = parts.slice(0, -8).join('').replace(/[^A-Z0-9]/g, '');
-  if(!name || !/^[A-Z0-9]{20}$/.test(tenantId)) return null;
-  return sig === ggLicSig(name) ? { name, tenantId } : null;
+/* ============================================================
+   LICENCIA v2 — Código de negocio + Contraseña
+   Sustituye a la clave larga (ggLicSig) por un par corto y fácil de
+   compartir: un CÓDIGO (público, se lo das a tus empleados para que
+   entren desde "Acceso Empleados") + una CONTRASEÑA (la que se envía al
+   comprar la licencia, sirve para activar la app como propietario). Ambos
+   se generan con generador-licencias.html — debe usar EXACTAMENTE el mismo
+   algoritmo que aquí abajo. El tenantId (identificador real del negocio en
+   la nube compartida) se deriva del código de forma determinista: no hace
+   falta guardarlo aparte ni transmitirlo, cualquiera que conozca el código
+   puede recalcularlo igual que la propia app.
+   ============================================================ */
+function _ggBizSecret(){
+  const c = [117,117,197,112,119,136,197,64,62,64,68,197,127,65];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+function ggBizPassword(code){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const secret = _ggBizSecret();
+  let h = ggLicHash(code + secret);
+  let pass = '', x = h;
+  for(let c = 0; c < 6; c++){ pass += A[x % 32]; x = Math.floor(x / 32); }
+  return pass;
+}
+function ggBizTenantId(code){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const secret = _ggBizSecret() + '·tenant';
+  const out = [];
+  let h = ggLicHash(code + secret);
+  for(let g = 0; g < 5; g++){
+    h = ggLicHash(code + secret + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += A[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
+// Valida un par código+contraseña y, si es correcto, devuelve la licencia
+// lista para guardar ({code, tenantId}). null si no coincide.
+function activateBusinessLicense(code, password){
+  code = String(code||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  password = String(password||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!code || !password) return null;
+  if(ggBizPassword(code) !== password) return null;
+  return {code, tenantId: ggBizTenantId(code)};
+}
+
+// Una licencia guardada es válida si su tenantId es el que de verdad se
+// deriva de su código — así no hace falta volver a pedir la contraseña
+// cada vez que se lee la licencia, solo al activarla la primera vez.
+function isStoredLicenseValid(lic){
+  return !!(lic && lic.code && lic.tenantId && ggBizTenantId(lic.code) === lic.tenantId);
 }
 
 function getLicense(){
   try{
     const l = JSON.parse(localStorage.getItem(LICENSE_LS));
-    if(l && validateLicenseKey(l.key)) return l;
+    if(isStoredLicenseValid(l)) return l;
   }catch(e){}
   const dl = (typeof DB !== 'undefined' && DB) ? DB.license : null;
-  if(dl && validateLicenseKey(dl.key)){
+  if(isStoredLicenseValid(dl)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(dl));
     return dl;
   }
@@ -735,9 +796,7 @@ function getLicense(){
    caen en el mismo "tenant" y se sincronizan automáticamente entre sí. */
 function getTenantId(){
   const lic = getLicense();
-  if(!lic || !lic.key) return null;
-  const parsed = validateLicenseKey(lic.key);
-  return parsed ? parsed.tenantId : null;
+  return lic ? lic.tenantId : null;
 }
 
 /* Identificador público (de menor privilegio) que se incrusta en el
@@ -805,13 +864,17 @@ function showRevokedGate(){
 
 const ONBOARDING_ROLE_LS = 'gastrogoan_onboarding_role';
 
+// Este gate ya solo lo ve el propietario: activar la licencia de un negocio
+// nuevo es siempre algo que hace quien lo compró, así que se quitó el
+// selector "¿quién eres? dueño/empleado" — un empleado nunca llega aquí,
+// entra siempre por "Acceso Empleados" con nombre+PIN+código, sin licencia
+// que pegar. Reutiliza el mismo código+contraseña corto de la compra en vez
+// de la antigua clave larga.
 function showActivationGate(){
   if(document.getElementById('license-gate')) return;
   const g = document.createElement('div');
   g.id = 'license-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
-  const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  const cardStyle = (active) => `flex:1;border:2px solid ${active?'var(--brand-orange)':'var(--border)'};background:${active?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
   const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
@@ -820,47 +883,15 @@ function showActivationGate(){
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('gate.lic.whoAreYou')}</label>
-        <div style="display:flex;gap:10px;margin-bottom:18px">
-          <div id="role-owner-card" style="${cardStyle(role==='owner')}" onclick="selectOnboardingRole('owner')">👤<br>${t('gate.lic.imOwner')}</div>
-          <div id="role-employee-card" style="${cardStyle(role==='employee')}" onclick="selectOnboardingRole('employee')">📱<br>${t('gate.lic.imEmployee')}</div>
-        </div>
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px" id="license-label">🔑 ${t('gate.lic.licenseKey')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenBySeller')})</span></label>
-        <div id="license-help-box" style="display:none;background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:8px;text-align:left"></div>
-        <input id="license-key-input" type="text" placeholder="MIRESTAURANTE-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:13px;text-transform:uppercase">
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
+        <input id="license-code-input" type="text" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('access.password')}</label>
+        <input id="license-password-input" type="text" placeholder="XXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
-        <p id="license-owner-note" style="font-size:12px;color:var(--muted);margin-top:12px;text-align:center">📱 ${t('gate.lic.employeeNote')}</p>
       </div>
     </div>`;
   document.body.appendChild(g);
-  updateLicenseFieldForRole(role);
-}
-
-function updateLicenseFieldForRole(role){
-  const label = document.getElementById('license-label');
-  const helpBox = document.getElementById('license-help-box');
-  const ownerNote = document.getElementById('license-owner-note');
-  if(!label || !helpBox || !ownerNote) return;
-  if(role === 'employee'){
-    label.innerHTML = `🔑 ${t('gate.lic.restaurantLicenseKey')}`;
-    helpBox.style.display = 'block';
-    helpBox.innerHTML = t('msg.employeeLicenseHelp');
-    ownerNote.style.display = 'none';
-  }else{
-    label.innerHTML = `🔑 ${t('gate.lic.licenseKey')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span>`;
-    helpBox.style.display = 'none';
-    ownerNote.style.display = 'block';
-  }
-}
-
-function selectOnboardingRole(role){
-  localStorage.setItem(ONBOARDING_ROLE_LS, role);
-  const ownerCard = document.getElementById('role-owner-card');
-  const employeeCard = document.getElementById('role-employee-card');
-  if(ownerCard) ownerCard.style.cssText = `flex:1;border:2px solid ${role==='owner'?'var(--brand-orange)':'var(--border)'};background:${role==='owner'?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
-  if(employeeCard) employeeCard.style.cssText = `flex:1;border:2px solid ${role==='employee'?'var(--brand-orange)':'var(--border)'};background:${role==='employee'?'#F5F0E3':'#fff'};border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;font-weight:700;font-size:13px;color:#222`;
-  updateLicenseFieldForRole(role);
 }
 
 function hideActivationGate(){
@@ -1135,21 +1166,26 @@ function postponeNetlify(){
 }
 
 function activateLicenseFromGate(){
-  const key = (document.getElementById('license-key-input').value || '').trim().toUpperCase();
-  const parsed = validateLicenseKey(key);
+  const code = (document.getElementById('license-code-input').value || '').trim();
+  const password = (document.getElementById('license-password-input').value || '').trim();
+  const lic = activateBusinessLicense(code, password);
   const err = document.getElementById('license-error');
-  if(!parsed){
+  if(!lic){
     err.textContent = t('gate.invalidLicenseKey');
     err.style.display = 'block';
     return;
   }
-  const lic = { name: parsed.name, key };
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   saveDB();
-  updateActiveSlotName(parsed.name);
+  // El código de negocio de este slot es el mismo que el de la licencia —
+  // es lo que se usará después para que los empleados entren desde
+  // "Acceso Empleados" sin tener que repetir la contraseña de la licencia.
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === ACTIVE_SLOT);
+  if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
   hideActivationGate();
-  showToast(t('msg.licenseActivated') + ': ' + parsed.name);
+  showToast(t('msg.licenseActivated'));
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
@@ -1494,9 +1530,8 @@ function buildSucursalesList(){
       const raw = localStorage.getItem(slotLicenseKey(s.id));
       if(!raw) continue;
       const lic = JSON.parse(raw);
-      const parsed = validateLicenseKey(lic.key);
-      if(!parsed) continue;
-      const pid = ggLicHash(parsed.tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
+      if(!isStoredLicenseValid(lic)) continue;
+      const pid = ggLicHash(lic.tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
       list.push({name: s.name, publicId: pid});
     }catch(e){}
   }
@@ -1579,9 +1614,8 @@ function applyRemoteBlock(key, remoteValue){
   DB[key] = merged;
   idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
-  if(DB.license && validateLicenseKey(DB.license.key)){
+  if(isStoredLicenseValid(DB.license)){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
-    updateActiveSlotName(DB.license.name);
     hideActivationGate();
   }
   refreshAfterRemoteChange();
@@ -1621,9 +1655,8 @@ function mergeRemoteIntoLocal(val){
   lastSyncedSnapshot = newSnapshot;
   if(changedLocally){
     idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
-    if(DB.license && validateLicenseKey(DB.license.key)){
+    if(isStoredLicenseValid(DB.license)){
       localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
-      updateActiveSlotName(DB.license.name);
       hideActivationGate();
     }
     refreshAfterRemoteChange();

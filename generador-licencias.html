@@ -40,14 +40,14 @@ td.key{font-family:monospace;font-size:11px}
   </header>
 
   <div class="card">
-    <h2>1 · Genera la clave de un cliente nuevo</h2>
-    <label>Nombre del restaurante (tal y como quieres que aparezca en su app)</label>
+    <h2>1 · Genera código + contraseña para un cliente nuevo</h2>
+    <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
     <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
-    <button class="gen" onclick="gen()">Generar clave de licencia</button>
+    <button class="gen" onclick="gen()">Generar código de negocio</button>
     <div id="out" style="display:none">
       <div class="key-out" id="key"></div>
       <div class="btns">
-        <button class="copy" onclick="copyKey()">📋 Copiar clave</button>
+        <button class="copy" onclick="copyKey()">📋 Copiar los dos</button>
         <a class="wa" id="wa" target="_blank" rel="noopener">📱 WhatsApp</a>
         <a class="copy" id="email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
       </div>
@@ -56,24 +56,25 @@ td.key{font-family:monospace;font-size:11px}
 
   <div class="card">
     <h2>2 · Registro de ventas <span class="muted" id="count"></span></h2>
-    <p class="muted" style="margin-bottom:10px">Cada clave generada se apunta aquí automáticamente (se guarda en este navegador).</p>
+    <p class="muted" style="margin-bottom:10px">Cada código generado se apunta aquí automáticamente (se guarda en este navegador).</p>
     <table id="log-table" style="display:none">
-      <thead><tr><th>Fecha</th><th>Restaurante</th><th>Clave</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Restaurante</th><th>Código</th><th>Contraseña</th><th></th></tr></thead>
       <tbody id="log"></tbody>
     </table>
-    <p class="muted" id="empty">Aún no has generado ninguna clave.</p>
+    <p class="muted" id="empty">Aún no has generado ningún código.</p>
     <div class="btns" id="export-row" style="display:none">
       <button class="copy" onclick="exportCSV()">⬇ Descargar registro (CSV)</button>
     </div>
   </div>
 
   <div class="warn">
-    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar claves válidas. El registro de ventas vive en este navegador: si cambias de ordenador, descarga el CSV antes.
+    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar códigos válidos. El registro de ventas vive en este navegador: si cambias de ordenador, descarga el CSV antes.
   </div>
 </div>
 
 <script>
-/* Debe ser IDÉNTICO al de la app */
+/* Debe ser IDÉNTICO al de la app (js/core.js: ggLicHash, _ggBizSecret,
+   ggBizPassword, ggBizTenantId) — si cambias algo aquí, cámbialo también allí. */
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
   for(let i = 0; i < str.length; i++){
@@ -82,53 +83,47 @@ function ggLicHash(str){
   }
   return h >>> 0;
 }
-function ggLicSig(name){
+function ggBizSecret(){
+  const c = [117,117,197,112,119,136,197,64,62,64,68,197,127,65];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+function ggBizPassword(code){
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const secret = 'gg·goan·2026·k7';
-  let h = ggLicHash(name + secret);
-  const out = [];
-  for(let g = 0; g < 3; g++){
-    h = ggLicHash(name + secret + h + g);
-    let grp = '', x = h;
-    for(let c = 0; c < 4; c++){ grp += A[x % 32]; x = Math.floor(x / 32); }
-    out.push(grp);
-  }
-  return out.join('-');
+  const secret = ggBizSecret();
+  let h = ggLicHash(code + secret);
+  let pass = '', x = h;
+  for(let c = 0; c < 6; c++){ pass += A[x % 32]; x = Math.floor(x / 32); }
+  return pass;
+}
+function generateBizCode(){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i = 0; i < 8; i++) code += A[Math.floor(Math.random() * 32)];
+  return code;
 }
 
-const LOG_KEY = 'gg_lic_sales_v1';
+const LOG_KEY = 'gg_biz_sales_v2';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
 
-function genTenantId(){
-  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let id = '';
-  for(let i = 0; i < 20; i++) id += A[Math.floor(Math.random() * 32)];
-  return id;
-}
-function formatTenant(t){
-  return t.slice(0,4)+'-'+t.slice(4,8)+'-'+t.slice(8,12)+'-'+t.slice(12,16)+'-'+t.slice(16,20);
-}
 function gen(){
   const raw = document.getElementById('name').value.trim();
-  const name = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if(!name){ alert('Escribe el nombre del restaurante'); return; }
-  const tenant = genTenantId();
-  const key = name + '-' + ggLicSig(name) + '-' + formatTenant(tenant);
-  document.getElementById('key').textContent = key;
+  const code = generateBizCode();
+  const password = ggBizPassword(code);
+  document.getElementById('key').innerHTML = `Código: ${code}<br>Contraseña: ${password}`;
   document.getElementById('out').style.display = 'block';
-  const msg = 'Tu clave de licencia de GastroGoan 🍽\n\n' + key + '\n\nPégala en la pantalla de activación al abrir la app por primera vez.';
+  const msg = 'Tus credenciales de GastroGoan 🍽\n\nCódigo de negocio: ' + code + '\nContraseña: ' + password + '\n\nAbre la app, pulsa "Acceso Propietarios" y usa estos dos datos para activarla la primera vez. Después podrás cambiar la contraseña por una que prefieras.\n\nGuarda también el código: lo necesitarás para dar de alta a tus empleados desde "Acceso Empleados".';
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tu clave de licencia de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  if(!sales.some(s => s.key === key)){
-    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw, key });
+  document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tus credenciales de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  if(!sales.some(s => s.code === code)){
+    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', code, password });
     localStorage.setItem(LOG_KEY, JSON.stringify(sales));
   }
   renderLog();
 }
 
 function copyKey(){
-  navigator.clipboard.writeText(document.getElementById('key').textContent).then(() => alert('Clave copiada'));
+  navigator.clipboard.writeText(document.getElementById('key').innerText).then(() => alert('Copiado'));
 }
 
 function delSale(i){
@@ -145,12 +140,12 @@ function renderLog(){
   document.getElementById('export-row').style.display = has ? 'flex' : 'none';
   document.getElementById('count').textContent = has ? '· ' + sales.length + ' venta' + (sales.length === 1 ? '' : 's') : '';
   document.getElementById('log').innerHTML = sales.map((s, i) =>
-    `<tr><td>${s.date}</td><td>${s.name}</td><td class="key">${s.key}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
+    `<tr><td>${s.date}</td><td>${s.name}</td><td class="key">${s.code}</td><td class="key">${s.password}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
   ).join('');
 }
 
 function exportCSV(){
-  const csv = 'Fecha;Restaurante;Clave\n' + sales.map(s => `${s.date};${s.name};${s.key}`).join('\n');
+  const csv = 'Fecha;Restaurante;Código;Contraseña\n' + sales.map(s => `${s.date};${s.name};${s.code};${s.password}`).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'ventas-gastrogoan.csv';
