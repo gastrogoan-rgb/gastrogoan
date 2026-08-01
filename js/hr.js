@@ -1512,6 +1512,21 @@ const GE = (function(){
     rows.push([t('hr.csv.vatToSettleShort'), sumIva - totalIvaSoportado]);
     rows.push([t('hr.csv.monthResult'), resultado]);
 
+    // Nota informativa: el "Resultado del mes" se calcula a partir de las
+    // ventas registradas, no del efectivo físico contado en los arqueos de
+    // caja — son fuentes con propósitos distintos (ingresos reconocidos vs.
+    // dinero realmente en el cajón) y no se mezclan aquí. Pero si ha habido
+    // diferencias de caja ese mes (sobras/faltas al arquear), se muestran
+    // aparte para que quien lleve la contabilidad las tenga a la vista sin
+    // tener que ir a buscarlas a Operaciones > Arqueo de Caja.
+    const cierresDelMes = (DB.cashClosures||[]).filter(c => (c.fecha||'').startsWith(mesStr) && c.diferencia != null);
+    if(cierresDelMes.length){
+      const sumDiferencias = cierresDelMes.reduce((s,c)=>s+parseFloat(c.diferencia||0), 0);
+      rows.push([]);
+      rows.push([t('hr.csv.cashClosuresNote')]);
+      rows.push([t('hr.csv.cashClosuresCount').replace('${n}', cierresDelMes.length), sumDiferencias]);
+    }
+
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     const vatByRate = Object.keys(ivaGroups).map(Number).sort((a,b)=>b-a).map(pct => ({pct, base: ivaGroups[pct].base, iva: ivaGroups[pct].iva}));
     return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado, vatByRate};
