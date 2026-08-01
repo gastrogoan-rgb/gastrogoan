@@ -946,8 +946,8 @@ const GE = (function(){
       <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${t('hr.te.vatPassedOn')}</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.vatIncludedInSales')}</div></div>
       <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
 
-    const realPer = totalPersonalNeto();
-    const realGF = totalGFNeto();
+    const realPer = geTotalPersonalNetoForMonth(currentYear, activeMonth);
+    const realGF = geTotalGFNetoForMonth(currentYear, activeMonth);
     const realMP = totalVariablesNetoMes(activeMonth);
     const realComisiones = comisionesMes(activeMonth);
     const realOG = capexCuotaMes(activeMonth) + realComisiones;

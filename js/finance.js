@@ -25,9 +25,11 @@ function snapshotGeFijosNeto(){
   const today = todayStr();
   const totalNeto = geTotalFijosNeto();
   const totalGross = geTotalFijos();
+  const personalNeto = geTotalPersonalNeto();
+  const gfNeto = totalNeto - personalNeto;
   const existing = DB.ge.fijosLog.find(e => e.fecha === today);
-  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; }
-  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross});
+  if(existing){ existing.totalNeto = totalNeto; existing.totalGross = totalGross; existing.personalNeto = personalNeto; existing.gfNeto = gfNeto; }
+  else DB.ge.fijosLog.push({fecha: today, totalNeto, totalGross, personalNeto, gfNeto});
 }
 // Valor del histórico de gastos fijos "vigente" a fecha de un mes concreto:
 // el último punto anterior o igual al último día de ese mes. Si no hay
@@ -57,6 +59,19 @@ function geTotalFijosGrossForMonth(year, month){
 // configuración actual de gastos fijos.
 function geIvaSoportadoFijosForMonth(year, month){
   return geTotalFijosGrossForMonth(year, month) - geTotalFijosNetoForMonth(year, month);
+}
+// Igual que geTotalFijosNetoForMonth pero para el desglose PERSONAL vs resto
+// de fijos (GF), necesario en Tesorería para no mezclar la configuración de
+// hoy con la de un mes pasado. Los puntos del histórico anteriores a este
+// desglose (personalNeto/gfNeto) no tienen estos campos: en ese caso se cae
+// en la configuración actual, igual que el resto de fallbacks del histórico.
+function geTotalPersonalNetoForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'personalNeto');
+  return v==null ? geTotalPersonalNeto() : v;
+}
+function geTotalGFNetoForMonth(year, month){
+  const v = geFijosLogValueForMonth(year, month, 'gfNeto');
+  return v==null ? (geTotalFijosNeto() - geTotalPersonalNeto()) : v;
 }
 // True si TODO el año consultado es anterior al primer punto del histórico
 // (es decir, no tenemos ningún dato real de cómo eran los gastos fijos en
