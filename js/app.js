@@ -3717,6 +3717,12 @@ function renderMiNegocio(){
       <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
     </div>
 
+    <div class="card" style="max-width:720px;border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
+      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
+      <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
+    </div>
+
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
@@ -4222,6 +4228,26 @@ function renderHeader(){
   }
   syncLangButton();
   checkArchiveReminder();
+  updateLogoutBtn();
+}
+
+// Muestra "Cerrar sesión" en la cabecera solo cuando hay una sesión de
+// acceso activa (empleado u propietario logueado desde la pantalla de
+// entrada), para poder dejar el dispositivo listo para que fiche otra
+// persona sin tener que cerrar la app entera.
+function updateLogoutBtn(){
+  const btn = document.getElementById('logout-btn');
+  if(!btn) return;
+  btn.style.display = getAccessSession() ? '' : 'none';
+}
+function logoutAccessSession(){
+  clearAccessSession();
+  areaUnlocked = {cocina:false, sala:false};
+  ownerUnlocked = false;
+  document.getElementById('lock-btn').style.display = 'none';
+  updateLogoutBtn();
+  goHome();
+  showAccessSelectScreen();
 }
 
 // Activa/desactiva un tipo de servicio (mesa/takeaway/delivery) y lo guarda al
@@ -6901,14 +6927,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
     if(splash) splash.classList.add('hide');
-    // Antes esto se mostraba SIEMPRE al abrir la app, sin pedir ningún PIN —
-    // si había 2+ negocios configurados en el dispositivo, cualquiera que
-    // abriera la app (empleado incluido) veía de entrada la lista completa
-    // de negocios, antes incluso de tocar nada. Con un solo negocio (el
-    // caso normal) no hay nada que proteger, así que se sigue mostrando
-    // igual que siempre. Con 2 o más, ya no se abre sola: hay que pulsar el
-    // botón "Negocios" de la cabecera, que desde ahora sí pide su PIN.
-    if(getBusinessSlots().length < 2) showBusinessSelectScreen();
+    if(!alreadySetUp){
+      // Primera configuración del dispositivo: se deja pasar tal cual, ya
+      // gestionado por las pantallas de activación/Netlify/Firebase de
+      // arriba — la nueva pantalla de acceso (Empleados/Propietarios) solo
+      // tiene sentido una vez hay un negocio de verdad ya configurado.
+      if(getBusinessSlots().length < 2) showBusinessSelectScreen();
+      return;
+    }
+    // Negocio ya configurado: la pantalla de "Acceso Empleados / Acceso
+    // Propietarios" sustituye tanto al selector automático de negocios como
+    // al viejo "cualquiera puede tocar Cocina/Sala sin identificarse". Si ya
+    // había una sesión guardada (de una visita anterior), se entra directo
+    // sin volver a pedir nada.
+    const session = getAccessSession();
+    if(session && session.type === 'employee' && resumeEmployeeSession()) return;
+    if(session && session.type === 'owner') return;
+    showAccessSelectScreen();
   }, 1800);
 
   // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario

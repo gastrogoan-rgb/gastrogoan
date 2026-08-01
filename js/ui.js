@@ -1047,8 +1047,15 @@ function resolveTargetFolder(view){
 let areaUnlocked = {cocina:false, sala:false};
 function isOperationalAreaLocked(view){
   if(ownerUnlocked) return false;
+  // Quien ya entró por "Acceso Propietarios" en la pantalla de arranque no
+  // tiene que volver a identificarse para Cocina/Sala — ya se autenticó a
+  // nivel de dispositivo. Este candado por área queda como red de seguridad
+  // para accesos que se salten esa pantalla (enlaces directos, etc.).
+  const session = getAccessSession();
+  if(session && session.type === 'owner') return false;
   const targetFolder = view === 'folder' ? currentFolder : resolveTargetFolder(view);
   if(targetFolder !== 'cocina' && targetFolder !== 'sala') return false;
+  if(session && session.type === 'employee' && session.area === targetFolder) return false;
   if(areaUnlocked[targetFolder]) return false;
   const areaEmps = (DB.employees||[]).filter(e => (e.area||'cocina') === targetFolder);
   if(!areaEmps.length) return false;

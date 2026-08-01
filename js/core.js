@@ -19,20 +19,43 @@ function getActiveSlot(){
   return localStorage.getItem(ACTIVE_SLOT_LS) || 'default';
 }
 
+// Código corto que identifica a un negocio concreto para el login de
+// empleados (ver requestEmployeeAccess): sin él, un login de "nombre + PIN"
+// no sabría a qué negocio pertenece si el dispositivo tiene varios. No es
+// secreto criptográfico, es simplemente el dato que el dueño le da de
+// palabra a cada empleado (como una "clave de wifi").
+function generateBusinessCode(existingCodes){
+  let code;
+  do{ code = String(Math.floor(100000 + Math.random()*900000)); }
+  while(existingCodes.includes(code));
+  return code;
+}
+function ensureSlotCodes(slots){
+  const existingCodes = slots.filter(s=>s.code).map(s=>s.code);
+  let changed = false;
+  slots.forEach(s => {
+    if(!s.code){ s.code = generateBusinessCode(existingCodes); existingCodes.push(s.code); changed = true; }
+  });
+  if(changed) saveBusinessSlots(slots);
+  return slots;
+}
 function getBusinessSlots(){
+  let slots;
   try{
     const list = JSON.parse(localStorage.getItem(SLOTS_LS));
-    if(Array.isArray(list) && list.length) return list;
+    if(Array.isArray(list) && list.length) slots = list;
   }catch(e){}
-  // Primera vez: si ya había una licencia (instalación anterior), registra
-  // el negocio 'default' para que aparezca en el selector.
-  const slots = [{ id:'default', name:'Mi negocio' }];
-  try{
-    const lic = JSON.parse(localStorage.getItem('gastrogoan_license_v1'));
-    if(lic && lic.name) slots[0].name = lic.name;
-  }catch(e){}
-  localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
-  return slots;
+  if(!slots){
+    // Primera vez: si ya había una licencia (instalación anterior), registra
+    // el negocio 'default' para que aparezca en el selector.
+    slots = [{ id:'default', name:'Mi negocio' }];
+    try{
+      const lic = JSON.parse(localStorage.getItem('gastrogoan_license_v1'));
+      if(lic && lic.name) slots[0].name = lic.name;
+    }catch(e){}
+    localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
+  }
+  return ensureSlotCodes(slots);
 }
 
 function saveBusinessSlots(slots){
@@ -49,6 +72,189 @@ function slotLicenseKey(slotId){
 
 const ACTIVE_SLOT = getActiveSlot();
 getBusinessSlots(); // asegura que el registro exista desde el arranque
+
+/* ============================================================
+   PANTALLA DE ACCESO — "Acceso Empleados" / "Acceso Propietarios"
+   Login del DISPOSITIVO, independiente de cualquier negocio concreto: se
+   comprueba ANTES incluso de saber a qué negocio se quiere entrar. Por eso
+   vive en localStorage (no dentro de la base de datos de ningún negocio).
+   ============================================================ */
+const OWNER_LOGIN_LS = 'gastrogoan_owner_login';
+const ACCESS_SESSION_LS = 'gastrogoan_access_session';
+
+function getOwnerLogin(){
+  try{ return JSON.parse(localStorage.getItem(OWNER_LOGIN_LS)); }catch(e){ return null; }
+}
+function setOwnerLogin(name, passwordPlain){
+  localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({name, passHash: hashPin(passwordPlain)}));
+}
+function verifyOwnerLogin(name, passwordPlain){
+  const login = getOwnerLogin();
+  if(!login) return false;
+  return login.name.trim().toLowerCase() === name.trim().toLowerCase() && login.passHash === hashPin(passwordPlain);
+}
+
+function getAccessSession(){
+  try{ return JSON.parse(localStorage.getItem(ACCESS_SESSION_LS)); }catch(e){ return null; }
+}
+function setAccessSession(session){
+  localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(session));
+  if(typeof updateLogoutBtn === 'function') updateLogoutBtn();
+}
+function clearAccessSession(){
+  localStorage.removeItem(ACCESS_SESSION_LS);
+}
+
+let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner' | 'owner-setup'
+function renderAccessScreen(){
+  const screen = document.getElementById('access-select-screen');
+  if(!screen) return;
+  screen.innerHTML = renderAccessSelectScreenHtml();
+  screen.classList.remove('hide');
+}
+function showAccessSelectScreen(){
+  accessScreenMode = 'choice';
+  renderAccessScreen();
+}
+function hideAccessSelectScreen(){
+  document.getElementById('access-select-screen')?.classList.add('hide');
+}
+function setAccessScreenMode(mode){
+  accessScreenMode = mode;
+  renderAccessScreen();
+}
+function renderAccessSelectScreenHtml(){
+  if(accessScreenMode === 'employee') return renderEmployeeAccessFormHtml();
+  if(accessScreenMode === 'owner' || accessScreenMode === 'owner-setup') return renderOwnerAccessFormHtml();
+  return `
+    <div class="bs-box" style="text-align:center">
+      <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff;margin:0 auto 14px"><i class="ti ti-tools-kitchen-2"></i></div>
+      <div class="bs-title" style="justify-content:center">${t('access.title')}</div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 20px">${t('access.subtitle')}</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" style="padding:16px" onclick="setAccessScreenMode('employee')"><i class="ti ti-users"></i> ${t('access.employeeBtn')}</button>
+        <button class="btn" style="padding:16px;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="setAccessScreenMode('${getOwnerLogin()?'owner':'owner-setup'}')"><i class="ti ti-user-shield"></i> ${t('access.ownerBtn')}</button>
+      </div>
+    </div>
+  `;
+}
+function renderEmployeeAccessFormHtml(){
+  return `
+    <div class="bs-box">
+      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <div class="bs-title">${t('access.employeeBtn')}</div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">${t('access.employeeDesc')}</p>
+      <div class="field">
+        <label>${t('common.name')}</label>
+        <input type="text" id="acc-emp-name" placeholder="${t('ph.employeeName')}">
+      </div>
+      <div class="field">
+        <label>${t('label.accessPin')}</label>
+        <input type="password" id="acc-emp-pin" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="field">
+        <label>${t('access.businessCode')}</label>
+        <input type="text" id="acc-emp-code" maxlength="6" inputmode="numeric" placeholder="000000" style="letter-spacing:4px;font-size:18px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'');confirmEmployeeAccess.busy=false" onkeydown="if(event.key==='Enter')confirmEmployeeAccess()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="confirmEmployeeAccess()">${t('common.unlock')}</button>
+    </div>
+  `;
+}
+function renderOwnerAccessFormHtml(){
+  const isSetup = accessScreenMode === 'owner-setup';
+  return `
+    <div class="bs-box">
+      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
+      <div class="bs-title">${t('access.ownerBtn')}</div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">${isSetup ? t('access.ownerSetupDesc') : t('access.ownerDesc')}</p>
+      <div class="field">
+        <label>${t('common.name')}</label>
+        <input type="text" id="acc-owner-name" placeholder="${t('ph.ownerName')}" value="${isSetup ? '' : escapeHtml(getOwnerLogin()?.name||'')}">
+      </div>
+      <div class="field">
+        <label>${isSetup ? t('access.newPassword') : t('access.password')}</label>
+        <input type="password" id="acc-owner-pass" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter'&&!${isSetup})confirmOwnerAccess()">
+      </div>
+      ${isSetup ? `
+      <div class="field">
+        <label>${t('access.repeatPassword')}</label>
+        <input type="password" id="acc-owner-pass2" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmOwnerAccessSetup()">
+      </div>` : ''}
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${isSetup ? t('common.save') : t('common.unlock')}</button>
+    </div>
+  `;
+}
+
+function confirmOwnerAccessSetup(){
+  const name = document.getElementById('acc-owner-name').value.trim();
+  const p1 = document.getElementById('acc-owner-pass').value;
+  const p2 = document.getElementById('acc-owner-pass2').value;
+  if(!name){ showToast(t('msg.nameRequired')); return; }
+  if(!p1 || p1.length < 4){ showToast(t('msg.pin4digits')); return; }
+  if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
+  setOwnerLogin(name, p1);
+  setAccessSession({type:'owner'});
+  hideAccessSelectScreen();
+  showBusinessSelectScreen();
+}
+function confirmOwnerAccess(){
+  const name = document.getElementById('acc-owner-name').value.trim();
+  const pass = document.getElementById('acc-owner-pass').value;
+  if(!verifyOwnerLogin(name, pass)){ showToast(t('msg.pinIncorrect')); return; }
+  setAccessSession({type:'owner'});
+  hideAccessSelectScreen();
+  showBusinessSelectScreen();
+}
+
+// Busca en TODOS los negocios del dispositivo (no solo el activo) el que
+// tenga este código, y dentro de él un empleado activo con ese nombre+PIN —
+// así el login no depende de qué negocio estuviera cargado antes. Usa
+// readSlotDB() para "asomarse" a otros negocios sin cambiar de negocio
+// todavía (solo se cambia si las credenciales son correctas).
+async function confirmEmployeeAccess(){
+  const name = document.getElementById('acc-emp-name').value.trim();
+  const pin = document.getElementById('acc-emp-pin').value;
+  const code = document.getElementById('acc-emp-code').value.trim();
+  if(!name || !pin || !code){ showToast(t('msg.completeAllFields')); return; }
+  const slot = getBusinessSlots().find(s => s.code === code);
+  if(!slot){ showToast(t('access.badCredentials')); return; }
+  let slotData;
+  try{ slotData = await readSlotDB(slot.id); }catch(e){ showToast(t('access.badCredentials')); return; }
+  const employees = slotData.employees || [];
+  const match = employees.find(e => {
+    if(e.active === false) return false;
+    if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) return false;
+    const storedPin = e.pin || '1234';
+    return storedPin.startsWith('H:') ? hashPin(pin) === storedPin : pin === storedPin;
+  });
+  if(!match){ showToast(t('access.badCredentials')); return; }
+  setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: slot.id});
+  if(slot.id !== ACTIVE_SLOT){
+    switchToBusiness(slot.id); // recarga la app ya con la sesión guardada
+    return;
+  }
+  hideAccessSelectScreen();
+  resumeEmployeeSession();
+}
+
+// Al arrancar (o justo tras un login de empleado en el mismo negocio ya
+// activo): si hay una sesión de empleado válida guardada, entra directo a
+// su área sin pedir ningún PIN más — y si ya no es válida (lo borraron o lo
+// desactivaron desde que inició sesión), se cierra la sesión sola.
+function resumeEmployeeSession(){
+  const session = getAccessSession();
+  if(!session || session.type !== 'employee') return false;
+  const emp = (DB.employees||[]).find(e => e.id === session.employeeId);
+  if(!emp || emp.active === false){
+    clearAccessSession();
+    return false;
+  }
+  const area = emp.area || 'cocina';
+  areaUnlocked[area] = true;
+  currentFolder = area;
+  navigate('folder');
+  return true;
+}
 
 // Actualiza el nombre mostrado del negocio activo en el selector (p.ej.
 // al activar una licencia o recibirla sincronizada desde la nube).
@@ -73,7 +279,7 @@ function switchToBusiness(slotId){
 function addNewBusiness(){
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
-  slots.push({ id, name: 'Nuevo negocio' });
+  slots.push({ id, name: 'Nuevo negocio', code: generateBusinessCode(slots.map(s=>s.code)) });
   saveBusinessSlots(slots);
   switchToBusiness(id);
 }
@@ -169,7 +375,7 @@ async function addSucursal(parentSlotId){
     req.onerror = () => reject(req.error);
   });
 
-  slots.push({ id: newId, name: nombre, parentId: parentSlotId });
+  slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: generateBusinessCode(slots.map(s=>s.code)) });
   saveBusinessSlots(slots);
   switchToBusiness(newId);
 }
