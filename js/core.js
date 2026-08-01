@@ -457,7 +457,12 @@ function removeBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
   if(!slot) return;
-  if(!confirm(t('gate.confirmRemoveBusiness').replace('${name}', slot.name))) return;
+  const typed = prompt(t('gate.confirmRemoveBusiness').replace('${name}', slot.name));
+  if(typed === null) return;
+  if(typed.trim().toLowerCase() !== slot.name.trim().toLowerCase()){
+    showToast(t('gate.removeBusinessNameMismatch'));
+    return;
+  }
 
   indexedDB.deleteDatabase(slotIdbName(slotId));
   localStorage.removeItem(slotLicenseKey(slotId));
