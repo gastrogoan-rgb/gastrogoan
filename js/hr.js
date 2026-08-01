@@ -2026,11 +2026,15 @@ function saveTurno(id){
   // el empleado+fecha de otro ya existente dejaba los dos duplicados.
   const collision = DB.turnos.find(x => x.employeeId===data.employeeId && x.fecha===data.fecha && x.id !== id);
   const emp = DB.employees.find(x=>x.id===data.employeeId);
-  const wasNew = !turno;
   if(collision){
     if(turno) DB.turnos = DB.turnos.filter(x => x.id !== turno.id);
     turno = collision;
   }
+  // wasNew se calcula DESPUÉS de resolver la colisión: si un turno nuevo
+  // (sin id) colisiona con uno existente, el resultado es una fusión sobre
+  // el turno colisionante (no se crea fila nueva), así que el registro de
+  // auditoría debe decir "editado", no "creado".
+  const wasNew = !turno;
   if(turno){
     Object.assign(turno, data);
   } else {

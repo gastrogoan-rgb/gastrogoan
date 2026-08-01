@@ -1414,6 +1414,44 @@ function mergeRemoteIntoLocal(val){
   }
 }
 
+// Tras perder la carrera de inicialización (ver startCloudSync), espera y
+// relee la nube varias veces con backoff creciente en vez de un solo intento
+// de 1500ms — si a la primera el ganador todavía no había terminado de
+// subir, un único intento nos llevaba a hacer un pushAllToCloud() de
+// emergencia sin ninguna coordinación, reintroduciendo exactamente la
+// sobreescritura que esta transacción se creó para evitar. Solo tras agotar
+// los reintentos se hace ese pushAllToCloud() como último recurso.
+const CLOUD_INIT_RACE_MAX_ATTEMPTS = 5;
+function waitForWinnerAfterLostRace(attempt){
+  attempt = attempt || 1;
+  cloudRef.once('value').then(snap2 => {
+    const remoteVal = snap2.val();
+    if(remoteVal !== null){
+      mergeRemoteIntoLocal(remoteVal);
+      attachCloudChildListeners();
+    }else if(attempt < CLOUD_INIT_RACE_MAX_ATTEMPTS){
+      setTimeout(() => waitForWinnerAfterLostRace(attempt+1), attempt*1000);
+    }else{
+      // Caso muy improbable tras varios reintentos: el ganador reclamó pero
+      // nunca llegó a subir nada (p.ej. se quedó sin conexión a mitad).
+      // Subimos nosotros como red de seguridad para no dejar la nube vacía
+      // para siempre.
+      lastSyncedSnapshot = {};
+      pushAllToCloud();
+      syncPublicMirror();
+      attachCloudChildListeners();
+    }
+  }).catch(e => {
+    console.error('Error releyendo la nube tras perder la carrera de inicialización', e);
+    if(attempt < CLOUD_INIT_RACE_MAX_ATTEMPTS){
+      setTimeout(() => waitForWinnerAfterLostRace(attempt+1), attempt*1000);
+    }else{
+      updateSyncBadge('error');
+      attachCloudChildListeners();
+    }
+  });
+}
+
 function startCloudSync(tenantId){
   if(cloudRef) return; // ya conectado
   try{
@@ -1441,22 +1479,7 @@ function startCloudSync(tenantId){
             syncPublicMirror();
             attachCloudChildListeners();
           }else{
-            setTimeout(() => {
-              cloudRef.once('value').then(snap2 => {
-                const remoteVal = snap2.val();
-                if(remoteVal !== null){
-                  mergeRemoteIntoLocal(remoteVal);
-                }else{
-                  // Caso improbable: el ganador reclamó pero aún no ha
-                  // terminado de subir. Subimos nosotros como red de
-                  // seguridad para no dejar la nube vacía para siempre.
-                  lastSyncedSnapshot = {};
-                  pushAllToCloud();
-                  syncPublicMirror();
-                }
-                attachCloudChildListeners();
-              });
-            }, 1500);
+            setTimeout(() => waitForWinnerAfterLostRace(1), 1000);
           }
         }).catch(e => {
           console.error('Error reclamando la inicialización de la nube', e);

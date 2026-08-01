@@ -2379,7 +2379,7 @@ function requestApplyDiscount(orderId){
       DB.discountLog.push({
         id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
         mesa: order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order),
-        porcentaje: -order.descuentoPct, importe: -(orderTotal(order) * order.descuentoPct / 100),
+        porcentaje: -order.descuentoPct, importe: -roundMoney(orderTotal(order) * order.descuentoPct / 100),
         motivo: t('msg.discountReverted') + (order.descuentoMotivo ? ` (${order.descuentoMotivo})` : ''),
         responsableId: order.descuentoResponsableId, responsableNombre: order.descuentoResponsableNombre || ''
       });
@@ -2430,7 +2430,7 @@ function confirmApplyDiscount(){
   const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
 
   const subtotal = orderTotal(order);
-  const importe = subtotal * pct / 100;
+  const importe = roundMoney(subtotal * pct / 100);
   order.descuentoPct = pct;
   order.descuentoMotivo = reason;
   order.descuentoResponsableId = responsableId;
@@ -2580,10 +2580,14 @@ function generateItemsSplit(orderId){
   // El coste de envío es un gasto del pedido entero, no de ningún plato
   // concreto: antes no se repartía entre los comensales, así que lo cobrado
   // sumaba menos que orderTotal() (lo que se imprime en ticket/factura) y
-  // faltaba dinero en caja. Se reparte a partes iguales, con el resto de
-  // redondeo en el último comensal para que la suma cuadre exactamente.
+  // faltaba dinero en caja. Se reparte en céntimos enteros a partes iguales,
+  // dando 1 céntimo extra a los primeros comensales hasta agotar el resto
+  // (en vez de metérselo todo al último), para que ningún comensal pueda
+  // acabar con un importe NEGATIVO cuando costeEnvio/n no es exacto.
   const costeEnvio = order.costeEnvio || 0;
-  const envioPorComensal = roundMoney(costeEnvio / n);
+  const costeEnvioCents = Math.round(costeEnvio * 100);
+  const envioBaseCents = Math.floor(costeEnvioCents / n);
+  const envioRestoCents = costeEnvioCents - envioBaseCents * n;
   order.splitPayments = Array.from({length:n}, (_,i) => {
     const personIdx = i+1;
     let amount = 0;
@@ -2596,8 +2600,8 @@ function generateItemsSplit(orderId){
       }
     });
     if(costeEnvio > 0){
-      const esUltimo = personIdx === n;
-      const envioAsignado = esUltimo ? roundMoney(costeEnvio - envioPorComensal * (n-1)) : envioPorComensal;
+      const envioAsignadoCents = envioBaseCents + (personIdx <= envioRestoCents ? 1 : 0);
+      const envioAsignado = envioAsignadoCents / 100;
       amount += envioAsignado;
       itemNames.push(`${t('label.deliveryCost')}: ${fmtMoney(envioAsignado)}`);
     }

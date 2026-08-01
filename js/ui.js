@@ -140,10 +140,15 @@ function finishTour(){
   tourClearHighlight();
   const b = document.getElementById('tour-bubble');
   if(b) b.remove();
-  ownerUnlocked = false;
-  tourOwnerUnlockedByTour = false;
-  const lockBtn = document.getElementById('lock-btn');
-  if(lockBtn) lockBtn.style.display = 'none';
+  // Solo bloqueamos Gestión aquí si fue el propio tour quien la desbloqueó.
+  // Si el usuario ya la había desbloqueado de verdad con su PIN antes de
+  // empezar el tour, terminar el tour no debe deshacer ese desbloqueo real.
+  if(tourOwnerUnlockedByTour){
+    ownerUnlocked = false;
+    tourOwnerUnlockedByTour = false;
+    const lockBtn = document.getElementById('lock-btn');
+    if(lockBtn) lockBtn.style.display = 'none';
+  }
   goHome();
 }
 

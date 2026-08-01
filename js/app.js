@@ -4297,12 +4297,22 @@ function saveBusiness(silent){
   // Antes esto se guardaba igual aunque el horario no tuviera sentido (p.ej.
   // hora de cierre antes que la de apertura): la validación se calculaba
   // DESPUÉS de asignarlo y de todas formas se persistía siempre, con un
-  // simple toast no bloqueante como único aviso. Ahora, si hay algún aviso
-  // real, se pide confirmación explícita antes de guardar ese horario.
-  if(horarioWarnings.length && !confirm(horarioWarnings[0] + '\n\n' + t('msg.confirmSaveAnyway'))){
-    return;
+  // simple toast no bloqueante como único aviso.
+  //
+  // La confirmación bloqueante solo tiene sentido en el guardado EXPLÍCITO
+  // ("Guardar todo", silent=false/undefined) — saveBusiness(true) se llama
+  // en el onchange de casi cualquier campo suelto del formulario (nombre,
+  // tipo, año...), y ese horario ya vivía en el DOM aunque el campo que
+  // cambió no tuviera nada que ver, así que un confirm() ahí interrumpía al
+  // usuario por cambios ajenos al horario. Y si cancela, el resto de campos
+  // (ya asignados arriba) se guardan igual: solo se descarta el horario.
+  let horarioRechazado = false;
+  if(horarioWarnings.length && !silent){
+    if(!confirm(horarioWarnings[0] + '\n\n' + t('msg.confirmSaveAnyway'))){
+      horarioRechazado = true;
+    }
   }
-  DB.business.horario = newHorario;
+  DB.business.horario = horarioRechazado ? (DB.business.horario||newHorario) : newHorario;
   const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMin);
   saveDB();
   renderHeader();
@@ -4310,7 +4320,8 @@ function saveBusiness(silent){
   updateAutoActiveMenu(true);
   checkAforoWarning();
   const serviceMismatchWarning = businessTypeServiceMismatchWarning(DB.business.tipo, DB.business.tiposServicio);
-  if(horarioWarnings.length) showToast(horarioWarnings[0]);
+  if(horarioRechazado) showToast(t('msg.horarioNotSaved'));
+  else if(horarioWarnings.length) showToast(horarioWarnings[0]);
   else if(leadTimeWarning) showToast(leadTimeWarning);
   else if(serviceMismatchWarning) showToast(serviceMismatchWarning);
   else if(!silent) showToast(t('msg.businessSaved'));

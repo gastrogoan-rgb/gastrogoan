@@ -441,14 +441,35 @@ function init(){
 }
 
 let businessInfoLoadedOnce = false;
+let lastRenderSignature = null;
+// Guarda y restaura lo que el cliente ya había escrito (nombre, teléfono,
+// dirección, notas...) alrededor de un re-render forzado por el listener en
+// vivo, para no perder el formulario a medio rellenar.
+function renderTabContentPreservingForm(){
+  const box = document.getElementById('tab-content');
+  const saved = {};
+  if(box){
+    box.querySelectorAll('input[id], textarea[id], select[id]').forEach(el => { saved[el.id] = el.value; });
+  }
+  renderTabContent();
+  Object.keys(saved).forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.value !== saved[id]) el.value = saved[id];
+  });
+}
 function loadBusinessInfo(){
   // Antes esto era un once('value') de una sola vez: si el dueño cambiaba un
   // precio o quitaba un plato de la carta mientras un cliente tenía la
-  // página abierta, el cliente seguía viendo datos obsoletos hasta recargar
-  // (a diferencia del aforo, que sí se revalida en cada reserva). Con on()
-  // los cambios de carta/precios/disponibilidad llegan en vivo. En las
-  // actualizaciones DESPUÉS de la primera no se llama a renderApp() (que
-  // vacía el carrito): solo se refresca el contenido de la pestaña actual.
+  // página abierta, el cliente seguía viendo datos obsoletos hasta recargar.
+  // Con on() los cambios de carta/precios/disponibilidad llegan en vivo. En
+  // las actualizaciones DESPUÉS de la primera no se llama a renderApp() (que
+  // vacía el carrito): solo se refresca el contenido de la pestaña actual, y
+  // solo si de verdad cambió algo relevante para lo que se ve — el nodo
+  // 'info' incluye reservasResumen (aforo), que se reescribe cada vez que
+  // CUALQUIER cliente reserva, y eso NO debe forzar un re-render (la
+  // disponibilidad ya se revalida en vivo al enviar, vía getAforoInfo /
+  // reserveAforoAtomic), o el formulario de otros clientes se vaciaría
+  // constantemente por reservas ajenas sin ningún cambio real de carta.
   db.ref('gastrogoan/public/' + publicId + '/info').on('value', snap => {
     const val = snap.val();
     if(!val){ if(!businessInfoLoadedOnce) showError('error.carga'); return; }
@@ -468,10 +489,15 @@ function loadBusinessInfo(){
     renderHeader();
     if(!businessInfoLoadedOnce){
       businessInfoLoadedOnce = true;
+      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables});
       renderApp();
       checkRedsysConfigured();
     }else if(currentTab && document.getElementById('tab-content')){
-      renderTabContent();
+      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables});
+      if(newSignature !== lastRenderSignature){
+        lastRenderSignature = newSignature;
+        renderTabContentPreservingForm();
+      }
     }
   }, e => {
     console.error(e);
