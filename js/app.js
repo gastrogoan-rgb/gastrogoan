@@ -6901,7 +6901,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
     if(splash) splash.classList.add('hide');
-    showBusinessSelectScreen();
+    // Antes esto se mostraba SIEMPRE al abrir la app, sin pedir ningún PIN —
+    // si había 2+ negocios configurados en el dispositivo, cualquiera que
+    // abriera la app (empleado incluido) veía de entrada la lista completa
+    // de negocios, antes incluso de tocar nada. Con un solo negocio (el
+    // caso normal) no hay nada que proteger, así que se sigue mostrando
+    // igual que siempre. Con 2 o más, ya no se abre sola: hay que pulsar el
+    // botón "Negocios" de la cabecera, que desde ahora sí pide su PIN.
+    if(getBusinessSlots().length < 2) showBusinessSelectScreen();
   }, 1800);
 
   // Si hay cambios pendientes de subir a la nube (agrupados) y el usuario
