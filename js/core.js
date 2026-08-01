@@ -470,13 +470,15 @@ function removeBusinessSlot(slotId){
 
 /* Pantalla a pantalla completa, mostrada justo después del splash, donde se
    elige con qué negocio se quiere trabajar antes de entrar a la app. */
-// El botón "Negocios" de la cabecera estaba abierto a cualquiera (sin PIN),
-// así que un empleado que solo hubiera desbloqueado su área con su propio
-// PIN podía ver los nombres de TODOS los negocios configurados en el mismo
-// dispositivo y cambiar a cualquiera de ellos con un solo toque. Ahora pide
-// el PIN del negocio actual antes de abrir el selector — igual que ya se
-// pide para entrar en Gestión o para borrar un empleado.
+// El botón "Negocios" de la cabecera solo es visible con sesión de
+// propietario (ver updateHeaderAccessButtons) — quien ya entró desde
+// "Acceso Propietarios" ya demostró quién es, así que no hace falta
+// pedirle el PIN otra vez aquí. El PIN del negocio se mantiene solo como
+// red de seguridad para el caso (raro) de llegar aquí sin sesión de
+// propietario activa.
 function requestSwitchBusinessPin(){
+  const session = getAccessSession();
+  if(session && session.type === 'owner'){ showBusinessSelectScreen(); return; }
   if(!DB.business || !DB.business.pin){ showBusinessSelectScreen(); return; }
   requestBusinessPinAction(t('title.switchBusiness'), t('msg.confirmSwitchBusiness'), () => showBusinessSelectScreen());
 }

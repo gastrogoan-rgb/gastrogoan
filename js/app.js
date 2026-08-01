@@ -4231,14 +4231,17 @@ function renderHeader(){
   updateLogoutBtn();
 }
 
-// Muestra "Cerrar sesión" en la cabecera solo cuando hay una sesión de
-// acceso activa (empleado u propietario logueado desde la pantalla de
-// entrada), para poder dejar el dispositivo listo para que fiche otra
-// persona sin tener que cerrar la app entera.
+// "Cerrar sesión" aparece con cualquier sesión activa (empleado o
+// propietario), para poder dejar el dispositivo listo para que entre otra
+// persona sin cerrar la app entera. "Negocios" solo tiene sentido para el
+// propietario — un empleado no puede usarlo de todas formas (pide el PIN
+// de propietario), así que ya ni se le muestra.
 function updateLogoutBtn(){
-  const btn = document.getElementById('logout-btn');
-  if(!btn) return;
-  btn.style.display = getAccessSession() ? '' : 'none';
+  const logoutBtn = document.getElementById('logout-btn');
+  const bizBtn = document.getElementById('business-switch-btn');
+  const session = getAccessSession();
+  if(logoutBtn) logoutBtn.style.display = session ? '' : 'none';
+  if(bizBtn) bizBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
 }
 function logoutAccessSession(){
   clearAccessSession();
