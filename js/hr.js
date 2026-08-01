@@ -2814,6 +2814,17 @@ function doFichaje(employeeId, action){
   }
   saveDB();
   closeModal();
+  // Si este fichaje de entrada venía de la pantalla de bloqueo (fichar para
+  // entrar en Cocina/Sala), retomamos la navegación pendiente en vez de
+  // simplemente refrescar la pestaña de Personal (que puede ni existir
+  // todavía, si aún no se había llegado a entrar en la carpeta).
+  if(action === 'entrada' && typeof fichaGatePendingView !== 'undefined' && fichaGatePendingView){
+    const resumeView = fichaGatePendingView;
+    fichaGatePendingView = null;
+    showToast(t('msg.clockInRegistered'));
+    navigate(resumeView);
+    return;
+  }
   renderHorariosTab();
   showToast(action === 'entrada' ? t('msg.clockInRegistered') : t('msg.clockOutRegistered'));
 }

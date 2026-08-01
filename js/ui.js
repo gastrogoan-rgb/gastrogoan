@@ -1017,6 +1017,83 @@ function isGestionLocked(view){
   return false;
 }
 
+// A qué carpeta pertenece de verdad esta vista, dando prioridad a la carpeta
+// en la que ya se está trabajando (algunos módulos como Stock/Escandallo
+// existen tanto en Cocina como en Sala; MODULE_FOLDER solo recuerda la
+// primera que los declaró, así que por sí solo no basta para saber en cuál
+// de las dos está realmente el usuario ahora mismo).
+function resolveTargetFolder(view){
+  const inCurrentFolder = currentFolder && FOLDERS[currentFolder] && FOLDERS[currentFolder].modules.some(m => m.id === view);
+  return inCurrentFolder ? currentFolder : MODULE_FOLDER[view];
+}
+
+// Antes cualquiera con el dispositivo delante podía usar TPV/Cocina/Sala sin
+// identificarse en absoluto — el único PIN real era para Gestión. Esto hace
+// imposible revocar de verdad a un empleado que se marcha: dar de baja
+// bloquea su PIN, pero si nadie tiene que fichar para entrar, la baja no
+// impide a nadie más seguir usando el dispositivo con normalidad. Ahora,
+// para entrar en Cocina o Sala hace falta que alguien de esa área (activo)
+// tenga un fichaje abierto, o que el propietario desbloquee con su PIN.
+// Si esa área no tiene ningún empleado registrado, no se exige fichar (no
+// hay a quién pedírselo — típico de un negocio muy pequeño donde el propio
+// dueño lo hace todo sin dar de alta "empleados").
+function isOperationalAreaLocked(view){
+  if(ownerUnlocked) return false;
+  const targetFolder = view === 'folder' ? currentFolder : resolveTargetFolder(view);
+  if(targetFolder !== 'cocina' && targetFolder !== 'sala') return false;
+  const areaEmps = (DB.employees||[]).filter(e => (e.area||'cocina') === targetFolder);
+  if(!areaEmps.length) return false;
+  return !areaEmps.some(e => e.active !== false && getOpenFichaje(e.id));
+}
+
+let fichaGatePendingView = null;
+let fichaGatePendingEmpId = null;
+function requestFichaGate(view){
+  fichaGatePendingView = view;
+  const area = view === 'folder' ? currentFolder : resolveTargetFolder(view);
+  const emps = (DB.employees||[]).filter(e => (e.area||'cocina') === area && e.active !== false);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-fingerprint"></i> ${t('title.clockInToEnter')}</h3>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.clockInToEnterDesc')}</p>
+    ${emps.length ? `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:280px;overflow-y:auto">
+      ${emps.map(e => `<button class="btn" onclick="requestFichaGatePin(${e.id})" style="text-align:left;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(e.name)}</button>`).join('')}
+    </div>` : `<p style="font-size:13px;color:var(--red)">${t('msg.noActiveEmployeesArea')}</p>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal();goHome()">${t('common.cancel')}</button>
+      <button class="btn" onclick="requestOwnerPin(fichaGatePendingView)">${t('label.imTheOwner')}</button>
+    </div>
+  `);
+}
+function requestFichaGatePin(employeeId){
+  fichaGatePendingEmpId = employeeId;
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-lock"></i> ${escapeHtml(e.name)}</h3>
+    </div>
+    <div class="field">
+      <label>${t('label.accessPin')}</label>
+      <input type="password" id="ficha-gate-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmFichaGatePin()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="requestFichaGate(fichaGatePendingView)">${t('common.back')}</button>
+      <button class="btn btn-primary" onclick="confirmFichaGatePin()">${t('hr2.clockIn')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('ficha-gate-pin-input')?.focus(), 50);
+}
+function confirmFichaGatePin(){
+  const e = DB.employees.find(x=>x.id===fichaGatePendingEmpId);
+  if(!e) return;
+  const val = document.getElementById('ficha-gate-pin-input').value;
+  if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
+  quickFichaje(e.id, 'entrada');
+}
+
 function lockOwnerArea(){
   ownerUnlocked = false;
   document.getElementById('lock-btn').style.display = 'none';
@@ -1026,6 +1103,10 @@ function lockOwnerArea(){
 function navigate(view){
   if(isGestionLocked(view)){
     requestOwnerPin(view);
+    return;
+  }
+  if(isOperationalAreaLocked(view)){
+    requestFichaGate(view);
     return;
   }
 
