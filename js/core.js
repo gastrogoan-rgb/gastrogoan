@@ -1988,7 +1988,11 @@ function defaultData(){
       // que las tendencias de meses pasados del Panel de Control no apliquen
       // silenciosamente la configuración de HOY a un mes en el que los gastos
       // fijos eran distintos. {fecha, totalNeto}
-      fijosLog: []
+      fijosLog: [],
+      // Meses cerrados/bloqueados para edición ('YYYY-MM'), para que los datos
+      // de gastos variables/CAPEX de un periodo ya cerrado y enviado a la
+      // gestoría no puedan modificarse sin querer.
+      cierres: []
     },
     nextId: 1
   };

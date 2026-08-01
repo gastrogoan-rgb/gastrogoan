@@ -533,6 +533,12 @@
 
       <!-- TESORERÍA -->
       <div id="ge-tesoreria" class="ge-tab-panel">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+          <button class="btn btn-sm btn-icon" onclick="GE.setTeYear(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:16px;font-weight:700" id="te-year"></span>
+          <button class="btn btn-sm btn-icon" onclick="GE.setTeYear(1)"><i class="ti ti-chevron-right"></i></button>
+          <button class="btn btn-sm" id="te-close-month-btn" style="margin-left:10px" onclick="GE.toggleCierreTe()"></button>
+        </div>
         <div class="month-sel" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
@@ -625,6 +631,7 @@
         <div class="ge-kpi-grid" style="margin-bottom:14px">
           <div class="ge-kpi"><div class="lbl"><span data-i18n="hr.capex.debtPending">Deuda pendiente</span></div><div class="val" id="capex-deuda-val" style="color:var(--red)">—</div></div>
         </div>
+        <div id="capex-overdue-alert" style="display:none;margin-bottom:14px"></div>
         <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
           <button class="btn btn-primary" onclick="GE.newCapex()"><i class="ti ti-plus"></i> <span data-i18n="hr.capex.newInvestment">Nueva inversión</span></button>
         </div>

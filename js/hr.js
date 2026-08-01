@@ -18,6 +18,7 @@ const GE = (function(){
   function ivaSelect(id, val){ return `<select id="${id}">${getIvaOptions().map(o=>`<option value="${o.v}" ${parseFloat(val)===o.v?'selected':''}>${o.l}</option>`).join('')}</select>`; }
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null, editingGV = null;
   let cdrYear = new Date().getFullYear();
+  let teYear = new Date().getFullYear();
   let distPctLoaded = false;
   let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   let gvSearch = '';
@@ -28,6 +29,27 @@ const GE = (function(){
   function variables(){ return ge().variables; }
   function capex(){ return ge().capex; }
   function config(){ return ge().config; }
+  function cierres(){ if(!ge().cierres) ge().cierres = []; return ge().cierres; }
+  function mesKey(year, month){ return `${year}-${String(month+1).padStart(2,'0')}`; }
+  function isMonthClosed(year, month){ return cierres().includes(mesKey(year, month)); }
+  function isDateClosed(fechaStr){
+    if(!fechaStr) return false;
+    const [y,m] = fechaStr.split('-').map(Number);
+    return isMonthClosed(y, m-1);
+  }
+  function toggleCierreTe(){
+    const key = mesKey(teYear, activeMonth);
+    const idx = cierres().indexOf(key);
+    if(idx>=0){
+      if(!confirm(t('hr.te.confirmReopenMonth'))) return;
+      cierres().splice(idx,1);
+    } else {
+      if(!confirm(t('hr.te.confirmCloseMonth'))) return;
+      cierres().push(key);
+    }
+    saveDB();
+    renderTesoreria();
+  }
 
   function proveedores(){ return [...new Set([...DB.ingredients.map(i=>i.supplier), ...(DB.providers||[]).map(p=>p.nombre)].filter(Boolean))]; }
 
@@ -492,8 +514,12 @@ const GE = (function(){
     };
     if(editingGV){
       const existing = variables().find(x=>x.id===editingGV);
-      if(existing) Object.assign(existing, data);
+      if(existing){
+        if(isDateClosed(existing.fecha) || isDateClosed(data.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
+        Object.assign(existing, data);
+      }
     }else{
+      if(isDateClosed(data.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
       variables().push({id: genId(), mes: activeMonth, año: currentYear, ...data});
     }
     saveDB();
@@ -502,14 +528,17 @@ const GE = (function(){
     showToast(t('msg.purchaseSaved'));
   }
   function deleteGV(id){
+    const v = variables().find(x=>x.id===id);
+    if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
     if(!confirm(t('msg.confirmDeleteGeneric'))) return;
     ge().variables = variables().filter(v=>v.id!==id);
     saveDB();
     renderVariables();
   }
   function deleteGVGroup(idsStr){
-    if(!confirm(t('msg.confirmDeletePurchases'))) return;
     const ids = idsStr.split(',').map(s=>parseInt(s));
+    if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
+    if(!confirm(t('msg.confirmDeletePurchases'))) return;
     ge().variables = variables().filter(v=>!ids.includes(v.id));
     saveDB();
     renderVariables();
@@ -724,6 +753,23 @@ const GE = (function(){
     const pagadas = Math.min(Math.max(elapsed,0), cuotas);
     return Math.max(cuotas-pagadas, 0);
   }
+  // Una inversión financiada reparte su coste en cuotas mes a mes: si se edita/borra,
+  // afecta a TODOS los meses de su ventana de financiación, no solo al mes de alta.
+  // Por eso al comprobar el cierre no basta con mirar c.fecha: si cualquiera de esos
+  // meses ya está cerrado, también hay que bloquear el cambio.
+  function capexTouchesClosedMonth(c){
+    if(!c.fecha) return false;
+    if(isDateClosed(c.fecha)) return true;
+    if(!c.financiado) return false;
+    const cuotas = parseInt(c.cuotas)||0;
+    if(cuotas<1) return false;
+    const [fy,fm] = c.fecha.split('-').map(Number);
+    for(let i=0;i<cuotas;i++){
+      const total = fy*12+(fm-1)+i;
+      if(isMonthClosed(Math.floor(total/12), total%12)) return true;
+    }
+    return false;
+  }
   function capexDeudaPendiente(){
     let totalDeuda = 0, totalCuotas = 0;
     capex().forEach(c=>{
@@ -739,6 +785,20 @@ const GE = (function(){
     const tbody = document.getElementById('capex-tbody');
     const empty = document.getElementById('capex-empty');
     const deudaEl = document.getElementById('capex-deuda-val');
+    const overdueAlert = document.getElementById('capex-overdue-alert');
+    if(overdueAlert){
+      const overdue = capex().filter(c=>c.financiado && capexRestantes(c)===0 && c.estadoPago!=='PAGADO');
+      if(overdue.length){
+        overdueAlert.style.display='block';
+        overdueAlert.innerHTML = `<div class="ge-section" style="background:var(--amber-l);border:1px solid var(--amber)">
+          <div style="font-weight:600;color:var(--amber-dark);margin-bottom:4px"><i class="ti ti-alert-triangle"></i> ${t('hr.capex.overdueTitle')}</div>
+          <div style="font-size:12px;color:var(--amber-dark)">${overdue.map(c=>escapeHtml(c.descripcion)).join(', ')} — ${t('hr.capex.overdueDesc')}</div>
+        </div>`;
+      } else {
+        overdueAlert.style.display='none';
+        overdueAlert.innerHTML='';
+      }
+    }
     if(deudaEl){
       const {totalDeuda, totalCuotas} = capexDeudaPendiente();
       deudaEl.innerHTML = `${fmtMoney(totalDeuda)} <span style="font-size:11px;font-weight:400;color:var(--muted)">${t('hr.capex.debtPendingSub').replace('${n}', totalCuotas)}</span>`;
@@ -764,7 +824,8 @@ const GE = (function(){
         if(restantes==null){
           financInfo = `<span style="color:var(--red)">${t('hr.capex.notConfigured')}</span>`;
         } else {
-          financInfo = `${fmtMoney(c.cuotaMensual||0)}${t('hr.capex.perMonth')} · ${restantes>0?t('hr.capex.installmentsRemaining').replace('${n}', restantes):t('hr.capex.paidOff')}`;
+          const overdueTag = (restantes===0 && c.estadoPago!=='PAGADO') ? ` <span style="color:var(--amber-dark)" title="${t('hr.capex.overdueDesc')}">⚠️</span>` : '';
+          financInfo = `${fmtMoney(c.cuotaMensual||0)}${t('hr.capex.perMonth')} · ${restantes>0?t('hr.capex.installmentsRemaining').replace('${n}', restantes):t('hr.capex.paidOff')}${overdueTag}`;
         }
       }
       return `<tr>
@@ -849,8 +910,11 @@ const GE = (function(){
       cuotas
     };
     if(editingCX){
-      Object.assign(capex().find(x=>x.id===editingCX), data);
+      const existing = capex().find(x=>x.id===editingCX);
+      if(capexTouchesClosedMonth(existing) || capexTouchesClosedMonth(data)){ showToast(t('hr.te.monthClosedError')); return; }
+      Object.assign(existing, data);
     }else{
+      if(capexTouchesClosedMonth(data)){ showToast(t('hr.te.monthClosedError')); return; }
       capex().push({id:genId(), ...data});
     }
     saveDB();
@@ -859,6 +923,8 @@ const GE = (function(){
     showToast(t('msg.investmentSaved'));
   }
   function deleteCapex(id){
+    const c = capex().find(x=>x.id===id);
+    if(c && capexTouchesClosedMonth(c)){ showToast(t('hr.te.monthClosedError')); return; }
     if(!confirm(t('msg.confirmDeleteInvestment'))) return;
     ge().capex = capex().filter(c=>c.id!==id);
     saveDB();
@@ -916,8 +982,18 @@ const GE = (function(){
 
   /* -- TESORERÍA -- */
   function renderTesoreria(){
+    const teYearEl = document.getElementById('te-year');
+    if(teYearEl) teYearEl.textContent = teYear;
     document.getElementById('te-months').innerHTML = getMeses().map((m,i)=>`
-      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}</div>`).join('');
+      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}${isMonthClosed(teYear,i)?' 🔒':''}</div>`).join('');
+    const closeBtn = document.getElementById('te-close-month-btn');
+    if(closeBtn){
+      const closed = isMonthClosed(teYear, activeMonth);
+      closeBtn.innerHTML = closed
+        ? `<i class="ti ti-lock-open"></i> ${t('hr.te.reopenMonth')}`
+        : `<i class="ti ti-lock"></i> ${t('hr.te.closeMonth')}`;
+      closeBtn.className = closed ? 'btn btn-sm' : 'btn btn-sm btn-primary';
+    }
 
     const dp = config().distPct;
     if(dp && !distPctLoaded){
@@ -935,9 +1011,9 @@ const GE = (function(){
     const pctOG = (parseFloat(document.getElementById('te-pct-og')?.value)||0)/100;
     const pctBen = (parseFloat(document.getElementById('te-pct-ben')?.value)||0)/100;
 
-    const facBruta = facturacionMes(activeMonth);
-    const facNeta = facturacionNetaMes(activeMonth);
-    const ivaLiquidar = ivaLiquidarMes(activeMonth);
+    const facBruta = facturacionMes(activeMonth, teYear);
+    const facNeta = facturacionNetaMes(activeMonth, teYear);
+    const ivaLiquidar = ivaLiquidarMes(activeMonth, teYear);
 
     const ivaVentas = facBruta - facNeta;
 
@@ -946,11 +1022,11 @@ const GE = (function(){
       <div class="kpi-mini" style="border-color:var(--amber)"><div class="l">${t('hr.te.vatPassedOn')}</div><div class="v" style="color:var(--amber-dark)">${fmtMoney(ivaVentas)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.vatIncludedInSales')}</div></div>
       <div class="kpi-mini" style="border-color:var(--teal)"><div class="l">${t('hr.lbl.netRevenue')}</div><div class="v" style="color:var(--teal-d)">${fmtMoney(facNeta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.baseToDistribute')}</div></div>`;
 
-    const realPer = geTotalPersonalNetoForMonth(currentYear, activeMonth);
-    const realGF = geTotalGFNetoForMonth(currentYear, activeMonth);
-    const realMP = totalVariablesNetoMes(activeMonth);
-    const realComisiones = comisionesMes(activeMonth);
-    const realOG = capexCuotaMes(activeMonth) + realComisiones;
+    const realPer = geTotalPersonalNetoForMonth(teYear, activeMonth);
+    const realGF = geTotalGFNetoForMonth(teYear, activeMonth);
+    const realMP = totalVariablesNetoMes(activeMonth, teYear);
+    const realComisiones = comisionesMes(activeMonth, teYear);
+    const realOG = capexCuotaMes(activeMonth, teYear) + realComisiones;
     const realBenPreTax = facNeta - realPer - realGF - realMP - realOG;
     // Igual que resultadoMes(): tras IVA, el "Beneficio/Ahorro" también debe descontar
     // el impuesto sobre beneficios para que coincida con el "Resultado Neto" post-impuestos
@@ -959,7 +1035,7 @@ const GE = (function(){
     const realBen = realBenPreTax>0 ? realBenPreTax*(1-pctImpTe) : realBenPreTax;
     // IVA: Modelo 303 se liquida trimestralmente, no cada mes — mostramos el acumulado
     // del trimestre en curso hasta el mes visto, no solo la porción de este mes.
-    const ivaLiquidarAcum = ivaLiquidarQTD(activeMonth);
+    const ivaLiquidarAcum = ivaLiquidarQTD(activeMonth, teYear);
     const ivaReserva = ivaLiquidarAcum >= 0 ? ivaLiquidarAcum : 0;
     const qIdx = Math.floor(activeMonth/3);
     const qMesesLbls = getMeses().slice(qIdx*3, qIdx*3+3);
@@ -1013,7 +1089,7 @@ const GE = (function(){
       <div class="te-bar-wrap"><div class="te-bar-fill" style="width:${Math.min(barPct,100)}%;background:${barColor}"></div></div>`;
     }).join('');
 
-    document.getElementById('te-annual-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i)})));
+    document.getElementById('te-annual-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i, teYear)})));
     renderTesoreriaUpcoming();
   }
   // Gastos Fijos periódicos (periodicidadMeses>1) cuyo pago cae en el mes visto: son un
@@ -1038,6 +1114,7 @@ const GE = (function(){
     `;
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
+  function setTeYear(delta){ teYear += delta; renderTesoreria(); }
   function adjustDistPct(changedId){
     const ids = ['te-pct-per','te-pct-gf','te-pct-mp','te-pct-og','te-pct-ben'];
     const els = {}; ids.forEach(id=>els[id]=document.getElementById(id));
@@ -1533,7 +1610,7 @@ const GE = (function(){
     );
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
 })();
 
 /* ============================================================
