@@ -156,7 +156,6 @@ function renderAccessSelectScreenHtml(){
   if(accessScreenMode === 'owner' || accessScreenMode === 'owner-setup') return renderOwnerAccessFormHtml();
   return `
     <div class="access-card">
-      <p class="access-card-lead" style="margin-bottom:20px">${t('access.subtitle')}</p>
       <div class="access-choice-list">
         <button class="access-choice-btn primary" onclick="setAccessScreenMode('employee')">
           <span class="aci"><i class="ti ti-users"></i></span>
