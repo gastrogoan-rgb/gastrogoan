@@ -1381,10 +1381,13 @@ function activateLicenseFromGate(){
 // Devuelve true si mostró algún paso pendiente (y por tanto no hay que
 // continuar con el arranque normal de la app).
 function continuePendingOwnerSetup(){
+  // Lo primero de todo, antes incluso del resto de la configuración
+  // inicial: si acaba de activar la licencia, se le anima a cambiar la
+  // contraseña que venía con ella justo al entrar, no al final del todo.
+  if(getOwnerLogin() && !localStorage.getItem(OWNER_PASS_PROMPTED_LS)){ promptChangeOwnerPasswordFirstTime(); return true; }
   if(!DB.business.netlifySetupDone){ showNetlifySetupGate(); return true; }
   if(!getLicense()){ showActivationGate(); return true; }
   if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
-  if(getOwnerLogin() && !localStorage.getItem(OWNER_PASS_PROMPTED_LS)){ promptChangeOwnerPasswordFirstTime(); return true; }
   if(!DB.business.tourSeen){ promptAppTour(); return true; }
   return false;
 }
