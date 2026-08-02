@@ -182,7 +182,7 @@ function renderEmployeeAccessFormHtml(){
       </div>
       <div class="field">
         <label>${t('label.accessPin')}</label>
-        <input type="password" id="acc-emp-pin" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <input type="password" id="acc-emp-pin" maxlength="4" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center;text-transform:uppercase" oninput="this.value=this.value.replace(/[^0-9A-Za-z]/g,'')">
       </div>
       <div class="field">
         <label>${t('access.businessCode')}</label>
