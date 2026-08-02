@@ -59,6 +59,7 @@ getBusinessSlots(); // asegura que el registro exista desde el arranque
    vive en localStorage (no dentro de la base de datos de ningún negocio).
    ============================================================ */
 const OWNER_LOGIN_LS = 'gastrogoan_owner_login';
+const OWNER_PASS_PROMPTED_LS = 'gastrogoan_owner_pass_prompted';
 const ACCESS_SESSION_LS = 'gastrogoan_access_session';
 const ACCESS_LAST_ACTIVITY_LS = 'gastrogoan_access_last_activity';
 // Si el dispositivo pasa más de esto sin actividad (ni un clic, ni un
@@ -394,6 +395,9 @@ function resumeEmployeeSession(){
   currentFolder = area;
   applyEmployeeSessionEditRights(emp.id);
   navigate('folder');
+  // Mientras siga con el PIN de fábrica, se le anima (sin bloquear) a
+  // elegir uno propio — una vez dentro de su área, no antes.
+  if(!emp.pinChanged) promptEmployeeFirstPinChange(emp.id);
   return true;
 }
 
@@ -1380,8 +1384,27 @@ function continuePendingOwnerSetup(){
   if(!DB.business.netlifySetupDone){ showNetlifySetupGate(); return true; }
   if(!getLicense()){ showActivationGate(); return true; }
   if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
+  if(getOwnerLogin() && !localStorage.getItem(OWNER_PASS_PROMPTED_LS)){ promptChangeOwnerPasswordFirstTime(); return true; }
   if(!DB.business.tourSeen){ promptAppTour(); return true; }
   return false;
+}
+
+// La contraseña de propietario, la primera vez, es la que vino con la
+// licencia (la misma para todo el mundo que compró ese código) — por eso,
+// justo tras activarla, se anima a cambiarla por una propia. Se pregunta
+// solo una vez por dispositivo (aceptar o no queda guardado igual, para no
+// insistir en cada sesión).
+function promptChangeOwnerPasswordFirstTime(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-key"></i> ${t('access.changePasswordFirstTitle')}</h3>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('access.changePasswordFirstDesc')}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();continuePendingOwnerSetup()">${t('common.later')}</button>
+      <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword();continuePendingOwnerSetup()">${t('access.changePassword')}</button>
+    </div>
+  `);
 }
 
 /* Cada negocio usa su PROPIO proyecto Firebase (gratuito, de Google),

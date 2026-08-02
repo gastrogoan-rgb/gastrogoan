@@ -2763,6 +2763,50 @@ function confirmNewPin(employeeId, action){
   doFichaje(employeeId, action);
 }
 
+// Igual que openNewPinModal/confirmNewPin (Fichar), pero para el momento de
+// entrar por "Acceso Empleados": mientras el empleado siga con el PIN de
+// fábrica (1234), se le anima a elegir el suyo — sin bloquear la entrada,
+// "Ahora no" lo deja pasar igual y no se le pregunta otra vez hasta que lo
+// cambie de verdad.
+function promptEmployeeFirstPinChange(employeeId){
+  const e = (DB.employees||[]).find(x => x.id === employeeId);
+  if(!e || e.pinChanged) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-key"></i> ${t('title.createYourPin')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('msg.firstLoginPinExplainer').replace('${name}', escapeHtml(e.name))}</p>
+    <div class="field">
+      <label>${t('label.newPin4Digits')}</label>
+      <input type="password" id="new-pin-1" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center">
+    </div>
+    <div class="field">
+      <label>${t('label.repeatPin')}</label>
+      <input type="password" id="new-pin-2" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center" onkeydown="if(event.key==='Enter')confirmFirstPinChange(${JSON.stringify(employeeId)})">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.later')}</button>
+      <button class="btn btn-primary" onclick="confirmFirstPinChange(${JSON.stringify(employeeId)})">${t('common.save')}</button>
+    </div>
+  `);
+}
+function confirmFirstPinChange(employeeId){
+  const e = (DB.employees||[]).find(x => x.id === employeeId);
+  if(!e) return;
+  const p1 = document.getElementById('new-pin-1').value.trim();
+  const p2 = document.getElementById('new-pin-2').value.trim();
+  if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pinMustBe4')); return; }
+  if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
+  if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
+  if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
+  e.pin = hashPin(p1);
+  e.pinChanged = true;
+  saveDB();
+  closeModal();
+  showToast(t('msg.pinUpdated'));
+}
+
 function doFichaje(employeeId, action){
   const now = new Date().toISOString();
   if(action === 'entrada'){
