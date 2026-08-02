@@ -223,6 +223,16 @@ function confirmOwnerAccessSetup(){
   if(!lic){ showToast(t('access.badCredentials')); return; }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
+  // "owner-setup" solo se ve cuando este dispositivo aún no tenía ningún
+  // login de propietario guardado — es decir, la primera vez de verdad
+  // para este negocio en este dispositivo. Por si el slot activo llevaba
+  // restos de alguna prueba anterior (nube mal configurada, aviso de
+  // hosting ya descartado, tour ya visto...), se limpia todo eso para que
+  // la configuración inicial (nube, tour) se pida siempre de cero, sin
+  // arrastrar nada de negocios o pruebas anteriores en este mismo navegador.
+  delete DB.business.ownFirebase;
+  DB.business.netlifySetupDone = false;
+  DB.business.tourSeen = false;
   saveDB();
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === ACTIVE_SLOT);
