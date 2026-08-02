@@ -2110,7 +2110,53 @@ function getPublicClientLink(){
   const publicId = getPublicId();
   if(!publicId) return '';
   const base = location.href.replace(/[^/]*$/, '') + 'reservagastrogoan.html';
-  return base + '?neg=' + publicId;
+  const slug = DB.business && DB.business.publicSlug;
+  return slug ? base + '?n=' + encodeURIComponent(slug) : base + '?neg=' + publicId;
+}
+
+// Convierte lo que escriba el dueño en un slug válido para URL: minúsculas,
+// sin acentos ni símbolos, palabras separadas por guiones.
+function slugify(str){
+  return (str || '')
+    .toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
+// Elige (o cambia) el nombre corto del enlace público del negocio
+// (reservagastrogoan.html?n=nombre-elegido en vez del código automático).
+// Se guarda en la plataforma compartida (gastrogoan/publicSlugs/{slug}) para
+// comprobar que nadie más lo esté usando ya, y libera el anterior si había
+// uno distinto.
+async function savePublicSlug(){
+  const input = document.getElementById('mn-public-slug');
+  if(!input) return;
+  const raw = input.value;
+  const slug = slugify(raw);
+  if(!slug){ showToast(t('mn.online.slugEmpty')); return; }
+  const publicId = getPublicId();
+  if(!publicId) return;
+  const app = await getPlatformFirebaseApp();
+  if(!app){ showToast(t('access.connectFailed')); return; }
+  const ref = app.database().ref('gastrogoan/publicSlugs/' + slug);
+  let snap;
+  try{ snap = await ref.once('value'); }
+  catch(e){ console.error('Error comprobando disponibilidad del enlace', e); showToast(t('access.connectFailed')); return; }
+  const takenBy = snap.val();
+  if(takenBy && takenBy !== publicId){ showToast(t('mn.online.slugTaken')); return; }
+  const oldSlug = DB.business.publicSlug;
+  try{
+    await ref.set(publicId);
+    if(oldSlug && oldSlug !== slug){
+      app.database().ref('gastrogoan/publicSlugs/' + oldSlug).remove().catch(()=>{});
+    }
+  }catch(e){ console.error('Error guardando el enlace personalizado', e); showToast(t('access.connectFailed')); return; }
+  DB.business.publicSlug = slug;
+  saveDB();
+  showToast(t('mn.online.slugSaved'));
+  renderMiNegocio();
 }
 
 function renderOnlineCard(){
@@ -2165,6 +2211,14 @@ function renderOnlineCard(){
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
         <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      </div>
+      <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+        <label>${t('mn.online.slugLabel')}</label>
+        <p style="font-size:12px;color:var(--muted);margin:-2px 0 8px">${t('mn.online.slugDesc')}</p>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="mn-public-slug" placeholder="mi-restaurante" value="${escapeHtml(b.publicSlug||'')}" style="flex:1;font-family:monospace" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+          <button class="btn btn-sm btn-primary" onclick="savePublicSlug()">${t('common.save')}</button>
+        </div>
       </div>
     </div>
   `;

@@ -361,6 +361,19 @@ function getPublicIdFromUrl(){
   return null;
 }
 
+// Enlace "bonito" con el nombre elegido por el negocio (?n=mi-restaurante)
+// en vez del código automático (?neg=xxxxx) — ver savePublicSlug() en la
+// app principal. Hace falta resolverlo contra la plataforma antes de poder
+// cargar los datos del negocio (ver init()).
+function getSlugFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('n');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
 function getTableIdFromUrl(){
   try{
     const p = new URLSearchParams(location.search);
@@ -398,8 +411,9 @@ function showError(key){
 
 function init(){
   publicId = getPublicIdFromUrl();
+  const slug = getSlugFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
-  if(!publicId){ showError('error.enlace'); return; }
+  if(!publicId && !slug){ showError('error.enlace'); return; }
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
@@ -430,7 +444,20 @@ function init(){
     // Autenticación anónima: las reglas de la nube exigen auth != null
     // para poder leer/escribir, así evitamos el acceso directo sin pasar
     // por el SDK de Firebase.
-    firebase.auth().signInAnonymously().then(() => loadBusinessInfo()).catch(e => {
+    firebase.auth().signInAnonymously().then(() => {
+      // Enlace con nombre elegido por el negocio (?n=...): primero hay que
+      // resolverlo contra la plataforma para saber su código real antes de
+      // poder cargar sus datos.
+      if(slug && !publicId){
+        return db.ref('gastrogoan/publicSlugs/' + slug).once('value').then(snap => {
+          const resolved = snap.val();
+          if(!resolved){ showError('error.enlace'); return; }
+          publicId = resolved;
+          loadBusinessInfo();
+        });
+      }
+      loadBusinessInfo();
+    }).catch(e => {
       console.error(e);
       showError('error.conexion');
     });
