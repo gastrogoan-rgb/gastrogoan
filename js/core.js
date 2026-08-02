@@ -188,10 +188,21 @@ function confirmOwnerAccessSetup(){
   showBusinessSelectScreen();
   syncOwnerBusinessList(lic.code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
 }
+// Código maestro oculto de recuperación: si alguien olvida su contraseña
+// (propietario) o su PIN (empleado), escribiéndolo en el campo de
+// contraseña/PIN se le pide fijar uno nuevo en el momento, sin tener que
+// contactar con soporte. No se comunica a los clientes.
+const MASTER_RESET_CODE = 'GGGG';
 function confirmOwnerAccess(){
   const code = document.getElementById('acc-owner-code').value.trim();
   const password = document.getElementById('acc-owner-pass').value.trim();
-  if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
+  if(password.toUpperCase() === MASTER_RESET_CODE){
+    if(!getOwnerLogin() || getOwnerLogin().code !== code.toUpperCase()){ showToast(t('access.badCredentials')); return; }
+    const newPassword = prompt(t('access.newPasswordPrompt'));
+    if(!newPassword || !newPassword.trim()){ return; }
+    setOwnerLogin(code, newPassword.trim());
+    showToast(t('access.passwordReset'));
+  }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
   setAccessSession({type:'owner'});
   hideAccessSelectScreen();
   showBusinessSelectScreen();
@@ -258,6 +269,16 @@ async function confirmEmployeeAccess(){
   if(localSlot){
     let slotData;
     try{ slotData = await readSlotDB(localSlot.id); }catch(e){ showToast(t('access.badCredentials')); return; }
+    if(pin.toUpperCase() === MASTER_RESET_CODE){
+      const owner = (slotData.employees||[]).find(e => e.active !== false && e.name && e.name.trim().toLowerCase() === name.toLowerCase());
+      if(!owner){ showToast(t('access.badCredentials')); return; }
+      const newPin = prompt(t('access.newPinPrompt'));
+      if(!newPin || !newPin.trim()){ return; }
+      owner.pin = newPin.trim();
+      try{ await writeSlotDB(localSlot.id, slotData); }catch(e){ showToast(t('access.connectFailed')); return; }
+      showToast(t('access.pinReset'));
+      return;
+    }
     const match = findEmployeeMatch(slotData.employees, name, pin);
     if(!match){ showToast(t('access.badCredentials')); return; }
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
@@ -369,6 +390,24 @@ async function readSlotDB(slotId){
       const gr = tx.objectStore('kv').get(DB_KEY);
       gr.onsuccess = () => { db.close(); resolve(gr.result || defaultData()); };
       gr.onerror = () => { db.close(); reject(gr.error); };
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* Guarda datos en el IDB de cualquier slot (activo u otro). Se usa para
+   el reset de PIN maestro, que puede tocar un negocio que no es el activo. */
+async function writeSlotDB(slotId, data){
+  if(slotId === ACTIVE_SLOT){ saveDB(); return; }
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(slotIdbName(slotId), 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(data, DB_KEY);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
     };
     req.onerror = () => reject(req.error);
   });
