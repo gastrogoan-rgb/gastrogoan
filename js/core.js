@@ -264,7 +264,8 @@ function confirmOwnerAccess(){
   if(password.toUpperCase() === MASTER_RESET_CODE){
     if(!getOwnerLogin() || getOwnerLogin().code !== code.toUpperCase()){ showToast(t('access.badCredentials')); return; }
     const newPassword = prompt(t('access.newPasswordPrompt'));
-    if(!newPassword || !newPassword.trim()){ return; }
+    if(!newPassword || !newPassword.trim()) return;
+    if(!/^\d{4}$/.test(newPassword.trim())){ showToast(t('msg.pin4digits')); return; }
     setOwnerLogin(code, newPassword.trim());
     showToast(t('access.passwordReset'));
   }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
@@ -640,13 +641,44 @@ function renderBusinessSelectScreenHtml(){
     </div>
   `;
 }
+// La contraseña de la licencia (6 caracteres, letras y números) es difícil
+// de recordar de memoria — por eso, en cuanto el propietario la cambia por
+// la suya, se le obliga a que sea un PIN numérico de 4 dígitos, mucho más
+// fácil de recordar y de teclear cada vez. El código de negocio no cambia.
 function promptChangeOwnerPassword(){
   const login = getOwnerLogin();
   if(!login) return;
-  const p1 = prompt(t('access.newPasswordPrompt'));
-  if(!p1) return;
+  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-key"></i> ${t('access.changePassword')}</h3>
+      <button class="modal-close" onclick="closeModal();continuePendingOwnerSetup()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('access.newPasswordPrompt')}</p>
+    <div class="field">
+      <label>${t('label.newPin')}</label>
+      <input type="password" id="owner-new-pass-1" ${pinInputAttrs}>
+    </div>
+    <div class="field">
+      <label>${t('label.repeatPin')}</label>
+      <input type="password" id="owner-new-pass-2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')confirmChangeOwnerPassword()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal();continuePendingOwnerSetup()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="confirmChangeOwnerPassword()">${t('common.save')}</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('owner-new-pass-1')?.focus(), 50);
+}
+function confirmChangeOwnerPassword(){
+  const p1 = document.getElementById('owner-new-pass-1').value.trim();
+  const p2 = document.getElementById('owner-new-pass-2').value.trim();
+  if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pin4digits')); return; }
+  if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
   changeOwnerAccessPassword(p1);
+  closeModal();
   showToast(t('msg.pinUpdated'));
+  continuePendingOwnerSetup();
 }
 
 function renderBsGroups(allSlots){
@@ -1405,7 +1437,7 @@ function promptChangeOwnerPasswordFirstTime(){
     <p style="font-size:13px;color:var(--muted)">${t('access.changePasswordFirstDesc')}</p>
     <div class="modal-footer">
       <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();continuePendingOwnerSetup()">${t('common.later')}</button>
-      <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword();continuePendingOwnerSetup()">${t('access.changePassword')}</button>
+      <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword()">${t('access.changePassword')}</button>
     </div>
   `);
 }
