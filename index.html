@@ -77,9 +77,8 @@
     <!-- ========== FOLDER (módulos de un área) ========== -->
     <section class="view" id="view-folder">
       <div class="folder-top">
-        <button class="btn btn-sm btn-back" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.home">Inicio</span></button>
+        <button class="btn btn-sm btn-back" id="folder-home-btn" style="margin-bottom:0" onclick="navigate('home')"><i class="ti ti-arrow-left"></i> <span data-i18n="common.home">Inicio</span></button>
         <div class="folder-top-title" id="folder-title"></div>
-        <button class="btn btn-sm folder-edit-toggle" id="folder-edit-toggle" onclick="toggleEditMode()" style="display:none"></button>
       </div>
       <div class="view-subtitle" id="folder-subtitle"></div>
       <div class="grid grid-modules" id="folder-modules"></div>

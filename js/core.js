@@ -392,6 +392,7 @@ function resumeEmployeeSession(){
   const area = emp.area || 'cocina';
   areaUnlocked[area] = true;
   currentFolder = area;
+  applyEmployeeSessionEditRights(emp.id);
   navigate('folder');
   return true;
 }

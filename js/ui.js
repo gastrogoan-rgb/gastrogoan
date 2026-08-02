@@ -886,13 +886,23 @@ function rememberLastArea(key){
 
 /* ============== Navigation ============== */
 function goHome(){
-  if(!(getAccessSession() && getAccessSession().type === 'owner')) lockEditMode();
+  const session = getAccessSession();
+  if(session && session.type === 'employee'){
+    // Un empleado no tiene "Inicio": su única carpeta es su área de
+    // trabajo, así que "ir a inicio" simplemente se queda en ella.
+    openFolder(session.area);
+    return;
+  }
+  if(!(session && session.type === 'owner')) lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   areaUnlocked = {cocina:false, sala:false};
   navigate('home');
 }
 function openFolder(key){
-  if(!(getAccessSession() && getAccessSession().type === 'owner')) lockEditMode();
+  const session = getAccessSession();
+  // Un empleado solo puede estar en su propia área — nunca en la otra.
+  if(session && session.type === 'employee' && session.area) key = session.area;
+  if(!(session && session.type === 'owner')) lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   // Igual que Gestión: salir de Cocina/Sala (o simplemente volver a entrar)
   // vuelve a pedir el PIN del área la próxima vez.
@@ -926,102 +936,19 @@ function applyOwnerSessionEditRights(){
   document.body.classList.add('edit-unlocked');
 }
 
-function requestEditPin(){
-  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
-  // Igual que requestOwnerPin(): si el negocio todavía usa el PIN de fábrica
-  // sin configurar (pinSet===false), se obliga a fijar uno propio la primera
-  // vez que se desbloquea CUALQUIER acción protegida, no solo al entrar en
-  // Gestión — así el PIN "1234" nunca queda aceptado para siempre sin que
-  // el dueño se dé cuenta.
-  if(!DB.business.pinSet){
-    openModal(`
-      <div class="modal-header">
-        <h3><i class="ti ti-lock"></i> ${t('title.configAccess')}</h3>
-      </div>
-      <p style="font-size:13px;color:var(--muted)">${t('title.configAccessDesc')}</p>
-      <div class="field">
-        <label>${t('label.currentPin')}</label>
-        <input type="password" id="edit-pin-input" ${pinInputAttrs}>
-      </div>
-      <div class="field">
-        <label>${t('label.newPin')}</label>
-        <input type="password" id="edit-pin-new" ${pinInputAttrs}>
-      </div>
-      <div class="field">
-        <label>${t('label.repeatPin')}</label>
-        <input type="password" id="edit-pin-new2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyEditPin()">
-      </div>
-      <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="verifyEditPin()">${t('common.continue')}</button>
-      </div>
-    `);
-    setTimeout(()=>document.getElementById('edit-pin-input')?.focus(), 50);
-    return;
-  }
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> ${t('title.editMode')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:13px;color:var(--muted)">${t('title.editModeDesc')}</p>
-    <div class="field">
-      <label>${t('label.accessPin')}</label>
-      <input type="password" id="edit-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyEditPin()">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="verifyEditPin()">${t('common.unlock')}</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('edit-pin-input')?.focus(), 50);
-}
-
-function verifyEditPin(){
-  const val = document.getElementById('edit-pin-input').value;
-  const bp = DB.business.pin;
-  const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
-  // Antes solo se comparaba contra el PRIMER empleado habilitado del área —
-  // si había varios con canUnlockEdit, el PIN de cualquiera menos el primero
-  // no funcionaba. Ahora se comprueba contra todos los habilitados.
-  const eligibleEmployees = (DB.employees||[]).filter(e => e.area === currentFolder && e.canUnlockEdit && e.pin && e.active !== false);
-  const empMatch = eligibleEmployees.some(e => e.pin.startsWith('H:') ? hashPin(val) === e.pin : val === e.pin);
-  if(!bMatch && !empMatch){
-    showToast(t('msg.pinIncorrect'));
-    return;
-  }
-  if(empMatch && !bMatch){
+// Un empleado ya se identificó con su propio PIN al entrar por "Acceso
+// Empleados" — no tiene sentido pedirle un PIN otra vez para editar. Ya no
+// hay botón que pulsar: si el propietario marcó su ficha como "puede
+// editar" (canUnlockEdit), entra directamente en modo edición de su área;
+// si no, se queda en vista de solo consulta, sin ningún control para
+// cambiarlo. Se llama al iniciar sesión de empleado y al reanudarla.
+function applyEmployeeSessionEditRights(employeeId){
+  const emp = (DB.employees||[]).find(e => e.id === employeeId);
+  if(emp && emp.canUnlockEdit){
     editUnlocked = true;
     document.body.classList.add('edit-unlocked');
-    closeModal();
-    showToast(t('msg.editModeOn'));
-    renderFolder();
-    return;
-  }
-  if(!DB.business.pinSet){
-    const n1 = document.getElementById('edit-pin-new').value;
-    const n2 = document.getElementById('edit-pin-new2').value;
-    if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pin4digits')); return; }
-    if(n1 !== n2){ showToast(t('msg.pinNoMatch')); return; }
-    DB.business.pin = hashPin(n1);
-    DB.business.pinSet = true;
-    saveDB();
-    showToast(t('msg.pinUpdated'));
-  }
-  editUnlocked = true;
-  document.body.classList.add('edit-unlocked');
-  closeModal();
-  showToast(t('msg.editModeOn'));
-  renderFolder();
-}
-
-function toggleEditMode(){
-  if(editUnlocked){
+  }else{
     lockEditMode();
-    showToast(t('msg.editModeLocked'));
-    renderFolder();
-  } else {
-    requestEditPin();
   }
 }
 
@@ -1113,6 +1040,10 @@ function lockOwnerArea(){
 }
 
 function navigate(view){
+  if(view === 'home'){
+    const session = getAccessSession();
+    if(session && session.type === 'employee'){ goHome(); return; }
+  }
   if(isGestionLocked(view)){
     requestOwnerPin(view);
     return;
@@ -1245,20 +1176,13 @@ function renderFolder(){
   if(!f){ navigate('home'); return; }
   document.getElementById('folder-title').innerHTML = `<i class="ti ${f.icon}"></i> ${escapeHtml(t(`folder.${currentFolder}.title`))}`;
   document.getElementById('folder-subtitle').textContent = t(`folder.${currentFolder}.subtitle`);
-  const editToggle = document.getElementById('folder-edit-toggle');
-  const ownerSession = getAccessSession() && getAccessSession().type === 'owner';
-  if((currentFolder === 'cocina' || currentFolder === 'sala') && !ownerSession){
-    editToggle.style.display = '';
-    if(editUnlocked){
-      editToggle.innerHTML = `<i class="ti ti-lock-open"></i> ${escapeHtml(t('common.lockEdit'))}`;
-      editToggle.classList.add('btn-primary');
-    } else {
-      editToggle.innerHTML = `<i class="ti ti-lock"></i> ${escapeHtml(t('common.edit'))}`;
-      editToggle.classList.remove('btn-primary');
-    }
-  } else {
-    editToggle.style.display = 'none';
-  }
+  // Ya no hay botón de editar que pulsar: el propietario siempre edita, y
+  // un empleado edita automáticamente si su ficha lo autoriza (ver
+  // applyEmployeeSessionEditRights) — nada que desbloquear a mano.
+  const session = getAccessSession();
+  const homeBtn = document.getElementById('folder-home-btn');
+  // Un empleado no tiene "Inicio": solo existe su propia área de trabajo.
+  if(homeBtn) homeBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
   document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
     <div class="module-card" onclick="navigate('${m.id}')">
       <i class="ti ${m.icon} module-icon"></i>
