@@ -119,16 +119,25 @@ function renderAccessLangSwitcherHtml(){
   const current = getLang();
   const langs = ['es','en','ca'];
   return `
-    <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:1">
+    <div class="access-lang-switch">
       ${langs.map(l => `
-        <button onclick="setLang('${l}')" title="${LANG_NAMES[l]}" style="border:1.5px solid ${l===current?'var(--brand-orange)':'var(--border)'};background:#fff;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center">${LANG_FLAGS[l]}</button>
+        <button class="${l===current?'active':''}" onclick="setLang('${l}')" title="${LANG_NAMES[l]}">${LANG_FLAGS[l]}</button>
       `).join('')}
     </div>`;
 }
 function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
-  screen.innerHTML = `<div style="position:relative;width:100%;display:flex;justify-content:center">${renderAccessLangSwitcherHtml()}${renderAccessSelectScreenHtml()}</div>`;
+  screen.innerHTML = `
+    ${renderAccessLangSwitcherHtml()}
+    <div class="access-wrap">
+      <div class="access-brand">
+        <div class="access-icon"><i class="ti ti-tools-kitchen-2"></i></div>
+        <span class="access-kicker">${t('access.kicker')}</span>
+        <h1>GastroGoan</h1>
+      </div>
+      ${renderAccessSelectScreenHtml()}
+    </div>`;
   screen.classList.remove('hide');
 }
 function showAccessSelectScreen(){
@@ -146,23 +155,27 @@ function renderAccessSelectScreenHtml(){
   if(accessScreenMode === 'employee') return renderEmployeeAccessFormHtml();
   if(accessScreenMode === 'owner' || accessScreenMode === 'owner-setup') return renderOwnerAccessFormHtml();
   return `
-    <div class="bs-box" style="text-align:center">
-      <div class="splash-icon" style="position:static;background:var(--brand-orange);color:#fff;margin:0 auto 14px"><i class="ti ti-tools-kitchen-2"></i></div>
-      <div class="bs-title" style="justify-content:center">${t('access.title')}</div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 20px">${t('access.subtitle')}</p>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn btn-primary" style="padding:16px" onclick="setAccessScreenMode('employee')"><i class="ti ti-users"></i> ${t('access.employeeBtn')}</button>
-        <button class="btn" style="padding:16px;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="setAccessScreenMode('${getOwnerLogin()?'owner':'owner-setup'}')"><i class="ti ti-user-shield"></i> ${t('access.ownerBtn')}</button>
+    <div class="access-card">
+      <p class="access-card-lead" style="margin-bottom:20px">${t('access.subtitle')}</p>
+      <div class="access-choice-list">
+        <button class="access-choice-btn primary" onclick="setAccessScreenMode('employee')">
+          <span class="aci"><i class="ti ti-users"></i></span>
+          <span class="act"><b>${t('access.employeeBtn')}</b><small>${t('access.employeeHint')}</small></span>
+        </button>
+        <button class="access-choice-btn secondary" onclick="setAccessScreenMode('${getOwnerLogin()?'owner':'owner-setup'}')">
+          <span class="aci"><i class="ti ti-user-shield"></i></span>
+          <span class="act"><b>${t('access.ownerBtn')}</b><small>${t('access.ownerHint')}</small></span>
+        </button>
       </div>
     </div>
   `;
 }
 function renderEmployeeAccessFormHtml(){
   return `
-    <div class="bs-box">
+    <div class="access-card">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
-      <div class="bs-title">${t('access.employeeBtn')}</div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">${t('access.employeeDesc')}</p>
+      <div class="access-card-title">${t('access.employeeBtn')}</div>
+      <p class="access-card-lead">${t('access.employeeDesc')}</p>
       <div class="field">
         <label>${t('common.name')}</label>
         <input type="text" id="acc-emp-name" placeholder="${t('ph.employeeName')}">
@@ -182,10 +195,10 @@ function renderEmployeeAccessFormHtml(){
 function renderOwnerAccessFormHtml(){
   const isSetup = accessScreenMode === 'owner-setup';
   return `
-    <div class="bs-box">
+    <div class="access-card">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
-      <div class="bs-title">${t('access.ownerBtn')}</div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 14px">${isSetup ? t('access.ownerSetupDesc') : t('access.ownerDesc')}</p>
+      <div class="access-card-title">${t('access.ownerBtn')}</div>
+      <p class="access-card-lead">${isSetup ? t('access.ownerSetupDesc') : t('access.ownerDesc')}</p>
       <div class="field">
         <label>${t('access.businessCode')}</label>
         <input type="text" id="acc-owner-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" value="${isSetup ? '' : escapeHtml(getOwnerLogin()?.code||'')}">
