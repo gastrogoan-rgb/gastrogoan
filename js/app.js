@@ -6939,17 +6939,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(MODULE_FOLDER[initial]) currentFolder = MODULE_FOLDER[initial];
   navigate(initial === 'folder' && !currentFolder ? 'home' : initial);
   applyI18n();
-  const onbRole = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
-  const alreadySetUp = getLicense() && getCloudConfig();
-  if(onbRole === 'owner' && !DB.business.netlifySetupDone && !alreadySetUp){
-    showNetlifySetupGate();
-  }else if(!getLicense()){
-    showActivationGate();
-  }else if(!getCloudConfig()){
-    showFirebaseSetupGate();
-  }else if(!DB.business.tourSeen){
-    promptAppTour();
-  }
   if(getLicense()) checkLicenseRevocation();
 
   setInterval(() => {
@@ -6964,22 +6953,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
     if(splash) splash.classList.add('hide');
-    if(!alreadySetUp){
-      // Primera configuración del dispositivo: se deja pasar tal cual, ya
-      // gestionado por las pantallas de activación/Netlify/Firebase de
-      // arriba — la nueva pantalla de acceso (Empleados/Propietarios) solo
-      // tiene sentido una vez hay un negocio de verdad ya configurado.
-      if(getBusinessSlots().length < 2) showBusinessSelectScreen();
-      return;
-    }
-    // Negocio ya configurado: la pantalla de "Acceso Empleados / Acceso
-    // Propietarios" sustituye tanto al selector automático de negocios como
-    // al viejo "cualquiera puede tocar Cocina/Sala sin identificarse". Si ya
-    // había una sesión guardada (de una visita anterior), se entra directo
-    // sin volver a pedir nada.
+    // La pantalla de "Acceso Empleados / Acceso Propietarios" es siempre lo
+    // primero que se ve al abrir la app sin sesión activa, haya o no un
+    // negocio ya configurado en este dispositivo: activar la licencia por
+    // primera vez es simplemente lo que pide "Acceso Propietarios" cuando
+    // todavía no hay ninguna. Sustituye tanto al viejo selector automático
+    // de negocios como al "cualquiera puede tocar Cocina/Sala sin
+    // identificarse".
     const session = getAccessSession();
     if(session && session.type === 'employee' && resumeEmployeeSession()) return;
-    if(session && session.type === 'owner') return;
+    if(session && session.type === 'owner'){
+      // Puede que quedara algún paso de la configuración inicial a medias
+      // (p.ej. se cerró la pestaña justo tras activar la licencia, antes de
+      // terminar de configurar la nube) — se retoma automáticamente.
+      continuePendingOwnerSetup();
+      return;
+    }
     showAccessSelectScreen();
   }, 1800);
 

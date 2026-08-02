@@ -185,6 +185,10 @@ function confirmOwnerAccessSetup(){
   initPublicRequestsListener();
   checkLicenseRevocation();
   linkBusinessToOwnerProfile(lic.tenantId, lic.tenantId, lic.code, DB.business && DB.business.name);
+  // Justo después de activar la licencia por primera vez, toca terminar el
+  // resto de la configuración inicial (aviso de hosting local si aplica,
+  // nube propia, tour) antes de dar por hecho que el negocio ya está listo.
+  if(continuePendingOwnerSetup()) return;
   showBusinessSelectScreen();
   syncOwnerBusinessList(lic.code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
 }
@@ -205,6 +209,7 @@ function confirmOwnerAccess(){
   }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
   setAccessSession({type:'owner'});
   hideAccessSelectScreen();
+  if(continuePendingOwnerSetup()) return;
   showBusinessSelectScreen();
   syncOwnerBusinessList(code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
 }
@@ -1300,6 +1305,21 @@ function activateLicenseFromGate(){
   // configurar.
   if(!getCloudConfig()) showFirebaseSetupGate();
   else if(!DB.business.tourSeen) promptAppTour();
+}
+
+// Retoma, en orden, cualquier paso de la configuración inicial de un
+// negocio que quedara pendiente (aviso de hosting local, licencia, nube,
+// tour) — se llama tanto justo después de activar la licencia desde
+// "Acceso Propietarios" como al arrancar con una sesión de propietario ya
+// guardada, por si la sesión anterior se cerró a media configuración.
+// Devuelve true si mostró algún paso pendiente (y por tanto no hay que
+// continuar con el arranque normal de la app).
+function continuePendingOwnerSetup(){
+  if(!DB.business.netlifySetupDone){ showNetlifySetupGate(); return true; }
+  if(!getLicense()){ showActivationGate(); return true; }
+  if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
+  if(!DB.business.tourSeen){ promptAppTour(); return true; }
+  return false;
 }
 
 /* Cada negocio usa su PROPIO proyecto Firebase (gratuito, de Google),
