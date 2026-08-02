@@ -6929,6 +6929,11 @@ function printManualChapter(){
    ============================================================ */
 window.addEventListener('DOMContentLoaded', async () => {
   await dbReadyPromise;
+  if(isAccessSessionExpiredByInactivity()) clearAccessSession();
+  // Cualquier interacción cuenta como actividad, para que la sesión no
+  // caduque mientras el dispositivo se está usando de verdad.
+  ['pointerdown','keydown'].forEach(evt => document.addEventListener(evt, recordAccessActivity, {passive:true}));
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && isAccessSessionExpiredByInactivity()){ clearAccessSession(); location.reload(); } });
   renderHeader();
   initCloud();
   syncPublicMirror();

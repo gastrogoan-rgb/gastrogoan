@@ -60,6 +60,14 @@ getBusinessSlots(); // asegura que el registro exista desde el arranque
    ============================================================ */
 const OWNER_LOGIN_LS = 'gastrogoan_owner_login';
 const ACCESS_SESSION_LS = 'gastrogoan_access_session';
+const ACCESS_LAST_ACTIVITY_LS = 'gastrogoan_access_last_activity';
+// Si el dispositivo pasa más de esto sin actividad (ni un clic, ni un
+// toque), la sesión de acceso (empleado o propietario) caduca sola: hay
+// que volver a identificarse. Así, si el móvil o la tablet se pierde o lo
+// roban, quien lo encuentre no puede simplemente reabrirlo horas después
+// y seguir dentro — pero mientras se está usando con normalidad, nunca
+// interrumpe pidiendo login de nuevo.
+const ACCESS_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
 
 function getOwnerLogin(){
   try{ return JSON.parse(localStorage.getItem(OWNER_LOGIN_LS)); }catch(e){ return null; }
@@ -76,15 +84,30 @@ function verifyOwnerLogin(code, passwordPlain){
   return login.code === code.trim().toUpperCase() && login.passHash === hashPin(passwordPlain);
 }
 
+// Si ha pasado más de ACCESS_INACTIVITY_TIMEOUT_MS desde el último toque
+///clic registrado, la sesión guardada se considera caducada por
+// inactividad (ver recordAccessActivity, llamada desde un listener global
+// en app.js). No borra nada del negocio, solo obliga a volver a
+// identificarse.
+function isAccessSessionExpiredByInactivity(){
+  const last = Number(localStorage.getItem(ACCESS_LAST_ACTIVITY_LS));
+  if(!last) return false;
+  return (Date.now() - last) > ACCESS_INACTIVITY_TIMEOUT_MS;
+}
+function recordAccessActivity(){
+  if(getAccessSession()) localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));
+}
 function getAccessSession(){
   try{ return JSON.parse(localStorage.getItem(ACCESS_SESSION_LS)); }catch(e){ return null; }
 }
 function setAccessSession(session){
   localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(session));
+  localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));
   if(typeof updateLogoutBtn === 'function') updateLogoutBtn();
 }
 function clearAccessSession(){
   localStorage.removeItem(ACCESS_SESSION_LS);
+  localStorage.removeItem(ACCESS_LAST_ACTIVITY_LS);
 }
 
 let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner' | 'owner-setup'
