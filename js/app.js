@@ -4247,6 +4247,7 @@ function logoutAccessSession(){
   clearAccessSession();
   areaUnlocked = {cocina:false, sala:false};
   ownerUnlocked = false;
+  lockEditMode();
   document.getElementById('lock-btn').style.display = 'none';
   updateLogoutBtn();
   goHome();
@@ -6968,6 +6969,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const session = getAccessSession();
     if(session && session.type === 'employee' && resumeEmployeeSession()) return;
     if(session && session.type === 'owner'){
+      applyOwnerSessionEditRights();
       // Puede que quedara algún paso de la configuración inicial a medias
       // (p.ej. se cerró la pestaña justo tras activar la licencia, antes de
       // terminar de configurar la nube) — se retoma automáticamente.

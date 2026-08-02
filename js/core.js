@@ -239,6 +239,7 @@ function confirmOwnerAccessSetup(){
   if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
   setOwnerLogin(lic.code, password);
   setAccessSession({type:'owner'});
+  applyOwnerSessionEditRights();
   hideAccessSelectScreen();
   initCloud();
   initPublicRequestsListener();
@@ -267,6 +268,7 @@ function confirmOwnerAccess(){
     showToast(t('access.passwordReset'));
   }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
   setAccessSession({type:'owner'});
+  applyOwnerSessionEditRights();
   hideAccessSelectScreen();
   if(continuePendingOwnerSetup()) return;
   showBusinessSelectScreen();

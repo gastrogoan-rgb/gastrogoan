@@ -886,13 +886,13 @@ function rememberLastArea(key){
 
 /* ============== Navigation ============== */
 function goHome(){
-  lockEditMode();
+  if(!(getAccessSession() && getAccessSession().type === 'owner')) lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   areaUnlocked = {cocina:false, sala:false};
   navigate('home');
 }
 function openFolder(key){
-  lockEditMode();
+  if(!(getAccessSession() && getAccessSession().type === 'owner')) lockEditMode();
   if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
   // Igual que Gestión: salir de Cocina/Sala (o simplemente volver a entrar)
   // vuelve a pedir el PIN del área la próxima vez.
@@ -914,6 +914,16 @@ let editUnlocked = false;
 function lockEditMode(){
   editUnlocked = false;
   document.body.classList.remove('edit-unlocked');
+}
+
+// Quien entró por "Acceso Propietarios" ya se identificó a nivel de
+// dispositivo: no tiene sentido pedirle otro PIN más para poder editar
+// Cocina/Sala (antes hacía falta aunque ya fueras el dueño). Se llama al
+// iniciar sesión como propietario y al reanudar una sesión de propietario
+// guardada en el arranque.
+function applyOwnerSessionEditRights(){
+  editUnlocked = true;
+  document.body.classList.add('edit-unlocked');
 }
 
 function requestEditPin(){
@@ -1236,7 +1246,8 @@ function renderFolder(){
   document.getElementById('folder-title').innerHTML = `<i class="ti ${f.icon}"></i> ${escapeHtml(t(`folder.${currentFolder}.title`))}`;
   document.getElementById('folder-subtitle').textContent = t(`folder.${currentFolder}.subtitle`);
   const editToggle = document.getElementById('folder-edit-toggle');
-  if(currentFolder === 'cocina' || currentFolder === 'sala'){
+  const ownerSession = getAccessSession() && getAccessSession().type === 'owner';
+  if((currentFolder === 'cocina' || currentFolder === 'sala') && !ownerSession){
     editToggle.style.display = '';
     if(editUnlocked){
       editToggle.innerHTML = `<i class="ti ti-lock-open"></i> ${escapeHtml(t('common.lockEdit'))}`;
