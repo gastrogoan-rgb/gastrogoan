@@ -6,6 +6,7 @@
 const TOUR_STEPS = [
   {icon:'ti-confetti', titleKey:'tour.s1.title', descKey:'tour.s1.desc'},
   {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc', target:'.folder-grid'},
+  {icon:'ti-fingerprint', titleKey:'tour.s32.title', descKey:'tour.s32.desc'},
 
   // ---- Cocina ----
   {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc', folder:'cocina', view:'carta'},
