@@ -111,10 +111,24 @@ function clearAccessSession(){
 }
 
 let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner' | 'owner-setup'
+// Selector de idioma visible desde el primer instante, antes incluso de
+// identificarse — muy probable que la app se venda también a negocios que
+// no hablan español, así que hace falta poder elegir idioma nada más
+// abrirla, no solo una vez dentro (en Mi Negocio).
+function renderAccessLangSwitcherHtml(){
+  const current = getLang();
+  const langs = ['es','en','ca'];
+  return `
+    <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:1">
+      ${langs.map(l => `
+        <button onclick="setLang('${l}')" title="${LANG_NAMES[l]}" style="border:1.5px solid ${l===current?'var(--brand-orange)':'var(--border)'};background:#fff;border-radius:8px;padding:5px 8px;cursor:pointer;font-size:15px;line-height:1;display:flex;align-items:center">${LANG_FLAGS[l]}</button>
+      `).join('')}
+    </div>`;
+}
 function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
-  screen.innerHTML = renderAccessSelectScreenHtml();
+  screen.innerHTML = `<div style="position:relative;width:100%;display:flex;justify-content:center">${renderAccessLangSwitcherHtml()}${renderAccessSelectScreenHtml()}</div>`;
   screen.classList.remove('hide');
 }
 function showAccessSelectScreen(){
