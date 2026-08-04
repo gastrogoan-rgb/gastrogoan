@@ -52,7 +52,31 @@ Netlify directamente a este repositorio de Git.
 Ver `docs/VERIFACTU_PENDIENTE.md` — pendiente de la Declaración Responsable
 propia (trámite legal, no de código) antes de activarlo en producción.
 
-## 3. (añadir aquí lo que vaya surgiendo)
+## 3. Dashboard de interacción en redes/reseñas (fase futura, aparcado)
+
+**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+
+Ya está hecho lo fácil: botones directos a Instagram/Facebook/Google Maps en
+Promoción (ver commit "Añade accesos directos a Instagram, Facebook y Google
+Maps en Promoción", 02/08/2026) — simples enlaces, sin API ni autorización.
+
+Lo que queda aparcado es la idea original más ambiciosa: publicar posts y
+responder reseñas *desde dentro* de GastroGoan, más un panel con reseñas del
+mes, seguidores nuevos, etc., para poder incentivar al equipo según la
+interacción. Motivo para aparcarlo: requiere registrar una app en Meta
+(Instagram/Facebook) y pasar su proceso de revisión (App Review, puede
+tardar semanas) para permisos de publicar/responder/leer métricas, más que
+cada negocio conecte su propia cuenta por OAuth (login + autorización,
+almacenar y renovar tokens). Para Google sería la Business Profile API, con
+un proceso de acceso similar. El dato de "cuánta gente vino de más por una
+promoción" no lo da ninguna de las dos APIs — habría que construirlo con un
+código de promoción canjeable en el TPV.
+
+Si se retoma: empezar por panel de reseñas + responder desde la app (más
+valor, menos complejidad que publicar posts), y dejar seguidores/métricas
+de posts para después.
+
+## 4. (añadir aquí lo que vaya surgiendo)
 
 Cuando aparezca un nuevo pendiente "fuera de código" en conversación, se
 añade como sección nueva en este archivo, con fecha y contexto suficiente
