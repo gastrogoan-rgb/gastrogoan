@@ -270,7 +270,8 @@ function openCashClosureHistory(){
               <td>${fmtDateTime(new Date(c.hasta))}</td>
               <td>${fmtMoney(c.total)}</td>
               <td>${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
-              <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button></td>
+              <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button>
+              <button class="btn btn-sm btn-icon" title="${t('tips.splitBtn')}" onclick="openTipsSplitModal(${c.id})"><i class="ti ti-cash"></i></button></td>
             </tr>
           `).join('')}
         </tbody>
@@ -279,6 +280,41 @@ function openCashClosureHistory(){
     ` : `<div class="empty"><i class="ti ti-cash-register"></i>${t('empty.cashClosures')}</div>`}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
+// Reparto automático de propinas de un cierre de caja: suma las propinas
+// cobradas en el periodo del cierre y las divide a partes iguales entre
+// quien estuvo fichado durante ese periodo — evita hacerlo a mano con una
+// calculadora al final del mes. Es solo informativo (no mueve dinero de
+// verdad, cada negocio lo reparte como prefiera con esta base).
+function openTipsSplitModal(closureId){
+  const c = DB.cashClosures.find(x=>x.id===closureId);
+  if(!c) return;
+  const desde = new Date(c.desde), hasta = new Date(c.hasta);
+  const sales = DB.sales.filter(s => {
+    if(s.date !== c.fecha) return false;
+    if(!s.createdAt) return true;
+    const dt = new Date(s.createdAt);
+    return dt > desde && dt <= hasta;
+  });
+  const totalPropinas = sales.reduce((s,x)=>s+(x.propina||0),0);
+  const workers = (DB.fichajes||[]).filter(f => f.fecha===c.fecha && new Date(f.entrada) < hasta && (!f.salida || new Date(f.salida) > desde));
+  const employees = [...new Set(workers.map(f=>f.employeeId))].map(id=>DB.employees.find(e=>e.id===id)).filter(Boolean);
+  const perPerson = employees.length ? totalPropinas / employees.length : 0;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cash"></i> ${t('tips.title')}</h3>
+      <button class="modal-close" onclick="openCashClosureHistory()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('tips.desc').replace('${total}', fmtMoney(totalPropinas))}</p>
+    ${employees.length ? `
+    <div style="display:flex;flex-direction:column;gap:4px">
+      ${employees.map(e => `<div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${escapeHtml(e.name)}</span><strong>${fmtMoney(perPerson)}</strong></div>`).join('')}
+    </div>` : `<div class="empty"><i class="ti ti-users"></i>${t('tips.noWorkers')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="openCashClosureHistory()">${t('common.close')}</button>
     </div>
   `);
 }
@@ -868,11 +904,16 @@ function registerPedidoComoGastoVariable(o){
   const d = new Date(fecha);
   const prov = getProviderByName(o.supplier);
   const provIva = prov && prov.iva != null ? prov.iva : 10;
+  // Fecha de pago por defecto: 30 días desde la recepción (el plazo más
+  // habitual con proveedores), editable luego desde el aviso de facturas
+  // pendientes — no es más que un recordatorio, no afecta a ningún cálculo.
+  const fechaPago = dateStr(new Date(d.getTime() + 30*86400000));
   Object.entries(byCat).forEach(([cat, importe]) => {
     DB.ge.variables.push({
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
-      iva: provIva, fecha, pedidoId: o.id, auto: true
+      iva: provIva, fecha, pedidoId: o.id, auto: true,
+      fechaPago, pagada: false
     });
   });
   o.gvCreated = true;

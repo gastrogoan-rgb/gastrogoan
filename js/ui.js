@@ -764,12 +764,14 @@ function renderChatMessages(){
   const author = getChatAuthor();
   const msgs = (DB.chatMessages||[]).filter(m => m.channel === currentChatChannel);
   box.innerHTML = msgs.map(m => `
-    <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}">
-      <span class="chat-meta">${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
+    <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}">
+      <span class="chat-meta">${m.urgent?'🚨 ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
       ${escapeHtml(m.text)}
+      <button class="btn btn-sm" style="margin-top:4px;font-size:10px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
     </div>
   `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('msg.noMessagesInChannelYet').replace('${channel}', escapeHtml(chatChannelLabel(currentChatChannel)))}</div>`;
   box.scrollTop = box.scrollHeight;
+  renderChatPinned();
 }
 function sendChatMessage(){
   const input = document.getElementById('chat-input');
@@ -791,6 +793,57 @@ function sendChatMessage(){
   saveDB();
   input.value = '';
   renderChatMessages();
+}
+
+// Mensaje fijado por canal: queda arriba del todo hasta que alguien lo
+// quite, para avisos del día ("hoy no hay salmón") que no deben perderse
+// entre los mensajes sueltos del chat.
+function renderChatPinned(){
+  const box = document.getElementById('chat-pinned');
+  if(!box) return;
+  if(!DB.chatPinned) DB.chatPinned = {};
+  const pinnedId = DB.chatPinned[currentChatChannel];
+  const msg = pinnedId ? (DB.chatMessages||[]).find(m => m.id === pinnedId) : null;
+  box.innerHTML = msg ? `
+    <div class="chat-pinned-bar">
+      <i class="ti ti-pin"></i>
+      <span style="flex:1"><strong>${escapeHtml(msg.authorName)}:</strong> ${escapeHtml(msg.text)}</span>
+      <button class="btn btn-sm btn-icon" onclick="unpinChatMessage()"><i class="ti ti-x"></i></button>
+    </div>` : '';
+}
+function pinChatMessage(msgId){
+  if(!DB.chatPinned) DB.chatPinned = {};
+  DB.chatPinned[currentChatChannel] = msgId;
+  saveDB();
+  renderChatPinned();
+  showToast(t('chat.pinnedOk'));
+}
+function unpinChatMessage(){
+  if(!DB.chatPinned) return;
+  delete DB.chatPinned[currentChatChannel];
+  saveDB();
+  renderChatPinned();
+}
+
+// Botón de "necesito ayuda ya": manda un mensaje marcado como urgente al
+// canal General (lo ven todos, no solo el área actual) con un pitido, para
+// pedir ayuda al encargado/dueño sin tener que ir a buscarlo físicamente.
+function sendUrgentHelpAlert(){
+  const authorId = getChatAuthor();
+  if(!chatVerifiedAuthors.has(authorId)){
+    requestChatAuthorPin(document.getElementById('chat-author-sel'), authorId);
+    return;
+  }
+  const authorName = getChatAuthorName(authorId);
+  DB.chatMessages.push({
+    id: genId(), channel: 'general', authorId, authorName,
+    text: t('chat.urgentDefaultText').replace('${name}', authorName),
+    ts: new Date().toISOString(), urgent: true
+  });
+  saveDB();
+  if(typeof playNewRequestAlert === 'function') playNewRequestAlert();
+  showToast(t('chat.urgentSent'));
+  if(currentChatChannel !== 'general'){ switchChatTab('general'); } else { renderChatMessages(); }
 }
 function markChatRead(channel){
   localStorage.setItem('chatLastRead_'+channel, new Date().toISOString());

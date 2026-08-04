@@ -374,9 +374,24 @@ function renderMesaCard(table){
   const waiterChip = order ? mesaWaiterChipHtml(order.camareroId) : '';
   const upcomingRes = !order ? getUpcomingReservationForTable(table.id) : null;
 
+  // "Mesa fría": todo servido pero lleva ya un rato sin que nadie la cobre
+  // ni la revise — suele significar que se olvidó, y esa mesa retiene sitio
+  // sin necesidad. Solo aplica una vez todos los platos están entregados.
+  const MESA_FRIA_MIN = 15;
+  let mesaFria = false;
+  if(order && phase && phase.key==='served'){
+    const entregadoTimes = (order.items||[]).filter(l=>!l.bebida && l.entregadoAt).map(l=>new Date(l.entregadoAt).getTime());
+    if(entregadoTimes.length){
+      const lastEntregado = Math.max(...entregadoTimes);
+      mesaFria = (Date.now() - lastEntregado) / 60000 >= MESA_FRIA_MIN;
+    }
+  }
+  const chaosBlink = (typeof chaosMode !== 'undefined' && chaosMode && order && order.createdAt && minutesSince(order.createdAt) >= 90) ? ' mesa-blink-urgent' : '';
+
   return `
-    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}${mesaFria?' mesa-fria':''}${chaosBlink}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
       <div class="mesa-icons-row">
+        ${mesaFria ? `<span class="mesa-mini-badge" style="background:var(--blue,#4E5A63);color:#fff" title="${t('tpv.mesaFria.hint')}"><i class="ti ti-snowflake"></i></span>` : ''}
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
         ${order && order.pagado ? `<span class="mesa-mini-badge" title="${t('label.paidOnline')}"><i class="ti ti-credit-card"></i></span>` : ''}
       </div>
@@ -547,6 +562,7 @@ function renderTpvPendingOnline(){
 function renderTPV(){
   markTpvSeen();
   migrateCartas();
+  applyTpvTextSize();
   const box = document.getElementById('tpv-content');
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
 
@@ -554,8 +570,11 @@ function renderTPV(){
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
     ${renderTpvKpis()}
+    ${renderLastCallBanner()}
     <div class="toolbar">
       <div class="left"></div>
+      <button class="btn ${chaosMode?'btn-danger':''}" onclick="toggleChaosMode()" title="${t('tpv.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn" onclick="setTpvTextSize()" title="${t('tpv.textSize.hint')}"><i class="ti ti-text-size"></i></button>
       <button class="btn" onclick="openTodaySalesModal()"><i class="ti ti-receipt"></i> ${t('title.todaySales')}</button>
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
@@ -564,8 +583,68 @@ function renderTPV(){
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
-    ${renderTpvMesas(tiposServicio)}
+    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
   `;
+}
+
+// "Modo caos": en vez de las mesas agrupadas por zona, una única lista con
+// solo las mesas ocupadas, ordenada por la que lleva más tiempo esperando
+// primero — para saber siempre qué sacar antes en una hora punta, sin tener
+// que ir zona por zona calculando de memoria quién llegó antes.
+let chaosMode = false;
+function toggleChaosMode(){
+  chaosMode = !chaosMode;
+  renderTPV();
+}
+function renderChaosModeMesas(){
+  const occupied = DB.tables
+    .map(table => ({table, order: getOpenOrderForTable(table.id)}))
+    .filter(x => x.order);
+  if(!occupied.length){
+    return `<h3 style="margin-top:16px"><i class="ti ti-flame"></i> ${t('tpv.chaos.title')}</h3><div class="empty"><i class="ti ti-mood-smile"></i>${t('tpv.chaos.empty')}</div>`;
+  }
+  occupied.sort((a,b) => new Date(a.order.createdAt) - new Date(b.order.createdAt));
+  return `
+    <h3 style="margin-top:16px"><i class="ti ti-flame"></i> ${t('tpv.chaos.title')}</h3>
+    <div class="grid grid-mesas">${occupied.map(x => renderMesaCard(x.table)).join('')}</div>
+  `;
+}
+
+// Tamaño de letra del TPV, para quien tenga la vista cansada al final de un
+// turno largo o simplemente prefiera verlo más grande en una tablet.
+function setTpvTextSize(){
+  const sizes = ['normal','grande','extra'];
+  const current = localStorage.getItem('tpvTextSize') || 'normal';
+  const next = sizes[(sizes.indexOf(current)+1) % sizes.length];
+  localStorage.setItem('tpvTextSize', next);
+  applyTpvTextSize();
+  showToast(t('tpv.textSize.now').replace('${size}', t('tpv.textSize.'+next)));
+}
+function applyTpvTextSize(){
+  const el = document.getElementById('view-tpv');
+  if(!el) return;
+  el.classList.remove('tpv-text-normal','tpv-text-grande','tpv-text-extra');
+  el.classList.add('tpv-text-' + (localStorage.getItem('tpvTextSize') || 'normal'));
+}
+
+// "Última llamada de cocina": si queda poco para la hora de cierre de hoy
+// (según el horario configurado en Mi Negocio), avisa arriba del todo para
+// no tomar comandas que luego no da tiempo a servir con calma.
+function renderLastCallBanner(){
+  try{
+    const horarioHoy = (DB.business.horario||[])[new Date().getDay()===0?6:new Date().getDay()-1];
+    if(!horarioHoy || horarioHoy.abierto===false) return '';
+    const tramos = horarioHoy.modo==='seguido' ? [horarioHoy.seguido] : (horarioHoy.turnos||[]);
+    const toMin = hhmm => { const [h,m] = (hhmm||'').split(':').map(Number); return isNaN(h)?null:h*60+(m||0); };
+    const now = new Date();
+    const nowMin = now.getHours()*60+now.getMinutes();
+    const closingsSoon = tramos
+      .map(tr => toMin(tr && tr.fin))
+      .filter(fin => fin!=null && fin - nowMin > 0 && fin - nowMin <= 30);
+    if(!closingsSoon.length) return '';
+    const minsLeft = Math.min(...closingsSoon.map(fin => fin - nowMin));
+    return `<div class="card" style="border:2px solid var(--red);background:var(--red-l);margin-bottom:10px;padding:10px 14px;display:flex;align-items:center;gap:8px"><i class="ti ti-clock-exclamation" style="font-size:20px;color:var(--red)"></i><span style="font-size:13.5px">${t('tpv.lastCall.msg').replace('${n}', minsLeft)}</span></div>`;
+  }catch(e){ return ''; }
 }
 
 // Busca un plato por nombre (comparación insensible a mayúsculas/tildes) en
@@ -723,6 +802,20 @@ function parseRepartidorFieldValue(raw){
 
 function orderTotal(order){
   return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
+}
+
+// Coste real de ingredientes de todo lo vendido en un pedido/venta, a
+// partir del escandallo de cada receta — para saber el margen real de esa
+// mesa concreta, no solo lo cobrado. Solo cuenta líneas con receta
+// vinculada; lo que no tiene receta (p.ej. un extra manual) no suma coste.
+function orderFoodCost(order){
+  return (order.items||[]).reduce((sum, line) => {
+    const recetas = [];
+    if(line.recipeId) recetas.push(line.recipeId);
+    else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
+    const costePorUnidad = recetas.reduce((s,rid) => { const r = getRecipe(rid); return s + (r ? recipeCost(r) : 0); }, 0);
+    return sum + costePorUnidad * line.qty;
+  }, 0);
 }
 
 // Etiqueta del pedido para TPV, cocina y ticket: los tickets rápidos de mostrador se llaman "Pedido Express".
@@ -1292,6 +1385,10 @@ function renderOrderClientNotesHtml(order){
       if(c.notes) parts.push({icon:'ti-note', text: c.notes});
     }
   }
+  // Alérgenos anotados a mano para esta mesa (independiente de si hay algún
+  // cliente vinculado) — para comensales sueltos que no están dados de alta
+  // como cliente pero sí han avisado de una alergia al sentarse.
+  if(order.tableAllergens) parts.push({icon:'ti-alert-triangle', text: `${t('label.allergensPresent')}: ${order.tableAllergens}`});
   if(!parts.length) return '';
   return `<div class="card" style="border:2px solid var(--brand-orange);background:var(--amber-l);margin-bottom:10px;padding:8px 12px">
     ${parts.map(p => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;margin-bottom:2px"><i class="ti ${p.icon}" style="margin-top:2px;color:var(--brand-orange);flex-shrink:0"></i><span>${escapeHtml(p.text)}</span></div>`).join('')}
@@ -1307,6 +1404,7 @@ function renderTableOrderModal(orderId){
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
   const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : t('label.assignWaiter')}</span>` : '';
+  const allergensBadge = ` <span class="badge ${order.tableAllergens?'badge-red':''}" style="cursor:pointer" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
 
   const total = orderTotal(order);
   if(order.items.some(l => l.nuevo)){
@@ -1363,7 +1461,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
-      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}</h3>
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}</h3>
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
@@ -1572,6 +1670,19 @@ function renderOrderComandaPanel(order){
 }
 
 // Permite anotar o cambiar qué camarero/a ha tomado o atiende esta comanda.
+// Alérgenos anotados para la mesa entera (no ligados a ningún cliente
+// dado de alta): se anotan al abrirla o en cualquier momento, se ven en
+// pantalla en la comanda y se imprimen destacados en el vale de cocina.
+function promptTableAllergens(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const val = prompt(t('tpv.tableAllergens.prompt'), order.tableAllergens || '');
+  if(val === null) return;
+  order.tableAllergens = val.trim();
+  saveDB();
+  renderTableOrderModal(orderId);
+}
+
 function openSetCamareroModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -1643,7 +1754,7 @@ function printMarchadasIfEnabled(order, firedLines){
   const titulo = table ? table.name : togoOrderLabel(order);
   printers.forEach(p => {
     const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
-    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket);
+    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, order.tableAllergens);
   });
 }
 
@@ -2886,19 +2997,21 @@ function openTodaySalesModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th class="owner-only">${t('tpv.margin.label')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
         <tbody>${sales.length ? sales.map(s => {
           const table = s.tableId ? DB.tables.find(t=>t.id===s.tableId) : null;
           const label = table ? table.name : togoOrderLabel(s);
           const hora = s.createdAt ? new Date(s.createdAt).toTimeString().slice(0,5) : '';
+          const margin = s.total - orderFoodCost(s);
           return `<tr>
             <td>${escapeHtml(hora)}</td>
             <td>${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>
             <td>${fmtMoney(s.total)}</td>
+            <td class="owner-only" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
             <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
             <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button></td>
           </tr>`;
-        }).join('') : `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
+        }).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">

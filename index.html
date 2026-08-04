@@ -845,7 +845,9 @@
   <div class="chat-author-row">
     <span data-i18n="label.writingAs">Escribo como:</span>
     <select id="chat-author-sel" onchange="onChatAuthorChange(this)"></select>
+    <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="sendUrgentHelpAlert()" title="Avisar al encargado ahora mismo"><i class="ti ti-alert-triangle"></i></button>
   </div>
+  <div id="chat-pinned"></div>
   <div class="help-tab-panel active" style="display:flex">
     <div class="help-chat-messages" id="chat-messages"></div>
     <div class="help-chat-input-row">

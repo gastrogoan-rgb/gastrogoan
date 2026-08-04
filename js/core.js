@@ -2680,10 +2680,13 @@ function defaultData(){
     },
     clients: [],
     chatMessages: [], // {id, channel:'general'|'cocina'|'sala', authorId, authorName, text, ts}
+    chatPinned: {}, // {general:msgId, cocina:msgId, sala:msgId} — mensaje fijado arriba del todo de cada canal
     categoryIcons: {recipe:{}, ingredient:{}}, // iconos elegidos a mano para carpetas: 'recipe' (Escandallo/Fichas), 'ingredient' (Mega Lista/Stock)
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     moodCheckins: [], // {id, employeeId, weekKey, value(1-5), ts} — encuesta de clima semanal, opcional
+    shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
+    turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {
       name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',

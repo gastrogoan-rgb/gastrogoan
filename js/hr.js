@@ -2257,6 +2257,38 @@ function setPersonalSearch(val){
 // mostrar a nadie "el peor", solo reconocer a los que más venden.
 function renderTeamPulseHtml(){
   const parts = [];
+  const pendingSwaps = (DB.turnoSwapRequests||[]).filter(r => r.status==='pending_owner').filter(r => {
+    const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
+    return from && (from.area||'cocina')===currentArea();
+  });
+  if(pendingSwaps.length){
+    parts.push(`
+      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--amber)">
+        <h4 style="margin-bottom:6px"><i class="ti ti-replace"></i> ${t('swap.ownerPendingTitle')}</h4>
+        ${pendingSwaps.map(r => {
+          const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
+          const to = DB.employees.find(e=>e.id===r.toEmployeeId);
+          const turno = (DB.turnos||[]).find(x=>x.id===r.fromTurnoId);
+          return `<div style="font-size:12.5px;margin-bottom:6px">
+            ${t('swap.ownerPendingLine').replace('${from}', escapeHtml(from?from.name:'?')).replace('${to}', escapeHtml(to?to.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button class="btn btn-sm btn-primary" onclick="ownerApproveTurnoSwap(${r.id}, true)">${t('common.accept')}</button>
+              <button class="btn btn-sm" onclick="ownerApproveTurnoSwap(${r.id}, false)">${t('common.reject')}</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`);
+  }
+  const longShifts = getLongShiftWarnings().filter(x => (x.employee.area||'cocina')===currentArea());
+  if(longShifts.length){
+    parts.push(`
+      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--red);background:var(--red-l)">
+        <h4 style="margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('hr.descanso.longShiftTitle')}</h4>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${longShifts.map(x => `<div style="font-size:13px">${escapeHtml(x.employee.name)} — ${x.horas.toFixed(1)}h ${t('hr.descanso.seguidas')}</div>`).join('')}
+        </div>
+      </div>`);
+  }
   if(currentArea()==='sala'){
     const now = new Date();
     const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
@@ -2684,6 +2716,32 @@ function fichajeHoras(f){
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
 }
+
+// Descanso mínimo legal entre jornadas (12h) y máximo de horas seguidas sin
+// descanso (9h) — igual que cualquier control de este tipo, es solo un
+// aviso para que el propio negocio se proteja de una inspección de
+// trabajo, no bloquea nada.
+const DESCANSO_MIN_ENTRE_JORNADAS_H = 12;
+const JORNADA_MAX_SEGUIDA_H = 9;
+function checkDescansoWarning(employeeId){
+  const fichajes = (DB.fichajes||[]).filter(f => f.employeeId===employeeId && f.salida).sort((a,b) => new Date(b.salida) - new Date(a.salida));
+  if(!fichajes.length) return null;
+  const lastSalida = new Date(fichajes[0].salida);
+  const gapH = (Date.now() - lastSalida) / 3600000;
+  if(gapH < DESCANSO_MIN_ENTRE_JORNADAS_H) return t('hr.descanso.tooShort').replace('${h}', gapH.toFixed(1)).replace('${min}', DESCANSO_MIN_ENTRE_JORNADAS_H);
+  return null;
+}
+// Empleados con un fichaje ABIERTO ahora mismo que ya supera la jornada
+// máxima seguida recomendada — para el aviso en Personal, sin esperar a
+// que se cierre el turno para darse cuenta.
+function getLongShiftWarnings(){
+  return (DB.fichajes||[])
+    .filter(f => !f.salida)
+    .map(f => ({f, horas: fichajeHoras(f)}))
+    .filter(x => x.horas >= JORNADA_MAX_SEGUIDA_H)
+    .map(x => ({employee: DB.employees.find(e=>e.id===x.f.employeeId), horas: x.horas}))
+    .filter(x => x.employee);
+}
 // Ver la jornada/fichar de un empleado ya no está abierto para cualquiera
 // que abra la pestaña Personal: hay que introducir el PIN de ese empleado
 // primero, igual que para fichar. Así cada uno solo ve sus propios datos
@@ -2802,7 +2860,149 @@ function openEmployeeFicharModal(employeeId){
       <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.salesServedWeek')}: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
       <div style="font-size:12px;color:var(--muted)">${t('hr2.salesServedMonth')}: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
       ` : ''}
-      <div style="margin-top:10px"><button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button></div>
+      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+        <button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button>
+        <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
+      </div>
+      ${renderIncomingSwapRequestsHtml(e.id)}
+      <div class="field" style="margin-top:12px;text-align:left">
+        <label>${t('handoff.label')}</label>
+        <textarea id="handoff-note-input" rows="2" placeholder="${t('handoff.placeholder')}" onchange="saveShiftHandoffNote('${(e.area||'cocina')}', this.value)">${escapeHtml(getShiftHandoffNote(e.area||'cocina'))}</textarea>
+      </div>
+    </div>
+  `);
+}
+
+// Peticiones de cambio de turno dirigidas a este empleado, esperando su
+// respuesta (aceptar/rechazar) — se ven nada más entrar en su propia ficha
+// de fichar, sin tener que ir a buscarlas a otro sitio.
+function renderIncomingSwapRequestsHtml(employeeId){
+  const pending = (DB.turnoSwapRequests||[]).filter(r => r.toEmployeeId===employeeId && r.status==='pending_peer');
+  if(!pending.length) return '';
+  return `
+    <div class="card" style="margin-top:12px;text-align:left;border:1px solid var(--amber)">
+      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-replace"></i> ${t('swap.incomingTitle')}</h4>
+      ${pending.map(r => {
+        const from = DB.employees.find(x=>x.id===r.fromEmployeeId);
+        const turno = (DB.turnos||[]).find(x=>x.id===r.fromTurnoId);
+        return `<div style="font-size:12.5px;margin-bottom:6px">
+          ${t('swap.incomingLine').replace('${name}', escapeHtml(from?from.name:'?')).replace('${date}', escapeHtml(turno?turno.fecha:'?'))}
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button class="btn btn-sm btn-primary" onclick="respondTurnoSwapRequest(${r.id}, true)">${t('common.accept')}</button>
+            <button class="btn btn-sm" onclick="respondTurnoSwapRequest(${r.id}, false)">${t('common.reject')}</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function openTurnoSwapRequestModal(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const today = todayStr();
+  const myTurnos = (DB.turnos||[]).filter(t2 => t2.employeeId===employeeId && t2.fecha >= today).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const colleagues = DB.employees.filter(x => x.id!==employeeId && (x.area||'cocina')===(e.area||'cocina') && x.active!==false);
+  if(!myTurnos.length){ showToast(t('swap.noUpcomingTurnos')); return; }
+  if(!colleagues.length){ showToast(t('swap.noColleagues')); return; }
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</h3>
+      <button class="modal-close" onclick="openEmployeeFicharModal(${employeeId})">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('swap.pickTurnoLabel')}</label>
+      <select id="swap-turno-sel">${myTurnos.map(t2 => `<option value="${t2.id}">${escapeHtml(t2.fecha)} — ${escapeHtml((SHIFT_TYPES[t2.tipo]||SHIFT_TYPES.C).label)}</option>`).join('')}</select>
+    </div>
+    <div class="field">
+      <label>${t('swap.pickColleagueLabel')}</label>
+      <select id="swap-colleague-sel">${colleagues.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openEmployeeFicharModal(${employeeId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="submitTurnoSwapRequest(${employeeId})">${t('swap.sendRequest')}</button>
+    </div>
+  `);
+}
+function submitTurnoSwapRequest(employeeId){
+  const fromTurnoId = parseInt(document.getElementById('swap-turno-sel').value);
+  const toEmployeeId = parseInt(document.getElementById('swap-colleague-sel').value);
+  DB.turnoSwapRequests.push({id: genId(), fromEmployeeId: employeeId, fromTurnoId, toEmployeeId, status:'pending_peer', createdAt: new Date().toISOString()});
+  saveDB();
+  showToast(t('swap.requestSent'));
+  openEmployeeFicharModal(employeeId);
+}
+// El compañero acepta o rechaza; si acepta, pasa a esperar la aprobación
+// final del propietario (no se cambia nada de verdad hasta que él lo
+// confirme, por si hay que ajustar cobertura de personal).
+function respondTurnoSwapRequest(requestId, accept){
+  const r = (DB.turnoSwapRequests||[]).find(x=>x.id===requestId);
+  if(!r) return;
+  r.status = accept ? 'pending_owner' : 'rejected';
+  saveDB();
+  showToast(accept ? t('swap.acceptedWaitingOwner') : t('swap.rejected'));
+  openEmployeeFicharModal(r.toEmployeeId);
+}
+// Aprobación final del propietario: reasigna de verdad el turno al
+// compañero que aceptó cubrirlo.
+function ownerApproveTurnoSwap(requestId, approve){
+  const r = (DB.turnoSwapRequests||[]).find(x=>x.id===requestId);
+  if(!r) return;
+  if(approve){
+    const turno = (DB.turnos||[]).find(t2=>t2.id===r.fromTurnoId);
+    if(turno) turno.employeeId = r.toEmployeeId;
+    r.status = 'approved';
+  }else{
+    r.status = 'rejected';
+  }
+  saveDB();
+  showToast(approve ? t('swap.approvedOk') : t('swap.rejected'));
+  renderHorariosTab();
+}
+
+// "Traspaso de turno": una nota de texto libre por área y día, visible para
+// quien fiche entrada después — para dejar dicho "cosas a tener en cuenta"
+// sin depender de que alguien se acuerde de decirlo de palabra.
+function shiftHandoffKey(area, fecha){ return area + '_' + (fecha||todayStr()); }
+function getShiftHandoffNote(area, fecha){ return (DB.shiftHandoffNotes||{})[shiftHandoffKey(area,fecha)] || ''; }
+function saveShiftHandoffNote(area, text){
+  if(!DB.shiftHandoffNotes) DB.shiftHandoffNotes = {};
+  const key = shiftHandoffKey(area);
+  if(text.trim()) DB.shiftHandoffNotes[key] = text.trim();
+  else delete DB.shiftHandoffNotes[key];
+  saveDB();
+}
+
+// Resumen del turno al fichar entrada: qué turno le toca hoy, cuántas
+// reservas hay (solo tiene sentido en Sala), tareas de limpieza asignadas
+// hoy, y la nota de traspaso que haya dejado el turno anterior — para que
+// fichar deje de ser un simple trámite y sea el briefing del día.
+function showShiftBriefing(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const today = todayStr();
+  const area = e.area || 'cocina';
+  const turno = turnoForDate(employeeId, today);
+  const turnoLine = turno
+    ? `${(SHIFT_TYPES[turno.tipo]||SHIFT_TYPES.C).label}${turno.entrada ? ` (${turno.entrada}${turno.salida?'–'+turno.salida:''})` : ''}`
+    : t('briefing.noTurnoToday');
+  const tareasHoy = ((DB.limpieza||{}).tareas||[]).filter(lt => lt.tipo==='mensual' && lt.responsableId===employeeId && lt.diaMes===new Date().getDate() && (lt.zona||'cocina')===area);
+  const reservasHoy = area==='sala' ? DB.reservations.filter(r => r.date===today && (r.status==='confirmada'||r.status==='pendiente')).length : null;
+  const handoffNote = getShiftHandoffNote(area, today);
+  const descansoWarning = checkDescansoWarning(employeeId);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-clipboard-text"></i> ${t('briefing.title').replace('${name}', escapeHtml(e.name))}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="font-size:13.5px;line-height:1.9">
+      <div><i class="ti ti-calendar" style="width:18px"></i> ${t('briefing.turnoLabel')}: <strong>${escapeHtml(turnoLine)}</strong></div>
+      ${reservasHoy!=null ? `<div><i class="ti ti-calendar-event" style="width:18px"></i> ${t('briefing.reservationsLabel').replace('${n}', reservasHoy)}</div>` : ''}
+      ${tareasHoy.length ? `<div><i class="ti ti-spray" style="width:18px"></i> ${t('briefing.cleaningTasksLabel').replace('${n}', tareasHoy.length)}: ${tareasHoy.map(x=>escapeHtml(x.producto||x.area||'')).join(', ')}</div>` : ''}
+    </div>
+    ${descansoWarning ? `<div class="card owner-only" style="margin-top:10px;border:1px solid var(--red);background:var(--red-l)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${escapeHtml(descansoWarning)}</div>` : ''}
+    ${handoffNote ? `<div class="card" style="margin-top:10px;background:var(--brand-cream)"><strong><i class="ti ti-arrow-forward-up"></i> ${t('briefing.handoffLabel')}:</strong><br>${escapeHtml(handoffNote)}</div>` : ''}
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">${t('common.understood')}</button>
     </div>
   `);
 }
@@ -3058,9 +3258,11 @@ function doFichaje(employeeId, action){
     fichaGatePendingView = null;
     showToast(t('msg.clockInRegistered'));
     navigate(resumeView);
+    showShiftBriefing(employeeId);
     return;
   }
   renderHorariosTab();
   showToast(action === 'entrada' ? t('msg.clockInRegistered') : t('msg.clockOutRegistered'));
+  if(action === 'entrada') showShiftBriefing(employeeId);
 }
 

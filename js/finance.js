@@ -205,6 +205,10 @@ function renderDashboard(){
   // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
   // aquí se avisa igual que con el stock bajo, para que no pase desapercibido.
   const overdueMaintenanceCount = ((DB.limpieza && DB.limpieza.mantenimiento) || []).filter(e => limpiezaMantenimientoDueStatus(e) === 'overdue').length;
+  // Facturas de proveedor (generadas automáticamente al recibir un pedido)
+  // con fecha de pago ya vencida y todavía sin marcar como pagadas — para
+  // no acumular sorpresas de tesorería por puro despiste.
+  const overdueInvoicesCount = (DB.ge.variables||[]).filter(v => v.fechaPago && !v.pagada && v.fechaPago < todayDate).length;
 
   const attentionItems = [
     {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
@@ -213,6 +217,7 @@ function renderDashboard(){
     {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
+    {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
   ];
   const anyAttention = attentionItems.some(i => i.count > 0);
   document.getElementById('dashboard-attention').innerHTML = `
@@ -1081,6 +1086,47 @@ function updateStockMin(ingredientId, value){
 
 // Registro de ajustes de stock (manuales y rápidos), para poder investigar
 // mermas/descuadres: qué se tocó, cuándo y de qué cantidad a qué cantidad.
+// Facturas de proveedor pendientes de pago (generadas automáticamente al
+// recibir un pedido) — vencidas primero, luego las que vencen en los
+// próximos 7 días, con un botón para marcarlas pagadas sin salir de aquí.
+function openPendingInvoicesModal(){
+  const today = todayStr();
+  const in7 = dateStr(new Date(Date.now() + 7*86400000));
+  const pending = (DB.ge.variables||[])
+    .filter(v => v.fechaPago && !v.pagada && v.fechaPago <= in7)
+    .sort((a,b) => a.fechaPago.localeCompare(b.fechaPago));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-file-invoice"></i> ${t('invoices.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    ${pending.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('invoices.dueDate')}</th><th>${t('common.supplier')}</th><th>${t('label.total')}</th><th></th></tr></thead>
+        <tbody>${pending.map(v => `
+          <tr>
+            <td style="color:${v.fechaPago<today?'var(--red)':''}">${escapeHtml(v.fechaPago)}${v.fechaPago<today?` <span class="badge badge-red" style="font-size:9px">${t('invoices.overdue')}</span>`:''}</td>
+            <td>${escapeHtml(v.proveedor||'—')}</td>
+            <td>${fmtMoney(v.importe)}</td>
+            <td><button class="btn btn-sm" onclick="markInvoicePaid(${v.id})">${t('invoices.markPaid')}</button></td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty"><i class="ti ti-circle-check"></i>${t('invoices.none')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function markInvoicePaid(id){
+  const v = (DB.ge.variables||[]).find(x=>x.id===id);
+  if(!v) return;
+  v.pagada = true;
+  saveDB();
+  openPendingInvoicesModal();
+  if(typeof renderDashboard === 'function') renderDashboard();
+}
+
 function logStockAdjustment(type, refId, name, before, after, source){
   if(!DB.stockLog) DB.stockLog = [];
   DB.stockLog.push({

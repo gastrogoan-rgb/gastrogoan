@@ -4949,18 +4949,23 @@ function deleteComandaPrinter(id){
   renderMiNegocio();
 }
 // Imprime un vale de comanda (cocina, sala, barra...) con las líneas marchadas.
-function printComandaTicket(destino, titulo, lineas, anchoTicket){
+function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos){
   if(!lineas || !lineas.length) return;
   const ancho = anchoTicket || 80;
   const widthPx = ancho == 58 ? 200 : 280;
   const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
   const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
+  // Alérgenos de la mesa (independiente de cualquier cliente vinculado): se
+  // imprime destacado arriba del todo, en grande, para que no pase
+  // desapercibido entre las líneas del pedido.
+  const alergenosHtml = alergenos ? `<div style="border:2px solid #000;padding:4px 6px;margin-bottom:6px;font-weight:700;font-size:14px;text-align:center">⚠ ${escapeHtml(alergenos)}</div>` : '';
   const win = window.open('', '_blank', `width=${widthPx+40},height=520`);
   if(!win) return;
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(titulo)}</title></head>
     <body style="font-family:monospace;width:${widthPx}px;padding:8px;margin:0">
       <div style="text-align:center;font-weight:700;font-size:16px;border-bottom:1px dashed #000;padding-bottom:4px;margin-bottom:6px">${escapeHtml(destino)}</div>
       <div style="font-size:13px;margin-bottom:6px">${escapeHtml(titulo)} · ${hora}</div>
+      ${alergenosHtml}
       ${filas}
       <script>window.onload=function(){window.print();}<\/script>
     </body></html>`);
