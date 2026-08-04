@@ -793,6 +793,16 @@ function renderPedidoDetail(){
           <textarea id="rec-obs" rows="2">${escapeHtml(r.obs||'')}</textarea>
         </div>
         <button class="btn btn-sm" onclick="savePedidoRecepcion()"><i class="ti ti-device-floppy"></i> ${t('btn.saveReception')}</button>
+        <div class="field" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+          <label>${t('albaran.attachLabel')}</label>
+          ${o.albaranFile ? `
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              ${o.albaranFile.dataUrl.startsWith('data:image') ? `<img src="${o.albaranFile.dataUrl}" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid var(--border)">` : `<a href="${o.albaranFile.dataUrl}" download="${escapeHtml(o.albaranFile.name)}" class="btn btn-sm"><i class="ti ti-file-text"></i> ${escapeHtml(o.albaranFile.name)}</a>`}
+              <button class="btn btn-sm btn-danger" onclick="removeAlbaranFile()"><i class="ti ti-trash"></i></button>
+            </div>
+          ` : `<input type="file" id="albaran-file-input" accept="image/*,application/pdf" onchange="handleAlbaranUpload(this)">`}
+          <small style="color:var(--muted)">${t('albaran.attachHint')}</small>
+        </div>
       </div>
       ` : ''}
 
@@ -874,6 +884,41 @@ function savePedidoRecepcion(){
   };
   saveDB();
   showToast(t('msg.receptionSaved'));
+}
+
+// Adjuntar la foto/PDF real del albarán o factura del proveedor, para tener
+// el justificante junto al pedido en vez de solo el resumen que ya se
+// registra a mano en el control de recepción. Se guarda como data URL
+// (base64) directamente en la base de datos, igual que el logo del negocio
+// — sin backend de subida de archivos, con un límite de tamaño para no
+// disparar el peso de la base de datos.
+const ALBARAN_MAX_KB = 1500;
+function handleAlbaranUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > ALBARAN_MAX_KB * 1024){
+    showToast(t('albaran.tooLarge').replace('${maxKb}', ALBARAN_MAX_KB));
+    input.value = '';
+    return;
+  }
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    o.albaranFile = {dataUrl: reader.result, name: file.name, size: file.size, uploadedAt: new Date().toISOString()};
+    saveDB();
+    renderPedidoDetail();
+    showToast(t('albaran.uploadedOk'));
+  };
+  reader.onerror = () => showToast(t('albaran.uploadFailed'));
+  reader.readAsDataURL(file);
+}
+function removeAlbaranFile(){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o) return;
+  delete o.albaranFile;
+  saveDB();
+  renderPedidoDetail();
 }
 
 function setPedidoComprobacion(value){
