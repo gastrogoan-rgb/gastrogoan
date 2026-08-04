@@ -2672,6 +2672,11 @@ function facebookProfileUrl(handle){
   if(!h) return '';
   return /^https?:\/\//i.test(h) ? h : 'https://facebook.com/' + encodeURIComponent(h);
 }
+function tiktokProfileUrl(handle){
+  const h = (handle||'').trim().replace(/^@/, '');
+  if(!h) return '';
+  return /^https?:\/\//i.test(h) ? h : 'https://www.tiktok.com/@' + encodeURIComponent(h);
+}
 function renderPromoSocialLinks(){
   const box = document.getElementById('promo-social-links');
   if(!box) return;
@@ -2679,6 +2684,7 @@ function renderPromoSocialLinks(){
   const links = [
     { url: instagramProfileUrl(b.ig), icon: 'ti-brand-instagram', label: 'Instagram' },
     { url: facebookProfileUrl(b.fb), icon: 'ti-brand-facebook', label: 'Facebook' },
+    { url: tiktokProfileUrl(b.tiktok), icon: 'ti-brand-tiktok', label: 'TikTok' },
     { url: (b.gmaps||'').trim(), icon: 'ti-brand-google', label: t('mn.business.gmapsLabel') },
   ].filter(l => l.url);
   if(!links.length){
@@ -3845,6 +3851,10 @@ function renderMiNegocio(){
           <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal" onchange="saveBusiness(true)">
         </div>
         <div class="field">
+          <label>TikTok</label>
+          <input type="text" id="mn-tiktok" value="${escapeHtml(b.tiktok||'')}" placeholder="@milocal" onchange="saveBusiness(true)">
+        </div>
+        <div class="field">
           <label>${t('mn.business.gmapsLabel')}</label>
           <input type="url" id="mn-gmaps" value="${escapeHtml(b.gmaps||'')}" placeholder="https://maps.app.goo.gl/..." onchange="saveBusiness(true)">
         </div>
@@ -4355,6 +4365,7 @@ function saveBusiness(silent){
   if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
   if(el('mn-gmaps')) DB.business.gmaps = el('mn-gmaps').value.trim();
+  if(el('mn-tiktok')) DB.business.tiktok = el('mn-tiktok').value.trim();
   if(el('mn-serv-mesa') && el('mn-serv-takeaway') && el('mn-serv-delivery')) {
     DB.business.tiposServicio = {
       mesa: el('mn-serv-mesa').checked,

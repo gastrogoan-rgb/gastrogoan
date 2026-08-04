@@ -2685,7 +2685,7 @@ function defaultData(){
     business: {
       name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',
-      mesasInterior:'', mesasTerraza:'', aforo:'', ig:'', fb:'', gmaps:'',
+      mesasInterior:'', mesasTerraza:'', aforo:'', ig:'', fb:'', gmaps:'', tiktok:'',
       pin:'1234', pinSet:false,
       horario: defaultHorario(),
       cartaAuto: true,
