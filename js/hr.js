@@ -2279,6 +2279,27 @@ function renderTeamPulseHtml(){
         }).join('')}
       </div>`);
   }
+  const pendingVacations = (DB.vacationRequests||[]).filter(r => r.status==='pending').filter(r => {
+    const emp = DB.employees.find(e=>e.id===r.employeeId);
+    return emp && (emp.area||'cocina')===currentArea();
+  });
+  if(pendingVacations.length){
+    parts.push(`
+      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--amber)">
+        <h4 style="margin-bottom:6px"><i class="ti ti-beach"></i> ${t('vacation.ownerPendingTitle')}</h4>
+        ${pendingVacations.map(r => {
+          const emp = DB.employees.find(e=>e.id===r.employeeId);
+          return `<div style="font-size:12.5px;margin-bottom:6px">
+            ${t('vacation.ownerPendingLine').replace('${name}', escapeHtml(emp?emp.name:'?')).replace('${from}', escapeHtml(r.fromDate)).replace('${to}', escapeHtml(r.toDate))}
+            ${r.notes ? `<div style="color:var(--muted)">${escapeHtml(r.notes)}</div>` : ''}
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <button class="btn btn-sm btn-primary" onclick="ownerRespondVacationRequest(${r.id}, true)">${t('common.accept')}</button>
+              <button class="btn btn-sm" onclick="ownerRespondVacationRequest(${r.id}, false)">${t('common.reject')}</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`);
+  }
   const longShifts = getLongShiftWarnings().filter(x => (x.employee.area||'cocina')===currentArea());
   if(longShifts.length){
     parts.push(`
@@ -2866,8 +2887,10 @@ function openEmployeeFicharModal(employeeId){
       <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
         <button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button>
         <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
+        <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
       </div>
       ${renderIncomingSwapRequestsHtml(e.id)}
+      ${renderMyVacationRequestsHtml(e.id)}
       <div class="field" style="margin-top:12px;text-align:left">
         <label>${t('handoff.label')}</label>
         <textarea id="handoff-note-input" rows="2" placeholder="${t('handoff.placeholder')}" onchange="saveShiftHandoffNote('${(e.area||'cocina')}', this.value)">${escapeHtml(getShiftHandoffNote(e.area||'cocina'))}</textarea>
@@ -2959,6 +2982,76 @@ function ownerApproveTurnoSwap(requestId, approve){
   }
   saveDB();
   showToast(approve ? t('swap.approvedOk') : t('swap.rejected'));
+  renderHorariosTab();
+}
+
+// Solicitud de vacaciones: el empleado pide un rango de fechas, el
+// propietario la aprueba o la rechaza. Al aprobarla se crean turnos tipo
+// "V" (vacaciones, ya existente en SHIFT_TYPES) para cada día del rango,
+// igual que ownerApproveTurnoSwap reasigna un turno ya existente — aquí en
+// vez de reasignar, se crean turnos nuevos que "ocupan" ese hueco en el
+// cuadrante para que quede reflejado sin tener que rellenarlo a mano día
+// a día.
+function renderMyVacationRequestsHtml(employeeId){
+  const mine = (DB.vacationRequests||[]).filter(r => r.employeeId===employeeId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  if(!mine.length) return '';
+  const statusLabel = s => s==='pending' ? t('vacation.statusPending') : s==='approved' ? t('vacation.statusApproved') : t('vacation.statusRejected');
+  return `
+    <div class="card" style="margin-top:12px;text-align:left">
+      <h4 style="margin-bottom:6px;font-size:13px"><i class="ti ti-beach"></i> ${t('vacation.myRequestsTitle')}</h4>
+      ${mine.slice(0,5).map(r => `<div style="font-size:12.5px;margin-bottom:4px">${escapeHtml(r.fromDate)} → ${escapeHtml(r.toDate)} — <strong>${statusLabel(r.status)}</strong></div>`).join('')}
+    </div>`;
+}
+function openVacationRequestModal(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</h3>
+      <button class="modal-close" onclick="openEmployeeFicharModal(${employeeId})">&times;</button>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>${t('vacation.fromLabel')}</label><input type="date" id="vac-from" min="${todayStr()}" value="${todayStr()}"></div>
+      <div class="field"><label>${t('vacation.toLabel')}</label><input type="date" id="vac-to" min="${todayStr()}" value="${todayStr()}"></div>
+    </div>
+    <div class="field"><label>${t('vacation.notesLabel')}</label><textarea id="vac-notes" rows="2"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openEmployeeFicharModal(${employeeId})">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="submitVacationRequest(${employeeId})">${t('swap.sendRequest')}</button>
+    </div>
+  `);
+}
+function submitVacationRequest(employeeId){
+  const fromDate = document.getElementById('vac-from').value;
+  const toDate = document.getElementById('vac-to').value;
+  const notes = document.getElementById('vac-notes').value.trim();
+  if(!fromDate || !toDate || toDate < fromDate){ showToast(t('vacation.badRange')); return; }
+  if(!DB.vacationRequests) DB.vacationRequests = [];
+  DB.vacationRequests.push({id: genId(), employeeId, fromDate, toDate, notes, status:'pending', createdAt: new Date().toISOString()});
+  saveDB();
+  showToast(t('swap.requestSent'));
+  openEmployeeFicharModal(employeeId);
+}
+function ownerRespondVacationRequest(requestId, approve){
+  const r = (DB.vacationRequests||[]).find(x=>x.id===requestId);
+  if(!r) return;
+  if(approve){
+    r.status = 'approved';
+    let d = new Date(r.fromDate);
+    const end = new Date(r.toDate);
+    while(d <= end){
+      const fecha = dateStr(d);
+      if(!(DB.turnos||[]).some(t2 => t2.employeeId===r.employeeId && t2.fecha===fecha)){
+        DB.turnos.push({id: genId(), employeeId: r.employeeId, fecha, tipo:'V', entrada:'', salida:''});
+      }
+      d.setDate(d.getDate()+1);
+    }
+  }else{
+    r.status = 'rejected';
+  }
+  logAudit(approve?'vacation_approved':'vacation_rejected', t(approve?'audit.vacationApproved':'audit.vacationRejected').replace('${name}', (DB.employees.find(e=>e.id===r.employeeId)||{}).name||'?'));
+  saveDB();
+  showToast(approve ? t('vacation.approvedOk') : t('swap.rejected'));
   renderHorariosTab();
 }
 

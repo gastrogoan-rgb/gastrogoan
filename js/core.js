@@ -1523,7 +1523,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist'
+  'voidLog','discountLog','waitlist','vacationRequests'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
@@ -2706,6 +2706,7 @@ function defaultData(){
     auditLog: [], // {id, ts, actor, action, summary} — quién hizo qué, para negocios con varios encargados
     pushSubscriptions: [], // {deviceId, subscription, updatedAt} — dispositivos suscritos a avisos push reales
     waitlist: [], // {id, name, phone, people, notes, status:'esperando'|'sentado'|'cancelada', createdAt} — cola de espera para walk-ins sin mesa libre
+    vacationRequests: [], // {id, employeeId, fromDate, toDate, notes, status:'pending'|'approved'|'rejected', createdAt}
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {
