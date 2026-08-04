@@ -205,6 +205,10 @@ const I18N = {
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'deposit.notice.title':'Esta reserva requiere señal',
     'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. El restaurante te contactará para gestionarla.',
+    'nps.title':'¿Qué tal tu experiencia en ${business}?', 'nps.subtitle':'Tu opinión es privada y solo la ve el restaurante — no se publica en ningún sitio.',
+    'nps.low':'Nada probable', 'nps.high':'Muy probable', 'nps.commentLabel':'¿Algo que quieras contarnos? (opcional)',
+    'nps.commentPlaceholder':'Cuéntanos qué tal fue todo...', 'nps.submit':'Enviar', 'nps.needScore':'Elige una puntuación del 0 al 10.',
+    'nps.thanks':'¡Gracias por tu opinión!',
     'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
     'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
     'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
@@ -254,6 +258,10 @@ const I18N = {
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'deposit.notice.title':'This booking requires a deposit',
     'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. The restaurant will contact you about it.',
+    'nps.title':'How was your experience at ${business}?', 'nps.subtitle':'Your answer is private and only seen by the restaurant — never published anywhere.',
+    'nps.low':'Not at all likely', 'nps.high':'Very likely', 'nps.commentLabel':'Anything you\'d like to tell us? (optional)',
+    'nps.commentPlaceholder':'Tell us how it went...', 'nps.submit':'Send', 'nps.needScore':'Pick a score from 0 to 10.',
+    'nps.thanks':'Thanks for your feedback!',
     'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
     'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
     'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
@@ -303,6 +311,10 @@ const I18N = {
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'deposit.notice.title':'Aquesta reserva requereix senyal',
     'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. El restaurant et contactarà per gestionar-la.',
+    'nps.title':'Què tal la teva experiència a ${business}?', 'nps.subtitle':'La teva opinió és privada i només la veu el restaurant — no es publica enlloc.',
+    'nps.low':'Gens probable', 'nps.high':'Molt probable', 'nps.commentLabel':'Alguna cosa que ens vulguis explicar? (opcional)',
+    'nps.commentPlaceholder':'Explica\'ns què tal va anar tot...', 'nps.submit':'Enviar', 'nps.needScore':'Tria una puntuació del 0 al 10.',
+    'nps.thanks':'Gràcies per la teva opinió!',
     'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
     'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
     'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
@@ -626,6 +638,14 @@ function getActiveCartas(){
 }
 
 function renderApp(){
+  // Encuesta de satisfacción privada (NPS): enlace aparte (?nps=1) que el
+  // negocio manda tras la visita, distinto del enlace de reseña pública de
+  // Google — sirve para detectar a alguien insatisfecho ANTES de que dejara
+  // una mala reseña pública, y solo el negocio ve la nota y el comentario.
+  if(new URLSearchParams(location.search).get('nps') === '1'){
+    renderNpsSurvey();
+    return;
+  }
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const tabs = [];
   if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? t('tab.mesa.qr') : t('tab.mesa')});
@@ -844,6 +864,45 @@ async function checkDeliveryZone(p, codigoPostal, direccion){
 }
 
 /* ============ RESERVA ============ */
+function renderNpsSurvey(){
+  const bizName = (DB.business && DB.business.name) || t('reserva.title');
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <h2>${t('nps.title').replace('${business}', escapeHtml(bizName))}</h2>
+      <p style="font-size:13px;color:#888">${t('nps.subtitle')}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:16px 0" id="nps-scale">
+        ${Array.from({length:11},(_, n) => `<button type="button" class="btn" style="min-width:38px;padding:8px 0" data-score="${n}" onclick="selectNpsScore(${n})">${n}</button>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:-10px;margin-bottom:14px">
+        <span>${t('nps.low')}</span><span>${t('nps.high')}</span>
+      </div>
+      <div class="field">
+        <label>${t('nps.commentLabel')}</label>
+        <textarea id="nps-comment" placeholder="${t('nps.commentPlaceholder')}"></textarea>
+      </div>
+      <button class="btn btn-primary" id="nps-submit" onclick="submitNps()">${t('nps.submit')}</button>
+    </div>
+  `;
+}
+let npsSelectedScore = null;
+function selectNpsScore(n){
+  npsSelectedScore = n;
+  document.querySelectorAll('#nps-scale button').forEach(b => {
+    b.classList.toggle('btn-primary', parseInt(b.dataset.score) === n);
+  });
+}
+function submitNps(){
+  if(npsSelectedScore === null){ alert(t('nps.needScore')); return; }
+  const comment = document.getElementById('nps-comment').value.trim();
+  const req = {
+    type: 'nps_response', score: npsSelectedScore, comment,
+    createdAt: new Date().toISOString()
+  };
+  const btn = document.getElementById('nps-submit');
+  if(btn) btn.disabled = true;
+  sendRequest(req, t('nps.thanks'));
+}
+
 function renderReservaForm(){
   const box = document.getElementById('tab-content');
   box.innerHTML = `

@@ -3410,13 +3410,27 @@ const PROMO_MESSAGE_TEMPLATES = {
     const link = (DB.business && DB.business.gmaps || '').trim();
     return link ? base + '\n' + link : base;
   },
-  vuelve: (c, biz) => t('promo.clients.template.vuelve').replace('${name}', c.name).replace('${biz}', biz)
+  vuelve: (c, biz) => t('promo.clients.template.vuelve').replace('${name}', c.name).replace('${biz}', biz),
+  nps: (c, biz) => {
+    const base = t('promo.clients.template.nps').replace('${name}', c.name).replace('${biz}', biz);
+    return base + '\n' + npsSurveyLink();
+  }
 };
 const PROMO_MESSAGE_SUBJECTS = {
   cumple: () => t('promo.clients.subject.cumple'),
   resena: () => t('promo.clients.subject.resena'),
-  vuelve: () => t('promo.clients.subject.vuelve')
+  vuelve: () => t('promo.clients.subject.vuelve'),
+  nps: () => t('promo.clients.subject.nps')
 };
+// El enlace de la encuesta privada reutiliza el mismo enlace público de
+// reservas/pedidos, con &nps=1 añadido — así reservagastrogoan.html sabe
+// que tiene que mostrar el formulario de puntuación en vez de las pestañas
+// normales de reserva/pedido.
+function npsSurveyLink(){
+  const base = getPublicClientLink();
+  if(!base) return '';
+  return base + (base.includes('?') ? '&nps=1' : '?nps=1');
+}
 
 // Días que faltan hasta el próximo cumpleaños (cumpleanos en formato YYYY-MM-DD).
 function nextBirthdayDays(cumpleanos){
@@ -3516,9 +3530,40 @@ function renderPromoClientes(){
     </div>
 
     <h3><i class="ti ti-mood-empty"></i> ${t('promo.clients.inactiveClients')}</h3>
-    <div class="grid grid-3">
+    <div class="grid grid-3" style="margin-bottom:18px">
       ${inactivos.length ? inactivos.slice(0,12).map(({c,days}) => clientCard(c, 'vuelve', days!=null ? `<span class="badge badge-gray">${t('promo.clients.daysAgo').replace('${n}', days)}</span>` : `<span class="badge badge-gray">${t('promo.clients.noVisits')}</span>`)).join('')
         : `<div class="empty"><i class="ti ti-users"></i>${t('promo.clients.noInactiveClients')}</div>`}
+    </div>
+
+    <h3><i class="ti ti-mood-smile"></i> ${t('nps.sectionTitle')}</h3>
+    ${renderNpsSummaryHtml()}
+    <div class="grid grid-3" style="margin-top:10px">
+      ${recientes.length ? recientes.map(({c,days}) => clientCard(c, 'nps', `<span class="badge badge-green">${days===0?t('promo.clients.agoToday'):t('promo.clients.agoDaysSuffix').replace('${n}', days).replace('${s}', days!==1?'s':'')}</span>`)).join('')
+        : `<div class="empty"><i class="ti ti-mood-smile"></i>${t('promo.clients.noRecentVisits')}</div>`}
+    </div>
+  `;
+}
+
+// Resumen NPS: media simple (0-10) sobre las últimas respuestas, más las
+// últimas con comentario (lo que más útil es leer directamente, ya que un
+// número solo no dice nada del porqué).
+function renderNpsSummaryHtml(){
+  const scores = DB.npsScores || [];
+  if(!scores.length){
+    return `<div class="empty" style="margin-top:10px"><i class="ti ti-chart-bar"></i>${t('nps.noResponsesYet')}</div>`;
+  }
+  const avg = (scores.reduce((s,x)=>s+x.score,0) / scores.length).toFixed(1);
+  const detractors = scores.filter(x=>x.score<=6).length;
+  const withComments = [...scores].filter(x=>x.comment).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);
+  return `
+    <div class="card" style="max-width:520px">
+      <div style="display:flex;gap:18px;align-items:center">
+        <div style="font-size:28px;font-weight:700">${avg}<span style="font-size:14px;color:var(--muted)">/10</span></div>
+        <div style="font-size:12.5px;color:var(--muted)">${t('nps.responsesCount').replace('${n}', scores.length)}${detractors ? `<br>${t('nps.detractorsCount').replace('${n}', detractors)}` : ''}</div>
+      </div>
+      ${withComments.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+        ${withComments.map(x => `<div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px"><strong>${x.score}/10</strong> — ${escapeHtml(x.comment)}</div>`).join('')}
+      </div>` : ''}
     </div>
   `;
 }
@@ -3569,7 +3614,8 @@ function sendPromoClientEmail(id, subject){
 const CLIENT_OUTREACH_LABELS = {
   cumple: () => t('promo.clients.outreachLabel.cumple'),
   resena: () => t('promo.clients.outreachLabel.resena'),
-  vuelve: () => t('promo.clients.outreachLabel.vuelve')
+  vuelve: () => t('promo.clients.outreachLabel.vuelve'),
+  nps: () => t('promo.clients.outreachLabel.nps')
 };
 function registerClientOutreachAsPromo(clientId, templateKey){
   const c = DB.clients.find(x=>x.id===clientId);

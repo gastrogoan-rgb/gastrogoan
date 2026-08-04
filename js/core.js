@@ -1523,7 +1523,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests'
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
@@ -1717,6 +1717,9 @@ function initPublicRequestsListener(){
           origen: 'publico', createdAt: new Date().toISOString()
         });
         notifyNewRequest = true;
+      }else if(req.type === 'nps_response'){
+        if(!DB.npsScores) DB.npsScores = [];
+        DB.npsScores.push({id: genId(), score: req.score, comment: req.comment || '', createdAt: new Date().toISOString()});
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
@@ -2707,6 +2710,7 @@ function defaultData(){
     pushSubscriptions: [], // {deviceId, subscription, updatedAt} — dispositivos suscritos a avisos push reales
     waitlist: [], // {id, name, phone, people, notes, status:'esperando'|'sentado'|'cancelada', createdAt} — cola de espera para walk-ins sin mesa libre
     vacationRequests: [], // {id, employeeId, fromDate, toDate, notes, status:'pending'|'approved'|'rejected', createdAt}
+    npsScores: [], // {id, score:0-10, comment, createdAt} — respuestas privadas de la encuesta de satisfacción (NPS)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {
