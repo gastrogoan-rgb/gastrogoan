@@ -464,6 +464,36 @@ const GE = (function(){
     }
     document.getElementById('gv-total-lbl').textContent = `${t('hr.lbl.totalVariables')} ${getMeses()[mes].toUpperCase()}`;
     document.getElementById('gv-total-val').innerHTML = `${fmtMoney(tvNeto)} <span style="font-size:11px;font-weight:400;color:var(--muted)">+ ${t('common.vat')} ${fmtMoney(ivaSop)} = ${fmtMoney(tvMes)}</span>`;
+    renderGastoHormiga();
+  }
+
+  // "Gasto hormiga": proveedores con muchos cargos pequeños y recurrentes a
+  // lo largo del año (comisiones, suministros puntuales...) que por
+  // separado parecen insignificantes pero suman más de lo que parece.
+  // Mira el año entero, no solo el mes activo, para detectar el patrón.
+  function renderGastoHormiga(){
+    const box = document.getElementById('gv-hormiga');
+    if(!box) return;
+    const all = variables().filter(v => parseInt(v.año) === currentYear);
+    const byProv = {};
+    all.forEach(v => {
+      const key = v.proveedor || t('common.unknown');
+      (byProv[key] = byProv[key]||[]).push(parseFloat(v.importe||0));
+    });
+    const candidates = Object.entries(byProv)
+      .map(([prov, amounts]) => ({prov, n: amounts.length, total: amounts.reduce((a,b)=>a+b,0), avg: amounts.reduce((a,b)=>a+b,0)/amounts.length}))
+      .filter(c => c.n >= 6 && c.avg < 60)
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 5);
+    if(!candidates.length){ box.innerHTML = ''; return; }
+    box.innerHTML = `
+      <div class="card" style="margin-bottom:14px;border:1px solid var(--amber);background:var(--amber-l)">
+        <h4 style="margin-bottom:4px"><i class="ti ti-ant"></i> ${t('hr.hormiga.title')}</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('hr.hormiga.desc').replace('${year}', currentYear)}</p>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${candidates.map(c => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escapeHtml(c.prov)} <span style="color:var(--muted)">(${c.n}${t('hr.hormiga.timesSuffix')}, ${fmtMoney(c.avg)}${t('hr.hormiga.avgSuffix')})</span></span><strong>${fmtMoney(c.total)}</strong></div>`).join('')}
+        </div>
+      </div>`;
   }
   function setMonth(m){ activeMonth = m; renderVariables(); }
   function setGVSearch(v){ gvSearch = v; renderVariables(); }
@@ -978,6 +1008,73 @@ const GE = (function(){
     });
     html += '</tbody>';
     document.getElementById('res-table').innerHTML = html;
+    renderMonthComparison();
+    renderSimulator();
+  }
+
+  // Compara el mes en curso (año actual) con el mes anterior y con el mismo
+  // mes del año pasado — de un vistazo, sin tener que leer la tabla entera
+  // de trimestres para hacer la resta mentalmente.
+  function renderMonthComparison(){
+    const box = document.getElementById('res-comparison');
+    if(!box) return;
+    const now = new Date();
+    const curM = now.getMonth(), curY = now.getFullYear();
+    const prevM = curM===0?11:curM-1, prevMY = curM===0?curY-1:curY;
+    const revCur = facturacionNetaMes(curM, curY);
+    const revPrev = facturacionNetaMes(prevM, prevMY);
+    const revYoy = facturacionNetaMes(curM, curY-1);
+    const resCur = resultadoAntesImpMes(curM, curY);
+    const resPrev = resultadoAntesImpMes(prevM, prevMY);
+    const resYoy = resultadoAntesImpMes(curM, curY-1);
+    function pctDelta(cur, ref){
+      if(!ref) return null;
+      return ((cur-ref)/Math.abs(ref))*100;
+    }
+    function badge(delta){
+      if(delta===null) return `<span class="badge badge-gray">—</span>`;
+      const cls = delta>=0 ? 'badge-green' : 'badge-red';
+      const sign = delta>=0 ? '+' : '';
+      return `<span class="badge ${cls}">${sign}${delta.toFixed(1)}%</span>`;
+    }
+    box.innerHTML = `
+      <div class="grid grid-2" style="margin-bottom:14px">
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
+        <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
+      </div>`;
+  }
+
+  // Simulador "¿y si...?": mueve dos supuestos (variación de precios de
+  // venta, coste extra de personal al mes) y ve el impacto estimado en el
+  // resultado del mes en curso, sin tener que cambiar nada de verdad en
+  // la carta ni en gastos fijos para verlo.
+  let simPctPrecio = 0, simCosteExtra = 0;
+  function setSimPctPrecio(v){ simPctPrecio = parseFloat(v)||0; renderSimulator(); }
+  function setSimCosteExtra(v){ simCosteExtra = parseFloat(v)||0; renderSimulator(); }
+  function renderSimulator(){
+    const box = document.getElementById('res-simulator');
+    if(!box) return;
+    const now = new Date();
+    const curM = now.getMonth(), curY = now.getFullYear();
+    const resActual = resultadoAntesImpMes(curM, curY);
+    const revActual = facturacionNetaMes(curM, curY);
+    const revSim = revActual * (1 + simPctPrecio/100);
+    const resSim = resActual + (revSim - revActual) - simCosteExtra;
+    const delta = resSim - resActual;
+    box.innerHTML = `
+      <div class="card">
+        <h4 style="margin-bottom:4px"><i class="ti ti-adjustments-alt"></i> ${t('hr.sim.title')}</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('hr.sim.desc')}</p>
+        <div class="field-row">
+          <div class="field"><label>${t('hr.sim.priceChangeLabel')}</label><input type="number" step="0.5" value="${simPctPrecio}" oninput="GE.setSimPctPrecio(this.value)">%</div>
+          <div class="field"><label>${t('hr.sim.extraStaffCostLabel')}</label><input type="number" step="10" value="${simCosteExtra}" oninput="GE.setSimCosteExtra(this.value)">€/${t('common.month')}</div>
+        </div>
+        <div class="ge-kpi" style="margin-top:6px">
+          <div class="lbl">${t('hr.sim.projectedResultLabel')}</div>
+          <div class="val" style="color:${resSim>=resActual?'var(--green)':'var(--red)'}">${fmtMoney(resSim)}</div>
+          <div class="sub">${t('hr.sim.vsActualLabel')} ${fmtMoney(resActual)} (${delta>=0?'+':''}${fmtMoney(delta)})</div>
+        </div>
+      </div>`;
   }
 
   /* -- TESORERÍA -- */
@@ -1091,6 +1188,40 @@ const GE = (function(){
 
     document.getElementById('te-annual-chart').innerHTML = barChartHTML(getMeses().map((m,i)=>({lbl:m, v:resultadoMes(i, teYear)})));
     renderTesoreriaUpcoming();
+    renderTreasuryForecast();
+  }
+
+  // Previsión de tesorería a 30/60/90 días: parte del resultado medio de
+  // los últimos 3 meses ya cerrados (no el actual, que va a medias) y lo
+  // proyecta hacia delante día a día. Es una estimación basada en tu propio
+  // histórico reciente, no una promesa — por eso se marca como tal.
+  function renderTreasuryForecast(){
+    const box = document.getElementById('te-forecast');
+    if(!box) return;
+    const now = new Date();
+    let m = now.getMonth(), y = now.getFullYear();
+    const lastMonths = [];
+    for(let i=0; i<3; i++){
+      m -= 1;
+      if(m < 0){ m = 11; y -= 1; }
+      lastMonths.push({m, y});
+    }
+    const results = lastMonths.map(({m,y}) => resultadoAntesImpMes(m,y));
+    const hasHistory = results.some(r => r !== 0);
+    if(!hasHistory){ box.innerHTML = ''; return; }
+    const avgMonthly = results.reduce((a,b)=>a+b,0) / results.length;
+    const dailyRate = avgMonthly / 30.4;
+    const proj = n => dailyRate * n;
+    box.innerHTML = `
+      <div class="card" style="margin:12px 0">
+        <h4 style="margin-bottom:4px"><i class="ti ti-crystal-ball"></i> ${t('hr.forecast.title')}</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('hr.forecast.desc')}</p>
+        <div class="grid grid-3">
+          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',30)}</div><div class="val" style="color:${proj(30)>=0?'var(--green)':'var(--red)'}">${proj(30)>=0?'+':''}${fmtMoney(proj(30))}</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',60)}</div><div class="val" style="color:${proj(60)>=0?'var(--green)':'var(--red)'}">${proj(60)>=0?'+':''}${fmtMoney(proj(60))}</div></div>
+          <div class="ge-kpi"><div class="lbl">${t('hr.forecast.days').replace('${n}',90)}</div><div class="val" style="color:${proj(90)>=0?'var(--green)':'var(--red)'}">${proj(90)>=0?'+':''}${fmtMoney(proj(90))}</div></div>
+        </div>
+      </div>`;
   }
   // Gastos Fijos periódicos (periodicidadMeses>1) cuyo pago cae en el mes visto: son un
   // desembolso de caja real que no se ve en el "Resultado" mensual (ya suavizado).
@@ -1625,7 +1756,7 @@ const GE = (function(){
     );
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, setSimPctPrecio, setSimCosteExtra};
 })();
 
 /* ============================================================
@@ -2120,20 +2251,77 @@ function setPersonalSearch(val){
   renderHorariosPersonal();
 }
 
+// Ranking amistoso de ventas del mes (por camarero, a partir de camareroId
+// en cada venta) + termómetro de clima del equipo (media de las respuestas
+// de esta semana) — ambos solo para el propietario, con tono positivo, sin
+// mostrar a nadie "el peor", solo reconocer a los que más venden.
+function renderTeamPulseHtml(){
+  const parts = [];
+  if(currentArea()==='sala'){
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+    const salesThisMonth = DB.sales.filter(s => s.date >= monthStart && s.camareroId);
+    const byWaiter = {};
+    salesThisMonth.forEach(s => { byWaiter[s.camareroId] = (byWaiter[s.camareroId]||0) + s.total; });
+    const ranking = Object.entries(byWaiter)
+      .map(([id, total]) => ({emp: DB.employees.find(e => e.id===parseInt(id) || e.id===id), total}))
+      .filter(r => r.emp)
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 3);
+    if(ranking.length){
+      const medals = ['🥇','🥈','🥉'];
+      parts.push(`
+        <div class="card owner-only" style="margin-bottom:10px">
+          <h4 style="margin-bottom:6px"><i class="ti ti-trophy"></i> ${t('hr.ranking.title')}</h4>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            ${ranking.map((r,i) => `<div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${medals[i]} ${escapeHtml(r.emp.name)}</span><strong>${fmtMoney(r.total)}</strong></div>`).join('')}
+          </div>
+        </div>`);
+    }
+  }
+  const wk = currentWeekKey();
+  const moodThisWeek = (DB.moodCheckins||[]).filter(c => c.weekKey===wk);
+  if(moodThisWeek.length){
+    const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
+    const faces = ['😞','🙁','😐','🙂','😄'];
+    parts.push(`
+      <div class="card owner-only" style="margin-bottom:10px">
+        <h4 style="margin-bottom:4px"><i class="ti ti-mood-smile"></i> ${t('hr.moodPulse.title')}</h4>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:28px">${faces[Math.round(avg)-1]||'😐'}</span>
+          <span style="font-size:13px;color:var(--muted)">${t('hr.moodPulse.desc').replace('${n}', moodThisWeek.length).replace('${avg}', avg.toFixed(1))}</span>
+        </div>
+      </div>`);
+  }
+  return parts.join('');
+}
+
 function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
   const allEmps = areaEmployees();
   const emps = personalSearch ? allEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : allEmps;
+  // "Empleado del mes" (top ventas) — solo tiene sentido en Sala, donde las
+  // ventas quedan atribuidas a un camarero concreto.
+  let topSellerId = null;
+  if(currentArea()==='sala'){
+    const monthStart = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
+    const byWaiter = {};
+    DB.sales.filter(s => s.date >= monthStart && s.camareroId).forEach(s => { byWaiter[s.camareroId] = (byWaiter[s.camareroId]||0) + s.total; });
+    const top = Object.entries(byWaiter).sort((a,b)=>b[1]-a[1])[0];
+    if(top) topSellerId = top[0];
+  }
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
     const isInactive = e.active === false;
+    const isTopSeller = topSellerId!=null && (e.id===parseInt(topSellerId) || e.id===topSellerId);
+    const tenureYears = e.fechaAlta ? Math.floor((Date.now() - new Date(e.fechaAlta+'T00:00:00')) / (365.25*86400000)) : 0;
     return `
     <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="requestEmployeePersonalPin(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
-          <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)}</strong>
+          <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)} ${isTopSeller?`<span title="${t('hr.badge.topSeller')}">🏆</span>`:''}${tenureYears>=1?`<span title="${t('hr.badge.tenure').replace('${n}',tenureYears)}">${'⭐'.repeat(Math.min(tenureYears,3))}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
@@ -2153,6 +2341,7 @@ function renderHorariosPersonal(){
   `;}).join('');
 
   box.innerHTML = `
+    ${renderTeamPulseHtml()}
     <div class="toolbar">
       <div class="left">
         <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
@@ -2423,7 +2612,7 @@ function saveEmployee(id){
     if(empActiveEl) emp.active = empActiveEl.checked;
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false, active:true});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false, active:true, fechaAlta: todayStr()});
   }
   saveDB();
   closeModal();
@@ -2539,7 +2728,48 @@ function confirmEmployeePersonalPin(){
   if(!e) return;
   const val = document.getElementById('personal-pin-input').value;
   if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
+  if(!hasAnsweredMoodThisWeek(e.id)){ promptMoodCheckin(e.id); return; }
   openEmployeeFicharModal(e.id);
+}
+
+// Clave de la semana en curso (lunes de esa semana), para no preguntar el
+// check-in de clima más de una vez por semana a la misma persona.
+function currentWeekKey(){ return dateStr(getWeekDates(0)[0]); }
+function hasAnsweredMoodThisWeek(employeeId){
+  const wk = currentWeekKey();
+  return (DB.moodCheckins||[]).some(c => c.employeeId===employeeId && c.weekKey===wk);
+}
+// Encuesta de clima semanal: un solo toque (1-5), totalmente opcional, para
+// que el dueño pueda ver de un vistazo cómo está el equipo sin tener que
+// preguntar uno a uno. No bloquea fichar ni ninguna otra acción.
+function promptMoodCheckin(employeeId){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  const faces = ['😞','🙁','😐','🙂','😄'];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-mood-smile"></i> ${t('mood.title')}</h3>
+      <button class="modal-close" onclick="skipMoodCheckin(${employeeId})">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('mood.desc')}</p>
+    <div style="display:flex;justify-content:space-between;gap:6px;margin:14px 0">
+      ${faces.map((f,i) => `<button class="btn" style="flex:1;font-size:26px;padding:12px 0" onclick="submitMoodCheckin(${employeeId},${i+1})">${f}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="skipMoodCheckin(${employeeId})">${t('common.later')}</button>
+    </div>
+  `);
+}
+function submitMoodCheckin(employeeId, value){
+  DB.moodCheckins.push({id: genId(), employeeId, weekKey: currentWeekKey(), value, ts: new Date().toISOString()});
+  saveDB();
+  closeModal();
+  showToast(t('mood.thanks'));
+  openEmployeeFicharModal(employeeId);
+}
+function skipMoodCheckin(employeeId){
+  closeModal();
+  openEmployeeFicharModal(employeeId);
 }
 function openEmployeeFicharModal(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);

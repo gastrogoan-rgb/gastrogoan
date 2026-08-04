@@ -195,6 +195,9 @@ const I18N = {
     'tab.mesa':'📱 Pedir en mesa','tab.mesa.qr':'📱 Tu pedido','tab.reserva':'🍽️ Reservar mesa','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
     'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva',
+    'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
     'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
@@ -235,6 +238,9 @@ const I18N = {
     'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
     'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request',
+    'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
     'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
@@ -275,6 +281,9 @@ const I18N = {
     'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
     'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
     'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva',
+    'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
     'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
@@ -840,6 +849,19 @@ function renderReservaForm(){
         <label>${t('notas')}</label>
         <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
       </div>
+      <div class="field">
+        <label>${t('referral.label')}</label>
+        <select id="r-referral">
+          <option value="">${t('referral.placeholder')}</option>
+          <option value="instagram">${t('referral.instagram')}</option>
+          <option value="facebook">${t('referral.facebook')}</option>
+          <option value="tiktok">${t('referral.tiktok')}</option>
+          <option value="google">${t('referral.google')}</option>
+          <option value="friend">${t('referral.friend')}</option>
+          <option value="returning">${t('referral.returning')}</option>
+          <option value="other">${t('referral.other')}</option>
+        </select>
+      </div>
       <button class="btn btn-primary" id="r-submit" onclick="submitReserva()">${t('reserva.submit')}</button>
     </div>
   `;
@@ -854,6 +876,7 @@ function submitReserva(){
   const time = document.getElementById('r-time').value;
   const people = parseInt(document.getElementById('r-people').value) || 1;
   const notes = document.getElementById('r-notes').value.trim();
+  const referral = document.getElementById('r-referral')?.value || '';
 
   if(!clientName || !clientPhone || !date || !time){
     alert(t('error.campos.reserva'));
@@ -891,7 +914,7 @@ function submitReserva(){
   }
 
   const req = {
-    type:'reserva', clientName, clientPhone, date, time, people, notes,
+    type:'reserva', clientName, clientPhone, date, time, people, notes, referral,
     createdAt: new Date().toISOString()
   };
 

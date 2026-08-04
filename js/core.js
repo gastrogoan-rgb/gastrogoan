@@ -1711,6 +1711,7 @@ function initPublicRequestsListener(){
           clientName: req.clientName || '', clientPhone: req.clientPhone || '',
           date: req.date, time: req.time, people: req.people || 1,
           tableId: null, notes: req.notes || '', status: 'pendiente',
+          referral: req.referral || '',
           origen: 'publico', createdAt: new Date().toISOString()
         });
         notifyNewRequest = true;
@@ -2682,6 +2683,7 @@ function defaultData(){
     categoryIcons: {recipe:{}, ingredient:{}}, // iconos elegidos a mano para carpetas: 'recipe' (Escandallo/Fichas), 'ingredient' (Mega Lista/Stock)
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
+    moodCheckins: [], // {id, employeeId, weekKey, value(1-5), ts} — encuesta de clima semanal, opcional
     business: {
       name:'', address:'', phone:'', email:'', description:'',
       logo:'', tipo:'', anyo:'', web:'', cif:'', prop:'',

@@ -394,6 +394,7 @@
       <div class="view-subtitle" data-i18n="view.stock.subtitle">Inventario con alertas de mínimos</div>
 
       <div class="grid grid-4" id="stock-kpis" style="margin-bottom:14px"></div>
+      <div id="stock-mermas"></div>
 
       <div class="toolbar">
         <div class="left">
@@ -486,6 +487,7 @@
           <h4><span data-i18n="ge.gvCategoryChart">Gasto por categoría (mes)</span></h4>
           <div id="gv-cat-chart" class="bar-chart"></div>
         </div>
+        <div id="gv-hormiga"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 id="gv-sec-title">Compras del mes</h4>
             <button class="btn btn-sm" onclick="GE.newGV()"><i class="ti ti-plus"></i> <span data-i18n="btn.addExtraPurchase">Añadir compra extra</span></button></div>
@@ -531,7 +533,9 @@
           <div class="dist-field"><span data-i18n="label.vatOnPurchases">IVA soportado en compras (deducible)</span> <input type="number" id="res-pct-iva-compras" value="10" min="0" max="21" step="0.5" oninput="GE.setPctIvaCompras()">%</div>
         </div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-info-circle"></i> <span data-i18n="ge.netResultExplanation">El "Resultado Neto" ya descuenta el IVA de tus ventas (configurado en Ajustes &gt; Facturación, % IVA en tickets), resta el coste de tus compras sin el IVA que pagas a proveedores (deducible) y descuenta el impuesto sobre beneficios: es lo que realmente te llevas. En la "Cuenta de Resultados" verás además el "IVA a liquidar con Hacienda (modelo 303)", que es la diferencia entre el IVA cobrado en ventas y el IVA pagado en compras e inversiones.</span></p>
+        <div id="res-comparison"></div>
         <div class="ge-grid"><table id="res-table"></table></div>
+        <div id="res-simulator" style="margin-top:16px"></div>
       </div>
 
       <!-- TESORERÍA -->
@@ -544,6 +548,7 @@
         </div>
         <div class="month-sel" id="te-months"></div>
         <div class="te-kpis" id="te-kpis"></div>
+        <div id="te-forecast"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div class="dist-config">
           <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>

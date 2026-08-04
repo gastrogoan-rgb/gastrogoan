@@ -370,9 +370,17 @@ function renderCartaSecciones(){
         // desfase en vez de dejarlo desactualizado en silencio.
         const linkedRecipe = p.recipeId ? getRecipe(p.recipeId) : null;
         const priceStale = linkedRecipe && (linkedRecipe.price||0) !== (p.precio||0);
+        // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food
+        // cost sobre el precio de venta), para ver de un vistazo, sin salir
+        // de la Carta, qué platos tienen buen margen y cuáles lo están
+        // comiendo. Sin receta vinculada no hay coste que calcular.
+        const fcPct = linkedRecipe ? recipeFoodCostPct(linkedRecipe) : null;
+        const marginDot = fcPct==null || !isFinite(fcPct) ? ''
+          : `<span class="badge ${fcPct>35?'badge-red':fcPct>28?'badge-amber':'badge-green'}" style="flex:none" title="${t('carta.foodCostHint')}">${fcPct.toFixed(0)}% FC</span>`;
         return `
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
+          ${marginDot}
           <span class="carta-plato-name" style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           ${priceStale ? `<button class="btn btn-sm" style="color:var(--brand-orange);border-color:var(--brand-orange)" onclick="syncCartaPlatoPrice(${sec.id},${p.id})" title="El escandallo tiene un precio de venta distinto (${fmtMoney(linkedRecipe.price||0)})"><i class="ti ti-refresh-alert"></i> ${t('btn.updatePrice')}</button>` : ''}

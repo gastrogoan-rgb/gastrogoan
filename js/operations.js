@@ -147,6 +147,34 @@ function updateClosureDiffPreview(){
   box.style.color = diff===0 ? 'var(--ok, #2e7d32)' : (diff>0 ? 'var(--warn, #b8860b)' : 'var(--danger, #c0392b)');
 }
 
+// Umbral a partir del cual una descuadre de caja se considera lo bastante
+// grande como para avisar (no bloquea el cierre, solo lo señala para que no
+// pase desapercibido entre turno y turno).
+const CASH_DIFF_WARNING_THRESHOLD = 10;
+
+// Detecta, sin acusar a nadie directamente, patrones que conviene revisar
+// en un cierre: un descuadre de caja grande, o un mismo responsable
+// concentrando muchos descuentos/anulaciones en un solo turno. Devuelve una
+// lista de avisos en texto plano (vacía si no hay nada raro).
+function detectClosureWarnings(diferencia, discounts, voids){
+  const warnings = [];
+  if(diferencia !== null && Math.abs(diferencia) > CASH_DIFF_WARNING_THRESHOLD){
+    warnings.push(t('closure.warning.cashDiff').replace('${amount}', fmtMoney(Math.abs(diferencia))).replace('${sign}', diferencia<0?t('label.cashShortage'):t('label.cashSurplus')));
+  }
+  const byResp = {};
+  discounts.forEach(d => {
+    const key = d.responsableNombre || t('common.unknown');
+    byResp[key] = (byResp[key]||0) + 1;
+  });
+  Object.entries(byResp).forEach(([name, n]) => {
+    if(n >= 5) warnings.push(t('closure.warning.manyDiscounts').replace('${name}', name).replace('${n}', n));
+  });
+  if(voids.length >= 8){
+    warnings.push(t('closure.warning.manyVoids').replace('${n}', voids.length));
+  }
+  return warnings;
+}
+
 function performCashClosure(){
   const sales = getSalesForClosure();
   const {totales, total, ticketCount} = computeClosureTotals(sales);
@@ -160,13 +188,14 @@ function performCashClosure(){
   const notas = document.getElementById('closure-notas').value.trim();
   const desde = document.getElementById('closure-desde').value;
   const hasta = document.getElementById('closure-hasta').value;
+  const warnings = detectClosureWarnings(diferencia, discounts, voids);
 
   const closure = {
     id: genId(), fecha: todayStr(), desde, hasta,
     totales, total, ticketCount,
     descuentos: discounts, totalDescuentos: discounts.reduce((s,d)=>s+d.importe, 0),
     anulaciones: voids,
-    fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas,
+    fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, warnings,
     createdAt: new Date().toISOString()
   };
   DB.cashClosures.push(closure);
@@ -174,7 +203,24 @@ function performCashClosure(){
   closeModal();
   renderTPV();
   printCashClosure(closure);
-  showToast(t('msg.cashCloseDone'));
+  if(warnings.length) showClosureWarningsModal(warnings);
+  else showToast(t('msg.cashCloseDone'));
+}
+
+function showClosureWarningsModal(warnings){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('closure.warning.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('closure.warning.desc')}</p>
+    <ul style="margin:0 0 4px 18px;font-size:13.5px;line-height:1.7">
+      ${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+    </ul>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">${t('common.understood')}</button>
+    </div>
+  `);
 }
 
 function printCashClosure(closure){
@@ -747,7 +793,7 @@ function updatePedidoItem(idx, field, value){
       const s = getStockEntry(line.ingredientId);
       const before = s.qty||0;
       s.qty = Math.max(0, before + (newVal - oldVal));
-      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty);
+      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
       renderStock();
     }
     DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== o.id);
@@ -1191,7 +1237,7 @@ function reallyDeleteOrder(id){
       const s = getStockEntry(line.ingredientId);
       const before = s.qty||0;
       s.qty = Math.max(0, before - (recibida||0));
-      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty);
+      if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
     });
     DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
     renderStock();

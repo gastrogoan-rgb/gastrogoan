@@ -3355,7 +3355,15 @@ function createPromoFromIdea(catIdx, ideaIdx){
 // (cumpleaños, reseñas, clientes que hace tiempo no vienen).
 const PROMO_MESSAGE_TEMPLATES = {
   cumple: (c, biz) => t('promo.clients.template.cumple').replace('${name}', c.name).replace('${biz}', biz),
-  resena: (c, biz) => t('promo.clients.template.resena').replace('${name}', c.name).replace('${biz}', biz),
+  // Justo tras la visita es el mejor momento para pedir una reseña — con el
+  // enlace directo a la ficha de Google puesto (Mi Negocio → Redes sociales),
+  // el cliente solo tiene que tocar una vez y puntuar, en vez de tener que
+  // buscar el negocio él mismo en Google.
+  resena: (c, biz) => {
+    const base = t('promo.clients.template.resena').replace('${name}', c.name).replace('${biz}', biz);
+    const link = (DB.business && DB.business.gmaps || '').trim();
+    return link ? base + '\n' + link : base;
+  },
   vuelve: (c, biz) => t('promo.clients.template.vuelve').replace('${name}', c.name).replace('${biz}', biz)
 };
 const PROMO_MESSAGE_SUBJECTS = {
@@ -3375,6 +3383,41 @@ function nextBirthdayDays(cumpleanos){
   let next = new Date(today.getFullYear(), month, day);
   if(next < today) next = new Date(today.getFullYear()+1, month, day);
   return Math.round((next - today) / 86400000);
+}
+
+// Resumen de "¿cómo nos conociste?" (últimos 90 días), a partir de las
+// reservas hechas desde la web pública que trajeron esa respuesta — así se
+// puede ver de un vistazo qué canal está trayendo clientes de verdad, sin
+// necesitar ninguna API de redes sociales.
+const REFERRAL_LABEL_KEYS = {instagram:'referral.instagram', facebook:'referral.facebook', tiktok:'referral.tiktok', google:'referral.google', friend:'referral.friend', returning:'referral.returning', other:'referral.other'};
+function renderReferralSummaryHtml(){
+  const since = dateStr(new Date(Date.now() - 90*86400000));
+  const withReferral = DB.reservations.filter(r => r.origen==='publico' && r.referral && r.date >= since);
+  if(!withReferral.length) return '';
+  const counts = {};
+  withReferral.forEach(r => { counts[r.referral] = (counts[r.referral]||0) + 1; });
+  const total = withReferral.length;
+  const rows = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  return `
+    <div class="card" style="margin-bottom:18px">
+      <h3 style="font-size:14px"><i class="ti ti-route"></i> ${t('promo.referral.title')}</h3>
+      <p style="font-size:12px;color:var(--muted);margin:-4px 0 10px">${t('promo.referral.desc')}</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${rows.map(([key,n]) => {
+          const pct = Math.round(n/total*100);
+          const label = t(REFERRAL_LABEL_KEYS[key]) || key;
+          return `
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:110px;font-size:12.5px;flex:none">${escapeHtml(label)}</span>
+            <div style="flex:1;background:var(--brand-cream);height:10px;border-radius:6px;overflow:hidden">
+              <div style="width:${pct}%;background:var(--olive-l,var(--brand-orange));height:100%"></div>
+            </div>
+            <span style="width:56px;text-align:right;font-size:12px;color:var(--muted);flex:none">${n} (${pct}%)</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function renderPromoClientes(){
@@ -3411,6 +3454,8 @@ function renderPromoClientes(){
 
   box.innerHTML = `
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> ${t('promo.clients.intro')}</p>
+
+    ${renderReferralSummaryHtml()}
 
     <h3><i class="ti ti-cake"></i> ${t('promo.clients.upcomingBirthdays')}</h3>
     <div class="grid grid-3" style="margin-bottom:18px">

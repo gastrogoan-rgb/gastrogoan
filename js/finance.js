@@ -927,6 +927,7 @@ function renderStock(){
       <div class="kpi ${lowElabCount?'warn':''}"><div class="label">${t('label.elaborationsBelowMin')}</div><div class="value">${lowElabCount}</div></div>
     `;
   }
+  renderMermasHtml();
 
   const renderRow = row => {
     const low = row.qty <= row.min;
@@ -1043,6 +1044,34 @@ function renderStock(){
   }
 }
 
+// Informe de mermas: agrupa, de los últimos 30 días, las correcciones de
+// stock a la BAJA hechas a mano (source:'manual'), que es la señal más
+// fiable que ya se registraba de "hemos contado menos de lo que decía la
+// app" — sin necesitar ningún conteo nuevo, solo mirar lo que ya se
+// corrige cuando alguien hace inventario.
+function renderMermasHtml(){
+  const box = document.getElementById('stock-mermas');
+  if(!box) return;
+  const since = dateStr(new Date(Date.now() - 30*86400000));
+  const entries = (DB.stockLog||[]).filter(e => e.source==='manual' && e.delta < 0 && e.fecha >= since && e.area === currentArea());
+  if(!entries.length){ box.innerHTML = ''; return; }
+  const byItem = {};
+  entries.forEach(e => {
+    const key = e.type + ':' + e.refId;
+    if(!byItem[key]) byItem[key] = {name: e.name, qty: 0, unit: e.type==='ing' ? (DB.ingredients.find(i=>i.id===e.refId)?.unit||'') : (DB.elaboraciones.find(el=>el.id===e.refId)?.unit||'')};
+    byItem[key].qty += Math.abs(e.delta);
+  });
+  const rows = Object.values(byItem).sort((a,b) => b.qty - a.qty).slice(0, 8);
+  box.innerHTML = `
+    <div class="card" style="margin-bottom:14px;border:1px solid var(--red);background:var(--red-l)">
+      <h4 style="margin-bottom:4px"><i class="ti ti-trash-x"></i> ${t('stock.merma.title')}</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('stock.merma.desc')}</p>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${rows.map(r => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escapeHtml(r.name)}</span><strong>-${r.qty.toFixed(2)} ${escapeHtml(r.unit)}</strong></div>`).join('')}
+      </div>
+    </div>`;
+}
+
 function updateStockMin(ingredientId, value){
   const s = getStockEntry(ingredientId);
   s.min = parseFloat(value) || 0;
@@ -1052,11 +1081,17 @@ function updateStockMin(ingredientId, value){
 
 // Registro de ajustes de stock (manuales y rápidos), para poder investigar
 // mermas/descuadres: qué se tocó, cuándo y de qué cantidad a qué cantidad.
-function logStockAdjustment(type, refId, name, before, after){
+function logStockAdjustment(type, refId, name, before, after, source){
   if(!DB.stockLog) DB.stockLog = [];
   DB.stockLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
-    type, refId, name, before, after, delta: after - before, area: currentArea()
+    type, refId, name, before, after, delta: after - before, area: currentArea(),
+    // 'purchase' = recepción de pedido a proveedor (entrada esperada, no es
+    // merma); 'manual' = alguien corrigió el stock a mano (típicamente tras
+    // un recuento físico) — si esa corrección es a la baja, es la señal más
+    // fiable de merma real que tenemos, y es lo que alimenta el informe de
+    // mermas en Stock.
+    source: source || 'manual'
   });
   if(DB.stockLog.length > 500) DB.stockLog = DB.stockLog.slice(-500);
 }
