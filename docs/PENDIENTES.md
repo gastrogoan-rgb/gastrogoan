@@ -10,8 +10,20 @@ enlazados abajo, como `VERIFACTU_PENDIENTE.md`) y responder con todo junto.
 ## 1. Desplegar la app en un hosting de verdad (Netlify) con dominio propio
 
 **Estado: pendiente, a la espera de que el usuario confirme que la app está
-"al 100% segura y definitiva".** No hacer nada de esto hasta que lo pida
-explícitamente — es él quien decide cuándo está lista para publicarse.
+en su versión final.** Confirmado otra vez el 04/08/2026: quiere esperar a
+la versión final antes de subirla, aunque sabe que técnicamente podría
+hacerlo ya (redesplegar es tan simple como volver a arrastrar la carpeta).
+No hacer nada de esto hasta que lo pida explícitamente — es él quien decide
+cuándo está lista para publicarse.
+
+**Recordatorio permanente para el propio asistente** (el usuario pidió
+explícitamente no olvidar esto): cada vez que se entregue una versión
+nueva de la app, tener preparado un paquete de despliegue actualizado
+(`dist/index.html`, `dist/reservagastrogoan.html`, `sw.js`, `_redirects`,
+y si aplica `netlify/functions/send-push.js` + `package.json` +
+`node_modules` + `README-PUSH.md` para los avisos push) — así, en cuanto
+el usuario diga "ya está, súbela", solo hay que entregarle la carpeta ya
+lista, sin tener que reconstruirla de cero en ese momento.
 
 Contexto: el dominio `gastrogoan.com` está gestionado desde Canva (ahí lo
 compró), pero **Canva no puede alojar la app en sí** (solo sirve para su
