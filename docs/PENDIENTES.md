@@ -76,35 +76,42 @@ Si se retoma: empezar por panel de reseñas + responder desde la app (más
 valor, menos complejidad que publicar posts), y dejar seguidores/métricas
 de posts para después.
 
-## 4. Modo offline real del TPV
+## 4. Modo offline real del TPV — HECHO (02/08/2026)
 
-**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+Al investigarlo resultó ser mucho más pequeño de lo previsto: todo ya se
+guarda primero en local (IndexedDB) sin depender de la red, y Firebase
+Realtime Database ya trae de fábrica cola de escritura offline (sincroniza
+sola al recuperar conexión). Verificado con la red del navegador cortada
+del todo: crear un pedido, calcular el total y guardarlo funciona sin
+errores ni bloqueos. Ya existía además un indicador "☁ Sin conexión" en la
+cabecera (`updateSyncBadge`). Riesgo residual NO resuelto (bajo, no
+abordado): si dos dispositivos editan la MISMA mesa estando ambos sin
+conexión a la vez, al reconectar gana el último en sincronizar — solo
+relevante en cortes de red largos con varios dispositivos activos a la
+vez; arreglarlo del todo requeriría mover la sincronización a rutas por
+elemento en vez de por colección entera, cambio más arriesgado que no se
+ha hecho por no tocar un motor que ya funciona bien sin poder probarlo
+contra un Firebase real en este entorno.
 
-Que el TPV siga funcionando (cobrar, comandar) si se cae la conexión a
-mitad de servicio, guardando todo en una cola local y sincronizando solo
-al recuperar internet. Es un cambio de fondo en el motor de sincronización
-con la nube (colas, resolución de conflictos si dos dispositivos cobraron
-la misma mesa offline, etc.) — merece su propia sesión centrada solo en
-esto, no meterlo de pasada junto con otras features.
+## 5. Comanda por voz en cocina — HECHO (02/08/2026)
 
-## 5. Comanda por voz en cocina
+Botón de micrófono en Comandas Cocina (Web Speech API — Chrome/Edge/Safari,
+no Firefox). Frases tipo "mesa 3 lista" o "mesa 5 plato 2". Se validó a
+fondo el "cerebro" de interpretación de frases (`handleVoiceComandaPhrase`)
+con casos reales — encuentra la mesa, encuentra el plato, marca servido,
+avisa si no encuentra algo. **Lo único que sigue sin poder validarse en
+este entorno es el reconocimiento de voz en sí** (hace falta un micrófono
+y una cocina real, con su ruido y acentos) — antes de depender de él a
+diario, probarlo con calma un servicio tranquilo. Nunca sustituye del todo
+poder tocar la pantalla, que sigue funcionando igual.
 
-**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+## 6. Plano de sala visual (arrastrar mesas) — HECHO (02/08/2026)
 
-Reconocimiento de voz (Web Speech API) para marcar platos como marchados
-sin tocar la pantalla. Técnicamente viable, pero hay que probarlo en una
-cocina de verdad (ruido, acentos, manos libres) antes de darlo por
-terminado — no se puede validar solo con pruebas automatizadas de texto.
-
-## 6. Plano de sala visual (arrastrar mesas)
-
-**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
-
-Un editor visual tipo mapa/canvas donde se vea la disposición real del
-local y se puedan arrastrar mesas/reservas, en vez de la lista/grid actual
-de mesas. Es un subsistema de UI nuevo entero (editor de layout, guardar
-posiciones, distintas vistas por zona) — proyecto propio, no un añadido
-rápido.
+Nueva vista "Plano" en el TPV: mapa con cada mesa colocada donde está de
+verdad en el local, arrastrable con el ratón/dedo (solo en modo edición).
+La posición se guarda sola por mesa (`table.x`/`table.y`). Validado que
+arrastrar guarda la posición correcta y que un clic normal (sin arrastrar)
+sigue abriendo la mesa con normalidad.
 
 ## 7. (añadir aquí lo que vaya surgiendo)
 
