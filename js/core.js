@@ -1712,6 +1712,7 @@ function initPublicRequestsListener(){
           date: req.date, time: req.time, people: req.people || 1,
           tableId: null, notes: req.notes || '', status: 'pendiente',
           referral: req.referral || '',
+          depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
           origen: 'publico', createdAt: new Date().toISOString()
         });
         notifyNewRequest = true;
@@ -2714,6 +2715,7 @@ function defaultData(){
       cartaAuto: true,
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
       ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
+      requireDeposit: false, depositAmount: '', depositType: 'fixed', depositInstructions: '',
       // Configuración de envío a un proveedor certificado VeriFactu (cada
       // negocio contrata y paga su propia cuenta con ese proveedor; GastroGoan
       // solo guarda su clave de API y llama a su servicio). Ver VERIFACTU_PROVIDERS

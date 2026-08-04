@@ -1924,6 +1924,9 @@ function renderReservasPendingOnline(){
           <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
           ${r.clientPhone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
+          ${r.depositRequired ? `<div style="margin-top:4px">${r.depositConfirmed
+            ? `<span class="badge badge-green"><i class="ti ti-cash"></i> ${t('deposit.received')} (${r.depositAmount}€)</span>`
+            : `<span class="badge badge-amber" style="cursor:pointer" onclick="confirmReservationDeposit(${r.id})" title="${t('deposit.confirmHint')}"><i class="ti ti-cash-banknote"></i> ${t('deposit.pending')} (${r.depositAmount}€)</span>`}</div>` : ''}
           ${(() => {
             const turnoIdx = getTurnoIndexForTime(r.date, r.time);
             if(turnoIdx === null) return '';
@@ -1948,6 +1951,21 @@ function renderReservasPendingOnline(){
 // del negocio, igual que rechazar un pedido online en el TPV (rejectOnlineOrder):
 // es una acción sensible de cara al cliente, no un simple cambio de estado
 // interno como sí lo es la gestión normal de reservas ya creadas por el personal.
+// Marca el depósito de una reserva como recibido (no hay pasarela de pago
+// automática para reservas — el negocio lo confirma a mano tras verlo en su
+// cuenta/Bizum, siguiendo las instrucciones que él mismo definió).
+function confirmReservationDeposit(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r) return;
+  r.depositConfirmed = true;
+  r.depositConfirmedAt = new Date().toISOString();
+  logAudit('deposit_confirmed', t('audit.depositConfirmed').replace('${name}', r.clientName||'—'));
+  saveDB();
+  renderReservasPendingOnline();
+  renderReservas();
+  showToast(t('deposit.confirmedOk'));
+}
+
 function rejectOnlineReservation(id){
   requestBusinessPinAction(t('title.rejectReservation'), t('msg.confirmRejectReservation'), () => {
     setReservationStatus(id, 'cancelada');
@@ -3949,6 +3967,32 @@ function renderMiNegocio(){
         <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">${t('mn.ops.leadTimeDesc')}</small>
       </div>
+      <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+          <input type="checkbox" id="mn-require-deposit" style="width:auto" ${b.requireDeposit?'checked':''} onchange="saveBusiness(true);renderMiNegocio()">
+          ${t('mn.ops.requireDeposit')}
+        </label>
+        <small style="color:var(--muted)">${t('mn.ops.requireDepositDesc')}</small>
+      </div>
+      ${b.requireDeposit ? `
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.ops.depositAmount')}</label>
+          <input type="number" id="mn-deposit-amount" min="0" step="0.5" value="${escapeHtml(b.depositAmount||'')}" placeholder="10" onchange="saveBusiness(true)">
+        </div>
+        <div class="field">
+          <label>${t('mn.ops.depositType')}</label>
+          <select id="mn-deposit-type" onchange="saveBusiness(true)">
+            <option value="fixed" ${b.depositType!=='perPerson'?'selected':''}>${t('mn.ops.depositFixed')}</option>
+            <option value="perPerson" ${b.depositType==='perPerson'?'selected':''}>${t('mn.ops.depositPerPerson')}</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>${t('mn.ops.depositInstructions')}</label>
+        <textarea id="mn-deposit-instructions" rows="2" placeholder="${t('mn.ops.depositInstructionsPh')}" onchange="saveBusiness(true)">${escapeHtml(b.depositInstructions||'')}</textarea>
+        <small style="color:var(--muted)">${t('mn.ops.depositInstructionsDesc')}</small>
+      </div>` : ''}
       <h4 style="margin:16px 0 4px"><i class="ti ti-layout-grid"></i> ${t('mn.ops.floorPlan')}</h4>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.floorPlanDesc')}</p>
       <div class="field-row">
@@ -4443,6 +4487,10 @@ function saveBusiness(silent){
     if(!DB.business.pedidos) DB.business.pedidos = {};
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMin;
   }
+  if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked;
+  if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
+  if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
+  if(el('mn-deposit-instructions')) DB.business.depositInstructions = el('mn-deposit-instructions').value.trim();
   if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
   if(el('mn-gmaps')) DB.business.gmaps = el('mn-gmaps').value.trim();

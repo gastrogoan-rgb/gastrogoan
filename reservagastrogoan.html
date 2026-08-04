@@ -203,6 +203,8 @@ const I18N = {
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
+    'deposit.notice.title':'Esta reserva requiere señal',
+    'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. El restaurante te contactará para gestionarla.',
     'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
     'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
     'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
@@ -250,6 +252,8 @@ const I18N = {
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
+    'deposit.notice.title':'This booking requires a deposit',
+    'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. The restaurant will contact you about it.',
     'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
     'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
     'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
@@ -297,6 +301,8 @@ const I18N = {
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
+    'deposit.notice.title':'Aquesta reserva requereix senyal',
+    'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. El restaurant et contactarà per gestionar-la.',
     'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
     'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
     'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
@@ -883,6 +889,11 @@ function renderReservaForm(){
           <option value="other">${t('referral.other')}</option>
         </select>
       </div>
+      ${(DB.business||{}).requireDeposit ? `<div class="card" style="background:var(--bg-soft, #fff7ed);margin:10px 0;padding:10px 12px">
+        <div style="font-size:13px;font-weight:600"><i class="ti ti-cash-banknote"></i> ${t('deposit.notice.title')}</div>
+        <div style="font-size:12.5px;margin-top:4px">${t('deposit.notice.body').replace('${amount}', reservaDepositAmount())}</div>
+        ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}
+      </div>` : ''}
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
         <input type="checkbox" id="r-privacy-consent" style="width:auto;margin-top:2px">
         <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
@@ -892,6 +903,19 @@ function renderReservaForm(){
   `;
   updateTimeInputRange('r-date','r-time','r-hour-hint');
   applyLeadTime('r-date','r-time','r-hour-hint');
+}
+
+// Calcula el importe de la señal para la reserva actual (según el tipo
+// configurado: fijo, o por persona multiplicado por los comensales del
+// formulario en este momento).
+function reservaDepositAmount(){
+  const b = DB.business || {};
+  const amount = parseFloat(b.depositAmount) || 0;
+  if(b.depositType === 'perPerson'){
+    const people = parseInt(document.getElementById('r-people')?.value) || 1;
+    return (amount * people).toFixed(2);
+  }
+  return amount.toFixed(2);
 }
 
 function submitReserva(){
@@ -942,8 +966,10 @@ function submitReserva(){
     return;
   }
 
+  const depositRequired = !!(DB.business||{}).requireDeposit;
   const req = {
     type:'reserva', clientName, clientPhone, date, time, people, notes, referral,
+    depositRequired, depositAmount: depositRequired ? reservaDepositAmount() : '',
     createdAt: new Date().toISOString()
   };
 
