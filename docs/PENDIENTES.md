@@ -172,7 +172,29 @@ llamada a la función con los destinatarios correctos. Lo que NO se puede
 probar desde aquí es la entrega real del push (necesita la función
 desplegada de verdad + un dispositivo real).
 
-## 9. (añadir aquí lo que vaya surgiendo)
+## 9. Ronda de 9 funcionalidades nuevas (04/08/2026) — HECHO, todo en código
+
+El usuario pidió una reflexión exhaustiva de qué faltaba de verdad, y tras
+varias rondas se cerró en 9 puntos, todos implementados, validados con
+Puppeteer y subidos a la rama:
+
+1. RGPD/derecho al olvido — borrado real e inmediato de datos personales de
+   un cliente, más consentimiento obligatorio en la reserva pública.
+2. Juntar mesas en el TPV.
+3. Reserva con señal/depósito (confirmación manual, sin pasarela de pago).
+4. Onboarding ligero (mini-tour) para empleado nuevo en su primer acceso.
+5. Lista de espera para walk-ins sin mesa libre.
+6. Solicitud de vacaciones del empleado con aprobación del propietario.
+7. Encuesta de satisfacción privada (NPS) tras la visita.
+8. Recordatorio de copia de seguridad periódica (sin backend propio, es un
+   aviso activo, no un backup automático real).
+9. Adjuntar foto/PDF real de factura/albarán a cada pedido a proveedor.
+
+Nada de esto queda pendiente de decisión de negocio ni de despliegue
+externo — es funcionalidad normal, ya incluida en el próximo paquete que
+se entregue.
+
+## 10. (añadir aquí lo que vaya surgiendo)
 
 Cuando aparezca un nuevo pendiente "fuera de código" en conversación, se
 añade como sección nueva en este archivo, con fecha y contexto suficiente
