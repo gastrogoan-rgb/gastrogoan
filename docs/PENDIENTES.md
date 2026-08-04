@@ -113,7 +113,40 @@ La posición se guarda sola por mesa (`table.x`/`table.y`). Validado que
 arrastrar guarda la posición correcta y que un clic normal (sin arrastrar)
 sigue abriendo la mesa con normalidad.
 
-## 7. (añadir aquí lo que vaya surgiendo)
+## 7. Licencia como suscripción anual (100€/año) en vez de pago único
+
+**Estado: decisión de negocio tomada (02/08/2026), NO implementado — el
+usuario confirmó que quiere ir hacia 100€/año en vez de pago único.**
+
+Motivo a favor (mi recomendación cuando se preguntó): un pago único no
+encaja con costes recurrentes (nube, mantenimiento, desarrollo continuo);
+100€/año es competitivo para lo que hace la app.
+
+Lo que hace falta construir (no es un interruptor, es un proyecto real):
+- Añadir fecha de vencimiento a la licencia (`DB.license` no tiene ningún
+  concepto de caducidad ahora mismo — se activa una vez y ya vale para
+  siempre).
+- Aviso de renovación próxima / bloqueo suave si caduca sin renovar.
+- Cobro real cada año: necesita un proveedor de pagos (Stripe u otro) —
+  infraestructura nueva, no existe nada de cobro automatizado hoy.
+- Decidir qué pasa con los datos/acceso si alguien no renueva (¿se
+  bloquea la app entera? ¿solo lectura? ¿periodo de gracia?).
+
+## 8. Notificaciones push de verdad (app cerrada del todo / móvil bloqueado)
+
+**Estado: parcialmente hecho (ver "Papelera de reciclaje, registro de
+auditoría y avisos del navegador", 02/08/2026) — lo que falta es más
+grande y necesita servidor propio.**
+
+Ya está implementado el aviso "mientras el navegador siga abierto" (otra
+pestaña, u otra app con el navegador de fondo) para mensajes urgentes de
+chat y cierres de caja con avisos. Lo que NO se ha hecho, y necesitaría su
+propio proyecto: un aviso real de tipo push que llegue aunque el móvil
+esté bloqueado y la app/navegador cerrados del todo. Eso requiere Firebase
+Cloud Functions (o un backend propio) desplegado para disparar el push
+desde servidor — infraestructura que no existe hoy.
+
+## 9. (añadir aquí lo que vaya surgiendo)
 
 Cuando aparezca un nuevo pendiente "fuera de código" en conversación, se
 añade como sección nueva en este archivo, con fecha y contexto suficiente
