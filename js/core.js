@@ -399,6 +399,7 @@ function resumeEmployeeSession(){
   // Mientras siga con el PIN de fábrica, se le anima (sin bloquear) a
   // elegir uno propio — una vez dentro de su área, no antes.
   if(!emp.pinChanged) promptEmployeeFirstPinChange(emp.id);
+  else maybeShowEmployeeOnboarding(emp.id);
   return true;
 }
 

@@ -3219,7 +3219,7 @@ function promptEmployeeFirstPinChange(employeeId){
       <input type="password" id="new-pin-2" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:24px;letter-spacing:6px;text-align:center" onkeydown="if(event.key==='Enter')confirmFirstPinChange(${JSON.stringify(employeeId)})">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.later')}</button>
+      <button class="btn" onclick="closeModal();maybeShowEmployeeOnboarding(${JSON.stringify(employeeId)})">${t('common.later')}</button>
       <button class="btn btn-primary" onclick="confirmFirstPinChange(${JSON.stringify(employeeId)})">${t('common.save')}</button>
     </div>
   `);
@@ -3238,6 +3238,37 @@ function confirmFirstPinChange(employeeId){
   saveDB();
   closeModal();
   showToast(t('msg.pinUpdated'));
+  maybeShowEmployeeOnboarding(employeeId);
+}
+
+// Mini-tour para un empleado nuevo: 3-4 tarjetas rápidas explicando lo básico
+// de su área (fichar, comandas/mesas según toque), se muestra solo una vez
+// (se marca con `onboardingSeen`) y nunca bloquea el acceso — "Entendido" es
+// la única salida, no hay "más tarde" para no dejarlo a medias sin marcarlo.
+function maybeShowEmployeeOnboarding(employeeId){
+  const e = (DB.employees||[]).find(x => x.id === employeeId);
+  if(!e || e.onboardingSeen) return;
+  const area = e.area || 'cocina';
+  const tips = area === 'sala'
+    ? [t('onboarding.tip.clockInOut'), t('onboarding.tip.salaMesas'), t('onboarding.tip.salaComandas'), t('onboarding.tip.chat')]
+    : [t('onboarding.tip.clockInOut'), t('onboarding.tip.cocinaComandas'), t('onboarding.tip.cocinaVoice'), t('onboarding.tip.chat')];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-confetti"></i> ${t('onboarding.title').replace('${name}', escapeHtml(e.name))}</h3>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${tips.map(tip => `<div style="display:flex;gap:8px;align-items:flex-start"><i class="ti ti-circle-check" style="color:var(--brand-orange);margin-top:2px"></i><span style="font-size:13.5px">${tip}</span></div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" style="flex:1" onclick="dismissEmployeeOnboarding(${JSON.stringify(employeeId)})">${t('onboarding.gotIt')}</button>
+    </div>
+  `);
+}
+function dismissEmployeeOnboarding(employeeId){
+  const e = (DB.employees||[]).find(x => x.id === employeeId);
+  if(e) e.onboardingSeen = true;
+  saveDB();
+  closeModal();
 }
 
 function doFichaje(employeeId, action){
