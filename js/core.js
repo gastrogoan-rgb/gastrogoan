@@ -2996,6 +2996,94 @@ function notifyDesktop(title, body){
   }catch(e){ console.error('Error mostrando aviso del navegador', e); }
 }
 
+/* ============================================================
+   IMPRESIÓN TÉRMICA REAL (ESC/POS por Bluetooth de bajo consumo)
+   Alternativa al diálogo de impresión del navegador: envía los bytes
+   ESC/POS directamente a una impresora térmica de recibos por Web
+   Bluetooth (el mismo perfil GATT que usan la inmensa mayoría de
+   impresoras térmicas de 58/80mm baratas — servicio 0xFF00/0x18F0,
+   característica de escritura sin respuesta). Solo Chrome/Edge en
+   Android o escritorio soportan Web Bluetooth (no Safari/iOS ni
+   Firefox) — si no está disponible, se avisa y se recomienda seguir
+   usando "Imprimir" normal (diálogo del navegador), que sigue
+   funcionando igual que siempre y no depende de esto.
+   ============================================================ */
+const THERMAL_PRINTER_SERVICE_CANDIDATES = ['000018f0-0000-1000-8000-00805f9b34fb', 0xff00];
+const THERMAL_PRINTER_CHAR_CANDIDATES = ['00002af1-0000-1000-8000-00805f9b34fb', 0xff02];
+let thermalPrinterCharacteristic = null;
+function thermalPrintingSupported(){
+  return typeof navigator !== 'undefined' && !!navigator.bluetooth;
+}
+async function connectThermalPrinter(){
+  if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return false; }
+  try{
+    const device = await navigator.bluetooth.requestDevice({
+      filters: THERMAL_PRINTER_SERVICE_CANDIDATES.map(s => ({services:[s]})),
+      optionalServices: THERMAL_PRINTER_SERVICE_CANDIDATES
+    });
+    const server = await device.gatt.connect();
+    let characteristic = null;
+    for(const svcId of THERMAL_PRINTER_SERVICE_CANDIDATES){
+      try{
+        const service = await server.getPrimaryService(svcId);
+        for(const charId of THERMAL_PRINTER_CHAR_CANDIDATES){
+          try{ characteristic = await service.getCharacteristic(charId); break; }catch(e){}
+        }
+        if(characteristic) break;
+      }catch(e){}
+    }
+    if(!characteristic){ showToast(t('thermal.noWritableService')); return false; }
+    thermalPrinterCharacteristic = characteristic;
+    localStorage.setItem('gg_thermal_printer_name', device.name || '');
+    showToast(t('thermal.connectedOk').replace('${name}', device.name || t('thermal.unnamedDevice')));
+    return true;
+  }catch(e){
+    // El usuario cancelando el selector de dispositivos también cae aquí —
+    // no es un error real, solo cambió de idea.
+    if(e && e.name !== 'NotFoundError') console.error('Error conectando la impresora térmica', e);
+    return false;
+  }
+}
+// Convierte texto plano a bytes ESC/POS básicos: inicializar, texto en
+// codificación de 1 byte (cp437, suficiente para lo que ya usa el ticket:
+// letras, números, acentos comunes), salto de línea final y corte de papel.
+function textToEscPos(text){
+  const ESC = 0x1B, GS = 0x1D;
+  const bytes = [ESC, 0x40]; // ESC @ : inicializar impresora
+  for(const ch of text){
+    const code = ch.codePointAt(0);
+    bytes.push(code < 256 ? code : 0x3F); // fuera de rango de 1 byte -> '?'
+  }
+  bytes.push(0x0A, 0x0A, 0x0A);
+  bytes.push(GS, 0x56, 0x42, 0x00); // GS V B 0 : corte parcial de papel
+  return new Uint8Array(bytes);
+}
+// Las conexiones BLE tienen un tamaño máximo de paquete (MTU) mucho menor
+// que el ticket completo — hay que trocear el envío o la impresora corta o
+// ignora el resto.
+const THERMAL_CHUNK_SIZE = 180;
+async function writeThermalChunks(characteristic, bytes){
+  for(let i=0; i<bytes.length; i += THERMAL_CHUNK_SIZE){
+    const chunk = bytes.slice(i, i + THERMAL_CHUNK_SIZE);
+    await characteristic.writeValueWithoutResponse(chunk);
+  }
+}
+async function printToThermalPrinter(text){
+  if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
+  if(!thermalPrinterCharacteristic){
+    const connected = await connectThermalPrinter();
+    if(!connected) return;
+  }
+  try{
+    await writeThermalChunks(thermalPrinterCharacteristic, textToEscPos(text));
+    showToast(t('thermal.printedOk'));
+  }catch(e){
+    console.error('Error imprimiendo en la impresora térmica', e);
+    thermalPrinterCharacteristic = null; // puede que se haya desconectado; forzar reconectar la próxima vez
+    showToast(t('thermal.printFailed'));
+  }
+}
+
 function genId(){
   // Id único incluso si varios dispositivos crean datos a la vez
   const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);

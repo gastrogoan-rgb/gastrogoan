@@ -3316,7 +3316,7 @@ function openTodaySalesModal(){
             <td>${fmtMoney(s.total)}</td>
             <td class="owner-only" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
             <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
-            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button></td>
+            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button>${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id})))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
           </tr>`;
         }).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
       </table>
@@ -3687,6 +3687,7 @@ function openTicketDeliveryModal(saleId){
       <button class="btn" onclick="sendTicketByEmail(${saleId})"><i class="ti ti-mail"></i> ${t('ticket.sendByEmail')}</button>
       <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> ${t('ticket.invoiceBtn')}</button>
       <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> ${t('ticket.printTicket')}</button>
+      ${thermalPrintingSupported() ? `<button class="btn" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printToThermalPrinter(buildTicketText(s));})()" title="${t('thermal.hint')}"><i class="ti ti-device-usb"></i> ${t('thermal.printBtn')}</button>` : ''}
     </div>
   `);
 }

@@ -4850,6 +4850,15 @@ function renderTicketConfigCard(){
         <button class="btn btn-primary" onclick="saveTicketConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="previewTicketConfig()"><i class="ti ti-eye"></i> ${t('mn.ticket.preview')}</button>
       </div>
+      ${thermalPrintingSupported() ? `
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-device-usb"></i> ${t('thermal.sectionTitle')}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('thermal.sectionDesc')}</p>
+      <button class="btn btn-sm" onclick="connectThermalPrinter()"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>
+      ` : `
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:12.5px;color:var(--muted)"><i class="ti ti-device-usb-off"></i> ${t('thermal.notSupportedHint')}</p>
+      `}
     </div>
   `;
 }
