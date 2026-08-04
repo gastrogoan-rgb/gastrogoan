@@ -4297,6 +4297,9 @@ function renderDataMaintenanceCard(){
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
+      <div style="font-size:12px;color:${daysSinceLastBackup()>=BACKUP_REMINDER_DAYS?'var(--red)':'var(--muted)'};margin-top:6px">
+        ${daysSinceLastBackup()===Infinity ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}
+      </div>
       <button class="btn btn-sm" onclick="openTrashModal()"><i class="ti ti-trash"></i> ${t('trash.title')}${(DB.trash||[]).length ? ` (${DB.trash.length})` : ''}</button>
       <button class="btn btn-sm" onclick="openAuditLogModal()"><i class="ti ti-list-details"></i> ${t('audit.title')}</button>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -4387,7 +4390,33 @@ function downloadJSON(obj, filename){
 
 function downloadFullBackup(){
   downloadJSON(DB, `gastrogoan-backup-${todayStr()}.json`);
+  if(!DB.business) DB.business = {};
+  DB.business.lastBackupAt = new Date().toISOString();
+  saveDB();
+  checkBackupReminder();
   showToast(t('msg.backupDownloaded'));
+}
+
+// No hay backend para backups automáticos de verdad (eso sería un proyecto
+// aparte con su propio servidor) — lo que sí se puede hacer sin depender de
+// nada externo es recordar activamente que hace demasiado que no se
+// descarga una copia, igual que ya se hace con el aviso de archivado.
+const BACKUP_REMINDER_DAYS = 30;
+function daysSinceLastBackup(){
+  const last = DB.business && DB.business.lastBackupAt;
+  if(!last) return Infinity;
+  return Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+}
+function checkBackupReminder(){
+  const btn = document.getElementById('backup-reminder-btn');
+  if(btn) btn.style.display = daysSinceLastBackup() >= BACKUP_REMINDER_DAYS ? '' : 'none';
+}
+function goToBackupFromReminder(){
+  navigate('minegocio');
+  setTimeout(() => {
+    const el = document.querySelector('[onclick="downloadFullBackup()"]');
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 200);
 }
 
 function archiveOldData(){
@@ -4410,6 +4439,7 @@ function archiveOldData(){
   DB.cashClosures = DB.cashClosures.filter(c => !(c.fecha && c.fecha < before));
   saveDB();
   checkArchiveReminder();
+  checkBackupReminder();
   renderMiNegocio();
   showToast(t('msg.dataArchived'));
 }
@@ -4448,6 +4478,7 @@ function renderHeader(){
   }
   syncLangButton();
   checkArchiveReminder();
+  checkBackupReminder();
   updateLogoutBtn();
 }
 

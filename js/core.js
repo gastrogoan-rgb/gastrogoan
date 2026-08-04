@@ -2723,6 +2723,7 @@ function defaultData(){
       tiposServicio: {mesa:true, takeaway:true, delivery:true},
       ownFirebase: null, // {apiKey, databaseURL} si el negocio usa su propio proyecto Firebase
       requireDeposit: false, depositAmount: '', depositType: 'fixed', depositInstructions: '',
+      lastBackupAt: null, // fecha de la última copia de seguridad descargada, para el aviso de "hace tiempo que no descargas una copia"
       // Configuración de envío a un proveedor certificado VeriFactu (cada
       // negocio contrata y paga su propia cuenta con ese proveedor; GastroGoan
       // solo guarda su clave de API y llama a su servicio). Ver VERIFACTU_PROVIDERS
