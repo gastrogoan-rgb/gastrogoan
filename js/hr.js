@@ -2645,6 +2645,7 @@ function saveEmployee(id){
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
     DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false, active:true, fechaAlta: todayStr()});
+    logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();
   closeModal();
@@ -2665,6 +2666,8 @@ function deleteEmployee(id){
   requestBusinessPinAction(t('title.deleteEmployee'), t('msg.confirmDeleteEmployee'), () => reallyDeleteEmployee(id));
 }
 function reallyDeleteEmployee(id){
+  const e0 = DB.employees.find(e => e.id === id);
+  if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name)); }
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);

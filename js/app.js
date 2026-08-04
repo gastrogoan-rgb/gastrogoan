@@ -1744,6 +1744,8 @@ function deleteClient(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
   requestBusinessPinAction(t('title.deleteClient'), t('msg.confirmDeleteClient'), () => {
+    moveToTrash('client', c);
+    logAudit('delete', t('audit.deletedClient').replace('${name}', c.name));
     DB.clients = DB.clients.filter(x=>x.id!==id);
     DB.reservations.forEach(r => { if(r.clientId===id) r.clientId = null; });
     DB.sales.forEach(s => { if(s.clientId===id) s.clientId = null; });
@@ -4179,6 +4181,14 @@ function renderDataMaintenanceCard(){
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
+      <button class="btn btn-sm" onclick="openTrashModal()"><i class="ti ti-trash"></i> ${t('trash.title')}${(DB.trash||[]).length ? ` (${DB.trash.length})` : ''}</button>
+      <button class="btn btn-sm" onclick="openAuditLogModal()"><i class="ti ti-list-details"></i> ${t('audit.title')}</button>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px">🔔 ${t('notif.title')}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('notif.desc')}</p>
+      ${desktopNotificationsEnabled()
+        ? `<span class="badge badge-green" style="margin-bottom:8px;display:inline-block"><i class="ti ti-bell-check"></i> ${t('notif.enabledBadge')}</span><br><button class="btn btn-sm" onclick="disableDesktopNotifications()">${t('notif.disable')}</button>`
+        : `<button class="btn btn-sm btn-primary" onclick="requestDesktopNotifications()"><i class="ti ti-bell"></i> ${t('notif.enableBtn')}</button>`}
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 ${t('mn.data.archiveTitle')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('mn.data.archiveDesc')}</p>

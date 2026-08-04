@@ -769,6 +769,8 @@ function deleteRecipe(id){
   confirmDeleteRecipe(id);
 }
 function confirmDeleteRecipe(id){
+  const r0 = DB.recipes.find(r => r.id === id);
+  if(r0){ moveToTrash('recipe', r0); logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name)); }
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
   // La ficha técnica vinculada documenta este plato en concreto: si el

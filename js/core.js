@@ -1965,6 +1965,21 @@ function applyRemoteBlock(key, remoteValue){
   }
   const json = JSON.stringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
+  // Aviso al navegador de este dispositivo si llega, desde OTRO dispositivo,
+  // un mensaje urgente de chat o un cierre de caja con algo raro que
+  // revisar — el punto entero de un aviso de este tipo es que llegue a
+  // quien no estaba mirando esa pantalla en ese momento.
+  if(key === 'chatMessages' && Array.isArray(DB[key]) && Array.isArray(merged)){
+    const knownIds = new Set(DB[key].map(m => m.id));
+    const me = (typeof getChatAuthor === 'function') ? getChatAuthor() : null;
+    merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me))
+      .forEach(m => notifyDesktop('🚨 ' + (m.authorName||''), m.text||''));
+  }
+  if(key === 'cashClosures' && Array.isArray(DB[key]) && Array.isArray(merged)){
+    const knownIds = new Set(DB[key].map(c => c.id));
+    merged.filter(c => c.warnings && c.warnings.length && !knownIds.has(c.id))
+      .forEach(c => notifyDesktop(t('notif.cashWarningTitle'), c.warnings[0]));
+  }
   lastSyncedSnapshot[key] = json;
   DB[key] = merged;
   idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
@@ -2685,6 +2700,8 @@ function defaultData(){
     loyaltyRewards: ['Postre gratis', 'Café o infusión gratis', 'Chupito o bebida gratis', 'Entrante gratis', '10% de descuento en la cuenta'], // catálogo de premios sugeribles al llegar a 10 puntos
     reservations: [],
     moodCheckins: [], // {id, employeeId, weekKey, value(1-5), ts} — encuesta de clima semanal, opcional
+    trash: [], // {id, type:'employee'|'client'|'recipe'|'ingredient', item, deletedAt, deletedBy} — papelera de reciclaje, 30 días
+    auditLog: [], // {id, ts, actor, action, summary} — quién hizo qué, para negocios con varios encargados
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {
@@ -2848,11 +2865,178 @@ function flushCloudSync(){
   }
 }
 
+/* ============================================================
+   AVISOS DEL NAVEGADOR (Notification API)
+   IMPORTANTE — límite real: esto solo llega si el navegador sigue abierto
+   (aunque sea en otra pestaña, u otra app con el navegador de fondo). Si
+   el móvil está bloqueado o la app/navegador está totalmente cerrado, no
+   llega nada — para eso hace falta un push real disparado desde un
+   servidor (Firebase Cloud Functions), que no tenemos desplegado. Esto
+   cubre el caso intermedio, muy real: "estoy en la cocina con el TPV
+   abierto en otra pestaña" o "el dueño tiene la app abierta de fondo".
+   ============================================================ */
+const DESKTOP_NOTIF_LS = 'gastrogoan_desktop_notifications';
+function desktopNotificationsEnabled(){
+  return localStorage.getItem(DESKTOP_NOTIF_LS) === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted';
+}
+function requestDesktopNotifications(){
+  if(typeof Notification === 'undefined'){ showToast(t('notif.unsupported')); return; }
+  Notification.requestPermission().then(perm => {
+    if(perm === 'granted'){
+      localStorage.setItem(DESKTOP_NOTIF_LS, '1');
+      showToast(t('notif.enabledOk'));
+      new Notification('GastroGoan', {body: t('notif.testBody')});
+    }else{
+      localStorage.setItem(DESKTOP_NOTIF_LS, '0');
+      showToast(t('notif.denied'));
+    }
+    if(typeof renderMiNegocio === 'function' && document.querySelector('.view.active')?.id === 'view-minegocio') renderMiNegocio();
+  });
+}
+function disableDesktopNotifications(){
+  localStorage.setItem(DESKTOP_NOTIF_LS, '0');
+  if(typeof renderMiNegocio === 'function') renderMiNegocio();
+}
+// Se usa el Service Worker si está listo (más fiable, sigue vivo aunque la
+// pestaña no tenga el foco); si no, cae en una Notification normal.
+function notifyDesktop(title, body){
+  if(!desktopNotificationsEnabled()) return;
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.ready){
+      navigator.serviceWorker.ready.then(reg => {
+        if(reg && reg.showNotification) reg.showNotification(title, {body, icon: 'icon-192.png', tag: title});
+        else new Notification(title, {body});
+      }).catch(() => { try{ new Notification(title, {body}); }catch(e){} });
+    }else{
+      new Notification(title, {body});
+    }
+  }catch(e){ console.error('Error mostrando aviso del navegador', e); }
+}
+
 function genId(){
   // Id único incluso si varios dispositivos crean datos a la vez
   const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
   DB.nextId = Math.max(DB.nextId || 1, id + 1);
   return id;
+}
+
+/* ============================================================
+   PAPELERA DE RECICLAJE
+   Antes de borrar de verdad un empleado, cliente, receta o ingrediente, se
+   guarda una copia aquí durante 30 días — así un borrado por error (el
+   caso más típico y más doloroso) se puede deshacer. Restaura el registro
+   en sí; NO reconstruye automáticamente relaciones ya limpiadas en otros
+   sitios al borrar (p. ej. los turnos de un empleado eliminado) — para eso
+   sigue haciendo falta rehacerlas a mano, pero al menos la ficha vuelve.
+   ============================================================ */
+const TRASH_RETENTION_DAYS = 30;
+function currentActorName(){
+  const session = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  if(session && session.type === 'owner') return t('common.owner');
+  if(session && session.type === 'employee'){
+    const emp = DB.employees.find(e => e.id === session.employeeId);
+    if(emp) return emp.name;
+  }
+  return t('common.unknown');
+}
+function moveToTrash(type, item){
+  if(!DB.trash) DB.trash = [];
+  DB.trash.unshift({
+    id: genId(), type, item: JSON.parse(JSON.stringify(item)),
+    deletedAt: new Date().toISOString(), deletedBy: currentActorName()
+  });
+  const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
+  DB.trash = DB.trash.filter(x => new Date(x.deletedAt).getTime() >= cutoff);
+}
+const TRASH_TYPE_ARRAY = {employee:'employees', client:'clients', recipe:'recipes', ingredient:'ingredients'};
+function restoreTrashItem(trashId){
+  const entry = (DB.trash||[]).find(x => x.id === trashId);
+  if(!entry) return;
+  const key = TRASH_TYPE_ARRAY[entry.type];
+  if(!key) return;
+  DB[key].push(entry.item);
+  DB.trash = DB.trash.filter(x => x.id !== trashId);
+  saveDB();
+  showToast(t('trash.restoredOk'));
+  if(typeof openTrashModal === 'function') openTrashModal();
+  // Refresca la vista que corresponda si está activa, para que se vea ya.
+  const active = document.querySelector('.view.active');
+  if(active) renderView(active.id.replace('view-',''));
+}
+function purgeTrashItem(trashId){
+  DB.trash = (DB.trash||[]).filter(x => x.id !== trashId);
+  saveDB();
+  if(typeof openTrashModal === 'function') openTrashModal();
+}
+const TRASH_TYPE_LABEL_KEY = {employee:'label.employee', client:'label.client', recipe:'label.recipe', ingredient:'label.ingredient'};
+const TRASH_TYPE_NAME_FIELD = {employee:'name', client:'name', recipe:'name', ingredient:'name'};
+function openTrashModal(){
+  const items = [...(DB.trash||[])].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-trash"></i> ${t('trash.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('trash.desc').replace('${n}', TRASH_RETENTION_DAYS)}</p>
+    ${items.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.type')}</th><th>${t('common.name')}</th><th>${t('trash.deletedBy')}</th><th>${t('trash.deletedAt')}</th><th></th></tr></thead>
+        <tbody>${items.map(x => `
+          <tr>
+            <td>${t(TRASH_TYPE_LABEL_KEY[x.type]||'common.unknown')}</td>
+            <td>${escapeHtml(x.item[TRASH_TYPE_NAME_FIELD[x.type]] || '—')}</td>
+            <td>${escapeHtml(x.deletedBy||'—')}</td>
+            <td>${escapeHtml(new Date(x.deletedAt).toLocaleString('es-ES'))}</td>
+            <td class="actions-cell">
+              <button class="btn btn-sm" onclick="restoreTrashItem(${x.id})"><i class="ti ti-arrow-back-up"></i> ${t('trash.restore')}</button>
+              <button class="btn btn-sm btn-icon btn-danger" onclick="purgeTrashItem(${x.id})" title="${t('trash.purgeOne')}"><i class="ti ti-x"></i></button>
+            </td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty"><i class="ti ti-trash-off"></i>${t('trash.empty')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+
+/* ============================================================
+   REGISTRO DE AUDITORÍA
+   Quién hizo qué y cuándo, para negocios con varios encargados/dueños —
+   no sustituye a los historiales específicos ya existentes (stock,
+   descuentos, anulaciones, cierres de caja), los complementa con los
+   cambios que antes no quedaban registrados en ningún sitio.
+   ============================================================ */
+function logAudit(action, summary){
+  if(!DB.auditLog) DB.auditLog = [];
+  DB.auditLog.unshift({id: genId(), ts: new Date().toISOString(), actor: currentActorName(), action, summary});
+  if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+}
+function openAuditLogModal(){
+  const items = (DB.auditLog||[]).slice(0, 200);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-list-details"></i> ${t('audit.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('audit.desc')}</p>
+    ${items.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('trash.deletedBy')}</th><th>${t('audit.action')}</th></tr></thead>
+        <tbody>${items.map(x => `
+          <tr>
+            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString('es-ES'))}</td>
+            <td>${escapeHtml(x.actor)}</td>
+            <td>${escapeHtml(x.summary)}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty"><i class="ti ti-list-details"></i>${t('audit.empty')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
 }
 
 // Registra el Service Worker del app-shell offline (ver sw.js). Los datos de

@@ -868,6 +868,8 @@ function confirmDeleteIngredient(id){
   requestBusinessPinAction(t('title.deleteIngredient'), t('msg.confirmDeleteIngredient'), () => reallyDeleteIngredient(id));
 }
 function reallyDeleteIngredient(id){
+  const ing0 = DB.ingredients.find(i => i.id === id);
+  if(ing0){ moveToTrash('ingredient', ing0); logAudit('delete', t('audit.deletedIngredient').replace('${name}', ing0.name)); }
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
