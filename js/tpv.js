@@ -1505,6 +1505,7 @@ function renderTableOrderModal(orderId){
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
   const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : t('label.assignWaiter')}</span>` : '';
   const allergensBadge = ` <span class="badge ${order.tableAllergens?'badge-red':''}" style="cursor:pointer" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
+  const mergeBadge = table ? ` <span class="badge" style="cursor:pointer" onclick="openMergeMesaModal(${order.id})" title="${t('tpv.merge.hint')}"><i class="ti ti-arrows-join"></i> ${t('tpv.merge.btn')}</span>` : '';
 
   const total = orderTotal(order);
   if(order.items.some(l => l.nuevo)){
@@ -1561,7 +1562,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
-      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}</h3>
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}</h3>
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
@@ -1773,6 +1774,52 @@ function renderOrderComandaPanel(order){
 // Alérgenos anotados para la mesa entera (no ligados a ningún cliente
 // dado de alta): se anotan al abrirla o en cualquier momento, se ven en
 // pantalla en la comanda y se imprimen destacados en el vale de cocina.
+// Juntar mesas: para un grupo grande que ocupa dos mesas, pasa todos los
+// platos/bebidas de una mesa a la otra y libera la primera — así se cobra
+// todo junto en un único ticket, en vez de dos comandas sueltas que no
+// tienen nada que ver entre sí.
+function openMergeMesaModal(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || !order.tableId) return;
+  const otherTables = DB.tables
+    .filter(t2 => t2.id !== order.tableId)
+    .map(t2 => ({table: t2, otherOrder: getOpenOrderForTable(t2.id)}))
+    .filter(x => x.otherOrder);
+  if(!otherTables.length){ showToast(t('tpv.merge.noOtherOpen')); return; }
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-arrows-join"></i> ${t('tpv.merge.title')}</h3>
+      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('tpv.merge.desc')}</p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${otherTables.map(({table:t2}) => `<button class="btn" onclick="confirmMergeMesa(${orderId}, ${t2.id})">${escapeHtml(t2.name)}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
+    </div>
+  `);
+}
+function confirmMergeMesa(fromOrderId, toTableId){
+  const fromOrder = DB.tpvOrders.find(o => o.id === fromOrderId);
+  const toOrder = getOpenOrderForTable(toTableId);
+  if(!fromOrder || !toOrder){ closeModal(); return; }
+  const fromTable = DB.tables.find(t2 => t2.id === fromOrder.tableId);
+  toOrder.items = [...(toOrder.items||[]), ...(fromOrder.items||[])];
+  toOrder.pax = (toOrder.pax||0) + (fromOrder.pax||0);
+  if(fromOrder.tableAllergens){
+    toOrder.tableAllergens = [toOrder.tableAllergens, fromOrder.tableAllergens].filter(Boolean).join(' · ');
+  }
+  fromOrder.status = 'pagada'; // libera la mesa origen sin generar una venta (0 items, no queda ticket fantasma)
+  fromOrder.mergedInto = toOrder.id;
+  logAudit('merge', t('audit.mergedTables').replace('${from}', fromTable?fromTable.name:'?').replace('${to}', DB.tables.find(t2=>t2.id===toTableId)?.name||'?'));
+  saveDB();
+  closeModal();
+  renderTPV();
+  showToast(t('tpv.merge.ok'));
+  renderTableOrderModal(toOrder.id);
+}
+
 function promptTableAllergens(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;

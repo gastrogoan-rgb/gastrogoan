@@ -1430,7 +1430,10 @@ function openClientModal(id){
       <input type="checkbox" id="client-marketing-consent" ${c.marketingConsent!==false?'checked':''} style="width:auto">
       ${t('label.marketingConsent')}
     </label>
-    ${id ? `<button class="btn btn-sm" style="margin-bottom:14px" onclick="openClientHistoryModal(${id})"><i class="ti ti-receipt"></i> ${t('btn.viewOrderHistory')}</button>` : ''}
+    ${id ? `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="openClientHistoryModal(${id})"><i class="ti ti-receipt"></i> ${t('btn.viewOrderHistory')}</button>
+      <button class="btn btn-sm btn-danger" onclick="eraseClientDataRGPD(${id})" title="${t('rgpd.eraseHint')}"><i class="ti ti-shield-off"></i> ${t('title.eraseClientRGPD')}</button>
+    </div>` : ''}
     ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
     <div class="field">
       <label>${t('label.rewardHistory')}</label>
@@ -1752,6 +1755,29 @@ function deleteClient(id){
     saveDB();
     renderClientes();
     showToast(t('msg.clientDeleted'));
+  });
+}
+
+// Derecho al olvido (RGPD): a diferencia de un borrado normal (que pasa
+// por la papelera y se conserva 30 días, precisamente para poder
+// recuperarlo), esto borra los datos personales de verdad y al instante,
+// sin dejar rastro recuperable — es lo que corresponde cuando un cliente
+// pide expresamente que se eliminen sus datos. Se conserva solo un
+// registro anónimo de que existió (para no romper el histórico de
+// ventas/reservas ya hechas), sin ningún dato identificativo.
+function eraseClientDataRGPD(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  requestBusinessPinAction(t('title.eraseClientRGPD'), t('msg.confirmEraseClientRGPD').replace('${name}', c.name), () => {
+    logAudit('rgpd_erase', t('audit.erasedClientRGPD').replace('${name}', c.name));
+    c.name = t('label.erasedClientName');
+    c.phone = ''; c.email = ''; c.allergies = ''; c.notes = ''; c.cp = ''; c.cumpleanos = '';
+    c.marketingConsent = false;
+    c.erasedAt = new Date().toISOString();
+    saveDB();
+    closeModal();
+    renderClientes();
+    showToast(t('msg.clientErasedOk'));
   });
 }
 
