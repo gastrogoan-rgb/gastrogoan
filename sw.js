@@ -58,3 +58,35 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+/* ============================================================
+   AVISOS PUSH (mensaje urgente de chat, cierre de caja con avisos)
+   Esto es lo que hace que el aviso llegue aunque la app/pestaña esté
+   cerrada del todo (mientras el sistema operativo no haya matado el
+   navegador de fondo del todo, ver netlify/functions/send-push.js del
+   otro lado que dispara este evento). Con la app solo abierta en otra
+   pestaña, el aviso ya llega directo desde el propio JS de la app
+   (ver notifyDesktop en js/core.js) — este bloque es el que cubre el
+   caso "app cerrada del todo".
+   ============================================================ */
+self.addEventListener('push', event => {
+  let data = {title: 'GastroGoan', body: ''};
+  try{ if(event.data) data = event.data.json(); }catch(e){}
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'GastroGoan', {
+      body: data.body || '',
+      icon: 'icon-192.png',
+      tag: data.tag || data.title || 'gastrogoan'
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({type:'window', includeUncontrolled:true}).then(clientList => {
+      for(const c of clientList){ if('focus' in c) return c.focus(); }
+      if(self.clients.openWindow) return self.clients.openWindow('./');
+    })
+  );
+});

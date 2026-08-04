@@ -2702,6 +2702,7 @@ function defaultData(){
     moodCheckins: [], // {id, employeeId, weekKey, value(1-5), ts} — encuesta de clima semanal, opcional
     trash: [], // {id, type:'employee'|'client'|'recipe'|'ingredient', item, deletedAt, deletedBy} — papelera de reciclaje, 30 días
     auditLog: [], // {id, ts, actor, action, summary} — quién hizo qué, para negocios con varios encargados
+    pushSubscriptions: [], // {deviceId, subscription, updatedAt} — dispositivos suscritos a avisos push reales
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {
@@ -2886,6 +2887,7 @@ function requestDesktopNotifications(){
       localStorage.setItem(DESKTOP_NOTIF_LS, '1');
       showToast(t('notif.enabledOk'));
       new Notification('GastroGoan', {body: t('notif.testBody')});
+      subscribeToPush();
     }else{
       localStorage.setItem(DESKTOP_NOTIF_LS, '0');
       showToast(t('notif.denied'));
@@ -2895,7 +2897,78 @@ function requestDesktopNotifications(){
 }
 function disableDesktopNotifications(){
   localStorage.setItem(DESKTOP_NOTIF_LS, '0');
+  unsubscribeFromPush();
   if(typeof renderMiNegocio === 'function') renderMiNegocio();
+}
+
+/* ============================================================
+   PUSH REAL (llega aunque la app/pestaña esté cerrada del todo)
+   Usa el estándar Web Push (no hace falta Firebase Cloud Messaging): el
+   navegador da una "suscripción" única por dispositivo, que se guarda
+   junto al resto de datos del negocio (se sincroniza sola por la nube ya
+   existente) — y para AVISAR, cualquier dispositivo que dispare una
+   alerta llama a una función serverless (netlify/functions/send-push.js,
+   ver el paquete que se sube a Netlify) pasándole a quién avisar y qué
+   decir. La función es la única pieza que tiene que estar desplegada de
+   verdad para que esto funcione — sin desplegarla, el resto sigue
+   funcionando igual que antes (avisos mientras el navegador esté abierto).
+   ============================================================ */
+const VAPID_PUBLIC_KEY = 'BETZalG9G2YzbCepMPNa23yUm_Dwkr3x2o3zLzCIF66ThpYskhROdtg7fwmygmTWCXgupg5ryVrGJ_WFZGHkazY';
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for(let i=0; i<raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+async function subscribeToPush(){
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub = existing || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    if(!DB.pushSubscriptions) DB.pushSubscriptions = [];
+    const deviceId = getOrCreateDeviceId();
+    const already = DB.pushSubscriptions.find(s => s.deviceId === deviceId);
+    const entry = {deviceId, subscription: sub.toJSON(), updatedAt: new Date().toISOString()};
+    if(already) Object.assign(already, entry);
+    else DB.pushSubscriptions.push(entry);
+    saveDB();
+  }catch(e){ console.error('Error activando el push real', e); }
+}
+async function unsubscribeFromPush(){
+  try{
+    if(!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if(sub) await sub.unsubscribe();
+    const deviceId = getOrCreateDeviceId();
+    DB.pushSubscriptions = (DB.pushSubscriptions||[]).filter(s => s.deviceId !== deviceId);
+    saveDB();
+  }catch(e){ console.error('Error desactivando el push real', e); }
+}
+function getOrCreateDeviceId(){
+  let id = localStorage.getItem('gastrogoan_device_id');
+  if(!id){ id = 'dev' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); localStorage.setItem('gastrogoan_device_id', id); }
+  return id;
+}
+// Llama a la función serverless (si está desplegada) para avisar de verdad
+// a todos los DEMÁS dispositivos suscritos — falla en silencio si esa
+// función no está desplegada todavía, sin romper nada del resto de la app.
+function sendPushToAll(title, body){
+  try{
+    const deviceId = getOrCreateDeviceId();
+    const targets = (DB.pushSubscriptions||[]).filter(s => s.deviceId !== deviceId).map(s => s.subscription);
+    if(!targets.length) return;
+    fetch('/.netlify/functions/send-push', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({subscriptions: targets, title, body})
+    }).catch(() => {}); // sin la función desplegada, esto simplemente no hace nada
+  }catch(e){}
 }
 // Se usa el Service Worker si está listo (más fiable, sigue vivo aunque la
 // pestaña no tenga el foco); si no, cae en una Notification normal.

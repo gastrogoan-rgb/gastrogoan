@@ -842,6 +842,7 @@ function sendUrgentHelpAlert(){
   });
   saveDB();
   if(typeof playNewRequestAlert === 'function') playNewRequestAlert();
+  if(typeof sendPushToAll === 'function') sendPushToAll('🚨 ' + authorName, t('chat.urgentDefaultText').replace('${name}', authorName));
   showToast(t('chat.urgentSent'));
   if(currentChatChannel !== 'general'){ switchChatTab('general'); } else { renderChatMessages(); }
 }

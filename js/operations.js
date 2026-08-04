@@ -203,7 +203,10 @@ function performCashClosure(){
   closeModal();
   renderTPV();
   printCashClosure(closure);
-  if(warnings.length) showClosureWarningsModal(warnings);
+  if(warnings.length){
+    showClosureWarningsModal(warnings);
+    if(typeof sendPushToAll === 'function') sendPushToAll(t('notif.cashWarningTitle'), warnings[0]);
+  }
   else showToast(t('msg.cashCloseDone'));
 }
 
