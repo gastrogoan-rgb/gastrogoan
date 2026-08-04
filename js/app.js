@@ -2658,7 +2658,41 @@ function setPromoTab(t){
   renderPromocion();
 }
 
+// Enlaces directos a Instagram/Facebook/Google (los mismos datos que en Mi
+// Negocio → Redes sociales), para que quien gestione Promoción pueda abrir
+// la cuenta de un toque y colgar un post o responder una reseña sin salir
+// de la app ni tener que buscar el perfil a mano.
+function instagramProfileUrl(handle){
+  const h = (handle||'').trim().replace(/^@/, '');
+  if(!h) return '';
+  return /^https?:\/\//i.test(h) ? h : 'https://instagram.com/' + encodeURIComponent(h);
+}
+function facebookProfileUrl(handle){
+  const h = (handle||'').trim();
+  if(!h) return '';
+  return /^https?:\/\//i.test(h) ? h : 'https://facebook.com/' + encodeURIComponent(h);
+}
+function renderPromoSocialLinks(){
+  const box = document.getElementById('promo-social-links');
+  if(!box) return;
+  const b = DB.business || {};
+  const links = [
+    { url: instagramProfileUrl(b.ig), icon: 'ti-brand-instagram', label: 'Instagram' },
+    { url: facebookProfileUrl(b.fb), icon: 'ti-brand-facebook', label: 'Facebook' },
+    { url: (b.gmaps||'').trim(), icon: 'ti-brand-google', label: t('mn.business.gmapsLabel') },
+  ].filter(l => l.url);
+  if(!links.length){
+    box.innerHTML = `<p style="font-size:12.5px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('promo.social.emptyHint')}</p>`;
+    return;
+  }
+  box.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${links.map(l => `<a class="btn btn-sm" style="text-decoration:none" href="${escapeHtml(l.url)}" target="_blank" rel="noopener"><i class="ti ${l.icon}"></i> ${escapeHtml(l.label)}</a>`).join('')}
+    </div>`;
+}
+
 function renderPromocion(){
+  renderPromoSocialLinks();
   document.querySelectorAll('#view-promocion .ge-tab').forEach(b => b.classList.remove('active'));
   const tabBtn = document.getElementById('promo-tab-'+promoTab);
   if(tabBtn) tabBtn.classList.add('active');
@@ -3810,7 +3844,12 @@ function renderMiNegocio(){
           <label>Facebook</label>
           <input type="text" id="mn-fb" value="${escapeHtml(b.fb||'')}" placeholder="milocal" onchange="saveBusiness(true)">
         </div>
+        <div class="field">
+          <label>${t('mn.business.gmapsLabel')}</label>
+          <input type="url" id="mn-gmaps" value="${escapeHtml(b.gmaps||'')}" placeholder="https://maps.app.goo.gl/..." onchange="saveBusiness(true)">
+        </div>
       </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 14px">${t('mn.business.gmapsHint')}</p>
 
       <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> ${t('mn.business.saveAll')}</button>
     </div>
@@ -4315,6 +4354,7 @@ function saveBusiness(silent){
   }
   if(el('mn-ig')) DB.business.ig = el('mn-ig').value.trim();
   if(el('mn-fb')) DB.business.fb = el('mn-fb').value.trim();
+  if(el('mn-gmaps')) DB.business.gmaps = el('mn-gmaps').value.trim();
   if(el('mn-serv-mesa') && el('mn-serv-takeaway') && el('mn-serv-delivery')) {
     DB.business.tiposServicio = {
       mesa: el('mn-serv-mesa').checked,
