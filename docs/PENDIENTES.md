@@ -76,7 +76,37 @@ Si se retoma: empezar por panel de reseñas + responder desde la app (más
 valor, menos complejidad que publicar posts), y dejar seguidores/métricas
 de posts para después.
 
-## 4. (añadir aquí lo que vaya surgiendo)
+## 4. Modo offline real del TPV
+
+**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+
+Que el TPV siga funcionando (cobrar, comandar) si se cae la conexión a
+mitad de servicio, guardando todo en una cola local y sincronizando solo
+al recuperar internet. Es un cambio de fondo en el motor de sincronización
+con la nube (colas, resolución de conflictos si dos dispositivos cobraron
+la misma mesa offline, etc.) — merece su propia sesión centrada solo en
+esto, no meterlo de pasada junto con otras features.
+
+## 5. Comanda por voz en cocina
+
+**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+
+Reconocimiento de voz (Web Speech API) para marcar platos como marchados
+sin tocar la pantalla. Técnicamente viable, pero hay que probarlo en una
+cocina de verdad (ruido, acentos, manos libres) antes de darlo por
+terminado — no se puede validar solo con pruebas automatizadas de texto.
+
+## 6. Plano de sala visual (arrastrar mesas)
+
+**Estado: aparcado, no empezar sin que el usuario lo pida explícitamente.**
+
+Un editor visual tipo mapa/canvas donde se vea la disposición real del
+local y se puedan arrastrar mesas/reservas, en vez de la lista/grid actual
+de mesas. Es un subsistema de UI nuevo entero (editor de layout, guardar
+posiciones, distintas vistas por zona) — proyecto propio, no un añadido
+rápido.
+
+## 7. (añadir aquí lo que vaya surgiendo)
 
 Cuando aparezca un nuevo pendiente "fuera de código" en conversación, se
 añade como sección nueva en este archivo, con fecha y contexto suficiente
