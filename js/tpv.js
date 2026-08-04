@@ -89,10 +89,10 @@ function updateAutoActiveCarta(force){
     if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
   }
 }
-const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro','TarjetaRegalo'];
 // El método de pago se guarda siempre en español (valor interno/histórico);
 // esto solo traduce la etiqueta que se le muestra al usuario.
-const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed'};
+const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed','TarjetaRegalo':'pay.giftcard'};
 function paymentMethodTpvLabel(value){
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
@@ -581,6 +581,7 @@ function renderTPV(){
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
+      <button class="btn" onclick="openGiftCardsModal()"><i class="ti ti-gift"></i> ${t('giftcard.btn')}</button>
       ${(tiposServicio.takeaway !== false || tiposServicio.delivery !== false) ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
@@ -1895,6 +1896,60 @@ function cancelWaitlistEntry(id){
   openWaitlistModal();
 }
 
+// Tarjetas/bonos regalo: emitir uno nuevo (queda registrado con su código y
+// saldo) y consultar el saldo de uno existente sin tener que ir a cobrar de
+// verdad. El cobro del importe del bono en sí se registra como una venta
+// normal con método de pago "Efectivo"/"Tarjeta" elegido por el cliente que
+// lo compra (dinero real entrando hoy) — el propio bono no es una venta de
+// comida, así que no se mete en DB.sales para no descuadrar el coste de
+// materia prima ni los informes de platos vendidos.
+function openGiftCardsModal(){
+  const active = (DB.giftCards||[]).filter(g => g.active).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-gift"></i> ${t('giftcard.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <h4 style="margin:0 0 8px"><i class="ti ti-plus"></i> ${t('giftcard.issueTitle')}</h4>
+    <div class="field-row">
+      <div class="field"><label>${t('giftcard.amountLabel')}</label><input type="number" id="gc-amount" min="1" step="1" value="50"></div>
+      <div class="field"><label>${t('common.notes')}</label><input type="text" id="gc-note" placeholder="${t('giftcard.notePlaceholder')}"></div>
+    </div>
+    <button class="btn btn-primary" onclick="issueGiftCardFromModal()"><i class="ti ti-gift"></i> ${t('giftcard.issueBtn')}</button>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <h4 style="margin:0 0 8px"><i class="ti ti-search"></i> ${t('giftcard.lookupTitle')}</h4>
+    <div style="display:flex;gap:6px">
+      <input type="text" id="gc-lookup-code" placeholder="XXXX-XXXX" style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <button class="btn" onclick="lookupGiftCard()">${t('giftcard.lookupBtn')}</button>
+    </div>
+    <div id="gc-lookup-result" style="margin-top:8px"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <h4 style="margin:0 0 8px">${t('giftcard.activeListTitle')}</h4>
+    <div style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+      ${active.length ? active.map(g => `<div style="font-size:12.5px;display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:4px"><span>${g.code}${g.note?' — '+escapeHtml(g.note):''}</span><strong>${fmtMoney(g.balance)}</strong></div>`).join('')
+        : `<div class="empty" style="padding:6px"><i class="ti ti-gift"></i>${t('giftcard.noneActive')}</div>`}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function issueGiftCardFromModal(){
+  const amount = parseFloat(document.getElementById('gc-amount').value) || 0;
+  const note = document.getElementById('gc-note').value.trim();
+  if(amount <= 0){ showToast(t('giftcard.needAmount')); return; }
+  const card = issueGiftCard(amount, note);
+  openGiftCardsModal();
+  showToast(t('giftcard.issuedOk').replace('${code}', card.code));
+}
+function lookupGiftCard(){
+  const code = document.getElementById('gc-lookup-code').value.trim();
+  const box = document.getElementById('gc-lookup-result');
+  const card = findGiftCard(code);
+  if(!card){ box.innerHTML = `<span style="color:var(--red)">${t('giftcard.notFound')}</span>`; return; }
+  box.innerHTML = `<span>${card.active ? t('giftcard.balanceIs').replace('${amount}', fmtMoney(card.balance)) : t('giftcard.alreadyUsedUp')}</span>`;
+}
+
 function promptTableAllergens(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
@@ -2736,6 +2791,11 @@ function renderFullPaymentTab(order, total){
       </div>
       <p style="font-size:12px;color:var(--muted)" id="payment-mixed-hint"></p>
     </div>
+    <div class="field" id="payment-giftcard-field" style="display:none">
+      <label>${t('giftcard.codeLabel')}</label>
+      <input type="text" id="payment-giftcard-code" placeholder="XXXX-XXXX" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <small style="color:var(--muted)" id="payment-giftcard-hint"></small>
+    </div>
   `;
 }
 
@@ -2743,9 +2803,11 @@ function togglePaymentCash(){
   const method = document.getElementById('payment-method').value;
   const isCash = method === 'Efectivo';
   const isMixed = method === 'Mixto';
+  const isGiftCard = method === 'TarjetaRegalo';
   document.getElementById('payment-cash-field').style.display = isCash ? '' : 'none';
   document.getElementById('payment-change-kpi').style.display = isCash ? '' : 'none';
   document.getElementById('payment-mixed-fields').style.display = isMixed ? '' : 'none';
+  document.getElementById('payment-giftcard-field').style.display = isGiftCard ? '' : 'none';
   if(isMixed) updatePaymentMixedHint();
 }
 
@@ -2888,6 +2950,17 @@ function finalizeCharge(orderId){
   const {total: subtotal, descuentoPct, descuentoImporte, propina, finalTotal: total} = computeFinalTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
   let pagos = null;
+  if(metodoPago === 'TarjetaRegalo'){
+    const code = document.getElementById('payment-giftcard-code').value.trim();
+    if(!code){ showToast(t('giftcard.needCode')); return; }
+    const result = redeemGiftCard(code, total);
+    if(!result.ok){
+      if(result.reason === 'insufficient') showToast(t('giftcard.insufficientBalance').replace('${balance}', fmtMoney(result.balance)));
+      else if(result.reason === 'inactive') showToast(t('giftcard.inactive'));
+      else showToast(t('giftcard.notFound'));
+      return;
+    }
+  }
   if(metodoPago === 'Mixto'){
     const cash = Math.max(0, parseFloat(document.getElementById('payment-mixed-cash').value) || 0);
     const card = Math.max(0, parseFloat(document.getElementById('payment-mixed-card').value) || 0);
