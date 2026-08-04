@@ -580,6 +580,7 @@ function renderTPV(){
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
+      <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
       ${(tiposServicio.takeaway !== false || tiposServicio.delivery !== false) ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
@@ -1818,6 +1819,80 @@ function confirmMergeMesa(fromOrderId, toTableId){
   renderTPV();
   showToast(t('tpv.merge.ok'));
   renderTableOrderModal(toOrder.id);
+}
+
+// Lista de espera: clientes que llegan sin reserva y no hay mesa libre. No
+// asigna mesa ni bloquea nada — es solo una cola visible para todo el
+// equipo, con la opción de "sentar" cuando se libera un hueco (lo que hace
+// es simplemente quitarlos de la lista; abrir la comanda de la mesa se
+// sigue haciendo a mano, como con cualquier cliente).
+function openWaitlistModal(){
+  const waiting = (DB.waitlist||[]).filter(w => w.status === 'esperando').sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-users-group"></i> ${t('waitlist.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      ${!waiting.length ? `<div class="empty"><i class="ti ti-mood-smile"></i>${t('waitlist.empty')}</div>` : waiting.map(w => `
+        <div class="card" style="padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${escapeHtml(w.name)}</strong> · 👥 ${w.people}
+              ${w.phone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(w.phone)}</div>` : ''}
+              ${w.notes ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(w.notes)}</div>` : ''}
+              <div style="font-size:11px;color:var(--muted)">${waitlistMinutesWaiting(w)} ${t('waitlist.minutesWaiting')}</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-primary" onclick="seatWaitlistEntry(${w.id})" title="${t('waitlist.seatHint')}"><i class="ti ti-armchair"></i></button>
+              <button class="btn btn-sm btn-danger" onclick="cancelWaitlistEntry(${w.id})" title="${t('waitlist.cancelHint')}"><i class="ti ti-x"></i></button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <h4 style="margin:0 0 8px"><i class="ti ti-plus"></i> ${t('waitlist.addTitle')}</h4>
+    <div class="field-row">
+      <div class="field"><label>${t('label.clientName')}</label><input type="text" id="wl-name"></div>
+      <div class="field"><label>${t('th.people')}</label><input type="number" id="wl-people" value="2" min="1" max="50"></div>
+    </div>
+    <div class="field"><label>${t('waitlist.phone')}</label><input type="tel" id="wl-phone" placeholder="600 000 000"></div>
+    <div class="field"><label>${t('waitlist.notes')}</label><input type="text" id="wl-notes"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+      <button class="btn btn-primary" onclick="addWaitlistEntry()"><i class="ti ti-plus"></i> ${t('waitlist.add')}</button>
+    </div>
+  `);
+}
+function waitlistMinutesWaiting(w){
+  return Math.max(0, Math.round((Date.now() - new Date(w.createdAt).getTime()) / 60000));
+}
+function addWaitlistEntry(){
+  const name = document.getElementById('wl-name').value.trim();
+  const people = parseInt(document.getElementById('wl-people').value) || 1;
+  const phone = document.getElementById('wl-phone').value.trim();
+  const notes = document.getElementById('wl-notes').value.trim();
+  if(!name){ showToast(t('waitlist.needName')); return; }
+  if(!DB.waitlist) DB.waitlist = [];
+  DB.waitlist.push({id: genId(), name, phone, people, notes, status: 'esperando', createdAt: new Date().toISOString()});
+  saveDB();
+  openWaitlistModal();
+}
+function seatWaitlistEntry(id){
+  const w = (DB.waitlist||[]).find(x => x.id === id);
+  if(!w) return;
+  w.status = 'sentado';
+  w.seatedAt = new Date().toISOString();
+  saveDB();
+  openWaitlistModal();
+  showToast(t('waitlist.seatedOk').replace('${name}', w.name));
+}
+function cancelWaitlistEntry(id){
+  const w = (DB.waitlist||[]).find(x => x.id === id);
+  if(!w) return;
+  w.status = 'cancelada';
+  saveDB();
+  openWaitlistModal();
 }
 
 function promptTableAllergens(orderId){
