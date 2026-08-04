@@ -132,19 +132,33 @@ Lo que hace falta construir (no es un interruptor, es un proyecto real):
 - Decidir qué pasa con los datos/acceso si alguien no renueva (¿se
   bloquea la app entera? ¿solo lectura? ¿periodo de gracia?).
 
-## 8. Notificaciones push de verdad (app cerrada del todo / móvil bloqueado)
+## 8. Notificaciones push de verdad (app cerrada del todo / móvil bloqueado) — HECHO en código (04/08/2026), pendiente de desplegar
 
-**Estado: parcialmente hecho (ver "Papelera de reciclaje, registro de
-auditoría y avisos del navegador", 02/08/2026) — lo que falta es más
-grande y necesita servidor propio.**
+Construido con el estándar Web Push (no ha hecho falta Firebase Cloud
+Functions al final — una función serverless de Netlify basta):
+- Cliente: `subscribeToPush()`/`sendPushToAll()` en `js/core.js`, guardan
+  la suscripción de cada dispositivo junto al resto de datos del negocio
+  (se sincroniza sola) y llaman a la función al disparar un aviso urgente
+  de chat o un cierre de caja con avisos.
+- Service Worker (`sw.js`): ya sabe recibir el push y mostrar el aviso del
+  sistema operativo, y al tocarlo abre/enfoca la app.
+- Función serverless (`netlify/functions/send-push.js`, con `web-push` ya
+  instalado en el paquete que se entregó): reenvía el aviso de verdad a
+  los demás dispositivos suscritos.
+- Claves VAPID ya generadas (públicas, en el código; la privada se pasó
+  solo por `README-PUSH.md`, no vive en el repo).
 
-Ya está implementado el aviso "mientras el navegador siga abierto" (otra
-pestaña, u otra app con el navegador de fondo) para mensajes urgentes de
-chat y cierres de caja con avisos. Lo que NO se ha hecho, y necesitaría su
-propio proyecto: un aviso real de tipo push que llegue aunque el móvil
-esté bloqueado y la app/navegador cerrados del todo. Eso requiere Firebase
-Cloud Functions (o un backend propio) desplegado para disparar el push
-desde servidor — infraestructura que no existe hoy.
+**Pendiente de que el usuario lo despliegue** (no se puede hacer desde
+aquí, hace falta su cuenta de Netlify): seguir los 3 pasos de
+`README-PUSH.md` (poner las dos variables de entorno en Netlify y subir
+la carpeta con `node_modules` incluido). Sin desplegar la función, todo
+sigue funcionando igual que antes (avisos solo con el navegador abierto)
+— no rompe nada, es un añadido opcional.
+
+Validado con pruebas: la lógica de "nunca avisarme a mí mismo" y la
+llamada a la función con los destinatarios correctos. Lo que NO se puede
+probar desde aquí es la entrega real del push (necesita la función
+desplegada de verdad + un dispositivo real).
 
 ## 9. (añadir aquí lo que vaya surgiendo)
 
