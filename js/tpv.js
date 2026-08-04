@@ -574,6 +574,7 @@ function renderTPV(){
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn ${chaosMode?'btn-danger':''}" onclick="toggleChaosMode()" title="${t('tpv.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      <button class="btn ${planoMode?'btn-primary':''}" onclick="togglePlanoMode()" title="${t('tpv.plano.hint')}"><i class="ti ti-layout-2"></i> ${t('tpv.plano.btn')}</button>
       <button class="btn" onclick="setTpvTextSize()" title="${t('tpv.textSize.hint')}"><i class="ti ti-text-size"></i></button>
       <button class="btn" onclick="openTodaySalesModal()"><i class="ti ti-receipt"></i> ${t('title.todaySales')}</button>
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
@@ -583,8 +584,9 @@ function renderTPV(){
     </div>
     ${renderTpvPendingOnline()}
     ${renderTpvToGo(tiposServicio)}
-    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
+    ${chaosMode ? renderChaosModeMesas() : planoMode ? renderTpvMesasPlano() : renderTpvMesas(tiposServicio)}
   `;
+  if(planoMode) attachPlanoDragHandlers();
 }
 
 // "Modo caos": en vez de las mesas agrupadas por zona, una única lista con
@@ -608,6 +610,97 @@ function renderChaosModeMesas(){
     <h3 style="margin-top:16px"><i class="ti ti-flame"></i> ${t('tpv.chaos.title')}</h3>
     <div class="grid grid-mesas">${occupied.map(x => renderMesaCard(x.table)).join('')}</div>
   `;
+}
+
+// Plano visual de sala: en vez de la lista/rejilla de mesas, un "mapa" con
+// cada mesa colocada donde de verdad está en el local (arrastrando su
+// tarjeta), para reconocer la sala de un vistazo en vez de leer nombres.
+// La posición (table.x/table.y, en píxeles dentro del plano) se guarda por
+// mesa; si una mesa nunca se ha colocado, aparece en una rejilla por
+// defecto hasta que alguien la arrastre a su sitio real.
+let planoMode = false;
+function togglePlanoMode(){
+  planoMode = !planoMode;
+  if(planoMode) chaosMode = false;
+  renderTPV();
+}
+const PLANO_CARD_W = 118, PLANO_CARD_H = 100, PLANO_GAP = 14;
+function renderTpvMesasPlano(){
+  const tables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
+  if(!tables.length){
+    return `<h3 style="margin-top:16px"><i class="ti ti-layout-2"></i> ${t('tpv.plano.title')}</h3><div class="empty">${t('empty.tables')}</div>`;
+  }
+  const cols = Math.max(3, Math.floor((document.getElementById('tpv-content')?.clientWidth || 900) / (PLANO_CARD_W+PLANO_GAP)));
+  let maxBottom = 0;
+  const cardsHtml = tables.map((table, i) => {
+    const hasPos = table.x!=null && table.y!=null;
+    const x = hasPos ? table.x : (i % cols) * (PLANO_CARD_W+PLANO_GAP);
+    const y = hasPos ? table.y : Math.floor(i / cols) * (PLANO_CARD_H+PLANO_GAP);
+    maxBottom = Math.max(maxBottom, y + PLANO_CARD_H);
+    return `<div class="plano-mesa-wrap" data-table-id="${table.id}" style="position:absolute;left:${x}px;top:${y}px;width:${PLANO_CARD_W}px;cursor:${(typeof editUnlocked!=='undefined'&&editUnlocked)?'grab':'pointer'}">${renderMesaCard(table)}</div>`;
+  }).join('');
+  const canDrag = typeof editUnlocked !== 'undefined' && editUnlocked;
+  return `
+    <h3 style="margin-top:16px"><i class="ti ti-layout-2"></i> ${t('tpv.plano.title')}</h3>
+    ${canDrag ? `<p style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ti-hand-move"></i> ${t('tpv.plano.dragHint')}</p>` : ''}
+    <div id="plano-floor" style="position:relative;min-height:${maxBottom+PLANO_GAP}px;background:var(--brand-cream);border:1px dashed var(--border);border-radius:10px;overflow:auto;padding:10px">
+      ${cardsHtml}
+    </div>
+  `;
+}
+// Arrastre simple con eventos de puntero: solo activo en modo edición
+// (propietario, o empleado con permiso), para que el personal normal no
+// pueda desordenar el plano sin querer mientras cobra.
+function attachPlanoDragHandlers(){
+  const floor = document.getElementById('plano-floor');
+  if(!floor) return;
+  if(!(typeof editUnlocked !== 'undefined' && editUnlocked)) return;
+  let dragEl = null, startX = 0, startY = 0, origX = 0, origY = 0, moved = false;
+  floor.querySelectorAll('.plano-mesa-wrap').forEach(wrap => {
+    // Si el puntero se movió de verdad (arrastre), se cancela el clic que
+    // el navegador dispara justo después de soltar, para no abrir la mesa
+    // sin querer al terminar de colocarla.
+    wrap.addEventListener('click', ev => {
+      if(wrap.dataset.justDragged === '1'){
+        wrap.dataset.justDragged = '';
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    }, true);
+    wrap.addEventListener('pointerdown', ev => {
+      dragEl = wrap;
+      moved = false;
+      startX = ev.clientX; startY = ev.clientY;
+      origX = parseInt(wrap.style.left); origY = parseInt(wrap.style.top);
+      wrap.setPointerCapture(ev.pointerId);
+      wrap.style.zIndex = 10;
+    });
+    wrap.addEventListener('pointermove', ev => {
+      if(dragEl !== wrap) return;
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      if(!moved) return;
+      wrap.style.left = Math.max(0, origX + dx) + 'px';
+      wrap.style.top = Math.max(0, origY + dy) + 'px';
+    });
+    const finish = () => {
+      if(dragEl !== wrap) return;
+      dragEl = null;
+      wrap.style.zIndex = '';
+      if(moved){
+        wrap.dataset.justDragged = '1';
+        const tableId = parseInt(wrap.dataset.tableId);
+        const table = DB.tables.find(t2 => t2.id === tableId);
+        if(table){
+          table.x = parseInt(wrap.style.left);
+          table.y = parseInt(wrap.style.top);
+          saveDB();
+        }
+      }
+    };
+    wrap.addEventListener('pointerup', finish);
+    wrap.addEventListener('pointercancel', finish);
+  });
 }
 
 // Tamaño de letra del TPV, para quien tenga la vista cansada al final de un
