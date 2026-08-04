@@ -624,26 +624,33 @@ function togglePlanoMode(){
   if(planoMode) chaosMode = false;
   renderTPV();
 }
-const PLANO_CARD_W = 118, PLANO_CARD_H = 100, PLANO_GAP = 14;
+const PLANO_CARD_W = 118, PLANO_CARD_H = 100, PLANO_GAP = 28;
 function renderTpvMesasPlano(){
   const tables = [...DB.tables].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'es', {numeric:true}));
+  const canDrag = typeof editUnlocked !== 'undefined' && editUnlocked;
   if(!tables.length){
     return `<h3 style="margin-top:16px"><i class="ti ti-layout-2"></i> ${t('tpv.plano.title')}</h3><div class="empty">${t('empty.tables')}</div>`;
   }
-  const cols = Math.max(3, Math.floor((document.getElementById('tpv-content')?.clientWidth || 900) / (PLANO_CARD_W+PLANO_GAP)));
+  const floorWidth = Math.max(document.getElementById('tpv-content')?.clientWidth || 900, 700);
+  const cols = Math.max(3, Math.floor(floorWidth / (PLANO_CARD_W+PLANO_GAP)));
   let maxBottom = 0;
   const cardsHtml = tables.map((table, i) => {
     const hasPos = table.x!=null && table.y!=null;
-    const x = hasPos ? table.x : (i % cols) * (PLANO_CARD_W+PLANO_GAP);
-    const y = hasPos ? table.y : Math.floor(i / cols) * (PLANO_CARD_H+PLANO_GAP);
+    // Sin posición guardada: reparto en rejilla, pero con margen generoso
+    // (no pegado a la esquina) para que ya se note que esto es un plano y
+    // no la misma lista de siempre — y quede sitio de sobra para arrastrar.
+    const x = hasPos ? table.x : PLANO_GAP + (i % cols) * (PLANO_CARD_W+PLANO_GAP);
+    const y = hasPos ? table.y : PLANO_GAP + Math.floor(i / cols) * (PLANO_CARD_H+PLANO_GAP);
     maxBottom = Math.max(maxBottom, y + PLANO_CARD_H);
-    return `<div class="plano-mesa-wrap" data-table-id="${table.id}" style="position:absolute;left:${x}px;top:${y}px;width:${PLANO_CARD_W}px;cursor:${(typeof editUnlocked!=='undefined'&&editUnlocked)?'grab':'pointer'}">${renderMesaCard(table)}</div>`;
+    // touch-action:none es imprescindible en tablet/móvil: sin esto, el
+    // propio navegador se queda con el gesto para hacer scroll de la
+    // página en vez de dejar que lo reciba el arrastre.
+    return `<div class="plano-mesa-wrap" data-table-id="${table.id}" style="position:absolute;left:${x}px;top:${y}px;width:${PLANO_CARD_W}px;touch-action:none;cursor:${canDrag?'grab':'pointer'}">${renderMesaCard(table)}</div>`;
   }).join('');
-  const canDrag = typeof editUnlocked !== 'undefined' && editUnlocked;
   return `
     <h3 style="margin-top:16px"><i class="ti ti-layout-2"></i> ${t('tpv.plano.title')}</h3>
-    ${canDrag ? `<p style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ti-hand-move"></i> ${t('tpv.plano.dragHint')}</p>` : ''}
-    <div id="plano-floor" style="position:relative;min-height:${maxBottom+PLANO_GAP}px;background:var(--brand-cream);border:1px dashed var(--border);border-radius:10px;overflow:auto;padding:10px">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:6px"><i class="ti ${canDrag?'ti-hand-move':'ti-info-circle'}"></i> ${canDrag ? t('tpv.plano.dragHint') : t('tpv.plano.viewOnlyHint')}</p>
+    <div id="plano-floor" class="plano-floor-bg" style="position:relative;width:100%;min-height:${maxBottom+PLANO_GAP}px;border-radius:10px;overflow:auto;padding:10px">
       ${cardsHtml}
     </div>
   `;

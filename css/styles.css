@@ -206,6 +206,18 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 @keyframes mesa-blink{0%,100%{box-shadow:0 0 0 0 rgba(220,53,69,.55)}50%{box-shadow:0 0 0 6px rgba(220,53,69,0)}}
 @media (prefers-reduced-motion: reduce){.mesa-card.mesa-blink-urgent{animation:none;border:2px solid var(--red)}}
 
+/* Plano visual de sala: fondo con patrón de cuadrícula (estilo plano de
+   arquitecto) para que se note a simple vista que no es la lista de
+   siempre, incluso antes de arrastrar ninguna mesa. */
+.plano-floor-bg{
+  background-color:var(--surface,#fff);
+  background-image:linear-gradient(rgba(0,0,0,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.06) 1px,transparent 1px);
+  background-size:24px 24px;
+  border:2px solid var(--border);
+}
+.plano-mesa-wrap{touch-action:none;transition:box-shadow .1s}
+.plano-mesa-wrap:active{box-shadow:0 6px 18px rgba(0,0,0,.25)}
+
 /* Tamaño de letra ajustable del TPV (por si a alguien le viene mejor más grande) */
 #view-tpv.tpv-text-grande{font-size:1.12em}
 #view-tpv.tpv-text-extra{font-size:1.28em}
