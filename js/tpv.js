@@ -1457,17 +1457,12 @@ function renderTableOrderModal(orderId){
       ${cartaTabs}${menuTabs}
       ${order.tipo==='delivery' || order.tipo==='takeaway' ? `<button class="btn btn-sm" style="margin-left:auto" onclick="openPasteOrderModal(${order.id})" title="${t('title.pasteOrderHint')}"><i class="ti ti-clipboard-text"></i> ${t('btn.pasteOrder')}</button>` : ''}
     </div>
-    <!-- Layout a dos columnas (se apilan en móvil): selector + comanda.
-         Antes esto estaba limitado a un 70vh fijo, muy por debajo de lo que
-         el propio modal (.modal-order, hasta 96vh) podía ofrecer — con una
-         mesa grande y muchos platos pedidos, la columna de la comanda hacía
-         su propio scroll interno diminuto en vez de aprovechar casi toda la
-         pantalla. Ahora usa prácticamente todo el alto disponible del modal. -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px)">
-      <div style="flex:1 1 300px;min-width:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px">
+    <!-- Layout a dos columnas: selector + comanda (ver .tpv-order-cols en styles.css) -->
+    <div class="tpv-order-cols">
+      <div class="tpv-order-col tpv-order-col-selector">
         ${selectorHtml}
       </div>
-      <div style="flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--brand-cream)">
+      <div class="tpv-order-col tpv-order-col-comanda">
         ${comandaHtml}
       </div>
     </div>

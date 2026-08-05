@@ -316,6 +316,23 @@ td.wrap{white-space:normal}
 .modal-body{overflow-y:auto;min-height:0;flex:1}
 .modal.modal-xl{max-width:920px;max-height:95vh}
 .modal.modal-order{max-width:1200px;max-height:96vh;width:98%}
+/* Mesa/comanda: carta a un lado y el pedido en curso al otro. En pantalla
+   ancha van lado a lado, cada uno con su propio scroll interno acotado a
+   casi toda la altura del modal — con una mesa grande y muchos platos
+   pedidos, se ve de golpe en vez de un cuadro diminuto con scroll propio. */
+.tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px)}
+.tpv-order-col{flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px}
+.tpv-order-col-comanda{background:var(--brand-cream)}
+/* En móvil se apilan (no caben lado a lado) — sin esto, cada bloque crecía
+   a su altura natural y todo acababa siendo un único scroll larguísimo
+   mezclando la carta con el pedido, obligando a bajar muchísimo para
+   encontrar lo que se busca. Con una altura propia acotada por bloque,
+   la carta y el pedido son dos "ventanas" independientes siempre a mano,
+   cada una con su scroll — nunca hay que perseguir el otro bloque. */
+@media (max-width: 720px){
+  .tpv-order-cols{max-height:none}
+  .tpv-order-col{flex-basis:100%;max-height:38vh}
+}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
 .modal-header h3{font-size:19px}
 .modal-close{background:none;border:none;font-size:26px;cursor:pointer;color:var(--muted);min-height:44px;min-width:44px}
