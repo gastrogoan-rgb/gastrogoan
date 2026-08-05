@@ -1716,8 +1716,16 @@ function initPublicRequestsListener(){
       if(!req || !req.type){ reqRef.remove(); return; }
       let notifyNewRequest = false;
       if(req.type === 'reserva'){
+        // Igual que ya se hacía con los pedidos para llevar/delivery
+        // creados desde el TPV: si el teléfono coincide con un cliente ya
+        // dado de alta, la reserva queda vinculada a su ficha desde el
+        // primer momento — antes esto NO pasaba con las reservas online (el
+        // canal con más volumen), así que ni el aviso de alergias al sentar
+        // la mesa ni los puntos de fidelidad se disparaban para un cliente
+        // recurrente que reservaba por la web en vez de llamar o venir en persona.
+        const matchedClient = req.clientPhone ? findClientByPhone(req.clientPhone) : null;
         DB.reservations.push({
-          id: genId(), clientId: null,
+          id: genId(), clientId: matchedClient ? matchedClient.id : null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '',
           date: req.date, time: req.time, people: req.people || 1,
           tableId: null, notes: req.notes || '', status: 'pendiente',
