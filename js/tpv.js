@@ -38,12 +38,6 @@ function toggleActiveCarta(id, checked){
   renderTPV();
 }
 
-function setCartaAuto(checked){
-  DB.business.cartaAuto = checked;
-  saveDB();
-  if(checked){ updateAutoActiveCarta(true); updateAutoActiveMenu(true); }
-  else renderTPV();
-}
 
 // Comprueba si una carta debería estar activa ahora mismo, según el horario
 // semanal propio configurado en su editor (días + franjas horarias opcionales).
@@ -75,7 +69,7 @@ function computeAutoActiveCartaIds(){
 // Si el cambio automático está activado, ajusta las cartas activas del TPV
 // según lo programado. force=true vuelve a calcular aunque ya hubiera activas.
 function updateAutoActiveCarta(force){
-  if(!DB.business || DB.business.cartaAuto === false) return;
+  if(!DB.business) return;
   const autoIds = computeAutoActiveCartaIds();
   // OJO: antes, si ninguna carta coincidía con el horario ahora mismo (autoIds
   // vacío), se salía sin tocar DB.activeCartaIds — así que la última carta
@@ -199,7 +193,11 @@ function getOpenOrderForTable(tableId){
 function renderTpvCartaSelector(){
   const activeCartas = getActiveCartas();
   const activeIds = DB.activeCartaIds||[];
-  const cartaAuto = DB.business.cartaAuto !== false;
+  // Fijo desde ahora: la carta activa siempre sigue el horario que el
+  // propio dueño configuró en Oferta Gastronómica, sin poder desactivarlo
+  // ni elegir manualmente qué carta mostrar (evita el despiste de dejarlo
+  // en manual sin querer y que se quede una carta vieja puesta).
+  const cartaAuto = true;
   const totalPlatos = activeCartas.reduce((s,c)=>s+(c.secciones||[]).reduce((ss,sec)=>ss+(sec.platos||[]).length,0), 0);
   return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -213,8 +211,8 @@ function renderTpvCartaSelector(){
           </label>
         `).join('') : `<span style="font-size:12px;color:var(--muted)">${t('empty.noCartasCreated')}</span>`}
       </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="tpv-carta-auto" ${cartaAuto?'checked':''} onchange="setCartaAuto(this.checked)">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:not-allowed;color:var(--muted)" title="${t('label.autoSwitchBySchedule.lockedHint')}">
+        <input type="checkbox" id="tpv-carta-auto" checked disabled>
         ${t('label.autoSwitchBySchedule')}
       </label>
       <span style="font-size:12px;color:var(--muted)">
@@ -227,7 +225,7 @@ function renderTpvCartaSelector(){
 function renderTpvMenuSelector(){
   if(!DB.menus.length) return '';
   const activeIds = DB.activeMenuIds||[];
-  const cartaAuto = DB.business.cartaAuto !== false;
+  const cartaAuto = true; // fijo, ver comentario en renderTpvCartaSelector
   return `
     <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <i class="ti ti-list-details"></i>

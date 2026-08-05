@@ -631,7 +631,7 @@ function computeAutoActiveMenuIds(){
   return DB.menus.filter(m => cartaIsActiveNow(m, now)).map(m=>m.id);
 }
 function updateAutoActiveMenu(force){
-  if(!DB.business || DB.business.cartaAuto === false) return;
+  if(!DB.business) return;
   const autoIds = computeAutoActiveMenuIds();
   // Igual que en updateAutoActiveCarta(): si ahora mismo no hay ningún menú
   // que coincida con su horario, hay que vaciar activeMenuIds también, no
