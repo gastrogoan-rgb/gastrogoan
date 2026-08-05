@@ -2102,9 +2102,25 @@ function startVoiceComanda(){
   };
   // Si se corta sola (silencio largo, error de red...) y seguimos en modo
   // activo, se reinicia automáticamente para no tener que volver a tocar
-  // el botón en mitad del servicio.
+  // el botón en mitad del servicio. PERO si el permiso de micrófono fue
+  // denegado, reintentar es inútil (fallará siempre igual) y sin avisar
+  // dejaba al usuario pensando que estaba "escuchando" cuando en realidad
+  // llevaba rato sin poder arrancar nunca — de ahí el "activo el micro
+  // pero no se marca nada": el error se registraba solo en la consola,
+  // invisible para quien está delante de la pantalla.
   voiceRecognition.onend = () => { if(voiceComandaActive){ try{ voiceRecognition.start(); }catch(e){} } };
-  voiceRecognition.onerror = e => { console.error('Voz: error de reconocimiento', e.error); };
+  voiceRecognition.onerror = e => {
+    console.error('Voz: error de reconocimiento', e.error);
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      stopVoiceComanda();
+      showToast(t('voice.errorPermission'));
+    }else if(e.error === 'no-speech' || e.error === 'aborted'){
+      // Silencio normal entre frases o parada intencionada — no es un
+      // error real, no hace falta avisar cada vez.
+    }else{
+      showToast(t('voice.errorGeneric'));
+    }
+  };
   try{
     voiceRecognition.start();
     voiceComandaActive = true;
