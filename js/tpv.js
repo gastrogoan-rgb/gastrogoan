@@ -1282,9 +1282,15 @@ function reassignMenuBasePrice(order, removedLine){
   sibling.menuBaseAmount = (sibling.menuBaseAmount||0) + removedLine.menuBaseAmount;
 }
 
-function groupOrderItemsByTanda(order){
+// itemsWithIdx opcional: si se pasa (ya filtrado, p.ej. solo carta o solo
+// menú), agrupa ESE subconjunto por tanda en vez de todas las líneas del
+// pedido — así carta y menú se pueden mostrar como dos bloques separados
+// sin mezclar sus tandas aunque compartan nombre (ambos pueden tener un
+// "Segundos", por ejemplo).
+function groupOrderItemsByTanda(order, itemsWithIdx){
   const groups = {};
-  (order.items||[]).forEach((line, idx) => {
+  const source = itemsWithIdx || (order.items||[]).map((line, idx) => ({line, idx}));
+  source.forEach(({line, idx}) => {
     const key = line.tanda || '';
     if(!groups[key]) groups[key] = [];
     groups[key].push({line, idx});
@@ -1590,74 +1596,100 @@ function renderMenuSelectorInline(order, menu){
   `;
 }
 
-// Panel de comanda: los ítems del pedido con estado, agrupados por sección (tanda),
-// ordenados como se fueron añadiendo (arriba lo primero, abajo lo último).
+// Tarjeta de un grupo (tanda) dentro de una sección (carta o menú) — misma
+// tarjeta que antes, ahora factorizada para poder usarla dos veces (una por
+// sección) sin duplicar el HTML de cada línea.
+function renderTandaGroupCard(order, g, isMenu){
+  const pendingCount = orderPendingKitchenLines(order, g.tanda, isMenu).reduce((s,l)=>s+l.qty, 0);
+  const allInGroup = g.items;
+  const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
+  const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
+  let statusBadge = '';
+  if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px">✅ ${t('tpv.pickedUp')}</span>`;
+  else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px">🍽️ ${t('tpv.readyToPickup')}</span>`;
+  else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px">🔥 ${t('kitchen.preparing')}</span>`;
+  else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px">⏳ ${t('tpv.fired')}</span>`;
+
+  return `
+  <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
+      <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
+      <div style="display:flex;gap:4px;align-items:center">
+        ${statusBadge}
+        ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
+      </div>
+    </div>
+    ${allInGroup.map(({line, idx}) => {
+      // Las bebidas no pasan por la pantalla de Cocina (no hay nada que
+      // cocinar), así que aquí en Sala es donde se marca su propio estado
+      // (pedida → preparando → servida) con un botón, no solo un badge de
+      // solo lectura como el resto de platos (que se controlan desde Cocina).
+      let lineStatus = '';
+      if(line.bebida && line.estado){
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}">🔥 ${t('kitchen.preparing')}</button>`;
+        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}">⏳ ${t('kitchen.waiting')}</button>`;
+      } else {
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
+        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
+        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+      }
+      // Distinción visual clara entre lo que viene de un menú (combo de
+      // varios platos a precio cerrado) y lo que es carta suelta — además
+      // de la sección propia, cada línea sigue llevando su badge con el
+      // nombre del menú concreto (útil si hay más de un menú en la mesa).
+      const menu = line.menuId ? (DB.menus||[]).find(m => m.id === line.menuId) : null;
+      const menuBadge = menu ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
+      return `
+      <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
+        <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
+        <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+        <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
+        <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
+        <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
+        ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
+        ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+      </div>
+      ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+    `;}).join('')}
+  </div>
+  `;
+}
+
+// Panel de comanda: los ítems del pedido con estado. Primero, en un bloque
+// aparte, todo lo de carta suelta; debajo, en su propio bloque, todo lo que
+// viene de un menú — antes iban mezclados por tanda (Entrantes/Segundos...)
+// sin distinguir de dónde venía cada plato, y con una comanda grande
+// (menú + carta a la vez) costaba encontrar cada cosa.
 function renderOrderComandaPanel(order){
-  const groups = groupOrderItemsByTanda(order);
-  if(!groups.length) return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>${t('empty.orderEmpty')}<br><span style="font-size:12px;color:var(--muted)">${t('label.selectFromMenu')}</span></div>`;
-  groups.sort((a,b) => {
+  const sortBebidaFirst = groups => groups.sort((a,b) => {
     const aB = a.items.some(({line}) => line.bebida) ? 0 : 1;
     const bB = b.items.some(({line}) => line.bebida) ? 0 : 1;
     return aB - bB;
   });
+  const cartaItems = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !line.menuId);
+  const menuItems = (order.items||[]).map((line, idx) => ({line, idx})).filter(({line}) => !!line.menuId);
+  const cartaGroups = sortBebidaFirst(groupOrderItemsByTanda(order, cartaItems));
+  const menuGroups = sortBebidaFirst(groupOrderItemsByTanda(order, menuItems));
+
+  if(!cartaGroups.length && !menuGroups.length){
+    return `<div class="empty" style="padding:20px;text-align:center"><i class="ti ti-clipboard-list"></i><br>${t('empty.orderEmpty')}<br><span style="font-size:12px;color:var(--muted)">${t('label.selectFromMenu')}</span></div>`;
+  }
+
   const total = orderTotal(order);
   let html = `<div style="font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between"><span>${t('label.order')}</span><span>${fmtMoney(total)}</span></div>`;
-  html += groups.map(g => {
-    const pendingCount = orderPendingKitchenLines(order, g.tanda).reduce((s,l)=>s+l.qty, 0);
-    const allInGroup = g.items;
-    const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
-    const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
-    let statusBadge = '';
-    if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px">✅ ${t('tpv.pickedUp')}</span>`;
-    else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px">🍽️ ${t('tpv.readyToPickup')}</span>`;
-    else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px">🔥 ${t('kitchen.preparing')}</span>`;
-    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px">⏳ ${t('tpv.fired')}</span>`;
-
-    return `
-    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">
-        <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
-        <div style="display:flex;gap:4px;align-items:center">
-          ${statusBadge}
-          ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}')"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
-        </div>
-      </div>
-      ${allInGroup.map(({line, idx}) => {
-        // Las bebidas no pasan por la pantalla de Cocina (no hay nada que
-        // cocinar), así que aquí en Sala es donde se marca su propio estado
-        // (pedida → preparando → servida) con un botón, no solo un badge de
-        // solo lectura como el resto de platos (que se controlan desde Cocina).
-        let lineStatus = '';
-        if(line.bebida && line.estado){
-          if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
-          else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}">🔥 ${t('kitchen.preparing')}</button>`;
-          else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}">⏳ ${t('kitchen.waiting')}</button>`;
-        } else {
-          if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
-          else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
-          else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
-        }
-        // Distinción visual clara entre lo que viene de un menú (combo de
-        // varios platos a precio cerrado) y lo que es carta suelta — antes
-        // solo se sabía leyendo la notita pequeña "Menú: X" al pie, fácil de
-        // pasar por alto en una comanda mixta con muchas líneas.
-        const menu = line.menuId ? (DB.menus||[]).find(m => m.id === line.menuId) : null;
-        const menuBadge = menu ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
-        return `
-        <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
-          <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
-          <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
-          ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
-          ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
-        </div>
-        ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
-      `;}).join('')}
-    </div>
-    `;
-  }).join('');
+  // Los títulos de sección solo aparecen si hay de los dos tipos a la vez —
+  // si la mesa solo tiene carta (lo normal) o solo menú, no hace falta
+  // etiquetar nada porque no hay ambigüedad que resolver.
+  const showSectionTitles = cartaGroups.length > 0 && menuGroups.length > 0;
+  if(cartaGroups.length){
+    if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:2px 0 6px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.section.carta')}</div>`;
+    html += cartaGroups.map(g => renderTandaGroupCard(order, g, false)).join('');
+  }
+  if(menuGroups.length){
+    if(showSectionTitles) html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:10px 0 6px"><i class="ti ti-list-details"></i> ${t('tpv.section.menu')}</div>`;
+    html += menuGroups.map(g => renderTandaGroupCard(order, g, true)).join('');
+  }
   return html;
 }
 
@@ -1819,23 +1851,28 @@ function confirmSetCamarero(orderId){
   renderTableOrderModal(orderId);
 }
 
-function orderPendingKitchenLines(order, tanda){
+// isMenu: undefined = cualquiera, true = solo líneas de menú, false = solo
+// carta suelta. Hace falta para no marchar de golpe la carta Y el menú
+// cuando comparten el mismo nombre de tanda (p.ej. ambos tienen "Segundos")
+// pero se muestran ahora en dos secciones separadas de la comanda.
+function orderPendingKitchenLines(order, tanda, isMenu){
   return (order.items||[])
     .filter(l => tanda === undefined || (l.tanda||'') === (tanda||''))
+    .filter(l => isMenu === undefined || !!l.menuId === isMenu)
     .map(l => ({name: l.name, qty: l.qty - (l.marchada||0), notas: l.notas||'', tanda: l.tanda||''}))
     .filter(l => l.qty > 0);
 }
 
-function marcharComanda(orderId, tanda){
+function marcharComanda(orderId, tanda, isMenu){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const pending = orderPendingKitchenLines(order, tanda);
+  const pending = orderPendingKitchenLines(order, tanda, isMenu);
   if(!pending.length){ showToast(t('msg.noNewDishes')); return; }
 
   const ahora = new Date().toISOString();
   const fired = [];
   (order.items||[]).forEach(l => {
-    if((tanda === undefined || (l.tanda||'') === (tanda||'')) && l.qty > (l.marchada||0)){
+    if((tanda === undefined || (l.tanda||'') === (tanda||'')) && (isMenu === undefined || !!l.menuId === isMenu) && l.qty > (l.marchada||0)){
       fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: l.bebida});
       l.estado = 'cocina';
       l.enviadoAt = ahora;
