@@ -83,7 +83,12 @@ function updateAutoActiveCarta(force){
     if(document.getElementById('view-tpv')?.classList.contains('active')) renderTPV();
   }
 }
+// "Otro" se mantiene aquí (usado por el cierre de caja como cajón de sastre
+// para cualquier venta histórica con un método de pago no reconocido) pero
+// ya NO se ofrece como opción al cobrar — solo Efectivo, Tarjeta o Mixto,
+// para no dar pie a un método ambiguo que no aporta nada al cerrar caja.
 const PAYMENT_METHODS = ['Efectivo','Tarjeta','Otro'];
+const SELECTABLE_PAYMENT_METHODS = ['Efectivo','Tarjeta'];
 // El método de pago se guarda siempre en español (valor interno/histórico);
 // esto solo traduce la etiqueta que se le muestra al usuario.
 const PAYMENT_METHOD_LABEL_KEYS = {'Efectivo':'pay.cash','Tarjeta':'pay.card','Otro':'pago.otro','Mixto':'pay.mixed'};
@@ -2563,6 +2568,17 @@ function applyActivePromoToLine(line, dishName){
   line.promoPct = promo.discountPct;
 }
 
+// Desglose claro del cálculo (subtotal → descuento → propina → total),
+// en vez de mostrar solo el número final sin más contexto — así se ve de
+// un vistazo, por ejemplo, "100€ − 10% (10€) = 90€" en lugar de solo "90€".
+function renderPaymentBreakdownHtml(total, descuentoPct, propina){
+  const descuentoImporte = roundMoney(total * descuentoPct / 100);
+  const parts = [`${t('label.subtotal')}: <strong>${fmtMoney(total)}</strong>`];
+  if(descuentoPct > 0) parts.push(`${t('label.discount')} (${descuentoPct}%): <strong style="color:var(--red)">−${fmtMoney(descuentoImporte)}</strong>`);
+  if(propina > 0) parts.push(`${t('label.tip')}: <strong style="color:var(--green)">+${fmtMoney(propina)}</strong>`);
+  return parts.join(' &nbsp;·&nbsp; ');
+}
+
 function computeFinalTotal(order){
   const total = orderTotal(order);
   const tipEl = document.getElementById('payment-tip');
@@ -2581,14 +2597,14 @@ function renderFullPaymentTab(order, total){
       <div class="field">
         <label>${t('label.discountPct')}</label>
         <div style="display:flex;gap:6px">
-          <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" style="flex:1">
+          <input type="number" id="payment-discount" min="0" max="100" step="1" value="${descuentoPct}" style="flex:1" onfocus="this.select()">
           <button class="btn btn-sm" onclick="requestApplyDiscount(${order.id})">${t('btn.applyDiscount')}</button>
         </div>
         ${descuentoPct > 0 ? `<small style="color:var(--muted)">${t('label.discountAppliedBy')}: ${escapeHtml(order.descuentoResponsableNombre||'—')} — "${escapeHtml(order.descuentoMotivo||'')}"</small>` : ''}
       </div>
       <div class="field">
         <label>${t('label.tip')} (€)</label>
-        <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTip(${order.id})">
+        <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTip(${order.id})" onfocus="this.select()">
       </div>
     </div>
     <div class="field">
@@ -2598,6 +2614,9 @@ function renderFullPaymentTab(order, total){
         <button class="btn btn-sm" onclick="applyCouponToOrder(${order.id})">${t('coupon.applyBtn')}</button>
       </div>
     </div>
+    <div id="payment-breakdown" style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
+      ${renderPaymentBreakdownHtml(total, descuentoPct, propina)}
+    </div>
     <div class="kpi" style="margin-bottom:12px">
       <div class="label">${t('label.totalToCharge')}</div>
       <div class="value" id="payment-final-total">${fmtMoney(finalTotal)}</div>
@@ -2605,13 +2624,13 @@ function renderFullPaymentTab(order, total){
     <div class="field">
       <label>${t('label.paymentMethod')}</label>
       <select id="payment-method" onchange="togglePaymentCash()">
-        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
+        ${SELECTABLE_PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
         <option value="Mixto">${t('pay.mixed')}</option>
       </select>
     </div>
     <div class="field" id="payment-cash-field">
       <label>${t('label.amountGiven')}</label>
-      <input type="number" id="payment-cash" step="0.01" min="0" value="${finalTotal.toFixed(2)}" oninput="updatePaymentChange(${order.id})">
+      <input type="number" id="payment-cash" step="0.01" min="0" value="${finalTotal.toFixed(2)}" oninput="updatePaymentChange(${order.id})" onfocus="this.select()">
     </div>
     <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
       <div class="label">${t('label.change')}</div>
@@ -2674,9 +2693,11 @@ function updatePaymentTip(orderId){
   const tipEl = document.getElementById('payment-tip');
   order.propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : 0;
   saveDB();
-  const {finalTotal} = computeFinalTotal(order);
+  const {total, descuentoPct, propina, finalTotal} = computeFinalTotal(order);
   const kpiEl = document.getElementById('payment-final-total');
   if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
+  const breakdownEl = document.getElementById('payment-breakdown');
+  if(breakdownEl) breakdownEl.innerHTML = renderPaymentBreakdownHtml(total, descuentoPct, propina);
   const cashEl = document.getElementById('payment-cash');
   if(cashEl) cashEl.value = finalTotal.toFixed(2);
   updatePaymentChange(orderId);
@@ -2828,10 +2849,19 @@ function finalizeCharge(orderId){
 /* ------------------ Pestaña: dividir a partes iguales ------------------ */
 function renderEqualSplitTab(order){
   if(!order.splitPayments || order.splitMode !== 'equal'){
+    // Por defecto, tantas partes como comensales tiene la mesa (order.pax
+    // ya incluye la suma si se han juntado dos mesas) — antes siempre
+    // empezaba en 2 sin más, dando la falsa impresión de que juntar mesas
+    // no sumaba los comensales. onfocus="this.select()" para que, al
+    // tocar el campo en una tablet, el número de partida quede
+    // seleccionado y el primer dígito que se escriba lo sustituya en vez
+    // de añadirse detrás (p.ej. escribir "6" sobre un "2" sin seleccionar
+    // antes daba "26", no "6" — parecía que el campo "no dejaba cambiarlo").
+    const defaultN = Math.max(2, Math.min(20, order.pax || 2));
     return `
       <div class="field">
         <label>${t('label.howManySplitBill')}</label>
-        <input type="number" id="split-equal-n" min="2" max="20" step="1" value="2">
+        <input type="number" id="split-equal-n" min="2" max="20" step="1" value="${defaultN}" onfocus="this.select()">
       </div>
     `;
   }
@@ -3011,7 +3041,7 @@ function openSplitPartPayment(orderId, partId){
     <div class="field">
       <label>${t('label.paymentMethod')}</label>
       <select id="split-part-method" onchange="toggleSplitPartCash(${part.amount})">
-        ${PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
+        ${SELECTABLE_PAYMENT_METHODS.map(m=>`<option value="${m}">${paymentMethodTpvLabel(m)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="split-part-cash-field">
