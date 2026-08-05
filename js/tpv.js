@@ -586,8 +586,8 @@ function renderTPV(){
       ${(tiposServicio.takeaway !== false || tiposServicio.delivery !== false) ? `<button class="btn btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-bolt"></i> ${t('btn.expressOrder')}</button>` : ''}
     </div>
     ${renderTpvPendingOnline()}
-    ${renderTpvToGo(tiposServicio)}
     ${chaosMode ? renderChaosModeMesas() : planoMode ? renderTpvMesasPlano() : renderTpvMesas(tiposServicio)}
+    ${renderTpvToGo(tiposServicio)}
   `;
   if(planoMode) attachPlanoDragHandlers();
 }
