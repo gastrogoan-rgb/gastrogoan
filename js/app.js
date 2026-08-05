@@ -3679,12 +3679,19 @@ function renderPromoClientes(){
   const box = document.getElementById('promo-tab-content');
   const today = new Date(); today.setHours(0,0,0,0);
 
-  const birthdays = DB.clients
+  // Igual que en la exportación de marketing de Clientes: si un cliente ha
+  // retirado el consentimiento de marketing, no debe aparecer aquí como
+  // candidato a un WhatsApp/email de felicitación o de "vuelve pronto" —
+  // antes esta pantalla ignoraba ese campo y ofrecía contactar a cualquiera
+  // con teléfono o email, sin importar si había dicho que no.
+  const withConsent = DB.clients.filter(c => c.marketingConsent !== false);
+
+  const birthdays = withConsent
     .map(c => ({c, days: nextBirthdayDays(c.cumpleanos)}))
     .filter(x => x.days !== null && x.days <= 30)
     .sort((a,b) => a.days - b.days);
 
-  const withContact = DB.clients.filter(c => c.phone || c.email);
+  const withContact = withConsent.filter(c => c.phone || c.email);
   const recientes = withContact
     .map(c => ({c, days: c.ultimoContacto ? Math.round((today - new Date(c.ultimoContacto+'T00:00:00')) / 86400000) : null}))
     .filter(x => x.days !== null && x.days >= 0 && x.days <= 7)
@@ -3709,8 +3716,6 @@ function renderPromoClientes(){
 
   box.innerHTML = `
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px"><i class="ti ti-info-circle"></i> ${t('promo.clients.intro')}</p>
-
-    <button class="btn btn-sm" style="margin-bottom:14px" onclick="openCouponsModal()"><i class="ti ti-ticket"></i> ${t('coupon.btn')}</button>
 
     ${renderReferralSummaryHtml()}
 
@@ -3739,65 +3744,6 @@ function renderPromoClientes(){
         : `<div class="empty"><i class="ti ti-mood-smile"></i>${t('promo.clients.noRecentVisits')}</div>`}
     </div>
   `;
-}
-
-// Gestión de cupones: crear un código nuevo (con % de descuento y límite de
-// usos opcional) y ver de un vistazo cuántas veces se ha canjeado cada uno
-// — el número real de canjes es lo que permite medir el retorno de una
-// campaña, no solo cuánta gente la vio.
-function openCouponsModal(){
-  const all = (DB.coupons||[]).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-ticket"></i> ${t('coupon.title')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <h4 style="margin:0 0 8px"><i class="ti ti-plus"></i> ${t('coupon.createTitle')}</h4>
-    <div class="field-row">
-      <div class="field"><label>${t('coupon.codeLabel')}</label><input type="text" id="cp-code" placeholder="VERANO10" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="field"><label>${t('coupon.discountLabel')}</label><input type="number" id="cp-discount" min="1" max="100" step="1" value="10"></div>
-    </div>
-    <div class="field-row">
-      <div class="field"><label>${t('coupon.maxUsesLabel')}</label><input type="number" id="cp-maxuses" min="1" step="1" placeholder="${t('coupon.maxUsesPlaceholder')}"></div>
-      <div class="field"><label>${t('common.notes')}</label><input type="text" id="cp-note" placeholder="${t('coupon.notePlaceholder')}"></div>
-    </div>
-    <button class="btn btn-primary" onclick="issueCouponFromModal()"><i class="ti ti-ticket"></i> ${t('coupon.createBtn')}</button>
-    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-    <h4 style="margin:0 0 8px">${t('coupon.listTitle')}</h4>
-    <div style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
-      ${all.length ? all.map(c => `
-        <div style="font-size:12.5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
-          <span>${c.code} — ${c.discountPct}%${c.note?' — '+escapeHtml(c.note):''} ${!c.active?`<span class="badge badge-gray">${t('coupon.inactiveBadge')}</span>`:''}</span>
-          <span style="display:flex;align-items:center;gap:6px">
-            <strong>${c.uses||0}${c.maxUses?'/'+c.maxUses:''} ${t('coupon.usesLabel')}</strong>
-            ${c.active ? `<button class="btn btn-sm btn-danger" onclick="deactivateCoupon(${c.id})">${t('coupon.deactivateBtn')}</button>` : ''}
-          </span>
-        </div>
-      `).join('') : `<div class="empty" style="padding:6px"><i class="ti ti-ticket"></i>${t('coupon.noneYet')}</div>`}
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-    </div>
-  `);
-}
-function issueCouponFromModal(){
-  const code = document.getElementById('cp-code').value.trim();
-  const discountPct = Math.max(1, Math.min(100, parseInt(document.getElementById('cp-discount').value) || 0));
-  const maxUsesRaw = document.getElementById('cp-maxuses').value;
-  const maxUses = maxUsesRaw ? Math.max(1, parseInt(maxUsesRaw)) : null;
-  const note = document.getElementById('cp-note').value.trim();
-  if(!code){ showToast(t('coupon.needCode')); return; }
-  const coupon = issueCoupon(code, discountPct, maxUses, note);
-  if(!coupon){ showToast(t('coupon.codeTaken')); return; }
-  openCouponsModal();
-  showToast(t('coupon.createdOk').replace('${code}', coupon.code));
-}
-function deactivateCoupon(id){
-  const c = (DB.coupons||[]).find(x=>x.id===id);
-  if(!c) return;
-  c.active = false;
-  saveDB();
-  openCouponsModal();
 }
 
 // Resumen NPS: media simple (0-10) sobre las últimas respuestas, más las

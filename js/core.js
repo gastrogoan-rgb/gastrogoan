@@ -1532,7 +1532,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','coupons','bankReconciliations'
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
@@ -1766,18 +1766,6 @@ function initPublicRequestsListener(){
           clientRef: req.clientRef || null,
           pendienteVerificarZona: !!req.pendienteVerificarZona
         });
-        // Revalida el cupón por si acaso (pudo agotarse/desactivarse entre
-        // que el cliente lo aplicó en la web y que llega este pedido) — el
-        // descuento del pedido en sí ya lo calculó el cliente en el total
-        // que envió, así que aquí solo hace falta registrar el canje real.
-        if(req.promoCode){
-          const order = DB.tpvOrders[DB.tpvOrders.length-1];
-          const result = redeemCoupon(req.promoCode);
-          if(result.ok){
-            order.descuentoPct = result.coupon.discountPct;
-            order.descuentoMotivo = t('coupon.appliedMotivo').replace('${code}', result.coupon.code);
-          }
-        }
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
         // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
@@ -1832,11 +1820,7 @@ function syncPublicMirror(){
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         reservasResumen: getReservasResumenForSync(),
-        tables: DB.tables.map(t => ({id: t.id, name: t.name})),
-        // Solo lo mínimo para validar en la web pública (código y % de
-        // descuento) — nunca usos ni notas internas, que no son de su
-        // incumbencia y no hace falta que viajen fuera del negocio.
-        coupons: (DB.coupons||[]).filter(c => c.active && (c.maxUses==null || c.uses < c.maxUses)).map(c => ({code: c.code, discountPct: c.discountPct}))
+        tables: DB.tables.map(t => ({id: t.id, name: t.name}))
       };
       if(sucursales) data.sucursales = sucursales;
       // Antes un fallo aquí se tragaba en silencio (".catch(()=>{})"): la
@@ -2761,7 +2745,6 @@ function defaultData(){
     waitlist: [], // {id, name, phone, people, notes, status:'esperando'|'sentado'|'cancelada', createdAt} — cola de espera para walk-ins sin mesa libre
     vacationRequests: [], // {id, employeeId, fromDate, toDate, notes, status:'pending'|'approved'|'rejected', createdAt}
     npsScores: [], // {id, score:0-10, comment, createdAt} — respuestas privadas de la encuesta de satisfacción (NPS)
-    coupons: [], // {id, code, discountPct, active:true, maxUses, uses, note, createdAt} — códigos promocionales canjeables por el cliente
     bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
@@ -3120,47 +3103,6 @@ async function writeThermalChunks(characteristic, bytes){
     await characteristic.writeValueWithoutResponse(chunk);
   }
 }
-/* ============================================================
-   CUPONES/CÓDIGOS PROMOCIONALES CANJEABLES POR EL CLIENTE
-   A diferencia del descuento manual del TPV (que exige PIN y motivo,
-   porque lo aplica el personal por su cuenta), un cupón lo introduce
-   el propio cliente — así se puede medir de verdad cuántos canjes
-   generó una campaña de Promoción, no solo cuánta gente la vio.
-   ============================================================ */
-function findCoupon(code){
-  const normalized = (code||'').trim().toUpperCase();
-  return (DB.coupons||[]).find(c => c.code === normalized);
-}
-// Comprueba si un código es válido AHORA (activo y con usos disponibles)
-// sin gastarlo — se usa tanto en la web pública (para aplicar el descuento
-// al carrito) como una segunda vez al recibir el pedido en el negocio (por
-// si ha caducado justo entre medias).
-function validateCoupon(code){
-  const c = findCoupon(code);
-  if(!c) return {ok:false, reason:'not_found'};
-  if(!c.active) return {ok:false, reason:'inactive'};
-  if(c.maxUses != null && c.uses >= c.maxUses) return {ok:false, reason:'exhausted'};
-  return {ok:true, coupon:c};
-}
-function redeemCoupon(code){
-  const result = validateCoupon(code);
-  if(!result.ok) return result;
-  result.coupon.uses = (result.coupon.uses||0) + 1;
-  if(result.coupon.maxUses != null && result.coupon.uses >= result.coupon.maxUses) result.coupon.active = false;
-  saveDB();
-  return result;
-}
-function issueCoupon(code, discountPct, maxUses, note){
-  if(!DB.coupons) DB.coupons = [];
-  const normalized = (code||'').trim().toUpperCase();
-  if(!normalized || findCoupon(normalized)) return null;
-  const coupon = {id: genId(), code: normalized, discountPct, active:true, maxUses: maxUses||null, uses:0, note: note||'', createdAt: new Date().toISOString()};
-  DB.coupons.push(coupon);
-  logAudit('coupon_issued', t('audit.couponIssued').replace('${code}', coupon.code).replace('${pct}', discountPct));
-  saveDB();
-  return coupon;
-}
-
 async function printToThermalPrinter(text){
   if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
   if(!thermalPrinterCharacteristic){

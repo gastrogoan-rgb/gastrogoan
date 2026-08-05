@@ -209,8 +209,6 @@ const I18N = {
     'nps.low':'Nada probable', 'nps.high':'Muy probable', 'nps.commentLabel':'¿Algo que quieras contarnos? (opcional)',
     'nps.commentPlaceholder':'Cuéntanos qué tal fue todo...', 'nps.submit':'Enviar', 'nps.needScore':'Elige una puntuación del 0 al 10.',
     'nps.thanks':'¡Gracias por tu opinión!',
-    'coupon.notFoundPublic':'Ese código no existe o ya no es válido', 'coupon.appliedPublic':'Cupón aplicado: %d% de descuento',
-    'coupon.codePlaceholderPublic':'¿Tienes un código promocional?', 'coupon.discountLine':'Descuento (%d%)', 'coupon.applyBtn':'Aplicar',
     'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
     'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
     'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
@@ -264,8 +262,6 @@ const I18N = {
     'nps.low':'Not at all likely', 'nps.high':'Very likely', 'nps.commentLabel':'Anything you\'d like to tell us? (optional)',
     'nps.commentPlaceholder':'Tell us how it went...', 'nps.submit':'Send', 'nps.needScore':'Pick a score from 0 to 10.',
     'nps.thanks':'Thanks for your feedback!',
-    'coupon.notFoundPublic':'That code doesn\'t exist or is no longer valid', 'coupon.appliedPublic':'Coupon applied: %d% off',
-    'coupon.codePlaceholderPublic':'Got a promo code?', 'coupon.discountLine':'Discount (%d%)', 'coupon.applyBtn':'Apply',
     'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
     'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
     'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
@@ -319,8 +315,6 @@ const I18N = {
     'nps.low':'Gens probable', 'nps.high':'Molt probable', 'nps.commentLabel':'Alguna cosa que ens vulguis explicar? (opcional)',
     'nps.commentPlaceholder':'Explica\'ns què tal va anar tot...', 'nps.submit':'Enviar', 'nps.needScore':'Tria una puntuació del 0 al 10.',
     'nps.thanks':'Gràcies per la teva opinió!',
-    'coupon.notFoundPublic':'Aquest codi no existeix o ja no és vàlid', 'coupon.appliedPublic':'Cupó aplicat: %d% de descompte',
-    'coupon.codePlaceholderPublic':'Tens un codi promocional?', 'coupon.discountLine':'Descompte (%d%)', 'coupon.applyBtn':'Aplicar',
     'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
     'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
     'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
@@ -1192,26 +1186,6 @@ function changeCartQty(recipeId, sectionId, delta, name, price){
   renderCartSummary();
 }
 
-// Cupón aplicado en esta sesión (código + % de descuento validados contra
-// DB.coupons, sincronizado desde el negocio en el mismo espejo público que
-// la carta/mesas). Se revalida otra vez al recibir el pedido en el negocio
-// por si acaso se agotó justo entre medias.
-let appliedCoupon = null;
-let couponHintMessage = null; // {text, color} — renderCartSummary() reconstruye el div del cupón entero, así que el mensaje se guarda aquí para sobrevivir a ese re-render en vez de perderse al escribirlo directamente en el DOM.
-function applyPublicCoupon(){
-  const input = document.getElementById('o-coupon-code');
-  const code = (input.value||'').trim().toUpperCase();
-  if(!code){ appliedCoupon = null; couponHintMessage = null; renderCartSummary(); return; }
-  const match = (DB.coupons||[]).find(c => c.code === code);
-  if(!match){
-    appliedCoupon = null;
-    couponHintMessage = {text: t('coupon.notFoundPublic'), color: 'var(--red, #c0392b)'};
-  }else{
-    appliedCoupon = match;
-    couponHintMessage = {text: t('coupon.appliedPublic').replace('%d', match.discountPct), color: 'green'};
-  }
-  renderCartSummary();
-}
 function renderCartSummary(){
   const box = document.getElementById('cart-summary');
   if(!box) return;
@@ -1224,26 +1198,16 @@ function renderCartSummary(){
   const p = (DB.business||{}).pedidos || {};
   const deliveryFee = currentTab === 'delivery' ? (p.deliveryFee || 0) : 0;
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
-  const discountAmount = appliedCoupon ? subtotal * appliedCoupon.discountPct / 100 : 0;
-  const total = subtotal - discountAmount + deliveryFee;
+  const total = subtotal + deliveryFee;
   const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
   const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
   if(submitBtn) submitBtn.disabled = bajoMinimo;
-  const hasCoupons = (DB.coupons||[]).length > 0;
   box.innerHTML = `
     <h2>${t('cart.title')}</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
     ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
-    ${discountAmount > 0 ? `<div class="cart-line"><span>${t('coupon.discountLine').replace('%d', appliedCoupon.discountPct)}</span><span>-${fmtMoney(discountAmount)}</span></div>` : ''}
     <div class="cart-total bump"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
-    ${hasCoupons ? `
-    <div style="display:flex;gap:6px;margin-top:10px">
-      <input type="text" id="o-coupon-code" placeholder="${t('coupon.codePlaceholderPublic')}" style="flex:1;text-transform:uppercase;padding:8px;border-radius:8px;border:1px solid #ddd" value="${appliedCoupon?appliedCoupon.code:''}">
-      <button type="button" class="btn" onclick="applyPublicCoupon()">${t('coupon.applyBtn')}</button>
-    </div>
-    <div id="o-coupon-hint" style="font-size:12px;margin-top:4px;color:${couponHintMessage?couponHintMessage.color:'inherit'}">${couponHintMessage?escapeHtml(couponHintMessage.text):''}</div>
-    ` : ''}
   `;
 }
 
@@ -1302,25 +1266,8 @@ async function submitOrder(){
     pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
   }
 
-  // Revalida el cupón contra el DB.coupons EN VIVO justo antes de calcular
-  // el importe a cobrar (no el objeto guardado en appliedCoupon cuando se
-  // pulsó "Aplicar", que puede llevar rato desactualizado) — el espejo
-  // público solo incluye cupones activos y con usos disponibles
-  // (syncPublicMirror en el negocio), así que si ya no aparece ahí es que
-  // dejó de ser válido entre medias. Esto importa especialmente en el pago
-  // con tarjeta: el cargo se hace YA con este importe, así que cobrar de
-  // menos por un cupón caducado sería una pérdida real sin forma de
-  // corregirla después.
-  if(appliedCoupon && !(DB.coupons||[]).some(c => c.code === appliedCoupon.code)){
-    appliedCoupon = null;
-    couponHintMessage = {text: t('coupon.notFoundPublic'), color: 'var(--red, #c0392b)'};
-    renderCartSummary();
-    alert(t('coupon.notFoundPublic'));
-    return;
-  }
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
-  const discountAmount = appliedCoupon ? subtotal * appliedCoupon.discountPct / 100 : 0;
-  const total = subtotal - discountAmount + deliveryFee;
+  const total = subtotal + deliveryFee;
 
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
@@ -1329,7 +1276,6 @@ async function submitOrder(){
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()
   };
-  if(appliedCoupon) req.promoCode = appliedCoupon.code;
   if(pendienteVerificarZona) req.pendienteVerificarZona = true;
 
   req.total = total;
