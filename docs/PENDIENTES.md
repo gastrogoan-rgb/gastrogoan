@@ -194,7 +194,40 @@ Nada de esto queda pendiente de decisión de negocio ni de despliegue
 externo — es funcionalidad normal, ya incluida en el próximo paquete que
 se entregue.
 
-## 10. (añadir aquí lo que vaya surgiendo)
+## 10. Auditoría exhaustiva + 4 funcionalidades más (04/08/2026) — HECHO, todo en código
+
+Tras cerrar la ronda anterior, el usuario pidió una auditoría exhaustiva y
+honesta de qué más faltaba de verdad (repasando el código real, no por
+intuición) antes de seguir añadiendo. Se verificó línea a línea todo
+`js/*.js` y se identificaron 4 huecos reales de valor (y se descartaron
+expresamente varias ideas que ya existían: fidelización, propinas,
+previsión financiera, menu engineering, autopedido QR). Los 4 se
+implementaron y validaron con Puppeteer:
+
+1. **Impresión térmica real por Bluetooth (ESC/POS)** — alternativa al
+   diálogo de imprimir del navegador; conecta una impresora térmica de
+   58/80mm por Web Bluetooth. Solo Chrome/Edge (no Safari/Firefox) — sin
+   soporte, el "Imprimir" de siempre sigue funcionando igual.
+2. **Tarjetas/bonos regalo prepago** — emitir código con importe/saldo,
+   nuevo método de pago que descuenta del saldo real al cobrar.
+3. **Cupones/códigos promocionales canjeables por el cliente** — a
+   diferencia del descuento manual (PIN+motivo, lo decide el personal),
+   este lo trae el cliente; funciona tanto en el TPV como en la web
+   pública de pedidos, con límite de usos opcional y canjes reales
+   medibles (no solo "vistas" de una campaña).
+4. **Conciliación bancaria manual** — compara lo cobrado por tarjeta
+   según el TPV con el extracto real del banco (introducido a mano, sin
+   integración bancaria real que no existe hoy).
+
+Nada de esto queda pendiente de decisión de negocio ni de despliegue
+externo tampoco.
+
+**Nota importante para el propio asistente**: cuando el usuario pregunte
+de nuevo "¿qué más falta?", NO se le puede prometer un "no hay nada más"
+absoluto — eso no es honesto en una app viva. Lo correcto es repetir una
+auditoría real del código (no una opinión rápida) cada vez que lo pida.
+
+## 11. (añadir aquí lo que vaya surgiendo)
 
 Cuando aparezca un nuevo pendiente "fuera de código" en conversación, se
 añade como sección nueva en este archivo, con fecha y contexto suficiente
