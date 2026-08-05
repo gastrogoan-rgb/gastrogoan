@@ -2374,7 +2374,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
-          <strong style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.name)} ${isTopSeller?`<span title="${t('hr.badge.topSeller')}">🏆</span>`:''}${tenureYears>=1?`<span title="${t('hr.badge.tenure').replace('${n}',tenureYears)}">${'⭐'.repeat(Math.min(tenureYears,3))}</span>`:''}</strong>
+          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${isTopSeller?`<span title="${t('hr.badge.topSeller')}">🏆</span>`:''}${tenureYears>=1?`<span title="${t('hr.badge.tenure').replace('${n}',tenureYears)}">${'⭐'.repeat(Math.min(tenureYears,3))}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}

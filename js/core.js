@@ -716,7 +716,7 @@ function renderBsGroups(allSlots){
         <div class="bs-sub-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
           <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
             <i class="ti ti-home" style="color:var(--muted);flex-shrink:0"></i>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t('bs.mainLocation')}</span>
+            <span style="overflow:visible;text-overflow:clip;white-space:normal">${t('bs.mainLocation')}</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
@@ -729,7 +729,7 @@ function renderBsGroups(allSlots){
           <div class="bs-sub-item ${sActive?'active':''}" onclick="enterBusiness('${escapeHtml(s.id)}')">
             <div style="display:flex;align-items:center;gap:6px;overflow:hidden">
               <i class="ti ti-building-store" style="color:var(--muted);flex-shrink:0"></i>
-              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
+              <span style="overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(s.name||t('bs.defaultBranchName'))}</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
               ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}

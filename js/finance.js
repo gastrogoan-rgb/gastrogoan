@@ -943,7 +943,7 @@ function renderStock(){
     const statusBadge = low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>';
     return `
       <div class="list-row" style="padding:6px 10px;flex-wrap:wrap">
-        <div class="list-row-name" style="flex-basis:180px"><span class="stock-name-full" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
         <span style="font-size:12.5px;color:var(--muted);white-space:nowrap">${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
         <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}

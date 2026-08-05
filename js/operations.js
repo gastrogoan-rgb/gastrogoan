@@ -761,7 +761,7 @@ function renderPedidoResultsList(){
     return `
       <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between;gap:8px">
-          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
+          <span style="min-width:0;overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
           <span style="display:flex;align-items:center;gap:6px;flex:none">
             <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
             ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}

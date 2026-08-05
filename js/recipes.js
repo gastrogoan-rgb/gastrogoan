@@ -361,7 +361,7 @@ function renderEscandalloCard(r){
     return `
       <div class="card card-compact">
         <h3 style="justify-content:space-between">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</span>
+          <span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</span>
           ${pctBadge}
         </h3>
         <div class="grid grid-3" style="margin-bottom:6px">
@@ -948,7 +948,7 @@ function renderFichas(){
       </div>
     ` : `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
+        <h3 style="justify-content:space-between"><span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
           <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
@@ -983,7 +983,7 @@ function renderFichaCard(r){
   return `
     <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
       <h3 style="justify-content:space-between">
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
+        <span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
         ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
       </h3>
       ${ficha ? `
