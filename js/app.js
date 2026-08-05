@@ -2000,6 +2000,15 @@ function setReservationStatus(id, status){
   if(!r) return;
 
   if(status === 'confirmada'){
+    // Las reservas que llegan de la web pública nunca traen mesa asignada
+    // (el cliente no elige mesa, solo el negocio) — asignar mesa es
+    // obligatorio para CUALQUIER reserva, así que aquí también hace falta
+    // antes de poder confirmarla, no solo al crearla o editarla a mano.
+    if(!r.tableId && DB.tables.length){
+      showToast(t('msg.assignTableBeforeConfirm'));
+      openReservationModal(id);
+      return;
+    }
     const turnoIdx = getTurnoIndexForTime(r.date, r.time);
     const aforo = parseInt(DB.business.aforo) || 0;
     if(turnoIdx !== null && aforo){
