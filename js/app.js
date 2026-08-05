@@ -548,9 +548,15 @@ function renderLimpiezaLog(key){
     }).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">${t('empty.noLogEntries')}</div></td></tr>`;
 
+  // El control de temperaturas es una tarea operativa normal del día a día
+  // (mirar la cámara, anotar el grado) que puede hacer cualquier empleado
+  // de cocina, no una acción sensible que exija permiso de editar — a
+  // diferencia de borrar un registro ya hecho, que sí sigue exigiéndolo
+  // (no se toca un registro de seguridad alimentaria ya escrito sin más).
+  const canAddThisLog = editUnlocked || key === 'temperaturas';
   box.innerHTML = `
     <div class="card" style="margin-bottom:16px">
-      ${editUnlocked ? `
+      ${canAddThisLog ? `
       <div class="grid grid-3" style="margin-bottom:10px">${formFields}</div>
       <button class="btn btn-primary" onclick="addLimpiezaLogEntry('${key}')"><i class="ti ti-plus"></i> ${t('common.register')}</button>
       ` : `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-lock"></i> ${t('msg.editModeRequiredForLog')}</div>`}
@@ -564,7 +570,7 @@ function renderLimpiezaLog(key){
   `;
 }
 function addLimpiezaLogEntry(key){
-  if(!editUnlocked) return;
+  if(!editUnlocked && key !== 'temperaturas') return;
   const cfg = limpiezaLogConfig(key);
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
