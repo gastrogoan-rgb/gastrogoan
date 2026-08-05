@@ -158,7 +158,11 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 /* Canal de Para Llevar / Delivery: panel propio, con fondo e independiente
    de la cuadrícula de mesas, para separar de un vistazo los pedidos del
    local de los que se sirven fuera (recoger o a domicilio). */
-.togo-panel{margin-top:16px;padding:14px 16px;border-radius:14px;background:var(--brand-cream);border:1px solid var(--border)}
+/* Fijo abajo (sticky) al hacer scroll por las mesas: con muchas mesas el
+   panel de Para Llevar/Delivery quedaba muy abajo del todo y había que
+   bajar mucho para verlo — así se queda siempre a la vista sin taparlo
+   del todo (altura máxima con scroll propio si hay muchos pedidos). */
+.togo-panel{margin-top:16px;padding:14px 16px;border-radius:14px 14px 0 0;background:var(--brand-cream);border:1px solid var(--border);position:sticky;bottom:0;z-index:5;max-height:38vh;overflow-y:auto;box-shadow:0 -6px 16px rgba(0,0,0,.12)}
 .togo-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .togo-panel-head h3{margin:0}
 .togo-card{border-top-width:4px;border-top-style:solid;background:var(--surface)}
