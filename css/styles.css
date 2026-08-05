@@ -228,6 +228,11 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--surface)}
 .list-row .list-row-name{flex:1;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;min-width:0}
 .list-row .list-row-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* En Stock, un nombre largo de ingrediente/elaboración no se corta con "...":
+   se ve entero, partiéndose en varias líneas si hace falta (flex-basis en la
+   fila le da un ancho mínimo propio en vez de competir por espacio con la
+   cantidad/mínimo/botones). */
+.list-row .list-row-name span.stock-name-full{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.3}
 
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
