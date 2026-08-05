@@ -1248,10 +1248,12 @@ function confirmAddMenuToOrder(orderId, menuId){
       l.menuId === m.id && l.name === lineName && (l.tanda||'') === (s.grupoNombre||'') &&
       !l.estado && (l.marchada||0) === 0
     );
+    let line;
     if(existing){
       existing.qty += 1;
+      line = existing;
     } else {
-      const line = {
+      line = {
         menuId: m.id, recipeId: s.recipeId, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
@@ -1261,6 +1263,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       order.items.push(line);
       autoSendTakeawayLine(order, line);
     }
+    syncBebidaLineEstado(line);
   });
   saveDB();
   renderTableOrderModal(orderId);
@@ -1300,24 +1303,15 @@ function renderOrderMarcharButtons(order){
   return `<button class="btn" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange)" onclick="marcharValeCompleto(${order.id})"><i class="ti ti-chef-hat"></i> ${t('btn.sendFullTicket')}</button>`;
 }
 
-// Marcha automáticamente: todas las bebidas + el primer grupo de comida con platos pendientes.
+// Marcha automáticamente el primer grupo de comida con platos pendientes.
+// Las bebidas nunca pasan por aquí: ya tienen su propio estado desde que se
+// añaden (ver syncBebidaLineEstado), sin necesitar ningún "Marchar".
 function marcharValeCompleto(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   const ahora = new Date().toISOString();
   const fired = [];
 
-  // 1. Marchar todas las bebidas pendientes
-  (order.items||[]).forEach(l => {
-    if(l.bebida && l.qty > (l.marchada||0)){
-      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: true});
-      l.estado = 'cocina';
-      l.enviadoAt = ahora;
-      l.marchada = l.qty;
-    }
-  });
-
-  // 2. Marchar el primer grupo de comida (tanda) con platos pendientes
   const groups = groupOrderItemsByTanda(order);
   const firstPendingFood = groups.find(g => g.items.some(({line}) => !line.bebida && line.qty > (line.marchada||0)));
   if(firstPendingFood){
@@ -2096,6 +2090,21 @@ function autoSendTakeawayLine(order, line){
   order.cerrada = false;
 }
 
+// Las bebidas nunca pasan por Cocina (no hay nada que cocinar) ni por el
+// paso de "Marchar" — se sirven directamente desde Sala, así que en cuanto
+// se añaden (o sube su cantidad) ya tienen que estar listas para su propio
+// ciclo de estado (pedida → preparando → servida) sin ningún clic previo.
+// marchada siempre igual a qty para que nunca cuenten como "pendiente de
+// marchar" en ningún sitio (contador de la tanda, botón de "Marchar vale"...).
+function syncBebidaLineEstado(line){
+  if(!line || !line.bebida) return;
+  line.marchada = line.qty;
+  if(!line.estado){
+    line.estado = 'cocina';
+    line.enviadoAt = line.enviadoAt || new Date().toISOString();
+  }
+}
+
 // El primer grupo de platos (primer tanda añadida a la comanda) se marcha a
 // cocina automáticamente. Los siguientes grupos se marchan manualmente.
 function autoSendFirstCourse(order, line, tanda){
@@ -2136,6 +2145,7 @@ function addOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
+  syncBebidaLineEstado(line);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -2209,6 +2219,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   }
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
+  syncBebidaLineEstado(line);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -2228,7 +2239,10 @@ function changeOrderItemQty(orderId, idx, delta){
   if(line.qty <= 0){
     order.items.splice(idx,1);
     reassignMenuBasePrice(order, line);
-  } else autoSendTakeawayLine(order, line);
+  } else {
+    autoSendTakeawayLine(order, line);
+    syncBebidaLineEstado(line);
+  }
   saveDB();
   renderTableOrderModal(orderId);
 }
