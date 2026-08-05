@@ -2218,17 +2218,21 @@ function reservaTimeToMinutes(t){
 // Ventana mínima entre dos reservas de la misma mesa: 90 min (hora y media)
 // de base, +15 min más por cada comensal por encima de 4 (un grupo grande
 // tarda más en comer que una mesa de 2, así que necesita más margen).
+// Fijo en 90 minutos para todos los casos (antes se ampliaba para grupos
+// grandes) — a petición del usuario, mismo margen entre mesa y mesa
+// siempre, sin excepciones por tamaño del grupo.
 const RESERVA_VENTANA_MIN = 90;
-function reservaVentanaMin(people){
-  return RESERVA_VENTANA_MIN + Math.max(0, (people||1) - 4) * 15;
+function reservaVentanaMin(){
+  return RESERVA_VENTANA_MIN;
 }
 
 // La reserva confirmada de hoy más próxima para una mesa concreta, si hay
-// alguna dentro de la próxima hora (o ya debería haber llegado hace poco).
-// Así una mesa que se ve "libre" en el TPV puede avisar de que en realidad
-// está a punto de ocuparse, en vez de que un camarero siente ahí a alguien
-// que no tiene reserva justo antes de que llegue quien sí la tiene.
-const MESA_RESERVA_AVISO_MIN = 60;
+// alguna dentro del mismo margen de 90 min que separa una reserva de otra
+// (o ya debería haber llegado hace poco). Así una mesa que se ve "libre" en
+// el TPV puede avisar de que en realidad está a punto de ocuparse, en vez
+// de que un camarero siente ahí a alguien que no tiene reserva justo antes
+// de que llegue quien sí la tiene — mismo margen en los dos sitios.
+const MESA_RESERVA_AVISO_MIN = RESERVA_VENTANA_MIN;
 function getUpcomingReservationForTable(tableId){
   if(!tableId) return null;
   const today = todayStr();
@@ -2255,7 +2259,7 @@ function getAvailableTablesForReservation(dateStr, time, excludeId, people){
         const rMin = reservaTimeToMinutes(r.time);
         // Si no podemos comparar horas, caemos al criterio antiguo (hora exacta).
         if(reqMin == null || rMin == null) return r.time === time;
-        const ventana = reservaVentanaMin(Math.max(people||1, r.people||1));
+        const ventana = reservaVentanaMin();
         return Math.abs(rMin - reqMin) < ventana;
       })
       .map(r => r.tableId)
@@ -2267,7 +2271,7 @@ function getAvailableTablesForReservation(dateStr, time, excludeId, people){
   // realidad está ocupada en este momento.
   if(dateStr === todayStr()){
     const nowMin = (() => { const d = new Date(); return d.getHours()*60 + d.getMinutes(); })();
-    const ventanaAhora = reservaVentanaMin(people||1);
+    const ventanaAhora = reservaVentanaMin();
     if(reqMin == null || Math.abs(reqMin - nowMin) < ventanaAhora){
       DB.tables.forEach(tb => {
         if(getOpenOrderForTable(tb.id)) occupied.add(tb.id);
@@ -2317,9 +2321,12 @@ function reservationTableFieldHtml(r){
     const short = tb.plazas < (r.people||1) ? ` ⚠ ${tb.plazas}p` : ` (${tb.plazas}p)`;
     return tb.name + short;
   };
+  // Ya no se puede dejar "sin asignar" (asignar mesa es obligatorio) — si el
+  // negocio no tiene ninguna mesa dada de alta todavía, no tiene sentido
+  // exigirlo, así que se deja el placeholder solo en ese caso.
   return `
     <select id="reservation-table">
-      <option value="">${t('label.notAssigned')}</option>
+      ${DB.tables.length ? `<option value="">${t('label.chooseTableRequired')}</option>` : `<option value="">${t('label.notAssigned')}</option>`}
       ${options.map(tb=>`<option value="${tb.id}" ${r.tableId===tb.id?'selected':''}>${escapeHtml(tableLabel(tb))}</option>`).join('')}
     </select>
   `;
@@ -2386,7 +2393,7 @@ function openReservationModal(id){
         <input type="number" id="reservation-people" value="${r.people}" min="1" onchange="updateReservationTableOptions()">
       </div>
       <div class="field">
-        <label>${t('label.tablePos')}</label>
+        <label>${t('label.tablePos')}${DB.tables.length ? ' *' : ''}</label>
         ${reservationTableFieldHtml(r)}
       </div>
     </div>
@@ -2429,8 +2436,15 @@ function saveReservation(id){
 
   if(!clientId && !clientName){ showToast(t('msg.indicateClient')); return; }
 
-  // No permitir reservar la misma mesa dos veces con menos de 1h30 de diferencia
-  // (más si el grupo es grande, ver reservaVentanaMin).
+  // Obligatorio asignar una mesa concreta a toda reserva (si el negocio
+  // tiene mesas dadas de alta): así el margen de 90 minutos entre mesa y
+  // mesa (reservaVentanaMin) tiene siempre algo real que proteger, y en el
+  // TPV se puede avisar de verdad al sentar a alguien en una mesa que
+  // tiene una reserva próxima, en vez de que la reserva quede "flotando"
+  // sin mesa asignada.
+  if(!tableId && DB.tables.length){ showToast(t('msg.selectReservationTableRequired')); return; }
+
+  // No permitir reservar la misma mesa dos veces con menos de 90 min de diferencia.
   if(tableId){
     const disponible = getAvailableTablesForReservation(date, time, id, people).some(t => t.id === tableId);
     if(!disponible){
@@ -2456,7 +2470,7 @@ function saveReservation(id){
     if(!isSameClient) return false;
     const rMin = reservaTimeToMinutes(r.time), reqMin = reservaTimeToMinutes(time);
     if(rMin == null || reqMin == null) return r.time === time;
-    return Math.abs(rMin - reqMin) < reservaVentanaMin(Math.max(people||1, r.people||1));
+    return Math.abs(rMin - reqMin) < reservaVentanaMin();
   });
   if(dupe){
     if(!confirm(t('msg.confirmDuplicateReservation'))) return;

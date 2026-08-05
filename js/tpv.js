@@ -901,6 +901,16 @@ function confirmOpenTableOrder(tableId){
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
+    // Aviso (no bloqueante) si se va a sentar a alguien sin reserva en una
+    // mesa que tiene una reserva próxima (dentro de la ventana de 90 min) —
+    // el camarero decide si sentar igualmente porque sabe que esa mesa se
+    // habrá ido a tiempo, en vez de impedírselo del todo.
+    const upcoming = getUpcomingReservationForTable(tableId);
+    if(upcoming){
+      const client = DB.clients.find(c=>c.id===upcoming.clientId);
+      const name = client ? client.name : (upcoming.clientName||'');
+      if(!confirm(t('msg.confirmSeatDespiteReservation').replace('${time}', upcoming.time).replace('${name}', name).replace('${people}', upcoming.people))) return;
+    }
   }
   // Si quien está fichado ahora mismo entró con su propio PIN de empleado,
   // la app ya sabe quién es — se asigna solo, sin preguntar nada. Solo si
