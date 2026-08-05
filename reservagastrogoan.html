@@ -738,7 +738,13 @@ function getAforoInfo(dateStr, time){
   if(!aforo) return null;
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return null;
-  const turnoIdx = turnos.findIndex(t => time >= t.abre && time <= t.cierra);
+  // Mismo criterio que getTurnoIndexForTime() en el panel interno (js/menu.js):
+  // cierre EXCLUSIVO salvo en el último turno del día (inclusivo) — antes aquí
+  // todos los cierres eran inclusivos, así que justo en el minuto de cambio de
+  // turno (p.ej. las 16:00 entre un turno 13-16 y otro 16-19) esta página
+  // podía calcular un turnoIdx distinto al que usa reservasResumen para
+  // contar el aforo real, dando una disponibilidad ligeramente equivocada.
+  const turnoIdx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
   if(turnoIdx === -1) return null;
   const resumen = (DB.reservasResumen||{})[dateStr] || {};
   const reservados = resumen[turnoIdx] || 0;
