@@ -101,6 +101,15 @@ function recordAccessActivity(){
 function getAccessSession(){
   try{ return JSON.parse(localStorage.getItem(ACCESS_SESSION_LS)); }catch(e){ return null; }
 }
+// Si quien está usando la app ahora mismo entró con su propio PIN de
+// empleado, la app ya sabe exactamente quién es — no hace falta volver a
+// preguntarlo (quién coge la mesa, quién anula un plato...). Solo cuando
+// entra como propietario (sin PIN de un empleado concreto) sigue haciendo
+// falta elegirlo a mano, porque el dueño no es "un empleado" identificado.
+function loggedInEmployeeId(){
+  const session = getAccessSession();
+  return (session && session.type === 'employee') ? session.employeeId : null;
+}
 function setAccessSession(session){
   localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(session));
   localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));

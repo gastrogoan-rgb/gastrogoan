@@ -853,7 +853,7 @@ function openNewOrderPaxModal(tableId){
       <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
-    ${renderCamareroFieldHtml('new-order-camarero-sel', null, true)}
+    ${loggedInEmployeeId() === null ? renderCamareroFieldHtml('new-order-camarero-sel', null, true) : ''}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
@@ -888,13 +888,15 @@ function confirmOpenTableOrder(tableId){
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
   }
+  // Si quien está fichado ahora mismo entró con su propio PIN de empleado,
+  // la app ya sabe quién es — se asigna solo, sin preguntar nada. Solo si
+  // entra como propietario (sin identidad de empleado concreta) hace falta
+  // elegirlo a mano en el desplegable, y sigue siendo obligatorio si hay
+  // camareros dados de alta en Sala.
+  const loggedEmployeeId = loggedInEmployeeId();
   const camareroSel = document.getElementById('new-order-camarero-sel');
-  // Obligatorio decir quién ha cogido la mesa (si hay camareros dados de
-  // alta en Sala): así se sabe siempre quién la atiende, tanto en la
-  // propia mesa como en cocina, sin depender de que alguien se acuerde de
-  // rellenarlo luego.
-  if(camareroSel && !camareroSel.value){ showToast(t('msg.selectWaiterRequired')); return; }
-  const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
+  if(loggedEmployeeId === null && camareroSel && !camareroSel.value){ showToast(t('msg.selectWaiterRequired')); return; }
+  const camareroId = loggedEmployeeId !== null ? loggedEmployeeId : (camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null);
 
   const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
@@ -2274,6 +2276,12 @@ function requestVoidLine(orderId, idx, type, delta){
   const line = order && order.items[idx];
   if(!line) return;
   voidPending = {orderId, idx, type, delta};
+  // Si quien está fichado ahora mismo entró con su propio PIN de empleado,
+  // la app ya sabe quién es y no hace falta preguntarlo — solo si entra
+  // como propietario (sin identidad de empleado concreta) se deja elegir a
+  // mano, igual que ya se hace con los descuentos.
+  const loggedEmployeeId = loggedInEmployeeId();
+  const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-alert-triangle"></i> ${t('title.voidDish')}</h3>
@@ -2284,6 +2292,13 @@ function requestVoidLine(orderId, idx, type, delta){
       <label>${t('label.accessPin')}</label>
       <input type="password" id="void-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
     </div>
+    ${loggedEmployeeId === null && camareros.length ? `<div class="field">
+      <label>${t('label.responsible')}</label>
+      <select id="void-responsable-sel">
+        <option value="">—</option>
+        ${camareros.map(e => `<option value="${e.id}" ${order.camareroId===e.id?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </div>` : ''}
     <div class="field">
       <label>${t('label.voidReason')}</label>
       <select id="void-reason-select" onchange="document.getElementById('void-reason-other').style.display=this.value==='otro'?'block':'none'">
@@ -2312,12 +2327,17 @@ function confirmVoidLine(){
   const reasonOther = document.getElementById('void-reason-other').value.trim();
   const motivo = reasonSel === 'otro' ? (reasonOther || t(VOID_REASON_KEYS.otro)) : t(VOID_REASON_KEYS[reasonSel]);
   const mesa = order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order);
+  const respSel = document.getElementById('void-responsable-sel');
+  const loggedEmployeeId = loggedInEmployeeId();
+  const responsableId = loggedEmployeeId !== null ? loggedEmployeeId : (respSel && respSel.value ? parseInt(respSel.value) : null);
+  const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
 
   if(!DB.voidLog) DB.voidLog = [];
   DB.voidLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
     plato: line.name, cantidad: type==='remove' ? line.qty : Math.abs(delta),
-    estado: line.estado||'', motivo, mesa: mesa||''
+    estado: line.estado||'', motivo, mesa: mesa||'',
+    responsableId, responsableNombre: responsable ? responsable.name : ''
   });
 
   if(type === 'remove'){
@@ -2345,8 +2365,8 @@ function openVoidLogModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.mesa||'—')}</td><td>${escapeHtml(e.plato)}</td><td>${e.cantidad}</td><td>${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.mesa||'—')}</td><td>${escapeHtml(e.plato)}</td><td>${e.cantidad}</td><td>${escapeHtml(e.responsableNombre||'—')}</td><td>${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">
@@ -2649,6 +2669,7 @@ function requestApplyDiscount(orderId){
     return;
   }
   discountPending = {orderId, pct};
+  const loggedEmployeeId = loggedInEmployeeId();
   const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
   openModal(`
     <div class="modal-header">
@@ -2656,7 +2677,7 @@ function requestApplyDiscount(orderId){
       <button class="modal-close" onclick="renderPaymentModal(${orderId})">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('msg.applyDiscountDesc')}</p>
-    ${camareros.length ? `<div class="field">
+    ${loggedEmployeeId === null && camareros.length ? `<div class="field">
       <label>${t('label.responsible')}</label>
       <select id="discount-responsable-sel">
         <option value="">—</option>
@@ -2682,7 +2703,8 @@ function confirmApplyDiscount(){
   const reason = document.getElementById('discount-reason-input').value.trim();
   if(!reason){ showToast(t('msg.discountReasonRequired')); return; }
   const respSel = document.getElementById('discount-responsable-sel');
-  const responsableId = respSel && respSel.value ? parseInt(respSel.value) : null;
+  const loggedEmployeeId = loggedInEmployeeId();
+  const responsableId = loggedEmployeeId !== null ? loggedEmployeeId : (respSel && respSel.value ? parseInt(respSel.value) : null);
   const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
 
   const subtotal = orderTotal(order);

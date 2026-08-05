@@ -107,8 +107,8 @@ function openCashClosureModal(){
     <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-alert-triangle"></i> ${t('title.voidsThisPeriod')}</h3>
     <div class="table-wrap" style="margin-bottom:14px">
       <table>
-        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${voids.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${escapeHtml(v.plato)}</td><td>${v.cantidad}</td><td>${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
+        <tbody>${voids.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${escapeHtml(v.plato)}</td><td>${v.cantidad}</td><td>${escapeHtml(v.responsableNombre||'—')}</td><td>${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
       </table>
     </div>` : ''}
     <div class="field-row">
@@ -235,7 +235,7 @@ function printCashClosure(closure){
     closure.descuentos.map(d => `${escapeHtml(d.hora)} ${escapeHtml(d.mesa||'')} ${escapeHtml(d.responsableNombre||'—')} ${d.porcentaje}% ${fmtMoney(d.importe)}\n  ${escapeHtml(d.motivo)}`).join('\n') +
     `\n${t('label.totalDiscounts')}: ${fmtMoney(closure.totalDescuentos||0)}\n` : '';
   const voidsBlock = (closure.anulaciones||[]).length ? `------------------------------\n${t('title.voidsThisPeriod').toUpperCase()}\n` +
-    closure.anulaciones.map(v => `${escapeHtml(v.hora)} ${escapeHtml(v.mesa||'')} ${v.cantidad}x ${escapeHtml(v.plato)}\n  ${escapeHtml(v.motivo)}`).join('\n') + '\n' : '';
+    closure.anulaciones.map(v => `${escapeHtml(v.hora)} ${escapeHtml(v.mesa||'')} ${v.cantidad}x ${escapeHtml(v.plato)} — ${escapeHtml(v.responsableNombre||'—')}\n  ${escapeHtml(v.motivo)}`).join('\n') + '\n' : '';
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.cashClosureReceipt')}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
 ${escapeHtml(DB.business.name||'GastroGoan')}
 ${t('title.cashClosureReceipt').toUpperCase()}
