@@ -1922,7 +1922,11 @@ function renderReservasSearch(){
 function renderReservasPendingOnline(){
   const box = document.getElementById('reservas-pending-online');
   if(!box) return;
-  const pending = DB.reservations.filter(r => r.status === 'pendiente');
+  // Una solicitud "pendiente" de una fecha ya pasada que nadie confirmó ni
+  // rechazó ya no tiene sentido gestionarla — antes se quedaba aquí para
+  // siempre, ensuciando la bandeja de "por hacer" indefinidamente. Se sigue
+  // viendo en el histórico normal de reservas, solo desaparece de este aviso.
+  const pending = DB.reservations.filter(r => r.status === 'pendiente' && r.date >= todayStr());
   if(!pending.length){ box.innerHTML = ''; return; }
   box.innerHTML = `
     <h3 style="margin-top:0"><i class="ti ti-bell-ringing"></i> ${t('title.pendingOnlineRequests')}</h3>

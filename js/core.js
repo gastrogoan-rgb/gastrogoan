@@ -1839,6 +1839,23 @@ function syncPublicMirror(){
         console.error('Error publicando el espejo público', e);
         if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
       });
+      // aforoHold (js/reservagastrogoan.html) es un contador aparte que la
+      // web pública usa para reservar de forma atómica sin pasarse del
+      // aforo — pero nunca se decrementaba solo, así que cada reserva
+      // online quedaba contada DOS VECES para siempre (una en
+      // reservasResumen, otra en aforoHold), y cancelar/rechazar una
+      // reserva no liberaba ese hueco: el turno podía acabar "lleno" en la
+      // web pública sin estarlo de verdad. Como reservasResumen ya es la
+      // fuente de verdad (recién recalculada arriba a partir de las
+      // reservas reales), se limpia aforoHold de cada fecha que aparezca
+      // ahí O que tenga alguna reserva (aunque esté cancelada/pasada, para
+      // cubrir el caso de "se cancelaron todas") — así vuelve a arrancar
+      // de cero en el próximo sync, sin arrastrar holds obsoletos.
+      const fechasATocar = new Set(Object.keys(data.reservasResumen));
+      DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
+      fechasATocar.forEach(fecha => {
+        app.database().ref('gastrogoan/public/' + publicId + '/aforoHold/' + fecha).remove().catch(() => {});
+      });
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
     console.error('Error publicando el espejo público', e);
