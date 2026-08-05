@@ -854,16 +854,21 @@ function camareroSalesInRange(empId, dateStrs){
   return {count: sales.length, total: sales.reduce((sum,s) => sum + (s.total||0), 0)};
 }
 
-// Selector de camarero/a que toma la comanda, para saber quién atiende cada mesa.
-function renderCamareroFieldHtml(selectId, selectedId){
+// Selector de camarero/a que toma la comanda, para saber quién atiende cada
+// mesa. Al ABRIR una mesa nueva (required=true) es obligatorio elegir a
+// alguien (sin opción "sin asignar") — así queda escrito desde el primer
+// momento, en vez de tener que acordarse de rellenarlo luego. Al
+// REASIGNAR el camarero de una mesa ya abierta sí se deja "sin asignar",
+// por si hace falta corregirlo o dejarlo libre temporalmente.
+function renderCamareroFieldHtml(selectId, selectedId, required){
   // Solo empleados del área sala que sean camareros
   const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
   if(!camareros.length) return '';
   return `
     <div class="field">
-      <label>${t('label.waiter')}</label>
+      <label>${t('label.waiter')}${required ? ' *' : ''}</label>
       <select id="${selectId}">
-        <option value="">${t('common.unassigned')}</option>
+        ${required ? `<option value="">${t('label.chooseWaiter')}</option>` : `<option value="">${t('common.unassigned')}</option>`}
         ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
@@ -972,7 +977,7 @@ function openNewOrderPaxModal(tableId){
       <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
-    ${renderCamareroFieldHtml('new-order-camarero-sel')}
+    ${renderCamareroFieldHtml('new-order-camarero-sel', null, true)}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
@@ -1008,6 +1013,11 @@ function confirmOpenTableOrder(tableId){
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
   }
   const camareroSel = document.getElementById('new-order-camarero-sel');
+  // Obligatorio decir quién ha cogido la mesa (si hay camareros dados de
+  // alta en Sala): así se sabe siempre quién la atiende, tanto en la
+  // propia mesa como en cocina, sin depender de que alguien se acuerde de
+  // rellenarlo luego.
+  if(camareroSel && !camareroSel.value){ showToast(t('msg.selectWaiterRequired')); return; }
   const camareroId = camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null;
 
   const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
@@ -2074,6 +2084,12 @@ function comandaOrderTitle(order){
   if(table) return `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}`;
   return `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
 }
+// Quién atiende la mesa, visible también en Comandas Cocina — así en cocina
+// se sabe de quién es cada comanda sin tener que ir a preguntar a sala,
+// igual que ya se veía en la propia mesa.
+function comandaWaiterChipHtml(order){
+  return order.tableId ? mesaWaiterChipHtml(order.camareroId) : '';
+}
 
 function timeAgo(iso){
   if(!iso) return '';
@@ -2159,7 +2175,7 @@ function renderComandasCocina(){
     box.innerHTML = tabsHtml + `<div class="grid grid-3">${closed.map(({order, lines, maxMs}) => `
       <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-          <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+          <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
           <span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>
         </div>
         ${maxMs ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${timeAgo(new Date(maxMs).toISOString())}</div>` : ''}
@@ -2205,7 +2221,7 @@ function renderComandasCocina(){
     return `
     <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
-        <strong>${escapeHtml(comandaOrderTitle(order))}</strong>
+        <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         ${urgencyBadge(mins)}
       </div>
       ${groups.map(g => {
