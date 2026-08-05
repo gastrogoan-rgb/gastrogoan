@@ -1296,6 +1296,22 @@ async function submitOrder(){
     pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
   }
 
+  // Revalida el cupón contra el DB.coupons EN VIVO justo antes de calcular
+  // el importe a cobrar (no el objeto guardado en appliedCoupon cuando se
+  // pulsó "Aplicar", que puede llevar rato desactualizado) — el espejo
+  // público solo incluye cupones activos y con usos disponibles
+  // (syncPublicMirror en el negocio), así que si ya no aparece ahí es que
+  // dejó de ser válido entre medias. Esto importa especialmente en el pago
+  // con tarjeta: el cargo se hace YA con este importe, así que cobrar de
+  // menos por un cupón caducado sería una pérdida real sin forma de
+  // corregirla después.
+  if(appliedCoupon && !(DB.coupons||[]).some(c => c.code === appliedCoupon.code)){
+    appliedCoupon = null;
+    couponHintMessage = {text: t('coupon.notFoundPublic'), color: 'var(--red, #c0392b)'};
+    renderCartSummary();
+    alert(t('coupon.notFoundPublic'));
+    return;
+  }
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
   const discountAmount = appliedCoupon ? subtotal * appliedCoupon.discountPct / 100 : 0;
   const total = subtotal - discountAmount + deliveryFee;
