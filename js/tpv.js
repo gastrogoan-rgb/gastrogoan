@@ -349,8 +349,16 @@ function mesaRepartidorChipHtml(repartidorId, repartidorCourierId){
 // "listos para cobrar".
 function mesaPhase(order){
   if(!order) return null;
-  const foodItems = (order.items||[]).filter(l => !l.bebida && l.estado);
-  const allDelivered = foodItems.length > 0 && foodItems.every(l => l.estado === 'entregado');
+  // OJO: "servido" exige que TODOS los platos de comida (allFoodLines,
+  // incluidos los que aún no tienen ni estado por no haberse marchado nunca)
+  // estén entregados — antes solo miraba los que YA tenían estado, así que
+  // un plato añadido a la comanda pero nunca enviado a cocina (p.ej. el
+  // segundo de un menú aún sin marchar) quedaba excluido del cálculo, y si
+  // el resto ya estaba servido la mesa se pintaba como "✅ Servido" en Sala
+  // aunque en realidad quedara un plato pendiente de marchar.
+  const allFoodLines = (order.items||[]).filter(l => !l.bebida);
+  const foodItems = allFoodLines.filter(l => l.estado);
+  const allDelivered = allFoodLines.length > 0 && allFoodLines.every(l => l.estado === 'entregado');
   if(allDelivered) return {key:'served', icon:'✅', label: t('status.served')};
   const preparing = foodItems.some(l => l.estado === 'preparando');
   if(preparing) return {key:'preparing', icon:'🔥', label: t('status.inKitchen')};
