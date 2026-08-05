@@ -921,7 +921,8 @@ const FOLDERS = {
 // coste/margen que no le corresponden. El propietario y quien SÍ tiene
 // permiso de editar (canUnlockEdit) los siguen viendo todos.
 const HIDDEN_MODULES_WHEN_LOCKED = {
-  cocina: ['carta', 'proveedores', 'megalista', 'escandallo']
+  cocina: ['carta', 'proveedores', 'megalista', 'escandallo'],
+  sala: ['carta', 'proveedores', 'megalista', 'escandallo']
 };
 const MODULE_FOLDER = {};
 Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => { if(MODULE_FOLDER[m.id] === undefined) MODULE_FOLDER[m.id] = key; }));
