@@ -1523,7 +1523,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','giftCards','coupons'
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','giftCards','coupons','bankReconciliations'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
@@ -2729,6 +2729,7 @@ function defaultData(){
     npsScores: [], // {id, score:0-10, comment, createdAt} — respuestas privadas de la encuesta de satisfacción (NPS)
     giftCards: [], // {id, code, initialAmount, balance, note, active:true, createdAt} — bonos/tarjetas regalo prepago
     coupons: [], // {id, code, discountPct, active:true, maxUses, uses, note, createdAt} — códigos promocionales canjeables por el cliente
+    bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
     turnoSwapRequests: [], // {id, fromEmployeeId, fromTurnoId, toEmployeeId, status:'pending_peer'|'pending_owner'|'approved'|'rejected', createdAt}
     business: {

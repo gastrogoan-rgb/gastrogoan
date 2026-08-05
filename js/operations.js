@@ -287,6 +287,101 @@ function openCashClosureHistory(){
   `);
 }
 
+/* ============================================================
+   CONCILIACIÓN BANCARIA
+   El arqueo de caja ya cuadra el efectivo físico al cerrar cada
+   turno, pero lo cobrado con tarjeta/datáfono no llega al banco al
+   instante ni tal cual (llega en lotes, con comisiones descontadas,
+   días después) — sin esto no había forma de comprobar que lo que el
+   TPV dice que se cobró por tarjeta coincide con lo que de verdad
+   entró en la cuenta. Es manual (el dueño mira su extracto real y
+   escribe el importe) porque conectar con el banco de verdad
+   requeriría una integración bancaria (PSD2/Open Banking) que no
+   existe hoy.
+   ============================================================ */
+function cardTotalInRange(fechaDesde, fechaHasta){
+  return DB.cashClosures
+    .filter(c => c.fecha >= fechaDesde && c.fecha <= fechaHasta)
+    .reduce((sum, c) => sum + ((c.totales && c.totales['Tarjeta']) || 0), 0);
+}
+function openBankReconciliationModal(){
+  const today = todayStr();
+  const monthStart = today.slice(0,7) + '-01';
+  renderBankReconciliationForm(monthStart, today);
+}
+function renderBankReconciliationForm(fechaDesde, fechaHasta){
+  const expected = cardTotalInRange(fechaDesde, fechaHasta);
+  const history = [...(DB.bankReconciliations||[])].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-building-bank"></i> ${t('reconcile.title')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('reconcile.desc')}</p>
+    <div class="field-row">
+      <div class="field"><label>${t('reconcile.fromLabel')}</label><input type="date" id="rec-bank-desde" value="${fechaDesde}" onchange="refreshBankReconciliationRange()"></div>
+      <div class="field"><label>${t('reconcile.toLabel')}</label><input type="date" id="rec-bank-hasta" value="${fechaHasta}" onchange="refreshBankReconciliationRange()"></div>
+    </div>
+    <div class="kpi" style="margin-bottom:12px">
+      <div class="label">${t('reconcile.expectedLabel')}</div>
+      <div class="value" id="rec-bank-expected" data-raw="${expected}">${fmtMoney(expected)}</div>
+    </div>
+    <div class="field">
+      <label>${t('reconcile.bankAmountLabel')}</label>
+      <input type="number" id="rec-bank-amount" step="0.01" placeholder="0.00" oninput="updateBankReconciliationDiff()">
+    </div>
+    <div id="rec-bank-diff" style="font-size:13px;font-weight:600;margin:6px 0"></div>
+    <div class="field"><label>${t('common.notes')}</label><textarea id="rec-bank-notes" rows="2"></textarea></div>
+    <button class="btn btn-primary" onclick="saveBankReconciliation()"><i class="ti ti-device-floppy"></i> ${t('reconcile.saveBtn')}</button>
+    ${history.length ? `
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <h4 style="margin:0 0 8px">${t('reconcile.historyTitle')}</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('label.period')}</th><th>${t('reconcile.expectedLabel')}</th><th>${t('reconcile.bankAmountLabel')}</th><th>${t('label.difference')}</th></tr></thead>
+        <tbody>
+          ${history.map(r => `<tr><td>${escapeHtml(r.fechaDesde)} — ${escapeHtml(r.fechaHasta)}</td><td>${fmtMoney(r.expected)}</td><td>${fmtMoney(r.bankAmount)}</td><td style="color:${Math.abs(r.difference)>0.01?'var(--red)':'var(--green)'}">${r.difference>0?'+':''}${fmtMoney(r.difference)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function refreshBankReconciliationRange(){
+  const desde = document.getElementById('rec-bank-desde').value;
+  const hasta = document.getElementById('rec-bank-hasta').value;
+  if(!desde || !hasta || desde > hasta) return;
+  renderBankReconciliationForm(desde, hasta);
+}
+function updateBankReconciliationDiff(){
+  const expected = parseFloat(document.getElementById('rec-bank-expected').dataset.raw) || 0;
+  const bankRaw = document.getElementById('rec-bank-amount').value;
+  const box = document.getElementById('rec-bank-diff');
+  if(bankRaw === ''){ box.textContent = ''; return; }
+  const bank = parseFloat(bankRaw) || 0;
+  const diff = roundMoney(bank - expected);
+  box.textContent = `${t('label.difference')}: ${diff>0?'+':''}${fmtMoney(diff)}`;
+  box.style.color = Math.abs(diff) < 0.01 ? 'var(--ok, #2e7d32)' : 'var(--danger, #c0392b)';
+}
+function saveBankReconciliation(){
+  const fechaDesde = document.getElementById('rec-bank-desde').value;
+  const fechaHasta = document.getElementById('rec-bank-hasta').value;
+  const bankRaw = document.getElementById('rec-bank-amount').value;
+  if(bankRaw === ''){ showToast(t('reconcile.needAmount')); return; }
+  const bankAmount = parseFloat(bankRaw) || 0;
+  const expected = cardTotalInRange(fechaDesde, fechaHasta);
+  const difference = roundMoney(bankAmount - expected);
+  const notes = document.getElementById('rec-bank-notes').value.trim();
+  if(!DB.bankReconciliations) DB.bankReconciliations = [];
+  DB.bankReconciliations.push({id: genId(), fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt: new Date().toISOString()});
+  logAudit('bank_reconciliation', t('audit.bankReconciliation').replace('${from}', fechaDesde).replace('${to}', fechaHasta));
+  saveDB();
+  renderBankReconciliationForm(fechaDesde, fechaHasta);
+  showToast(t('reconcile.savedOk'));
+}
+
 // Reparto automático de propinas de un cierre de caja: suma las propinas
 // cobradas en el periodo del cierre y las divide a partes iguales entre
 // quien estuvo fichado durante ese periodo — evita hacerlo a mano con una
