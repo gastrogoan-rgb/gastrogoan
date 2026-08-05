@@ -1315,6 +1315,38 @@ function findDuplicateClientGroups(){
   return groups;
 }
 
+// Fusiona dos fichas de cliente que resultaron ser la misma persona:
+// traspasa a "keepId" todo el historial de ventas y reservas de
+// "removeId" (si no, borrar sin más la ficha sobrante perdería ese
+// historial y contaría de menos las visitas reales del cliente), suma los
+// puntos de fidelidad de ambas, y rellena en la ficha que se queda los
+// campos que tuviera vacíos (teléfono, email, alergias...) con los de la
+// que se elimina. Por último borra la ficha sobrante.
+function mergeClients(keepId, removeId){
+  const keep = DB.clients.find(c => c.id === keepId);
+  const remove = DB.clients.find(c => c.id === removeId);
+  if(!keep || !remove) return;
+  if(!confirm(`¿Fusionar «${remove.name}» dentro de «${keep.name}»? Se traspasará su historial y se eliminará la ficha «${remove.name}».`)) return;
+
+  DB.sales.forEach(s => { if(s.clientId === removeId) s.clientId = keepId; });
+  DB.reservations.forEach(r => { if(r.clientId === removeId) r.clientId = keepId; });
+  keep.points = (keep.points||0) + (remove.points||0);
+  keep.noShows = (keep.noShows||0) + (remove.noShows||0);
+  ['phone','email','cp','cumpleanos','allergies'].forEach(field => {
+    if(!keep[field] && remove[field]) keep[field] = remove[field];
+  });
+  if(remove.notes && remove.notes !== keep.notes){
+    keep.notes = keep.notes ? `${keep.notes} / ${remove.notes}` : remove.notes;
+  }
+  if(remove.marketingConsent === false) keep.marketingConsent = false;
+  DB.clients = DB.clients.filter(c => c.id !== removeId);
+
+  saveDB();
+  showToast(`Fichas fusionadas en «${keep.name}»`);
+  openDuplicateClientsModal();
+  renderClientes();
+}
+
 function openDuplicateClientsModal(){
   const groups = findDuplicateClientGroups();
   let html = `<div class="modal-header"><h3><i class="ti ti-users-group"></i> Posibles clientes duplicados</h3><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>`;
@@ -1333,6 +1365,7 @@ function openDuplicateClientsModal(){
           </div>
           <div style="display:flex;gap:6px">
             <button class="btn btn-sm" onclick="closeModal();openClientModal(${c.id})"><i class="ti ti-edit"></i> Editar</button>
+            ${group.length > 1 ? group.filter(x=>x.id!==c.id).map(x => `<button class="btn btn-sm" onclick="mergeClients(${c.id}, ${x.id})" title="Traspasar el historial de '${escapeHtml(x.name)}' a esta ficha y eliminar la sobrante"><i class="ti ti-git-merge"></i> Fusionar con «${escapeHtml(x.name)}»</button>`).join('') : ''}
             <button class="btn btn-sm btn-danger" onclick="closeModal();deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
           </div>
         </div>`;
@@ -1660,6 +1693,24 @@ function exportClientsCSV(){
   downloadCSV(rows, `clientes-${todayStr()}.csv`);
 }
 
+// Exportación específica para campañas de marketing: solo clientes que han
+// dado consentimiento (marketingConsent !== false) y que tienen al menos
+// un contacto usable (teléfono o email). El CSV general de arriba incluye
+// a todo el mundo (útil para gestión interna) pero mandarlo tal cual a una
+// plataforma de WhatsApp/email masivo se saltaría el consentimiento y
+// mandaría a gente sin forma de contactar.
+function exportMarketingCSV(){
+  const items = DB.clients.filter(c => c.marketingConsent !== false && (c.phone || c.email));
+  if(!items.length){ showToast(t('empty.clients')); return; }
+  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket')]];
+  items.forEach(c => {
+    const stats = clientSalesStats(c);
+    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio]);
+  });
+  downloadCSV(rows, `clientes-marketing-${todayStr()}.csv`);
+  showToast(`${items.length} clientes exportados para marketing`);
+}
+
 // Cumpleaños en los próximos 14 días (por día/mes, sin importar el año), para
 // poder felicitar a los clientes sin tener que acordarte tú de mirarlo cada día.
 function getUpcomingBirthdays(days){
@@ -1679,6 +1730,23 @@ function getUpcomingBirthdays(days){
     }
   });
   return upcoming.sort((a,b) => a.inDays - b.inDays);
+}
+// Aviso proactivo de cumpleaños: hasta ahora había que acordarse de abrir
+// "Cumpleaños próximos" a mano cada día. Al abrir la app se comprueba una
+// vez por día (localStorage guarda la última fecha comprobada, para no
+// repetir el aviso varias veces el mismo día) si hay clientes que cumplen
+// años hoy, y si los hay se avisa con un toast que abre directamente el
+// modal de cumpleaños.
+function checkTodayBirthdaysReminder(){
+  const key = 'gg_birthday_reminder_last_check';
+  const today = todayStr();
+  if(localStorage.getItem(key) === today) return;
+  localStorage.setItem(key, today);
+  const upcoming = getUpcomingBirthdays(0);
+  if(upcoming.length){
+    const names = upcoming.map(u => u.client.name).join(', ');
+    showToast(`🎂 ${t('label.today')}: ${names}`, 8000);
+  }
 }
 function openBirthdaysModal(){
   const upcoming = getUpcomingBirthdays(14);
@@ -7414,6 +7482,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateAutoActiveCarta();
   updateAutoActiveMenu();
   setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders(); }, 60000);
+  checkTodayBirthdaysReminder();
 
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
