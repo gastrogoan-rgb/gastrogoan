@@ -1410,6 +1410,22 @@ function renderOrderClientNotesHtml(order){
   </div>`;
 }
 
+// Solo el aviso de alergias (sin notas generales de reserva/cliente, que no
+// son urgentes) para la pantalla de cocina: antes esta información solo se
+// veía en el modal de mesa de Sala, así que un cocinero podía preparar un
+// plato con un alérgeno peligroso para ese cliente sin enterarse, porque el
+// modo por defecto es "pantalla" (no impresión de tickets, que sí lo incluye).
+function orderAllergyWarningHtml(order){
+  const texts = [];
+  if(order.clientId){
+    const c = DB.clients.find(x => x.id === order.clientId);
+    if(c && c.allergies) texts.push(c.allergies);
+  }
+  if(order.tableAllergens) texts.push(order.tableAllergens);
+  if(!texts.length) return '';
+  return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:12.5px;font-weight:700;color:#fff;background:var(--red,#c0392b);border-radius:6px;padding:6px 8px;margin-bottom:8px"><i class="ti ti-alert-triangle" style="margin-top:1px;flex-shrink:0"></i><span>${t('label.allergensPresent')}: ${escapeHtml(texts.join(' / '))}</span></div>`;
+}
+
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
@@ -2109,6 +2125,7 @@ function renderComandasCocina(){
         <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
         ${urgencyBadge(mins)}
       </div>
+      ${orderAllergyWarningHtml(order)}
       ${groups.map(g => {
         const hasCocina = g.lines.some(({line}) => line.estado === 'cocina');
         const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
