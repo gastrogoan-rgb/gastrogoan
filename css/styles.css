@@ -171,7 +171,13 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .togo-card.togo-card-urgent{border-top-color:var(--red);background:var(--red-l)}
 .togo-card .mesa-waiter-chip{justify-content:center}
 
-.mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center}
+/* min-height fijo para que TODAS las mesas midan igual, estén en la zona que
+   estén y tengan o no comanda abierta — antes cada zona era una rejilla CSS
+   independiente, así que una zona con mesas mayormente libres (contenido
+   corto: nombre + "Libre") salía visiblemente más baja/pequeña que otra con
+   mesas ocupadas (más líneas de contenido: fase, total, camarero...). Con
+   una altura mínima común, todas ocupan el mismo sitio siempre. */
+.mesa-card{padding:16px 10px 12px;margin-bottom:0;font-size:11px;border-radius:14px;border-top-width:4px;border-top-style:solid;display:flex;flex-direction:column;align-items:center;min-height:150px;justify-content:center}
 .mesa-card.mesa-free{background:var(--surface);border:1px dashed var(--border);border-top:4px dashed var(--border)}
 .mesa-card.mesa-free:hover{border-color:var(--brand-orange)}
 .mesa-card.mesa-occupied{background:var(--surface);border:1px solid var(--border)}
@@ -185,13 +191,14 @@ body:not(.edit-unlocked) .owner-only{display:none !important}
 .mesa-card.mesa-phase-served{border-top-color:var(--green)}
 .mesa-card .mesa-name{font-size:16px;font-weight:800;margin-bottom:1px;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%;line-height:1.15}
 .mesa-card .badge{font-size:9.5px;padding:2px 6px;gap:2px}
-.mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:4px}
+.mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:4px}
 .mesa-card .mesa-status-free .ti{font-size:15px}
 .mesa-card.mesa-reserved-soon{border-color:var(--brand-orange);border-style:dashed}
+.mesa-card .mesa-pax-free{margin-top:4px;justify-content:center;width:100%}
 .mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--brand-orange);display:flex;align-items:center;justify-content:center;gap:3px}
-.mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:2px}
-.mesa-card .mesa-total{margin-top:4px;font-weight:800;font-size:20px;color:var(--brand-orange)}
-.mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:5px;flex-wrap:wrap;width:100%}
+.mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:6px}
+.mesa-card .mesa-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);width:100%;font-weight:800;font-size:20px;color:var(--brand-orange)}
+.mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;flex-wrap:wrap;width:100%}
 .mesa-card .mesa-pax{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
 .mesa-card .mesa-pax .ti{font-size:12px}
 .mesa-card .mesa-waiter-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);font-weight:600;max-width:100%;overflow:visible;text-overflow:clip;white-space:normal}

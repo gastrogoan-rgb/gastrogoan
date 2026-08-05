@@ -409,6 +409,7 @@ function renderMesaCard(table){
           </div>
         `
         : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>
+           ${table.plazas ? `<div class="mesa-pax mesa-pax-free"><i class="ti ti-users"></i> ${table.plazas} ${t('common.persAbbr')}</div>` : ''}
            ${upcomingRes ? `<div class="mesa-reservation-hint" title="${escapeHtml(upcomingRes.clientName||'')}"><i class="ti ti-calendar-event"></i> ${t('label.reservedAt').replace('${time}', escapeHtml(upcomingRes.time))} · ${upcomingRes.people} <i class="ti ti-users"></i></div>` : ''}`}
     </div>
   `;
