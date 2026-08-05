@@ -1523,7 +1523,7 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','giftCards','coupons','bankReconciliations'
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','coupons','bankReconciliations'
 ]);
 
 /* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
@@ -2727,7 +2727,6 @@ function defaultData(){
     waitlist: [], // {id, name, phone, people, notes, status:'esperando'|'sentado'|'cancelada', createdAt} — cola de espera para walk-ins sin mesa libre
     vacationRequests: [], // {id, employeeId, fromDate, toDate, notes, status:'pending'|'approved'|'rejected', createdAt}
     npsScores: [], // {id, score:0-10, comment, createdAt} — respuestas privadas de la encuesta de satisfacción (NPS)
-    giftCards: [], // {id, code, initialAmount, balance, note, active:true, createdAt} — bonos/tarjetas regalo prepago
     coupons: [], // {id, code, discountPct, active:true, maxUses, uses, note, createdAt} — códigos promocionales canjeables por el cliente
     bankReconciliations: [], // {id, fechaDesde, fechaHasta, expected, bankAmount, difference, notes, createdAt} — conciliación bancaria manual (tarjeta cobrada vs. extracto real)
     shiftHandoffNotes: {}, // {'area_YYYY-MM-DD': texto} — traspaso de turno
@@ -3087,49 +3086,6 @@ async function writeThermalChunks(characteristic, bytes){
     await characteristic.writeValueWithoutResponse(chunk);
   }
 }
-/* ============================================================
-   TARJETAS/BONOS REGALO (gift cards prepago)
-   Emisión y canje de un importe prepagado — caja anticipada real
-   para el negocio (se cobra hoy, se consume después), y un producto
-   de regalo típico en hostelería que hasta ahora no existía en la
-   app. El código es lo único que hace falta para canjearlo, así que
-   se genera con caracteres poco ambiguos al leerlos a mano (sin O/0,
-   I/1) y se muestra siempre en mayúsculas.
-   ============================================================ */
-const GIFT_CARD_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function generateGiftCardCode(){
-  let code;
-  do{
-    code = Array.from({length:8}, () => GIFT_CARD_CODE_CHARS[Math.floor(Math.random()*GIFT_CARD_CODE_CHARS.length)]).join('');
-  }while((DB.giftCards||[]).some(g => g.code === code));
-  return code.slice(0,4) + '-' + code.slice(4);
-}
-function issueGiftCard(amount, note){
-  if(!DB.giftCards) DB.giftCards = [];
-  const card = {id: genId(), code: generateGiftCardCode(), initialAmount: amount, balance: amount, note: note||'', active: true, createdAt: new Date().toISOString()};
-  DB.giftCards.push(card);
-  logAudit('giftcard_issued', t('audit.giftCardIssued').replace('${code}', card.code).replace('${amount}', fmtMoney(amount)));
-  saveDB();
-  return card;
-}
-function findGiftCard(code){
-  const normalized = (code||'').trim().toUpperCase();
-  return (DB.giftCards||[]).find(g => g.code === normalized);
-}
-// Descuenta del saldo si hay suficiente; no permite dejar el saldo negativo
-// (un canje parcial se resuelve completando el resto con otro método de
-// pago, igual que ya hace el pago mixto efectivo/tarjeta).
-function redeemGiftCard(code, amount){
-  const card = findGiftCard(code);
-  if(!card) return {ok:false, reason:'not_found'};
-  if(!card.active) return {ok:false, reason:'inactive'};
-  if(card.balance < amount - 0.001) return {ok:false, reason:'insufficient', balance: card.balance};
-  card.balance = Math.max(0, roundMoney(card.balance - amount));
-  if(card.balance <= 0) card.active = false;
-  saveDB();
-  return {ok:true, remaining: card.balance};
-}
-
 /* ============================================================
    CUPONES/CÓDIGOS PROMOCIONALES CANJEABLES POR EL CLIENTE
    A diferencia del descuento manual del TPV (que exige PIN y motivo,
