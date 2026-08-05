@@ -1166,9 +1166,15 @@ function addDistTarea(dayIdx){
   renderDistDetail();
 }
 
+// El id de cada tarea lo genera genId() como NÚMERO, pero al llegar aquí
+// desde un onclick/onchange del HTML siempre es TEXTO (viene interpolado
+// entre comillas en la plantilla) — comparar con === los dejaba sin
+// coincidir nunca, así que editar el texto no guardaba nada y el botón de
+// borrar (la X roja) no borraba nunca, en silencio. String() a ambos lados
+// para que la comparación no dependa del tipo.
 function updateDistTarea(dayIdx, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
-  const task = (d.produccion[dayIdx]||[]).find(t=>t.id===taskId);
+  const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(!task || !(editUnlocked || task.bySelf)) return;
   task.text = val;
   saveDB();
@@ -1176,10 +1182,10 @@ function updateDistTarea(dayIdx, taskId, val){
 
 function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
-  const task = (d.produccion[dayIdx]||[]).find(t=>t.id===taskId);
+  const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(editUnlocked || task.bySelf)) return;
   if(d.produccion[dayIdx]){
-    d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>t.id!==taskId);
+    d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>String(t.id)!==String(taskId));
     saveDB();
     renderDistDetail();
   }
@@ -1189,7 +1195,7 @@ function removeDistTarea(dayIdx, taskId){
 // plantilla recurrente por día de la semana.
 function updateDistTareaUnica(ds, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
-  const task = (d.tareasUnicas[ds]||[]).find(t=>t.id===taskId);
+  const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
   if(!task || !(editUnlocked || task.bySelf)) return;
   task.text = val;
   saveDB();
@@ -1197,10 +1203,10 @@ function updateDistTareaUnica(ds, taskId, val){
 
 function removeDistTareaUnica(ds, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
-  const task = (d.tareasUnicas[ds]||[]).find(t=>t.id===taskId);
+  const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(editUnlocked || task.bySelf)) return;
   if(d.tareasUnicas[ds]){
-    d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>t.id!==taskId);
+    d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>String(t.id)!==String(taskId));
     saveDB();
     renderDistDetail();
   }
