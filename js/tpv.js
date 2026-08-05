@@ -256,7 +256,11 @@ function renderTpvKpis(){
 
   return `
     <div class="grid grid-4" style="margin-bottom:14px">
-      <div class="kpi ok"><div class="label">${t('label.salesToday')}</div><div class="value">${fmtMoney(todayTotal)}</div></div>
+      <div class="kpi ok" style="cursor:pointer" onclick="openTodaySalesModal()" title="${t('tpv.salesToday.clickHint')}">
+        <div class="label">${t('label.salesToday')}</div>
+        <div class="value">${fmtMoney(todayTotal)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px"><i class="ti ti-list-details"></i> ${t('tpv.salesToday.clickHint')}</div>
+      </div>
       <div class="kpi"><div class="label">${t('label.ticketsToday')}</div><div class="value">${ticketCount}</div></div>
       <div class="kpi"><div class="label">${t('label.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
       <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label"><i class="ti ti-tools-kitchen-2"></i> ${t('label.inKitchen')}</div><div class="value">${comandasEnCocina}</div></div>
@@ -573,7 +577,6 @@ function renderTPV(){
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn ${chaosMode?'btn-danger':''}" onclick="toggleChaosMode()" title="${t('tpv.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
-      <button class="btn" onclick="openTodaySalesModal()"><i class="ti ti-receipt"></i> ${t('title.todaySales')}</button>
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
