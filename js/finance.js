@@ -1059,6 +1059,10 @@ function renderStock(){
 function renderMermasHtml(){
   const box = document.getElementById('stock-mermas');
   if(!box) return;
+  // Merma es un dato de negocio (cuánto se ha tirado/descuadrado), no algo
+  // que un empleado sin permiso de editar necesite ver — se oculta igual
+  // que el resto de módulos de coste/margen que no le corresponden.
+  if(!editUnlocked){ box.innerHTML = ''; return; }
   const since = dateStr(new Date(Date.now() - 30*86400000));
   const entries = (DB.stockLog||[]).filter(e => e.source==='manual' && e.delta < 0 && e.fecha >= since && e.area === currentArea());
   if(!entries.length){ box.innerHTML = ''; return; }

@@ -647,6 +647,11 @@ function updatePedidosTabsUI(){
 }
 
 function renderPedidos(){
+  // Sin permiso de editar, "Realizar Pedido" no está disponible (el botón
+  // ni siquiera se ve) — si por cualquier motivo quedó seleccionada esa
+  // pestaña de una sesión anterior, se cae al historial en vez de dejar
+  // ver el formulario de creación igualmente.
+  if(pedidosTab === 'crear' && !editUnlocked) pedidosTab = 'historial';
   updatePedidosTabsUI();
   const o = pedidoDetailId && getPurchaseOrder(pedidoDetailId);
   if(o && (o.area||'cocina') === currentArea()){
@@ -796,7 +801,9 @@ function renderPedidoDetail(){
       <div class="list-row" style="padding:6px 10px">
         <div class="list-row-name"><span>${ing ? escapeHtml(ing.name) : '—'}</span></div>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.ordered')}</span>
-        <input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">
+        ${editUnlocked
+          ? `<input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
+          : `<span style="width:70px;padding:3px 5px;font-size:13px;font-weight:600">${fmtNum(line.cantidad)}</span>`}
         ${isRecibido ? `
         <span style="font-size:11.5px;color:var(--muted)">${t('label.receivedAbbrev')}</span>
         <input type="number" value="${line.cantidadRecibida||0}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidadRecibida', this.value)">

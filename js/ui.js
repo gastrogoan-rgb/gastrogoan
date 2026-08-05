@@ -914,6 +914,15 @@ const FOLDERS = {
     ]
   }
 };
+// Módulos que solo aportan valor si se pueden editar de verdad (costes,
+// márgenes, gestión de proveedores...): a un empleado sin permiso de
+// edición no le sirve de nada verlos en modo solo-lectura, así que
+// directamente no aparecen en su carpeta — menos ruido, y no ve datos de
+// coste/margen que no le corresponden. El propietario y quien SÍ tiene
+// permiso de editar (canUnlockEdit) los siguen viendo todos.
+const HIDDEN_MODULES_WHEN_LOCKED = {
+  cocina: ['carta', 'proveedores', 'megalista', 'escandallo']
+};
 const MODULE_FOLDER = {};
 Object.entries(FOLDERS).forEach(([key, f]) => f.modules.forEach(m => { if(MODULE_FOLDER[m.id] === undefined) MODULE_FOLDER[m.id] = key; }));
 
@@ -1237,7 +1246,9 @@ function renderFolder(){
   const homeBtn = document.getElementById('folder-home-btn');
   // Un empleado no tiene "Inicio": solo existe su propia área de trabajo.
   if(homeBtn) homeBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
-  document.getElementById('folder-modules').innerHTML = f.modules.map(m => `
+  const hiddenIds = editUnlocked ? [] : (HIDDEN_MODULES_WHEN_LOCKED[currentFolder] || []);
+  const visibleModules = f.modules.filter(m => !hiddenIds.includes(m.id));
+  document.getElementById('folder-modules').innerHTML = visibleModules.map(m => `
     <div class="module-card" onclick="navigate('${m.id}')">
       <i class="ti ${m.icon} module-icon"></i>
       <h3>${escapeHtml(t(`module.${currentFolder}.${m.id}.name`))}</h3>
