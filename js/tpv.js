@@ -2069,105 +2069,6 @@ function setLineEstado(orderId, idx, estado){
   if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
-/* ============================================================
-   COMANDA POR VOZ — manos libres en cocina
-   Usa el reconocimiento de voz del navegador (Web Speech API, Chrome/Edge/
-   Safari; no soportado en Firefox) para poder marcar "listo" o "servido"
-   sin tocar la pantalla con las manos llenas. IMPORTANTE: esto se ha
-   escrito y validado a nivel de código, pero por su propia naturaleza NO
-   se puede probar de verdad sin un micrófono y una cocina real (ruido,
-   acentos, jerga de cada casa) — conviene probarlo con calma antes de
-   confiar en él a diario, y siempre queda la opción de tocar la pantalla
-   como alternativa, nunca se sustituye del todo.
-   ============================================================ */
-let voiceComandaActive = false;
-let voiceRecognition = null;
-function voiceComandaSupported(){
-  return typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-}
-function toggleVoiceComanda(){
-  if(voiceComandaActive){ stopVoiceComanda(); return; }
-  startVoiceComanda();
-}
-function startVoiceComanda(){
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!Recognition) return;
-  voiceRecognition = new Recognition();
-  voiceRecognition.lang = (typeof getLang === 'function' && getLang()==='ca') ? 'ca-ES' : (typeof getLang === 'function' && getLang()==='en') ? 'en-US' : 'es-ES';
-  voiceRecognition.continuous = true;
-  voiceRecognition.interimResults = false;
-  voiceRecognition.onresult = ev => {
-    const said = ev.results[ev.results.length-1][0].transcript;
-    handleVoiceComandaPhrase(said);
-  };
-  // Si se corta sola (silencio largo, error de red...) y seguimos en modo
-  // activo, se reinicia automáticamente para no tener que volver a tocar
-  // el botón en mitad del servicio. PERO si el permiso de micrófono fue
-  // denegado, reintentar es inútil (fallará siempre igual) y sin avisar
-  // dejaba al usuario pensando que estaba "escuchando" cuando en realidad
-  // llevaba rato sin poder arrancar nunca — de ahí el "activo el micro
-  // pero no se marca nada": el error se registraba solo en la consola,
-  // invisible para quien está delante de la pantalla.
-  voiceRecognition.onend = () => { if(voiceComandaActive){ try{ voiceRecognition.start(); }catch(e){} } };
-  voiceRecognition.onerror = e => {
-    console.error('Voz: error de reconocimiento', e.error);
-    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
-      stopVoiceComanda();
-      showToast(t('voice.errorPermission'));
-    }else if(e.error === 'no-speech' || e.error === 'aborted'){
-      // Silencio normal entre frases o parada intencionada — no es un
-      // error real, no hace falta avisar cada vez.
-    }else{
-      showToast(t('voice.errorGeneric'));
-    }
-  };
-  try{
-    voiceRecognition.start();
-    voiceComandaActive = true;
-    renderComandasCocina();
-  }catch(e){
-    console.error('Voz: no se pudo iniciar', e);
-    showToast(t('voice.errorStart'));
-  }
-}
-function stopVoiceComanda(){
-  voiceComandaActive = false;
-  if(voiceRecognition){ try{ voiceRecognition.stop(); }catch(e){} }
-  renderComandasCocina();
-}
-// Interpreta frases tipo "mesa 3 lista", "servido mesa 5", "mesa 2 plato 1
-// listo" — se busca el número de mesa y, si lo hay, el número de plato
-// dentro de la comanda (por orden de aparición, 1 = el primero).
-function handleVoiceComandaPhrase(phrase){
-  const text = (phrase||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const mesaMatch = text.match(/mesa\s*(\d+)/);
-  if(!mesaMatch){ showVoiceFeedback(t('voice.notUnderstood').replace('${text}', phrase)); return; }
-  const mesaNum = mesaMatch[1];
-  const table = DB.tables.find(tb => new RegExp('(^|\\D)'+mesaNum+'(\\D|$)').test(tb.name||''));
-  if(!table){ showVoiceFeedback(t('voice.tableNotFound').replace('${n}', mesaNum)); return; }
-  const order = getOpenOrderForTable(table.id);
-  if(!order){ showVoiceFeedback(t('voice.noOpenOrder').replace('${table}', table.name)); return; }
-  const platoMatch = text.match(/plato\s*(\d+)/);
-  const foodLines = (order.items||[]).map((line,idx)=>({line,idx})).filter(({line}) => !line.bebida && line.estado);
-  if(platoMatch){
-    const n = parseInt(platoMatch[1]);
-    const target = foodLines[n-1];
-    if(!target){ showVoiceFeedback(t('voice.dishNotFound').replace('${n}', n).replace('${table}', table.name)); return; }
-    setLineEstado(order.id, target.idx, 'entregado');
-    showVoiceFeedback(t('voice.dishMarked').replace('${n}', n).replace('${table}', table.name));
-  }else{
-    const pending = foodLines.filter(({line}) => line.estado !== 'entregado');
-    if(!pending.length){ showVoiceFeedback(t('voice.alreadyDone').replace('${table}', table.name)); return; }
-    pending.forEach(({idx}) => setLineEstado(order.id, idx, 'entregado'));
-    showVoiceFeedback(t('voice.tableMarked').replace('${table}', table.name));
-  }
-}
-function showVoiceFeedback(msg){
-  const box = document.getElementById('voice-comanda-feedback');
-  if(box) box.innerHTML = `<div class="card" style="border:1px solid var(--olive-l,var(--brand-orange));margin-bottom:10px;padding:8px 12px;font-size:13px"><i class="ti ti-microphone"></i> ${escapeHtml(msg)}</div>`;
-  if(typeof showToast === 'function') showToast(msg);
-}
-
 function comandaOrderTitle(order){
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
   if(table) return `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}`;
@@ -2234,9 +2135,7 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
-      ${voiceComandaSupported() ? `<button class="btn btn-sm ${voiceComandaActive?'btn-danger':''}" style="margin-left:auto" onclick="toggleVoiceComanda()" title="${t('voice.hint')}"><i class="ti ${voiceComandaActive?'ti-microphone':'ti-microphone-off'}"></i> ${voiceComandaActive?t('voice.listening'):t('voice.btn')}</button>` : ''}
     </div>
-    <div id="voice-comanda-feedback"></div>
   `;
 
   if(comandasCocinaTab === 'cerradas'){

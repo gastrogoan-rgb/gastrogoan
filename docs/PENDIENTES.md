@@ -105,17 +105,17 @@ elemento en vez de por colección entera, cambio más arriesgado que no se
 ha hecho por no tocar un motor que ya funciona bien sin poder probarlo
 contra un Firebase real en este entorno.
 
-## 5. Comanda por voz en cocina — HECHO (02/08/2026)
+## 5. Comanda por voz en cocina — ELIMINADA (05/08/2026)
 
-Botón de micrófono en Comandas Cocina (Web Speech API — Chrome/Edge/Safari,
-no Firefox). Frases tipo "mesa 3 lista" o "mesa 5 plato 2". Se validó a
-fondo el "cerebro" de interpretación de frases (`handleVoiceComandaPhrase`)
-con casos reales — encuentra la mesa, encuentra el plato, marca servido,
-avisa si no encuentra algo. **Lo único que sigue sin poder validarse en
-este entorno es el reconocimiento de voz en sí** (hace falta un micrófono
-y una cocina real, con su ruido y acentos) — antes de depender de él a
-diario, probarlo con calma un servicio tranquilo. Nunca sustituye del todo
-poder tocar la pantalla, que sigue funcionando igual.
+Se construyó y validó a nivel de código (Web Speech API), pero durante la
+revisión manual el usuario decidió quitarla del todo: tras probarla en
+condiciones reales, consideró que iba a dar más problemas que beneficios
+(fiabilidad del reconocimiento en un entorno de cocina real, ruido,
+acentos). Eliminada por completo de `js/tpv.js` (botón del micro,
+`toggleVoiceComanda`/`startVoiceComanda`/`stopVoiceComanda`/
+`handleVoiceComandaPhrase`) y de las claves `voice.*` de `js/i18n.js`. No
+sustituye nada — tocar la pantalla sigue siendo la única forma de marcar
+platos listos/servidos en cocina.
 
 ## 6. Plano de sala visual (arrastrar mesas) — HECHO (02/08/2026)
 
