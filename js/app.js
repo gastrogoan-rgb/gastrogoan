@@ -1273,7 +1273,74 @@ function clientSalesStats(c){
   }
   const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
   const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
-  return {visitas, ticketMedio, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+  return {visitas, ticketMedio, total, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+}
+
+// Estado de ordenación de la tabla de clientes (se mantiene mientras dure la sesión).
+let clientesSortField = null;
+let clientesSortDir = 'desc';
+function setClientesSort(field){
+  if(clientesSortField === field){
+    clientesSortDir = clientesSortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    clientesSortField = field;
+    clientesSortDir = 'desc';
+  }
+  renderClientes();
+}
+
+// Escaneo de la ficha completa de clientes en busca de posibles duplicados
+// (mismo teléfono, mismo email o mismo nombre exacto). El aviso al guardar
+// un cliente (saveClient) solo detecta duplicados nuevos en el momento de
+// crear/editar una ficha; este escaneo revisa TODA la base ya existente,
+// para casos donde el duplicado se creó antes de tener ese aviso o entró
+// por otra vía (p.ej. import, o dos personas distintas dieron de alta al
+// mismo cliente sin saberlo).
+function findDuplicateClientGroups(){
+  const groups = [];
+  const seen = new Set();
+  DB.clients.forEach(c => {
+    if(seen.has(c.id)) return;
+    const matches = DB.clients.filter(x => x.id !== c.id && !seen.has(x.id) && (
+      (c.phone && x.phone && c.phone.replace(/\D/g,'') === x.phone.replace(/\D/g,'')) ||
+      (c.email && x.email && c.email.trim().toLowerCase() === x.email.trim().toLowerCase()) ||
+      c.name.trim().toLowerCase() === x.name.trim().toLowerCase()
+    ));
+    if(matches.length){
+      const group = [c, ...matches];
+      group.forEach(g => seen.add(g.id));
+      groups.push(group);
+    }
+  });
+  return groups;
+}
+
+function openDuplicateClientsModal(){
+  const groups = findDuplicateClientGroups();
+  let html = `<div class="modal-header"><h3><i class="ti ti-users-group"></i> Posibles clientes duplicados</h3><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>`;
+  if(!groups.length){
+    html += `<div class="empty"><i class="ti ti-check"></i> No se han encontrado clientes con el mismo teléfono, email o nombre.</div>`;
+  } else {
+    html += `<div style="padding:8px 0;color:var(--muted);font-size:13px">Se han encontrado ${groups.length} grupo(s) de fichas que comparten teléfono, email o nombre. Revísalas y, si son la misma persona, edítalas para unificar los datos y elimina la ficha sobrante.</div>`;
+    groups.forEach(group => {
+      html += `<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">`;
+      group.forEach(c => {
+        const stats = clientSalesStats(c);
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee">
+          <div>
+            <strong>${escapeHtml(c.name)}</strong>
+            <div style="font-size:12px;color:var(--muted)">${c.phone ? escapeHtml(c.phone) : ''}${c.phone && c.email ? ' · ' : ''}${c.email ? escapeHtml(c.email) : ''} · ${stats.visitas} visitas · ${fmtMoney(stats.total)}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="closeModal();openClientModal(${c.id})"><i class="ti ti-edit"></i> Editar</button>
+            <button class="btn btn-sm btn-danger" onclick="closeModal();deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+  }
+  openModal(html, {xl:true});
 }
 
 function renderClientes(){
@@ -1287,10 +1354,30 @@ function renderClientes(){
   else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
   else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
   else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
+
+  if(clientesSortField){
+    const dir = clientesSortDir === 'asc' ? 1 : -1;
+    items = items.map(c => ({c, stats: clientSalesStats(c)}))
+      .sort((a,b) => {
+        let va, vb;
+        if(clientesSortField === 'visitas'){ va = a.stats.visitas; vb = b.stats.visitas; }
+        else if(clientesSortField === 'ticket'){ va = a.stats.ticketMedio; vb = b.stats.ticketMedio; }
+        else if(clientesSortField === 'total'){ va = a.stats.total; vb = b.stats.total; }
+        else if(clientesSortField === 'lastDate'){ va = a.stats.lastDate || ''; vb = b.stats.lastDate || ''; }
+        return va < vb ? -1*dir : va > vb ? 1*dir : 0;
+      })
+      .map(x => x.c);
+  }
+  document.querySelectorAll('#view-clientes .th-sort i').forEach(i => { i.className = 'ti ti-arrows-sort'; i.style.opacity = '.5'; });
+  if(clientesSortField){
+    const icon = document.getElementById(`clientes-sort-${clientesSortField}`);
+    if(icon){ icon.className = clientesSortDir === 'asc' ? 'ti ti-sort-ascending' : 'ti ti-sort-descending'; icon.style.opacity = '1'; }
+  }
+
   const tbody = document.getElementById('clientes-tbody');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
     return;
   }
 
@@ -1317,6 +1404,7 @@ function renderClientes(){
       </td>
       <td><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas}</span></button></td>
       <td>${fmtMoney(stats.ticketMedio)}</td>
+      <td>${fmtMoney(stats.total)}</td>
       <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap">${escapeHtml(c.notes||'—')}</td>
@@ -1564,10 +1652,10 @@ function exportClientsCSV(){
   else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
   else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
   else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
-  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket'), t('label.lastVisit'), t('label.loyaltyPoints'), t('label.noShowCount'), t('label.allergiesPrefs'), t('th.notes')]];
+  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket'), 'Gasto total', t('label.lastVisit'), t('label.loyaltyPoints'), t('label.noShowCount'), t('label.allergiesPrefs'), t('th.notes')]];
   items.forEach(c => {
     const stats = clientSalesStats(c);
-    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio, stats.lastDate||'', c.points||0, c.noShows||0, c.allergies||'', c.notes||'']);
+    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio, stats.total, stats.lastDate||'', c.points||0, c.noShows||0, c.allergies||'', c.notes||'']);
   });
   downloadCSV(rows, `clientes-${todayStr()}.csv`);
 }
