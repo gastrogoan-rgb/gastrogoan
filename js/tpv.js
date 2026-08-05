@@ -2759,6 +2759,13 @@ function renderFullPaymentTab(order, total){
         <input type="number" id="payment-tip" min="0" step="0.5" value="${propina}" oninput="updatePaymentTip(${order.id})">
       </div>
     </div>
+    <div class="field">
+      <label>${t('coupon.codeLabel')}</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="payment-coupon-code" placeholder="VERANO10" style="flex:1;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-sm" onclick="applyCouponToOrder(${order.id})">${t('coupon.applyBtn')}</button>
+      </div>
+    </div>
     <div class="kpi" style="margin-bottom:12px">
       <div class="label">${t('label.totalToCharge')}</div>
       <div class="value" id="payment-final-total">${fmtMoney(finalTotal)}</div>
@@ -2934,6 +2941,26 @@ function confirmApplyDiscount(){
   discountPending = null;
   renderPaymentModal(orderId);
   showToast(t('msg.discountApplied'));
+}
+
+// Aplicar un cupón en el propio TPV (cliente presencial que trae un código):
+// a diferencia del descuento manual, no exige PIN+motivo porque no lo
+// decide el personal por su cuenta, lo trae ya el cliente.
+function applyCouponToOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const code = document.getElementById('payment-coupon-code').value.trim();
+  if(!code){ showToast(t('coupon.needCode')); return; }
+  const result = redeemCoupon(code);
+  if(!result.ok){
+    showToast(result.reason==='exhausted' ? t('coupon.exhausted') : result.reason==='inactive' ? t('coupon.inactive') : t('coupon.notFound'));
+    return;
+  }
+  order.descuentoPct = result.coupon.discountPct;
+  order.descuentoMotivo = t('coupon.appliedMotivo').replace('${code}', result.coupon.code);
+  saveDB();
+  renderPaymentModal(orderId);
+  showToast(t('coupon.appliedOk').replace('${pct}', result.coupon.discountPct));
 }
 
 function updatePaymentChange(orderId){
