@@ -40,21 +40,33 @@ function migrateCartas(){
   if(!DB.cartas) DB.cartas = [];
 }
 
-// Resume en texto el horario semanal propio de una carta/menú, agrupando
-// los días que comparten la misma franja horaria.
-function fmtItemSchedule(item){
+// Resume el horario semanal propio de una carta/menú como un pequeño grupo
+// de etiquetas (días en negrita + badge de horas por cada tramo), agrupando
+// los días que comparten exactamente las mismas franjas horarias. Antes era
+// una única línea de texto en gris pequeño y todo apretado, costaba
+// distinguir de un vistazo los días de las horas cuando una carta tenía
+// varios tramos, todo pegado y sin separación visual real. Además leía
+// d.desde/d.hasta directamente, un esquema antiguo de una sola franja por
+// día — desde que un día admite varias franjas (p.ej. mediodía Y noche) el
+// horario real vive en d.franjas[], así que la versión vieja ya no reflejaba
+// bien cartas con más de un tramo al día.
+function renderItemScheduleHtml(item){
   const horario = migrateItemHorario(item);
   const active = horario.map((d,i)=>({i, d})).filter(x=>x.d.activo!==false);
-  if(!active.length) return t('empty.noActiveDays');
+  if(!active.length) return `<span style="font-size:12px;color:var(--muted)">${t('empty.noActiveDays')}</span>`;
   const groups = {};
   active.forEach(({i,d})=>{
-    const label = (d.desde && d.hasta) ? `${d.desde}-${d.hasta}` : t('label.allDayLong');
+    const franjas = (d.franjas||[]).filter(f=>f.desde && f.hasta);
+    const label = franjas.length ? franjas.map(f=>`${f.desde}–${f.hasta}`).join(', ') : t('label.allDayLong');
     (groups[label] = groups[label] || []).push(i);
   });
-  return Object.entries(groups).map(([label, idxs])=>{
+  return `<div style="display:flex;flex-direction:column;gap:3px">${Object.entries(groups).map(([label, idxs])=>{
     const days = idxs.length===7 ? t('common.allDays') : idxs.map(i=>weekDayShort(i)).join(', ');
-    return `${days}: ${label}`;
-  }).join(' · ');
+    return `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">
+      <span style="font-weight:600">${escapeHtml(days)}</span>
+      <span class="badge badge-gray" style="font-size:11.5px"><i class="ti ti-clock" style="margin-right:2px"></i>${escapeHtml(label)}</span>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 /* ============================================================
@@ -176,7 +188,7 @@ function renderCartaList(){
             const nplat = (c.secciones||[]).reduce((s,sec)=>s+(sec.platos||[]).length,0);
             return `<tr>
               <td><strong>${escapeHtml(tItem(c))}</strong>${(DB.activeCartaIds||[]).includes(c.id)?` <span class="badge badge-green">${t('badge.activeInPos')}</span>`:''}</td>
-              <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(c)}</td>
+              <td>${renderItemScheduleHtml(c)}</td>
               <td>${nsec}</td>
               <td>${nplat}</td>
               <td class="actions-cell">
@@ -680,7 +692,7 @@ function renderMenuList(){
             return `<tr>
               <td><strong>${escapeHtml(tItem(m))}</strong>${(DB.activeMenuIds||[]).includes(m.id)?` <span class="badge badge-green">${t('badge.activeInPosM')}</span>`:''}</td>
               <td style="font-family:monospace;font-weight:600">${fmtMoney(m.precio)}</td>
-              <td style="font-size:12px;color:var(--muted)">${fmtItemSchedule(m)}</td>
+              <td>${renderItemScheduleHtml(m)}</td>
               <td>${ngrupos}</td>
               <td class="actions-cell">
                 <button class="owner-only btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
