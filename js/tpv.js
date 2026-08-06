@@ -3676,14 +3676,101 @@ function buildTicketText(sale, opts={}){
   return lines.join('\n');
 }
 
-function printTicket(sale, opts={}){
-  const text = buildTicketText(sale, opts);
+// Versión con diseño real del ticket/factura para la impresión desde el
+// navegador (buildTicketText() se deja tal cual — texto plano — porque la
+// usan también la impresora térmica y el envío por email/WhatsApp, donde
+// no tiene sentido HTML). Aquí sí: cabecera centrada con el logo si hay
+// uno configurado, tabla de líneas con importes alineados, separadores
+// reales en vez de guiones, y el total destacado — antes era un volcado de
+// texto monoespaciado sin ninguna maquetación.
+function buildTicketHtml(sale, opts={}){
+  const b = DB.business || {};
+  const tc = b.ticket || {};
+  const logoHtml = b.logo ? `<img src="${b.logo}" alt="" style="max-height:48px;max-width:200px;display:block;margin:0 auto 8px">` : '';
+  const metaLines = [];
+  if(tc.mostrarDireccion !== false && b.address) metaLines.push(escapeHtml(b.address));
+  if(tc.mostrarTelefono !== false && b.phone) metaLines.push(t('ticket.phone').replace('${phone}', escapeHtml(b.phone)));
+  if(tc.mostrarWeb && b.web) metaLines.push(escapeHtml(b.web));
+  if(tc.mostrarNif !== false && b.cif) metaLines.push(t('ticket.taxIdLabel').replace('${cif}', escapeHtml(b.cif)));
+
+  const tipoLabel = sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway');
+
+  const itemsHtml = sale.items.map(l => `
+    <tr>
+      <td style="padding:3px 4px 3px 0;vertical-align:top;white-space:nowrap">${fmtNum(l.qty)}×</td>
+      <td style="padding:3px 4px;vertical-align:top">${escapeHtml(l.name)}</td>
+      <td style="padding:3px 0 3px 4px;vertical-align:top;text-align:right;white-space:nowrap">${fmtMoney(l.price*l.qty)}</td>
+    </tr>
+  `).join('');
+
+  const ivaGroups = saleIvaGroupsForFiscal(sale);
+  const summaryRows = [];
+  if(sale.descuentoImporte) summaryRows.push([`${t('label.discount')} (${sale.descuentoPct}%)`, `-${fmtMoney(sale.descuentoImporte)}`]);
+  if(sale.propina) summaryRows.push([t('label.tip'), fmtMoney(sale.propina)]);
+  ivaGroups.forEach(g => {
+    summaryRows.push([`${t('ticket.taxBase')} (${g.ivaPct}%)`, fmtMoney(g.base)]);
+    summaryRows.push([`${t('common.vat')} (${g.ivaPct}%)`, fmtMoney(g.cuota)]);
+  });
+  const summaryHtml = summaryRows.map(([lbl,val]) => `
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:1px 0">
+      <span>${lbl}</span><span>${val}</span>
+    </div>
+  `).join('');
+
+  const paymentHtml = (sale.pagos && sale.pagos.length > 1)
+    ? sale.pagos.map(p => `<div style="display:flex;justify-content:space-between;font-size:12px"><span>${escapeHtml(p.label)}</span><span>${fmtMoney(p.amount)} (${escapeHtml(p.metodoPago||'')})</span></div>`).join('')
+    : `<div style="display:flex;justify-content:space-between;font-size:12px"><span>${t('ticket.payment')}</span><span>${escapeHtml(sale.metodoPago||'')}</span></div>`;
+
+  const verifactuHtml = sale.verifactu && sale.verifactu.status === 'sent'
+    ? `<div style="text-align:center;font-size:11px;font-weight:700;letter-spacing:.5px;margin-top:10px">VERI*FACTU</div>`
+    : (DB.business && DB.business.verifactu && DB.business.verifactu.enabled
+      ? `<div style="text-align:center;font-size:11px;color:#a15c00;margin-top:10px">${t('ticket.verifactuPending')}</div>` : '');
   const qrHtml = (sale.verifactu && sale.verifactu.status === 'sent' && sale.verifactu.qrData)
     ? `<div style="text-align:center;margin-top:10px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(sale.verifactu.qrData)}" style="width:120px;height:120px"></div>`
     : '';
-  const win = window.open('', '_blank', 'width=320,height=520');
+
+  return `
+    <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
+      ${logoHtml}
+      <div style="text-align:center;font-weight:700;font-size:16px">${escapeHtml(b.name || 'GastroGoan')}</div>
+      ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
+      ${opts.factura ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:8px">${t('ticket.invoiceNumber')} ${escapeHtml(sale.facturaNum||'')}</div>` : ''}
+      <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#555">
+        <span>${escapeHtml(sale.date||'')}</span>
+        <span>${escapeHtml(tipoLabel)}${sale.clienteNombre?' · '+escapeHtml(sale.clienteNombre):''}</span>
+      </div>
+      <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead>
+          <tr style="border-bottom:1px solid #ccc;font-size:10.5px;color:#888;text-transform:uppercase">
+            <th style="text-align:left;padding:0 4px 4px 0;font-weight:600">${t('common.qty')}</th>
+            <th style="text-align:left;padding:0 4px 4px;font-weight:600">${t('common.product')}</th>
+            <th style="text-align:right;padding:0 0 4px 4px;font-weight:600">€</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
+      ${summaryHtml}
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;margin-top:8px;padding-top:8px;border-top:2px solid #111">
+        <span>${t('common.total')}</span><span>${fmtMoney(sale.total)}</span>
+      </div>
+      <div style="margin-top:8px">${paymentHtml}</div>
+      ${verifactuHtml}
+      ${qrHtml}
+      <div style="text-align:center;font-size:11.5px;color:#666;margin-top:14px;line-height:1.5">${escapeHtml(tc.pie || t('ticket.thanksVisit'))}</div>
+    </div>
+  `;
+}
+
+function printTicket(sale, opts={}){
+  const html = buildTicketHtml(sale, opts);
+  const win = window.open('', '_blank', 'width=360,height=600');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">${escapeHtml(text)}${qrHtml}</body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${opts.factura?'Factura':'Ticket'}</title>
+    <style>@page{margin:6mm} body{margin:0;padding:14px 0}</style>
+    </head><body>${html}</body></html>`);
   win.document.close();
   win.print();
 }
