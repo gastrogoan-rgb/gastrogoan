@@ -516,7 +516,7 @@ const GE = (function(){
       </div>
       <div class="field">
         <label>${t('common.supplier')}</label>
-        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" list="gv-prov-list" onchange="var p=getProviderByName(this.value);if(p&&p.iva!=null){document.getElementById('gv-f-iva').value=p.iva}">
+        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" list="gv-prov-list">
         <datalist id="gv-prov-list">${provs}</datalist>
       </div>
       <div class="field-row">

@@ -461,7 +461,6 @@ function renderProveedores(){
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
-      ${p.iva!=null ? `<span class="badge badge-gray">${t('common.vat')} ${p.iva}%</span>` : ''}
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
       <div style="margin-top:6px">
         ${ings.length
@@ -545,14 +544,6 @@ function openProviderModal(id){
     <div class="field"><label>${t('label.approxDeliveryTime')}</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
     <div class="field"><label>${t('common.address')}</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
-    <div class="field"><label>${t('label.usualVatType')}</label>
-      <select id="prov-iva">
-        <option value="21" ${(p.iva==null||parseFloat(p.iva)===21)?'selected':''}>${t('vat.general')}</option>
-        <option value="10" ${parseFloat(p.iva)===10?'selected':''}>${t('vat.reduced')}</option>
-        <option value="4" ${parseFloat(p.iva)===4?'selected':''}>${t('vat.superReduced')}</option>
-        <option value="0" ${parseFloat(p.iva)===0?'selected':''}>${t('vat.exempt')}</option>
-      </select>
-    </div>
     <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
@@ -572,7 +563,6 @@ function saveProvider(id){
     email: document.getElementById('prov-email').value.trim(),
     dir: document.getElementById('prov-dir').value.trim(),
     iban: document.getElementById('prov-iban').value.trim(),
-    iva: parseFloat(document.getElementById('prov-iva').value),
     diasEntrega: WEEK_DAYS.filter((_,i)=>document.getElementById(`prov-dia-entrega-${i}`).checked),
     horaEntrega: document.getElementById('prov-hora-entrega').value,
     notas: document.getElementById('prov-notas').value.trim()
@@ -786,6 +776,39 @@ function backToPedidoList(){
   renderPedidoList();
 }
 
+// Desglose de base imponible/IVA/total de un pedido a proveedor, agrupado
+// por tipo de IVA — cada ingrediente lleva su propio tipo (elegido en Mega
+// Lista), así que un mismo pedido puede mezclar productos al 10% y al 21%
+// sin que el desglose salga mal. El precio del ingrediente (ing.price) es
+// la base sin IVA: aquí se le AÑADE el IVA de cada uno, no se extrae de un
+// total que ya lo llevara incluido.
+function renderPedidoIvaBreakdownHtml(o, isRecibido){
+  const groups = {}; // ivaPct -> base
+  let missingIva = false;
+  (o.items||[]).forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return;
+    const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
+    const base = qty * (ing.price||0);
+    if(base <= 0) return;
+    if(ing.iva == null){ missingIva = true; return; }
+    groups[ing.iva] = (groups[ing.iva]||0) + base;
+  });
+  const rates = Object.keys(groups).map(Number).sort((a,b)=>b-a);
+  if(!rates.length && !missingIva) return '';
+  const totalBase = rates.reduce((s,r)=>s+groups[r], 0);
+  const totalIva = rates.reduce((s,r)=>s+groups[r]*r/100, 0);
+  return `
+  <div style="padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
+    ${rates.map(r => `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px">
+      <div><span style="color:var(--muted)">${t('label.taxBase')} ${r}%:</span> <strong>${fmtMoney(groups[r])}</strong></div>
+      <div><span style="color:var(--muted)">${t('label.vat')}:</span> <strong>${fmtMoney(groups[r]*r/100)}</strong></div>
+    </div>`).join('')}
+    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBase+totalIva)}</strong></div>` : ''}
+    ${missingIva ? `<div style="color:var(--red);margin-top:6px"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</div>` : ''}
+  </div>`;
+}
+
 function renderPedidoDetail(){
   const o = getPurchaseOrder(pedidoDetailId);
   const box = document.getElementById('pedidos-list');
@@ -823,24 +846,7 @@ function renderPedidoDetail(){
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
         ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
       </div>
-      ${(()=>{
-        const prov = getProviderByName(o.supplier);
-        const ivaPct = prov && prov.iva != null ? prov.iva : 10;
-        let totalBruto = 0;
-        (o.items||[]).forEach(line => {
-          const ing = getIngredient(line.ingredientId);
-          const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
-          totalBruto += qty * (ing ? (ing.price||0) : 0);
-        });
-        const base = totalBruto / (1 + ivaPct/100);
-        const iva = totalBruto - base;
-        return totalBruto > 0 ? `
-        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
-          <div><span style="color:var(--muted)">${t('label.taxBase')}:</span> <strong>${fmtMoney(base)}</strong></div>
-          <div><span style="color:var(--muted)">${t('label.vat')} ${ivaPct}%:</span> <strong>${fmtMoney(iva)}</strong></div>
-          <div><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBruto)}</strong></div>
-        </div>` : '';
-      })()}
+      ${renderPedidoIvaBreakdownHtml(o, isRecibido)}
 
       <div class="field">
         <label>${t('common.notes')}</label>
@@ -1041,31 +1047,43 @@ function gvCategoryForIngredient(ing){
 // Al recibir un pedido, registra su coste en Gastos Variables (Gestión Económica), agrupado por categoría
 function registerPedidoComoGastoVariable(o){
   if(o.gvCreated) return;
-  const byCat = {};
+  // Se agrupa por categoría Y por tipo de IVA del ingrediente (ya no por un
+  // único IVA de proveedor): dos ingredientes de la misma categoría pero con
+  // IVA distinto (ej. dos bebidas, una al 10% y otra al 21%) generan dos
+  // líneas de gasto separadas, para que el IVA que arrastra cada una a
+  // Informes sea el real del producto, no uno adivinado para todo el pedido.
+  const byGroup = {};
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
     const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
-    const cost = (recibida||0) * (ing ? (ing.price||0) : 0);
-    if(cost <= 0) return;
+    const costBase = (recibida||0) * (ing ? (ing.price||0) : 0);
+    if(costBase <= 0) return;
     const cat = gvCategoryForIngredient(ing);
-    byCat[cat] = (byCat[cat]||0) + cost;
+    const ivaPct = ing && ing.iva != null ? ing.iva : null;
+    const key = cat + '|' + (ivaPct==null ? '?' : ivaPct);
+    if(!byGroup[key]) byGroup[key] = {cat, iva: ivaPct, base: 0};
+    byGroup[key].base += costBase;
   });
-  if(!Object.keys(byCat).length){ o.gvCreated = true; return; }
+  if(!Object.keys(byGroup).length){ o.gvCreated = true; return; }
   const fecha = todayStr();
   const d = new Date(fecha);
-  const prov = getProviderByName(o.supplier);
-  const provIva = prov && prov.iva != null ? prov.iva : 10;
   // Fecha de pago por defecto: 30 días desde la recepción (el plazo más
   // habitual con proveedores), editable luego desde el aviso de facturas
   // pendientes — no es más que un recordatorio, no afecta a ningún cálculo.
   const fechaPago = dateStr(new Date(d.getTime() + 30*86400000));
-  Object.entries(byCat).forEach(([cat, importe]) => {
-    DB.ge.variables.push({
+  Object.values(byGroup).forEach(({cat, iva, base}) => {
+    // El precio del ingrediente es la base sin IVA: el importe del gasto
+    // (como en el resto de Gestión Económica) se guarda CON IVA incluido,
+    // así que aquí se le suma antes de guardarlo.
+    const importe = iva != null ? base * (1 + iva/100) : base;
+    const rec = {
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
       categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
-      iva: provIva, fecha, pedidoId: o.id, auto: true,
+      fecha, pedidoId: o.id, auto: true,
       fechaPago, pagada: false
-    });
+    };
+    if(iva != null) rec.iva = iva;
+    DB.ge.variables.push(rec);
   });
   o.gvCreated = true;
 }
