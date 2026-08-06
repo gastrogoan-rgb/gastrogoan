@@ -79,12 +79,7 @@ function groupRecipesByCategory(recipes){
   return ordered;
 }
 
-let escandalloView = 'grid'; // 'grid' | 'list'
 let escandalloTab = 'platos'; // 'platos' | 'elaboraciones'
-function setEscandalloView(mode){
-  escandalloView = mode;
-  renderEscandallo();
-}
 function setEscandalloTab(tab){
   escandalloTab = tab;
   escandalloFolder = null;
@@ -104,6 +99,17 @@ function backToEscandalloFolders(){
   escandalloFolder = null;
   escandalloRecipe = null;
   document.getElementById('escandallo-search').value = '';
+  renderEscandallo();
+}
+// Abre la ficha completa de un plato dentro de la lista de nombres (tanto
+// si esa lista viene de una carpeta como de una búsqueda/filtro).
+function openEscandalloRecipe(id){
+  escandalloRecipe = id;
+  renderEscandallo();
+}
+// Vuelve de la ficha completa a la lista de nombres.
+function backToEscandalloRecipes(){
+  escandalloRecipe = null;
   renderEscandallo();
 }
 // Navega directo al Escandallo completo de un plato por nombre (usado desde
@@ -166,9 +172,6 @@ function renderEscandallo(){
   document.querySelector('#view-escandallo .view-subtitle').textContent = isElab ? t('tab.elaborationSubtitle') : (currentArea()==='sala' ? t('view.escandallo.subtitle.sala') : t('view.escandallo.subtitle'));
   document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
 
-  document.getElementById('escandallo-view-grid').classList.toggle('active', escandalloView==='grid');
-  document.getElementById('escandallo-view-list').classList.toggle('active', escandalloView==='list');
-
   if(!areaRecipes.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
     return;
@@ -205,66 +208,31 @@ function renderEscandallo(){
     return;
   }
 
-  const gridClass = escandalloView==='list' ? '' : 'grid grid-compact';
+  // Mismo comportamiento tanto si se llega buscando/filtrando por categoría
+  // como si se navega por carpeta: una lista compacta de solo nombres, y al
+  // pinchar uno se abre su ficha completa (coste/PVP/margen/ingredientes) —
+  // antes filtrar por categoría enseñaba directamente todas las fichas
+  // completas de golpe, distinto de cómo se veía entrando por carpeta.
+  const renderNameList = (recs) => `<div class="table-wrap"><table><tbody>${recs.map(r => `
+    <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
+      <td><strong><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</td>
+      <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
+    </tr>
+  `).join('')}</tbody></table></div>`;
 
-  // Mismo listado de fichas completas (coste/PVP/margen/ingredientes) tanto
-  // si se llega buscando/filtrando por categoría como si se navega
-  // haciendo clic en una carpeta — antes, entrar por carpeta solo enseñaba
-  // una lista de nombres y había que pinchar cada uno para ver su ficha,
-  // mientras que filtrar por categoría ya enseñaba las fichas directamente.
-  const renderCards = (recs) => `<div class="${gridClass}">${recs.map(r => {
-    const html = escandalloView==='list' ? renderEscandalloRow(r) : renderEscandalloCard(r);
-    // Si se llega aquí desde un enlace directo a un plato concreto (p.ej.
-    // desde el Dashboard), su ficha se resalta para encontrarla de un
-    // vistazo entre el resto de la categoría.
-    return r.id === escandalloRecipe ? `<div style="outline:2px solid var(--brand-orange);border-radius:10px">${html}</div>` : html;
-  }).join('')}</div>`;
-
-  if(searching){
+  if(escandalloRecipe !== null){
+    const sel = visibleRecipes.find(r => r.id === escandalloRecipe);
+    if(!sel){ escandalloRecipe = null; renderEscandallo(); return; }
+    const recBackBtn = `<button class="btn btn-sm" style="margin-bottom:10px" onclick="backToEscandalloRecipes()"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>`;
+    box.innerHTML = recBackBtn + renderEscandalloFull(sel);
+  } else if(searching){
     box.innerHTML = groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
       <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-      ${renderCards(group)}
+      ${renderNameList(group)}
     `).join('');
   } else {
-    box.innerHTML = backBtn + renderCards(visibleRecipes);
+    box.innerHTML = backBtn + renderNameList(visibleRecipes);
   }
-  escandalloRecipe = null;
-}
-
-function renderEscandalloRow(r){
-    const breakdown = recipeCostBreakdown(r);
-    const cost = breakdown.total;
-    if(r.isBase){
-      const perUnit = recipeBaseCostPerUnit(r);
-      return `
-        <div class="list-row">
-          <div class="list-row-name"><i class="ti ti-soup"></i> <span>${escapeHtml(r.name)}</span></div>
-          <span style="font-size:12px;color:var(--muted)">${t('label.totalCost')} ${fmtMoney(cost)} · ${t('label.yieldShort')} ${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</span>
-          <span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>
-          <div class="actions-cell">
-            <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
-            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i></button>
-          </div>
-        </div>
-      `;
-    }
-    const pct = recipeFoodCostPct(r);
-    const margin = (r.price||0) - cost;
-    const pctBadge = !isFinite(pct) ? `<span class="badge badge-gray">${t('label.noSalePrice')}</span>`
-      : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
-      : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
-      : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
-    return `
-      <div class="list-row">
-        <div class="list-row-name"><i class="ti ${(r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i> <span>${escapeHtml(r.name)}</span></div>
-        <span style="font-size:12px;color:var(--muted)">${t('common.cost')} ${fmtMoney(cost)} · ${t('label.salePriceShort')} ${fmtMoney(r.price||0)} · ${t('label.margin')} ${fmtMoney(margin)}</span>
-        ${pctBadge}
-        <div class="actions-cell">
-          <button class="owner-only btn btn-sm btn-icon" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    `;
 }
 
 function renderEscandalloLineLabel(line){
@@ -277,53 +245,52 @@ function renderEscandalloLineLabel(line){
 }
 
 
-function renderEscandalloCard(r){
+function renderEscandalloFull(r){
     const breakdown = recipeCostBreakdown(r);
     const cost = breakdown.total;
     const pct = recipeFoodCostPct(r);
     const margin = (r.price||0) - cost;
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
-    const pctBadge = r.isBase ? `<span class="badge badge-gray">${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}</span>`
-      : !isFinite(pct) ? `<span class="badge badge-gray">${t('label.noSalePrice')}</span>`
-      : pct > 35 ? `<span class="badge badge-red">${pct.toFixed(1)}% FC</span>`
-      : pct > 28 ? `<span class="badge badge-amber">${pct.toFixed(1)}% FC</span>`
-      : `<span class="badge badge-green">${pct.toFixed(1)}% FC</span>`;
+    const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
+    const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
 
     const lines = (r.ingredients||[]).map(line => {
       const label = renderEscandalloLineLabel(line);
       if(!label) return '';
       const lineCost = recipeIngredientCost(line);
       const merma = line.merma||0;
-      return `<tr><td>${escapeHtml(label.name)}</td><td>${fmtNum(line.qty)} ${escapeHtml(label.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td></tr>`;
+      const pctOfTotal = cost > 0 ? ((lineCost/cost)*100).toFixed(1) : '0.0';
+      return `<tr><td><strong>${escapeHtml(label.name)}</strong></td><td>${fmtNum(line.qty)} ${escapeHtml(label.unit)}</td><td>${merma>0?merma+'%':'—'}</td><td>${fmtMoney(lineCost)}</td><td style="color:var(--muted)">${pctOfTotal}%</td></tr>`;
     }).join('');
 
     return `
-      <div class="card card-compact">
-        <h3 style="justify-content:space-between">
-          <span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</span>
-          ${pctBadge}
-        </h3>
-        <div class="grid grid-3" style="margin-bottom:6px">
-          <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:14px">${fmtMoney(cost)}</div></div>
+      <div class="card" style="max-width:100%">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
+          <span class="badge badge-${pctClass}">${pctText}</span>
+        </div>
+        <div class="grid grid-4" style="margin-bottom:14px">
+          <div class="kpi"><div class="label">${t('label.totalCost')}</div><div class="value" style="font-size:18px">${fmtMoney(cost)}</div></div>
           ${r.isBase ? `
-          <div class="kpi"><div class="label">${t('label.yieldShort')}</div><div class="value" style="font-size:14px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
-          <div class="kpi"><div class="label">${t('common.cost')}/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:14px">${fmtMoney(perUnit)}</div></div>
+          <div class="kpi"><div class="label">${t('label.yieldShort')}</div><div class="value" style="font-size:18px">${fmtNum(r.baseYield||1)} ${escapeHtml(r.baseUnit||'L')}</div></div>
+          <div class="kpi"><div class="label">${t('common.cost')}/${escapeHtml(r.baseUnit||'L')}</div><div class="value" style="font-size:18px">${fmtMoney(perUnit)}</div></div>
           ` : `
-          <div class="kpi"><div class="label">${t('label.salePriceShort')}</div><div class="value" style="font-size:14px">${fmtMoney(r.price||0)}</div></div>
-          <div class="kpi"><div class="label">${t('label.margin')}</div><div class="value" style="font-size:14px">${fmtMoney(margin)}</div></div>
+          <div class="kpi"><div class="label">${t('label.salePriceShort')}</div><div class="value" style="font-size:18px">${fmtMoney(r.price||0)}</div></div>
+          <div class="kpi"><div class="label">${t('label.margin')}</div><div class="value" style="font-size:18px;color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</div></div>
+          <div class="kpi"><div class="label">${t('label.foodCost')}</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
           `}
         </div>
-        <div style="font-size:12px;color:var(--muted);margin:6px 0">
+        ${r.comensales || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
           ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
           ${r.consumiblesPct ? ` · ${t('label.consumablesInline')}: ${r.consumiblesPct}%` : ''}
-        </div>
-        <div class="table-wrap" style="margin-bottom:6px">
+        </div>` : ''}
+        <div class="table-wrap">
           <table>
-            <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th></tr></thead>
-            <tbody>${lines || `<tr><td colspan="4"><div class="empty" style="padding:14px">${t('empty.noIngredients')}</div></td></tr>`}</tbody>
+            <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
+            <tbody>${lines || `<tr><td colspan="5"><div class="empty" style="padding:14px">${t('empty.noIngredients')}</div></td></tr>`}</tbody>
           </table>
         </div>
-        <div class="actions-cell">
+        <div class="actions-cell" style="margin-top:10px">
           <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
           <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
