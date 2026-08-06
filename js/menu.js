@@ -50,23 +50,40 @@ function migrateCartas(){
 // día — desde que un día admite varias franjas (p.ej. mediodía Y noche) el
 // horario real vive en d.franjas[], así que la versión vieja ya no reflejaba
 // bien cartas con más de un tramo al día.
-function renderItemScheduleHtml(item){
-  const horario = migrateItemHorario(item);
+// Agrupa los días activos de un horario (ya migrado, con d.franjas[]) por
+// franja horaria compartida — usado tanto en la lista (renderItemScheduleHtml)
+// como en el resumen colapsado del editor (scheduleSummaryText), para no
+// repetir la misma lógica de agrupación dos veces.
+function groupScheduleDays(horario){
   const active = horario.map((d,i)=>({i, d})).filter(x=>x.d.activo!==false);
-  if(!active.length) return `<span style="font-size:12px;color:var(--muted)">${t('empty.noActiveDays')}</span>`;
+  if(!active.length) return null;
   const groups = {};
   active.forEach(({i,d})=>{
     const franjas = (d.franjas||[]).filter(f=>f.desde && f.hasta);
     const label = franjas.length ? franjas.map(f=>`${f.desde}–${f.hasta}`).join(', ') : t('label.allDayLong');
     (groups[label] = groups[label] || []).push(i);
   });
-  return `<div style="display:flex;flex-direction:column;gap:3px">${Object.entries(groups).map(([label, idxs])=>{
-    const days = idxs.length===7 ? t('common.allDays') : idxs.map(i=>weekDayShort(i)).join(', ');
-    return `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">
+  return Object.entries(groups).map(([label, idxs]) => ({
+    label,
+    days: idxs.length===7 ? t('common.allDays') : idxs.map(i=>weekDayShort(i)).join(', ')
+  }));
+}
+function renderItemScheduleHtml(item){
+  const groups = groupScheduleDays(migrateItemHorario(item));
+  if(!groups) return `<span style="font-size:12px;color:var(--muted)">${t('empty.noActiveDays')}</span>`;
+  return `<div style="display:flex;flex-direction:column;gap:3px">${groups.map(({label, days})=>`
+    <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">
       <span style="font-weight:600">${escapeHtml(days)}</span>
       <span class="badge badge-gray" style="font-size:11.5px"><i class="ti ti-clock" style="margin-right:2px"></i>${escapeHtml(label)}</span>
-    </div>`;
-  }).join('')}</div>`;
+    </div>
+  `).join('')}</div>`;
+}
+// Versión en texto plano (sin HTML) del horario, para el resumen que se ve
+// en la cabecera colapsada del editor.
+function scheduleSummaryText(horario){
+  const groups = groupScheduleDays(horario);
+  if(!groups) return t('empty.noActiveDays');
+  return groups.map(({label, days}) => `${days}: ${label}`).join(' · ');
 }
 
 /* ============================================================
@@ -222,30 +239,71 @@ function migrateItemHorario(item){
   const dias = Array.isArray(item.dias) ? item.dias : [0,1,2,3,4,5,6];
   return WEEK_DAYS.map((_,i)=>({activo: dias.includes(i), franjas:[{desde:'', hasta:''}]}));
 }
-// Renderiza las filas de días/horario compartidas por el editor de cartas y menús.
-// Diseño compacto: una fila por día, con hasta 2 franjas horarias apilables.
+// Renderiza las filas de días/horario compartidas por el editor de cartas y
+// menús. Una tarjeta por día, con espacio suficiente para leer y tocar bien
+// las horas (antes las columnas eran tan estrechas que el propio campo de
+// hora cortaba el texto, p.ej. "11:0" en vez de "11:00").
 function renderScheduleRows(prefix, horario){
-  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,98px));gap:4px">${horario.map((d,i) => {
+  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">${horario.map((d,i) => {
     const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
     return `
-    <div class="carta-schedule-day" style="padding:5px 6px;border:1px solid var(--border);border-radius:6px;${d.activo===false?'opacity:.5':''}">
-      <label style="display:flex;align-items:center;gap:4px;font-weight:700;font-size:11px;cursor:pointer;margin-bottom:3px">
-        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i})" style="width:12px;height:12px;margin:0">
-        ${weekDayShort(i)}
+    <div class="carta-schedule-day" style="padding:10px;border:1px solid var(--border);border-radius:8px;${d.activo===false?'opacity:.55':''}">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">
+        <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i});updateScheduleSummary('${prefix}')" style="width:15px;height:15px;margin:0">
+        ${weekDayFull(i)}
       </label>
-      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:3px">
+      <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:6px">
         ${franjas.map((f,j) => `
-          <div style="display:flex;align-items:center;gap:2px">
-            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
-            <span style="color:var(--muted);font-size:9px">-</span>
-            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:1px 2px;font-size:10px;width:46px;min-height:22px">
-            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="padding:1px 3px;min-height:20px;min-width:20px" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x" style="font-size:11px"></i></button>` : ''}
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:4px 5px;font-size:13px;width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
+            <span style="color:var(--muted);font-size:12px">–</span>
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:4px 5px;font-size:13px;width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
+            ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>` : ''}
           </div>
         `).join('')}
-        ${franjas.length < 2 ? `<button class="btn btn-sm" style="padding:1px 5px;font-size:10px;margin-top:1px" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i></button>` : ''}
+        ${franjas.length < 2 ? `<button class="btn btn-sm" style="align-self:flex-start" onclick="addScheduleFranja('${prefix}',${i})"><i class="ti ti-plus"></i> ${t('common.add')}</button>` : ''}
       </div>
     </div>
-  `}).join('')}</div><p style="font-size:10px;color:var(--muted);margin-top:3px">${t('common.emptyAllDay')}</p>`;
+  `}).join('')}</div><p style="font-size:11.5px;color:var(--muted);margin-top:8px">${t('common.emptyAllDay')}</p>`;
+}
+
+// Bloque plegable que envuelve renderScheduleRows(): el horario no se ve
+// siempre desplegado (antes ocupaba sitio permanentemente aunque no se
+// estuviera tocando) — se abre solo al pulsar, y mientras está cerrado se ve
+// un resumen de una línea de los días/horas ya configurados para no
+// necesitar abrirlo solo para comprobar qué hay puesto.
+let scheduleSectionOpen = {}; // prefix -> bool
+function renderScheduleSection(prefix, horario, titleKey, hintKey){
+  const open = !!scheduleSectionOpen[prefix];
+  return `
+    <div class="card" style="padding:0;overflow:hidden">
+      <button type="button" onclick="toggleScheduleSection('${prefix}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:none;border:none;cursor:pointer;text-align:left;color:inherit;font:inherit">
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:14px"><i class="ti ti-calendar-clock"></i> ${t(titleKey)}</div>
+          <div id="${prefix}-schedule-summary" style="font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(scheduleSummaryText(horario))}</div>
+        </div>
+        <i class="ti ${open?'ti-chevron-up':'ti-chevron-down'}" style="flex-shrink:0"></i>
+      </button>
+      <div id="${prefix}-schedule-body" style="display:${open?'':'none'};padding:0 14px 14px">
+        <p style="font-size:12.5px;color:var(--muted);margin:0 0 10px">${t(hintKey)}</p>
+        <div id="${prefix}-horario">${renderScheduleRows(prefix, horario)}</div>
+      </div>
+    </div>
+  `;
+}
+function toggleScheduleSection(prefix){
+  scheduleSectionOpen[prefix] = !scheduleSectionOpen[prefix];
+  const body = document.getElementById(`${prefix}-schedule-body`);
+  if(body) body.style.display = scheduleSectionOpen[prefix] ? '' : 'none';
+  const btn = document.querySelector(`[onclick="toggleScheduleSection('${prefix}')"] .ti`);
+  if(btn) btn.className = `ti ${scheduleSectionOpen[prefix] ? 'ti-chevron-up' : 'ti-chevron-down'}`;
+}
+// Refresca el resumen de la cabecera (colapsada o no) tras cualquier cambio
+// en los días/horas — sin volver a pintar toda la rejilla, para no perder
+// el foco del campo que se esté editando.
+function updateScheduleSummary(prefix){
+  const el = document.getElementById(`${prefix}-schedule-summary`);
+  if(el) el.textContent = scheduleSummaryText(readScheduleFromForm(prefix));
 }
 function toggleScheduleDia(prefix, i){
   const on = document.getElementById(`${prefix}-hor-${i}-activo`).checked;
@@ -255,11 +313,13 @@ function addScheduleFranja(prefix, i){
   const horario = readScheduleFromForm(prefix);
   if(horario[i].franjas.length < 2) horario[i].franjas.push({desde:'', hasta:''});
   document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, horario);
+  updateScheduleSummary(prefix);
 }
 function removeScheduleFranja(prefix, i, j){
   const horario = readScheduleFromForm(prefix);
   horario[i].franjas.splice(j, 1);
   document.getElementById(`${prefix}-horario`).innerHTML = renderScheduleRows(prefix, horario);
+  updateScheduleSummary(prefix);
 }
 function readScheduleFromForm(prefix){
   return WEEK_DAYS.map((_,i)=>{
@@ -333,7 +393,7 @@ function saveCarta(){
 
 function renderCartaEditor(){
   document.getElementById('carta-f-nombre').value = cartaEdit.nombre || '';
-  document.getElementById('carta-horario').innerHTML = renderScheduleRows('carta', cartaEdit.horario);
+  document.getElementById('carta-horario-section').innerHTML = renderScheduleSection('carta', cartaEdit.horario, 'label.daysAndSchedule', 'label.cartaScheduleHint');
   renderCartaSecciones();
 }
 
@@ -765,7 +825,7 @@ function renderMenuEditor(){
   document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
   document.getElementById('menu-f-nombre').placeholder = isSala ? t('ph.maridajeName') : t('ph.menuName');
   document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
-  document.getElementById('menu-horario').innerHTML = renderScheduleRows('menu', menuEdit.horario);
+  document.getElementById('menu-horario-section').innerHTML = renderScheduleSection('menu', menuEdit.horario, 'label.daysAndScheduleMenu', 'label.menuScheduleHint');
   renderMenuGrupos();
 }
 
