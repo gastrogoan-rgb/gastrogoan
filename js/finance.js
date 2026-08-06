@@ -601,8 +601,9 @@ function renderMegalistaTable(items){
         <td>${escapeHtml(ing.unit)}</td>
         <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
         <td>
-          <select onchange="updateIngredientIva(${ing.id}, this.value)" style="font-size:12px;padding:3px 4px" title="${t('label.ivaSoportado')}">
-            ${[21,10,4,0].map(pct => `<option value="${pct}" ${(ing.iva!=null?ing.iva:10)===pct?'selected':''}>${pct}%</option>`).join('')}
+          <select onchange="updateIngredientIva(${ing.id}, this.value)" style="font-size:12px;padding:3px 4px;${ing.iva==null?'border-color:var(--red);color:var(--red)':''}" title="${t('label.ivaSoportado')}">
+            <option value="" ${ing.iva==null?'selected':''} disabled>${t('label.chooseIva')}</option>
+            ${[21,10,4,0].map(pct => `<option value="${pct}" ${ing.iva===pct?'selected':''}>${pct}%</option>`).join('')}
           </select>
         </td>
         <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
