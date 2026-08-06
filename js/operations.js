@@ -1171,12 +1171,23 @@ function sendPedidoEmail(order){
 function printPedido(){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
-  const txt = pedidoTexto(o);
-  const win = window.open('', '_blank', 'width=400,height=500');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('label.order')}</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
-  win.document.close();
-  win.print();
+  printReportWindow(t('label.order'), buildPedidoPrintHtml(o));
+}
+
+// Cuerpo compartido por printPedido() (pedido ya guardado) y
+// printPedidoBorrador() (pedido en curso, aún sin guardar).
+function buildPedidoPrintHtml(o){
+  const rows = (o.items||[]).map(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return '';
+    return `<tr><td>${escapeHtml(ing.name)}</td><td class="pr-num">${fmtNum(line.cantidad)} ${escapeHtml(ing.unit)}</td></tr>`;
+  }).join('');
+  return `
+    ${printReportHeaderHtml(t('label.orderTo')+' '+o.supplier, `${t('common.date')}: ${escapeHtml(o.date||'')}`)}
+    <table><thead><tr><th>${t('common.item')}</th><th class="pr-num">${t('common.qty')}</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="2" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
+    ${o.notas ? `<div class="pr-divider"></div><div class="pr-meta"><strong>${t('common.notes')}:</strong> ${escapeHtml(o.notas)}</div>` : ''}
+  `;
 }
 
 let orderModalSupplier = '';
@@ -1432,12 +1443,8 @@ function printPedidoBorrador(){
   const items = orderModalLines.filter(l => l.cantidad > 0);
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return; }
   const date = document.getElementById('order-date').value || todayStr();
-  const txt = pedidoTexto({supplier: orderModalSupplier, date, items, notas:''});
-  const win = window.open('', '_blank', 'width=400,height=500');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('label.order')}</title></head><body style="font-family:Arial;padding:24px;white-space:pre-wrap;font-size:14px">${escapeHtml(txt).replace(/\n/g,'<br>')}</body></html>`);
-  win.document.close();
-  win.print();
+  const o = {supplier: orderModalSupplier, date, items, notas:''};
+  printReportWindow(t('label.order'), buildPedidoPrintHtml(o));
 }
 
 function sendNewPedido(method){
