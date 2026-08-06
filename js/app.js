@@ -360,19 +360,20 @@ function resetProtocoloPasos(type){
 function printProtocolo(type){
   const pasos = limpiezaProtocoloPasos(type);
   const title = type==='apertura' ? t('title.openingProtocol') : t('title.closingProtocol');
-  const w = window.open('','_blank');
-  w.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:40px}h2{margin-bottom:20px}ol li{padding:6px 0;font-size:16px}</style></head><body><h2>${title}</h2><ol>${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ol></body></html>`);
-  w.document.close(); w.print();
+  const body = `
+    ${printReportHeaderHtml(title)}
+    <ul class="pr-steps">${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
+  `;
+  printReportWindow(title, body);
 }
 function printManosProtocolo(){
   const pasos = limpiezaManosPasos();
-  const html = `<h2>Protocolo de lavado de manos</h2><ol>${pasos.map(p=>`<li style="margin-bottom:8px">${escapeHtml(p)}</li>`).join('')}</ol>`;
-  const w = window.open('', '_blank', 'width=500,height=600');
-  if(!w){ showToast(t('msg.allowPopupsPrint')); return; }
-  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Protocolo de lavado de manos</title><style>body{font-family:Arial,sans-serif;padding:24px;font-size:14px}</style></head><body>${html}</body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
+  const title = t('title.handWashingProtocol');
+  const body = `
+    ${printReportHeaderHtml(title)}
+    <ul class="pr-steps">${pasos.map(p=>`<li>${escapeHtml(p)}</li>`).join('')}</ul>
+  `;
+  printReportWindow(title, body);
 }
 
 function deleteLimpiezaTarea(id){
@@ -1228,23 +1229,26 @@ function printDistribucion(empId){
   migrateWorkDistribution();
   const targets = empId ? DB.employees.filter(e=>e.id===empId) : areaEmployees();
   const isSala = currentArea() === 'sala';
-  let html = `<h2 style="margin:0 0 16px">${t('view.distribucion.title')}</h2>`;
+  const title = t('view.distribucion.title');
+  let body = printReportHeaderHtml(title);
+  if(!targets.length){
+    body += `<div class="pr-empty">${t('common.noResults')}</div>`;
+  }
   targets.forEach(emp => {
     const d = getDistEmpData(emp.id);
-    html += `<div style="margin-bottom:20px;break-inside:avoid;border:1px solid #ddd;border-radius:6px;overflow:hidden">
-      <div style="background:#f5f5f5;padding:8px 14px;font-weight:700">${escapeHtml(emp.name)} <span style="font-weight:400;color:#666">${escapeHtml(emp.rol||'')}</span></div>`;
-    if(!isSala && d.platos.length) html += `<div style="padding:8px 14px;border-bottom:1px solid #eee"><b>${t('common.dishes')}:</b> ${d.platos.map(escapeHtml).join(' · ')}</div>`;
+    const rows = [];
+    if(!isSala && d.platos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.dishes')}</strong></td><td>${d.platos.map(escapeHtml).join(' · ')}</td></tr>`);
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);
       const tasks = d.produccion[idx] || [];
-      if(tasks.length) html += `<div style="padding:6px 14px;border-bottom:1px solid #eee"><b>${label}:</b> ${tasks.map(task=>escapeHtml(task.text)).join(' · ')}</div>`;
+      if(tasks.length) rows.push(`<tr><td><strong>${escapeHtml(label)}</strong></td><td>${tasks.map(task=>escapeHtml(task.text)).join(' · ')}</td></tr>`);
     });
-    html += `</div>`;
+    body += `
+      <h2>${escapeHtml(emp.name)}${emp.rol ? ` <span style="text-transform:none;font-weight:400;color:#888">— ${escapeHtml(emp.rol)}</span>` : ''}</h2>
+      ${rows.length ? `<table>${rows.join('')}</table>` : `<div class="pr-empty">${t('common.noResults')}</div>`}
+    `;
   });
-  const w = window.open('', '_blank', 'width=620,height=700');
-  if(!w){ showToast(t('msg.allowPopupsPrint')); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('view.distribucion.title')}</title><style>body{font-family:Arial;padding:24px;font-size:13px}@media print{body{padding:0}}</style></head><body>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);
-  w.document.close();
+  printReportWindow(title, body);
 }
 
 /* ============================================================
