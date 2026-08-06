@@ -648,7 +648,7 @@ function importFromEscandallo(secId){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmImportEsc(${secId==null?'null':secId})">${t('common.import')}</button>
+      <button class="btn btn-primary" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
     </div>
   `);
 }
@@ -658,13 +658,8 @@ function toggleImportEscAll(checked){
 function confirmImportEsc(secId){
   const checked = [...document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)')].map(c=>parseInt(c.value));
   if(!checked.length){ showToast(currentArea()==='sala' ? t('msg.selectAtLeastOneDrink') : t('msg.selectAtLeastOneDish')); return; }
-  let sec;
-  if(secId != null){
-    sec = cartaEdit.secciones.find(s=>s.id===secId);
-  }else{
-    sec = cartaEdit.secciones.find(s=>s.nombre==='OTROS PLATOS');
-    if(!sec){ sec = {id: genId(), nombre:'OTROS PLATOS', platos:[]}; cartaEdit.secciones.push(sec); }
-  }
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
   checked.forEach(rid => {
     const r = getRecipe(rid);
     if(!r) return;
