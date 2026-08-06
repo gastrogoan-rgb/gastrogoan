@@ -1,3 +1,47 @@
+// Ventana de impresión con un diseño consistente compartido por todos los
+// informes "de oficina" de la app (cierre de caja, pedidos a proveedor,
+// protocolos de limpieza, distribución del trabajo...) — antes cada
+// función montaba su propio HTML suelto, casi siempre texto monoespaciado
+// sin tabla ni cabecera, con un aspecto distinto en cada sitio. Un mismo
+// bloque de estilos para todos da un aspecto consistente y más cuidado sin
+// tener que repetirlo función por función.
+function printReportWindow(title, bodyHtml, opts={}){
+  const win = window.open('', '_blank', opts.winSize || 'width=680,height=760');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:28px;max-width:720px;margin:0 auto;font-size:13px;line-height:1.45}
+      h1{font-size:19px;margin:0 0 2px;font-weight:700}
+      .pr-subtitle{font-size:12px;color:#666;margin-bottom:4px}
+      .pr-meta{font-size:12px;color:#555;margin:2px 0}
+      h2{font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:#444;border-bottom:1px solid #ddd;padding-bottom:4px;margin:22px 0 8px}
+      table{width:100%;border-collapse:collapse;margin-bottom:6px}
+      th,td{padding:5px 6px;text-align:left;font-size:12.5px;vertical-align:top}
+      th{background:#f5f5f3;font-weight:600;border-bottom:1px solid #ddd;text-transform:uppercase;font-size:10.5px;color:#666;letter-spacing:.3px}
+      td{border-bottom:1px solid #eee}
+      .pr-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+      .pr-total-row td{font-weight:700;border-top:2px solid #111;border-bottom:none;padding-top:8px}
+      .pr-note{font-size:12px;color:#666;font-style:italic;margin-top:4px}
+      .pr-empty{font-size:12px;color:#999;font-style:italic;padding:6px 0}
+      .pr-divider{border-top:1px dashed #bbb;margin:14px 0}
+      ul.pr-steps{padding-left:20px;margin:0}
+      ul.pr-steps li{margin-bottom:6px}
+      @media print{body{padding:10mm}}
+    </style>
+    </head><body>${bodyHtml}</body></html>`);
+  win.document.close();
+  win.print();
+}
+// Cabecera común (nombre del negocio + título del informe + subtítulo
+// opcional) para reutilizar en todos los printX() que usan printReportWindow.
+function printReportHeaderHtml(title, subtitle){
+  return `
+    <div class="pr-meta" style="font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
+    <h1>${escapeHtml(title)}</h1>
+    ${subtitle ? `<div class="pr-subtitle">${subtitle}</div>` : ''}
+  `;
+}
+
 /* ============== Tour virtual de bienvenida ==============
    Cada paso, además del texto, indica a qué pantalla ir (folder/view) y
    qué elemento resaltar (target), para que el tour navegue de verdad por

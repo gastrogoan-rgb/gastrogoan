@@ -227,32 +227,39 @@ function showClosureWarningsModal(warnings){
 }
 
 function printCashClosure(closure){
-  const win = window.open('', '_blank', 'width=320,height=520');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  const diffLine = closure.efectivoContado === null ? '' :
-    `${t('label.cashCounted')}: ${fmtMoney(closure.efectivoContado)}\n${t('label.difference')}: ${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}${closure.diferencia===0?` (${t('label.exactCash')})`:closure.diferencia>0?` (${t('label.cashSurplus')})`:` (${t('label.cashShortage')})`}\n`;
-  const discountsBlock = (closure.descuentos||[]).length ? `------------------------------\n${t('title.discountsAppliedThisPeriod').toUpperCase()}\n` +
-    closure.descuentos.map(d => `${escapeHtml(d.hora)} ${escapeHtml(d.mesa||'')} ${escapeHtml(d.responsableNombre||'—')} ${d.porcentaje}% ${fmtMoney(d.importe)}\n  ${escapeHtml(d.motivo)}`).join('\n') +
-    `\n${t('label.totalDiscounts')}: ${fmtMoney(closure.totalDescuentos||0)}\n` : '';
-  const voidsBlock = (closure.anulaciones||[]).length ? `------------------------------\n${t('title.voidsThisPeriod').toUpperCase()}\n` +
-    closure.anulaciones.map(v => `${escapeHtml(v.hora)} ${escapeHtml(v.mesa||'')} ${v.cantidad}x ${escapeHtml(v.plato)} — ${escapeHtml(v.responsableNombre||'—')}\n  ${escapeHtml(v.motivo)}`).join('\n') + '\n' : '';
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.cashClosureReceipt')}</title></head><body style="font-family:monospace;padding:16px;font-size:12px;white-space:pre-wrap">
-${escapeHtml(DB.business.name||'GastroGoan')}
-${t('title.cashClosureReceipt').toUpperCase()}
-${t('label.from')}: ${fmtDateTime(new Date(closure.desde))}
-${t('label.to')}: ${fmtDateTime(new Date(closure.hasta))}
-------------------------------
-${PAYMENT_METHODS.map(m => `${paymentMethodTpvLabel(m).padEnd(12)}${fmtMoney(closure.totales[m]||0)}`).join('\n')}
-------------------------------
-${t('label.totalSales').toUpperCase()}: ${fmtMoney(closure.total)}
-${t('noun.tickets')}: ${closure.ticketCount}
-${discountsBlock}${voidsBlock}------------------------------
-${t('label.initialFund')}: ${fmtMoney(closure.fondoInicial)}
-${t('label.expectedCash')}: ${fmtMoney(closure.efectivoEsperado)}
-${diffLine}${closure.notas ? '\n'+t('common.notes')+': '+escapeHtml(closure.notas)+'\n' : ''}
-</body></html>`);
-  win.document.close();
-  win.print();
+  const diffLabel = closure.diferencia===0 ? t('label.exactCash') : closure.diferencia>0 ? t('label.cashSurplus') : t('label.cashShortage');
+  const diffHtml = closure.efectivoContado === null ? '' : `
+    <div class="pr-meta">${t('label.cashCounted')}: <strong>${fmtMoney(closure.efectivoContado)}</strong></div>
+    <div class="pr-meta">${t('label.difference')}: <strong style="color:${closure.diferencia===0?'#111':closure.diferencia>0?'#1a7a3c':'#b3261e'}">${closure.diferencia>0?'+':''}${fmtMoney(closure.diferencia)}</strong> (${diffLabel})</div>
+  `;
+  const discountsHtml = (closure.descuentos||[]).length ? `
+    <h2>${t('title.discountsAppliedThisPeriod')}</h2>
+    <table><thead><tr><th>${t('common.time')}</th><th>${t('label.table')}</th><th>${t('common.responsible')}</th><th class="pr-num">%</th><th class="pr-num">${t('common.amount')}</th></tr></thead>
+    <tbody>${closure.descuentos.map(d => `<tr><td>${escapeHtml(d.hora)}</td><td>${escapeHtml(d.mesa||'—')}</td><td>${escapeHtml(d.responsableNombre||'—')}<div class="pr-note">${escapeHtml(d.motivo||'')}</div></td><td class="pr-num">${d.porcentaje}%</td><td class="pr-num">${fmtMoney(d.importe)}</td></tr>`).join('')}
+    <tr class="pr-total-row"><td colspan="4">${t('label.totalDiscounts')}</td><td class="pr-num">${fmtMoney(closure.totalDescuentos||0)}</td></tr>
+    </tbody></table>` : '';
+  const voidsHtml = (closure.anulaciones||[]).length ? `
+    <h2>${t('title.voidsThisPeriod')}</h2>
+    <table><thead><tr><th>${t('common.time')}</th><th>${t('label.table')}</th><th>${t('common.item')}</th><th>${t('common.responsible')}</th></tr></thead>
+    <tbody>${closure.anulaciones.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${v.cantidad}× ${escapeHtml(v.plato)}<div class="pr-note">${escapeHtml(v.motivo||'')}</div></td><td>${escapeHtml(v.responsableNombre||'—')}</td></tr>`).join('')}</tbody></table>` : '';
+
+  const body = `
+    ${printReportHeaderHtml(t('title.cashClosureReceipt'), `${t('label.from')} ${fmtDateTime(new Date(closure.desde))} — ${t('label.to')} ${fmtDateTime(new Date(closure.hasta))}`)}
+    <h2>${t('label.totalSales')}</h2>
+    <table><thead><tr><th>${t('ticket.payment')}</th><th class="pr-num">${t('common.amount')}</th></tr></thead>
+      <tbody>
+        ${PAYMENT_METHODS.map(m => `<tr><td>${escapeHtml(paymentMethodTpvLabel(m))}</td><td class="pr-num">${fmtMoney(closure.totales[m]||0)}</td></tr>`).join('')}
+        <tr class="pr-total-row"><td>${t('common.total')} (${closure.ticketCount} ${closure.ticketCount!==1?t('noun.tickets'):t('noun.ticket')})</td><td class="pr-num">${fmtMoney(closure.total)}</td></tr>
+      </tbody>
+    </table>
+    ${discountsHtml}${voidsHtml}
+    <h2>${t('label.cash')}</h2>
+    <div class="pr-meta">${t('label.initialFund')}: <strong>${fmtMoney(closure.fondoInicial)}</strong></div>
+    <div class="pr-meta">${t('label.expectedCash')}: <strong>${fmtMoney(closure.efectivoEsperado)}</strong></div>
+    ${diffHtml}
+    ${closure.notas ? `<div class="pr-divider"></div><div class="pr-meta"><strong>${t('common.notes')}:</strong> ${escapeHtml(closure.notas)}</div>` : ''}
+  `;
+  printReportWindow(t('title.cashClosureReceipt'), body);
 }
 
 function openCashClosureHistory(){
