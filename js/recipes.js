@@ -431,10 +431,22 @@ function renderRecipeModal(id, r){
         <label>${r.isBase ? t('label.elaborationName') : (isSala ? t('label.drinkName') : t('label.dishName'))}</label>
         <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${r.isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}">
       </div>
+    </div>
+    <div class="field-row">
       <div class="field">
-        <label>${t('label.salePrice')}</label>
-        <input type="number" id="recipe-price" value="${r.price||0}" step="0.01" min="0">
+        <label>${t('label.priceBaseNoVat')}</label>
+        <input type="number" id="recipe-price-base" value="${r.priceBase!=null?r.priceBase:(r.price||0)}" step="0.01" min="0" oninput="updateRecipeFinalPriceDisplay()">
       </div>
+      <div class="field">
+        <label>${t('label.ivaTypeRepercutido')}</label>
+        <select id="recipe-iva" onchange="updateRecipeFinalPriceDisplay()" style="${r.ivaPct==null?'border-color:var(--red);color:var(--red)':''}">
+          <option value="" ${r.ivaPct==null?'selected':''} disabled>${t('label.chooseIva')}</option>
+          ${[21,10,4,0].map(pct => `<option value="${pct}" ${r.ivaPct===pct?'selected':''}>${pct}%</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:-8px">
+      <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
     <div class="field-row">
       <div class="field">
@@ -636,9 +648,24 @@ function confirmNewRecipeCategory(id){
   recipeFormStateBeforeCategory = null;
   renderRecipeModal(id, state);
 }
+// Actualiza en vivo el "precio final (IVA incluido)" mostrado bajo el precio
+// base y el tipo de IVA, sin volver a pintar todo el modal (evita perder el
+// foco mientras se escribe, igual que ya se hacía para el % de consumibles).
+function updateRecipeFinalPriceDisplay(){
+  const baseEl = document.getElementById('recipe-price-base');
+  const ivaEl = document.getElementById('recipe-iva');
+  const display = document.getElementById('recipe-price-final-display');
+  if(!baseEl || !ivaEl || !display) return;
+  const base = parseFloat(baseEl.value) || 0;
+  const iva = ivaEl.value === '' ? 0 : parseFloat(ivaEl.value);
+  display.textContent = fmtMoney(base * (1 + iva/100));
+  ivaEl.style.borderColor = ivaEl.value === '' ? 'var(--red)' : '';
+  ivaEl.style.color = ivaEl.value === '' ? 'var(--red)' : '';
+}
 function currentRecipeFormState(id){
   const nameEl = document.getElementById('recipe-name');
-  const priceEl = document.getElementById('recipe-price');
+  const priceBaseEl = document.getElementById('recipe-price-base');
+  const ivaEl = document.getElementById('recipe-iva');
   const comensalesEl = document.getElementById('recipe-comensales');
   const consumiblesEl = document.getElementById('recipe-consumibles');
   const categoryEl = document.getElementById('recipe-category');
@@ -646,9 +673,13 @@ function currentRecipeFormState(id){
   const baseYieldEl = document.getElementById('recipe-base-yield');
   const baseUnitEl = document.getElementById('recipe-base-unit');
   const r = id ? getRecipe(id) : {};
+  const priceBase = priceBaseEl ? parseFloat(priceBaseEl.value)||0 : (r.priceBase!=null?r.priceBase:(r.price||0));
+  const ivaPct = ivaEl ? (ivaEl.value===''?null:parseFloat(ivaEl.value)) : (r.ivaPct!=null?r.ivaPct:null);
   return {
     name: nameEl ? nameEl.value : (r.name||''),
-    price: priceEl ? priceEl.value : (r.price||0),
+    priceBase,
+    ivaPct,
+    price: ivaPct!=null ? Math.round(priceBase*(1+ivaPct/100)*100)/100 : (r.price||0),
     comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
     consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
     category: categoryEl ? categoryEl.value : (r.category||''),
@@ -662,7 +693,11 @@ function currentRecipeFormState(id){
 function saveRecipe(id){
   const name = document.getElementById('recipe-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
-  const price = parseFloat(document.getElementById('recipe-price').value) || 0;
+  const priceBase = parseFloat(document.getElementById('recipe-price-base').value) || 0;
+  const ivaRaw = document.getElementById('recipe-iva').value;
+  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+  const ivaPct = parseFloat(ivaRaw);
+  const price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
   const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
   const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
   const categoryEl = document.getElementById('recipe-category');
@@ -693,10 +728,10 @@ function saveRecipe(id){
     // checkbox está deshabilitado al editar uno existente) — así una
     // elaboración nunca puede acabar puesta a la venta como plato, ni
     // viceversa.
-    Object.assign(r, {name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
+    Object.assign(r, {name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], isBase: r.isBase, baseYield, baseUnit});
   }else{
     recipeId = genId();
-    DB.recipes.push({id: recipeId, name, price, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
+    DB.recipes.push({id: recipeId, name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
   saveDB();
