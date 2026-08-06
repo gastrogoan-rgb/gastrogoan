@@ -292,6 +292,7 @@ function renderEscandalloFull(r){
         </div>
         <div class="actions-cell" style="margin-top:10px">
           <button class="owner-only btn btn-sm" onclick="openRecipeModal(${r.id})"><i class="ti ti-edit"></i> ${t('common.edit')}</button>
+          <button class="owner-only btn btn-sm" onclick="duplicateRecipe(${r.id})"><i class="ti ti-copy"></i> ${t('btn.duplicate')}</button>
           <button class="owner-only btn btn-sm btn-danger" onclick="deleteRecipe(${r.id})"><i class="ti ti-trash"></i> ${t('common.delete')}</button>
         </div>
       </div>
@@ -602,13 +603,19 @@ function currentRecipeFormState(id){
 function saveRecipe(id){
   const name = document.getElementById('recipe-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
-  const priceBase = parseFloat(document.getElementById('recipe-price-base').value) || 0;
+  // Aviso (no bloqueante) de posible plato duplicado, mismo criterio ya
+  // usado en Clientes/Proveedores/Mega Lista — fácil dar de alta "Ensalada
+  // César" dos veces sin darse cuenta y que una de las dos fichas quede
+  // huérfana sin usarse en ninguna carta.
+  const dupe = DB.recipes.find(r => r.id !== id && (r.area||'cocina')===currentArea() && !!r.isBase===!!(document.getElementById('recipe-is-base')?.checked) && r.name.trim().toLowerCase() === name.toLowerCase());
+  if(dupe && !confirm(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name))) return;
+  const priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
   const ivaRaw = document.getElementById('recipe-iva').value;
   if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
   const ivaPct = parseFloat(ivaRaw);
   const price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
   const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
-  const consumiblesPct = parseFloat(document.getElementById('recipe-consumibles').value) || 0;
+  const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
   const categoryEl = document.getElementById('recipe-category');
   const category = categoryEl ? categoryEl.value : '';
   const isBaseEl = document.getElementById('recipe-is-base');
@@ -660,6 +667,25 @@ function syncElaboracionForRecipe(recipeId, isBase, name, unit){
   } else if(existing){
     DB.elaboraciones = DB.elaboraciones.filter(e => e.recipeId !== recipeId);
   }
+}
+
+// Duplica un plato/elaboración como punto de partida para otro parecido
+// (ej. "Ensalada César" → "Ensalada César con pollo"), sin tener que volver
+// a montar toda la lista de ingredientes a mano. Abre directamente la ficha
+// de la copia para renombrarla y ajustar lo que cambie.
+function duplicateRecipe(id){
+  const r = getRecipe(id);
+  if(!r) return;
+  const copy = JSON.parse(JSON.stringify(r));
+  copy.id = genId();
+  copy.name = `${r.name} ${t('label.copySuffix')}`;
+  DB.recipes.push(copy);
+  syncElaboracionForRecipe(copy.id, copy.isBase, copy.name, copy.baseUnit);
+  saveDB();
+  escandalloRecipe = null;
+  renderEscandallo();
+  showToast(t('msg.dishDuplicated'));
+  openRecipeModal(copy.id);
 }
 
 // Secciones de carta donde este plato/receta está puesto a la venta ahora
