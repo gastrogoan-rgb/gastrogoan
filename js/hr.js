@@ -15,7 +15,16 @@ const GE = (function(){
   function gfConceptLabel(name){ const dict = t('hr.gfConceptLabels'); return (dict && dict[name]) || name; }
   function variableCategoryLabel(name){ const dict = t('hr.variableCategoryLabels'); return (dict && dict[name]) || name; }
   function getIvaOptions(){ return [{v:21,l:t('vat.general')},{v:10,l:t('vat.reduced')},{v:4,l:t('vat.superReduced')},{v:0,l:t('vat.exempt')}]; }
-  function ivaSelect(id, val){ return `<select id="${id}">${getIvaOptions().map(o=>`<option value="${o.v}" ${parseFloat(val)===o.v?'selected':''}>${o.l}</option>`).join('')}</select>`; }
+  // Sin valor por defecto: obliga a elegir un tipo a propósito (igual que en
+  // Mega Lista/Escandallo/Carta), en vez de dar por hecho un 21%/10% que
+  // podría no ser el real de ese gasto concreto.
+  function ivaSelect(id, val){
+    const hasVal = val != null && val !== '';
+    return `<select id="${id}" style="${hasVal?'':'border-color:var(--red);color:var(--red)'}">
+      <option value="" ${hasVal?'':'selected'} disabled>${t('label.chooseIva')}</option>
+      ${getIvaOptions().map(o=>`<option value="${o.v}" ${hasVal && parseFloat(val)===o.v?'selected':''}>${o.l}</option>`).join('')}
+    </select>`;
+  }
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null, editingGV = null;
   let cdrYear = new Date().getFullYear();
   let teYear = new Date().getFullYear();
@@ -68,16 +77,20 @@ const GE = (function(){
     requestAnimationFrame(function(){ if(typeof runPolishAnimations==='function') runPolishAnimations(); });
   }
 
-  /* -- Helpers -- */
-  function gfMonthlyNeto(g){ const m=gfMonthlyImporte(g); const p=g.iva!=null?parseFloat(g.iva):0; return m/(1+p/100); }
-  function totalFijos(){ return fijos().reduce((s,g)=>s+gfMonthlyImporte(g),0); }
-  function totalFijosNeto(){ return fijos().reduce((s,g)=>s+gfMonthlyNeto(g),0); }
-  function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
-  function totalPersonalNeto(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyNeto(g),0); }
-  function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
-  function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyNeto(g),0); }
+  /* -- Helpers --
+     g.importe es la BASE mensual equivalente sin IVA (gfMonthlyImporte ya
+     reparte por periodicidad) — el IVA se AÑADE encima para el total con
+     IVA, nunca se extrae de un total que ya lo llevara incluido. Mismo
+     criterio que Ingredientes/Escandallo/Carta/CAPEX: siempre "base + IVA",
+     nunca "importe con IVA incluido, adivina cuánto es cada cosa". */
+  function gfMonthlyGross(g){ const m=gfMonthlyImporte(g); const p=g.iva!=null?parseFloat(g.iva):0; return m*(1+p/100); }
+  function totalFijosNeto(){ return fijos().reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalFijos(){ return fijos().reduce((s,g)=>s+gfMonthlyGross(g),0); }
+  function totalPersonalNeto(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyGross(g),0); }
+  function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
+  function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyGross(g),0); }
   function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
-  function totalVariablesMes(mes, año=currentYear){ return variablesMes(mes,año).reduce((s,v)=>s+parseFloat(v.importe||0),0); }
   function facturacionMes(mes, año=currentYear){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
@@ -128,11 +141,15 @@ const GE = (function(){
   function ivaComprasPct(){
     return config().ivaComprasPct!=null ? parseFloat(config().ivaComprasPct) : 10;
   }
+  // v.importe es la base sin IVA (como Ingredientes/Escandallo/Carta/Fijos):
+  // el IVA se añade encima, nunca se extrae de un total que ya lo llevara.
   function totalVariablesNetoMes(mes, año=currentYear){
-    const items = variablesMes(mes,año);
-    return items.reduce((s,v) => {
+    return variablesMes(mes,año).reduce((s,v) => s + (parseFloat(v.importe)||0), 0);
+  }
+  function totalVariablesMes(mes, año=currentYear){
+    return variablesMes(mes,año).reduce((s,v) => {
       const pct = v.iva != null ? parseFloat(v.iva) : ivaComprasPct();
-      return s + parseFloat(v.importe||0) / (1 + pct/100);
+      return s + (parseFloat(v.importe)||0) * (1 + pct/100);
     }, 0);
   }
   function ivaSoportadoComprasMes(mes, año=currentYear){
@@ -339,7 +356,7 @@ const GE = (function(){
       </div>
       ` : ''}
       <div class="field-row">
-        <div class="field"><label>${t('hr.lbl.amount')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
+        <div class="field"><label>${t('hr.lbl.amountNoVat')} ${autoCalc?'<span class="ge-auto">AUTO</span>':''}</label><input type="number" id="gf-f-importe" min="0" step="0.01" value="${g.importe}" ${autoCalc?'readonly':''}></div>
         <div class="field"><label>${t('hr.gf.payDayLabel')}</label><input type="number" id="gf-f-dia" min="1" max="31" placeholder="25" value="${g.diaPago||''}"></div>
       </div>
       <div class="field">
@@ -348,7 +365,7 @@ const GE = (function(){
           ${GF_PERIODOS.map(p=>`<option value="${p.v}" ${(parseInt(g.periodicidadMeses)||1)===p.v?'selected':''}>${p.lbl}</option>`).join('')}
         </select>
       </div>
-      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva!=null?g.iva:21)}</div>` : ''}
+      ${g.categoria!=='PERSONAL' ? `<div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gf-f-iva', g.iva)}</div>` : ''}
       <div class="field">
         <label>${t('hr.lbl.commentOptional')}</label>
         <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
@@ -386,12 +403,15 @@ const GE = (function(){
     const importe = parseFloat(document.getElementById('gf-f-importe').value);
     if(!nombre){ showToast(t('msg.conceptRequired')); return; }
     if(isNaN(importe) || importe<0){ showToast(t('msg.enterAmount')); return; }
+    const catVal = document.getElementById('gf-f-cat').value;
+    const ivaEl = document.getElementById('gf-f-iva');
+    if(catVal!=='PERSONAL' && ivaEl && ivaEl.value===''){ showToast(t('msg.chooseIvaForExpense')); return; }
     const data = {
       nombre:nombre.toUpperCase(), importe, diaPago:parseInt(document.getElementById('gf-f-dia').value)||null,
-      categoria:document.getElementById('gf-f-cat').value,
+      categoria: catVal,
       periodicidadMeses: parseInt(document.getElementById('gf-f-periodo').value)||1,
       notas: document.getElementById('gf-f-notas').value.trim(),
-      iva: document.getElementById('gf-f-iva') ? parseFloat(document.getElementById('gf-f-iva').value) : 0
+      iva: ivaEl ? parseFloat(ivaEl.value) : 0
     };
     const autocalcEl = document.getElementById('gf-f-autocalc');
     if(autocalcEl && autocalcEl.checked){
@@ -466,9 +486,9 @@ const GE = (function(){
         const byProv = {};
         autoItems.forEach(v=>{ (byProv[v.proveedor||'—'] = byProv[v.proveedor||'—']||[]).push(v); });
         const autoHtml = Object.entries(byProv).map(([prov,vs])=>{
-          const total = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
-          const totalBase = vs.reduce((s,v)=>{ const p=v.iva!=null?parseFloat(v.iva):ivaComprasPct(); return s+parseFloat(v.importe||0)/(1+p/100); },0);
-          const totalIva = total - totalBase;
+          const totalBase = vs.reduce((s,v)=>s+parseFloat(v.importe||0),0);
+          const totalIva = vs.reduce((s,v)=>{ const p=v.iva!=null?parseFloat(v.iva):ivaComprasPct(); return s+parseFloat(v.importe||0)*p/100; },0);
+          const total = totalBase + totalIva;
           const ids = vs.map(v=>v.id).join(',');
           return `<div class="ge-item" style="flex-wrap:wrap">
             <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(prov)} <span class="badge badge-gray" style="font-size:10px;font-weight:400"><i class="ti ti-truck-delivery"></i> ${t('hr.lbl.receivedOrders')}</span></span>
@@ -478,15 +498,15 @@ const GE = (function(){
           </div>`;
         }).join('');
         const manualHtml = manualItems.map(v=>{
-          const imp = parseFloat(v.importe||0);
+          const base = parseFloat(v.importe||0);
           const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
-          const base = imp / (1 + pct/100);
-          const ivaAmt = imp - base;
+          const ivaAmt = base * pct/100;
+          const total = base + ivaAmt;
           return `<div class="ge-item" style="flex-wrap:wrap">
           <span style="flex:1;font-size:14px;min-width:140px">${escapeHtml(v.proveedor||'—')}</span>
           <span style="font-size:12px;color:var(--muted);margin-right:4px">${escapeHtml(v.fecha||'')}</span>
           <span style="font-size:11px;color:var(--muted);margin-right:4px">${t('hr.lbl.base')} ${fmtMoney(base)} + ${t('common.vat')} ${pct}% (${fmtMoney(ivaAmt)})</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(imp)}</span>
+          <span style="font-family:monospace;font-weight:700">${fmtMoney(total)}</span>
           <button class="btn btn-sm btn-icon" onclick="GE.editGV(${v.id})"><i class="ti ti-edit"></i></button>
           <button class="btn btn-sm btn-icon btn-danger" onclick="GE.deleteGV(${v.id})"><i class="ti ti-trash"></i></button>
         </div>`; }).join('');
@@ -530,7 +550,7 @@ const GE = (function(){
   function setGVSearch(v){ gvSearch = v; renderVariables(); }
   function newGV(){
     editingGV = null;
-    openGVModal({categoria:VARIABLE_CATEGORIES[0], proveedor:'', importe:'', iva:10, fecha:`${currentYear}-${String(activeMonth+1).padStart(2,'0')}-01`});
+    openGVModal({categoria:VARIABLE_CATEGORIES[0], proveedor:'', importe:'', iva:null, fecha:`${currentYear}-${String(activeMonth+1).padStart(2,'0')}-01`});
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
@@ -551,8 +571,8 @@ const GE = (function(){
         <datalist id="gv-prov-list">${provs}</datalist>
       </div>
       <div class="field-row">
-        <div class="field"><label>${t('hr.lbl.amount')}</label><input type="number" id="gv-f-imp" min="0" step="0.01" value="${v.importe||''}"></div>
-        <div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gv-f-iva', v.iva!=null?v.iva:10)}</div>
+        <div class="field"><label>${t('hr.lbl.amountNoVat')}</label><input type="number" id="gv-f-imp" min="0" step="0.01" value="${v.importe||''}"></div>
+        <div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('gv-f-iva', v.iva)}</div>
       </div>
       <div class="field">
         <label>${t('common.date')}</label><input type="date" id="gv-f-fecha" value="${v.fecha||''}">
@@ -566,11 +586,13 @@ const GE = (function(){
   function saveGV(){
     const imp = parseFloat(document.getElementById('gv-f-imp').value);
     if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
+    const ivaRaw = document.getElementById('gv-f-iva').value;
+    if(ivaRaw === ''){ showToast(t('msg.chooseIvaForExpense')); return; }
     const data = {
       categoria: document.getElementById('gv-f-cat').value,
       proveedor: document.getElementById('gv-f-prov').value.trim().toUpperCase() || 'SIN PROVEEDOR',
       importe: imp,
-      iva: parseFloat(document.getElementById('gv-f-iva').value),
+      iva: parseFloat(ivaRaw),
       fecha: document.getElementById('gv-f-fecha').value
     };
     if(editingGV){
@@ -911,7 +933,7 @@ const GE = (function(){
   function estadoPagoLabel(code){ return t(ESTADO_PAGO_KEYS[code]||code); }
   function newCapex(){
     editingCX = null;
-    openCapexModal(t('hr.capex.newInvestment'), {descripcion:'', importe:'', iva:21, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
+    openCapexModal(t('hr.capex.newInvestment'), {descripcion:'', importe:'', iva:null, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
   }
   function editCapex(id){
     const c = capex().find(x=>x.id===id); if(!c) return;
@@ -927,8 +949,8 @@ const GE = (function(){
       <div class="modal-header"><h3>${title}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field"><label>${t('hr.lbl.description')}</label><input type="text" id="cx-f-desc" value="${escapeHtml(c.descripcion)}"></div>
       <div class="field-row">
-        <div class="field"><label>${t('hr.lbl.amount')}</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
-        <div class="field"><label>${t('common.vat')} (%)</label><input type="number" id="cx-f-iva" min="0" max="100" value="${c.iva||21}"></div>
+        <div class="field"><label>${t('hr.lbl.amountNoVat')}</label><input type="number" id="cx-f-imp" min="0" step="0.01" value="${c.importe}"></div>
+        <div class="field"><label>${t('hr.lbl.vatType')}</label>${ivaSelect('cx-f-iva', c.iva)}</div>
       </div>
       <div class="field-row">
         <div class="field"><label>${t('common.date')}</label><input type="date" id="cx-f-fecha" value="${c.fecha||''}"></div>
@@ -957,13 +979,15 @@ const GE = (function(){
     const imp = parseFloat(document.getElementById('cx-f-imp').value);
     if(!desc){ showToast(t('msg.descRequired')); return; }
     if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
+    const ivaRaw = document.getElementById('cx-f-iva').value;
+    if(ivaRaw === ''){ showToast(t('msg.chooseIvaForExpense')); return; }
     const financiado = document.getElementById('cx-f-financiado').checked;
     const cuotaMensual = financiado ? (parseFloat(document.getElementById('cx-f-cuota').value)||0) : 0;
     const cuotas = financiado ? (parseInt(document.getElementById('cx-f-numcuotas').value)||0) : 0;
     if(financiado && (cuotas<1 || cuotaMensual<=0)){ showToast(t('msg.capexFinancingRequired')); return; }
     const data = {
       descripcion: desc.toUpperCase(), importe: imp,
-      iva: parseFloat(document.getElementById('cx-f-iva').value)||0,
+      iva: parseFloat(ivaRaw),
       fecha: document.getElementById('cx-f-fecha').value,
       estadoPago: document.getElementById('cx-f-estado').value,
       financiado,
@@ -1268,11 +1292,15 @@ const GE = (function(){
     el.innerHTML = `
       <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> ${t('hr.te.upcomingLumpTitle')}</h4></div>
       <div style="font-size:12px;color:var(--muted);padding:0 16px 8px">${t('hr.te.upcomingLumpNote')}</div>
-      ${dueItems.map(x=>`
+      ${dueItems.map(x=>{
+        const base = parseFloat(x.g.importe||0);
+        const pct = x.g.iva!=null ? parseFloat(x.g.iva) : 0;
+        return `
         <div class="ge-item">
           <span style="flex:1;font-size:14px;font-weight:500">${escapeHtml(x.g.nombre)}</span>
-          <span style="font-family:monospace;font-weight:700">${fmtMoney(parseFloat(x.g.importe||0))}</span>
-        </div>`).join('')}
+          <span style="font-family:monospace;font-weight:700">${fmtMoney(base*(1+pct/100))}</span>
+        </div>`;
+      }).join('')}
     `;
   }
   function setMonthTe(m){ activeMonth=m; renderTesoreria(); }
@@ -1599,13 +1627,13 @@ const GE = (function(){
     rows.push([t('hr.lbl.concept'), t('common.category'), t('hr.gf.payDayLabel'), t('hr.gf.payPeriodicity'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     let sumFijos = 0, sumFijosBase = 0, sumFijosIva = 0;
     fijos().forEach(g => {
-      const imp = gfMonthlyImporte(g);
+      const base = gfMonthlyImporte(g);
       const pct = g.iva!=null ? parseFloat(g.iva) : 0;
-      const base = imp / (1 + pct/100);
-      const ivaAmt = imp - base;
-      sumFijos += imp; sumFijosBase += base; sumFijosIva += ivaAmt;
+      const ivaAmt = base * pct/100;
+      const total = base + ivaAmt;
+      sumFijos += total; sumFijosBase += base; sumFijosIva += ivaAmt;
       const periodo = (parseInt(g.periodicidadMeses)||1)===1 ? t('hr.periodo.monthly') : t('hr.gf.everyMonths').replace('${n}', g.periodicidadMeses);
-      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, base, pct, ivaAmt, imp]);
+      rows.push([g.nombre||'', g.categoria||'', g.diaPago||'', periodo, base, pct, ivaAmt, total]);
     });
     if(!fijos().length) rows.push([t('hr.csv.noFixedExpenses')]);
     rows.push(['','','',t('common.total'), sumFijosBase, '', sumFijosIva, sumFijos]);
@@ -1621,12 +1649,12 @@ const GE = (function(){
     let sumVar = 0, sumVarBase = 0, sumVarIva = 0;
     const variablesDelMes = variablesMes(mes, año).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
     variablesDelMes.forEach(v => {
-      const imp = parseFloat(v.importe||0);
+      const base = parseFloat(v.importe||0);
       const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
-      const base = imp / (1 + pct/100);
-      const ivaAmt = imp - base;
-      sumVar += imp; sumVarBase += base; sumVarIva += ivaAmt;
-      rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', base, pct, ivaAmt, imp]);
+      const ivaAmt = base * pct/100;
+      const total = base + ivaAmt;
+      sumVar += total; sumVarBase += base; sumVarIva += ivaAmt;
+      rows.push([v.fecha||'', v.categoria||'', v.proveedor||'', base, pct, ivaAmt, total]);
     });
     if(!variablesDelMes.length) rows.push([t('hr.csv.noVariableExpenses')]);
     rows.push(['','',t('common.total'), sumVarBase, '', sumVarIva, sumVar]);
@@ -1659,16 +1687,14 @@ const GE = (function(){
       ivaGroups[pct].base += base; ivaGroups[pct].iva += ivaAmt;
     }
     variablesDelMes.forEach(v => {
-      const imp = parseFloat(v.importe||0);
+      const base = parseFloat(v.importe||0);
       const pct = v.iva!=null ? parseFloat(v.iva) : ivaComprasPct();
-      const base = imp / (1 + pct/100);
-      addToVatGroup(pct, base, imp-base);
+      addToVatGroup(pct, base, base*pct/100);
     });
     fijos().forEach(g => {
-      const imp = gfMonthlyImporte(g);
+      const base = gfMonthlyImporte(g);
       const pct = g.iva!=null ? parseFloat(g.iva) : 0;
-      const base = imp / (1 + pct/100);
-      addToVatGroup(pct, base, imp-base);
+      addToVatGroup(pct, base, base*pct/100);
     });
     capexMes.forEach(c => {
       const imp = parseFloat(c.importe||0);

@@ -1,18 +1,20 @@
 /* ============================================================
    DASHBOARD
    ============================================================ */
-function geTotalFijos(){
+// g.importe (vía gfMonthlyImporte) es la base mensual sin IVA — el IVA se
+// añade encima para el total, nunca se extrae de un total que ya lo llevara.
+function geTotalFijosNeto(){
   return (DB.ge.fijos||[]).reduce((s,g)=>s+gfMonthlyImporte(g),0);
 }
-function geTotalFijosNeto(){
-  return (DB.ge.fijos||[]).reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m/(1+p/100);},0);
+function geTotalFijos(){
+  return (DB.ge.fijos||[]).reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m*(1+p/100);},0);
 }
 // Solo la parte de "gastos fijos" que es coste de personal (nóminas), para
 // poder mostrar el coste de personal como % de la facturación junto al food
 // cost — los dos números de "prime cost" que todo dueño de restaurante mira
 // juntos.
 function geTotalPersonalNeto(){
-  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>{const m=gfMonthlyImporte(g);const p=g.iva!=null?parseFloat(g.iva):0;return s+m/(1+p/100);},0);
+  return (DB.ge.fijos||[]).filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyImporte(g),0);
 }
 // Registra un punto en el histórico de gastos fijos (uno por día como
 // máximo: si ya se tocó algo hoy, se sobrescribe con el valor final del
@@ -88,12 +90,15 @@ function geFijosHistoryPredatesYear(year){
 function gfMonthlyImporte(g){
   return parseFloat(g.importe||0) / (parseInt(g.periodicidadMeses)||1);
 }
-function geTotalVariablesMes(year, month){
+// v.importe es la base sin IVA (como en Ingredientes/Escandallo/Carta/Fijos):
+// el IVA se AÑADE encima para el total con IVA, nunca se extrae de un total
+// que ya lo llevara incluido.
+function geTotalVariablesNetoMes(year, month){
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
-function geTotalVariablesNetoMes(year, month){
+function geTotalVariablesMes(year, month){
   const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
-  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
+  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)*(1+p/100);},0);
 }
 function salesTotalForRange(startDate, endDate){
   return DB.sales.filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);
@@ -109,10 +114,10 @@ function salesTotalForDate(dateStr){
 function daysInMonth(year, month){
   return new Date(year, month+1, 0).getDate();
 }
-// Gastos variables (compras) registrados con fecha concreta dentro del rango (sin IVA)
+// Gastos variables (compras) registrados con fecha concreta dentro del rango
+// (sin IVA) — v.importe ya es la base, no hace falta extraer nada.
 function geVariablesTotalForRange(startDate, endDate){
-  const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
-  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)/(1+p/100);},0);
+  return (DB.ge.variables||[]).filter(v=>v.fecha && v.fecha>=startDate && v.fecha<=endDate).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
 // Los gastos fijos son mensuales: se prorratean por día para poder mostrar "gastos de hoy/semana" (sin IVA).
 // Usa el histórico de gastos fijos vigente en CADA día (no la configuración de HOY, que
@@ -1133,7 +1138,7 @@ function openPendingInvoicesModal(){
           <tr>
             <td style="color:${v.fechaPago<today?'var(--red)':''}">${escapeHtml(v.fechaPago)}${v.fechaPago<today?` <span class="badge badge-red" style="font-size:9px">${t('invoices.overdue')}</span>`:''}</td>
             <td>${escapeHtml(v.proveedor||'—')}</td>
-            <td>${fmtMoney(v.importe)}</td>
+            <td>${fmtMoney((parseFloat(v.importe)||0) * (1 + (v.iva!=null?parseFloat(v.iva):(DB.ge?.config?.ivaComprasPct!=null?parseFloat(DB.ge.config.ivaComprasPct):10))/100))}</td>
             <td><button class="btn btn-sm" onclick="markInvoicePaid(${v.id})">${t('invoices.markPaid')}</button></td>
           </tr>`).join('')}</tbody>
       </table>

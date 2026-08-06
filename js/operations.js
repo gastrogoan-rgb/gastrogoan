@@ -1072,13 +1072,12 @@ function registerPedidoComoGastoVariable(o){
   // pendientes — no es más que un recordatorio, no afecta a ningún cálculo.
   const fechaPago = dateStr(new Date(d.getTime() + 30*86400000));
   Object.values(byGroup).forEach(({cat, iva, base}) => {
-    // El precio del ingrediente es la base sin IVA: el importe del gasto
-    // (como en el resto de Gestión Económica) se guarda CON IVA incluido,
-    // así que aquí se le suma antes de guardarlo.
-    const importe = iva != null ? base * (1 + iva/100) : base;
+    // El precio del ingrediente ya es la base sin IVA, y el importe del
+    // gasto (como en el resto de Gestión Económica) también se guarda sin
+    // IVA — el IVA se añade encima al mostrarlo, nunca se guarda ya incluido.
     const rec = {
       id: genId(), mes: d.getMonth(), año: d.getFullYear(),
-      categoria: cat, proveedor: o.supplier, importe: Math.round(importe*100)/100,
+      categoria: cat, proveedor: o.supplier, importe: Math.round(base*100)/100,
       fecha, pedidoId: o.id, auto: true,
       fechaPago, pagada: false
     };
