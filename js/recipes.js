@@ -475,7 +475,7 @@ function renderRecipeModal(id, r){
         <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} ${id?'disabled':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
         ${t('label.isBaseElaborationCheckbox')}
       </label>
-      ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.isBaseLockedAfterCreation')}</p>` : ''}
+      ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.dishTypeLockedAfterCreation')}</p>` : ''}
     </div>
     `}
     ${r.isBase ? `
