@@ -1205,7 +1205,7 @@ function orderFormBodyHtml(){
 
   let itemsHtml = '';
   if(orderModalSupplier){
-    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier && (i.area||'cocina') === currentArea());
+    const ings = DB.ingredients.filter(i => i.supplier === orderModalSupplier && (i.area||'cocina') === currentArea() && i.activo !== false);
     if(!ings.length){
       itemsHtml = `<div class="empty" style="padding:10px">${t('empty.supplierNoIngredients')}</div>`;
     }else{
@@ -1387,7 +1387,7 @@ function nextValidDeliveryDate(dateStr, diasEntrega){
 function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
   orderModalSearch = '';
-  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea()).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
+  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea() && i.activo !== false).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
   orderSupplierJustChanged = true;
   refreshOrderForm();
 }

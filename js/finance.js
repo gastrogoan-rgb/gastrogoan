@@ -610,8 +610,8 @@ function renderMegalistaTable(items){
   const rowsHtml = !items.length
     ? `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
     : items.map(ing => `
-      <tr>
-        <td><strong>${escapeHtml(ing.name)}</strong></td>
+      <tr style="${ing.activo===false?'opacity:.55':''}">
+        <td><strong>${escapeHtml(ing.name)}</strong>${ing.activo===false?` <span class="badge badge-gray" style="font-size:9px">${t('label.discontinued')}</span>`:''}</td>
         <td><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
         <td>${escapeHtml(ing.supplier||'—')}</td>
         <td>${escapeHtml(ing.unit)}</td>
@@ -624,6 +624,7 @@ function renderMegalistaTable(items){
         </td>
         <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
         <td class="actions-cell">
+          <button class="owner-only btn btn-sm ${ing.activo===false?'':''}" onclick="toggleIngredientActivo(${ing.id})" title="${ing.activo===false?t('title.reactivateIngredient'):t('title.discontinueIngredient')}"><i class="ti ${ing.activo===false?'ti-rotate':'ti-ban'}"></i></button>
           <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
         </td>
@@ -644,11 +645,13 @@ function renderMegalista(){
   const prov = document.getElementById('megalista-filter-prov').value;
   const box = document.getElementById('megalista-content');
 
+  const showInactive = document.getElementById('megalista-show-inactive')?.checked;
   const items = DB.ingredients.filter(i => {
     const matchArea = (i.area||'cocina') === currentArea();
     const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
     const matchProv = !prov || (i.supplier||'') === prov;
-    return matchArea && matchSearch && matchProv;
+    const matchActivo = showInactive || i.activo !== false;
+    return matchArea && matchSearch && matchProv && matchActivo;
   });
 
   if(!items.length){
@@ -906,6 +909,22 @@ function updateIngredientIva(id, val){
   if(!ing) return;
   ing.iva = parseFloat(val);
   saveDB();
+}
+
+// Marca un ingrediente como descatalogado/inactivo sin borrarlo — a
+// diferencia de borrarlo (deleteIngredient), esto NO desvincula el
+// ingrediente de las recetas que ya lo usan (su coste histórico sigue
+// intacto), solo deja de ofrecerse para comprarlo o para añadirlo a un
+// plato nuevo. Útil para un ingrediente de temporada o que ha dejado de
+// servir el proveedor, sin perder ni el histórico ni el vínculo con las
+// recetas que lo llevan.
+function toggleIngredientActivo(id){
+  const ing = DB.ingredients.find(i=>i.id===id);
+  if(!ing) return;
+  ing.activo = ing.activo===false ? true : false;
+  saveDB();
+  renderMegalista();
+  showToast(ing.activo===false ? t('msg.ingredientDiscontinued') : t('msg.ingredientReactivated'));
 }
 
 // Recetas (Escandallo) que usan un ingrediente, para avisar antes de
