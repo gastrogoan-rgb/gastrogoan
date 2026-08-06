@@ -565,6 +565,7 @@ const MEGALISTA_COLUMNS = [
   {key:'supplier', label:t('common.supplier')},
   {key:'unit', label:t('common.unit')},
   {key:'price', label:t('megalista.colPurchase')},
+  {key:'iva', label:t('megalista.colIva')},
   {key:null, label:t('label.allergens')},
   {key:null, label:''}
 ];
@@ -591,7 +592,7 @@ function renderMegalistaTable(items){
     return `<th style="cursor:pointer;white-space:nowrap" onclick="setMegalistaSort('${c.key}')">${c.label}${arrow}</th>`;
   }).join('');
   const rowsHtml = !items.length
-    ? `<tr><td colspan="7"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
+    ? `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
     : items.map(ing => `
       <tr>
         <td><strong>${escapeHtml(ing.name)}</strong></td>
@@ -599,6 +600,11 @@ function renderMegalistaTable(items){
         <td>${escapeHtml(ing.supplier||'—')}</td>
         <td>${escapeHtml(ing.unit)}</td>
         <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
+        <td>
+          <select onchange="updateIngredientIva(${ing.id}, this.value)" style="font-size:12px;padding:3px 4px" title="${t('label.ivaSoportado')}">
+            ${[21,10,4,0].map(pct => `<option value="${pct}" ${(ing.iva!=null?ing.iva:10)===pct?'selected':''}>${pct}%</option>`).join('')}
+          </select>
+        </td>
         <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
         <td class="actions-cell">
           <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
@@ -833,6 +839,18 @@ function saveIngredient(id){
   closeModal();
   renderMegalista();
   showToast(t('msg.ingredientSaved'));
+}
+
+// IVA soportado de este ingrediente (el que se paga al comprarlo) — se
+// edita desde Mega Lista, no desde la ficha del proveedor: un mismo
+// proveedor puede venderte productos con tipos de IVA distintos (ej. una
+// tienda de bebidas que vende agua al 10% y vino al 21%), así que el tipo
+// tiene que ir ligado al producto, no a quién te lo vende.
+function updateIngredientIva(id, val){
+  const ing = DB.ingredients.find(i=>i.id===id);
+  if(!ing) return;
+  ing.iva = parseFloat(val);
+  saveDB();
 }
 
 // Recetas (Escandallo) que usan un ingrediente, para avisar antes de
