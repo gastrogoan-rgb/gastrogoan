@@ -1238,13 +1238,20 @@ function saveFicha(){
     showToast(t('msg.recipeAlreadyHasTechSheet'));
     return;
   }
+  // Aviso (no bloqueante) de posible ficha duplicada, mismo criterio ya
+  // usado en Escandallo/Clientes/Proveedores/Mega Lista — sin esto, era
+  // fácil duplicar una ficha (con el propio botón "Duplicar") varias veces
+  // y acabar con varias fichas huérfanas con el mismo nombre, imposibles
+  // de distinguir en la lista de "sin vincular".
+  const dupe = DB.fichas.find(other => other.id !== f.id && (other.area||'cocina')===currentArea() && other.name.trim().toLowerCase() === name.toLowerCase());
+  if(dupe && !confirm(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name))) return;
   const data = {
     name,
     recipeId: f.recipeId || '',
-    comensales: parseInt(f.comensales)||1,
-    baseComensales: f.baseComensales || parseInt(f.comensales) || 1,
-    produccion: f.produccion || parseInt(f.comensales) || 1,
-    tiempo: f.tiempo ? parseInt(f.tiempo) : '',
+    comensales: Math.max(1, parseInt(f.comensales)||1),
+    baseComensales: Math.max(1, f.baseComensales || parseInt(f.comensales) || 1),
+    produccion: Math.max(1, f.produccion || parseInt(f.comensales) || 1),
+    tiempo: f.tiempo ? Math.max(0, parseInt(f.tiempo)||0) : '',
     temp: f.temp || 'CALIENTE',
     ingredients: f.ingredients.filter(i => i && i.trim()),
     pasos: f.pasos.filter(p => p && p.trim()),
@@ -1280,7 +1287,15 @@ function duplicateFicha(id){
   if(!f) return;
   const copy = JSON.parse(JSON.stringify(f));
   copy.id = genId();
-  copy.name = f.name + ' (copia)';
+  // Si ya existe una copia (o varias), numera la siguiente en vez de crear
+  // otra con el mismo nombre exacto — antes duplicar la misma ficha dos
+  // veces daba dos fichas idénticamente llamadas "X (copia)", imposibles
+  // de distinguir en la lista.
+  const existingNames = new Set(DB.fichas.filter(x=>(x.area||'cocina')===(f.area||'cocina')).map(x=>x.name));
+  let candidate = `${f.name} (copia)`;
+  let n = 2;
+  while(existingNames.has(candidate)){ candidate = `${f.name} (copia ${n})`; n++; }
+  copy.name = candidate;
   copy.recipeId = '';
   DB.fichas.push(copy);
   saveDB();
