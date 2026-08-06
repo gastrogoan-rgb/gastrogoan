@@ -4609,16 +4609,33 @@ function daysSinceLastBackup(){
   if(!last) return Infinity;
   return Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
 }
+// Antes esto solo encendía un botón discreto en la cabecera (fácil de no
+// ver nunca si no se mira arriba a la derecha). Ahora, en vez de vivir
+// callado en la barra, se avisa activamente con un modal al entrar en la
+// sesión — una vez por sesión, para no ser pesado si el dueño decide
+// posponerlo y sigue trabajando — con un botón directo para descargarla ya.
+let backupReminderShownThisSession = false;
 function checkBackupReminder(){
-  const btn = document.getElementById('backup-reminder-btn');
-  if(btn) btn.style.display = daysSinceLastBackup() >= BACKUP_REMINDER_DAYS ? '' : 'none';
+  if(backupReminderShownThisSession) return;
+  if(daysSinceLastBackup() < BACKUP_REMINDER_DAYS) return;
+  const session = getAccessSession();
+  if(!session || session.type !== 'owner') return;
+  backupReminderShownThisSession = true;
+  openBackupReminderModal();
 }
-function goToBackupFromReminder(){
-  navigate('minegocio');
-  setTimeout(() => {
-    const el = document.querySelector('[onclick="downloadFullBackup()"]');
-    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
-  }, 200);
+function openBackupReminderModal(){
+  const never = daysSinceLastBackup() === Infinity;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-cloud-download"></i> ${t('hdr.backup')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px">${never ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('msg.backupRemindLater')}</button>
+      <button class="btn btn-primary" onclick="closeModal();downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
+    </div>
+  `);
 }
 
 function archiveOldData(){
