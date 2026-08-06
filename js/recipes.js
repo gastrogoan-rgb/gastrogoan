@@ -864,16 +864,25 @@ function renderFichas(){
   document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
 
-  if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
-    return;
-  }
-
   const searching = !!(search || cat);
   const gridClass = fichasView==='list' ? '' : 'grid grid-compact';
   const renderCard = r => fichasView==='list' ? renderFichaRow(r) : renderFichaCard(r);
 
-  if(!searching && fichasFolder === null){
+  // Fichas sueltas (sin vincular a ningún plato de Escandallo, o vinculadas
+  // a uno que ya no existe) que coinciden con la búsqueda actual — se
+  // calcula ANTES de cualquier "no hay nada que enseñar" para no perderlas
+  // de vista solo porque no haya ningún plato de Escandallo que además
+  // coincida con esa misma búsqueda (antes pasaba justo eso: una ficha
+  // suelta con un nombre que ningún escandallo comparte se quedaba
+  // invisible, aunque existiera).
+  const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
+
+  if(!areaRecipes.length){
+    if(!orphanFichas.length){
+      box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
+      return;
+    }
+  } else if(!searching && fichasFolder === null){
     // Vista de carpetas por categoría
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
@@ -891,21 +900,24 @@ function renderFichas(){
     ? recipes.filter(r => (r.category || '__none__') === fichasFolder)
     : recipes;
 
-  if(!visibleRecipes.length){
+  if(!visibleRecipes.length && !orphanFichas.length){
     box.innerHTML = backBtn + `<div class="empty"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
     return;
   }
 
-  if(searching){
-    html += groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
-      <h3 class="cat-heading">${escapeHtml(catName)}</h3>
-      <div class="${gridClass}">${group.map(renderCard).join('')}</div>
-    `).join('');
+  if(visibleRecipes.length){
+    if(searching){
+      html += groupRecipesByCategory(visibleRecipes).map(([catName, group]) => `
+        <h3 class="cat-heading">${escapeHtml(catName)}</h3>
+        <div class="${gridClass}">${group.map(renderCard).join('')}</div>
+      `).join('');
+    } else {
+      html += backBtn + `<div class="${gridClass}">${visibleRecipes.map(renderCard).join('')}</div>`;
+    }
   } else {
-    html += backBtn + `<div class="${gridClass}">${visibleRecipes.map(renderCard).join('')}</div>`;
+    html += backBtn;
   }
 
-  const orphanFichas = (!searching && fichasFolder !== null) ? [] : DB.fichas.filter(f => (!f.recipeId || !getRecipe(f.recipeId)) && (f.area||'cocina') === currentArea() && (!search || f.name.toLowerCase().includes(search)));
   if(orphanFichas.length){
     html += `<h3 class="cat-heading">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
       <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
@@ -1118,9 +1130,9 @@ function renderFichaModal(){
     <div class="field">
       <label>${t('label.plating')}</label>
       <textarea id="ficha-presentation" placeholder="${t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-top:8px;flex-wrap:wrap">
         ${f.photo ? `
-          <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+          <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:260px;height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in" onclick="openFichaPhotoLightbox('${escapeJsAttr(f.photo)}')" title="${t('title.clickToEnlarge')}">
           ${ro ? '' : `<button class="btn btn-sm btn-danger" onclick="removeFichaPhoto()"><i class="ti ti-trash"></i> ${t('btn.removePhoto')}</button>`}
         ` : (ro ? '' : `
           <label class="btn btn-sm" style="cursor:pointer">
@@ -1220,6 +1232,18 @@ function removeFichaPhoto(){
   syncFichaModalFields();
   fichaModalState.photo = '';
   renderFichaModal();
+}
+// La miniatura de la ficha (para no ocupar demasiado sitio en el
+// formulario) se puede ampliar a pantalla completa con un clic — antes no
+// había forma de ver el emplatado en grande, solo el recorte pequeño.
+function openFichaPhotoLightbox(src){
+  openModal(`
+    <div class="modal-header">
+      <h3>${t('label.plating')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <img src="${src}" alt="${t('label.platingPhotoAlt')}" style="width:100%;max-height:75vh;object-fit:contain;border-radius:8px">
+  `, {xl:true});
 }
 function toggleFichaAllergen(a){
   syncFichaModalFields();
