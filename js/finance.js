@@ -584,6 +584,17 @@ function megalistaSortItems(items){
   return items.slice().sort((a,b) => {
     let av, bv;
     if(megalistaSortKey === 'price'){ av = a.packPrice!=null?a.packPrice:a.price; bv = b.packPrice!=null?b.packPrice:b.price; }
+    else if(megalistaSortKey === 'iva'){
+      // Los que todavía no tienen IVA elegido (null, no 0%) se agrupan
+      // siempre al final, sea cual sea el sentido del orden — así se ven
+      // de un vistazo los que faltan por revisar, en vez de intercalarse
+      // de forma inconsistente por culpa de comparar null/NaN.
+      const aNull = a.iva==null, bNull = b.iva==null;
+      if(aNull && bNull) return 0;
+      if(aNull) return 1;
+      if(bNull) return -1;
+      return (a.iva - b.iva) * megalistaSortDir;
+    }
     else { av = (a[megalistaSortKey]||''); bv = (b[megalistaSortKey]||''); }
     if(typeof av === 'string') return av.localeCompare(bv) * megalistaSortDir;
     return ((av||0) - (bv||0)) * megalistaSortDir;
@@ -656,12 +667,19 @@ function renderMegalista(){
   const cats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
 
   if(megalistaFolder === null){
-    box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
-      <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(ingredientCategoryLabel(cat))}</h3>
+    box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => {
+      const safeCat = cat.replace(/'/g,"\\'");
+      const isCustom = !ingredientCategories().includes(cat);
+      return `
+      <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${safeCat}')">
+        <h3>
+          <span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
+          ${escapeHtml(ingredientCategoryLabel(cat))}
+          ${isCustom ? `<button class="btn btn-sm btn-icon" style="margin-left:auto" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil"></i></button>` : ''}
+        </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
-    `).join('')}</div>`;
+    `;}).join('')}</div>`;
     return;
   }
 
@@ -800,6 +818,30 @@ function onIngredientCategoryChange(id){
     setTimeout(()=>document.getElementById('new-ingredient-category-name')?.focus(), 50);
   }
 }
+// Corrige un nombre de categoría personalizada (ej. un error tipográfico al
+// crearla) sin tener que mover uno a uno todos los ingredientes que la
+// usan: antes, una vez creada, un nombre mal escrito se quedaba así para
+// siempre — no había forma de arreglarlo, solo de crear una categoría
+// nueva y reasignar ingredientes a mano.
+function renameIngredientCategory(oldName){
+  const nuevo = prompt(t('msg.renameCategoryPrompt'), oldName);
+  if(nuevo === null) return;
+  const trimmed = nuevo.trim();
+  if(!trimmed || trimmed === oldName) return;
+  DB.ingredients.forEach(i => { if(i.category === oldName) i.category = trimmed; });
+  const idx = DB.ingredientCategories.indexOf(oldName);
+  if(idx >= 0) DB.ingredientCategories.splice(idx, 1);
+  if(!ingredientCategories().includes(trimmed) && !DB.ingredientCategories.includes(trimmed)) DB.ingredientCategories.push(trimmed);
+  // El icono elegido para la categoría antigua se traspasa al nuevo nombre,
+  // para no perderlo solo por corregir el texto.
+  if(DB.categoryIcons && DB.categoryIcons.ingredient && DB.categoryIcons.ingredient[oldName] != null){
+    DB.categoryIcons.ingredient[trimmed] = DB.categoryIcons.ingredient[oldName];
+    delete DB.categoryIcons.ingredient[oldName];
+  }
+  saveDB();
+  renderMegalista();
+  showToast(t('msg.categoryRenamed'));
+}
 function cancelNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   state.category = ingredientCategories()[0];
@@ -831,6 +873,13 @@ function saveIngredient(id){
   const packPrice = parseFloat(document.getElementById('ing-pack-price').value) || 0;
   const price = packQty > 0 ? packPrice / packQty : 0;
   const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
+
+  // Aviso (no bloqueante) de posible ingrediente duplicado: mismo nombre en
+  // la misma área, dado de alta quizás con otro proveedor sin darse cuenta
+  // de que ya existía — para no acabar con el coste/IVA de un mismo
+  // ingrediente repartido entre dos fichas distintas.
+  const dupe = DB.ingredients.find(i => i.id !== id && (i.area||'cocina')===currentArea() && i.name.trim().toLowerCase() === name.toLowerCase());
+  if(dupe && !confirm(t('msg.confirmDuplicateIngredient').replace('${name}', dupe.name))) return;
 
   if(id){
     const ing = getIngredient(id);
