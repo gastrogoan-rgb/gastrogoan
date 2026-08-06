@@ -853,8 +853,9 @@
     <button class="help-tab" id="chat-tab-btn-sala" onclick="switchChatTab('sala')" data-i18n="folder.sala.title">Sala</button>
   </div>
   <div class="chat-author-row">
-    <span data-i18n="label.writingAs">Escribo como:</span>
+    <span id="chat-author-row-select-label" data-i18n="label.writingAs">Escribo como:</span>
     <select id="chat-author-sel" onchange="onChatAuthorChange(this)"></select>
+    <span id="chat-author-row-label" style="display:none;font-size:12px;color:var(--muted)"></span>
     <button class="btn btn-sm btn-danger" style="margin-left:auto" onclick="sendUrgentHelpAlert()" title="Avisar al encargado ahora mismo"><i class="ti ti-alert-triangle"></i></button>
   </div>
   <div id="chat-pinned"></div>

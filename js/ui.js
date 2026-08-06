@@ -635,7 +635,18 @@ let chatVerifiedAuthors = new Set();
 let chatPinPrevValue = '';
 let chatPendingAuthorVal = null;
 
+// Si ha entrado con su propio PIN de empleado, la app ya sabe exactamente
+// quién es (mismo criterio que loggedInEmployeeId() en el resto de la app:
+// mesa asignada, autorización de descuentos...) — no hace falta volver a
+// preguntárselo ni pedirle el PIN otra vez solo para escribir en el chat.
+// Solo cuando ha entrado como propietario (PIN del negocio, no de un
+// empleado concreto) sigue haciendo falta elegir con quién se escribe,
+// porque ese acceso no identifica a una persona en concreto (puede ser el
+// propio dueño, o un dispositivo compartido en el que varios se turnan sin
+// fichar cada uno).
 function getChatAuthor(){
+  const empId = loggedInEmployeeId();
+  if(empId != null) return String(empId);
   return localStorage.getItem('chatAuthor') || '';
 }
 function setChatAuthor(val){
@@ -654,6 +665,23 @@ function chatEligibleEmployees(channel){
 }
 function populateChatAuthorSelect(){
   const sel = document.getElementById('chat-author-sel');
+  const selLabel = document.getElementById('chat-author-row-select-label');
+  const nameLabel = document.getElementById('chat-author-row-label');
+  const empId = loggedInEmployeeId();
+  if(empId != null){
+    // Ya se sabe quién es por el login: se marca como verificado (no hace
+    // falta repetir el PIN que ya dio al fichar) y se oculta el selector,
+    // dejando solo el aviso de urgencia en esa fila.
+    chatVerifiedAuthors.add(String(empId));
+    setChatAuthor(String(empId));
+    sel.style.display = 'none';
+    if(selLabel) selLabel.style.display = 'none';
+    if(nameLabel){ nameLabel.style.display = ''; nameLabel.textContent = t('label.writingAsName').replace('${name}', getChatAuthorName(String(empId))); }
+    return;
+  }
+  sel.style.display = '';
+  if(selLabel) selLabel.style.display = '';
+  if(nameLabel) nameLabel.style.display = 'none';
   const current = getChatAuthor();
   const emps = chatEligibleEmployees(currentChatChannel);
   let opts;
