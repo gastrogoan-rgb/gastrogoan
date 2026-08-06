@@ -1016,6 +1016,7 @@ function handleAlbaranUpload(input){
   reader.readAsDataURL(file);
 }
 function removeAlbaranFile(){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   delete o.albaranFile;

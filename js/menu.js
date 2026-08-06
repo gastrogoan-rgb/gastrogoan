@@ -513,6 +513,7 @@ function toggleCartaPlato(secId, platoId){
   renderCartaSecciones();
 }
 function removeCartaPlato(secId, platoId){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
   renderCartaSecciones();
@@ -616,6 +617,7 @@ function addPlatoMod(secId, platoId){
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
 }
 function removePlatoMod(secId, platoId, modId){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
@@ -1044,6 +1046,7 @@ function confirmAddMenuOpcion(grupoId){
   renderMenuGrupos();
 }
 function removeMenuOpcion(grupoId, opcionId){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   g.opciones = g.opciones.filter(o=>o.id!==opcionId);
   renderMenuGrupos();
@@ -1095,6 +1098,7 @@ function addMenuOpcionMod(grupoId, opcionId){
 }
 
 function removeMenuOpcionMod(grupoId, opcionId, modId){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g.opciones.find(x=>x.id===opcionId);
   o.modificadores = (o.modificadores||[]).filter(m=>m.id!==modId);

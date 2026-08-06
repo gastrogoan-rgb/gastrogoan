@@ -268,6 +268,7 @@ function addManosPaso(){ limpiezaManosPasos().push('Nuevo paso'); saveDB(); rend
 function removeManosPaso(i){
   const pasos = limpiezaManosPasos();
   if(pasos.length<=1) return;
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   pasos.splice(i,1);
   saveDB();
   renderLimpiezaManos();
@@ -335,6 +336,7 @@ function registerProtocoloCompliance(type){
   showToast(t('msg.complianceRegistered'));
 }
 function deleteProtocoloComplianceEntry(type, id){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
   DB.limpieza[logKey] = DB.limpieza[logKey].filter(x => x.id !== id);
   saveDB();
@@ -344,6 +346,7 @@ function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push('Nuevo paso')
 function removeProtocoloPaso(type,i){
   const pasos = limpiezaProtocoloPasos(type);
   if(pasos.length<=1) return;
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   pasos.splice(i,1);
   saveDB();
   renderLimpiezaProtocolo();
@@ -1143,6 +1146,7 @@ function addDistPlatoManual(){
 }
 
 function removeDistPlato(idx){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   d.platos.splice(idx,1);
   saveDB();
@@ -1190,6 +1194,7 @@ function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(editUnlocked || task.bySelf)) return;
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   if(d.produccion[dayIdx]){
     d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>String(t.id)!==String(taskId));
     saveDB();
@@ -1211,6 +1216,7 @@ function removeDistTareaUnica(ds, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(editUnlocked || task.bySelf)) return;
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   if(d.tareasUnicas[ds]){
     d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>String(t.id)!==String(taskId));
     saveDB();
@@ -1505,6 +1511,7 @@ function addLoyaltyReward(){
   document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
 }
 function removeLoyaltyReward(i){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   DB.loyaltyRewards.splice(i,1);
   saveDB();
   document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
@@ -4679,6 +4686,7 @@ function handleLogoUpload(input){
 }
 
 function removeLogo(){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   DB.business.logo = '';
   saveDB();
   renderMiNegocio();
