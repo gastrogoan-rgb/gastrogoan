@@ -349,9 +349,22 @@
           </div>
           <div class="field-row">
             <div class="field">
-              <label data-i18n="label.basePrice">Precio base (€)</label>
-              <input type="number" id="menu-f-precio" step="0.01" min="0">
+              <label data-i18n="label.priceBaseNoVat">Precio base (sin IVA)</label>
+              <input type="number" id="menu-f-precio-base" step="0.01" min="0" oninput="updateMenuFinalPriceDisplay()">
             </div>
+            <div class="field">
+              <label data-i18n="label.ivaTypeRepercutido">Tipo de IVA (repercutido)</label>
+              <select id="menu-f-iva" onchange="updateMenuFinalPriceDisplay()">
+                <option value="" selected disabled data-i18n="label.chooseIva">Elige el IVA...</option>
+                <option value="21">21%</option>
+                <option value="10">10%</option>
+                <option value="4">4%</option>
+                <option value="0">0%</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" style="margin-top:-8px">
+            <span style="font-size:12.5px;color:var(--muted)"><span data-i18n="label.finalPriceWithVat">Precio final (IVA incluido)</span>: <strong id="menu-f-precio-final">0,00 €</strong></span>
           </div>
           <div class="field">
             <div id="menu-horario-section"></div>

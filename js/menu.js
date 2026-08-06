@@ -565,9 +565,21 @@ function addCartaPlato(secId){
       <label>${isBebidas ? t('label.newDrinkNameField') : t('label.newDishNameField')}</label>
       <input type="text" id="new-carta-plato-nombre" placeholder="${isBebidas ? t('ph.drinkNameExample') : t('ph.dishNameExample')}">
     </div>
-    <div class="field">
-      <label>${t('common.price')} (€)</label>
-      <input type="number" id="new-carta-plato-precio" step="0.01" min="0">
+    <div class="field-row">
+      <div class="field">
+        <label>${t('label.priceBaseNoVat')}</label>
+        <input type="number" id="new-carta-plato-precio-base" step="0.01" min="0" oninput="updateCartaPlatoFinalPriceDisplay()">
+      </div>
+      <div class="field">
+        <label>${t('label.ivaTypeRepercutido')}</label>
+        <select id="new-carta-plato-iva" onchange="updateCartaPlatoFinalPriceDisplay()">
+          <option value="" selected disabled>${t('label.chooseIva')}</option>
+          ${[21,10,4,0].map(pct => `<option value="${pct}">${pct}%</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:-8px">
+      <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="new-carta-plato-precio-final">${fmtMoney(0)}</strong></span>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
@@ -576,14 +588,24 @@ function addCartaPlato(secId){
   `);
   setTimeout(()=>document.getElementById('new-carta-plato-nombre')?.focus(), 50);
 }
+function updateCartaPlatoFinalPriceDisplay(){
+  const base = parseFloat(document.getElementById('new-carta-plato-precio-base').value) || 0;
+  const ivaVal = document.getElementById('new-carta-plato-iva').value;
+  const iva = ivaVal === '' ? 0 : parseFloat(ivaVal);
+  document.getElementById('new-carta-plato-precio-final').textContent = fmtMoney(base * (1 + iva/100));
+}
 function confirmAddCartaPlato(secId){
   const nombre = document.getElementById('new-carta-plato-nombre').value;
   if(!nombre || !nombre.trim()){ showToast(currentArea()==='sala' ? t('msg.needDrinkName') : t('msg.needDishName')); return; }
-  const precioStr = document.getElementById('new-carta-plato-precio').value;
-  const precio = parseFloat((precioStr||'').replace(',','.'));
-  if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
+  const precioBaseStr = document.getElementById('new-carta-plato-precio-base').value;
+  const precioBase = parseFloat((precioBaseStr||'').replace(',','.'));
+  if(isNaN(precioBase) || precioBase < 0){ showToast(t('msg.invalidPrice')); return; }
+  const ivaRaw = document.getElementById('new-carta-plato-iva').value;
+  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+  const ivaPct = parseFloat(ivaRaw);
+  const precio = Math.round(precioBase * (1 + ivaPct/100) * 100) / 100;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, disponible:true, modificadores:[]});
+  sec.platos.push({id: genId(), recipeId:null, nombre: nombre.trim(), precio, precioBase, ivaPct, disponible:true, modificadores:[]});
   closeModal();
   renderCartaSecciones();
 }
@@ -811,18 +833,30 @@ function deleteMenu(id){
   renderMenu();
   showToast(t('msg.menuDeleted'));
 }
+function updateMenuFinalPriceDisplay(){
+  const base = parseFloat(document.getElementById('menu-f-precio-base').value) || 0;
+  const ivaVal = document.getElementById('menu-f-iva').value;
+  const iva = ivaVal === '' ? 0 : parseFloat(ivaVal);
+  document.getElementById('menu-f-precio-final').textContent = fmtMoney(base * (1 + iva/100));
+}
 function saveMenu(){
   const nombre = document.getElementById('menu-f-nombre').value.trim();
   if(!nombre){ showToast(t('msg.menuNameRequired')); return; }
-  const precioStr = document.getElementById('menu-f-precio').value;
-  const precio = parseFloat((precioStr||'').replace(',','.'));
-  if(isNaN(precio) || precio < 0){ showToast(t('msg.invalidPrice')); return; }
+  const precioBaseStr = document.getElementById('menu-f-precio-base').value;
+  const precioBase = parseFloat((precioBaseStr||'').replace(',','.'));
+  if(isNaN(precioBase) || precioBase < 0){ showToast(t('msg.invalidPrice')); return; }
+  const ivaRaw = document.getElementById('menu-f-iva').value;
+  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+  const ivaPct = parseFloat(ivaRaw);
+  const precio = Math.round(precioBase * (1 + ivaPct/100) * 100) / 100;
   if(!menuEdit.grupos.length){ showToast(t('msg.menuNeedsGroup')); return; }
   for(const g of menuEdit.grupos){
     if(!g.opciones.length){ showToast(t('msg.groupNeedsOneOption').replace('${name}', g.nombre)); return; }
   }
   menuEdit.nombre = nombre;
   menuEdit.precio = precio;
+  menuEdit.precioBase = precioBase;
+  menuEdit.ivaPct = ivaPct;
   menuEdit.horario = readScheduleFromForm('menu');
   delete menuEdit.turno;
   delete menuEdit.dias;
@@ -844,7 +878,10 @@ function renderMenuEditor(){
   document.getElementById('menu-editor-back-label').textContent = isSala ? t('tab.maridajes') : t('common.menus');
   document.getElementById('menu-f-nombre').value = menuEdit.nombre || '';
   document.getElementById('menu-f-nombre').placeholder = isSala ? t('ph.maridajeName') : t('ph.menuName');
-  document.getElementById('menu-f-precio').value = menuEdit.precio || 0;
+  document.getElementById('menu-f-precio-base').value = menuEdit.precioBase!=null ? menuEdit.precioBase : (menuEdit.precio||0);
+  const ivaSel = document.getElementById('menu-f-iva');
+  ivaSel.value = menuEdit.ivaPct!=null ? menuEdit.ivaPct : '';
+  updateMenuFinalPriceDisplay();
   document.getElementById('menu-horario-section').innerHTML = renderScheduleSection('menu', menuEdit.horario, 'label.daysAndScheduleMenu', 'label.menuScheduleHint');
   renderMenuGrupos();
 }
