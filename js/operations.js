@@ -438,7 +438,7 @@ function renderProveedores(){
   const box = document.getElementById('proveedores-list');
   const q = providerSearchQuery.trim().toLowerCase();
   let providers = DB.providers.filter(p => (p.area||'cocina') === currentArea());
-  if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q));
+  if(q) providers = providers.filter(p => p.nombre.toLowerCase().includes(q) || (p.contacto||'').toLowerCase().includes(q) || (p.dir||'').toLowerCase().includes(q) || (p.tel||'').includes(q));
   if(!providers.length){
     box.innerHTML = `<div class="empty"><i class="ti ti-building-factory-2"></i>${q ? t('empty.noSearchResults') : t('empty.suppliers')}</div>`;
     return;
@@ -462,10 +462,11 @@ function renderProveedores(){
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
       ${p.notas ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">${escapeHtml(p.notas)}</div>` : ''}
-      <div style="margin-top:6px">
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
         ${ings.length
           ? `<button class="btn btn-sm" onclick="openSupplierIngredientsModal(${p.id})"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (${ings.length})</button>`
           : `<span style="color:var(--muted);font-size:13px"><i class="ti ti-list"></i> ${t('label.ingredientsFromSupplier')} (0)</span>`}
+        <button class="btn btn-sm" onclick="viewSupplierOrderHistory('${escapeJsAttr(p.nombre)}')"><i class="ti ti-history"></i> ${t('tab.orderHistory')}</button>
       </div>
     </div>
   `;}).join('');
@@ -555,6 +556,12 @@ function openProviderModal(id){
 function saveProvider(id){
   const nombre = document.getElementById('prov-nombre').value.trim();
   if(!nombre){ showToast(t('msg.nameRequired')); return; }
+  // El vínculo con los ingredientes de Mega Lista y con los pedidos es por
+  // nombre exacto (no por id) — un proveedor duplicado con mayúsculas o
+  // espacios distintos rompería ese vínculo en silencio, así que se avisa
+  // (no bloqueante) si ya existe otro con el mismo nombre.
+  const dupe = DB.providers.find(p => p.id !== id && (p.area||'cocina')===currentArea() && p.nombre.trim().toLowerCase() === nombre.toLowerCase());
+  if(dupe && !confirm(t('msg.confirmDuplicateSupplier').replace('${name}', dupe.nombre))) return;
   const data = {
     nombre,
     contacto: document.getElementById('prov-contacto').value.trim(),
@@ -570,6 +577,16 @@ function saveProvider(id){
   if(id){
     const prov = DB.providers.find(p=>p.id===id);
     if(!prov) return;
+    // El nombre del proveedor es la única forma en que sus ingredientes
+    // (Mega Lista) y sus pedidos lo identifican — si se renombra aquí sin
+    // más, esos ingredientes y pedidos se quedan huérfanos (ya no aparecen
+    // como "de este proveedor") sin ningún aviso. Se propaga el cambio a
+    // ambos para que el proveedor siga siendo el mismo, solo con otro nombre.
+    const oldName = prov.nombre;
+    if(oldName !== nombre){
+      DB.ingredients.forEach(i => { if(i.supplier === oldName) i.supplier = nombre; });
+      (DB.purchaseOrders||[]).forEach(o => { if(o.supplier === oldName) o.supplier = nombre; });
+    }
     Object.assign(prov, data);
   }else{
     DB.providers.push({id: genId(), ...data, area: currentArea()});
@@ -623,6 +640,15 @@ function pedidoSuppliers(){
 }
 
 let pedidosTab = 'crear';
+// Desde la ficha de un proveedor, ir directo a su historial de pedidos ya
+// filtrado — antes había que ir a mano a Pedidos > Historial y elegirlo del
+// desplegable.
+function viewSupplierOrderHistory(nombre){
+  navigate('pedidos');
+  setPedidosTab('historial');
+  pedidoHistorialSupplierFilter = nombre;
+  renderPedidos();
+}
 function setPedidosTab(tab){
   pedidosTab = tab;
   pedidoDetailId = null;
