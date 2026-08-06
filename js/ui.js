@@ -629,75 +629,26 @@ function visibleChatChannels(){
   if(currentFolder === 'sala') return ['general', 'sala'];
   return CHAT_CHANNELS.slice();
 }
-// Identidades ya verificadas con PIN en esta sesión (se reinicia al recargar
-// la app), para que cada persona escriba siempre en su propio nombre.
-let chatVerifiedAuthors = new Set();
-let chatPinPrevValue = '';
-let chatPendingAuthorVal = null;
-
-// Si ha entrado con su propio PIN de empleado, la app ya sabe exactamente
-// quién es (mismo criterio que loggedInEmployeeId() en el resto de la app:
-// mesa asignada, autorización de descuentos...) — no hace falta volver a
-// preguntárselo ni pedirle el PIN otra vez solo para escribir en el chat.
-// Solo cuando ha entrado como propietario (PIN del negocio, no de un
-// empleado concreto) sigue haciendo falta elegir con quién se escribe,
-// porque ese acceso no identifica a una persona en concreto (puede ser el
-// propio dueño, o un dispositivo compartido en el que varios se turnan sin
-// fichar cada uno).
+// Quién escribe en el chat lo determina siempre la sesión con la que se ha
+// entrado — empleado con su propio PIN, o propietario con el PIN del
+// negocio — igual que loggedInEmployeeId() ya usa en el resto de la app
+// (mesa asignada, autorización de descuentos...) para no preguntar dos
+// veces algo que ya se sabe. No hace falta ningún selector ni volver a
+// verificar con PIN solo para mandar un mensaje: quien ha entrado como
+// propietario ya se sabe que es el propietario, y quien ha entrado como
+// empleado ya se sabe quién es.
 function getChatAuthor(){
   const empId = loggedInEmployeeId();
-  if(empId != null) return String(empId);
-  return localStorage.getItem('chatAuthor') || '';
-}
-function setChatAuthor(val){
-  localStorage.setItem('chatAuthor', val);
+  return empId != null ? String(empId) : 'owner';
 }
 function getChatAuthorName(val){
   if(val === 'owner') return t('common.chef');
   const e = DB.employees.find(x => String(x.id) === String(val));
   return e ? e.name : t('common.chef');
 }
-// Quién puede escribir en cada canal: en General, cualquier empleado (de
-// cocina o de sala) + Jefe/a; en Cocina/Sala, solo el personal de esa área + Jefe/a.
-function chatEligibleEmployees(channel){
-  if(channel === 'general') return DB.employees.slice();
-  return DB.employees.filter(e => (e.area||'cocina')===channel);
-}
 function populateChatAuthorSelect(){
-  const sel = document.getElementById('chat-author-sel');
-  const selLabel = document.getElementById('chat-author-row-select-label');
-  const nameLabel = document.getElementById('chat-author-row-label');
-  const empId = loggedInEmployeeId();
-  if(empId != null){
-    // Ya se sabe quién es por el login: se marca como verificado (no hace
-    // falta repetir el PIN que ya dio al fichar) y se oculta el selector,
-    // dejando solo el aviso de urgencia en esa fila.
-    chatVerifiedAuthors.add(String(empId));
-    setChatAuthor(String(empId));
-    sel.style.display = 'none';
-    if(selLabel) selLabel.style.display = 'none';
-    if(nameLabel){ nameLabel.style.display = ''; nameLabel.textContent = t('label.writingAsName').replace('${name}', getChatAuthorName(String(empId))); }
-    return;
-  }
-  sel.style.display = '';
-  if(selLabel) selLabel.style.display = '';
-  if(nameLabel) nameLabel.style.display = 'none';
-  const current = getChatAuthor();
-  const emps = chatEligibleEmployees(currentChatChannel);
-  let opts;
-  if(currentChatChannel === 'general'){
-    const cocina = emps.filter(e => (e.area||'cocina')==='cocina');
-    const sala = emps.filter(e => e.area==='sala');
-    opts = (cocina.length ? `<optgroup label="Cocina">${cocina.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '')
-      + (sala.length ? `<optgroup label="Sala">${sala.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '');
-  } else {
-    const label = currentChatChannel==='sala' ? 'Sala' : 'Cocina';
-    opts = emps.length ? `<optgroup label="${label}">${emps.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>` : '';
-  }
-  sel.innerHTML = `<option value="owner">${t('common.chef')}</option>` + opts;
-  const eligible = current==='owner' || emps.some(e => String(e.id)===String(current));
-  sel.value = eligible ? current : 'owner';
-  if(sel.value !== current) setChatAuthor(sel.value);
+  const label = document.getElementById('chat-author-row-label');
+  if(label) label.textContent = t('label.writingAsName').replace('${name}', getChatAuthorName(getChatAuthor()));
 }
 // Oculta las pestañas de canal que no le corresponden ver a esta área
 // (ver visibleChatChannels), y si el canal activo ya no es visible, cambia
@@ -712,60 +663,6 @@ function applyChatAreaRestrictions(){
     currentChatChannel = visible[0];
   }
   CHAT_CHANNELS.forEach(c => document.getElementById('chat-tab-btn-'+c)?.classList.toggle('active', c===currentChatChannel));
-}
-function onChatAuthorChange(sel){
-  const val = sel.value;
-  if(chatVerifiedAuthors.has(val)){
-    setChatAuthor(val);
-    return;
-  }
-  requestChatAuthorPin(sel, val);
-}
-// PIN de la propia persona (el del negocio para Jefe/a, el PIN de fichaje de
-// cada empleado para el resto), para asegurar que cada uno escribe en su
-// propio nombre en el chat.
-function chatAuthorStoredPin(val){
-  if(val === 'owner') return DB.business.pin;
-  const e = DB.employees.find(x => String(x.id) === String(val));
-  return (e && e.pin) || '1234';
-}
-function requestChatAuthorPin(sel, val){
-  chatPinPrevValue = getChatAuthor();
-  chatPendingAuthorVal = val;
-  const name = getChatAuthorName(val);
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-lock"></i> Verificar identidad</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:13px;color:var(--muted)">Introduce el PIN de ${escapeHtml(name)} para escribir en el chat como ${escapeHtml(name)}.</p>
-    <div class="field">
-      <label>${t('label.accessPin')}</label>
-      <input type="password" id="chat-author-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')confirmChatAuthorPin()">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmChatAuthorPin()">${t('common.unlock')}</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('chat-author-pin-input')?.focus(), 50);
-}
-function confirmChatAuthorPin(){
-  const val = document.getElementById('chat-author-pin-input').value;
-  const sel = document.getElementById('chat-author-sel');
-  const target = chatPendingAuthorVal;
-  const storedPin = chatAuthorStoredPin(target);
-  const match = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
-  if(!match){
-    showToast(t('msg.pinIncorrect'));
-    if(sel) sel.value = chatPinPrevValue || getChatAuthor();
-    return;
-  }
-  chatVerifiedAuthors.add(target);
-  setChatAuthor(target);
-  closeModal();
-  showToast(t('msg.identityVerified'));
-  if(sel) sel.value = target;
 }
 function toggleChatPanel(){
   const panel = document.getElementById('chat-panel');
@@ -806,10 +703,6 @@ function sendChatMessage(){
   const text = input.value.trim();
   if(!text) return;
   const authorId = getChatAuthor();
-  if(!chatVerifiedAuthors.has(authorId)){
-    requestChatAuthorPin(document.getElementById('chat-author-sel'), authorId);
-    return;
-  }
   DB.chatMessages.push({
     id: genId(),
     channel: currentChatChannel,
@@ -858,10 +751,6 @@ function unpinChatMessage(){
 // pedir ayuda al encargado/dueño sin tener que ir a buscarlo físicamente.
 function sendUrgentHelpAlert(){
   const authorId = getChatAuthor();
-  if(!chatVerifiedAuthors.has(authorId)){
-    requestChatAuthorPin(document.getElementById('chat-author-sel'), authorId);
-    return;
-  }
   const authorName = getChatAuthorName(authorId);
   DB.chatMessages.push({
     id: genId(), channel: 'general', authorId, authorName,
