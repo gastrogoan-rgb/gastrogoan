@@ -458,6 +458,7 @@ function renderCartaSecciones(){
           ${priceStale ? `<button class="btn btn-sm" style="color:var(--brand-orange);border-color:var(--brand-orange)" onclick="syncCartaPlatoPrice(${sec.id},${p.id})" title="El escandallo tiene un precio de venta distinto (${fmtMoney(linkedRecipe.price||0)})"><i class="ti ti-refresh-alert"></i> ${t('btn.updatePrice')}</button>` : ''}
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
+          <button class="btn btn-sm ${p.stock!=null && p.stock<=0?'btn-danger':''}" style="${p.stock!=null && p.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setCartaPlatoStock(${sec.id},${p.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${p.stock!=null ? t('label.portionsLeft').replace('${n}', p.stock) : t('btn.limitPortions')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaPlato(${sec.id},${p.id})"><i class="ti ti-x"></i></button>
         </div>
       `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : (currentArea()==='sala' ? t('empty.sectionDrinks') : t('empty.sectionDishes'))}</div>`}
@@ -510,6 +511,28 @@ function toggleCartaPlato(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.disponible = p.disponible===false ? true : false;
+  renderCartaSecciones();
+}
+// Raciones limitadas: p.stock es null/undefined si el plato no lleva
+// control de cantidad (comportamiento normal, disponible/no disponible a
+// mano). Si se le pone un número, el TPV lo va descontando solo cada vez
+// que se marcha una unidad a cocina (ver decrementDishStock en tpv.js) y al
+// llegar a 0 el plato pasa a "No disponible" sin que nadie tenga que
+// acordarse — no se resetea solo: cuando se agote un día, hay que volver a
+// aquí y ponerle de nuevo la cantidad para el día siguiente.
+function setCartaPlatoStock(secId, platoId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec && sec.platos.find(x=>x.id===platoId);
+  if(!p) return;
+  const current = p.stock!=null ? String(p.stock) : '';
+  const val = prompt(t('msg.setStockPrompt'), current);
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(trimmed === ''){ delete p.stock; renderCartaSecciones(); return; }
+  const n = parseInt(trimmed);
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  p.stock = n;
+  p.disponible = n > 0;
   renderCartaSecciones();
 }
 function removeCartaPlato(secId, platoId){

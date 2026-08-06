@@ -681,6 +681,7 @@ function acceptOnlineOrder(orderId){
         l.estado = 'cocina';
         l.enviadoAt = ahora;
         l.marchada = l.qty;
+        if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
       }
     });
     order.cerrada = false;
@@ -1349,10 +1350,12 @@ function marcharValeCompleto(orderId){
   if(firstPendingFood){
     firstPendingFood.items.forEach(({line}) => {
       if(!line.bebida && line.qty > (line.marchada||0)){
-        fired.push({qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: false});
+        const qtyFired = line.qty - (line.marchada||0);
+        fired.push({qty: qtyFired, name: line.name, notas: line.notas, bebida: false});
         line.estado = 'cocina';
         line.enviadoAt = ahora;
         line.marchada = line.qty;
+        decrementDishStock(line.platoId, qtyFired);
       }
     });
   }
@@ -1372,10 +1375,12 @@ function marcharLine(orderId, idx){
   if(!order) return;
   const line = (order.items||[])[idx];
   if(!line || line.qty <= (line.marchada||0)){ showToast(t('msg.noNewDishes')); return; }
-  const fired = [{qty: line.qty - (line.marchada||0), name: line.name, notas: line.notas, bebida: line.bebida}];
+  const qtyFired = line.qty - (line.marchada||0);
+  const fired = [{qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida}];
   line.estado = 'cocina';
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
+  if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -1913,10 +1918,12 @@ function marcharComanda(orderId, tanda, isMenu){
   const fired = [];
   (order.items||[]).forEach(l => {
     if((tanda === undefined || (l.tanda||'') === (tanda||'')) && (isMenu === undefined || !!l.menuId === isMenu) && l.qty > (l.marchada||0)){
-      fired.push({qty: l.qty - (l.marchada||0), name: l.name, notas: l.notas, bebida: l.bebida});
+      const qtyFired = l.qty - (l.marchada||0);
+      fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida});
       l.estado = 'cocina';
       l.enviadoAt = ahora;
       l.marchada = l.qty;
+      if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
     }
   });
   order.cerrada = false;
@@ -2166,13 +2173,40 @@ function findCartaPlato(secId, platoId){
   }
   return null;
 }
+// Busca un plato por su id en TODAS las cartas (no solo las activas), para
+// poder descontar sus raciones aunque la carta se haya desactivado entre
+// medias con un pedido todavía abierto.
+function findCartaPlatoById(platoId){
+  if(platoId == null) return null;
+  for(const c of DB.cartas){
+    for(const sec of (c.secciones||[])){
+      const p = (sec.platos||[]).find(x=>x.id===platoId);
+      if(p) return p;
+    }
+  }
+  return null;
+}
+// Descuenta "qty" raciones del plato al marcharlo a cocina, si tiene un
+// límite de raciones configurado (p.stock != null). Al llegar a 0 se marca
+// "No disponible" sola, sin que nadie tenga que estar pendiente durante el
+// servicio. Los platos sin límite (p.stock == null, el caso normal) no se
+// tocan aquí.
+function decrementDishStock(platoId, qty){
+  if(!qty || qty <= 0) return;
+  const p = findCartaPlatoById(platoId);
+  if(!p || p.stock == null) return;
+  p.stock = Math.max(0, p.stock - qty);
+  if(p.stock === 0) p.disponible = false;
+}
 // Para los pedidos "para llevar" (tickets rápidos), los platos pasan a cocina automáticamente
 // al añadirlos o aumentar su cantidad, sin necesidad de pulsar "Marchar".
 function autoSendTakeawayLine(order, line){
   if(order.tipo !== 'takeaway' || !line) return;
+  const qtyFired = line.qty - (line.marchada||0);
   line.estado = 'cocina';
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
+  if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   order.cerrada = false;
 }
 
@@ -2197,9 +2231,11 @@ function autoSendFirstCourse(order, line, tanda){
   if(!line || order.tipo === 'takeaway') return;
   const firstTanda = (order.tandas||[])[0];
   if(firstTanda === undefined || (tanda||'') !== (firstTanda||'')) return;
+  const qtyFired = line.qty - (line.marchada||0);
   line.estado = 'cocina';
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
+  if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
   order.cerrada = false;
 }
 
