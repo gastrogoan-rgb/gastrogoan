@@ -82,16 +82,47 @@ const GE = (function(){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
-  // % de IVA incluido en los precios de venta (configurado en Ajustes > Facturación, por defecto 10%)
+  // % de IVA de reserva por defecto (Ajustes > Facturación, 10% si no se ha
+  // tocado) — solo se usa como último recurso para líneas de venta que no
+  // llevan su propio tipo estampado (ventas de antes de este cambio, o de un
+  // plato al que nunca se le eligió IVA en Carta/Escandallo).
   function ivaVentasPct(){
     return (DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
   }
+  // Agrupa la facturación del mes por tipo de IVA REAL de cada línea vendida
+  // (line.ivaPct, estampado al cobrar en finalizeCharge/finalizeSplitOrder),
+  // aplicando el % de descuento de la venta proporcionalmente a cada línea.
+  // Las líneas sin tipo asignado (ventas antiguas o platos sin IVA elegido)
+  // caen en el tipo general por defecto para no perder ese importe del
+  // cálculo, pero se contabilizan aparte como "sinAsignar" para poder
+  // avisar de que conviene revisarlas.
+  function ventasIvaGroups(mes, año=currentYear){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    const groups = {};
+    let sinAsignar = 0;
+    const fallbackRate = ivaVentasPct();
+    DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
+      const descPct = parseFloat(sale.descuentoPct)||0;
+      (sale.items||[]).forEach(line => {
+        const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+        if(grossLine <= 0) return;
+        const usedFallback = line.ivaPct == null;
+        const rate = usedFallback ? fallbackRate : line.ivaPct;
+        if(!groups[rate]) groups[rate] = {base:0, iva:0};
+        const net = grossLine / (1 + rate/100);
+        groups[rate].base += net;
+        groups[rate].iva += grossLine - net;
+        if(usedFallback) sinAsignar += grossLine;
+      });
+    });
+    return {groups, sinAsignar};
+  }
   // Facturación sin IVA: el IVA cobrado no es ingreso del negocio, hay que reservarlo para Hacienda.
   function facturacionNetaMes(mes, año=currentYear){
-    return facturacionMes(mes,año) / (1 + ivaVentasPct()/100);
+    return Object.values(ventasIvaGroups(mes,año).groups).reduce((s,g)=>s+g.base, 0);
   }
   function ivaVentasMes(mes, año=currentYear){
-    return facturacionMes(mes,año) - facturacionNetaMes(mes,año);
+    return Object.values(ventasIvaGroups(mes,año).groups).reduce((s,g)=>s+g.iva, 0);
   }
   // % de IVA incluido en lo que pagas a tus proveedores (compras de Gastos Variables), configurable, por defecto 10%
   function ivaComprasPct(){
@@ -1501,10 +1532,34 @@ const GE = (function(){
     `);
   }
 
+  // Desglose de base/IVA de UNA venta usando el tipo real de cada línea
+  // (estampado al cobrar), en vez de un único % adivinado para todo el
+  // ticket — si la venta mezcla platos con distinto IVA (ej. comida al 10%
+  // y una copa al 21%), pctLabel devuelve 'mixto' en vez de un porcentaje
+  // que no sería correcto para toda la venta.
+  function saleIvaBreakdown(sale){
+    const descPct = parseFloat(sale.descuentoPct)||0;
+    const fallbackRate = ivaVentasPct();
+    const rates = {};
+    (sale.items||[]).forEach(line => {
+      const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+      if(grossLine <= 0) return;
+      const rate = line.ivaPct != null ? line.ivaPct : fallbackRate;
+      rates[rate] = (rates[rate]||0) + grossLine;
+    });
+    let base = 0, iva = 0;
+    Object.entries(rates).forEach(([rate, gross]) => {
+      const r = parseFloat(rate);
+      const net = gross / (1 + r/100);
+      base += net; iva += gross - net;
+    });
+    const distinctRates = Object.keys(rates).map(Number);
+    const pctLabel = distinctRates.length <= 1 ? (distinctRates[0] != null ? distinctRates[0] : fallbackRate) : 'mixto';
+    return {base, iva, pctLabel};
+  }
   function buildMonthReport(mes, año){
     const b = DB.business || {};
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    const ivaVentas = (b.ticket && b.ticket.ivaPct != null) ? b.ticket.ivaPct : 10;
 
     const ventas = DB.sales.filter(v => (v.date||'').startsWith(mesStr)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
@@ -1525,10 +1580,9 @@ const GE = (function(){
     let sumBase=0, sumIva=0, sumTotal=0;
     ventas.forEach(v => {
       const total = parseFloat(v.total||0);
-      const base = total / (1 + ivaVentas/100);
-      const iva = total - base;
+      const {base, iva, pctLabel} = saleIvaBreakdown(v);
       sumBase += base; sumIva += iva; sumTotal += total;
-      rows.push([v.date||'', v.facturaNum||'', v.tipo||'', v.clienteNombre||'', v.metodoPago||'', base, ivaVentas, iva, total]);
+      rows.push([v.date||'', v.facturaNum||'', v.tipo||'', v.clienteNombre||'', v.metodoPago||'', base, pctLabel==='mixto'?t('label.mixedRatesShort'):pctLabel, iva, total]);
     });
     if(!ventas.length) rows.push([t('hr.csv.noSalesThisMonth')]);
     rows.push(['','','','',t('common.total'), sumBase, '', sumIva, sumTotal]);
@@ -1627,6 +1681,19 @@ const GE = (function(){
     });
     rows.push([]);
 
+    // Igual que arriba pero al revés: el IVA REPERCUTIDO (el que se cobra
+    // al cliente en cada venta), por tipo real de cada plato/menú vendido —
+    // no el mismo desglose que el de compras de arriba, que es el soportado.
+    const {groups: ventasGroups, sinAsignar} = ventasIvaGroups(mes, año);
+    rows.push([t('hr.csv.vatBreakdownTitleVentas')]);
+    rows.push([t('hr.csv.vatRatePct'), t('hr.csv.baseEur'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
+    Object.keys(ventasGroups).map(Number).sort((a,b)=>b-a).forEach(pct => {
+      const g = ventasGroups[pct];
+      rows.push([`${pct}%`, g.base, g.iva, g.base+g.iva]);
+    });
+    if(sinAsignar > 0) rows.push([t('hr.csv.vatVentasSinAsignarNote'), sinAsignar]);
+    rows.push([]);
+
     const comisiones = comisionesMes(mes, año);
     const resultado = sumBase - sumVarBase - sumFijosBaseHist - comisiones - capexCuotaMes(mes, año);
     const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva;
@@ -1660,7 +1727,8 @@ const GE = (function(){
 
     const nombreNegocio = (b.name||'gastrogoan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     const vatByRate = Object.keys(ivaGroups).map(Number).sort((a,b)=>b-a).map(pct => ({pct, base: ivaGroups[pct].base, iva: ivaGroups[pct].iva}));
-    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado, vatByRate};
+    const vatByRateVentas = Object.keys(ventasGroups).map(Number).sort((a,b)=>b-a).map(pct => ({pct, base: ventasGroups[pct].base, iva: ventasGroups[pct].iva}));
+    return {rows, mesStr, nombreNegocio, sumTotal, sumBase, sumIva, sumFijos: sumFijosBase, sumVar: sumVarBase, comisiones, resultado, vatByRate, vatByRateVentas};
   }
 
   function exportMonth(){

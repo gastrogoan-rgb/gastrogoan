@@ -2198,6 +2198,26 @@ function decrementDishStock(platoId, qty){
   p.stock = Math.max(0, p.stock - qty);
   if(p.stock === 0) p.disponible = false;
 }
+// Tipo de IVA repercutido real de una línea de comanda, buscando en el
+// menú/plato/receta que la originó — se guarda (se "estampa") en cada línea
+// de la venta en el momento de cobrar, para que quede fijo en el histórico
+// tal como era entonces aunque luego cambie el IVA del plato en Carta.
+function resolveLineIvaPct(line){
+  if(!line) return null;
+  if(line.menuId != null){
+    const m = DB.menus.find(x=>x.id===line.menuId);
+    if(m && m.ivaPct != null) return m.ivaPct;
+  }
+  if(line.platoId != null){
+    const p = findCartaPlatoById(line.platoId);
+    if(p && p.ivaPct != null) return p.ivaPct;
+  }
+  if(line.recipeId != null){
+    const r = DB.recipes.find(x=>x.id===line.recipeId);
+    if(r && r.ivaPct != null) return r.ivaPct;
+  }
+  return null;
+}
 // Para los pedidos "para llevar" (tickets rápidos), los platos pasan a cocina automáticamente
 // al añadirlos o aumentar su cantidad, sin necesidad de pulsar "Marchar".
 function autoSendTakeawayLine(order, line){
@@ -2877,7 +2897,7 @@ function finalizeCharge(orderId){
     if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
     if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
   }
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: order.items.map(l=>({...l}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: order.items.map(l=>({...l, ivaPct: resolveLineIvaPct(l)}))};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -3138,7 +3158,7 @@ function finalizeSplitOrder(orderId){
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
     metodoPago: metodos.length===1?metodos[0]:'Dividido',
-    pagos, items: order.items.map(l=>({...l}))
+    pagos, items: order.items.map(l=>({...l, ivaPct: resolveLineIvaPct(l)}))
   };
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
