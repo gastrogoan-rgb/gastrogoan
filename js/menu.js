@@ -551,6 +551,8 @@ function syncCartaPlatoPrice(secId, platoId){
   const r = getRecipe(p.recipeId);
   if(!r) return;
   p.precio = r.price||0;
+  p.precioBase = r.priceBase;
+  p.ivaPct = r.ivaPct;
   renderCartaSecciones();
   showToast(t('msg.priceUpdated'));
 }
@@ -710,7 +712,7 @@ function confirmImportEsc(secId){
   checked.forEach(rid => {
     const r = getRecipe(rid);
     if(!r) return;
-    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, disponible:true});
+    sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, ivaPct: r.ivaPct, disponible:true});
   });
   closeModal();
   renderCartaSecciones();

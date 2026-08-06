@@ -3436,6 +3436,31 @@ function enqueueVerifactuSubmission(sale){
 function verifactuIvaPct(){
   return (DB.business.ticket && DB.business.ticket.ivaPct != null) ? DB.business.ticket.ivaPct : 10;
 }
+// Tipo de IVA real de una línea de venta para la factura fiscal: el
+// estampado al cobrar (resolveLineIvaPct, aplicado en finalizeCharge), o el
+// general de reserva solo si la venta es de antes de ese cambio.
+function fiscalLineIvaPct(line){
+  return line.ivaPct != null ? line.ivaPct : verifactuIvaPct();
+}
+// Agrupa una venta por tipo de IVA real de cada línea (con el descuento de
+// la venta prorrateado), para declarar un desglose correcto a Hacienda en
+// vez de un único tipo para todo el ticket — imprescindible en cuanto se
+// mezclan platos con distinto IVA (ej. comida al 10% y una copa al 21%).
+function saleIvaGroupsForFiscal(sale){
+  const descPct = parseFloat(sale.descuentoPct)||0;
+  const rates = {};
+  (sale.items||[]).forEach(line => {
+    const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+    if(grossLine <= 0) return;
+    const rate = fiscalLineIvaPct(line);
+    rates[rate] = (rates[rate]||0) + grossLine;
+  });
+  return Object.keys(rates).map(Number).sort((a,b)=>b-a).map(rate => {
+    const gross = rates[rate];
+    const base = gross / (1 + rate/100);
+    return {ivaPct: rate, base: Math.round(base*100)/100, cuota: Math.round((gross-base)*100)/100};
+  });
+}
 
 async function submitSaleToVerifactuProvider(sale, cfg){
   const provider = VERIFACTU_PROVIDERS[cfg.provider];
@@ -3460,13 +3485,12 @@ async function submitSaleToVerifactuProvider(sale, cfg){
 // normal de reintento (processVerifactuQueue) y se comprueba en la
 // siguiente pasada, sin bloquear nada.
 async function submitSaleToVerifactuApi(sale, cfg, provider){
-  const ivaPct = verifactuIvaPct();
   const nif = (DB.business && DB.business.cif) || '';
   const numSerieFactura = sale.verifactuNumSerie || (sale.verifactuNumSerie = nextVerifactuNumSerieFactura());
   const fecha = new Date(sale.date);
   const fechaExpedicion = `${fecha.getFullYear()}-${fecha.getMonth()+1}-${fecha.getDate()}`; // formato confirmado en su doc: "2025-1-1"
-  const base = sale.total / (1 + ivaPct/100);
-  const cuota = sale.total - base;
+  const groups = saleIvaGroupsForFiscal(sale);
+  const cuotaTotal = groups.reduce((s,g)=>s+g.cuota, 0);
   const headers = {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`};
   const body = {
     IDEmisorFactura: nif,
@@ -3475,11 +3499,15 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
     TipoFactura: 'F2', // factura simplificada (tique), el caso normal de un restaurante; sin Destinatarios
     DescripcionOperacion: sale.items.map(l => `${l.qty}x ${l.name}`).join(', ').slice(0, 500),
     FacturaSimplificadaArt7273: 'S',
-    Desglose: [{
+    // Un grupo por cada tipo de IVA real presente en la venta (comida al
+    // 10%, alcohol al 21%...), no un único tipo adivinado para todo el
+    // ticket — así la declaración a Hacienda es correcta también cuando
+    // se mezclan platos con distinto IVA en la misma venta.
+    Desglose: groups.map(g => ({
       Impuesto: '01', ClaveRegimen: 1, CalificacionOperacion: 1,
-      TipoImpositivo: ivaPct, BaseImponibleOImporteNoSujeto: Math.round(base*100)/100, CuotaRepercutida: Math.round(cuota*100)/100,
-    }],
-    CuotaTotal: Math.round(cuota*100)/100,
+      TipoImpositivo: g.ivaPct, BaseImponibleOImporteNoSujeto: g.base, CuotaRepercutida: g.cuota,
+    })),
+    CuotaTotal: Math.round(cuotaTotal*100)/100,
     ImporteTotal: Math.round(sale.total*100)/100,
   };
   const createRes = await fetch(`${provider.apiBase}/api/alta-registro-facturacion`, {method: 'POST', headers, body: JSON.stringify(body)});
@@ -3509,18 +3537,19 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
 // cabecera del bloque sobre qué campos de la respuesta de /status siguen
 // sin confirmar.
 async function submitSaleToFacturaHub(sale, cfg, provider){
-  const ivaPct = verifactuIvaPct();
   const headers = {'Content-Type': 'application/json', 'x-api-key': cfg.apiKey};
 
   // 1) Crear la factura en FacturaHub. Un ticket de restaurante a consumidor
   // final no siempre tiene NIF del cliente; se usa un nombre genérico si no
   // hay uno registrado, como hace ya el resto de la app con las facturas
-  // simplificadas.
+  // simplificadas. Cada línea lleva su propio tipo de IVA real (no uno
+  // único adivinado para todo el ticket), para declarar bien una venta que
+  // mezcle platos con distinto IVA.
   const createRes = await fetch(`${provider.apiBase}/api/invoices`, {
     method: 'POST', headers,
     body: JSON.stringify({
       client: {name: sale.clienteNombre || t('ticket.finalConsumer')},
-      items: sale.items.map(l => ({description: l.name, quantity: l.qty, unitPrice: l.price, taxRate: ivaPct})),
+      items: sale.items.map(l => ({description: l.name, quantity: l.qty, unitPrice: l.price, taxRate: fiscalLineIvaPct(l)})),
     }),
   });
   if(!createRes.ok) throw new Error(`FacturaHub (crear factura) respondió ${createRes.status}`);
@@ -3551,11 +3580,10 @@ async function submitSaleToFacturaHub(sale, cfg, provider){
 // confirmar todavía contra su documentación/sandbox real (ver aviso de la
 // cabecera del bloque). Estructura genérica de referencia.
 async function submitSaleToGenericProvider(sale, cfg, provider){
-  const ivaPct = verifactuIvaPct();
   const body = {
     fecha: sale.date,
     cliente: sale.clienteNombre || null,
-    lineas: sale.items.map(l => ({descripcion: l.name, cantidad: l.qty, precioUnitario: l.price, ivaPct})),
+    lineas: sale.items.map(l => ({descripcion: l.name, cantidad: l.qty, precioUnitario: l.price, ivaPct: fiscalLineIvaPct(l)})),
     total: sale.total,
   };
   const res = await fetch(`${provider.apiBase}/facturas`, {
@@ -3621,11 +3649,14 @@ function buildTicketText(sale, opts={}){
   lines.push('------------------------------');
   if(sale.descuentoImporte) lines.push(`${t('label.discount')} (${sale.descuentoPct}%): -${fmtMoney(sale.descuentoImporte)}`);
   if(sale.propina) lines.push(`${t('label.tip')}: ${fmtMoney(sale.propina)}`);
-  const ivaPct = tc.ivaPct != null ? tc.ivaPct : 10;
-  const base = sale.total / (1 + ivaPct/100);
-  const iva = sale.total - base;
-  lines.push(`${t('ticket.taxBase')}: ${fmtMoney(base)}`);
-  lines.push(`${t('common.vat')} (${ivaPct}%): ${fmtMoney(iva)}`);
+  // Un desglose por cada tipo de IVA real presente en la venta (no un único
+  // % adivinado para todo el ticket): si se mezclan platos con distinto IVA
+  // (ej. comida al 10% y una copa al 21%), cada tipo sale por separado.
+  const ivaGroups = saleIvaGroupsForFiscal(sale);
+  ivaGroups.forEach(g => {
+    lines.push(`${t('ticket.taxBase')} (${g.ivaPct}%): ${fmtMoney(g.base)}`);
+    lines.push(`${t('common.vat')} (${g.ivaPct}%): ${fmtMoney(g.cuota)}`);
+  });
   lines.push(`${t('common.total')}: ${fmtMoney(sale.total)}`);
   if(sale.pagos && sale.pagos.length > 1){
     sale.pagos.forEach(p => lines.push(`${p.label}: ${fmtMoney(p.amount)} (${p.metodoPago||''})`));
