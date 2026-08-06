@@ -1069,7 +1069,7 @@ function openMenuOpcionModsModal(grupoId, opcionId){
       ${mods.length ? mods.map(m => `
         <div class="ge-item">
           <span style="flex:1;font-weight:600">${escapeHtml(m.nombre)}</span>
-          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(m.precio||0)}</span>
+          <span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">${m.precio ? '+'+fmtMoney(m.precio) : t('common.free')}</span>
           <button class="btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcionMod(${grupoId},${opcionId},${m.id})"><i class="ti ti-x"></i></button>
         </div>
       `).join('') : `<div class="empty" style="padding:10px">${t('empty.mods')}</div>`}
