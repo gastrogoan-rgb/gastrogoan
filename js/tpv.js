@@ -2288,6 +2288,7 @@ function addOrderItem(orderId, secId, platoId){
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   syncBebidaLineEstado(line);
+  warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -2362,6 +2363,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   autoSendTakeawayLine(order, line);
   autoSendFirstCourse(order, line, tanda);
   syncBebidaLineEstado(line);
+  warnIfRecipeStockShort(p.recipeId);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   renderTableOrderModal(orderId);
@@ -2384,6 +2386,7 @@ function changeOrderItemQty(orderId, idx, delta){
   } else {
     autoSendTakeawayLine(order, line);
     syncBebidaLineEstado(line);
+    if(delta > 0) warnIfRecipeStockShort(line.recipeId);
   }
   saveDB();
   renderTableOrderModal(orderId);
@@ -3173,6 +3176,38 @@ function finalizeSplitOrder(orderId){
   saveDB();
   renderTPV();
   openTicketDeliveryModal(sale.id);
+}
+
+// Comprueba si vender UNA unidad más de este plato dejaría algún ingrediente
+// (o elaboración base que use) por debajo de lo que hace falta, con el stock
+// que hay AHORA MISMO (el descuento real no ocurre hasta cobrar, en
+// discountStockForOrder — este chequeo es solo un aviso anticipado al añadir
+// el plato a la comanda). No bloquea la venta: puede que se sirva igual con
+// lo que quede y se reponga después, pero al menos quien cobra se entera.
+function recipeStockShortageWarning(recipeId){
+  const r = getRecipe(recipeId);
+  if(!r) return null;
+  const short = [];
+  (r.ingredients||[]).forEach(line => {
+    const need = line.qty * (1 + (line.merma||0)/100);
+    if(line.type === 'base'){
+      const elab = (DB.elaboraciones||[]).find(e => e.recipeId === line.baseRecipeId);
+      if(elab && (elab.qty||0) < need) short.push(elab.name);
+      return;
+    }
+    const ing = getIngredient(line.ingredientId);
+    if(!ing || ing.activo === false) return; // descatalogado: ya no se repone, no tiene sentido avisar
+    const s = getStockEntry(line.ingredientId);
+    if((s.qty||0) < need) short.push(ing.name);
+  });
+  return short.length ? short : null;
+}
+// Avisa (toast, no bloqueante) si el plato recién añadido/incrementado deja
+// algún ingrediente por debajo de lo necesario.
+function warnIfRecipeStockShort(recipeId){
+  if(!recipeId) return;
+  const short = recipeStockShortageWarning(recipeId);
+  if(short) showToast(t('msg.lowStockForDish').replace('${items}', short.slice(0,3).join(', ') + (short.length>3?'…':'')));
 }
 
 function discountStockForOrder(order){
