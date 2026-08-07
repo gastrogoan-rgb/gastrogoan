@@ -795,7 +795,7 @@ function renderPedidoResultsList(){
             ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
           </span>
         </h3>
-        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong></div>
+        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong>${o.estado==='RECIBIDO' && o.recibidoPor ? ` · ${t('label.receivedBy')}: ${escapeHtml(o.recibidoPor)}` : ''}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
           ${diasBadge}
@@ -948,6 +948,7 @@ function renderPedidoDetail(){
           return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
             <span style="font-size:13px;color:var(--muted)">${checkedCount}/${items.length} ${t('label.itemsConfirmedArrived')}</span>
+            ${isRecibido && o.recibidoPor ? `<span style="font-size:13px;color:var(--muted)">· ${t('label.receivedBy')}: <strong>${escapeHtml(o.recibidoPor)}</strong></span>` : ''}
           </div>`;
         })()}
       </div>
@@ -1224,6 +1225,13 @@ function changePedidoEstado(estado){
       s.qty = (s.qty||0) + (recibida||0);
     });
     o.comprobacion = pedidoComprobacionAuto(o);
+    // Quién ha confirmado la recepción — cualquier empleado puede hacerla
+    // (no hace falta permiso de editar para esto, solo para crear el
+    // pedido), así que queda constancia de quién fue con el mismo criterio
+    // de "quién usa el dispositivo ahora" que ya usa el chat interno.
+    if(typeof getChatAuthor === 'function' && typeof getChatAuthorName === 'function'){
+      o.recibidoPor = getChatAuthorName(getChatAuthor());
+    }
     renderStock();
     registerPedidoComoGastoVariable(o);
   }
@@ -1685,6 +1693,7 @@ function reallyRevertPedidoRecepcion(id){
   DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
   o.gvCreated = false;
   o.estado = 'ENVIADO';
+  delete o.recibidoPor;
   renderStock();
   saveDB();
   renderPedidos();
