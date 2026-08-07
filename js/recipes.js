@@ -280,10 +280,11 @@ function renderEscandalloFull(r){
           <div class="kpi"><div class="label">${t('label.foodCost')}</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
           `}
         </div>
-        ${r.comensales || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          ${r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
+        ${(r.isBase && r.comensales) || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+          ${r.isBase && r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
           ${r.consumiblesPct ? ` · ${t('label.consumablesInline')}: ${r.consumiblesPct}%` : ''}
         </div>` : ''}
+        ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
         <div class="table-wrap">
           <table>
             <thead><tr><th>${t('label.ingredient')}</th><th>${t('common.qty')}</th><th>${t('th.merma')}</th><th>${t('common.cost')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
@@ -358,10 +359,17 @@ function renderRecipeModal(id, r){
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
     <div class="field-row">
+      ${r.isBase ? `
       <div class="field">
         <label>${isSala ? t('label.servings') : t('label.diners')}</label>
         <input type="number" id="recipe-comensales" value="${r.comensales||2}" step="1" min="1">
       </div>
+      ` : `
+      <div class="field">
+        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
+        <input type="number" id="recipe-comensales" value="1" step="1" min="1" disabled style="background:var(--bg);color:var(--muted)">
+      </div>
+      `}
       <div class="field">
         <label>${t('label.consumables')}</label>
         <input type="number" id="recipe-consumibles" value="${r.consumiblesPct!=null?r.consumiblesPct:5}" step="0.5" min="0" max="99" oninput="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
@@ -375,6 +383,10 @@ function renderRecipeModal(id, r){
         </select>
       </div>
     </div>
+    ${!r.isBase ? `<div style="display:flex;align-items:center;gap:8px;background:var(--brand-cream);border-radius:8px;padding:8px 12px;margin:-6px 0 12px;font-size:12.5px;color:#7a5c1e">
+      <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
+      ${t('msg.escandalloForOnePerson')}
+    </div>` : ''}
 
     ${(r.isBase || isSala) ? `<input type="checkbox" id="recipe-is-base" style="display:none" ${r.isBase?'checked':''}>` : `
     <div class="field">
@@ -590,7 +602,7 @@ function currentRecipeFormState(id){
     priceBase,
     ivaPct,
     price: ivaPct!=null ? Math.round(priceBase*(1+ivaPct/100)*100)/100 : (r.price||0),
-    comensales: comensalesEl ? comensalesEl.value : (r.comensales||2),
+    comensales: (isBaseEl ? isBaseEl.checked : !!r.isBase) ? (comensalesEl ? comensalesEl.value : (r.comensales||2)) : 1,
     consumiblesPct: consumiblesEl ? consumiblesEl.value : (r.consumiblesPct!=null?r.consumiblesPct:5),
     category: categoryEl ? categoryEl.value : (r.category||''),
     isBase: isBaseEl ? isBaseEl.checked : !!r.isBase,
@@ -614,12 +626,17 @@ function saveRecipe(id){
   if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
   const ivaPct = parseFloat(ivaRaw);
   const price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
-  const comensales = parseInt(document.getElementById('recipe-comensales').value) || 1;
   const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
   const categoryEl = document.getElementById('recipe-category');
   const category = categoryEl ? categoryEl.value : '';
   const isBaseEl = document.getElementById('recipe-is-base');
   const isBase = isBaseEl ? isBaseEl.checked : false;
+  // Un plato/bebida (no elaboración base) se calcula SIEMPRE para 1 ración:
+  // las cantidades de ingredientes son las que lleva una sola unidad
+  // vendida, así el coste, el precio y el descuento de stock al vender
+  // coinciden sin depender de que alguien recuerde dividir a mano. Se
+  // fuerza aquí además de deshabilitar el campo, por si acaso.
+  const comensales = isBase ? (parseInt(document.getElementById('recipe-comensales').value) || 1) : 1;
   const baseYield = isBase ? (parseFloat(document.getElementById('recipe-base-yield').value) || 1) : 1;
   const baseUnit = isBase ? document.getElementById('recipe-base-unit').value : 'L';
   const ingredients = recipeModalLines.map(l => ({...l}));
