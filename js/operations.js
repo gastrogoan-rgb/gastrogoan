@@ -886,13 +886,13 @@ function renderPedidoDetail(){
 
   // El checklist de recepción se ve en cuanto el pedido está Enviado (para
   // poder ir marcando mientras llega la mercancía), no solo tras marcarlo
-  // Recibido. Por defecto cada línea nace marcada como "llegado" (el caso
-  // habitual): el responsable de recepción desmarca solo lo que de verdad
-  // no ha llegado, en vez de tener que marcar artículo a artículo.
+  // Recibido. Cada línea nace SIN marcar: es el personal quien tiene que
+  // comprobar y marcar cada artículo según llega, no algo que se dé por
+  // hecho de antemano.
   const canEditChecklist = !isRecibido || editUnlocked;
   const itemsHtml = (o.items||[]).map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
-    const checked = line.recibidoCheck !== false;
+    const checked = line.recibidoCheck === true;
     const rowAccent = !showRecepcion ? 'var(--border)' : (checked ? 'var(--olive,#5c7a4a)' : 'var(--red)');
     const qtyRecibidaVal = line.cantidadRecibida != null ? line.cantidadRecibida : line.cantidad;
     return `
@@ -944,7 +944,7 @@ function renderPedidoDetail(){
         <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.orderCheckHelp')}</p>
         ${(() => {
           const items = o.items||[];
-          const checkedCount = items.filter(l => l.recibidoCheck !== false).length;
+          const checkedCount = items.filter(l => l.recibidoCheck === true).length;
           const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
           return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
@@ -1131,7 +1131,7 @@ function removeAlbaranFile(){
 function pedidoComprobacionAuto(o){
   const items = o.items||[];
   if(!items.length) return '';
-  const checkedCount = items.filter(l => l.recibidoCheck !== false).length;
+  const checkedCount = items.filter(l => l.recibidoCheck === true).length;
   const anyNote = items.some(l => (l.notaRecepcion||'').trim());
   if(checkedCount < items.length) return 'falta';
   return anyNote ? 'mal' : 'ok';
@@ -1224,7 +1224,7 @@ function changePedidoEstado(estado){
       // no suma stock ni genera gasto, sea cual sea la cantidad que se
       // hubiera pedido. Uno marcado suma la cantidad confirmada (por defecto
       // la pedida, o la que se haya corregido a mano antes de confirmar).
-      const checked = line.recibidoCheck !== false;
+      const checked = line.recibidoCheck === true;
       const recibida = checked ? (line.cantidadRecibida != null ? line.cantidadRecibida : line.cantidad) : 0;
       line.cantidadRecibida = recibida;
       const ing = getIngredient(line.ingredientId);
