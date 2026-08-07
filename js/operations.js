@@ -831,7 +831,7 @@ function pedidoTotalConIva(o){
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
     if(!ing) return;
-    const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
+    const qty = isRecibido ? (line.cantidadRecibida!=null ? line.cantidadRecibida : 0) : (line.cantidad||0);
     const base = qty * (ing.price||0);
     if(base <= 0) return;
     const ivaPct = ing.iva != null ? ing.iva : 0;
@@ -854,7 +854,7 @@ function renderPedidoIvaBreakdownHtml(o, isRecibido){
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
     if(!ing) return;
-    const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
+    const qty = isRecibido ? (line.cantidadRecibida!=null ? line.cantidadRecibida : 0) : (line.cantidad||0);
     const base = qty * (ing.price||0);
     if(base <= 0) return;
     if(ing.iva == null){ missingIva = true; return; }
@@ -884,20 +884,36 @@ function renderPedidoDetail(){
   const showRecepcion = o.estado === 'ENVIADO' || o.estado === 'RECIBIDO';
   const r = o.recepcion || {};
 
+  // El checklist de recepción se ve en cuanto el pedido está Enviado (para
+  // poder ir marcando mientras llega la mercancía), no solo tras marcarlo
+  // Recibido. Por defecto cada línea nace marcada como "llegado" (el caso
+  // habitual): el responsable de recepción desmarca solo lo que de verdad
+  // no ha llegado, en vez de tener que marcar artículo a artículo.
+  const canEditChecklist = !isRecibido || editUnlocked;
   const itemsHtml = (o.items||[]).map((line, idx) => {
     const ing = getIngredient(line.ingredientId);
+    const checked = line.recibidoCheck !== false;
+    const rowAccent = !showRecepcion ? 'var(--border)' : (checked ? 'var(--olive,#5c7a4a)' : 'var(--red)');
+    const qtyRecibidaVal = line.cantidadRecibida != null ? line.cantidadRecibida : line.cantidad;
     return `
-      <div class="list-row" style="padding:6px 10px">
-        <div class="list-row-name"><span>${ing ? escapeHtml(ing.name) : '—'}</span></div>
+      <div class="list-row" style="padding:6px 10px;flex-wrap:wrap;border-left:3px solid ${rowAccent}">
+        <div class="list-row-name"><span style="${showRecepcion && checked ? 'text-decoration:underline;text-decoration-color:var(--olive,#5c7a4a);text-decoration-thickness:2px' : ''}${showRecepcion && !checked ? 'color:var(--red)' : ''}">${ing ? escapeHtml(ing.name) : '—'}</span></div>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.ordered')}</span>
         ${editUnlocked
           ? `<input type="number" value="${line.cantidad}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidad', this.value)">`
           : `<span style="width:70px;padding:3px 5px;font-size:13px;font-weight:600">${fmtNum(line.cantidad)}</span>`}
-        ${isRecibido ? `
-        <span style="font-size:11.5px;color:var(--muted)">${t('label.receivedAbbrev')}</span>
-        <input type="number" value="${line.cantidadRecibida||0}" step="0.01" min="0" style="width:70px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="updatePedidoItem(${idx}, 'cantidadRecibida', this.value)">
-        ` : ''}
         <span style="font-size:12px;color:var(--muted);min-width:22px">${ing ? escapeHtml(ing.unit) : ''}</span>
+        ${showRecepcion ? `
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:${canEditChecklist?'pointer':'default'}">
+          <input type="checkbox" ${checked?'checked':''} ${canEditChecklist?'':'disabled'} onchange="toggleRecepcionCheck(${idx}, this.checked)">
+          ${t('label.arrived')}
+        </label>
+        ${checked ? `
+        <span style="font-size:11.5px;color:var(--muted)">${t('label.receivedAbbrev')}</span>
+        <input type="number" value="${qtyRecibidaVal}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${canEditChecklist?'':'disabled'} onchange="updatePedidoItem(${idx}, 'cantidadRecibida', this.value)">
+        ` : `<span style="font-size:11.5px;color:var(--red)"><i class="ti ti-x"></i> ${t('label.notArrived')}</span>`}
+        <input type="text" placeholder="${t('ph.receptionNote')}" value="${escapeHtml(line.notaRecepcion||'')}" style="flex:1;min-width:150px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" ${canEditChecklist?'':'disabled'} onchange="updatePedidoLineNota(${idx}, this.value)">
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -912,7 +928,7 @@ function renderPedidoDetail(){
           <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
         </span>
       </h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
+      <div style="display:${showRecepcion ? 'flex' : 'grid'};flex-direction:column;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
         ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
       </div>
       ${renderPedidoIvaBreakdownHtml(o, isRecibido)}
@@ -926,11 +942,15 @@ function renderPedidoDetail(){
       <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
         <h3><i class="ti ti-clipboard-check"></i> ${t('title.orderCheck')}</h3>
         <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.orderCheckHelp')}</p>
-        <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
-          ${Object.entries(getPedidoComprobacionMap()).map(([key, c]) => `
-            <button class="btn btn-sm ${o.comprobacion===key?'btn-primary':''}" onclick="setPedidoComprobacion('${key}')">${c.label}</button>
-          `).join('')}
-        </div>
+        ${(() => {
+          const items = o.items||[];
+          const checkedCount = items.filter(l => l.recibidoCheck !== false).length;
+          const comp = getPedidoComprobacionMap()[o.comprobacion || pedidoComprobacionAuto(o)];
+          return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            ${comp ? `<span class="badge ${comp.cls}">${comp.label}</span>` : ''}
+            <span style="font-size:13px;color:var(--muted)">${checkedCount}/${items.length} ${t('label.itemsConfirmedArrived')}</span>
+          </div>`;
+        })()}
       </div>
       <div class="card" style="background:var(--brand-cream);margin-bottom:10px">
         <h3><i class="ti ti-clipboard-check"></i> ${t('title.receptionAppcc')}</h3>
@@ -1003,10 +1023,13 @@ function updatePedidoItem(idx, field, value){
   const line = o.items[idx];
   const newVal = parseFloat(value) || 0;
   if(field === 'cantidadRecibida' && o.estado === 'RECIBIDO'){
-    // Corregir la cantidad recibida ya registrada (no la primera vez que se
-    // rellena al recibir el pedido) resincroniza stock y gasto retroactivamente:
-    // eso exige modo edición, igual que los registros de temperaturas/plagas.
-    if(line.cantidadRecibida > 0 && !editUnlocked){
+    // Corregir la cantidad recibida ya registrada resincroniza stock y gasto
+    // retroactivamente: eso exige modo edición, igual que los registros de
+    // temperaturas/plagas. Una vez el pedido está Recibido, cantidadRecibida
+    // siempre está fijada a un número concreto (incluido 0 legítimo para un
+    // artículo desmarcado del checklist), así que cualquier cambio aquí es
+    // siempre una corrección posterior, nunca "la primera vez que se rellena".
+    if(!editUnlocked){
       showToast(t('msg.editModeRequiredForLog'));
       renderPedidoDetail();
       return;
@@ -1014,7 +1037,7 @@ function updatePedidoItem(idx, field, value){
     // El pedido ya sumó stock y registró un gasto con la cantidad recibida
     // original: si se corrige a mano después, hay que resincronizar ambos.
     const ing = getIngredient(line.ingredientId);
-    const oldVal = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+    const oldVal = line.cantidadRecibida || 0;
     line.cantidadRecibida = newVal;
     if(ing){
       const s = getStockEntry(line.ingredientId);
@@ -1100,10 +1123,43 @@ function removeAlbaranFile(){
   renderPedidoDetail();
 }
 
-function setPedidoComprobacion(value){
+// El estado de comprobación del pedido ya no se elige a mano (antes eran 3
+// botones ok/falta/mal sin relación con nada) — se calcula solo a partir del
+// checklist de recepción: si todo está marcado como llegado y sin ninguna
+// incidencia anotada, "ok"; si falta algo por marcar/llegar, "falta"; si todo
+// llegó pero hay alguna nota (devuelto, mal estado...), "mal".
+function pedidoComprobacionAuto(o){
+  const items = o.items||[];
+  if(!items.length) return '';
+  const checkedCount = items.filter(l => l.recibidoCheck !== false).length;
+  const anyNote = items.some(l => (l.notaRecepcion||'').trim());
+  if(checkedCount < items.length) return 'falta';
+  return anyNote ? 'mal' : 'ok';
+}
+
+function toggleRecepcionCheck(idx, checked){
   const o = getPurchaseOrder(pedidoDetailId);
-  if(!o) return;
-  o.comprobacion = o.comprobacion === value ? '' : value;
+  if(!o || idx < 0 || idx >= (o.items||[]).length) return;
+  if(o.estado === 'RECIBIDO' && !editUnlocked){
+    showToast(t('msg.editModeRequiredForLog'));
+    renderPedidoDetail();
+    return;
+  }
+  o.items[idx].recibidoCheck = checked;
+  o.comprobacion = pedidoComprobacionAuto(o);
+  saveDB();
+  renderPedidoDetail();
+}
+function updatePedidoLineNota(idx, value){
+  const o = getPurchaseOrder(pedidoDetailId);
+  if(!o || idx < 0 || idx >= (o.items||[]).length) return;
+  if(o.estado === 'RECIBIDO' && !editUnlocked){
+    showToast(t('msg.editModeRequiredForLog'));
+    renderPedidoDetail();
+    return;
+  }
+  o.items[idx].notaRecepcion = value.trim();
+  o.comprobacion = pedidoComprobacionAuto(o);
   saveDB();
   renderPedidoDetail();
 }
@@ -1125,8 +1181,7 @@ function registerPedidoComoGastoVariable(o){
   const byGroup = {};
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
-    const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
-    const costBase = (recibida||0) * (ing ? (ing.price||0) : 0);
+    const costBase = (line.cantidadRecibida||0) * (ing ? (ing.price||0) : 0);
     if(costBase <= 0) return;
     const cat = gvCategoryForIngredient(ing);
     const ivaPct = ing && ing.iva != null ? ing.iva : null;
@@ -1165,17 +1220,19 @@ function changePedidoEstado(estado){
   if(estado === 'ENVIADO' && !o.enviadoEn) o.enviadoEn = todayStr();
   if(estado === 'RECIBIDO'){
     (o.items||[]).forEach(line => {
+      // El checklist de recepción manda: un artículo sin marcar ("no llegó")
+      // no suma stock ni genera gasto, sea cual sea la cantidad que se
+      // hubiera pedido. Uno marcado suma la cantidad confirmada (por defecto
+      // la pedida, o la que se haya corregido a mano antes de confirmar).
+      const checked = line.recibidoCheck !== false;
+      const recibida = checked ? (line.cantidadRecibida != null ? line.cantidadRecibida : line.cantidad) : 0;
+      line.cantidadRecibida = recibida;
       const ing = getIngredient(line.ingredientId);
       if(!ing) return; // ingrediente borrado de Mega Lista: no hay stock real que sumar
       const s = getStockEntry(line.ingredientId);
-      const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
-      // Se escribe la cantidad realmente contabilizada en la propia línea:
-      // si no, el detalle del pedido seguía mostrando "Recibida: 0" en cada
-      // artículo aunque el pedido ya estuviera marcado como Recibido y el
-      // stock/gasto ya se hubieran actualizado con la cantidad pedida.
-      line.cantidadRecibida = recibida;
       s.qty = (s.qty||0) + (recibida||0);
     });
+    o.comprobacion = pedidoComprobacionAuto(o);
     renderStock();
     registerPedidoComoGastoVariable(o);
   }
@@ -1468,7 +1525,7 @@ function nextValidDeliveryDate(dateStr, diasEntrega){
 function selectOrderSupplier(supplier){
   orderModalSupplier = supplier;
   orderModalSearch = '';
-  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea() && i.activo !== false).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: 0})) : [];
+  orderModalLines = supplier ? DB.ingredients.filter(i => i.supplier === supplier && (i.area||'cocina') === currentArea() && i.activo !== false).map(i => ({ingredientId: i.id, cantidad: 0, cantidadRecibida: null})) : [];
   orderSupplierJustChanged = true;
   refreshOrderForm();
 }
@@ -1578,10 +1635,10 @@ function reallyDeleteOrder(id){
     (o.items||[]).forEach(line => {
       const ing = getIngredient(line.ingredientId);
       if(!ing) return;
-      const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+      const recibida = line.cantidadRecibida||0;
       const s = getStockEntry(line.ingredientId);
       const before = s.qty||0;
-      s.qty = Math.max(0, before - (recibida||0));
+      s.qty = Math.max(0, before - recibida);
       if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
     });
     DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
@@ -1601,7 +1658,7 @@ function duplicateOrder(id){
   if(!o) return;
   const copy = {
     id: genId(), supplier: o.supplier, date: todayStr(), estado: 'BORRADOR',
-    items: (o.items||[]).map(line => ({ingredientId: line.ingredientId, cantidad: line.cantidad, cantidadRecibida: 0})),
+    items: (o.items||[]).map(line => ({ingredientId: line.ingredientId, cantidad: line.cantidad, cantidadRecibida: null})),
     notas: '', recepcion: null, comprobacion: '', area: o.area || currentArea()
   };
   DB.purchaseOrders.push(copy);
@@ -1624,12 +1681,15 @@ function reallyRevertPedidoRecepcion(id){
   (o.items||[]).forEach(line => {
     const ing = getIngredient(line.ingredientId);
     if(!ing) return;
-    const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+    const recibida = line.cantidadRecibida||0;
     const s = getStockEntry(line.ingredientId);
     const before = s.qty||0;
-    s.qty = Math.max(0, before - (recibida||0));
+    s.qty = Math.max(0, before - recibida);
     if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
-    line.cantidadRecibida = 0;
+    // Vuelve a "sin revisar": la próxima recepción parte de cero, no arrastra
+    // la cantidad de la vez anterior. El checklist (marcado/nota) sí se
+    // conserva, porque suele reflejar justo lo que pasó de verdad.
+    line.cantidadRecibida = null;
   });
   DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
   o.gvCreated = false;
