@@ -409,8 +409,12 @@
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> <span data-i18n="label.onlyAlerts">Solo alertas</span>
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
+            <input type="checkbox" id="stock-show-discontinued" onchange="renderStock()" style="width:auto"> <span data-i18n="megalista.showDiscontinued">Mostrar descatalogados</span>
+          </label>
         </div>
         <div style="display:flex;gap:8px">
+          <button class="btn" onclick="openStockCountModal()"><i class="ti ti-clipboard-list"></i> <span data-i18n="btn.stockPhysicalCount">Recuento físico</span></button>
           <button class="btn" onclick="printStockCountSheet()"><i class="ti ti-printer"></i> <span data-i18n="btn.printStockSheet">Hoja de recuento</span></button>
           <button class="owner-only btn" onclick="openStockLogModal()"><i class="ti ti-history"></i> <span data-i18n="btn.stockLog">Historial</span></button>
         </div>

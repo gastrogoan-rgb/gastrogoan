@@ -205,7 +205,13 @@ function renderDashboard(){
   const pendingReservations = DB.reservations.filter(r => r.date===todayDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
   const tomorrowDate = dateStr(new Date(today.getTime() + 86400000));
   const tomorrowReservations = DB.reservations.filter(r => r.date===tomorrowDate && !r.llegada && (r.status==='confirmada'||r.status==='pendiente')).length;
-  const lowStockCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
+  // Incluye tanto ingredientes (sin contar los descatalogados, que ya no se
+  // reponen y no deberían generar aviso) como elaboraciones (fondos, salsas,
+  // caldos) por debajo de mínimo — antes el aviso principal del dashboard
+  // solo miraba ingredientes, así que un fondo agotado no se notaba aquí.
+  const lowStockIngCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && ing.activo !== false && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
+  const lowStockElabCount = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===currentArea() && (e.qty||0) <= (e.min||0)).length;
+  const lowStockCount = lowStockIngCount + lowStockElabCount;
   // Antes el mantenimiento vencido (control de plagas, revisiones, etc.) solo
   // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
   // aquí se avisa igual que con el stock bajo, para que no pase desapercibido.
@@ -994,14 +1000,18 @@ function renderStock(){
   maybeShowCategoryIconHint();
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
+  // Un ingrediente descatalogado ya no se compra: seguía apareciendo en
+  // Stock como cualquier otro, se podía seguir ajustando y contaba en las
+  // alertas de bajo mínimo aunque nadie fuera a reponerlo — igual que ya se
+  // excluye en Mega Lista y Pedidos, aquí queda oculto por defecto.
+  const showDiscontinued = document.getElementById('stock-show-discontinued')?.checked;
 
-  let items = DB.ingredients.filter(ing => {
-    const s = getStockEntry(ing.id);
-    const matchArea = (ing.area||'cocina') === currentArea();
-    const matchSearch = !search || ing.name.toLowerCase().includes(search);
-    const matchAlert = !onlyAlerts || s.qty <= s.min;
-    return matchArea && matchSearch && matchAlert;
-  }).map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}));
+  // Un solo getStockEntry() por ingrediente (antes se llamaba una vez para
+  // filtrar y otra para pintar la fila, el doble de trabajo en cada
+  // render — y esto se repinta en cada +/- que se pulsa).
+  let items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
+    .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), discontinued: ing.activo===false, activo: ing.activo, ...getStockEntry(ing.id)}))
+    .filter(row => (onlyAlerts ? row.qty <= row.min : true) && (showDiscontinued || row.activo !== false));
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
@@ -1015,9 +1025,10 @@ function renderStock(){
   // búsqueda ni el filtro "Solo alertas" afecten al recuento.
   const kpisBox = document.getElementById('stock-kpis');
   if(kpisBox){
-    const allIngCount = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea()).length;
+    const activeArea = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && ing.activo !== false);
+    const allIngCount = activeArea.length;
     const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
-    const lowIngCount = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
+    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty <= s.min; }).length;
     const lowElabCount = allElabList.filter(e => (e.qty||0) <= (e.min||0)).length;
     kpisBox.innerHTML = `
       <div class="kpi"><div class="label">${t('label.products')}</div><div class="value">${allIngCount}</div></div>
@@ -1035,7 +1046,7 @@ function renderStock(){
     const statusBadge = low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>';
     return `
       <div class="list-row" style="padding:6px 10px;flex-wrap:wrap">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}${row.discontinued ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.discontinued')}</span>` : ''}</div>
         <span style="font-size:12.5px;color:var(--muted);white-space:nowrap">${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
         <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
@@ -1107,12 +1118,24 @@ function renderStock(){
   const elabFolders = getEscandalloFolders(baseRecipes); // [[key, label, recipes], ...]
   const elabsByRecipeCat = {};
   elabs.forEach(e => {
-    const cat = e.recipeId ? ((DB.recipes.find(r=>r.id===e.recipeId)||{}).category || '__none__') : '__none__';
+    // Las elaboraciones que vienen de una receta base del Escandallo heredan
+    // su categoría; las creadas a mano desde Stock antes no tenían ninguna
+    // (siempre "Sin categoría") — ahora usan la que se les asigne en su
+    // propia ficha (elab.category), con las mismas categorías de receta.
+    const cat = e.recipeId ? ((DB.recipes.find(r=>r.id===e.recipeId)||{}).category || '__none__') : (e.category || '__none__');
     (elabsByRecipeCat[cat] = elabsByRecipeCat[cat] || []).push(e);
   });
   if(!elabFolders.some(([key])=>key==='__none__') && elabsByRecipeCat['__none__']){
     elabFolders.push(['__none__', t('label.noCategory'), []]);
   }
+  // Una elaboración manual puede llevar una categoría que ninguna receta
+  // base usa todavía (getEscandalloFolders solo conoce las de baseRecipes):
+  // se añade igualmente para que su carpeta no quede invisible.
+  Object.keys(elabsByRecipeCat).forEach(cat => {
+    if(cat !== '__none__' && !elabFolders.some(([key]) => key === cat)){
+      elabFolders.push([cat, cat, []]);
+    }
+  });
 
   if(!elabs.length){
     elabGroupsWrap.innerHTML = `<div class="empty"><i class="ti ti-package"></i>${t('empty.elaborations')}</div>`;
@@ -1235,7 +1258,11 @@ function logStockAdjustment(type, refId, name, before, after, source){
     // un recuento físico) — si esa corrección es a la baja, es la señal más
     // fiable de merma real que tenemos, y es lo que alimenta el informe de
     // mermas en Stock.
-    source: source || 'manual'
+    source: source || 'manual',
+    // Quién hizo el ajuste — antes el histórico solo decía "qué" y "cuándo",
+    // nunca "quién", que es justo lo que hace falta para investigar mermas
+    // repetidas de una persona concreta. Mismo criterio que logAudit().
+    actor: (typeof currentActorName === 'function') ? currentActorName() : ''
   });
   if(DB.stockLog.length > 500) DB.stockLog = DB.stockLog.slice(-500);
 }
@@ -1249,8 +1276,8 @@ function openStockLogModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('megalista.qtyBefore')}</th><th>${t('megalista.qtyAfter')}</th><th>${t('megalista.change')}</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.name)}</td><td>${fmtNum(e.before)}</td><td>${fmtNum(e.after)}</td><td style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td></tr>`).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
+        <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('megalista.qtyBefore')}</th><th>${t('megalista.qtyAfter')}</th><th>${t('megalista.change')}</th><th>${t('common.responsible')}</th></tr></thead>
+        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.name)}</td><td>${fmtNum(e.before)}</td><td>${fmtNum(e.after)}</td><td style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td><td>${escapeHtml(e.actor||'—')}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">
@@ -1264,7 +1291,7 @@ function openStockLogModal(){
 // poder cuadrarla luego contra lo que la app tiene estimado.
 function printStockCountSheet(){
   const area = currentArea();
-  const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area)
+  const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area && ing.activo !== false)
     .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category?ingredientCategoryLabel(ing.category):t('label.noCategory'), qty: getStockEntry(ing.id).qty}))
     .sort((a,b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
   const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
@@ -1278,6 +1305,83 @@ function printStockCountSheet(){
     <tbody>${rows || `<tr><td colspan="5" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
   `;
   printReportWindow(t('btn.printStockSheet'), body, {winSize:'width=800,height=1000'});
+}
+
+// Recuento físico digital: lista de golpe todo lo activo del área con un
+// campo para anotar la cantidad realmente contada, en vez de tener que
+// entrar producto a producto con "Ajustar cantidad" — solo se ajusta (y se
+// registra en el historial) lo que de verdad cambió respecto a lo que la
+// app tenía estimado. La hoja impresa (printStockCountSheet) sigue
+// disponible para quien prefiera contar en papel primero.
+function openStockCountModal(){
+  const area = currentArea();
+  const ings = DB.ingredients.filter(i => (i.area||'cocina')===area && i.activo !== false)
+    .map(i => ({type:'ing', id:i.id, name:i.name, unit:i.unit, category: i.category?ingredientCategoryLabel(i.category):t('label.noCategory'), qty:getStockEntry(i.id).qty}))
+    .sort((a,b)=>(a.category||'').localeCompare(b.category||'')||a.name.localeCompare(b.name));
+  const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
+    .map(e => ({type:'elab', id:e.id, name:e.name, unit:e.unit, category:t('label.elaborations'), qty:e.qty||0}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const all = [...ings, ...elabs];
+  if(!all.length){ showToast(t('common.noResults')); return; }
+  const rows = all.map(x => `
+    <tr>
+      <td>${escapeHtml(x.category)}</td>
+      <td>${escapeHtml(x.name)}</td>
+      <td>${escapeHtml(x.unit)}</td>
+      <td class="pr-num">${fmtNum(x.qty)}</td>
+      <td><input type="number" step="0.01" min="0" data-count-type="${x.type}" data-count-id="${x.id}" placeholder="${fmtNum(x.qty)}" style="width:85px;padding:3px 5px;border:1px solid var(--border);border-radius:6px"></td>
+    </tr>
+  `).join('');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-clipboard-list"></i> ${t('title.stockPhysicalCount')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('label.stockPhysicalCountHelp')}</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>${t('megalista.estimated')}</th><th>${t('megalista.real')}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="applyStockCount()">${t('btn.applyCount')}</button>
+    </div>
+  `, {xl:true});
+}
+function applyStockCount(){
+  const inputs = document.querySelectorAll('[data-count-id]');
+  let changes = 0;
+  inputs.forEach(inp => {
+    const val = inp.value.trim();
+    if(val === '') return;
+    const num = parseFloat(val);
+    if(isNaN(num) || num < 0) return;
+    const type = inp.getAttribute('data-count-type');
+    const id = parseInt(inp.getAttribute('data-count-id'));
+    if(type === 'ing'){
+      const s = getStockEntry(id);
+      const before = s.qty||0;
+      if(before === num) return;
+      s.qty = num;
+      const ing = getIngredient(id);
+      logStockAdjustment('ing', id, ing?ing.name:'', before, num);
+    } else {
+      const e = getElaboracion(id);
+      if(!e || (e.qty||0) === num) return;
+      const before = e.qty||0;
+      e.qty = num;
+      logStockAdjustment('elab', id, e.name, before, num);
+    }
+    changes++;
+  });
+  if(!changes){ showToast(t('msg.noStockCountChanges')); closeModal(); return; }
+  saveDB();
+  closeModal();
+  renderStock();
+  if(typeof renderDashboard === 'function') renderDashboard();
+  showToast(t('msg.stockCountApplied').replace('${n}', changes));
 }
 
 function adjustStock(ingredientId, delta){
@@ -1326,7 +1430,9 @@ function confirmSetStockQty(ingredientId){
 function getElaboracion(id){ return (DB.elaboraciones||[]).find(e => e.id === id); }
 
 function openElaboracionModal(id){
-  const e = id ? getElaboracion(id) : {id:null, name:'', unit:'L', qty:0, min:0};
+  const e = id ? getElaboracion(id) : {id:null, name:'', unit:'L', qty:0, min:0, category:''};
+  const catOptions = `<option value="">${t('label.noCategory')}</option>` +
+    areaRecipeCategories().map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}" ${e.category===name?'selected':''}>${escapeHtml(name)}</option>`; }).join('');
   openModal(`
     <div class="modal-header">
       <h3>${id ? t('title.editElaboration') : t('title.newElaboration')}</h3>
@@ -1335,6 +1441,10 @@ function openElaboracionModal(id){
     <div class="field">
       <label>${t('common.name')}</label>
       <input type="text" id="elab-name" value="${escapeHtml(e.name)}" placeholder="${t('ph.elaborationName')}">
+    </div>
+    <div class="field">
+      <label>${t('common.category')}</label>
+      <select id="elab-category">${catOptions}</select>
     </div>
     <div class="field-row">
       <div class="field">
@@ -1362,14 +1472,20 @@ function openElaboracionModal(id){
 function saveElaboracion(id){
   const name = document.getElementById('elab-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
+  const category = document.getElementById('elab-category').value;
   const unit = document.getElementById('elab-unit').value;
   const qty = parseFloat(document.getElementById('elab-qty').value) || 0;
   const min = parseFloat(document.getElementById('elab-min').value) || 0;
+  // Igual que con ingredientes/recetas/proveedores: avisa de un posible
+  // duplicado (mismo nombre, misma área) en vez de dejarlo pasar en
+  // silencio — antes no había ningún aviso al crear una elaboración.
+  const dupe = (DB.elaboraciones||[]).find(x => x.id !== id && (x.area||'cocina')===currentArea() && x.name.trim().toLowerCase() === name.toLowerCase());
+  if(dupe && !confirm(t('msg.confirmDuplicateElaboration').replace('${name}', dupe.name))) return;
   if(id){
-    Object.assign(getElaboracion(id), {name, unit, qty, min});
+    Object.assign(getElaboracion(id), {name, category, unit, qty, min});
   } else {
     if(!DB.elaboraciones) DB.elaboraciones = [];
-    DB.elaboraciones.push({id: genId(), name, unit, qty, min, area: currentArea()});
+    DB.elaboraciones.push({id: genId(), name, category, unit, qty, min, area: currentArea()});
   }
   saveDB();
   closeModal();
@@ -1377,10 +1493,21 @@ function saveElaboracion(id){
   showToast(t('msg.elaborationSaved'));
 }
 
+// Antes se borraba con un simple confirm() del navegador y sin pasar por la
+// papelera — al contrario que un ingrediente, que exige el PIN de negocio y
+// se puede recuperar. Una elaboración también tiene su stock y su mínimo
+// configurados: perderla de un clic de más era demasiado fácil.
 function deleteElaboracion(id){
-  if(!confirm(t('msg.confirmDeleteElaboration'))) return;
-  DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.id !== id);
+  requestBusinessPinAction(t('title.deleteElaboration'), t('msg.confirmDeleteElaboration'), () => reallyDeleteElaboracion(id));
+}
+function reallyDeleteElaboracion(id){
+  const e = getElaboracion(id);
+  if(!e) return;
+  moveToTrash('elaboracion', e);
+  logAudit('delete', t('audit.deletedElaboration').replace('${name}', e.name));
+  DB.elaboraciones = (DB.elaboraciones||[]).filter(x => x.id !== id);
   saveDB();
+  closeModal();
   renderStock();
   showToast(t('msg.elaborationDeleted'));
 }
