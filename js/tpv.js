@@ -2049,6 +2049,55 @@ function cycleGroupEstado(orderId, tanda){
   if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
+// Marcar un plato como agotado a media comanda, sin salir de la pantalla de
+// Comandas Cocina ni pedir permiso de editar: "Oferta Gastronómica" (Carta)
+// está oculta para el personal sin permiso de edición, así que antes la
+// única forma de avisar de que algo se había terminado era decírselo a
+// alguien con acceso. Este toggle actúa directamente sobre DB.cartas (no
+// pasa por el borrador del editor de Carta, cartaEdit) y se guarda al
+// instante — cualquiera que vea Comandas Cocina puede usarlo.
+function quickToggleDishAvailability(cartaId, secId, platoId){
+  const carta = (DB.cartas||[]).find(c => c.id === cartaId);
+  const sec = carta && (carta.secciones||[]).find(s => s.id === secId);
+  const p = sec && (sec.platos||[]).find(x => x.id === platoId);
+  if(!p) return;
+  p.disponible = p.disponible === false ? true : false;
+  saveDB();
+  renderMarkDishOutModal();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-carta' && typeof renderCartaSecciones === 'function') renderCartaSecciones();
+}
+function openMarkDishOutModal(){
+  renderMarkDishOutModal();
+}
+function renderMarkDishOutModal(){
+  const area = currentArea();
+  const cartas = (DB.cartas||[]).filter(c => (c.area||'cocina')===area && !isBebidaCarta(c));
+  const rowsHtml = cartas.map(c => {
+    const secsHtml = (c.secciones||[]).filter(s => (s.platos||[]).length).map(sec => `
+      <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700;text-transform:uppercase">${escapeHtml(sec.nombre)}</div>
+      ${sec.platos.map(p => `
+        <div class="list-row" style="padding:6px 10px">
+          <div class="list-row-name"><span>${escapeHtml(tItem(p))}</span></div>
+          <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="quickToggleDishAvailability(${c.id},${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
+        </div>
+      `).join('')}
+    `).join('');
+    return secsHtml ? `<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700">${escapeHtml(c.nombre)}</div>${secsHtml}</div>` : '';
+  }).join('');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-flame-off"></i> ${t('title.markDishOut')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('label.markDishOutHelp')}</p>
+    ${rowsHtml || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `, {xl:true});
+}
+
 function renderComandasCocina(){
   const box = document.getElementById('comandascocina-content');
   if(!box) return;
@@ -2059,6 +2108,7 @@ function renderComandasCocina(){
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm ${comandasCocinaTab==='activas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('activas')"><i class="ti ti-tools-kitchen-2"></i> ${t('tab.activeOrders')}</button>
       <button class="btn btn-sm ${comandasCocinaTab==='cerradas' ? 'btn-primary' : ''}" onclick="setComandasCocinaTab('cerradas')"><i class="ti ti-history"></i> ${t('tab.closedOrders')}</button>
+      <button class="btn btn-sm" style="margin-left:auto" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
     </div>
   `;
 
