@@ -66,6 +66,11 @@ a{color:var(--text)}a:hover{color:var(--olive)}
 .lang-menu-item:hover{background:var(--brand-cream, #F5EFE6)}
 .lang-menu-item.active{font-weight:700}
 body:not(.edit-unlocked) .owner-only{display:none !important}
+/* .owner-strict: a diferencia de .owner-only (visible también para un
+   empleado con canUnlockEdit), esto solo se muestra en una sesión de
+   propietario real — para acciones de gestión de personal que nunca deben
+   quedar accesibles a un compañero solo por tener editada su área. */
+body:not(.owner-session) .owner-strict{display:none !important}
 .folder-edit-toggle{margin-left:auto}
 .app-logo-icon img{width:100%;height:100%;object-fit:contain;border-radius:8px;background:#fff}
 .app-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}

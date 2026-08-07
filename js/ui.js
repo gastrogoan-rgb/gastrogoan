@@ -956,9 +956,19 @@ function lockEditMode(){
 // Cocina/Sala (antes hacía falta aunque ya fueras el dueño). Se llama al
 // iniciar sesión como propietario y al reanudar una sesión de propietario
 // guardada en el arranque.
+//
+// "owner-session" es distinto de "edit-unlocked": edit-unlocked (.owner-only)
+// se concede también a un empleado con canUnlockEdit, pensado solo para que
+// no tenga que pedir PIN para tocar turnos/inventario de SU área. Pero eso
+// dejaba a la vista (y accionables) botones pensados solo para el
+// propietario real — editar la ficha de otro compañero, resetearle el PIN,
+// aprobar sus vacaciones o cambios de turno — a cualquier empleado con ese
+// permiso, aunque nunca se le quiso dar gestión de personal de todo el
+// equipo. .owner-strict (gobernado por esta clase) solo se muestra en una
+// sesión de propietario de verdad.
 function applyOwnerSessionEditRights(){
   editUnlocked = true;
-  document.body.classList.add('edit-unlocked');
+  document.body.classList.add('edit-unlocked', 'owner-session');
 }
 
 // Un empleado ya se identificó con su propio PIN al entrar por "Acceso
@@ -968,6 +978,7 @@ function applyOwnerSessionEditRights(){
 // si no, se queda en vista de solo consulta, sin ningún control para
 // cambiarlo. Se llama al iniciar sesión de empleado y al reanudarla.
 function applyEmployeeSessionEditRights(employeeId){
+  document.body.classList.remove('owner-session');
   const emp = (DB.employees||[]).find(e => e.id === employeeId);
   if(emp && emp.canUnlockEdit){
     editUnlocked = true;

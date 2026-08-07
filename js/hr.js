@@ -2249,6 +2249,11 @@ function saveTurno(id){
   const collision = DB.turnos.find(x => x.employeeId===data.employeeId && x.fecha===data.fecha && x.id !== id);
   const emp = DB.employees.find(x=>x.id===data.employeeId);
   if(collision){
+    // Antes esto se fusionaba en silencio: si ya había OTRO turno asignado
+    // ese día para este empleado, se pisaba sin ningún aviso específico
+    // (solo un texto genérico fijo en el modal, fácil de no leer). Ahora se
+    // avisa con los datos concretos del turno que se va a sustituir.
+    if(!confirm(t('msg.confirmOverwriteShift').replace('${name}', emp?emp.name:'?').replace('${date}', data.fecha).replace('${tipo}', collision.tipo))) return;
     if(turno) DB.turnos = DB.turnos.filter(x => x.id !== turno.id);
     turno = collision;
   }
@@ -2354,7 +2359,7 @@ function renderTeamPulseHtml(){
   });
   if(pendingSwaps.length){
     parts.push(`
-      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--amber)">
+      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--amber)">
         <h4 style="margin-bottom:6px"><i class="ti ti-replace"></i> ${t('swap.ownerPendingTitle')}</h4>
         ${pendingSwaps.map(r => {
           const from = DB.employees.find(e=>e.id===r.fromEmployeeId);
@@ -2376,7 +2381,7 @@ function renderTeamPulseHtml(){
   });
   if(pendingVacations.length){
     parts.push(`
-      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--amber)">
+      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--amber)">
         <h4 style="margin-bottom:6px"><i class="ti ti-beach"></i> ${t('vacation.ownerPendingTitle')}</h4>
         ${pendingVacations.map(r => {
           const emp = DB.employees.find(e=>e.id===r.employeeId);
@@ -2455,13 +2460,19 @@ function renderHorariosPersonal(){
     const top = Object.entries(byWaiter).sort((a,b)=>b[1]-a[1])[0];
     if(top) topSellerId = top[0];
   }
+  // El dueño ya se identificó a nivel de sesión al entrar: no tiene sentido
+  // volver a pedirle el PIN del empleado (o del negocio) solo para abrir su
+  // ficha de fichaje/horas, y la tarjeta debe dejar claro que está viendo la
+  // ficha de gestión, no un kiosko de fichar como el que ve el propio
+  // empleado.
+  const isOwnerSession = (getAccessSession()||{}).type === 'owner';
   const cards = emps.map(e => {
     const open = getOpenFichaje(e.id);
     const isInactive = e.active === false;
     const isTopSeller = topSellerId!=null && (e.id===parseInt(topSellerId) || e.id===topSellerId);
     const tenureYears = e.fechaAlta ? Math.floor((Date.now() - new Date(e.fechaAlta+'T00:00:00')) / (365.25*86400000)) : 0;
     return `
-    <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="requestEmployeePersonalPin(${e.id})">
+    <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openEmployeePersonalCard(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
@@ -2471,14 +2482,14 @@ function renderHorariosPersonal(){
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       <div style="text-align:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:700;color:#fff;background:var(--brand-orange);padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ti-click"></i> ${t('label.clickToClockIn')}</span>
+        <span style="font-size:12px;font-weight:700;color:#fff;background:${isOwnerSession?'var(--teal)':'var(--brand-orange)'};padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="event.stopPropagation()">
         <div class="actions-cell">
           ${e.phone ? `<a class="btn btn-sm btn-icon" href="https://wa.me/${escapeJsAttr(e.phone.replace(/[^\d+]/g,''))}" target="_blank" rel="noopener" title="Enviar WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
           ${e.email ? `<a class="btn btn-sm btn-icon" href="mailto:${escapeJsAttr(e.email)}" title="${t('title.sendEmail')}"><i class="ti ti-mail"></i></a>` : ''}
-          <button class="owner-only btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon" onclick="openEmployeeModal(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteEmployee(${e.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
     </div>
@@ -2491,8 +2502,8 @@ function renderHorariosPersonal(){
         <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
       </div>
       <div style="display:flex;gap:8px">
-        <button class="owner-only btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
-        <button class="owner-only btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
+        <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
+        <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
     ${emps.length ? `<div class="grid grid-personal">${cards}</div>` : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
@@ -2700,24 +2711,24 @@ function openEmployeeModal(id){
     </div>
     <p style="font-size:12px;color:var(--muted);margin:-4px 0 6px">${t('msg.forCommentsOrDocs')}</p>
     ${id ? `
-    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="emp-active" ${e.active!==false?'checked':''} style="width:auto">
       ${t('label.employeeActive').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
     </label>
-    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.employeeActiveDesc')}</p>` : ''}
-    <label class="owner-only" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
+    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.employeeActiveDesc')}</p>` : ''}
+    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:14px;cursor:pointer">
       <input type="checkbox" id="emp-can-edit" ${e.canUnlockEdit?'checked':''} style="width:auto">
       ${t('label.canUnlockEditMode').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
     </label>
-    <p class="owner-only" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('msg.canUnlockEditModeDesc')}</p>
+    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('msg.canUnlockEditModeDesc')}</p>
     ${id ? `
-    <div class="field">
+    <div class="field owner-strict">
       <label>${t('label.clockInPin')}</label>
       <p style="font-size:13px;color:var(--muted);margin:0 0 6px">${e.pinChanged ? t('msg.employeeSetOwnPin') : t('msg.defaultPinExplainer')}</p>
       <button class="btn btn-sm" onclick="resetEmployeePin(${id})"><i class="ti ti-key"></i> ${t('btn.resetPinTo1234')}</button>
     </div>` : ''}
     <div class="modal-footer">
-      ${id ? `<button class="owner-only btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
+      ${id ? `<button class="owner-strict btn btn-danger" onclick="deleteEmployee(${id})">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="saveEmployee(${id||'null'})">${t("common.save")}</button>
     </div>
@@ -2727,9 +2738,11 @@ function openEmployeeModal(id){
 function resetEmployeePin(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  // Se aplica directamente, sin pedir ningún PIN de confirmación: quien puede
-  // llegar a este botón ya está en la ficha del empleado con la edición
-  // desbloqueada, así que pedirlo aquí otra vez era un paso de más.
+  // Solo el propietario llega a este botón (campo .owner-strict), así que no
+  // hace falta pedir otro PIN — pero sí una confirmación explícita, porque
+  // deja el PIN de esa persona en el valor por defecto (1234) hasta que
+  // vuelva a cambiarlo.
+  if(!confirm(t('msg.confirmResetEmployeePin').replace('${name}', e.name))) return;
   e.pin = '1234';
   e.pinChanged = false;
   // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
@@ -2826,7 +2839,11 @@ function fichajeHoras(f){
   // Si el fichaje sigue abierto (sin salida), cuenta hasta ahora mismo, para
   // que las horas de esta semana/mes no ignoren un turno que está en curso.
   const salida = f.salida ? new Date(f.salida) : new Date();
-  return (salida - new Date(f.entrada)) / 3600000;
+  // Un reloj mal puesto o un fichaje manual manipulado puede dejar la salida
+  // antes que la entrada: sin este suelo, esas horas negativas se sumaban
+  // sin más al total semanal/mensual, pudiendo dar un total absurdamente
+  // bajo (o negativo) sin ningún aviso.
+  return Math.max(0, (salida - new Date(f.entrada)) / 3600000);
 }
 function employeeHoursInRange(employeeId, dates){
   return (DB.fichajes||[]).filter(f => f.employeeId===employeeId && dates.includes(f.fecha)).reduce((s,f) => s + fichajeHoras(f), 0);
@@ -2857,10 +2874,18 @@ function getLongShiftWarnings(){
     .map(x => ({employee: DB.employees.find(e=>e.id===x.f.employeeId), horas: x.horas}))
     .filter(x => x.employee);
 }
-// Ver la jornada/fichar de un empleado ya no está abierto para cualquiera
-// que abra la pestaña Personal: hay que introducir el PIN de ese empleado
-// primero, igual que para fichar. Así cada uno solo ve sus propios datos
-// (o el dueño, si conoce el PIN de esa persona).
+// El dueño ya se identificó al iniciar sesión: entra directo a la ficha,
+// sin pedirle un PIN otra vez (ni el suyo propio ni el del empleado). Para
+// cualquier otra sesión (empleado mirando la pestaña Personal) se mantiene
+// el PIN por empleado, igual que para fichar — así cada uno solo ve sus
+// propios datos salvo que conozca el PIN de otra persona o el del negocio.
+function openEmployeePersonalCard(employeeId){
+  if((getAccessSession()||{}).type === 'owner'){
+    openEmployeeFicharModal(employeeId);
+    return;
+  }
+  requestEmployeePersonalPin(employeeId);
+}
 let personalPendingPinEmployeeId = null;
 function requestEmployeePersonalPin(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
@@ -3457,8 +3482,12 @@ function dismissEmployeeOnboarding(employeeId){
 
 function doFichaje(employeeId, action){
   const now = new Date().toISOString();
+  let descansoWarning = null;
   if(action === 'entrada'){
     if(getOpenFichaje(employeeId)){ showToast(t('msg.alreadyClockedIn')); closeModal(); renderHorariosTab(); return; }
+    // Se calcula ANTES de registrar la nueva entrada (si no, se compararía
+    // contra sí misma). Solo avisa, no bloquea el fichaje.
+    descansoWarning = checkDescansoWarning(employeeId);
     DB.fichajes.push({id: genId(), employeeId, fecha: todayStr(), entrada: now, salida: null});
   }else{
     const open = getOpenFichaje(employeeId);
@@ -3474,13 +3503,13 @@ function doFichaje(employeeId, action){
   if(action === 'entrada' && typeof fichaGatePendingView !== 'undefined' && fichaGatePendingView){
     const resumeView = fichaGatePendingView;
     fichaGatePendingView = null;
-    showToast(t('msg.clockInRegistered'));
+    showToast(descansoWarning || t('msg.clockInRegistered'));
     navigate(resumeView);
     showShiftBriefing(employeeId);
     return;
   }
   renderHorariosTab();
-  showToast(action === 'entrada' ? t('msg.clockInRegistered') : t('msg.clockOutRegistered'));
+  showToast(action === 'entrada' ? (descansoWarning || t('msg.clockInRegistered')) : t('msg.clockOutRegistered'));
   if(action === 'entrada') showShiftBriefing(employeeId);
 }
 

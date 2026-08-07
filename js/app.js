@@ -855,7 +855,7 @@ function renderDistribucion(){
 
   if(!areaEmployees().length){
     box.innerHTML = `
-      <div class="toolbar"><div class="left"></div><button class="owner-only btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button></div>
+      <div class="toolbar"><div class="left"></div><button class="owner-strict btn btn-primary" onclick="addEmployeeFromDistribucion()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button></div>
       <div class="empty"><i class="ti ti-users"></i>${t("empty.employees")}</div>
     `;
     return;
@@ -4720,6 +4720,7 @@ function logoutAccessSession(){
   clearAccessSession();
   areaUnlocked = {cocina:false, sala:false};
   ownerUnlocked = false;
+  document.body.classList.remove('owner-session');
   lockEditMode();
   document.getElementById('lock-btn').style.display = 'none';
   updateLogoutBtn();
