@@ -1345,28 +1345,21 @@ function printFicha(id){
   const ingredientLines = getFichaIngredientLines(f);
   const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
   const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
-  const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px"><strong>${i+1}.</strong> ${escapeHtml(p)}</div>`).join('');
-  const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${escapeHtml(displayName)}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
-  h1{font-size:18pt;margin:0 0 4px}h2{font-size:11pt;text-transform:uppercase;letter-spacing:.5px;color:#555;border-bottom:1px solid #ddd;padding-bottom:4px;margin:16px 0 8px}
-  .meta{display:flex;gap:20px;font-size:10pt;color:#555;margin-bottom:16px}.meta span{background:#f5f5f3;padding:4px 10px;border-radius:4px}
-  ul{margin:0;padding-left:18px}@media print{body{padding:15mm 12mm}}</style></head><body>
-  <h1>${escapeHtml(displayName)}</h1>
-  <div class="meta">
-    ${produccion?`<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>`:''}
-    ${f.tiempo?`<span>⏱ ${f.tiempo} min</span>`:''}
-    ${f.temp?`<span>${escapeHtml(fichaTempLabel(f.temp))}</span>`:''}
-  </div>
-  <h2>${t('label.ingredients')}</h2><ul>${ings || `<li>${t('empty.noIngredients')}</li>`}</ul>
-  <h2>${t('label.prepMethod')}</h2>${steps || `<p>${t('label.notSpecified')}</p>`}
-  <h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>
-  ${f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:80mm;border-radius:6px;margin-top:6px">` : ''}
-  <h2>${t('label.allergens')}</h2><div>${algs}</div>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px;display:flex;gap:10px"><strong style="flex-shrink:0;color:#999">${i+1}.</strong><span>${escapeHtml(p)}</span></div>`).join('');
+  const metaChips = [
+    produccion ? `<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
+    f.tiempo ? `<span>⏱ ${f.tiempo} min</span>` : '',
+    f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : ''
+  ].filter(Boolean).join('');
+  const body = `
+    ${printReportHeaderHtml(displayName)}
+    ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#f5f5f3;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
+    ${f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : ''}
+    <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
+    <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
+    <h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>
+    <h2>${t('label.allergens')}</h2><div>${algs}</div>
+  `;
+  printReportWindow(displayName, body, {winSize:'width=800,height=1000'});
 }
 

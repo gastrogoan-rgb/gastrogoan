@@ -3158,23 +3158,13 @@ function printPromoMes(year, month){
       rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'✅':'—'}</td></tr>`);
     });
   }
-  const win = window.open('', '_blank', 'width=900,height=1000');
-  if(!win){ showToast(t('promo.print.popupBlocked')); return; }
   const printTitle = t('promo.print.title').replace('${month}', monthFull(month)).replace('${year}', year);
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${printTitle}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:12mm}
-  h1{font-size:15pt;margin:0 0 10px}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
-  th{background:#f5f5f3}
-  @media print{body{padding:8mm}}</style></head><body>
-  <h1>${printTitle}</h1>
-  <table><thead><tr><th>${t('promo.print.date')}</th><th>${t('promo.print.title.col')}</th><th>${t('promo.print.description')}</th><th>${t('promo.print.responsible')}</th><th>${t('promo.print.done')}</th></tr></thead>
-  <tbody>${rows.join('') || `<tr><td colspan="5">${t('promo.print.noActions')}</td></tr>`}</tbody></table>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const body = `
+    ${printReportHeaderHtml(printTitle)}
+    <table><thead><tr><th>${t('promo.print.date')}</th><th>${t('promo.print.title.col')}</th><th>${t('promo.print.description')}</th><th>${t('promo.print.responsible')}</th><th>${t('promo.print.done')}</th></tr></thead>
+    <tbody>${rows.join('') || `<tr><td colspan="5" class="pr-empty">${t('promo.print.noActions')}</td></tr>`}</tbody></table>
+  `;
+  printReportWindow(printTitle, body, {winSize:'width=900,height=1000'});
 }
 
 /* ============================================================
@@ -7411,15 +7401,18 @@ function goManualChapter(i){
 }
 function printManualChapter(){
   const ch = MANUAL_CHAPTERS[manualChapter];
+  const title = manualChapterTitle(ch).replace(/<[^>]+>/g,'');
   const win = window.open('', '_blank', 'width=800,height=1000');
   if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${manualChapterTitle(ch).replace(/<[^>]+>/g,'')}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:15mm 12mm;max-width:180mm;margin:0 auto}
-  h3{font-size:15pt}h4{font-size:12.5pt;color:#555;margin-top:16px}
+  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${title}</title>
+  <style>body{font-family:Arial,sans-serif;font-size:11pt;color:#111;padding:20mm 18mm;max-width:180mm;margin:0 auto}
+  .pr-brand{font-size:11.5px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+  h2{font-size:17pt;margin:0 0 16px}h4{font-size:12.5pt;color:#555;margin-top:16px}
   .manual-step{display:flex;gap:10px;margin-bottom:8px}.sn{flex:none;width:22px;height:22px;border-radius:50%;background:#DF7039;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
   .manual-tip,.manual-warning{background:#F5F0E3;border-left:3px solid #DF7039;border-radius:6px;padding:8px 12px;margin:10px 0;font-size:10.5pt}
-  @media print{body{padding:8mm}}</style></head><body>
-  <h2>${manualChapterTitle(ch).replace(/<[^>]+>/g,'')}</h2>
+  @media print{body{padding:10mm}}</style></head><body>
+  <div class="pr-brand">${escapeHtml((DB.business&&DB.business.name)||'GastroGoan')}</div>
+  <h2>${title}</h2>
   ${manualChapterText(ch)}
   </body></html>`);
   win.document.close();

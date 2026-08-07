@@ -1270,24 +1270,14 @@ function printStockCountSheet(){
   const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
     .map(e => ({name: e.name, unit: e.unit, category: t('label.elaborations'), qty: e.qty||0}))
     .sort((a,b) => a.name.localeCompare(b.name));
-  const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td>${fmtNum(x.qty)}</td><td></td></tr>`).join('');
-  const win = window.open('', '_blank', 'width=800,height=1000');
-  if(!win){ showToast(t('megalista.popupBlocked')); return; }
+  const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td class="pr-num">${fmtNum(x.qty)}</td><td></td></tr>`).join('');
   const printLocale = getLang()==='en' ? 'en-GB' : getLang()==='ca' ? 'ca-ES' : 'es-ES';
-  win.document.write(`<!DOCTYPE html><html lang="${getLang()}"><head><meta charset="UTF-8"><title>${t('btn.printStockSheet')}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:10pt;color:#111;padding:15mm 12mm}
-  h1{font-size:16pt;margin:0 0 12px}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}
-  th{background:#f5f5f3}
-  @media print{body{padding:10mm}}</style></head><body>
-  <h1>${t('btn.printStockSheet')} — ${new Date().toLocaleDateString(printLocale)}</h1>
-  <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>${t('megalista.estimated')}</th><th>${t('megalista.real')}</th></tr></thead>
-  <tbody>${rows || `<tr><td colspan="5">${t('common.noResults')}</td></tr>`}</tbody></table>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const body = `
+    ${printReportHeaderHtml(t('btn.printStockSheet'), new Date().toLocaleDateString(printLocale))}
+    <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th class="pr-num">${t('megalista.estimated')}</th><th class="pr-num">${t('megalista.real')}</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="5" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
+  `;
+  printReportWindow(t('btn.printStockSheet'), body, {winSize:'width=800,height=1000'});
 }
 
 function adjustStock(ingredientId, delta){

@@ -2138,22 +2138,12 @@ function printWeeklySchedule(){
     }).join('');
     return `<tr><td><strong>${escapeHtml(emp.name)}</strong>${emp.rol?` <span style="color:#888">(${escapeHtml(emp.rol)})</span>`:''}</td>${cells}</tr>`;
   }).join('');
-  const win = window.open('', '_blank', 'width=900,height=1000');
-  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
-  win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t('btn.printSchedule')}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:9.5pt;color:#111;padding:12mm}
-  h1{font-size:15pt;margin:0 0 10px}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
-  th{background:#f5f5f3}
-  @media print{body{padding:8mm}}</style></head><body>
-  <h1>${t('btn.printSchedule')} — ${label}</h1>
-  <table><thead><tr><th>${t('th.employee')}</th>${headerCells}</tr></thead>
-  <tbody>${rows || `<tr><td colspan="8">${t('empty.employees')}</td></tr>`}</tbody></table>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
+  const body = `
+    ${printReportHeaderHtml(t('btn.printSchedule'), label)}
+    <table><thead><tr><th>${t('th.employee')}</th>${headerCells}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="8" class="pr-empty">${t('empty.employees')}</td></tr>`}</tbody></table>
+  `;
+  printReportWindow(t('btn.printSchedule'), body, {winSize:'width=900,height=1000'});
 }
 
 function openTurnoModal(id, employeeId, fecha){
