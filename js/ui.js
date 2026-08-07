@@ -1078,9 +1078,17 @@ function navigate(view){
     return;
   }
 
+  const prevActive = document.querySelector('.view.active');
+  const wasAlreadyInPedidos = prevActive && prevActive.id === 'view-pedidos';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById('view-' + view);
   if(target) target.classList.add('active');
+
+  // Entrar en Pedidos desde otro módulo siempre aterriza en la lista del
+  // historial, nunca directo en el detalle del último pedido que se hubiera
+  // abierto — si no, parecía que "saltaba" a un pedido al azar en vez de
+  // dejar elegir cuál mirar.
+  if(view === 'pedidos' && !wasAlreadyInPedidos) pedidoDetailId = null;
 
   const inCurrentFolder = currentFolder && FOLDERS[currentFolder] && FOLDERS[currentFolder].modules.some(m => m.id === view);
   if(!inCurrentFolder && MODULE_FOLDER[view]) currentFolder = MODULE_FOLDER[view];
