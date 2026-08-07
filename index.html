@@ -37,7 +37,6 @@
     <span class="app-logo-text" id="app-logo-text">GastroGoan<span style="color:var(--olive);font-size:18px;line-height:1;margin:0 2px">·</span><span class="app-logo-sub" data-i18n="hdr.subtitle">Kit de Gestión</span></span>
   </a>
   <span id="sync-badge" onclick="openCloudWizard()" style="display:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;margin-right:8px;white-space:nowrap;cursor:pointer"></span>
-  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" data-i18n-title="hdr.updateTitle" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text" data-i18n="common.update"> Actualizar</span></button>
   <div style="position:relative;margin-right:8px">
     <button class="btn btn-sm" id="lang-btn" onclick="toggleLangMenu(event)" style="display:flex;align-items:center;gap:6px;background:#fff">
       <span id="lang-btn-flag">🇪🇸</span><span class="hdr-text" id="lang-btn-label">Castellano</span>
@@ -49,14 +48,15 @@
     </div>
   </div>
   <button class="btn btn-sm" id="business-switch-btn" onclick="requestSwitchBusinessPin()" style="margin-right:4px" data-i18n-title="hdr.switchBusinessTitle" title="Cambiar de negocio"><i class="ti ti-building-store"></i><span class="hdr-text" data-i18n="hdr.businesses"> Negocios</span></button>
+  <button class="btn btn-sm" id="refresh-btn" onclick="manualRefresh()" data-i18n-title="hdr.updateTitle" title="Actualizar datos" style="margin-right:4px"><i class="ti ti-refresh" id="refresh-icon"></i><span class="hdr-text" data-i18n="common.update"> Actualizar</span></button>
+  <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:4px;background:#8A4A3B;color:#fff;border:none"><i class="ti ti-archive"></i><span class="hdr-text" data-i18n="hdr.archive"> Archivar</span></button>
+  <button class="btn btn-sm" id="logout-btn" onclick="logoutAccessSession()" style="display:none;margin-right:4px" data-i18n-title="access.logoutTitle" title="Cerrar sesión"><i class="ti ti-logout"></i><span class="hdr-text" data-i18n="access.logout"> Cerrar sesión</span></button>
   <span class="hdr-divider"></span>
   <button class="btn btn-sm hdr-icon-btn" id="chat-fab" onclick="toggleChatPanel()" data-i18n-title="title.internalChat" title="Chat interno" style="margin-right:4px;position:relative">
     <i class="ti ti-messages"></i>
     <span class="chat-badge" id="chat-badge" style="display:none"></span>
   </button>
   <button class="btn btn-sm hdr-icon-btn" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
-  <button class="btn btn-sm" id="archive-reminder-btn" onclick="goToArchiveFromReminder()" style="display:none;margin-right:4px;background:#8A4A3B;color:#fff;border:none"><i class="ti ti-archive"></i><span class="hdr-text" data-i18n="hdr.archive"> Archivar</span></button>
-  <button class="btn btn-sm" id="logout-btn" onclick="logoutAccessSession()" style="display:none;margin-right:4px" data-i18n-title="access.logoutTitle" title="Cerrar sesión"><i class="ti ti-logout"></i><span class="hdr-text" data-i18n="access.logout"> Cerrar sesión</span></button>
   <button class="btn btn-sm" id="lock-btn" onclick="lockOwnerArea()" style="display:none" data-i18n-title="title.lockGestion" title="Bloquear zona de gestión"><i class="ti ti-lock"></i></button>
 </header>
 

@@ -4716,6 +4716,7 @@ function updateLogoutBtn(){
   if(bizBtn) bizBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
 }
 function logoutAccessSession(){
+  if(!confirm(t('msg.confirmLogout'))) return;
   clearAccessSession();
   areaUnlocked = {cocina:false, sala:false};
   ownerUnlocked = false;
