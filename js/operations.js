@@ -776,11 +776,16 @@ function renderPedidoResultsList(){
     return;
   }
 
+  const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
+  const totalHtml = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
+
   const sorted = orders.slice().sort((a,b) => b.date.localeCompare(a.date));
-  box.innerHTML = sorted.map(o => {
+  box.innerHTML = totalHtml + sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
     const comp = getPedidoComprobacionMap()[o.comprobacion];
+    const dias = o.estado === 'ENVIADO' ? daysSincePedidoEnviado(o) : null;
+    const diasBadge = dias != null && dias > 0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}" style="margin-top:6px">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : '';
     return `
       <div class="card" style="cursor:pointer" onclick="openPedido(${o.id})">
         <h3 style="justify-content:space-between;gap:8px">
@@ -790,8 +795,11 @@ function renderPedidoResultsList(){
             ${o.estado==='RECIBIDO' ? `<button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteOrder(${o.id})" title="${t('title.deleteOrder')}"><i class="ti ti-trash"></i></button>` : ''}
           </span>
         </h3>
-        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')}</div>
-        ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
+        <div style="color:var(--muted);font-size:13px">${itemCount} ${itemCount!==1?t('noun.products'):t('noun.product')} · ${withQty} ${t('label.withQty')} · <strong>${fmtMoney(pedidoTotalConIva(o))}</strong></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${comp ? `<span class="badge ${comp.cls}" style="margin-top:6px">${comp.label}</span>` : ''}
+          ${diasBadge}
+        </div>
       </div>
     `;
   }).join('');
@@ -815,6 +823,31 @@ function backToPedidoList(){
 // sin que el desglose salga mal. El precio del ingrediente (ing.price) es
 // la base sin IVA: aquí se le AÑADE el IVA de cada uno, no se extrae de un
 // total que ya lo llevara incluido.
+// Total del pedido (base + IVA de cada ingrediente), usado en el histórico
+// para no tener que entrar en cada pedido para saber cuánto costó.
+function pedidoTotalConIva(o){
+  const isRecibido = o.estado === 'RECIBIDO';
+  let total = 0;
+  (o.items||[]).forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return;
+    const qty = isRecibido ? (line.cantidadRecibida||line.cantidad||0) : (line.cantidad||0);
+    const base = qty * (ing.price||0);
+    if(base <= 0) return;
+    const ivaPct = ing.iva != null ? ing.iva : 0;
+    total += base * (1 + ivaPct/100);
+  });
+  return total;
+}
+
+// Días transcurridos desde que un pedido se marcó como Enviado — para poder
+// avisar visualmente de un pedido que lleva mucho tiempo sin confirmarse ni
+// recibirse (antes no había ninguna forma de detectar esto de un vistazo).
+function daysSincePedidoEnviado(o){
+  if(!o.enviadoEn) return null;
+  return Math.floor((new Date(todayStr()) - new Date(o.enviadoEn)) / 86400000);
+}
+
 function renderPedidoIvaBreakdownHtml(o, isRecibido){
   const groups = {}; // ivaPct -> base
   let missingIva = false;
@@ -874,7 +907,10 @@ function renderPedidoDetail(){
     <div class="card" style="margin-top:10px">
       <h3 style="justify-content:space-between">
         <span><i class="ti ti-truck-delivery"></i> ${escapeHtml(o.supplier)} — ${o.date}</span>
-        <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          ${(() => { const dias = o.estado==='ENVIADO' ? daysSincePedidoEnviado(o) : null; return dias!=null && dias>0 ? `<span class="badge ${dias>=3?'badge-red':'badge-amber'}">${t('label.daysSinceSent').replace('${days}', dias)}</span>` : ''; })()}
+          <span class="badge ${PEDIDO_BADGE[o.estado]||'badge-gray'}">${pedidoEstadoLabel(o.estado)}</span>
+        </span>
       </h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;margin-bottom:10px">
         ${itemsHtml || `<div class="empty" style="padding:10px">${t('empty.noItems')}</div>`}
@@ -950,6 +986,7 @@ function renderPedidoDetail(){
       <div class="actions-cell" style="flex-wrap:wrap;gap:8px">
         ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
         ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
+        ${o.estado==='RECIBIDO' ? `<button class="owner-only btn" onclick="revertPedidoRecepcion(${o.id})"><i class="ti ti-arrow-back-up"></i> ${t('btn.revertReception')}</button>` : ''}
         <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
@@ -1125,12 +1162,18 @@ function changePedidoEstado(estado){
   if(!o) return;
   if(o.estado === estado) return;
   o.estado = estado;
+  if(estado === 'ENVIADO' && !o.enviadoEn) o.enviadoEn = todayStr();
   if(estado === 'RECIBIDO'){
     (o.items||[]).forEach(line => {
       const ing = getIngredient(line.ingredientId);
       if(!ing) return; // ingrediente borrado de Mega Lista: no hay stock real que sumar
       const s = getStockEntry(line.ingredientId);
       const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+      // Se escribe la cantidad realmente contabilizada en la propia línea:
+      // si no, el detalle del pedido seguía mostrando "Recibida: 0" en cada
+      // artículo aunque el pedido ya estuviera marcado como Recibido y el
+      // stock/gasto ya se hubieran actualizado con la cantidad pedida.
+      line.cantidadRecibida = recibida;
       s.qty = (s.qty||0) + (recibida||0);
     });
     renderStock();
@@ -1149,13 +1192,20 @@ function pedidoTexto(o){
   return `🛒 ${t('label.orderTo')} ${o.supplier}\n${t('common.date')}: ${o.date}\n\n${rows}${o.notas ? '\n\n📝 '+o.notas : ''}`;
 }
 
+// Si el proveedor no tiene teléfono/email guardado, antes se abría igualmente
+// una URL de WhatsApp/mailto vacía y el pedido se quedaba marcado como
+// "Enviado" aunque en realidad no le hubiera llegado nada a nadie. Ahora se
+// avisa y no se manda — y si el pedido estaba en Borrador, el envío real
+// (cuando sí hay datos de contacto) lo pasa a Enviado automáticamente.
 function sendPedidoWhatsapp(order){
   const o = order || getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   const prov = getProviderByName(o.supplier);
   const tel = prov && prov.tel ? prov.tel.replace(/\D/g,'') : '';
+  if(!tel){ showToast(t('msg.supplierMissingPhone')); return; }
   const txt = encodeURIComponent(pedidoTexto(o));
   window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
+  markPedidoSentIfDraft(o);
 }
 
 function sendPedidoEmail(order){
@@ -1163,9 +1213,18 @@ function sendPedidoEmail(order){
   if(!o) return;
   const prov = getProviderByName(o.supplier);
   const to = prov && prov.email ? prov.email : '';
+  if(!to){ showToast(t('msg.supplierMissingEmail')); return; }
   const subject = encodeURIComponent(t('msg.supplierOrderSubject').replace('${supplier}', o.supplier).replace('${date}', o.date));
   const body = encodeURIComponent(pedidoTexto(o));
   window.location.href = 'mailto:'+to+'?subject='+subject+'&body='+body;
+  markPedidoSentIfDraft(o);
+}
+function markPedidoSentIfDraft(o){
+  if(o.estado !== 'BORRADOR') return;
+  o.estado = 'ENVIADO';
+  o.enviadoEn = todayStr();
+  saveDB();
+  renderPedidos();
 }
 
 function printPedido(){
@@ -1268,13 +1327,16 @@ function orderFormBodyHtml(){
 // refrescar solo esto al escribir, sin recrear el input de búsqueda y que
 // pierda el foco en cada letra (por eso antes solo dejaba escribir de una
 // en una: cada tecla volvía a montar el formulario entero).
+// Con catálogos pequeños (proveedor de pocos artículos) no tiene sentido
+// obligar a escribir para verlos: se listan todos directamente. Solo con
+// catálogos grandes hace falta buscar para no abrumar con la lista entera.
+const ORDER_ITEMS_AUTOLIST_MAX = 8;
 function orderItemsRowsHtml(){
   const search = orderModalSearch.toLowerCase();
-  // Sin búsqueda no se lista nada: con proveedores de muchos artículos,
-  // volcarlos todos de golpe abruma. Solo aparecen al buscarlos por nombre.
-  const rows = !search ? '' : orderModalLines.filter(line => {
+  const showAll = !search && orderModalLines.length <= ORDER_ITEMS_AUTOLIST_MAX;
+  const rows = (!search && !showAll) ? '' : orderModalLines.filter(line => {
     const ing = getIngredient(line.ingredientId);
-    return ing && ing.name.toLowerCase().includes(search);
+    return ing && (!search || ing.name.toLowerCase().includes(search));
   }).map(line => {
     const ing = getIngredient(line.ingredientId);
     const s = getStockEntry(ing.id);
@@ -1287,7 +1349,7 @@ function orderItemsRowsHtml(){
       </div>
     `;
   }).join('');
-  const emptyMsg = !search
+  const emptyMsg = (!search && !showAll)
     ? `<div class="empty" style="padding:10px">${t('msg.searchSupplierProducts')}</div>`
     : `<div class="empty" style="padding:10px">${t('common.noResults')}</div>`;
   return rows || emptyMsg;
@@ -1304,6 +1366,7 @@ function updateOrderItemSearch(val){
 // Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
 function orderFormButtonsHtml(){
   return `
+    <button class="btn" onclick="saveNewPedidoAsDraft()"><i class="ti ti-device-floppy"></i> ${t('btn.saveDraft')}</button>
     <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
     <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
     <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
@@ -1411,6 +1474,8 @@ function selectOrderSupplier(supplier){
 }
 
 function sugerirPorDeficit(){
+  const hasManualQty = orderModalLines.some(l => l.cantidad > 0);
+  if(hasManualQty && !confirm(t('msg.confirmOverwriteQtyWithSuggestion'))) return;
   orderModalLines.forEach(line => {
     const s = getStockEntry(line.ingredientId);
     line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
@@ -1425,17 +1490,44 @@ function updateOrderLineQty(ingredientId, value){
   renderOrderSummary();
 }
 
+// Hay ya un pedido pendiente (no Recibido) para este proveedor? Sirve para
+// avisar antes de crear uno nuevo y evitar duplicar el pedido físico sin
+// darse cuenta (antes no había ningún aviso).
+function pendingOrderForSupplier(supplier){
+  return DB.purchaseOrders.find(o => o.supplier === supplier && (o.area||'cocina') === currentArea() && o.estado !== 'RECIBIDO');
+}
+
 // Crea (o reutiliza) el pedido a partir del formulario del modal "Nuevo Pedido".
 // Devuelve el pedido creado, o null si los datos no son válidos.
-function buildNewPedido(){
+function buildNewPedido(estado){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return null; }
   const date = document.getElementById('order-date').value || todayStr();
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return null; }
-  const order = {id: genId(), supplier: orderModalSupplier, date, estado:'ENVIADO', items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
+  const pending = pendingOrderForSupplier(orderModalSupplier);
+  if(pending && !confirm(t('msg.confirmPendingOrderExists').replace('${date}', pending.date).replace('${status}', pedidoEstadoLabel(pending.estado)))) return null;
+  const finalEstado = estado || 'ENVIADO';
+  const order = {id: genId(), supplier: orderModalSupplier, date, estado: finalEstado, items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
+  if(finalEstado === 'ENVIADO') order.enviadoEn = todayStr();
   DB.purchaseOrders.push(order);
   saveDB();
   return order;
+}
+
+// Guarda el pedido en curso como Borrador, sin enviarlo todavía — para poder
+// revisarlo con calma antes de mandarlo (antes el único estado real al crear
+// un pedido era "Enviado", no había forma de dejarlo a medias).
+function saveNewPedidoAsDraft(){
+  const order = buildNewPedido('BORRADOR');
+  if(!order) return;
+  if(orderFormInline){
+    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = '';
+    pedidosTab = 'historial';
+  }else{
+    closeModal();
+  }
+  renderPedidos();
+  showToast(t('msg.orderSavedAsDraft'));
 }
 
 function printPedidoBorrador(){
@@ -1448,6 +1540,10 @@ function printPedidoBorrador(){
 }
 
 function sendNewPedido(method){
+  if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return; }
+  const prov = getProviderByName(orderModalSupplier);
+  if(method === 'whatsapp' && !(prov && prov.tel)){ showToast(t('msg.supplierMissingPhone')); return; }
+  if(method === 'email' && !(prov && prov.email)){ showToast(t('msg.supplierMissingEmail')); return; }
   const order = buildNewPedido();
   if(!order) return;
   if(orderFormInline){
@@ -1505,12 +1601,42 @@ function duplicateOrder(id){
   if(!o) return;
   const copy = {
     id: genId(), supplier: o.supplier, date: todayStr(), estado: 'BORRADOR',
-    items: (o.items||[]).map(line => ({ingredientId: line.ingredientId, cantidad: line.cantidad})),
+    items: (o.items||[]).map(line => ({ingredientId: line.ingredientId, cantidad: line.cantidad, cantidadRecibida: 0})),
     notas: '', recepcion: null, comprobacion: '', area: o.area || currentArea()
   };
   DB.purchaseOrders.push(copy);
   saveDB();
   showToast(t('msg.orderDuplicated'));
   openPedido(copy.id);
+}
+
+// Deshace la recepción de un pedido marcado por error: revierte el stock y
+// el gasto variable ya generados y lo devuelve a Enviado. Antes la única
+// salida de un "Recibido" puesto sin querer era borrar el pedido entero.
+function revertPedidoRecepcion(id){
+  const o = getPurchaseOrder(id);
+  if(!o || o.estado !== 'RECIBIDO') return;
+  requestBusinessPinAction(t('title.revertReception'), t('msg.confirmRevertReception'), () => reallyRevertPedidoRecepcion(id));
+}
+function reallyRevertPedidoRecepcion(id){
+  const o = getPurchaseOrder(id);
+  if(!o) return;
+  (o.items||[]).forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(!ing) return;
+    const recibida = line.cantidadRecibida > 0 ? line.cantidadRecibida : line.cantidad;
+    const s = getStockEntry(line.ingredientId);
+    const before = s.qty||0;
+    s.qty = Math.max(0, before - (recibida||0));
+    if(typeof logStockAdjustment === 'function') logStockAdjustment('ing', line.ingredientId, ing.name, before, s.qty, 'purchase');
+    line.cantidadRecibida = 0;
+  });
+  DB.ge.variables = (DB.ge.variables||[]).filter(v => v.pedidoId !== id);
+  o.gvCreated = false;
+  o.estado = 'ENVIADO';
+  renderStock();
+  saveDB();
+  renderPedidos();
+  showToast(t('msg.receptionReverted'));
 }
 
