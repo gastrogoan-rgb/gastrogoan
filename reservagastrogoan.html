@@ -222,7 +222,7 @@ const I18N = {
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
     'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
-    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta', 'pago.metodoLocal':'¿Cómo vas a pagar?','pago.efectivo':'Efectivo','pago.tarjetaLocal':'Tarjeta (al recibir)','pago.pagaConLabel':'¿Con qué billete vas a pagar?','pago.pagaConPlaceholder':'Ej: 20, 50...','pago.pagaConHint':'Para que llevemos el cambio justo.','error.pagaCon':'Indica un importe igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Este negocio solo acepta tarjeta al entregar/recoger.',
+    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta', 'pago.metodoLocal':'¿Cómo vas a pagar?','pago.efectivo':'Efectivo','pago.tarjetaLocal':'Tarjeta (al recibir)','pago.pagaConLabel':'¿Con qué billete vas a pagar?','pago.pagaConPlaceholder':'Ej: 20, 50...','pago.pagaConHint':'Para que llevemos el cambio justo.','error.pagaCon':'Indica un importe igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Este negocio solo acepta tarjeta al entregar/recoger.', 'pago.metodoFijado':'Pagarás con: %s',
     'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).',
     'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
     'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
@@ -276,7 +276,7 @@ const I18N = {
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
     'no.services':'This restaurant has no online services available at the moment.',
-    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card', 'pago.metodoLocal':'How will you pay?','pago.efectivo':'Cash','pago.tarjetaLocal':'Card (on arrival)','pago.pagaConLabel':'What bill will you pay with?','pago.pagaConPlaceholder':'E.g: 20, 50...','pago.pagaConHint':'So we bring the right change.','error.pagaCon':'Enter an amount equal to or greater than the total (%s).', 'pago.soloTarjetaLocal':'This business only accepts card on delivery/pickup.',
+    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card', 'pago.metodoLocal':'How will you pay?','pago.efectivo':'Cash','pago.tarjetaLocal':'Card (on arrival)','pago.pagaConLabel':'What bill will you pay with?','pago.pagaConPlaceholder':'E.g: 20, 50...','pago.pagaConHint':'So we bring the right change.','error.pagaCon':'Enter an amount equal to or greater than the total (%s).', 'pago.soloTarjetaLocal':'This business only accepts card on delivery/pickup.', 'pago.metodoFijado':'You will pay with: %s',
     'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, date and time).',
     'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
     'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
@@ -330,7 +330,7 @@ const I18N = {
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
     'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
-    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta', 'pago.metodoLocal':'Com pagaràs?','pago.efectivo':'Efectiu','pago.tarjetaLocal':'Targeta (en rebre)','pago.pagaConLabel':'Amb quin bitllet pagaràs?','pago.pagaConPlaceholder':'Ex: 20, 50...','pago.pagaConHint':'Perquè portem el canvi just.','error.pagaCon':'Indica un import igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Aquest negoci només accepta targeta en entregar/recollir.',
+    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta', 'pago.metodoLocal':'Com pagaràs?','pago.efectivo':'Efectiu','pago.tarjetaLocal':'Targeta (en rebre)','pago.pagaConLabel':'Amb quin bitllet pagaràs?','pago.pagaConPlaceholder':'Ex: 20, 50...','pago.pagaConHint':'Perquè portem el canvi just.','error.pagaCon':'Indica un import igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Aquest negoci només accepta targeta en entregar/recollir.', 'pago.metodoFijado':'Pagaràs amb: %s',
     'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, data i hora).',
     'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
     'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
@@ -1181,68 +1181,50 @@ function renderOrderForm(){
         <label>${t('order.notas')}</label>
         <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
       </div>
-      ${redsysConfigured ? `
       <div class="field">
-        <label>${t('pago')}</label>
-        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago" value="local" checked onchange="updateLocalPaymentVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
-        <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} onchange="updateLocalPaymentVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjeta')}</label>
-      </div>` : ''}
-      ${isDelivery ? `
-      <div class="field" id="o-cash-block">
-        ${renderLocalPagoRadiosHtml(p)}
+        ${renderPaymentMethodRadiosHtml(p)}
         <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
           <label>${t('pago.pagaConLabel')}</label>
           <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
           <small style="color:#888">${t('pago.pagaConHint')}</small>
         </div>
-      </div>` : ''}
+      </div>
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
     </div>
   `;
   renderCartSummary();
   updateTimeInputRange('o-date','o-time','o-hour-hint');
   applyLeadTime('o-date','o-time','o-hour-hint');
-  updateLocalPaymentVisibility();
   updateCashAmountVisibility();
 }
 
-// Solo se pregunta con qué billete se va a pagar (para preparar el cambio)
-// en pedidos a DOMICILIO — para recoger en el propio local no hace falta,
-// el cliente paga en persona en el mostrador sin que nadie tenga que
-// llevarle cambio a ningún sitio. Respeta las formas de pago que el
-// negocio haya marcado que acepta en Mi Negocio → Pedidos: si solo acepta
-// una, no se pregunta (queda fijada esa), si acepta las dos se deja elegir.
-function renderLocalPagoRadiosHtml(p){
-  const aceptaEfectivo = p.aceptaEfectivo !== false;
-  const aceptaTarjetaLocal = p.aceptaTarjetaLocal !== false;
-  if(aceptaEfectivo && aceptaTarjetaLocal){
-    return `
-      <label>${t('pago.metodoLocal')}</label>
-      <label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago-local" value="efectivo" checked onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.efectivo')}</label>
-      <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago-local" value="tarjeta" onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjetaLocal')}</label>
-    `;
+// Un único grupo de opciones con las 3 formas de pago posibles (en vez del
+// antiguo esquema de dos niveles "online vs en persona" + "efectivo vs
+// tarjeta"): efectivo, tarjeta al entregar/recoger, y TPV virtual (pagar ya
+// online con tarjeta, si el negocio lo tiene configurado). Respeta lo que
+// el negocio haya marcado en Mi Negocio → Pedidos; si solo hay una
+// disponible, se fija sin preguntar.
+function renderPaymentMethodRadiosHtml(p){
+  const opts = [];
+  if(redsysConfigured && p.aceptaTpvVirtual !== false) opts.push({value:'tpv', label:t('pago.tarjeta')});
+  if(p.aceptaEfectivo !== false) opts.push({value:'efectivo', label: t('pago.efectivo')});
+  if(p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
+  if(!opts.length) opts.push({value:'efectivo', label: t('pago.efectivo')}); // salvaguarda: nunca dejar el formulario sin ninguna opción
+  if(opts.length === 1){
+    return `<input type="radio" name="o-pago-metodo" value="${opts[0].value}" checked style="display:none"><p style="font-size:13px;color:#888">${t('pago.metodoFijado').replace('%s', opts[0].label)}</p>`;
   }
-  // Solo una forma de pago local aceptada: se fija sin preguntar (radio
-  // oculto, para que updateCashAmountVisibility/submitOrder sigan leyendo
-  // el mismo sitio sin necesitar un caso especial).
-  const only = aceptaEfectivo ? 'efectivo' : 'tarjeta';
-  return `<input type="radio" name="o-pago-local" value="${only}" checked style="display:none">${only==='tarjeta' ? `<div style="font-size:13px;color:#888">${t('pago.soloTarjetaLocal')}</div>` : ''}`;
-}
-// Muestra la pregunta de "efectivo o tarjeta al recibir" solo cuando el
-// cliente NO va a pagar ya online con tarjeta (si no hay Redsys configurado,
-// siempre se paga en persona, así que se muestra directamente).
-function updateLocalPaymentVisibility(){
-  const outer = document.querySelector('input[name="o-pago"]:checked');
-  const block = document.getElementById('o-cash-block');
-  if(block) block.style.display = (outer && outer.value === 'tarjeta') ? 'none' : '';
+  return `
+    <label>${t('pago')}</label>
+    ${opts.map((o,i) => `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago-metodo" value="${o.value}" ${i===0?'checked':''} onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${o.label}</label>`).join('')}
+  `;
 }
 // El importe del billete con el que se va a pagar solo tiene sentido si
-// eligen efectivo — si van a pagar con tarjeta en persona (datáfono del
-// repartidor/mostrador), no hace falta preparar cambio.
+// eligen efectivo Y es un pedido a domicilio (para recoger en el local no
+// hace falta preparar cambio, el cliente paga en persona en el mostrador).
 function updateCashAmountVisibility(){
-  const sel = document.querySelector('input[name="o-pago-local"]:checked');
+  const sel = document.querySelector('input[name="o-pago-metodo"]:checked');
   const wrap = document.getElementById('o-cash-amount-wrap');
-  if(wrap) wrap.style.display = (!sel || sel.value === 'efectivo') ? '' : 'none';
+  if(wrap) wrap.style.display = (currentTab === 'delivery' && sel && sel.value === 'efectivo') ? '' : 'none';
 }
 
 function getCartQty(recipeId){
@@ -1374,18 +1356,17 @@ async function submitOrder(){
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
   const total = subtotal + deliveryFee;
 
-  // Si es un pedido a DOMICILIO y va a pagar en persona (no online con
-  // tarjeta) y elige efectivo, pedimos con qué billete va a pagar — así el
-  // repartidor sabe de antemano cuánto cambio llevar, en vez de
-  // descubrirlo al llegar. Tiene que ser al menos el importe total. Para
-  // recoger en el local no se pregunta: el cliente paga en persona en el
-  // mostrador, no hace falta que nadie lleve cambio a ningún sitio.
-  const pagoTarjetaOnline = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
+  // Método de pago elegido entre las opciones que el negocio acepta
+  // (efectivo / tarjeta al recibir / TPV virtual). Si es DOMICILIO y elige
+  // efectivo, pedimos con qué billete va a pagar — así el repartidor sabe
+  // de antemano cuánto cambio llevar, en vez de descubrirlo al llegar.
+  // Para recoger en el local no se pregunta: el cliente paga en persona en
+  // el mostrador, no hace falta que nadie lleve cambio a ningún sitio.
+  const metodoPago = document.querySelector('input[name="o-pago-metodo"]:checked')?.value || 'efectivo';
   let metodoPagoLocal = null, pagaCon = null;
-  if(isDelivery && !pagoTarjetaOnline){
-    const localSel = document.querySelector('input[name="o-pago-local"]:checked');
-    metodoPagoLocal = localSel ? localSel.value : 'efectivo';
-    if(metodoPagoLocal === 'efectivo'){
+  if(metodoPago !== 'tpv'){
+    metodoPagoLocal = metodoPago === 'tarjeta_local' ? 'tarjeta' : 'efectivo';
+    if(isDelivery && metodoPagoLocal === 'efectivo'){
       const pagaConEl = document.getElementById('o-paga-con');
       pagaCon = pagaConEl ? parseFloat(pagaConEl.value) : NaN;
       if(isNaN(pagaCon) || pagaCon < total){
@@ -1412,8 +1393,7 @@ async function submitOrder(){
   const submitBtn = document.getElementById('o-submit');
   if(submitBtn) submitBtn.disabled = true;
 
-  const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
-  if(pagoTarjeta){
+  if(metodoPago === 'tpv'){
     setPaySubmitEnabled(false);
     payWithCard(req, total, isDelivery ? t('order.delivery.title') : t('order.takeaway.title'));
     return;

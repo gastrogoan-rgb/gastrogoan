@@ -2437,20 +2437,17 @@ function renderPedidosConfigCard(){
         <small style="color:var(--muted)">${t('mn.pedidos.maxPorFranjaDesc')}</small>
       </div>
       <div class="field">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
-          <input type="checkbox" id="mn-pagolocal" ${p.permitirPagoLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.allowPayOnPickup')}
-        </label>
-        <small style="color:var(--muted)">${t('mn.pedidos.allowPayOnPickupDesc')}</small>
-      </div>
-      <div class="field">
         <label>${t('mn.pedidos.metodosLocales')}</label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px">
           <input type="checkbox" id="mn-acepta-efectivo" ${p.aceptaEfectivo!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaEfectivo')}
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px">
           <input type="checkbox" id="mn-acepta-tarjeta-local" ${p.aceptaTarjetaLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTarjetaLocal')}
         </label>
-        <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')}</small>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="mn-acepta-tpv-virtual" ${p.aceptaTpvVirtual!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
+        </label>
+        <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')} ${t('mn.pedidos.aceptaTpvVirtualHint')}</small>
       </div>
       ${deliveryEnabled ? `
       <div class="field">
@@ -2480,15 +2477,21 @@ async function savePedidosConfig(){
   const p = b.pedidos || {};
   p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
-  p.permitirPagoLocal = document.getElementById('mn-pagolocal').checked;
   const aceptaEfectivo = document.getElementById('mn-acepta-efectivo').checked;
   const aceptaTarjetaLocal = document.getElementById('mn-acepta-tarjeta-local').checked;
-  if(!aceptaEfectivo && !aceptaTarjetaLocal){
+  const aceptaTpvVirtual = document.getElementById('mn-acepta-tpv-virtual').checked;
+  if(!aceptaEfectivo && !aceptaTarjetaLocal && !aceptaTpvVirtual){
     showToast(t('msg.needOnePaymentMethod'));
     return;
   }
   p.aceptaEfectivo = aceptaEfectivo;
   p.aceptaTarjetaLocal = aceptaTarjetaLocal;
+  p.aceptaTpvVirtual = aceptaTpvVirtual;
+  // Las 3 casillas de arriba son ahora la única fuente de verdad de qué
+  // formas de pago se ofrecen — el antiguo interruptor "permitirPagoLocal"
+  // (todo o nada: pago en persona sí/no) queda fijado a true para que no
+  // siga anulando en silencio lo que el dueño acaba de marcar aquí.
+  p.permitirPagoLocal = true;
 
   const deliveryFeeEl = document.getElementById('mn-deliveryfee');
   if(deliveryFeeEl){
