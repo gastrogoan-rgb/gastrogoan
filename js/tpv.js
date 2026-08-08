@@ -99,6 +99,7 @@ let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del m
 let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
 let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
 let tpvSelectedCartaId = null; // id de la carta/menú seleccionada en las pestañas de la comanda
+let tpvSelectedSeccionId = null; // sección abierta dentro de la carta seleccionada (null = viendo las carpetas)
 
 // Emoji por defecto para una sección de carta sin icono propio asignado
 function guessSeccionEmoji(nombre){
@@ -1475,8 +1476,8 @@ function renderTableOrderModal(orderId){
   }
 
   // Pestañas de cartas/menús
-  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};renderTableOrderModal(${order.id})">${escapeHtml(tItem(c))}</button>`).join('');
-  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
+  const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})">${escapeHtml(tItem(c))}</button>`).join('');
+  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
   let selectorHtml = '';
@@ -1617,21 +1618,43 @@ function confirmPastedOrder(orderId){
 }
 
 // Selector de platos dentro de una carta concreta (secciones + platos visibles).
+// Navegación por carpetas (sección → platos → volver), en vez de enseñar de
+// golpe todas las secciones con todos sus platos apilados: con una carta de
+// varias secciones grandes, había que hacer scroll largo para encontrar el
+// plato que se busca. Mismo patrón que ya usa la configuración de menús
+// (getOrderMenuFolders/openTpvMenuFolder), aplicado aquí a la carta suelta.
 function renderCartaSelectorInline(order, carta){
   const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
   if(!secciones.length) return `<div class="empty" style="padding:10px">${t('empty.noDishesInCarta')}</div>`;
-  return secciones.map(sec => {
-    const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
-    const icono = sec.icono || guessSeccionEmoji(sec.nombre);
+
+  const seccionAbierta = tpvSelectedSeccionId!=null ? secciones.find(s => s.id === tpvSelectedSeccionId) : null;
+
+  if(seccionAbierta){
+    const platos = (seccionAbierta.platos||[]).filter(p=>p.disponible!==false);
+    const icono = seccionAbierta.icono || guessSeccionEmoji(seccionAbierta.nombre);
     return `
-      <div style="margin-bottom:12px">
-        <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(sec))}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${sec.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
-        </div>
+      <button class="btn btn-sm" style="margin-bottom:10px" onclick="tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-arrow-left"></i> ${t('common.sections')}</button>
+      <div style="font-weight:700;font-size:13px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">${icono} ${escapeHtml(tItem(seccionAbierta))}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${platos.map(p => `<button class="btn btn-sm" style="font-size:12px" onclick="addOrderItem(${order.id}, ${seccionAbierta.id}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
       </div>
     `;
-  }).join('');
+  }
+
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${secciones.map(sec => {
+        const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
+        const icono = sec.icono || guessSeccionEmoji(sec.nombre);
+        return `
+        <button class="btn" style="flex:1;min-width:130px;flex-direction:column;gap:4px;padding:14px 10px;height:auto" onclick="tpvSelectedSeccionId=${sec.id};renderTableOrderModal(${order.id})">
+          <span style="font-size:22px">${icono}</span>
+          <span style="font-size:13px;font-weight:700">${escapeHtml(tItem(sec))}</span>
+          <span style="font-size:11px;color:var(--muted)">${platos.length} ${platos.length===1?t('noun.product'):t('noun.products')}</span>
+        </button>
+      `;}).join('')}
+    </div>
+  `;
 }
 
 // Selector de menú (combo con grupos y opciones).
