@@ -175,6 +175,7 @@ let db = null;
 let DB = null; // { business, cartas, activeCartaId }
 let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
 let cart = []; // [{recipeId, sectionId, name, price, qty}]
+let submittingRequest = false; // evita duplicados por doble clic en pedidos/reservas
 let redsysConfigured = false;
 
 // Worker (Cloudflare) que firma los pagos del TPV virtual (Redsys) sin
@@ -984,6 +985,8 @@ function reservaDepositAmount(){
 }
 
 function submitReserva(){
+  if(submittingRequest) return;
+  submittingRequest = true;
   const clientName = document.getElementById('r-name').value.trim();
   const clientPhone = document.getElementById('r-phone').value.trim();
   const date = document.getElementById('r-date').value;
@@ -994,20 +997,24 @@ function submitReserva(){
 
   if(!clientName || !clientPhone || !date || !time){
     alert(t('error.campos.reserva'));
+    submittingRequest = false;
     return;
   }
   if(!document.getElementById('r-privacy-consent').checked){
     alert(t('privacy.mustAccept'));
+    submittingRequest = false;
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
     alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    submittingRequest = false;
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
     alert(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    submittingRequest = false;
     return;
   }
 
@@ -1017,6 +1024,7 @@ function submitReserva(){
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
       alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      submittingRequest = false;
       return;
     }
   }
@@ -1028,6 +1036,7 @@ function submitReserva(){
     }else{
       alert(t('error.aforo.parcial').replace('%d', aforoInfo.disponible));
     }
+    submittingRequest = false;
     return;
   }
 
@@ -1052,6 +1061,7 @@ function submitReserva(){
   reserveAforoAtomic(date, aforoInfo.turnoIdx, people, aforoInfo.aforo, aforoInfo.reservados).then(result => {
     if(!result.committed){
       if(btn) btn.disabled = false;
+      submittingRequest = false;
       alert(t('error.aforo.completo'));
       return;
     }
@@ -1213,6 +1223,8 @@ function renderCartSummary(){
 
 async function submitOrder(){
   if(!cart.length){ alert(t('error.carrito.vacio')); return; }
+  if(submittingRequest) return;
+  submittingRequest = true;
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
   const date = document.getElementById('o-date').value;
@@ -1226,6 +1238,7 @@ async function submitOrder(){
 
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
     alert(t('error.campos'));
+    submittingRequest = false;
     return;
   }
 
@@ -1233,16 +1246,19 @@ async function submitOrder(){
   const pedidoMinimo = p.pedidoMinimo || 0;
   if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
     alert(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
+    submittingRequest = false;
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
     alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    submittingRequest = false;
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
     alert(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    submittingRequest = false;
     return;
   }
 
@@ -1252,6 +1268,7 @@ async function submitOrder(){
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
       alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      submittingRequest = false;
       return;
     }
   }
@@ -1261,6 +1278,7 @@ async function submitOrder(){
     const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
     if(!zoneCheck.ok){
       alert(t('error.zona'));
+      submittingRequest = false;
       return;
     }
     pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
@@ -1279,6 +1297,9 @@ async function submitOrder(){
   if(pendienteVerificarZona) req.pendienteVerificarZona = true;
 
   req.total = total;
+
+  const submitBtn = document.getElementById('o-submit');
+  if(submitBtn) submitBtn.disabled = true;
 
   const pagoTarjeta = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
   if(pagoTarjeta){
@@ -1335,6 +1356,7 @@ function payWithCard(req, amount, description){
 function setPaySubmitEnabled(enabled){
   const btn = document.getElementById('o-submit');
   if(btn) btn.disabled = !enabled;
+  if(enabled) submittingRequest = false;
 }
 
 /* ============ PEDIDO EN MESA (auto-pedido) ============ */
@@ -1387,6 +1409,8 @@ function renderMesaOrderForm(){
 
 function submitMesaOrder(){
   if(!cart.length){ alert(t('error.carrito.vacio')); return; }
+  if(submittingRequest) return;
+  submittingRequest = true;
 
   const tables = DB.tables || [];
   let tableId = null;
@@ -1396,12 +1420,12 @@ function submitMesaOrder(){
       tableId = currentTable.id;
     }else{
       const manual = document.getElementById('m-table-manual');
-      if(!manual || !manual.value.trim()){ alert(t('error.mesa.manual')); return; }
+      if(!manual || !manual.value.trim()){ alert(t('error.mesa.manual')); submittingRequest = false; return; }
       tableId = manual.value.trim();
     }
   }else{
     const sel = document.getElementById('m-table');
-    if(!sel || !sel.value){ alert(t('error.mesa.select')); return; }
+    if(!sel || !sel.value){ alert(t('error.mesa.select')); submittingRequest = false; return; }
     tableId = tables.find(tb => String(tb.id) === sel.value).id;
   }
 
@@ -1415,6 +1439,8 @@ function submitMesaOrder(){
     total: cart.reduce((s,l)=>s+l.price*l.qty,0),
     createdAt: new Date().toISOString()
   };
+  const submitBtn = document.getElementById('o-submit');
+  if(submitBtn) submitBtn.disabled = true;
   sendRequest(req, t('order.ok.mesa'));
 }
 
@@ -1431,6 +1457,7 @@ function sendRequest(req, successMsg){
   }).catch(e => {
     console.error(e);
     alert(t('error.envio'));
+    submittingRequest = false;
   });
 }
 

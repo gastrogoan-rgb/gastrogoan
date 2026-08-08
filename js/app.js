@@ -2253,7 +2253,7 @@ function renderReservasPendingOnline(){
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
           <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
-          ${r.clientPhone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}</div>` : ''}
+          ${r.clientPhone ? `<div style="font-size:12px;color:${r.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}${r.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
           ${r.depositRequired ? `<div style="margin-top:4px">${r.depositConfirmed
             ? `<span class="badge badge-green"><i class="ti ti-cash"></i> ${t('deposit.received')} (${r.depositAmount}€)</span>`

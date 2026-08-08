@@ -1663,7 +1663,10 @@ function getUnseenReservasCount(){
 }
 function getUnseenTpvRequestsCount(){
   const since = (DB.business && DB.business.lastSeenTpvTs) || '';
-  return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (o.createdAt || '') > since).length;
+  // Debe usar el mismo filtro que renderTpvPendingOnline (isTogoOrderVisibleNow):
+  // si no, el badge puede anunciar "1 nuevo" sin que aparezca ninguna tarjeta
+  // que aceptar/rechazar (pedidos programados con muchas horas de antelación).
+  return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && (o.createdAt || '') > since && isTogoOrderVisibleNow(o)).length;
 }
 function markReservasSeen(){
   if(!DB.business || !getUnseenReservasCount()) return;
@@ -1731,7 +1734,12 @@ function initPublicRequestsListener(){
           tableId: null, notes: req.notes || '', status: 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
-          origen: 'publico', createdAt: new Date().toISOString()
+          origen: 'publico', createdAt: new Date().toISOString(),
+          // El teléfono llega tal cual lo escribió el cliente en la web pública,
+          // sin pasar por la misma validación que saveClient (que sí bloquea con
+          // confirmación un teléfono con menos de 9 dígitos): se marca aquí para
+          // que el personal lo vea al gestionar la solicitud, no se descubre a ciegas.
+          phoneOdd: !!(req.clientPhone && req.clientPhone.replace(/[^\d]/g,'').length < 9)
         });
         notifyNewRequest = true;
       }else if(req.type === 'nps_response'){
@@ -1764,7 +1772,8 @@ function initPublicRequestsListener(){
           costeEnvio: req.costeEnvio || 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
           clientRef: req.clientRef || null,
-          pendienteVerificarZona: !!req.pendienteVerificarZona
+          pendienteVerificarZona: !!req.pendienteVerificarZona,
+          phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9)
         });
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
@@ -3154,7 +3163,7 @@ function moveToTrash(type, item){
   const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
   DB.trash = DB.trash.filter(x => new Date(x.deletedAt).getTime() >= cutoff);
 }
-const TRASH_TYPE_ARRAY = {employee:'employees', client:'clients', recipe:'recipes', ingredient:'ingredients', elaboracion:'elaboraciones', reservation:'reservations'};
+const TRASH_TYPE_ARRAY = {employee:'employees', client:'clients', recipe:'recipes', ingredient:'ingredients', elaboracion:'elaboraciones', reservation:'reservations', order:'tpvOrders'};
 function restoreTrashItem(trashId){
   const entry = (DB.trash||[]).find(x => x.id === trashId);
   if(!entry) return;
@@ -3174,8 +3183,8 @@ function purgeTrashItem(trashId){
   saveDB();
   if(typeof openTrashModal === 'function') openTrashModal();
 }
-const TRASH_TYPE_LABEL_KEY = {employee:'label.employee', client:'label.client', recipe:'label.recipe', ingredient:'label.ingredient', elaboracion:'label.elaboration', reservation:'label.reservation'};
-const TRASH_TYPE_NAME_FIELD = {employee:'name', client:'name', recipe:'name', ingredient:'name', elaboracion:'name', reservation:'clientName'};
+const TRASH_TYPE_LABEL_KEY = {employee:'label.employee', client:'label.client', recipe:'label.recipe', ingredient:'label.ingredient', elaboracion:'label.elaboration', reservation:'label.reservation', order:'label.order'};
+const TRASH_TYPE_NAME_FIELD = {employee:'name', client:'name', recipe:'name', ingredient:'name', elaboracion:'name', reservation:'clientName', order:'clienteNombre'};
 function openTrashModal(){
   const items = [...(DB.trash||[])].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
   openModal(`

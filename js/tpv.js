@@ -558,7 +558,7 @@ function renderTpvPendingOnline(){
           </h3>
           ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--brand-orange);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
           ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
-          ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
+          ${o.clienteTelefono ? `<div style="font-size:12px;color:${o.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}${o.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${o.time ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}${o.date && o.date !== todayStr() ? ' (' + escapeHtml(o.date) + ')' : ''}</div>` : ''}
           ${o.clienteDireccion ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}${o.clienteCodigoPostal ? ' (' + escapeHtml(o.clienteCodigoPostal) + ')' : ''}</div>` : ''}
           <div style="margin:8px 0;font-size:13px">
@@ -661,23 +661,32 @@ function findActiveDishByName(name){
 function acceptOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  order.status = 'abierta';
   if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
-    const ahora = new Date().toISOString();
+    // Comprobación de precio/disponibilidad frente a la carta activa actual,
+    // ANTES de tocar nada: si el pedido ya está pagado (Redsys) y hay algún
+    // desajuste, el personal debe confirmarlo explícitamente, porque al
+    // cliente ya se le ha cobrado un importe que puede no coincidir con lo
+    // que realmente se le va a servir.
     let anyMismatch = false;
     (order.items||[]).forEach(l => {
-      // Comprobación (no bloqueante) de precio/disponibilidad frente a la
-      // carta activa actual: se marca la línea con un aviso visual, pero el
-      // pedido se acepta igualmente para que el personal decida si ajusta.
+      const dish = findActiveDishByName(l.name);
+      if(!dish || dish.disponible === false || (typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001)){
+        anyMismatch = true;
+      }
+    });
+    if(anyMismatch && order.pagado && !confirm(t('msg.confirmAcceptPaidMismatch'))) return;
+
+    order.status = 'abierta';
+    const ahora = new Date().toISOString();
+    (order.items||[]).forEach(l => {
       const dish = findActiveDishByName(l.name);
       l.priceMismatch = false;
       l.unavailableNow = false;
       if(!dish){
         l.unavailableNow = true;
-        anyMismatch = true;
       }else{
-        if(dish.disponible === false){ l.unavailableNow = true; anyMismatch = true; }
-        if(typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001){ l.priceMismatch = true; anyMismatch = true; }
+        if(dish.disponible === false) l.unavailableNow = true;
+        if(typeof dish.precio === 'number' && Math.abs(dish.precio - l.price) > 0.001) l.priceMismatch = true;
       }
       if(!l.estado){
         l.estado = 'cocina';
@@ -692,13 +701,18 @@ function acceptOnlineOrder(orderId){
     showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted'));
     return;
   }
+  order.status = 'abierta';
   saveDB();
   renderTPV();
   showToast(t('msg.orderAccepted'));
 }
 
 function rejectOnlineOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    moveToTrash('order', order);
+    logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'));
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
     saveDB();
     renderTPV();
