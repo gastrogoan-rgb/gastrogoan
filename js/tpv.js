@@ -1494,7 +1494,7 @@ function renderTableOrderModal(orderId){
   const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
   const actionButtons = allDelivered && order.items.length
     ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`
-    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button></div>`;
+    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" style="white-space:nowrap" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button></div>`;
 
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
