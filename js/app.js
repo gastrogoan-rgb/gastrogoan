@@ -884,11 +884,16 @@ function renderDistList(){
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
     const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
+    // Un empleado dado de baja seguía apareciendo igual que uno activo,
+    // pudiendo asignársele trabajo sin darse cuenta hasta entrar en su
+    // ficha de Personal — mismo aviso visual que ya usa esa pestaña.
+    const isInactive = emp.active === false;
     return `
-      <div class="card" style="cursor:pointer" onclick="openDistEmployee(${emp.id})">
+      <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openDistEmployee(${emp.id})">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span style="width:14px;height:14px;border-radius:50%;background:${emp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
           <strong>${escapeHtml(emp.name)}</strong>
+          ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : ''}
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
@@ -966,14 +971,26 @@ function renderDistDetail(){
   // platos" (eso es propio de cocina); ahí este módulo es solo el calendario
   // de tareas (Sala + Limpieza + Promos) de cada persona.
   const isSala = currentArea() === 'sala';
+  // Distinto de editUnlocked: asignar/quitar el trabajo de OTRO compañero es
+  // cosa del propietario real, no de cualquier empleado con "puede editar"
+  // (antes se usaba editUnlocked/.owner-only aquí y un compañero con ese
+  // permiso podía tocar el trabajo asignado a cualquier otro).
+  const ownerSess = isOwnerSession();
 
+  // Un plato asignado se guarda por nombre (texto suelto), no por id de
+  // receta: si luego se renombra o se borra en el Escandallo/Carta, la
+  // asignación se quedaba con el nombre viejo para siempre, sin ningún
+  // aviso — se veía igual que un plato válido hasta que se pulsaba y salía
+  // el aviso de "ficha no encontrada". Ahora se marca en rojo de antemano.
   const platosHtml = d.platos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>`
-        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${t('title.viewTechSpec')}">
-          <span style="overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(pl)}</span>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
+        const broken = !allDishes.includes(pl);
+        return `
+        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid ${broken?'var(--red)':'var(--border)'};border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
+          <span style="overflow:visible;text-overflow:clip;white-space:normal;${broken?'color:var(--red)':''}">${broken?`<i class="ti ti-link-off"></i> `:''}${escapeHtml(pl)}</span>
+          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
         </div>
-      `).join('') + `</div>`
+      `;}).join('') + `</div>`
     : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
 
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
@@ -999,13 +1016,13 @@ function renderDistDetail(){
     const tareasHtml = tareas.map(task => {
       const done = isDistTareaDone(emp.id, ds, task.id);
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      const canEditThis = editUnlocked || task.bySelf;
+      const canEditThis = ownerSess || task.bySelf;
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
         ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
-        <button class="${task.bySelf?'':'owner-only'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
+        <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
 
@@ -1014,14 +1031,14 @@ function renderDistDetail(){
     const tareasUnicasHtml = tareasUnicas.map(task => {
       const done = isDistTareaDone(emp.id, ds, task.id);
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
-      const canEditThis = editUnlocked || task.bySelf;
+      const canEditThis = ownerSess || task.bySelf;
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
         <span class="badge badge-purple" style="font-size:10px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
         ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
-        <button class="${task.bySelf?'':'owner-only'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
+        <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
 
@@ -1092,14 +1109,14 @@ function renderDistDetail(){
     <div class="card">
       <h3><i class="ti ti-tools-kitchen-2"></i> ${t('dist.dishesInChargeTitle')}</h3>
       ${platosHtml}
-      <div class="owner-only" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+      <div class="owner-strict" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
         <select id="dist-plato-sel" style="flex:1;min-width:140px">
           <option value="">${t('dist.selectDish')}</option>
           ${platosOptions}
         </select>
         <button class="btn btn-default" style="flex:none" onclick="addDistPlato()">${t('btn.assign')}</button>
       </div>
-      <div class="owner-only" style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
+      <div class="owner-strict" style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
         <input type="text" id="dist-plato-manual" placeholder="${t('dist.manualDishPlaceholder')}" style="flex:1;min-width:140px" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
         <button class="btn btn-default" style="flex:none" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> ${t('common.add')}</button>
       </div>
@@ -1127,6 +1144,7 @@ function addEmployeeFromDistribucion(){
 }
 
 function addDistPlato(){
+  if(!isOwnerSession()) return;
   const sel = document.getElementById('dist-plato-sel');
   const nombre = sel.value;
   if(!nombre) return;
@@ -1137,6 +1155,7 @@ function addDistPlato(){
 }
 
 function addDistPlatoManual(){
+  if(!isOwnerSession()) return;
   const inp = document.getElementById('dist-plato-manual');
   const nombre = inp.value.trim();
   if(!nombre) return;
@@ -1147,6 +1166,7 @@ function addDistPlatoManual(){
 }
 
 function removeDistPlato(idx){
+  if(!isOwnerSession()) return;
   if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   d.platos.splice(idx,1);
@@ -1160,17 +1180,23 @@ function addDistTarea(dayIdx){
   if(!val) return;
   const onlyThisWeek = document.getElementById('dist-once-'+dayIdx)?.checked;
   const d = getDistEmpData(distCurrentEmployeeId);
-  // Si quien añade la tarea no tiene el modo edición activo, es el propio
+  // Si quien añade la tarea no es el propietario real, es el propio
   // empleado auto-organizándose su trabajo (no el jefe asignándoselo), así
   // que se marca como "suya" para poder editarla/borrarla libremente y
-  // distinguirla visualmente de las tareas que le asigna el jefe.
-  const bySelf = !editUnlocked;
+  // distinguirla visualmente de las tareas que le asigna el jefe. Antes se
+  // comprobaba editUnlocked, así que un compañero con permiso de editar
+  // veía sus propias tareas marcadas como "del jefe" sin serlo.
+  const bySelf = !isOwnerSession();
   if(onlyThisWeek){
     const ds = dateStr(getWeekDates(distWeekOffset)[dayIdx]);
     if(!d.tareasUnicas[ds]) d.tareasUnicas[ds] = [];
+    // Evita duplicar la misma tarea el mismo día por doble Enter/doble
+    // clic, igual que ya se comprueba para los platos asignados.
+    if(d.tareasUnicas[ds].some(t => t.text.trim().toLowerCase() === val.toLowerCase())){ showToast(t('msg.taskAlreadyExists')); return; }
     d.tareasUnicas[ds].push({id: genId(), text: val, bySelf});
   } else {
     if(!d.produccion[dayIdx]) d.produccion[dayIdx] = [];
+    if(d.produccion[dayIdx].some(t => t.text.trim().toLowerCase() === val.toLowerCase())){ showToast(t('msg.taskAlreadyExists')); return; }
     d.produccion[dayIdx].push({id: genId(), text: val, bySelf});
   }
   saveDB();
@@ -1186,7 +1212,7 @@ function addDistTarea(dayIdx){
 function updateDistTarea(dayIdx, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
-  if(!task || !(editUnlocked || task.bySelf)) return;
+  if(!task || !(isOwnerSession() || task.bySelf)) return;
   task.text = val;
   saveDB();
 }
@@ -1194,7 +1220,7 @@ function updateDistTarea(dayIdx, taskId, val){
 function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
-  if(task && !(editUnlocked || task.bySelf)) return;
+  if(task && !(isOwnerSession() || task.bySelf)) return;
   if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   if(d.produccion[dayIdx]){
     d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>String(t.id)!==String(taskId));
@@ -1208,7 +1234,7 @@ function removeDistTarea(dayIdx, taskId){
 function updateDistTareaUnica(ds, taskId, val){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
-  if(!task || !(editUnlocked || task.bySelf)) return;
+  if(!task || !(isOwnerSession() || task.bySelf)) return;
   task.text = val;
   saveDB();
 }
@@ -1216,7 +1242,7 @@ function updateDistTareaUnica(ds, taskId, val){
 function removeDistTareaUnica(ds, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
-  if(task && !(editUnlocked || task.bySelf)) return;
+  if(task && !(isOwnerSession() || task.bySelf)) return;
   if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   if(d.tareasUnicas[ds]){
     d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>String(t.id)!==String(taskId));

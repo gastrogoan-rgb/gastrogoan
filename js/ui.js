@@ -946,6 +946,14 @@ let ownerUnlocked = false;
 let tourOwnerUnlockedByTour = false;
 let editUnlocked = false;
 
+// Sesión de propietario real, a diferencia de editUnlocked (que también
+// tiene un empleado con "puede editar" activo). Úsalo en cualquier acción
+// que toque datos de OTRO empleado (asignar/quitar tareas o platos suyos,
+// gestionar su ficha, etc.) — editUnlocked por sí solo no basta para eso.
+function isOwnerSession(){
+  return document.body.classList.contains('owner-session');
+}
+
 function lockEditMode(){
   editUnlocked = false;
   document.body.classList.remove('edit-unlocked');
