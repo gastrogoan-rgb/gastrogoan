@@ -849,6 +849,25 @@ function getAllDishNames(){
   return [...names].sort((a,b)=>a.localeCompare(b));
 }
 
+// Solo los nombres con una Ficha Técnica de verdad ya creada — a diferencia
+// de getAllDishNames() (usado en Promos, donde cualquier nombre de la
+// Carta/Escandallo vale), aquí hace falta que exista la ficha porque el
+// sentido de "platos a su cargo" es poder tocar el plato y que lleve
+// directo a la receta para producir. Antes se podía asignar cualquier
+// plato del Escandallo/Carta aunque no tuviera ficha (o un nombre suelto de
+// Carta sin receta vinculada), y al pulsar no llevaba a ningún sitio útil.
+function getDishNamesWithFicha(){
+  const names = new Set();
+  DB.fichas.forEach(f => {
+    const r = f.recipeId ? DB.recipes.find(rec => rec.id === f.recipeId) : null;
+    const fArea = f.area || (r && r.area) || 'cocina';
+    if(fArea !== currentArea()) return;
+    const name = r ? r.name : f.name;
+    if(name) names.add(name);
+  });
+  return [...names].sort((a,b)=>a.localeCompare(b));
+}
+
 function renderDistribucion(){
   migrateWorkDistribution();
   const box = document.getElementById('distribucion-content');
@@ -966,7 +985,7 @@ function renderDistDetail(){
   const emp = DB.employees.find(e=>e.id===distCurrentEmployeeId);
   if(!emp){ backToDistList(); return; }
   const d = getDistEmpData(emp.id);
-  const allDishes = getAllDishNames();
+  const allDishes = getDishNamesWithFicha();
   // En Sala no tiene sentido el concepto de "plan de producción semanal de
   // platos" (eso es propio de cocina); ahí este módulo es solo el calendario
   // de tareas (Sala + Limpieza + Promos) de cada persona.
@@ -982,13 +1001,18 @@ function renderDistDetail(){
   // asignación se quedaba con el nombre viejo para siempre, sin ningún
   // aviso — se veía igual que un plato válido hasta que se pulsaba y salía
   // el aviso de "ficha no encontrada". Ahora se marca en rojo de antemano.
+  // Tarjetas grandes y táctiles: en la práctica se usan para tocar el plato
+  // en una tablet en mitad de cocina e ir directo a producir, no para
+  // gestionarlas con precisión de ratón — la fila estrecha de antes era
+  // fácil de fallar con el dedo.
   const platosHtml = d.platos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
+    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
         const broken = !allDishes.includes(pl);
         return `
-        <div class="actions-cell" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid ${broken?'var(--red)':'var(--border)'};border-radius:6px;cursor:pointer" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
-          <span style="overflow:visible;text-overflow:clip;white-space:normal;${broken?'color:var(--red)':''}">${broken?`<i class="ti ti-link-off"></i> `:''}${escapeHtml(pl)}</span>
-          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 12px;min-height:96px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
+          <button class="owner-strict btn btn-sm btn-icon btn-danger" style="position:absolute;top:6px;right:6px" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:26px;color:${broken?'var(--red)':'var(--brand-orange)'}"></i>
+          <span style="font-size:14px;font-weight:600;line-height:1.25;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
         </div>
       `;}).join('') + `</div>`
     : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
@@ -1116,10 +1140,7 @@ function renderDistDetail(){
         </select>
         <button class="btn btn-default" style="flex:none" onclick="addDistPlato()">${t('btn.assign')}</button>
       </div>
-      <div class="owner-strict" style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
-        <input type="text" id="dist-plato-manual" placeholder="${t('dist.manualDishPlaceholder')}" style="flex:1;min-width:140px" onkeydown="if(event.key==='Enter')addDistPlatoManual()">
-        <button class="btn btn-default" style="flex:none" onclick="addDistPlatoManual()"><i class="ti ti-plus"></i> ${t('common.add')}</button>
-      </div>
+      ${!allDishes.length ? `<p class="owner-strict" style="font-size:12px;color:var(--muted);margin:6px 0 0">${t('dist.noFichasYet')}</p>` : ''}
     </div>
     `}
 
@@ -1148,17 +1169,6 @@ function addDistPlato(){
   if(!isOwnerSession()) return;
   const sel = document.getElementById('dist-plato-sel');
   const nombre = sel.value;
-  if(!nombre) return;
-  const d = getDistEmpData(distCurrentEmployeeId);
-  if(!d.platos.includes(nombre)) d.platos.push(nombre);
-  saveDB();
-  renderDistDetail();
-}
-
-function addDistPlatoManual(){
-  if(!isOwnerSession()) return;
-  const inp = document.getElementById('dist-plato-manual');
-  const nombre = inp.value.trim();
   if(!nombre) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   if(!d.platos.includes(nombre)) d.platos.push(nombre);
