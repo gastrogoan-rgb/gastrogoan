@@ -413,7 +413,7 @@
             <input type="checkbox" id="stock-show-discontinued" onchange="renderStock()" style="width:auto"> <span data-i18n="megalista.showDiscontinued">Mostrar descatalogados</span>
           </label>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="openStockCountModal()"><i class="ti ti-clipboard-list"></i> <span data-i18n="btn.stockPhysicalCount">Recuento físico</span></button>
           <button class="btn" onclick="printStockCountSheet()"><i class="ti ti-printer"></i> <span data-i18n="btn.printStockSheet">Hoja de recuento</span></button>
           <button class="owner-only btn" onclick="openStockLogModal()"><i class="ti ti-history"></i> <span data-i18n="btn.stockLog">Historial</span></button>
@@ -712,7 +712,7 @@
             <option value="atrisk" data-i18n="filter.atRiskClients">En riesgo de fuga</option>
           </select>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="openDuplicateClientsModal()"><i class="ti ti-users-group"></i> Buscar duplicados</button>
           <button class="btn" onclick="openBirthdaysModal()"><i class="ti ti-cake"></i> <span data-i18n="btn.upcomingBirthdays">Cumpleaños próximos</span></button>
           <button class="btn" onclick="exportClientsCSV()"><i class="ti ti-file-export"></i> <span data-i18n="btn.exportCSV">Exportar CSV</span></button>
