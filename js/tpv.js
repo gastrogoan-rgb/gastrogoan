@@ -22,6 +22,168 @@ function kitchenStatusBadge(line){
   if(!st || line.estado === 'entregado') return '';
   return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${t(st.labelKey)}</span>`;
 }
+
+// Control de repartos propios (reparto hecho por el propio negocio, no por
+// una plataforma externa tipo Glovo/Uber Eats — esos ya llevan su propio
+// repartidor y su propio seguimiento, fuera de esta app). Estado del
+// reparto en sí, aparte del estado de cocina (que ya dice si el plato está
+// preparado): "preparando" (aún en cocina/mostrador) -> "en_reparto" (el
+// repartidor ya ha salido) -> "entregado" (ya está en manos del cliente).
+const REPARTO_STATES = {
+  en_reparto: {labelKey:'reparto.enCamino', icon:'ti-moped',       cls:'badge-blue'},
+  entregado:  {labelKey:'reparto.entregado', icon:'ti-circle-check', cls:'badge-green'}
+};
+function esRepartoPropio(order){
+  return order.tipo === 'delivery' && !order.plataformaId;
+}
+function repartoStatusBadgeHtml(order){
+  const st = REPARTO_STATES[order.entregaEstado];
+  if(!st) return ` <span class="badge"><i class="ti ti-clock"></i> ${t('reparto.preparando')}</span>`;
+  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${t(st.labelKey)}</span>`;
+}
+// Avanza el estado del reparto: preparando -> en_reparto -> entregado.
+// Queda registrado en auditoría quién lo marcó (sesión del empleado
+// conectado), igual que el resto de acciones sensibles de esta sesión.
+function advanceRepartoEstado(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  if(!order.entregaEstado){
+    order.entregaEstado = 'en_reparto';
+    order.entregaSalidaAt = new Date().toISOString();
+    logAudit('edit', t('audit.orderOutForDelivery').replace('${name}', order.clienteNombre||'?'));
+  }else if(order.entregaEstado === 'en_reparto'){
+    order.entregaEstado = 'entregado';
+    order.entregadoAt = new Date().toISOString();
+    logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
+  }
+  saveDB();
+  if(document.getElementById('repartos-control-modal-body')) renderRepartosControlModalBody();
+  else if(typeof renderTableOrderModal === 'function' && document.querySelector('.modal-overlay')) renderTableOrderModal(orderId);
+  renderTPV();
+  showToast(order.entregaEstado === 'entregado' ? t('msg.deliveryMarkedDelivered') : t('msg.deliveryMarkedOut'));
+}
+function assignRepartidorForOrder(orderId, raw){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  Object.assign(order, parseRepartidorFieldValue(raw));
+  saveDB();
+  renderTPV();
+  if(document.getElementById('repartos-control-modal-body')) renderRepartosControlModalBody();
+}
+
+// Pedidos de reparto propio "vivos" ahora mismo (aún sin entregar), para el
+// contador del botón de la barra de herramientas.
+function getActiveRepartosOrders(){
+  return DB.tpvOrders.filter(o => esRepartoPropio(o) && o.status !== 'pagada' && o.status !== 'pendiente-online' && o.entregaEstado !== 'entregado');
+}
+// Pedidos de reparto propio entregados HOY, para el histórico del panel de
+// control — así el dueño puede revisar a final del día quién repartió qué,
+// a qué hora salió y a qué hora llegó, sin tener que ir pedido a pedido.
+function getDeliveredTodayRepartosOrders(){
+  const today = todayStr();
+  return DB.tpvOrders.filter(o => esRepartoPropio(o) && o.entregaEstado === 'entregado' && o.entregadoAt && o.entregadoAt.slice(0,10) === today);
+}
+function repartidorNombre(order){
+  if(order.repartidorId){ const e = DB.employees.find(x=>x.id===order.repartidorId); return e ? e.name : t('common.unassigned'); }
+  if(order.repartidorCourierId){ const c = (DB.business.ownCouriers||[]).find(x=>x.id===order.repartidorCourierId); return c ? c.nombre : t('common.unassigned'); }
+  return t('common.unassigned');
+}
+// Panel central de control de repartos: pensado tanto para el dueño (ver de
+// un vistazo todos los repartos en curso y quién lleva cada uno) como para
+// quien reparte, si usa su propio móvil con su sesión de empleado — ve aquí
+// mismo sus repartos pendientes con dirección, teléfono e importe a cobrar,
+// sin tener que navegar el TPV completo.
+function openRepartosControlModal(){
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-moped"></i> ${t('title.repartosControl')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="repartos-control-modal-body"></div>
+  `);
+  renderRepartosControlModalBody();
+}
+function renderRepartosControlModalBody(){
+  const box = document.getElementById('repartos-control-modal-body');
+  if(!box) return;
+  const active = getActiveRepartosOrders();
+  const delivered = getDeliveredTodayRepartosOrders();
+  // "Mis repartos" primero si quien está conectado es a la vez el repartidor
+  // asignado — para que un empleado que reparte con su propio móvil vea de
+  // inmediato lo suyo arriba del todo, sin tener que buscar entre todos.
+  const myId = loggedInEmployeeId();
+  active.sort((a,b) => {
+    const aMine = myId && a.repartidorId === myId ? 0 : 1;
+    const bMine = myId && b.repartidorId === myId ? 0 : 1;
+    if(aMine !== bMine) return aMine - bMine;
+    return (a.entregaSalidaAt||a.createdAt||'').localeCompare(b.entregaSalidaAt||b.createdAt||'');
+  });
+  const renderRow = o => `
+    <div class="card" style="cursor:pointer" onclick="closeModal();openTableOrder(null, ${o.id})">
+      <h3 style="justify-content:space-between;font-size:14px">
+        <span>${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
+        ${repartoStatusBadgeHtml(o)}
+      </h3>
+      ${o.clienteDireccion ? `<div style="font-size:13px"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('reparto.noAddress')}</div>`}
+      ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span style="font-size:12px;color:var(--muted)"><i class="ti ti-user"></i> ${escapeHtml(repartidorNombre(o))}</span>
+        <strong style="color:var(--brand-orange)">${o.pagado ? t('label.paidOnline') : fmtMoney(orderTotal(o))}</strong>
+      </div>
+    </div>
+  `;
+  box.innerHTML = `
+    <h4 style="margin:6px 0"><i class="ti ti-clock"></i> ${t('reparto.enCurso')} (${active.length})</h4>
+    ${active.length ? `<div class="grid grid-3" style="margin-bottom:18px">${active.map(renderRow).join('')}</div>` : `<div class="empty" style="padding:14px;margin-bottom:14px">${t('reparto.emptyActive')}</div>`}
+    <h4 style="margin:6px 0"><i class="ti ti-history"></i> ${t('reparto.historialHoy')} (${delivered.length})</h4>
+    ${delivered.length ? `
+      <table class="table" style="font-size:13px">
+        <thead><tr><th>${t('label.client')}</th><th>${t('label.deliveryRider')}</th><th>${t('reparto.leftAt')}</th><th>${t('reparto.deliveredAt')}</th></tr></thead>
+        <tbody>
+          ${delivered.map(o => `<tr>
+            <td>${escapeHtml(o.clienteNombre||'—')}</td>
+            <td>${escapeHtml(repartidorNombre(o))}</td>
+            <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td>${new Date(o.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    ` : `<div class="empty" style="padding:14px">${t('reparto.emptyHistorial')}</div>`}
+  `;
+}
+
+// Tarjeta con todo lo que necesita quien reparte el pedido: dirección,
+// teléfono, cuánto cobrar (si no está ya pagado online) y el repartidor
+// asignado, más el botón para ir avanzando el estado del reparto.
+function renderRepartoControlCardHtml(order){
+  const currentValue = order.repartidorId ? `emp:${order.repartidorId}` : (order.repartidorCourierId ? `courier:${order.repartidorCourierId}` : '');
+  const repartidorSelectHtml = renderRepartidorFieldHtml('reparto-repartidor-sel-' + order.id, currentValue)
+    .replace(`id="reparto-repartidor-sel-${order.id}"`, `id="reparto-repartidor-sel-${order.id}" onchange="assignRepartidorForOrder(${order.id}, this.value)"`);
+  const st = order.entregaEstado;
+  const btnLabel = !st ? t('reparto.btn.salida') : (st === 'en_reparto' ? t('reparto.btn.entregado') : '');
+  return `
+    <div class="card" style="margin-bottom:10px;border:2px solid var(--brand-orange)">
+      <h3 style="justify-content:space-between;font-size:14px"><span><i class="ti ti-moped"></i> ${t('reparto.title')}</span>${repartoStatusBadgeHtml(order)}</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px">
+        <div style="flex:1;min-width:200px">
+          ${order.clienteDireccion ? `<div style="font-size:14px"><i class="ti ti-map-pin"></i> ${escapeHtml(order.clienteDireccion)}${order.clienteCodigoPostal ? ' ('+escapeHtml(order.clienteCodigoPostal)+')' : ''}</div>` : `<div style="font-size:13px;color:var(--muted)">${t('reparto.noAddress')}</div>`}
+          ${order.clienteTelefono ? `<div style="font-size:14px;margin-top:4px"><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(order.clienteTelefono)}">${escapeHtml(order.clienteTelefono)}</a></div>` : ''}
+          <div style="font-size:14px;margin-top:4px">
+            ${order.pagado
+              ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>`
+              : `<strong style="color:var(--brand-orange)"><i class="ti ti-cash"></i> ${t('reparto.toCollect')}: ${fmtMoney(orderTotal(order))}</strong>`}
+          </div>
+          ${order.entregaSalidaAt ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-clock"></i> ${t('reparto.leftAt')} ${new Date(order.entregaSalidaAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+          ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+        </div>
+        <div style="flex:1;min-width:200px">
+          ${repartidorSelectHtml}
+          ${btnLabel ? `<button class="btn ${st==='en_reparto'?'btn-primary':''}" style="width:100%;margin-top:6px" onclick="advanceRepartoEstado(${order.id})"><i class="ti ${st==='en_reparto'?'ti-circle-check':'ti-moped'}"></i> ${btnLabel}</button>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
 function getActiveCartas(){
   const ids = DB.activeCartaIds||[];
   return DB.cartas.filter(c=>ids.includes(c.id));
@@ -510,7 +672,7 @@ function renderTpvToGo(tiposServicio){
               </div>
               ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
               ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
-              ${o.clienteAddress ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteAddress)}</div>` : ''}
+              ${(o.clienteDireccion||o.clienteAddress) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
               <div style="margin-top:8px;font-weight:800;font-size:19px;color:var(--brand-orange)">${fmtMoney(orderTotal(o))}</div>
               ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
             </div>
@@ -596,6 +758,7 @@ function renderTPV(){
       <div class="left"></div>
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
       <button class="btn ${chaosMode?'btn-danger':''}" onclick="toggleChaosMode()" title="${t('tpv.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
+      ${getActiveRepartosOrders().length ? `<button class="btn btn-primary" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : ''}
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
@@ -1042,7 +1205,13 @@ function checkNewDeliveryZoneHint(){
 
 function confirmNewToGoOrder(){
   const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
-  const clientePhone = document.getElementById('togo-cliente-phone').value.trim();
+  // Antes esto se guardaba como "clientePhone" (y la dirección como
+  // "clienteAddress"), pero el resto de la app — pedidos online, tickets,
+  // fichas de cliente — usa "clienteTelefono"/"clienteDireccion": ese
+  // desajuste de nombres hacía que el teléfono/dirección de un pedido creado
+  // a mano en el TPV nunca se mostrara en ningún sitio (campo "de solo
+  // escritura"). Se unifica al nombre que ya usa el resto de la app.
+  const clienteTelefono = document.getElementById('togo-cliente-phone').value.trim();
   // Si el teléfono coincide con un cliente ya dado de alta, se vincula el
   // pedido a su ficha — igual que ya pasa con mesas y reservas — para que
   // sume puntos de fidelidad, aparezca en su historial, y el personal pueda
@@ -1050,7 +1219,7 @@ function confirmNewToGoOrder(){
   // Si no hay teléfono o no coincide, se prueba también por nombre exacto
   // (sin tildes/mayúsculas) para no crear una ficha duplicada de alguien que
   // ya está dado de alta pero llamó sin dar el mismo teléfono registrado.
-  let matchedClient = clientePhone ? findClientByPhone(clientePhone) : null;
+  let matchedClient = clienteTelefono ? findClientByPhone(clienteTelefono) : null;
   if(!matchedClient && clienteNombre){
     const norm = stripAccents(clienteNombre.toLowerCase());
     matchedClient = DB.clients.find(c => stripAccents((c.name||'').trim().toLowerCase()) === norm) || null;
@@ -1065,12 +1234,12 @@ function confirmNewToGoOrder(){
   const date = dateEl && dateEl.value ? dateEl.value : todayStr();
   const time = timeEl && timeEl.value ? timeEl.value : null;
   const isDelivery = toGoOrderTypeSelected === 'delivery';
-  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre: clientId ? matchedClient.name : clienteNombre, clientePhone, clientId, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre: clientId ? matchedClient.name : clienteNombre, clienteTelefono, clientId, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   if(isDelivery){
     const addressEl = document.getElementById('togo-cliente-address');
     const plataformaEl = document.getElementById('togo-plataforma');
     const repartidorEl = document.getElementById('togo-repartidor-sel');
-    order.clienteAddress = addressEl ? addressEl.value.trim() : '';
+    order.clienteDireccion = addressEl ? addressEl.value.trim() : '';
     order.plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
     Object.assign(order, parseRepartidorFieldValue(repartidorEl ? repartidorEl.value : ''));
     // El coste de envío configurado en Mi Negocio solo aplica cuando el
@@ -1524,6 +1693,7 @@ function renderTableOrderModal(orderId){
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}
+    ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
