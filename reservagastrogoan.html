@@ -237,7 +237,7 @@ const I18N = {
     'error.antelacion':'Con la antelación mínima de %d minutos, lo antes que puedes elegir hoy es a las %s.',
     'error.conexion':'No se ha podido conectar con el restaurante','error.carga':'No se ha podido cargar la información del restaurante','error.enlace':'Enlace no válido o incompleto',
     'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
-    'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.',
+    'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.', 'hint.cierrePedidos':'Para esta franja, el último pedido posible es a las %s.', 'error.cierrePedidos':'Ya no se aceptan pedidos para esta franja (el último posible era a las %s). Por favor elige otra hora.',
     'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
     'success.otra':'Hacer otra solicitud', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
@@ -291,7 +291,7 @@ const I18N = {
     'error.antelacion':'With a minimum lead time of %d minutes, the earliest you can choose today is %s.',
     'error.conexion':'Could not connect to the restaurant','error.carga':'Could not load restaurant information','error.enlace':'Invalid or incomplete link',
     'error.enlace.sub':'Ask the restaurant for a valid link.',
-    'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.',
+    'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.', 'hint.cierrePedidos':'For this time slot, the last possible order is at %s.', 'error.cierrePedidos':'Orders are no longer accepted for this time slot (the last possible was at %s). Please choose another time.',
     'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
     'success.otra':'Make another request', 'success.callToChange':'Need to change or cancel? Call %s.',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
@@ -345,7 +345,7 @@ const I18N = {
     'error.antelacion':'Amb una antelació mínima de %d minuts, el més aviat que pots triar avui és a les %s.',
     'error.conexion':'No s\'ha pogut connectar amb el restaurant','error.carga':'No s\'ha pogut carregar la informació del restaurant','error.enlace':'Enllaç no vàlid o incomplet',
     'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
-    'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.',
+    'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.', 'hint.cierrePedidos':'Per a aquesta franja, l\'última comanda possible és a les %s.', 'error.cierrePedidos':'Ja no s\'accepten comandes per a aquesta franja (l\'última possible era a les %s). Si us plau tria una altra hora.',
     'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
     'success.otra':'Fer una altra sol·licitud', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
@@ -732,6 +732,26 @@ function isTimeAllowed(dateStr, time){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return true;
   return turnos.some(t => time >= t.abre && time <= t.cierra);
+}
+
+// Hora límite real para hacer un PEDIDO (no una reserva) dentro del turno al
+// que pertenece `time`: el cierre del turno menos los minutos que el
+// negocio haya configurado en "Dejar de aceptar pedidos X min antes del
+// cierre" (mn.pedidos.cierreAntes). Devuelve null si no hay cutoff
+// configurado o `time` no cae dentro de ningún turno (ese caso ya lo separa
+// isTimeAllowed).
+function pedidosCutoffTimeForTurno(dateStr, time, p){
+  const cutoffMin = parseInt(p.cierrePedidosAntesMin) || 0;
+  if(!cutoffMin) return null;
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos) return null;
+  const turno = turnos.find(t => time >= t.abre && time <= t.cierra);
+  if(!turno) return null;
+  const [ch, cm] = turno.cierra.split(':').map(Number);
+  let limiteMin = ch * 60 + cm - cutoffMin;
+  if(limiteMin < 0) limiteMin = 0; // cutoff mayor que la duración del turno: no se acepta ningún pedido en él
+  const limite = String(Math.floor(limiteMin/60)).padStart(2,'0') + ':' + String(limiteMin%60).padStart(2,'0');
+  return {limite, turno};
 }
 
 // Devuelve {aforo, turnoIdx, reservados, disponible} o null si no hay aforo
@@ -1166,14 +1186,15 @@ function renderOrderForm(){
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint'); renderCartSummary()">
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint'); updateCierreHint(); renderCartSummary()">
         </div>
         <div class="field">
           <label>${t('hora')}</label>
-          <input type="time" id="o-time" value="20:00">
+          <input type="time" id="o-time" value="20:00" onchange="updateCierreHint()">
         </div>
       </div>
       <div id="o-hour-hint"></div>
+      <div id="o-cierre-hint"></div>
       ${isDelivery ? `
       <div class="field">
         <label>${t('direccion')}</label>
@@ -1202,7 +1223,23 @@ function renderOrderForm(){
   renderCartSummary();
   updateTimeInputRange('o-date','o-time','o-hour-hint');
   applyLeadTime('o-date','o-time','o-hour-hint');
+  updateCierreHint();
   updateCashAmountVisibility();
+}
+
+// Aviso de la hora límite real para pedir (cierre del turno menos el
+// margen configurado), independiente del aviso general de horario — solo
+// aplica a pedidos, así que va en su propio hint en vez de reutilizar
+// horarioHintHtml (compartido con el formulario de reservas).
+function updateCierreHint(){
+  const box = document.getElementById('o-cierre-hint');
+  if(!box) return;
+  const dateEl = document.getElementById('o-date');
+  const timeEl = document.getElementById('o-time');
+  if(!dateEl || !timeEl){ box.innerHTML = ''; return; }
+  const p = (DB.business||{}).pedidos || {};
+  const info = pedidosCutoffTimeForTurno(dateEl.value, timeEl.value, p);
+  box.innerHTML = info ? `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.cierrePedidos').replace('%s', info.limite)}</p>` : '';
 }
 
 // Un único grupo de opciones con las 3 formas de pago posibles (en vez del
@@ -1339,6 +1376,18 @@ async function submitOrder(){
     alert(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     submittingRequest = false;
     return;
+  }
+  // Además de estar dentro del horario de apertura, la cocina puede
+  // necesitar dejar de aceptar pedidos un rato antes del cierre real (para
+  // dar tiempo a prepararlos y no quedarse con un pedido a medias a la hora
+  // de cerrar). Se aplica solo a pedidos, no a reservas de mesa.
+  if(turnos !== null && turnos.length){
+    const cutoffTime = pedidosCutoffTimeForTurno(date, time, p);
+    if(cutoffTime && time > cutoffTime.limite){
+      alert(t('error.cierrePedidos').replace('%s', cutoffTime.limite));
+      submittingRequest = false;
+      return;
+    }
   }
 
   const leadTimeMin = getLeadTimeMin();

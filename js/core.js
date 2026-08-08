@@ -2456,6 +2456,11 @@ function renderPedidosConfigCard(){
       </div>
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('mn.pedidos.tiempoEstimadoDesc')}</p>
       <div class="field">
+        <label>${t('mn.pedidos.cierreAntes')}</label>
+        <input type="number" id="mn-cierreantes" min="0" step="5" value="${escapeHtml(p.cierrePedidosAntesMin||0)}" placeholder="0">
+        <small style="color:var(--muted)">${t('mn.pedidos.cierreAntesDesc')}</small>
+      </div>
+      <div class="field">
         <label>${t('mn.pedidos.minOrder')}</label>
         <input type="number" id="mn-pedidominimo" min="0" step="0.5" value="${escapeHtml(p.pedidoMinimo||0)}" placeholder="10">
         <small style="color:var(--muted)">${t('mn.pedidos.minOrderDesc')}</small>
@@ -2521,6 +2526,7 @@ async function savePedidosConfig(){
   p.tiempoBasePrep = Math.max(0, parseInt(document.getElementById('mn-tiempobase').value) || 0);
   p.extraPorPedidoEnCola = Math.max(0, parseInt(document.getElementById('mn-extraporpedido').value) || 0);
   p.tiempoMaxEstimado = Math.max(0, parseInt(document.getElementById('mn-tiempomax').value) || 0);
+  p.cierrePedidosAntesMin = Math.max(0, parseInt(document.getElementById('mn-cierreantes').value) || 0);
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
   const maxParadasEl = document.getElementById('mn-maxparadasruta');
   if(maxParadasEl) p.maxParadasPorRuta = Math.max(0, parseInt(maxParadasEl.value) || 0);
