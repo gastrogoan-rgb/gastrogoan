@@ -622,7 +622,12 @@ function checkRedsysConfigured(){
     .then(r => r.json())
     .then(data => {
       redsysConfigured = !!(data && data.configured);
-      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery')) renderTabContent();
+      // renderTabContentPreservingForm (no renderTabContent a secas): si el
+      // cliente ya había empezado a escribir su nombre/teléfono/dirección
+      // antes de que esta comprobación terminase (llega por red, puede
+      // tardar), un renderTabContent normal lo habría borrado todo de golpe
+      // justo cuando aparece la opción de pagar con tarjeta.
+      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery')) renderTabContentPreservingForm();
     })
     .catch(() => {});
 }

@@ -47,19 +47,36 @@ function markRepartoEntregado(orderId){
   order.entregadoAt = new Date().toISOString();
   logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
   saveDB();
+  refreshRepartoUI(orderId);
+  showToast(t('msg.deliveryMarkedDelivered'));
+}
+// Vuelve a pintar lo que haga falta después de tocar algo del reparto
+// (repartidor asignado, cambio a preparar, entregado...): el panel de
+// control si está abierto, o si no la propia tarjeta del pedido si es esa
+// la que está abierta — si no, el badge/importe se quedaban con el valor
+// viejo hasta cerrar y reabrir el pedido a mano.
+function refreshRepartoUI(orderId){
   if(document.getElementById('repartos-control-modal-body')) renderRepartosControlModalBody();
   else if(document.querySelector('.modal-overlay.active')) renderTableOrderModal(orderId);
   renderTPV();
-  showToast(t('msg.deliveryMarkedDelivered'));
 }
 function assignRepartidorForOrder(orderId, raw){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  // Mismo criterio que confirmSetCamarero: quitarle un reparto YA asignado
+  // a otra persona para dárselo a otra es cosa del propietario, no de
+  // cualquier empleado — la primera asignación (auto o manual) sigue
+  // abierta a cualquiera, como el resto de esta sesión.
+  const yaAsignado = order.repartidorId != null || order.repartidorCourierId != null;
+  if(yaAsignado && !isOwnerSession()){
+    showToast(t('msg.onlyOwnerCanReassignRider'));
+    refreshRepartoUI(orderId); // repinta el <select> a su valor real (deshace el cambio visual)
+    return;
+  }
   Object.assign(order, parseRepartidorFieldValue(raw));
   logAudit('edit', t('audit.reassignedRider').replace('${name}', order.clienteNombre||'?').replace('${rider}', repartidorNombre(order)));
   saveDB();
-  renderTPV();
-  if(document.getElementById('repartos-control-modal-body')) renderRepartosControlModalBody();
+  refreshRepartoUI(orderId);
 }
 
 // Asignación automática: entre los empleados de Sala marcados como
@@ -240,6 +257,7 @@ function setPagaConForOrder(orderId, value){
   const n = parseFloat(value);
   order.pagaCon = (value === '' || isNaN(n)) ? null : n;
   saveDB();
+  refreshRepartoUI(orderId);
 }
 // Toda la información que necesita quien reparte, en una sola tarjeta:
 // dirección (con botón directo a Google Maps), teléfono, cuánto cobrar y
@@ -281,6 +299,7 @@ function renderRepartoControlCardHtml(order){
               ${order.pagaCon!=null && order.metodoPagoLocal==='efectivo' ? `<small style="color:var(--muted)">${t('reparto.pagaConFromClient')}</small>` : ''}
             </div>
             ${cambio != null ? `<div style="font-size:14px;margin-top:4px"><strong style="color:var(--red)"><i class="ti ti-cash-banknote"></i> ${t('reparto.change')}: ${fmtMoney(cambio)}</strong></div>` : ''}
+            ${order.pagaCon != null && order.pagaCon < total ? `<div style="font-size:12px;margin-top:4px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${t('reparto.pagaConInsuficiente')}</div>` : ''}
           ` : ''}
           ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted);margin-top:8px"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         </div>
