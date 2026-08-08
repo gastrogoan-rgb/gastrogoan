@@ -1739,6 +1739,12 @@ function saveClient(id){
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
+  // Aviso (no bloqueante) de un teléfono/email con pinta de mal escrito —
+  // antes no se comprobaba nada aquí, y el error solo se descubría mucho
+  // más tarde y lejos de esta ficha, al fallar en silencio el envío de un
+  // WhatsApp o email (recordatorio de reserva, premio de fidelidad...).
+  if(phone && phone.replace(/[^\d]/g,'').length < 9 && !confirm(t('msg.confirmOddPhone'))) return;
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !confirm(t('msg.confirmOddEmail'))) return;
   const cp = document.getElementById('client-cp').value.trim();
   const cumpleanos = document.getElementById('client-cumpleanos').value;
   const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
@@ -2932,23 +2938,22 @@ function confirmReservaArrival(id){
   renderReservas();
 }
 
+// Antes solo una solicitud pendiente venida de la web pública exigía PIN;
+// cualquier otra reserva (confirmada, completada, gestionada por el
+// personal) se borraba con un simple confirm(), perdiendo para siempre su
+// histórico/notas — a diferencia de borrar un cliente, que sí pasa por PIN
+// + papelera. Ahora todas las reservas usan el mismo nivel de protección.
 function deleteReservation(id){
   const r = DB.reservations.find(x=>x.id===id);
-  // Borrar una solicitud PENDIENTE que vino de la web pública exige el PIN del
-  // negocio (misma lógica que rechazarla); una reserva normal creada/gestionada
-  // por el personal sigue usando el confirm() de siempre, sin fricción extra.
-  if(r && r.origen === 'publico' && r.status === 'pendiente'){
-    requestBusinessPinAction(t('title.rejectReservation'), t('msg.confirmDeleteReservation'), () => {
-      DB.reservations = DB.reservations.filter(x=>x.id!==id);
-      saveDB();
-      renderReservas();
-    });
-    return;
-  }
-  if(!confirm(t('msg.confirmDeleteReservation'))) return;
-  DB.reservations = DB.reservations.filter(x=>x.id!==id);
-  saveDB();
-  renderReservas();
+  if(!r) return;
+  requestBusinessPinAction(t('title.deleteReservation'), t('msg.confirmDeleteReservation'), () => {
+    moveToTrash('reservation', r);
+    logAudit('delete', t('audit.deletedReservation').replace('${name}', r.clientName||'?').replace('${date}', r.date));
+    DB.reservations = DB.reservations.filter(x=>x.id!==id);
+    saveDB();
+    closeModal();
+    renderReservas();
+  });
 }
 
 // Recordatorio de la reserva por WhatsApp/email, con el mismo patrón que el
@@ -3154,7 +3159,7 @@ function renderPromoDia(){
             <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
               <button class="btn btn-sm" onclick="incrementPromoRedemption(${p.id},'${date}')" title="${t('promo.day.redemptionHint')}"><i class="ti ti-plus"></i> ${t('promo.day.redemptions').replace('${n}', redemptions)}</button>
             </div>
-            <div class="actions-cell owner-only" style="margin-top:10px">
+            <div class="actions-cell owner-strict" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
             </div>
@@ -4089,7 +4094,9 @@ function savePromo(id){
 
 function deletePromo(id){
   if(!confirm(t('msg.confirmDeletePromotion'))) return;
+  const p = DB.promos.find(x=>x.id===id);
   DB.promos = DB.promos.filter(p=>p.id!==id);
+  if(p) logAudit('delete', t('audit.deletedPromo').replace('${title}', p.titulo));
   saveDB();
   renderPromocion();
 }

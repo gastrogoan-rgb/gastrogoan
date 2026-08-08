@@ -1873,9 +1873,18 @@ function promptTableAllergens(orderId){
   renderTableOrderModal(orderId);
 }
 
+// El camarero de una mesa ya se asigna solo al abrirla, según quién esté
+// fichado (ver confirmOpenTableOrder) — eso es lo que luego reparte ventas
+// y estadísticas por empleado. Cambiarlo A POSTERIORI (no asignarlo por
+// primera vez) es distinto: antes cualquiera podía "quitarle" la mesa a un
+// compañero con un solo clic, sin ninguna restricción, pudiendo desviar a
+// quién se atribuye la venta. Ahora solo el propietario real puede
+// reasignar una mesa que ya tenía camarero; asignarla por primera vez
+// (estaba sin nadie) sigue abierto a cualquiera, igual que al crearla.
 function openSetCamareroModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  if(order.camareroId != null && !isOwnerSession()){ showToast(t('msg.onlyOwnerCanReassignWaiter')); return; }
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-user"></i> ${t('label.waiterShort')}</h3>
@@ -1891,8 +1900,15 @@ function openSetCamareroModal(orderId){
 function confirmSetCamarero(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  if(order.camareroId != null && !isOwnerSession()) return;
   const sel = document.getElementById('set-camarero-sel');
-  order.camareroId = sel && sel.value ? parseInt(sel.value) : null;
+  const newId = sel && sel.value ? parseInt(sel.value) : null;
+  if(order.camareroId !== newId){
+    const before = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
+    const after = newId ? DB.employees.find(e=>e.id===newId) : null;
+    logAudit('edit', t('audit.reassignedWaiter').replace('${from}', before?before.name:t('common.unassigned')).replace('${to}', after?after.name:t('common.unassigned')));
+  }
+  order.camareroId = newId;
   saveDB();
   renderTableOrderModal(orderId);
 }
@@ -2486,10 +2502,6 @@ function requestVoidLine(orderId, idx, type, delta){
       <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">"${escapeHtml(line.name)}" ${t('msg.voidDishDesc')}</p>
-    <div class="field">
-      <label>${t('label.accessPin')}</label>
-      <input type="password" id="void-pin-input" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-    </div>
     ${loggedEmployeeId === null && camareros.length ? `<div class="field">
       <label>${t('label.responsible')}</label>
       <select id="void-responsable-sel">
@@ -2509,18 +2521,19 @@ function requestVoidLine(orderId, idx, type, delta){
       <button class="btn btn-danger" onclick="confirmVoidLine()"><i class="ti ti-trash"></i> ${t('btn.voidDish')}</button>
     </div>
   `);
-  setTimeout(()=>document.getElementById('void-pin-input')?.focus(), 50);
 }
+// Ya no pide el PIN de negocio (igual que los descuentos): quien anula queda
+// igualmente identificado por su sesión (o elegido a mano solo si nadie
+// está fichado individualmente), y la anulación se ve en el Historial de
+// Anulaciones para que el responsable pueda revisar quién ha hecho qué y
+// actuar si algo no cuadra — el control pasa a ser "queda constancia", no
+// "hace falta un PIN para poder hacerlo".
 function confirmVoidLine(){
   if(!voidPending) return;
   const {orderId, idx, type, delta} = voidPending;
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!order || !line) return;
-  const pin = document.getElementById('void-pin-input').value;
-  const bp = DB.business.pin;
-  const match = bp.startsWith('H:') ? hashPin(pin) === bp : pin === bp;
-  if(!match){ showToast(t('msg.pinIncorrect')); return; }
   const reasonSel = document.getElementById('void-reason-select').value;
   const reasonOther = document.getElementById('void-reason-other').value.trim();
   const motivo = reasonSel === 'otro' ? (reasonOther || t(VOID_REASON_KEYS.otro)) : t(VOID_REASON_KEYS[reasonSel]);
@@ -3404,7 +3417,7 @@ function openTodaySalesModal(){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th class="owner-only">${t('tpv.margin.label')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.total')}</th><th class="owner-strict">${t('tpv.margin.label')}</th><th>${t('label.paymentMethod')}</th><th></th></tr></thead>
         <tbody>${sales.length ? sales.map(s => {
           const table = s.tableId ? DB.tables.find(t=>t.id===s.tableId) : null;
           const label = table ? table.name : togoOrderLabel(s);
@@ -3414,7 +3427,7 @@ function openTodaySalesModal(){
             <td>${escapeHtml(hora)}</td>
             <td>${escapeHtml(label)}${s.clienteNombre?` — ${escapeHtml(s.clienteNombre)}`:''}</td>
             <td>${fmtMoney(s.total)}</td>
-            <td class="owner-only" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
+            <td class="owner-strict" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
             <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
             <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button>${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id})))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
           </tr>`;

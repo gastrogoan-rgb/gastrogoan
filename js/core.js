@@ -3154,7 +3154,7 @@ function moveToTrash(type, item){
   const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
   DB.trash = DB.trash.filter(x => new Date(x.deletedAt).getTime() >= cutoff);
 }
-const TRASH_TYPE_ARRAY = {employee:'employees', client:'clients', recipe:'recipes', ingredient:'ingredients', elaboracion:'elaboraciones'};
+const TRASH_TYPE_ARRAY = {employee:'employees', client:'clients', recipe:'recipes', ingredient:'ingredients', elaboracion:'elaboraciones', reservation:'reservations'};
 function restoreTrashItem(trashId){
   const entry = (DB.trash||[]).find(x => x.id === trashId);
   if(!entry) return;
@@ -3174,8 +3174,8 @@ function purgeTrashItem(trashId){
   saveDB();
   if(typeof openTrashModal === 'function') openTrashModal();
 }
-const TRASH_TYPE_LABEL_KEY = {employee:'label.employee', client:'label.client', recipe:'label.recipe', ingredient:'label.ingredient', elaboracion:'label.elaboration'};
-const TRASH_TYPE_NAME_FIELD = {employee:'name', client:'name', recipe:'name', ingredient:'name', elaboracion:'name'};
+const TRASH_TYPE_LABEL_KEY = {employee:'label.employee', client:'label.client', recipe:'label.recipe', ingredient:'label.ingredient', elaboracion:'label.elaboration', reservation:'label.reservation'};
+const TRASH_TYPE_NAME_FIELD = {employee:'name', client:'name', recipe:'name', ingredient:'name', elaboracion:'name', reservation:'clientName'};
 function openTrashModal(){
   const items = [...(DB.trash||[])].sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
   openModal(`
