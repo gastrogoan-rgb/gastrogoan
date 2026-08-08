@@ -1254,10 +1254,18 @@ function updateCierreHint(){
 // el negocio haya marcado en Mi Negocio → Pedidos; si solo hay una
 // disponible, se fija sin preguntar.
 function renderPaymentMethodRadiosHtml(p){
+  // Compatibilidad con negocios que ya tenían el antiguo interruptor
+  // "permitirPagoLocal: false" (pago online obligatorio) puesto de antes de
+  // que existieran estas 3 casillas independientes: si nunca han tocado el
+  // nuevo ajuste (aceptaEfectivo/aceptaTarjetaLocal siguen "undefined", no
+  // "false" explícito), se respeta la preferencia antigua. En cuanto el
+  // dueño guarda el nuevo ajuste una vez, savePedidosConfig fija
+  // permitirPagoLocal=true y ya no vuelve a aplicar este fallback.
+  const legacyForceOnline = p.permitirPagoLocal === false && p.aceptaEfectivo === undefined && p.aceptaTarjetaLocal === undefined;
   const opts = [];
   if(redsysConfigured && p.aceptaTpvVirtual !== false) opts.push({value:'tpv', label:t('pago.tarjeta')});
-  if(p.aceptaEfectivo !== false) opts.push({value:'efectivo', label: t('pago.efectivo')});
-  if(p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
+  if(!legacyForceOnline && p.aceptaEfectivo !== false) opts.push({value:'efectivo', label: t('pago.efectivo')});
+  if(!legacyForceOnline && p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
   if(!opts.length) opts.push({value:'efectivo', label: t('pago.efectivo')}); // salvaguarda: nunca dejar el formulario sin ninguna opción
   if(opts.length === 1){
     return `<input type="radio" name="o-pago-metodo" value="${opts[0].value}" checked style="display:none"><p style="font-size:13px;color:#888">${t('pago.metodoFijado').replace('%s', opts[0].label)}</p>`;
