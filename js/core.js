@@ -2062,6 +2062,23 @@ function applyRemoteBlock(key, remoteValue){
     merged.filter(c => c.warnings && c.warnings.length && !knownIds.has(c.id))
       .forEach(c => notifyDesktop(t('notif.cashWarningTitle'), c.warnings[0]));
   }
+  // Aviso de "nuevo reparto asignado" a quien esté conectado en ESTE
+  // dispositivo con su propia sesión de empleado: si el reparto automático
+  // (autoAssignRepartidor, js/tpv.js) le acaba de asignar un pedido desde
+  // OTRO dispositivo (donde se aceptó el pedido), es aquí — al llegar ese
+  // cambio por la nube — donde este dispositivo se entera y puede avisar.
+  if(key === 'tpvOrders' && Array.isArray(DB[key]) && Array.isArray(merged)){
+    const myId = (typeof loggedInEmployeeId === 'function') ? loggedInEmployeeId() : null;
+    if(myId){
+      const before = new Map(DB[key].map(o => [o.id, o.repartidorId]));
+      merged.filter(o => o.repartidorId === myId && before.get(o.id) !== myId && o.entregaEstado !== 'entregado')
+        .forEach(o => {
+          notifyDesktop(t('notif.newDeliveryTitle'), (o.clienteNombre||'') + (o.clienteDireccion ? ' — ' + o.clienteDireccion : ''));
+          if(typeof playNewRequestAlert === 'function') playNewRequestAlert();
+          if(typeof showToast === 'function') showToast(t('msg.newDeliveryAssignedToYou').replace('${name}', o.clienteNombre||'?'));
+        });
+    }
+  }
   lastSyncedSnapshot[key] = json;
   DB[key] = merged;
   idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));

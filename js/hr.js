@@ -1919,6 +1919,28 @@ function turnoHorarioLabel(t){
   return s;
 }
 
+// ¿Está este empleado dentro de su turno AHORA MISMO, según el horario que
+// se le ha planificado hoy? Se usa para el reparto automático (asignar el
+// pedido a un repartidor que de verdad esté trabajando ahora, no a
+// cualquiera dado de alta como repartidor aunque libre o de vacaciones).
+// Contempla turnos partidos (dos franjas) y turnos que cruzan medianoche.
+function isEmployeeOnShiftNow(employeeId){
+  const turno = (DB.turnos||[]).find(x => x.employeeId === employeeId && x.fecha === todayStr());
+  if(!turno || ['D','V','B'].includes(turno.tipo)) return false;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const inRange = (entrada, salida) => {
+    if(!entrada || !salida) return false;
+    const [eh,em] = entrada.split(':').map(Number);
+    const [sh,sm] = salida.split(':').map(Number);
+    const e = eh*60+em, s = sh*60+sm;
+    return s > e ? (nowMin >= e && nowMin <= s) : (nowMin >= e || nowMin <= s);
+  };
+  if(inRange(turno.entrada, turno.salida)) return true;
+  if(turno.tipo === 'P' && inRange(turno.entrada2, turno.salida2)) return true;
+  return false;
+}
+
 function renderHorarios(){
   const box = document.getElementById('horarios-content');
   box.innerHTML = `
@@ -2736,6 +2758,12 @@ function openEmployeeModal(id){
       ${t('label.canUnlockEditMode').replace('${area}', (e.area||currentArea())==='sala' ? t('folder.sala.title') : t('folder.cocina.title'))}
     </label>
     <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:-10px 0 6px">${t('msg.canUnlockEditModeDesc')}</p>
+    ${(e.area||currentArea())==='sala' ? `
+    <label class="owner-strict" style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="emp-es-repartidor" ${e.esRepartidor?'checked':''} style="width:auto">
+      ${t('label.isDeliveryRider')}
+    </label>
+    <p class="owner-strict" style="font-size:12px;color:var(--muted);margin:0 0 14px">${t('msg.isDeliveryRiderDesc')}</p>` : ''}
     ${id ? `
     <div class="field owner-strict">
       <label>${t('label.clockInPin')}</label>
@@ -2776,15 +2804,17 @@ function saveEmployee(id){
   const email = document.getElementById('emp-email').value.trim();
   const canUnlockEdit = document.getElementById('emp-can-edit').checked;
   const empActiveEl = document.getElementById('emp-active');
+  const esRepartidorEl = document.getElementById('emp-es-repartidor');
+  const esRepartidor = esRepartidorEl ? esRepartidorEl.checked : false;
   if(id){
     const emp = DB.employees.find(e => e.id===id);
     if(!emp) return;
     // El área no se pregunta: se conserva la del empleado (o la actual si no tenía).
-    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, area: emp.area||currentArea()});
+    Object.assign(emp, {name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: emp.area||currentArea()});
     if(empActiveEl) emp.active = empActiveEl.checked;
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, area: currentArea(), pin:'1234', pinChanged:false, active:true, fechaAlta: todayStr()});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:'1234', pinChanged:false, active:true, fechaAlta: todayStr()});
     logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();
