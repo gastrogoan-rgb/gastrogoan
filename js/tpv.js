@@ -591,6 +591,7 @@ function renderTPV(){
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
       <button class="btn ${chaosMode?'btn-danger':''}" onclick="toggleChaosMode()" title="${t('tpv.chaos.hint')}"><i class="ti ti-flame"></i> ${t('tpv.chaos.btn')}</button>
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
+      <button class="btn" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
     </div>
@@ -2049,13 +2050,13 @@ function cycleGroupEstado(orderId, tanda){
   if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
-// Marcar un plato como agotado a media comanda, sin salir de la pantalla de
-// Comandas Cocina ni pedir permiso de editar: "Oferta Gastronómica" (Carta)
-// está oculta para el personal sin permiso de edición, así que antes la
-// única forma de avisar de que algo se había terminado era decírselo a
-// alguien con acceso. Este toggle actúa directamente sobre DB.cartas (no
-// pasa por el borrador del editor de Carta, cartaEdit) y se guarda al
-// instante — cualquiera que vea Comandas Cocina puede usarlo.
+// Marcar un plato/bebida como agotado a media comanda, sin salir de la
+// pantalla que ya se tiene abierta (Comandas Cocina, o el TPV en Sala) ni
+// pedir permiso de editar: "Oferta Gastronómica" (Carta) está oculta para
+// el personal sin permiso de edición, así que antes la única forma de
+// avisar de que algo se había terminado era decírselo a alguien con
+// acceso. Este toggle actúa directamente sobre DB.cartas (no pasa por el
+// borrador del editor de Carta, cartaEdit) y se guarda al instante.
 function quickToggleDishAvailability(cartaId, secId, platoId){
   const carta = (DB.cartas||[]).find(c => c.id === cartaId);
   const sec = carta && (carta.secciones||[]).find(s => s.id === secId);
@@ -2072,7 +2073,11 @@ function openMarkDishOutModal(){
 }
 function renderMarkDishOutModal(){
   const area = currentArea();
-  const cartas = (DB.cartas||[]).filter(c => (c.area||'cocina')===area && !isBebidaCarta(c));
+  // Antes se excluían las cartas de bebidas con !isBebidaCarta(c), que en
+  // Sala (donde toda carta ES de bebidas) dejaba la lista siempre vacía —
+  // el filtro por área ya es suficiente, esa exclusión era innecesaria en
+  // Cocina (sus cartas nunca son de bebidas) y rompía Sala del todo.
+  const cartas = (DB.cartas||[]).filter(c => (c.area||'cocina')===area);
   const rowsHtml = cartas.map(c => {
     const secsHtml = (c.secciones||[]).filter(s => (s.platos||[]).length).map(sec => `
       <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700;text-transform:uppercase">${escapeHtml(sec.nombre)}</div>
