@@ -1623,6 +1623,19 @@ function getPedidosResumenForSync(){
   return resumen;
 }
 
+// Cuántos pedidos hay ahora mismo en cocina sin terminar de preparar
+// (aceptados, con alguna línea todavía sin marcar "entregado" desde el
+// punto de vista de cocina) — se usa para dar al cliente de la web pública
+// una estimación de cuánto puede tardar su pedido según la carga real de
+// ese momento, no un tiempo fijo que no refleje si hay mucho lío o no.
+function getActiveKitchenOrdersCount(){
+  return DB.tpvOrders.filter(o =>
+    o.status === 'abierta' &&
+    (o.tipo === 'takeaway' || o.tipo === 'delivery' || o.tipo === 'mesa') &&
+    (o.items||[]).some(l => !l.bebida && l.estado !== 'entregado')
+  ).length;
+}
+
 /* Inicializa (una sola vez) una segunda instancia de Firebase apuntando
    al proyecto compartido de la plataforma, y se autentica de forma anónima
    en ella (sus reglas también exigen auth != null). Devuelve una promesa
@@ -1860,6 +1873,7 @@ function syncPublicMirror(){
         activeCartaIds: DB.activeCartaIds,
         reservasResumen: getReservasResumenForSync(),
         pedidosResumen: getPedidosResumenForSync(),
+        cocinaCargaActiva: getActiveKitchenOrdersCount(),
         tables: DB.tables.map(t => ({id: t.id, name: t.name}))
       };
       if(sucursales) data.sucursales = sucursales;
@@ -2426,6 +2440,21 @@ function renderPedidosConfigCard(){
     <div class="card" style="max-width:720px">
       <h3><i class="ti ti-clock-hour-4"></i> ${t('mn.pedidos.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> ${t('mn.pedidos.leadTimeInfo')}</p>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.pedidos.tiempoBase')}</label>
+          <input type="number" id="mn-tiempobase" min="0" step="5" value="${escapeHtml(p.tiempoBasePrep!=null?p.tiempoBasePrep:15)}" placeholder="15">
+        </div>
+        <div class="field">
+          <label>${t('mn.pedidos.extraPorPedido')}</label>
+          <input type="number" id="mn-extraporpedido" min="0" step="1" value="${escapeHtml(p.extraPorPedidoEnCola!=null?p.extraPorPedidoEnCola:3)}" placeholder="3">
+        </div>
+        <div class="field">
+          <label>${t('mn.pedidos.tiempoMax')}</label>
+          <input type="number" id="mn-tiempomax" min="0" step="5" value="${escapeHtml(p.tiempoMaxEstimado!=null?p.tiempoMaxEstimado:60)}" placeholder="60">
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('mn.pedidos.tiempoEstimadoDesc')}</p>
       <div class="field">
         <label>${t('mn.pedidos.minOrder')}</label>
         <input type="number" id="mn-pedidominimo" min="0" step="0.5" value="${escapeHtml(p.pedidoMinimo||0)}" placeholder="10">
@@ -2436,6 +2465,18 @@ function renderPedidosConfigCard(){
         <input type="number" id="mn-maxporfranja" min="0" step="1" value="${escapeHtml(p.maxPorFranja||0)}" placeholder="0">
         <small style="color:var(--muted)">${t('mn.pedidos.maxPorFranjaDesc')}</small>
       </div>
+      ${deliveryEnabled ? `
+      <div class="field">
+        <label>${t('mn.pedidos.maxParadasRuta')}</label>
+        <input type="number" id="mn-maxparadasruta" min="0" step="1" value="${escapeHtml(p.maxParadasPorRuta!=null?p.maxParadasPorRuta:4)}" placeholder="4">
+        <small style="color:var(--muted)">${t('mn.pedidos.maxParadasRutaDesc')}</small>
+      </div>
+      <div class="field">
+        <label>${t('mn.pedidos.ventanaRuta')}</label>
+        <input type="number" id="mn-ventanaruta" min="0" step="5" value="${escapeHtml(p.ventanaRutaMin!=null?p.ventanaRutaMin:30)}" placeholder="30">
+        <small style="color:var(--muted)">${t('mn.pedidos.ventanaRutaDesc')}</small>
+      </div>
+      ` : ''}
       <div class="field">
         <label>${t('mn.pedidos.metodosLocales')}</label>
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px">
@@ -2477,7 +2518,14 @@ async function savePedidosConfig(){
   const b = DB.business;
   const p = b.pedidos || {};
   p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
+  p.tiempoBasePrep = Math.max(0, parseInt(document.getElementById('mn-tiempobase').value) || 0);
+  p.extraPorPedidoEnCola = Math.max(0, parseInt(document.getElementById('mn-extraporpedido').value) || 0);
+  p.tiempoMaxEstimado = Math.max(0, parseInt(document.getElementById('mn-tiempomax').value) || 0);
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
+  const maxParadasEl = document.getElementById('mn-maxparadasruta');
+  if(maxParadasEl) p.maxParadasPorRuta = Math.max(0, parseInt(maxParadasEl.value) || 0);
+  const ventanaRutaEl = document.getElementById('mn-ventanaruta');
+  if(ventanaRutaEl) p.ventanaRutaMin = Math.max(0, parseInt(ventanaRutaEl.value) || 0);
   const aceptaEfectivo = document.getElementById('mn-acepta-efectivo').checked;
   const aceptaTarjetaLocal = document.getElementById('mn-acepta-tarjeta-local').checked;
   // Por mucho que llegara marcado desde el DOM, el TPV virtual solo se

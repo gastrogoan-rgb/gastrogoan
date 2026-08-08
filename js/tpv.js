@@ -115,10 +115,29 @@ function repartidorNombre(order){
 function getRouteGroupForOrder(order){
   const key = order.repartidorId ? `emp:${order.repartidorId}` : (order.repartidorCourierId ? `courier:${order.repartidorCourierId}` : null);
   if(!key) return [order];
-  const group = getActiveRepartosOrders().filter(o => {
+  let group = getActiveRepartosOrders().filter(o => {
     const k = o.repartidorId ? `emp:${o.repartidorId}` : (o.repartidorCourierId ? `courier:${o.repartidorCourierId}` : null);
     return k === key;
   });
+  const p = (DB.business && DB.business.pedidos) || {};
+  const anchorTime = new Date(order.createdAt).getTime();
+  // Ventana de tiempo: no agrupa en la misma ruta un pedido que lleva horas
+  // esperando con uno que acaba de entrar, aunque el mismo repartidor los
+  // tenga los dos activos a la vez — pueden ir en direcciones/momentos muy
+  // distintos y no tiene sentido forzarlos juntos.
+  const ventanaMin = p.ventanaRutaMin != null ? p.ventanaRutaMin : 30;
+  if(ventanaMin > 0){
+    group = group.filter(o => Math.abs(new Date(o.createdAt).getTime() - anchorTime) <= ventanaMin * 60000);
+  }
+  // Tope de paradas: si aun así quedan más pedidos de los que caben en una
+  // ruta, se queda con los más cercanos en el tiempo a ESTE pedido (el resto
+  // formará su propia ruta al mirarla desde su propia tarjeta).
+  const maxParadas = p.maxParadasPorRuta != null ? p.maxParadasPorRuta : 4;
+  if(maxParadas > 0 && group.length > maxParadas){
+    group = [...group]
+      .sort((a,b) => Math.abs(new Date(a.createdAt).getTime()-anchorTime) - Math.abs(new Date(b.createdAt).getTime()-anchorTime))
+      .slice(0, maxParadas);
+  }
   group.sort((a,b) => (a.createdAt||'').localeCompare(b.createdAt||''));
   return group;
 }

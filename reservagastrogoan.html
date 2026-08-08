@@ -218,7 +218,7 @@ const I18N = {
     'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
-    'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.',
+    'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
     'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
@@ -272,7 +272,7 @@ const I18N = {
     'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
-    'cart.min':'Minimum order: %s. Add %s more to continue.',
+    'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
     'no.services':'This restaurant has no online services available at the moment.',
@@ -326,7 +326,7 @@ const I18N = {
     'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
-    'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.',
+    'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
     'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
@@ -563,6 +563,13 @@ function loadBusinessInfo(){
       cartas: val.cartas || [],
       activeCartaIds: val.activeCartaIds || (val.activeCartaId ? [val.activeCartaId] : []),
       reservasResumen: val.reservasResumen || {},
+      // Antes faltaba "pedidosResumen" aquí: el límite de pedidos por franja
+      // (submitOrder → reservePedidoSlotAtomic) siempre veía un baseline de 0
+      // aunque ya hubiera pedidos aceptados en esa franja, así que en la
+      // práctica solo detectaba choques entre pedidos casi simultáneos, no
+      // el límite acumulado real de la franja.
+      pedidosResumen: val.pedidosResumen || {},
+      cocinaCargaActiva: val.cocinaCargaActiva || 0,
       tables: val.tables || []
     };
     renderHeader();
@@ -1159,7 +1166,7 @@ function renderOrderForm(){
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint')">
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint'); renderCartSummary()">
         </div>
         <div class="field">
           <label>${t('hora')}</label>
@@ -1272,7 +1279,25 @@ function renderCartSummary(){
     ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
     <div class="cart-total bump"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
+    ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
   `;
+}
+
+// Estimación de "tu pedido debería estar listo en X min" a partir de la
+// carga real de cocina ahora mismo (cocinaCargaActiva, sincronizado en
+// vivo) — no un tiempo fijo que sea mentira en hora punta o exagerado en
+// horas tranquilas. Formula configurable desde Mi Negocio → Pedidos:
+// tiempo base + minutos extra por cada pedido que cocina tiene aún sin
+// terminar, con un tope máximo para no anunciar esperas disparatadas.
+function etaHintHtml(){
+  const p = (DB.business||{}).pedidos || {};
+  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
+  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
+  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
+  const carga = DB.cocinaCargaActiva || 0;
+  const eta = Math.min(base + carga * extra, max || (base + carga * extra));
+  const label = currentTab === 'delivery' ? t('cart.etaDelivery') : t('cart.etaTakeaway');
+  return `<p style="font-size:13px;color:var(--muted);margin-top:8px"><i class="ti ti-clock"></i> ${label.replace('%d', eta)}</p>`;
 }
 
 async function submitOrder(){
