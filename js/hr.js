@@ -246,14 +246,20 @@ const GE = (function(){
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupportedFixed')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivFijos)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realMonthlyCost')}</div><div class="val" style="color:var(--teal)">${fmtMoney(totN)}</div></div>`;
     renderGFList('gf-personal', personal);
-    const gfNames = new Set(personal.map(g => g.nombre.trim().toLowerCase()));
-    const empSuggestions = DB.employees.filter(e => !gfNames.has(e.name.trim().toLowerCase()));
+    // Se descarta por employeeId cuando la línea de gasto ya está enlazada a
+    // una ficha (el caso normal desde que existe este enlace); las líneas
+    // antiguas sin employeeId siguen comparándose por nombre, para no volver
+    // a sugerir a alguien que ya tiene su coste dado de alta desde antes de
+    // este cambio.
+    const gfEmployeeIds = new Set(personal.filter(g => g.employeeId != null).map(g => g.employeeId));
+    const gfNames = new Set(personal.filter(g => g.employeeId == null).map(g => g.nombre.trim().toLowerCase()));
+    const empSuggestions = DB.employees.filter(e => !gfEmployeeIds.has(e.id) && !gfNames.has(e.name.trim().toLowerCase()));
     const sugBox = document.getElementById('gf-personal');
     if(empSuggestions.length){
       sugBox.insertAdjacentHTML('beforeend', `
         <div style="padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <span style="font-size:12px;color:var(--muted)"><i class="ti ti-users"></i> ${t('hr.gf.employeesNoCost')}</span>
-          ${empSuggestions.map(e => `<button class="btn btn-sm" onclick="GE.newGFFromEmployee('${escapeJsAttr(e.name)}')" style="font-weight:600"><i class="ti ti-plus"></i> ${escapeHtml(e.name)}</button>`).join('')}
+          ${empSuggestions.map(e => `<button class="btn btn-sm" onclick="GE.newGFFromEmployee(${e.id})" style="font-weight:600"><i class="ti ti-plus"></i> ${escapeHtml(e.name)}</button>`).join('')}
         </div>`);
     }
     renderGFList('gf-fijos', generales);
@@ -316,9 +322,14 @@ const GE = (function(){
     editingGF = null;
     openGFModal(cat==='PERSONAL'?t('hr.gf.titlePersonal'):t('hr.gf.titleFixed'), {nombre:'',importe:'',diaPago:'',categoria:cat, periodicidadMeses:1});
   }
-  function newGFFromEmployee(name){
+  function newGFFromEmployee(employeeId){
+    const emp = DB.employees.find(e => e.id === employeeId);
+    if(!emp) return;
     editingGF = null;
-    openGFModal(t('hr.gf.titlePersonal'), {nombre:name,importe:'',diaPago:'',categoria:'PERSONAL', periodicidadMeses:1});
+    // Enlazada a la ficha del empleado (employeeId), no solo al nombre en
+    // texto libre: así no se puede duplicar por una errata ni desincroniza
+    // si el empleado se renombra más adelante.
+    openGFModal(t('hr.gf.titlePersonal'), {nombre:emp.name,importe:'',diaPago:'',categoria:'PERSONAL', periodicidadMeses:1, employeeId});
   }
   function editGF(id){
     const g = fijos().find(x=>x.id===id); if(!g) return;
@@ -371,6 +382,7 @@ const GE = (function(){
         <textarea id="gf-f-notas" rows="2" placeholder="${t('hr.gf.internalNotesPh')}">${escapeHtml(g.notas||'')}</textarea>
       </div>
       <input type="hidden" id="gf-f-cat" value="${g.categoria}">
+      <input type="hidden" id="gf-f-empid" value="${g.employeeId!=null?g.employeeId:''}">
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
         <button class="btn btn-primary" onclick="GE.saveGF()">${t('common.save')}</button>
@@ -413,6 +425,8 @@ const GE = (function(){
       notas: document.getElementById('gf-f-notas').value.trim(),
       iva: ivaEl ? parseFloat(ivaEl.value) : 0
     };
+    const empIdVal = document.getElementById('gf-f-empid').value;
+    if(empIdVal !== '') data.employeeId = parseInt(empIdVal);
     const autocalcEl = document.getElementById('gf-f-autocalc');
     if(autocalcEl && autocalcEl.checked){
       const neto = parseFloat(document.getElementById('gf-f-neto').value) || 0;
@@ -2318,6 +2332,7 @@ function formatPersonalLogEntry(e){
     case 'shiftEdited': return t('personalLog.shiftEdited').replace('${detail}', shiftDetail);
     case 'shiftDeleted': return t('personalLog.shiftDeleted').replace('${detail}', shiftDetail);
     case 'pinReset': return t('personalLog.pinReset').replace('${name}', p.name);
+    case 'clockedByOther': return t('personalLog.clockedByOther').replace('${name}', p.name).replace('${action}', p.action==='entrada'?t('hr2.clockIn'):t('hr2.clockOut')).replace('${via}', p.via==='owner_session'?t('common.owner'):t('label.businessPin'));
     default: return '';
   }
 }
@@ -2879,8 +2894,15 @@ function getLongShiftWarnings(){
 // cualquier otra sesión (empleado mirando la pestaña Personal) se mantiene
 // el PIN por empleado, igual que para fichar — así cada uno solo ve sus
 // propios datos salvo que conozca el PIN de otra persona o el del negocio.
+// Con qué se autorizó el fichaje que se está a punto de hacer — para poder
+// distinguir después "fichó la propia persona" de "alguien fichó por
+// ella usando el PIN del negocio (o entrando como dueño)". Antes no quedaba
+// ningún rastro de esto: cualquiera con el PIN de negocio podía fichar
+// entrada/salida de otro empleado sin que constara quién lo hizo de verdad.
+let personalFicharAuthMethod = 'self';
 function openEmployeePersonalCard(employeeId){
   if((getAccessSession()||{}).type === 'owner'){
+    personalFicharAuthMethod = 'owner_session';
     openEmployeeFicharModal(employeeId);
     return;
   }
@@ -2926,6 +2948,9 @@ function confirmEmployeePersonalPin(){
   if(!e) return;
   const val = document.getElementById('personal-pin-input').value;
   if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
+  const storedPin = e.pin || '1234';
+  const wasOwnPin = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  personalFicharAuthMethod = wasOwnPin ? 'self' : 'business_pin';
   if(!hasAnsweredMoodThisWeek(e.id)){ promptMoodCheckin(e.id); return; }
   openEmployeeFicharModal(e.id);
 }
@@ -3488,11 +3513,20 @@ function doFichaje(employeeId, action){
     // Se calcula ANTES de registrar la nueva entrada (si no, se compararía
     // contra sí misma). Solo avisa, no bloquea el fichaje.
     descansoWarning = checkDescansoWarning(employeeId);
-    DB.fichajes.push({id: genId(), employeeId, fecha: todayStr(), entrada: now, salida: null});
+    DB.fichajes.push({id: genId(), employeeId, fecha: todayStr(), entrada: now, salida: null, entradaAuthMethod: personalFicharAuthMethod});
   }else{
     const open = getOpenFichaje(employeeId);
     if(!open){ showToast(t('msg.noClockedIn')); closeModal(); renderHorariosTab(); return; }
     open.salida = now;
+    open.salidaAuthMethod = personalFicharAuthMethod;
+  }
+  // Deja rastro en el historial cuando el fichaje NO lo hizo la propia
+  // persona (se usó el PIN de negocio, o se hizo desde sesión de dueño) —
+  // antes cualquiera con el PIN de negocio podía fichar entrada/salida de
+  // otro empleado sin que quedara constancia de quién lo hizo de verdad.
+  if(personalFicharAuthMethod !== 'self'){
+    const emp = DB.employees.find(x=>x.id===employeeId);
+    logPersonalEvent('clockedByOther', {name: emp?emp.name:'?', action, via: personalFicharAuthMethod});
   }
   saveDB();
   closeModal();
