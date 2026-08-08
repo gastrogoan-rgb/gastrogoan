@@ -215,7 +215,7 @@ function renderEscandallo(){
   // completas de golpe, distinto de cómo se veía entrando por carpeta.
   const renderNameList = (recs) => `<div class="table-wrap"><table><tbody>${recs.map(r => `
     <tr style="cursor:pointer" onclick="openEscandalloRecipe(${r.id})">
-      <td><strong><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</td>
+      <td><strong><i class="ti ${r.isBase?((r.area||'cocina')==='sala'?'ti-flask':'ti-soup'):((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}</strong>${r.isBase?` <span style="font-size:11px;color:var(--muted);font-weight:400">(${t('label.baseShort')})</span>`:''}</td>
       <td style="text-align:right;color:var(--muted)"><i class="ti ti-chevron-right"></i></td>
     </tr>
   `).join('')}</tbody></table></div>`;
@@ -266,7 +266,7 @@ function renderEscandalloFull(r){
     return `
       <div class="card" style="max-width:100%">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?'ti-soup':((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
+          <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?((r.area||'cocina')==='sala'?'ti-flask':'ti-soup'):((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
           <span class="badge badge-${pctClass}">${pctText}</span>
         </div>
         <div class="grid grid-4" style="margin-bottom:14px">
@@ -476,7 +476,7 @@ function filterRecipeIngredientResults(id){
   } else {
     const renderItem = m => `
       <div style="padding:8px 10px;font-size:13px;cursor:pointer" onmousedown="selectRecipeIngredientResult(${id||'null'}, '${m.type}', ${m.id})" onmouseover="this.style.background='var(--brand-cream)'" onmouseout="this.style.background=''">
-        ${m.type==='base' ? '<i class="ti ti-soup"></i> ' : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`${t('label.baseShort')} — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
+        ${m.type==='base' ? `<i class="ti ${area==='sala'?'ti-flask':'ti-soup'}"></i> ` : ''}${escapeHtml(m.name)} <span style="color:var(--muted)">(${m.type==='base'?`${t('label.baseShort')} — ${fmtMoney(m.perUnit)}/${escapeHtml(m.unit)}`:escapeHtml(m.unit)})</span>
       </div>
     `;
     const sectionHeader = label => `<div style="padding:5px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:var(--bg-soft,#f4f5f7)">${label}</div>`;
@@ -1025,7 +1025,7 @@ function openFichaModal(id, recipeId){
     fichaModalState = {
       id: null, name: r.name, recipeId: r.id, comensales: r.comensales||2,
       baseComensales: r.comensales||1, produccion: r.comensales||1,
-      tiempo: '', temp: 'CALIENTE',
+      tiempo: '', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE',
       ingredients: (r.ingredients||[]).map(line => {
         const ing = getIngredient(line.ingredientId);
         return ing ? `${fmtNum(line.qty)} ${ing.unit} — ${ing.name}` : '';
@@ -1037,7 +1037,7 @@ function openFichaModal(id, recipeId){
     if(!fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
     if(!fichaModalState.pasos.length) fichaModalState.pasos = [''];
   } else {
-    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp:'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
+    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
   }
   renderFichaModal();
 }
