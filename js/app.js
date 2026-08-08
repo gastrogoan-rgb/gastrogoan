@@ -13,7 +13,7 @@ const LIMPIEZA_TAB_ICONS = {
 function limpiezaTabLabel(k){ return `<i class="ti ${LIMPIEZA_TAB_ICONS[k]}"></i> ${t(LIMPIEZA_TAB_LABEL_KEYS[k])}`; }
 const LIMPIEZA_LOG_CONFIG_KEYS = {
   temperaturas: {fields:['fecha','hora','equipo','tipo','temp','estado','responsable'], labelKeys:['common.date','th.time','label.equipment','label.equipmentType','label.tempC','label.status','label.responsible']},
-  plagas: {fields:['fecha','area','hallazgos','accion','proxima'], labelKeys:['common.date','label.area','label.findings','label.actionTaken','label.nextReview']}
+  plagas: {fields:['fecha','area','hallazgos','accion','proxima','responsable'], labelKeys:['common.date','label.area','label.findings','label.actionTaken','label.nextReview','label.responsible']}
 };
 function limpiezaLogConfig(key){
   const c = LIMPIEZA_LOG_CONFIG_KEYS[key];
@@ -235,11 +235,11 @@ function renderLimpiezaManos(){
           <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
             <div class="step-num">${i+1}</div>
             <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
-            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
         `).join('')}
-        <button class="owner-only btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-        <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> ${t('btn.resetToDefault')}</button>
+        <button class="owner-strict btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+        <button class="owner-strict btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetManosPasos()"><i class="ti ti-restore"></i> ${t('btn.resetToDefault')}</button>
       </div>
       <div>
         <div class="card">
@@ -277,7 +277,6 @@ function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
   const ap = limpiezaProtocoloPasos('apertura');
   const ci = limpiezaProtocoloPasos('cierre');
-  const empOptions = areaEmployees().map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   const renderBlock = (title, icon, pasos, type) => {
     const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
     const log = (DB.limpieza[logKey] || []).filter(e => (e.area||'cocina')===currentArea());
@@ -289,28 +288,30 @@ function renderLimpiezaProtocolo(){
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
           <div class="step-num">${i+1}</div>
           <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
-          <div class="owner-only" style="display:flex;gap:2px">
+          <div class="owner-strict" style="display:flex;gap:2px">
             ${reorderButtons(`moveProtocoloPaso('${type}',${i},-1)`, `moveProtocoloPaso('${type}',${i},1)`, i===0, i===pasos.length-1)}
           </div>
-          <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
-      <button class="owner-only btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
-      <button class="owner-only btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> ${t('common.reset')}</button>
+      <button class="owner-strict btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
+      <button class="owner-strict btn btn-sm btn-secondary" style="margin-left:8px" onclick="resetProtocoloPasos('${type}')"><i class="ti ti-restore"></i> ${t('common.reset')}</button>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase">${t('title.dailyCompliance')}</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <select id="protocolo-resp-${type}" style="flex:1">
-            <option value="">${t('label.responsible')}</option>
-            ${empOptions}
-          </select>
+        <div style="margin-bottom:10px">
           <button class="btn btn-sm btn-primary" onclick="registerProtocoloCompliance('${type}')"><i class="ti ti-check"></i> ${t('btn.registerToday')}</button>
+          <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">${t('msg.complianceRegistersYou')}</p>
         </div>
         ${logEntries.length ? `<div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto">${logEntries.map(entry => {
-          const resp = entry.responsableId ? DB.employees.find(e=>e.id===entry.responsableId) : null;
+          // responsableNombre es una foto fija de quién lo registró en ese
+          // momento (por sesión, no elegido a mano); se conserva aunque esa
+          // persona se renombre o se borre luego. Entradas antiguas (antes
+          // de este cambio) solo tenían responsableId, así que se resuelve
+          // el nombre por si acaso para no perder el dato ya guardado.
+          const respName = entry.responsableNombre || (entry.responsableId ? (DB.employees.find(e=>e.id===entry.responsableId)||{}).name : null);
           return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px">
-            <span><i class="ti ti-check" style="color:var(--green)"></i> ${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora)}${resp?` · ${escapeHtml(resp.name)}`:''}</span>
-            <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteProtocoloComplianceEntry('${type}',${entry.id})"><i class="ti ti-trash"></i></button>
+            <span><i class="ti ti-check" style="color:var(--green)"></i> ${escapeHtml(entry.fecha)} · ${escapeHtml(entry.hora)}${respName?` · ${escapeHtml(respName)}`:''}</span>
+            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteProtocoloComplianceEntry('${type}',${entry.id})"><i class="ti ti-trash"></i></button>
           </div>`;
         }).join('')}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('empty.noComplianceLog')}</div>`}
       </div>
@@ -325,22 +326,37 @@ function moveProtocoloPaso(type,i,dir){
   saveDB();
   renderLimpiezaProtocolo();
 }
+// Quién registra el cumplimiento lo decide la propia sesión con la que se
+// ha entrado (igual que el chat interno), no un desplegable donde se podía
+// "registrar en nombre de" cualquier compañero sin verificar que fuera él.
 function registerProtocoloCompliance(type){
   const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
-  const sel = document.getElementById(`protocolo-resp-${type}`);
-  const responsableId = sel && sel.value ? parseInt(sel.value) : null;
   const now = new Date();
-  DB.limpieza[logKey].push({id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5), responsableId, area: currentArea()});
+  const authorId = getChatAuthor();
+  DB.limpieza[logKey].push({
+    id: genId(), fecha: todayStr(), hora: now.toTimeString().slice(0,5),
+    responsableId: authorId==='owner' ? null : authorId,
+    responsableNombre: getChatAuthorName(authorId),
+    area: currentArea()
+  });
   saveDB();
   renderLimpiezaProtocolo();
   showToast(t('msg.complianceRegistered'));
 }
+// Registro APPCC (prueba de cumplimiento ante una inspección): borrarlo
+// exige el PIN de negocio y queda auditado, igual que cualquier otro dato
+// sensible — antes bastaba un simple "¿seguro?" y lo podía borrar cualquier
+// empleado con edición desbloqueada.
 function deleteProtocoloComplianceEntry(type, id){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
-  const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
-  DB.limpieza[logKey] = DB.limpieza[logKey].filter(x => x.id !== id);
-  saveDB();
-  renderLimpiezaProtocolo();
+  requestBusinessPinAction(t('title.deleteComplianceEntry'), t('msg.confirmDeleteComplianceEntry'), () => {
+    const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
+    const entry = DB.limpieza[logKey].find(x => x.id === id);
+    DB.limpieza[logKey] = DB.limpieza[logKey].filter(x => x.id !== id);
+    if(entry) logAudit('delete', t('audit.deletedComplianceEntry').replace('${type}', type==='apertura'?t('title.openingProtocol'):t('title.closingProtocol')).replace('${date}', entry.fecha));
+    saveDB();
+    closeModal();
+    renderLimpiezaProtocolo();
+  });
 }
 function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
 function removeProtocoloPaso(type,i){
@@ -398,6 +414,13 @@ function renderLimpiezaMes(){
   const startOffset = (firstDay.getDay()+6)%7; // Lunes = 0
   const daysInMonth = new Date(year, month+1, 0).getDate();
 
+  // Capturadas fuera del bucle: dentro de tareasDelDia.map(t => ...) el
+  // parámetro "t" es la tarea (nombre ya usado en todo este módulo), y tapa
+  // a la función global de traducción t() — llamarla ahí dentro fallaba
+  // con "t is not a function".
+  const doneOnLabel = t('limpieza.doneOn');
+  const notYourTaskLabel = t('limpieza.notYourTask');
+
   let cells = '';
   for(let i=0; i<startOffset; i++) cells += `<div></div>`;
   for(let day=1; day<=daysInMonth; day++){
@@ -409,10 +432,12 @@ function renderLimpiezaMes(){
         ${tareasDelDia.map(t => {
           const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
           const info = limpiezaCheckInfo(checks, t.id);
+          const canToggle = canToggleLimpiezaTarea(t);
+          const doneTitle = info ? `${doneOnLabel.replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre?` · ${escapeHtml(info.checkedByNombre)}`:''}` : (canToggle ? '' : notYourTaskLabel);
           return `
           <div style="margin-bottom:4px;cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
-            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer" onclick="event.stopPropagation()" title="${info?`Hecho el ${escapeHtml(info.fecha||'')} ${escapeHtml(info.hora||'')}`:''}">
-              <input type="checkbox" ${info?'checked':''} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
+              <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
               <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
             </label>
             ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-left:20px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
@@ -430,7 +455,7 @@ function renderLimpiezaMes(){
         <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
         <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
       </div>
-      <button class="owner-only btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
+      <button class="owner-strict btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
     </div>
     ${tareasMes.length ? `
     <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
@@ -447,19 +472,36 @@ function limpiezaCheckInfo(checks, taskId){
   if(v && typeof v === 'object') return v;
   return v ? {done:true} : null;
 }
+// Como el login ya identifica a cada persona, cada uno solo puede marcar
+// como hecha su propia tarea asignada — el dueño puede marcar cualquiera.
+// Una tarea sin responsable asignado es de cualquiera del área (compartida).
+function canToggleLimpiezaTarea(tarea){
+  if((getAccessSession()||{}).type === 'owner') return true;
+  if(tarea.responsableId == null) return true;
+  const empId = loggedInEmployeeId();
+  return empId != null && empId === tarea.responsableId;
+}
 function toggleLimpiezaCheckMes(monthKey, tareaId, val){
+  const tarea = DB.limpieza.tareas.find(x => x.id === tareaId);
+  if(tarea && !canToggleLimpiezaTarea(tarea)){ showToast(t('limpieza.notYourTaskToast')); renderLimpiezaMes(); return; }
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
   const now = new Date();
-  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5)} : null;
+  // Quién lo marca lo dice la sesión, no un campo a elegir — igual que el
+  // registro de cumplimiento del protocolo de apertura/cierre.
+  const authorId = getChatAuthor();
+  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5), checkedByNombre: getChatAuthorName(authorId)} : null;
   saveDB();
   renderLimpiezaMes();
 }
 function toggleLimpiezaCheckMesFromDist(monthKey, tareaId, val){
+  const tarea = DB.limpieza.tareas.find(x => x.id === tareaId);
+  if(tarea && !canToggleLimpiezaTarea(tarea)){ showToast(t('limpieza.notYourTaskToast')); renderDistDetail(); return; }
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
   const now = new Date();
-  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5)} : null;
+  const authorId = getChatAuthor();
+  DB.limpieza.checksMes[monthKey][tareaId] = val ? {done:true, fecha: todayStr(), hora: now.toTimeString().slice(0,5), checkedByNombre: getChatAuthorName(authorId)} : null;
   saveDB();
   renderDistDetail();
 }
@@ -494,7 +536,7 @@ function openLimpiezaTareaMesModal(id){
       </div>
     </div>
     <div class="modal-footer">
-      ${tarea ? `<button class="owner-only btn btn-danger" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()">${t("common.delete")}</button>` : ''}
+      ${tarea ? `<button class="owner-strict btn btn-danger" onclick="deleteLimpiezaTarea(${tarea.id});closeModal()">${t("common.delete")}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t("common.cancel")}</button>
       <button class="btn btn-primary" onclick="confirmLimpiezaTareaMes(${tarea?tarea.id:'null'})">${tarea?t('common.save'):t('common.add')}</button>
     </div>
@@ -528,14 +570,20 @@ function renderLimpiezaLog(key){
   const cfg = limpiezaLogConfig(key);
   const entries = DB.limpieza[key].filter(e => (e.zona||'cocina')===currentArea());
 
-  const formFields = cfg.fields.map((f,i) => {
+  // "Responsable" ya no se escribe/elige a mano: lo dice la sesión con la
+  // que se ha entrado (igual que el cumplimiento de apertura/cierre), así
+  // que ni siquiera aparece como campo del formulario — se rellena solo al
+  // guardar y se ve en la tabla como cualquier otro dato ya registrado.
+  const formFields = cfg.fields.filter(f => f !== 'responsable').map((f) => {
+    const i = cfg.fields.indexOf(f);
     let input;
     if(f === 'estado' && key === 'temperaturas') input = `<div style="font-size:12px;color:var(--muted);padding-top:8px">${t('label.autoCalculated')}</div>`;
     else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
     else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
-    else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}">`;
+    else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}" max="${todayStr()}">`;
+    else if(f === 'proxima' && key === 'plagas') input = `<input type="date" id="lp-${key}-${f}">`;
     else if(f === 'hora') input = `<input type="time" id="lp-${key}-${f}">`;
-    else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
+    else if(f === 'temp' && key === 'temperaturas') input = `<input type="number" step="0.1" min="-60" max="300" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
     else input = `<input type="text" id="lp-${key}-${f}" placeholder="${cfg.labels[i]}">`;
     return `<div class="field" style="margin-bottom:0"><label>${cfg.labels[i]}</label>${input}</div>`;
   }).join('');
@@ -548,8 +596,13 @@ function renderLimpiezaLog(key){
         return `<td style="color:var(--muted)">ℹ️ ${t('status.notEvaluated')}</td>`;
       }
       if(f === 'tipo' && key === 'temperaturas') return `<td>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
+      if(f === 'proxima' && key === 'plagas'){
+        if(!e.proxima) return `<td>—</td>`;
+        const due = limpiezaMantenimientoDueStatus({proximo: e.proxima});
+        return `<td>${escapeHtml(e.proxima)}${due==='overdue'?` <span class="badge badge-red" style="white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>`:''}${due==='soon'?` <span class="badge badge-amber" style="white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>`:''}</td>`;
+      }
       return `<td>${escapeHtml(String(e[f]||'—'))}</td>`;
-    }).join('')}<td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
+    }).join('')}<td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteLimpiezaLogEntry('${key}',${e.id})"><i class="ti ti-trash"></i></button></td></tr>
   `).join('') : `<tr><td colspan="${cfg.fields.length+1}"><div class="empty" style="padding:14px">${t('empty.noLogEntries')}</div></td></tr>`;
 
   // El control de temperaturas es una tarea operativa normal del día a día
@@ -576,9 +629,21 @@ function renderLimpiezaLog(key){
 function addLimpiezaLogEntry(key){
   if(!editUnlocked && key !== 'temperaturas') return;
   const cfg = limpiezaLogConfig(key);
+  // La fecha no puede ser futura (el campo ya lo limita con max, esto es
+  // por si acaso) — sí se permite alguna del pasado reciente, para poder
+  // anotar a posteriori una visita de control de plagas que llegó tarde.
+  const fechaEl = document.getElementById(`lp-${key}-fecha`);
+  if(fechaEl && fechaEl.value > todayStr()){ showToast(t('msg.dateCannotBeFuture')); return; }
+  if(key === 'temperaturas'){
+    const tempVal = parseFloat(document.getElementById(`lp-${key}-temp`).value);
+    // No bloquea (podría ser un dato real raro), pero avisa de que igual es
+    // un error de tecleo antes de guardar algo como "950°C" sin darse cuenta.
+    if(!isNaN(tempVal) && (tempVal < -60 || tempVal > 300) && !confirm(t('msg.confirmExtremeTemp').replace('${temp}', tempVal))) return;
+  }
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
     if(f === 'estado' && key === 'temperaturas') return; // se calcula solo, más abajo
+    if(f === 'responsable') return; // se rellena solo, más abajo, según la sesión
     const el = document.getElementById(`lp-${key}-${f}`);
     entry[f] = el ? el.value : '';
   });
@@ -586,15 +651,25 @@ function addLimpiezaLogEntry(key){
     entry.estado = computeTempEstado(entry.tipo, parseFloat(entry.temp)) || null;
   }
   entry.zona = currentArea();
+  // Registro APPCC: queda quién lo introdujo, según la sesión con la que se
+  // ha entrado — no un campo "responsable" a elegir a mano.
+  entry.responsable = getChatAuthorName(getChatAuthor());
   DB.limpieza[key].push(entry);
   saveDB();
   renderLimpiezaLog(key);
 }
+// Registro APPCC (temperaturas/plagas): borrarlo exige el PIN de negocio y
+// queda auditado — es justo el tipo de dato que hay que poder demostrar
+// intacto ante una inspección, no algo que se borre con un simple "¿seguro?".
 function deleteLimpiezaLogEntry(key, id){
-  if(!confirm(t('msg.confirmDeleteShift'))) return;
-  DB.limpieza[key] = DB.limpieza[key].filter(e => e.id!==id);
-  saveDB();
-  renderLimpiezaLog(key);
+  requestBusinessPinAction(t('title.deleteAppccEntry'), t('msg.confirmDeleteAppccEntry'), () => {
+    const entry = DB.limpieza[key].find(e => e.id === id);
+    DB.limpieza[key] = DB.limpieza[key].filter(e => e.id!==id);
+    if(entry) logAudit('delete', t('audit.deletedAppccEntry').replace('${type}', key==='temperaturas'?t('tab.temperatures'):t('tab.pests')).replace('${date}', entry.fecha||'?'));
+    saveDB();
+    closeModal();
+    renderLimpiezaLog(key);
+  });
 }
 
 // Vencido si "próximo" ya pasó; próximo a vencer si faltan 7 días o menos.
@@ -611,7 +686,7 @@ function renderLimpiezaMantenimiento(){
   box.innerHTML = `
     <div class="toolbar">
       <div class="left"></div>
-      <button class="owner-only btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
+      <button class="owner-strict btn btn-primary" onclick="addMantenimientoEquipo()"><i class="ti ti-plus"></i> ${t('btn.addEquipment')}</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -627,12 +702,15 @@ function renderLimpiezaMantenimiento(){
               ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
               ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
             </td>
-            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
+            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'responsableId',this.value?parseInt(this.value):null)" ${editUnlocked?'':'disabled'}>
+              <option value="">${t('common.unassigned')}</option>
+              ${areaEmployees().map(emp => `<option value="${emp.id}"${e.responsableId===emp.id?' selected':''}>${escapeHtml(emp.name)}</option>`).join('')}
+            </select></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
             <td><input type="text" value="${escapeHtml(e.notas||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:120px" onchange="updateMantenimientoEquipo(${e.id},'notas',this.value)" ${editUnlocked?'':'disabled'}></td>
-            <td><button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
+            <td><button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="deleteMantenimientoEquipo(${e.id})"><i class="ti ti-trash"></i></button></td>
           </tr>
         `;}).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noEquipmentRegistered')}</div></td></tr>`}</tbody>
       </table>
@@ -659,7 +737,7 @@ function addMantenimientoEquipo(){
 function confirmAddMantenimientoEquipo(){
   const nombre = document.getElementById('new-mantenimiento-equipo').value;
   if(!nombre || !nombre.trim()){ showToast(t('msg.writeEquipName')); return; }
-  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:'', zona: currentArea()});
+  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsableId:null, estado:'OK', notas:'', zona: currentArea()});
   saveDB();
   closeModal();
   renderLimpiezaMantenimiento();
@@ -1073,10 +1151,11 @@ function renderDistDetail(){
     const checksMes = DB.limpieza.checksMes[monthKey] || {};
     const limpiezaHtml = tareasLimpiezaDia.map(lt => {
       const done = !!limpiezaCheckInfo(checksMes, lt.id);
+      const canToggle = canToggleLimpiezaTarea(lt);
       nTareasTotal++; if(done) nTareasHechas++; else if(isPast){ nTareasAtrasadas++; dayHasPending = true; }
       return `
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer">
-        <input type="checkbox" ${done?'checked':''} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:${canToggle?'pointer':'not-allowed'}">
+        <input type="checkbox" ${done?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
         <span class="badge badge-blue" style="font-size:10px"><i class="ti ti-spray"></i> Limpieza</span>
         <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
       </label>
