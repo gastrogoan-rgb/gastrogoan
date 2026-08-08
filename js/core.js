@@ -2444,10 +2444,11 @@ function renderPedidosConfigCard(){
         <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px">
           <input type="checkbox" id="mn-acepta-tarjeta-local" ${p.aceptaTarjetaLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTarjetaLocal')}
         </label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
-          <input type="checkbox" id="mn-acepta-tpv-virtual" ${p.aceptaTpvVirtual!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400" id="mn-acepta-tpv-virtual-label">
+          <input type="checkbox" id="mn-acepta-tpv-virtual" ${(p.aceptaTpvVirtual!==false && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTpvVirtual')}
         </label>
-        <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')} ${t('mn.pedidos.aceptaTpvVirtualHint')}</small>
+        <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')}</small>
+        <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--brand-orange)'}">${redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
       </div>
       ${deliveryEnabled ? `
       <div class="field">
@@ -2479,7 +2480,10 @@ async function savePedidosConfig(){
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
   const aceptaEfectivo = document.getElementById('mn-acepta-efectivo').checked;
   const aceptaTarjetaLocal = document.getElementById('mn-acepta-tarjeta-local').checked;
-  const aceptaTpvVirtual = document.getElementById('mn-acepta-tpv-virtual').checked;
+  // Por mucho que llegara marcado desde el DOM, el TPV virtual solo se
+  // guarda como aceptado si de verdad está configurado (evita ofrecerlo a
+  // los clientes sin que funcione realmente).
+  const aceptaTpvVirtual = redsysIsConfigured && document.getElementById('mn-acepta-tpv-virtual').checked;
   if(!aceptaEfectivo && !aceptaTarjetaLocal && !aceptaTpvVirtual){
     showToast(t('msg.needOnePaymentMethod'));
     return;
@@ -2532,6 +2536,24 @@ async function savePedidosConfig(){
    vez al Worker, que la guarda en una ruta privada de Firebase y la
    usa para firmar los pagos y validar la confirmación de Redsys.
    ============================================================ */
+// Se sabe de forma asíncrona (loadRedsysCardStatus consulta al Worker), así
+// que el checkbox "TPV virtual" de renderPedidosConfigCard arranca
+// deshabilitado por defecto y se habilita en cuanto se confirma que sí está
+// configurado — evita que se pueda marcar como forma de pago aceptada algo
+// que en realidad no funcionaría para los clientes.
+let redsysIsConfigured = false;
+function updateTpvVirtualCheckboxAvailability(){
+  const cb = document.getElementById('mn-acepta-tpv-virtual');
+  const hint = document.getElementById('mn-acepta-tpv-virtual-hint');
+  if(!cb) return;
+  cb.disabled = !redsysIsConfigured;
+  const p = (DB.business && DB.business.pedidos) || {};
+  cb.checked = redsysIsConfigured && p.aceptaTpvVirtual !== false;
+  if(hint){
+    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--brand-orange)';
+    hint.textContent = redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
+  }
+}
 function renderRedsysCard(){
   if(!getTenantId()) return '';
   return `
@@ -2571,6 +2593,7 @@ async function loadRedsysCardStatus(){
   try{
     const res = await fetch(`${REDSYS_WORKER_URL}/config?tenantId=${encodeURIComponent(getTenantId())}`);
     const data = await res.json();
+    redsysIsConfigured = !!(data && data.configured);
     if(data && data.configured){
       el.innerHTML = `<span style="color:var(--brand-orange);font-weight:600"><i class="ti ti-check"></i> ${t('mn.redsys.configured')}</span> · FUC ${escapeHtml(data.fuc)} · ${t('mn.redsys.terminal')} ${escapeHtml(data.terminal)} · ${t('mn.redsys.environment')} ${data.ambiente === 'real' ? t('mn.redsys.envReal') : t('mn.redsys.envTest')}`;
       document.getElementById('rs-fuc').value = data.fuc || '';
@@ -2580,8 +2603,10 @@ async function loadRedsysCardStatus(){
       el.innerHTML = t('msg.cardPaymentNotConfigured');
     }
   }catch(e){
+    redsysIsConfigured = false;
     el.innerHTML = t('msg.cardPaymentCheckFailed');
   }
+  updateTpvVirtualCheckboxAvailability();
 }
 
 async function saveRedsysConfig(){
@@ -2626,6 +2651,15 @@ async function disableRedsysConfig(){
   const realEl = document.getElementById('rs-real'); if(realEl) realEl.checked = false;
   const el = document.getElementById('redsys-status');
   if(el) el.innerHTML = t('msg.cardPaymentNotConfigured');
+  redsysIsConfigured = false;
+  // Si el TPV virtual estaba marcado como forma de pago aceptada, se
+  // desmarca aquí mismo: si no, la web pública seguiría ofreciéndoselo a
+  // los clientes aunque ya no funcione de verdad.
+  if(DB.business && DB.business.pedidos && DB.business.pedidos.aceptaTpvVirtual !== false){
+    DB.business.pedidos.aceptaTpvVirtual = false;
+    saveDB();
+  }
+  updateTpvVirtualCheckboxAvailability();
   showToast(t('mn.redsys.disabled'));
 }
 
