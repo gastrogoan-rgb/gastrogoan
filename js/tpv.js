@@ -104,6 +104,44 @@ function repartidorNombre(order){
   if(order.repartidorCourierId){ const c = (DB.business.ownCouriers||[]).find(x=>x.id===order.repartidorCourierId); return c ? c.nombre : t('common.unassigned'); }
   return t('common.unassigned');
 }
+
+// Ruta agrupada: si el mismo repartidor tiene varios pedidos activos a la
+// vez (lo normal cuando entran varios pedidos seguidos y no hay más
+// repartidores de turno para repartir la carga), tiene sentido que los
+// lleve todos en una sola vuelta en vez de ir y volver al negocio entre
+// cada uno. Se agrupan por repartidor asignado (empleado o externo), no
+// por franja horaria de llegada — si el repartidor los tiene todos a la
+// vez sin entregar, es su ruta ahora mismo, da igual cuándo entró cada uno.
+function getRouteGroupForOrder(order){
+  const key = order.repartidorId ? `emp:${order.repartidorId}` : (order.repartidorCourierId ? `courier:${order.repartidorCourierId}` : null);
+  if(!key) return [order];
+  const group = getActiveRepartosOrders().filter(o => {
+    const k = o.repartidorId ? `emp:${o.repartidorId}` : (o.repartidorCourierId ? `courier:${o.repartidorCourierId}` : null);
+    return k === key;
+  });
+  group.sort((a,b) => (a.createdAt||'').localeCompare(b.createdAt||''));
+  return group;
+}
+// URL de Google Maps con varias paradas (sin necesitar API de pago): el
+// prefijo "optimize:true" en waypoints le pide a Maps que reordene las
+// paradas intermedias por la ruta más rápida al abrir la app/web — no hay
+// forma 100% oficial de pedir esto sin clave de la API de rutas de pago,
+// pero este prefijo es el que usan históricamente apps de reparto para
+// conseguirlo con la Maps normal y gratuita.
+function buildRouteMapsUrl(orders){
+  const addresses = orders.map(o => (o.clienteDireccion||'') + (o.clienteCodigoPostal ? ' ' + o.clienteCodigoPostal : '')).filter(Boolean);
+  if(!addresses.length) return null;
+  if(addresses.length === 1) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addresses[0])}`;
+  const destination = addresses[addresses.length-1];
+  const waypoints = addresses.slice(0, -1);
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&waypoints=optimize:true|${waypoints.map(encodeURIComponent).join('|')}&travelmode=driving`;
+}
+function setRepartoNotasForOrder(orderId, value){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  order.repartoNotas = value.trim();
+  saveDB();
+}
 // Panel central de control de repartos: pensado tanto para el dueño (ver de
 // un vistazo todos los repartos en curso y quién lleva cada uno) como para
 // quien reparte, si usa su propio móvil con su sesión de empleado — ve aquí
@@ -134,7 +172,10 @@ function renderRepartosControlModalBody(){
     if(aMine !== bMine) return aMine - bMine;
     return (a.entregaSalidaAt||a.createdAt||'').localeCompare(b.entregaSalidaAt||b.createdAt||'');
   });
-  const renderRow = o => `
+  const renderRow = o => {
+    const group = getRouteGroupForOrder(o);
+    const isRoute = group.length > 1;
+    return `
     <div class="card" style="cursor:pointer" onclick="closeModal();openTableOrder(null, ${o.id})">
       <h3 style="justify-content:space-between;font-size:14px">
         <span>${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
@@ -142,25 +183,28 @@ function renderRepartosControlModalBody(){
       </h3>
       ${o.clienteDireccion ? `<div style="font-size:13px"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion)}</div>` : `<div style="font-size:12px;color:var(--muted)">${t('reparto.noAddress')}</div>`}
       ${o.clienteTelefono ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}</div>` : ''}
+      ${isRoute ? `<div style="font-size:11px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', group.length)}</div>` : ''}
+      ${o.repartoNotas ? `<div style="font-size:11px;color:var(--red);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(o.repartoNotas)}</div>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
         <span style="font-size:12px;color:var(--muted)"><i class="ti ti-user"></i> ${escapeHtml(repartidorNombre(o))}</span>
         <strong style="color:var(--brand-orange)">${o.pagado ? t('label.paidOnline') : fmtMoney(orderTotal(o))}</strong>
       </div>
     </div>
-  `;
+  `;};
   box.innerHTML = `
     <h4 style="margin:6px 0"><i class="ti ti-clock"></i> ${t('reparto.enCurso')} (${active.length})</h4>
     ${active.length ? `<div class="grid grid-3" style="margin-bottom:18px">${active.map(renderRow).join('')}</div>` : `<div class="empty" style="padding:14px;margin-bottom:14px">${t('reparto.emptyActive')}</div>`}
     <h4 style="margin:6px 0"><i class="ti ti-history"></i> ${t('reparto.historialHoy')} (${delivered.length})</h4>
     ${delivered.length ? `
       <table class="table" style="font-size:13px">
-        <thead><tr><th>${t('label.client')}</th><th>${t('label.deliveryRider')}</th><th>${t('reparto.leftAt')}</th><th>${t('reparto.deliveredAt')}</th></tr></thead>
+        <thead><tr><th>${t('label.client')}</th><th>${t('label.deliveryRider')}</th><th>${t('reparto.leftAt')}</th><th>${t('reparto.deliveredAt')}</th><th>${t('reparto.notas')}</th></tr></thead>
         <tbody>
           ${delivered.map(o => `<tr>
             <td>${escapeHtml(o.clienteNombre||'—')}</td>
             <td>${escapeHtml(repartidorNombre(o))}</td>
             <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
             <td>${new Date(o.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${escapeHtml(o.repartoNotas||'—')}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -189,15 +233,18 @@ function renderRepartoControlCardHtml(order){
   const total = orderTotal(order);
   const cambio = (!order.pagado && order.pagaCon != null && order.pagaCon >= total) ? order.pagaCon - total : null;
   const entregado = order.entregaEstado === 'entregado';
-  const mapsUrl = order.clienteDireccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.clienteDireccion + (order.clienteCodigoPostal ? ' ' + order.clienteCodigoPostal : ''))}` : null;
+  const routeGroup = !entregado ? getRouteGroupForOrder(order) : [order];
+  const isRoute = routeGroup.length > 1;
+  const mapsUrl = isRoute ? buildRouteMapsUrl(routeGroup) : (order.clienteDireccion ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.clienteDireccion + (order.clienteCodigoPostal ? ' ' + order.clienteCodigoPostal : ''))}` : null);
   return `
     <div class="card" style="margin-bottom:10px;border:2px solid var(--brand-orange)">
       <h3 style="justify-content:space-between;font-size:14px"><span><i class="ti ti-moped"></i> ${t('reparto.title')}</span>${repartoStatusBadgeHtml(order)}</h3>
+      ${isRoute ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:2px"><i class="ti ti-route"></i> ${t('reparto.routeWith').replace('${n}', routeGroup.length)}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px">
         <div style="flex:1;min-width:220px">
           ${order.clienteDireccion ? `
             <div style="font-size:14px"><i class="ti ti-map-pin"></i> ${escapeHtml(order.clienteDireccion)}${order.clienteCodigoPostal ? ' ('+escapeHtml(order.clienteCodigoPostal)+')' : ''}</div>
-            <a class="btn btn-sm" style="margin-top:6px;text-decoration:none;display:inline-flex" href="${mapsUrl}" target="_blank" rel="noopener"><i class="ti ti-map-2"></i> ${t('reparto.openMaps')}</a>
+            <a class="btn btn-sm" style="margin-top:6px;text-decoration:none;display:inline-flex" href="${mapsUrl}" target="_blank" rel="noopener"><i class="ti ${isRoute?'ti-route':'ti-map-2'}"></i> ${isRoute ? t('reparto.openRoute') : t('reparto.openMaps')}</a>
           ` : `<div style="font-size:13px;color:var(--muted)">${t('reparto.noAddress')}</div>`}
           ${order.clienteTelefono ? `<div style="font-size:14px;margin-top:8px"><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(order.clienteTelefono)}">${escapeHtml(order.clienteTelefono)}</a></div>` : ''}
           <div style="font-size:14px;margin-top:8px">
@@ -217,6 +264,10 @@ function renderRepartoControlCardHtml(order){
         <div style="flex:1;min-width:200px">
           ${repartidorSelectHtml}
           ${!entregado ? `<button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="markRepartoEntregado(${order.id})"><i class="ti ti-circle-check"></i> ${t('reparto.btn.entregado')}</button>` : ''}
+          <div class="field" style="margin-top:8px">
+            <label style="font-size:12px">${t('reparto.notas')}</label>
+            <textarea placeholder="${t('reparto.notasPlaceholder')}" onchange="setRepartoNotasForOrder(${order.id}, this.value)" style="min-height:50px">${escapeHtml(order.repartoNotas||'')}</textarea>
+          </div>
         </div>
       </div>
     </div>
