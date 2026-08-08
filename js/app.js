@@ -702,10 +702,7 @@ function renderLimpiezaMantenimiento(){
               ${due==='overdue' ? `<span class="badge badge-red" style="margin-left:4px;white-space:nowrap"><i class="ti ti-alert-triangle"></i> ${t('badge.overdue')}</span>` : ''}
               ${due==='soon' ? `<span class="badge badge-amber" style="margin-left:4px;white-space:nowrap"><i class="ti ti-clock"></i> ${t('badge.dueSoon')}</span>` : ''}
             </td>
-            <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'responsableId',this.value?parseInt(this.value):null)" ${editUnlocked?'':'disabled'}>
-              <option value="">${t('common.unassigned')}</option>
-              ${areaEmployees().map(emp => `<option value="${emp.id}"${e.responsableId===emp.id?' selected':''}>${escapeHtml(emp.name)}</option>`).join('')}
-            </select></td>
+            <td><input type="text" value="${escapeHtml(e.responsable||'')}" placeholder="—" style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;width:100px" onchange="updateMantenimientoEquipo(${e.id},'responsable',this.value)" ${editUnlocked?'':'disabled'}></td>
             <td><select style="border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px" onchange="updateMantenimientoEquipo(${e.id},'estado',this.value)" ${editUnlocked?'':'disabled'}>
               ${[['OK','status.ok'],['Pendiente','status.pendingM'],['Urgente','status.urgent']].map(([opt,key])=>`<option value="${opt}"${e.estado===opt?' selected':''}>${t(key)}</option>`).join('')}
             </select></td>
@@ -737,7 +734,9 @@ function addMantenimientoEquipo(){
 function confirmAddMantenimientoEquipo(){
   const nombre = document.getElementById('new-mantenimiento-equipo').value;
   if(!nombre || !nombre.trim()){ showToast(t('msg.writeEquipName')); return; }
-  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsableId:null, estado:'OK', notas:'', zona: currentArea()});
+  // El responsable de mantenimiento suele ser una empresa externa (no un
+  // empleado de la ficha de Personal), así que es texto libre.
+  DB.limpieza.mantenimiento.push({id: genId(), nombre: nombre.trim(), ultimo:'', proximo:'', responsable:'', estado:'OK', notas:'', zona: currentArea()});
   saveDB();
   closeModal();
   renderLimpiezaMantenimiento();
