@@ -1598,6 +1598,31 @@ function getReservasResumenForSync(){
   return resumen;
 }
 
+// Igual que getReservasResumenForSync pero para pedidos para llevar/domicilio:
+// cuenta cuántos pedidos activos hay en cada franja de 30 min, para que la
+// web pública pueda avisar/bloquear si el negocio ha puesto un límite de
+// pedidos simultáneos por franja (mn-maxporfranja) y así no se acumulen más
+// pedidos de los que la cocina puede asumir en una hora punta.
+function roundToPedidoSlot(time){
+  const parts = (time||'').split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return String(h).padStart(2,'0') + ':' + (m < 30 ? '00' : '30');
+}
+function getPedidosResumenForSync(){
+  const resumen = {};
+  const today = todayStr();
+  DB.tpvOrders.forEach(o => {
+    if(o.tipo !== 'takeaway' && o.tipo !== 'delivery') return;
+    if(o.status !== 'pendiente-online' && o.status !== 'abierta') return;
+    if(!o.date || o.date < today || !o.time) return;
+    const slot = roundToPedidoSlot(o.time);
+    if(!resumen[o.date]) resumen[o.date] = {};
+    resumen[o.date][slot] = (resumen[o.date][slot]||0) + 1;
+  });
+  return resumen;
+}
+
 /* Inicializa (una sola vez) una segunda instancia de Firebase apuntando
    al proyecto compartido de la plataforma, y se autentica de forma anónima
    en ella (sus reglas también exigen auth != null). Devuelve una promesa
@@ -1829,6 +1854,7 @@ function syncPublicMirror(){
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         reservasResumen: getReservasResumenForSync(),
+        pedidosResumen: getPedidosResumenForSync(),
         tables: DB.tables.map(t => ({id: t.id, name: t.name}))
       };
       if(sucursales) data.sucursales = sucursales;
@@ -1856,6 +1882,14 @@ function syncPublicMirror(){
       DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
         app.database().ref('gastrogoan/public/' + publicId + '/aforoHold/' + fecha).remove().catch(() => {});
+      });
+      // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
+      // (el contador atómico de pedidos por franja): se limpia en cada sync
+      // para no arrastrar holds obsoletos de pedidos ya aceptados/rechazados.
+      const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen));
+      DB.tpvOrders.forEach(o => { if(o.date && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
+      fechasPedidosATocar.forEach(fecha => {
+        app.database().ref('gastrogoan/public/' + publicId + '/pedidosHold/' + fecha).remove().catch(() => {});
       });
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
@@ -2376,6 +2410,11 @@ function renderPedidosConfigCard(){
         <small style="color:var(--muted)">${t('mn.pedidos.minOrderDesc')}</small>
       </div>
       <div class="field">
+        <label>${t('mn.pedidos.maxPorFranja')}</label>
+        <input type="number" id="mn-maxporfranja" min="0" step="1" value="${escapeHtml(p.maxPorFranja||0)}" placeholder="0">
+        <small style="color:var(--muted)">${t('mn.pedidos.maxPorFranjaDesc')}</small>
+      </div>
+      <div class="field">
         <label style="display:flex;align-items:center;gap:8px;font-weight:400">
           <input type="checkbox" id="mn-pagolocal" ${p.permitirPagoLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.allowPayOnPickup')}
         </label>
@@ -2408,6 +2447,7 @@ async function savePedidosConfig(){
   const b = DB.business;
   const p = b.pedidos || {};
   p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
+  p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
   p.permitirPagoLocal = document.getElementById('mn-pagolocal').checked;
 
   const deliveryFeeEl = document.getElementById('mn-deliveryfee');

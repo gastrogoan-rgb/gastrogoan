@@ -228,6 +228,7 @@ const I18N = {
     'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
     'error.horario.reservas':'reservas','error.horario.pedidos':'pedidos',
     'error.aforo.completo':'Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad.',
+    'error.pedidos.completo':'Lo sentimos, ya no admitimos más pedidos para esa franja horaria. Por favor elige otra hora o llama al restaurante.',
     'error.aforo.parcial':'Lo sentimos, para ese turno solo quedan %d plaza(s) disponible(s). Por favor reduce el número de personas, elige otro horario o llama al restaurante.',
     'error.carrito.vacio':'Añade al menos un plato a tu pedido.','error.mesa.select':'Selecciona tu mesa.','error.mesa.manual':'Indica el número de tu mesa.',
     'error.pedido.min':'El pedido mínimo es de %s. Añade más platos para continuar.',
@@ -238,7 +239,7 @@ const I18N = {
     'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
     'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.',
     'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
-    'success.otra':'Hacer otra solicitud',
+    'success.otra':'Hacer otra solicitud', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
@@ -281,6 +282,7 @@ const I18N = {
     'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
     'error.horario.reservas':'bookings','error.horario.pedidos':'orders',
     'error.aforo.completo':'Sorry, that slot is fully booked. Please choose another time or call the restaurant.',
+    'error.pedidos.completo':'Sorry, we are not accepting more orders for that time slot. Please choose another time or call the restaurant.',
     'error.aforo.parcial':'Sorry, only %d seat(s) left for that slot. Please reduce the number of people, choose another time or call the restaurant.',
     'error.carrito.vacio':'Add at least one dish to your order.','error.mesa.select':'Select your table.','error.mesa.manual':'Enter your table number.',
     'error.pedido.min':'Minimum order is %s. Add more dishes to continue.',
@@ -291,7 +293,7 @@ const I18N = {
     'error.enlace.sub':'Ask the restaurant for a valid link.',
     'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.',
     'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
-    'success.otra':'Make another request',
+    'success.otra':'Make another request', 'success.callToChange':'Need to change or cancel? Call %s.',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
@@ -334,6 +336,7 @@ const I18N = {
     'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
     'error.horario.reservas':'reserves','error.horario.pedidos':'comandes',
     'error.aforo.completo':'Ho sentim, aquest torn ja és complet. Si us plau tria un altre horari o truca al restaurant.',
+    'error.pedidos.completo':'Ho sentim, ja no admetem més comandes per a aquesta franja horària. Si us plau tria una altra hora o truca al restaurant.',
     'error.aforo.parcial':'Ho sentim, per a aquest torn només queden %d plaça/es disponible/s. Si us plau redueix el nombre de persones, tria un altre horari o truca al restaurant.',
     'error.carrito.vacio':'Afegeix almenys un plat a la comanda.','error.mesa.select':'Selecciona la teva taula.','error.mesa.manual':'Indica el número de la teva taula.',
     'error.pedido.min':'Comanda mínima de %s. Afegeix més plats per continuar.',
@@ -344,7 +347,7 @@ const I18N = {
     'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
     'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.',
     'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
-    'success.otra':'Fer una altra sol·licitud',
+    'success.otra':'Fer una altra sol·licitud', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
@@ -764,6 +767,25 @@ function reserveAforoAtomic(dateStr, turnoIdx, people, aforo, baseline){
     const held = current || 0;
     if(baseline + held + people > aforo) return; // abort: se pasaría del aforo
     return held + people;
+  });
+}
+
+// Mismo mecanismo que reserveAforoAtomic pero para el límite de pedidos por
+// franja de 30 min (mn.pedidos.maxPorFranja): evita que dos pedidos casi
+// simultáneos para la misma franja superen juntos el límite que el negocio
+// ha configurado, antes de que el resumen sincronizado se actualice.
+function roundToPedidoSlot(time){
+  const parts = (time||'').split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return String(h).padStart(2,'0') + ':' + (m < 30 ? '00' : '30');
+}
+function reservePedidoSlotAtomic(dateStr, slot, max, baseline){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/pedidosHold/' + dateStr + '/' + slot);
+  return ref.transaction(current => {
+    const held = current || 0;
+    if(baseline + held + 1 > max) return; // abort: se pasaría del límite
+    return held + 1;
   });
 }
 
@@ -1273,6 +1295,21 @@ async function submitOrder(){
     }
   }
 
+  const maxPorFranja = p.maxPorFranja || 0;
+  if(maxPorFranja > 0){
+    const slot = roundToPedidoSlot(time);
+    const baseline = ((DB.pedidosResumen||{})[date]||{})[slot] || 0;
+    // Comprobación final ATÓMICA justo antes de enviar, igual que con el
+    // aforo de reservas: cierra la ventana de carrera entre dos pedidos
+    // casi simultáneos para la misma franja.
+    const result = await reservePedidoSlotAtomic(date, slot, maxPorFranja, baseline);
+    if(!result.committed){
+      alert(t('error.pedidos.completo'));
+      submittingRequest = false;
+      return;
+    }
+  }
+
   let pendienteVerificarZona = false;
   if(zoneRestricted){
     const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
@@ -1312,41 +1349,47 @@ async function submitOrder(){
 }
 
 /* ============ PAGO CON TARJETA (TPV virtual / Redsys) ============
-   1) Enviamos el pedido como siempre (con una referencia propia).
-   2) Pedimos al Worker que firme el pago con esa referencia.
-   3) Redirigimos al cliente al TPV de Redsys. Cuando el banco confirme el
-      pago, el Worker avisará automáticamente al restaurante. */
+   1) Firmamos el pago con el Worker ANTES de registrar el pedido en el
+      negocio (antes se hacía al revés: se registraba el pedido en Firebase
+      y LUEGO se pedía la firma — si el Worker fallaba o el fetch se caía a
+      medio camino, quedaba un pedido huérfano en el TPV sin ningún estado
+      de pago, indistinguible de uno a pagar en el local). Así, si la firma
+      falla, no llega a crearse ningún pedido en el negocio.
+   2) Solo si la firma tiene éxito, registramos el pedido (con su
+      clientRef) y redirigimos al cliente al TPV de Redsys.
+   3) Cuando el banco confirme el pago, el Worker avisará automáticamente
+      al restaurante (evento pago_confirmado). */
 function payWithCard(req, amount, description){
   const clientRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
   req.clientRef = clientRef;
 
-  db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
-    const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
-    return fetch(`${REDSYS_WORKER_URL}/sign`, {
-      method: 'POST',
-      headers: {'content-type':'application/json'},
-      body: JSON.stringify({
-        publicId, orderRef: clientRef, amount, description,
-        urlOk: base + '&pago=ok',
-        urlKo: base + '&pago=ko'
-      })
-    });
+  const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+  fetch(`${REDSYS_WORKER_URL}/sign`, {
+    method: 'POST',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({
+      publicId, orderRef: clientRef, amount, description,
+      urlOk: base + '&pago=ok',
+      urlKo: base + '&pago=ko'
+    })
   }).then(r => r.json()).then(data => {
     if(!data || !data.url || data.error){
       showInlineError(t('error.pago') + (data && data.error ? ' ' + data.error : ''));
       setPaySubmitEnabled(true);
       return;
     }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = data.url;
-    Object.entries(data.fields).forEach(([k,v]) => {
-      const input = document.createElement('input');
-      input.type = 'hidden'; input.name = k; input.value = v;
-      form.appendChild(input);
+    return db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = data.url;
+      Object.entries(data.fields).forEach(([k,v]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = k; input.value = v;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
     });
-    document.body.appendChild(form);
-    form.submit();
   }).catch(e => {
     console.error(e);
     showInlineError(t('error.pago.conexion'));
@@ -1447,10 +1490,12 @@ function submitMesaOrder(){
 /* ============ ENVÍO ============ */
 function sendRequest(req, successMsg){
   db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+    const phone = (DB.business||{}).phone;
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
+        ${phone ? `<p style="font-size:13px;color:#888;margin-top:8px">${t('success.callToChange').replace('%s', escapeHtml(phone))}</p>` : ''}
         <button class="btn" style="margin-top:16px" onclick="location.reload()">${t('success.otra')}</button>
       </div>
     `;

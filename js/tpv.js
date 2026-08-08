@@ -556,6 +556,11 @@ function renderTpvPendingOnline(){
             <span><i class="ti ${o.tipo==='delivery'?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
+          ${(() => {
+            const waitMin = o.createdAt ? minutesSince(o.createdAt) : 0;
+            if(waitMin < 30) return '';
+            return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
+          })()}
           ${o.pendienteVerificarZona ? `<div style="font-size:12px;color:var(--brand-orange);margin:2px 0"><i class="ti ti-alert-triangle"></i> ${t('label.zoneNotVerified')}</div>` : ''}
           ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
           ${o.clienteTelefono ? `<div style="font-size:12px;color:${o.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(o.clienteTelefono)}${o.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}

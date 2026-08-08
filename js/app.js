@@ -2252,6 +2252,11 @@ function renderReservasPendingOnline(){
             <span>${escapeHtml(r.clientName||'—')}</span>
             <span class="badge badge-amber">${t('badge.newF')}</span>
           </h3>
+          ${(() => {
+            const waitMin = r.createdAt ? minutesSince(r.createdAt) : 0;
+            if(waitMin < 30) return '';
+            return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
+          })()}
           <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
           ${r.clientPhone ? `<div style="font-size:12px;color:${r.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}${r.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
