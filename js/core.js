@@ -2442,6 +2442,16 @@ function renderPedidosConfigCard(){
         </label>
         <small style="color:var(--muted)">${t('mn.pedidos.allowPayOnPickupDesc')}</small>
       </div>
+      <div class="field">
+        <label>${t('mn.pedidos.metodosLocales')}</label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px">
+          <input type="checkbox" id="mn-acepta-efectivo" ${p.aceptaEfectivo!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaEfectivo')}
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="mn-acepta-tarjeta-local" ${p.aceptaTarjetaLocal!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.pedidos.aceptaTarjetaLocal')}
+        </label>
+        <small style="color:var(--muted)">${t('mn.pedidos.metodosLocalesDesc')}</small>
+      </div>
       ${deliveryEnabled ? `
       <div class="field">
         <label>${t('mn.pedidos.deliveryFee')}</label>
@@ -2471,6 +2481,14 @@ async function savePedidosConfig(){
   p.pedidoMinimo = Math.max(0, parseFloat(document.getElementById('mn-pedidominimo').value) || 0);
   p.maxPorFranja = Math.max(0, parseInt(document.getElementById('mn-maxporfranja').value) || 0);
   p.permitirPagoLocal = document.getElementById('mn-pagolocal').checked;
+  const aceptaEfectivo = document.getElementById('mn-acepta-efectivo').checked;
+  const aceptaTarjetaLocal = document.getElementById('mn-acepta-tarjeta-local').checked;
+  if(!aceptaEfectivo && !aceptaTarjetaLocal){
+    showToast(t('msg.needOnePaymentMethod'));
+    return;
+  }
+  p.aceptaEfectivo = aceptaEfectivo;
+  p.aceptaTarjetaLocal = aceptaTarjetaLocal;
 
   const deliveryFeeEl = document.getElementById('mn-deliveryfee');
   if(deliveryFeeEl){
