@@ -1006,13 +1006,13 @@ function renderDistDetail(){
   // gestionarlas con precisión de ratón — la fila estrecha de antes era
   // fácil de fallar con el dedo.
   const platosHtml = d.platos.length
-    ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
+    ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">` + d.platos.map((pl,i)=>{
         const broken = !allDishes.includes(pl);
         return `
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 12px;min-height:96px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
-          <button class="owner-strict btn btn-sm btn-icon btn-danger" style="position:absolute;top:6px;right:6px" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
-          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:26px;color:${broken?'var(--red)':'var(--brand-orange)'}"></i>
-          <span style="font-size:14px;font-weight:600;line-height:1.25;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
+          <button class="owner-strict btn btn-sm btn-icon btn-danger" style="position:absolute;top:4px;right:4px" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+          <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:20px;color:${broken?'var(--red)':'var(--brand-orange)'}"></i>
+          <span style="font-size:12.5px;font-weight:600;line-height:1.2;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
         </div>
       `;}).join('') + `</div>`
     : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
