@@ -252,10 +252,14 @@ function renderRepartoControlCardHtml(order){
               ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>`
               : `<strong style="color:var(--brand-orange)"><i class="ti ti-cash"></i> ${t('reparto.toCollect')}: ${fmtMoney(total)}</strong>`}
           </div>
-          ${!order.pagado ? `
+          ${!order.pagado && order.metodoPagoLocal === 'tarjeta' ? `
+            <div style="font-size:13px;margin-top:6px"><span class="badge badge-blue"><i class="ti ti-credit-card"></i> ${t('reparto.paysCardOnArrival')}</span></div>
+          ` : ''}
+          ${!order.pagado && order.metodoPagoLocal !== 'tarjeta' ? `
             <div class="field" style="margin-top:8px;max-width:220px">
               <label style="font-size:12px">${t('reparto.pagaCon')}</label>
               <input type="number" min="0" step="0.5" value="${order.pagaCon!=null?order.pagaCon:''}" placeholder="${t('reparto.pagaConPlaceholder')}" onchange="setPagaConForOrder(${order.id}, this.value)">
+              ${order.pagaCon!=null && order.metodoPagoLocal==='efectivo' ? `<small style="color:var(--muted)">${t('reparto.pagaConFromClient')}</small>` : ''}
             </div>
             ${cambio != null ? `<div style="font-size:14px;margin-top:4px"><strong style="color:var(--red)"><i class="ti ti-cash-banknote"></i> ${t('reparto.change')}: ${fmtMoney(cambio)}</strong></div>` : ''}
           ` : ''}

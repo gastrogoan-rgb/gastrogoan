@@ -1798,7 +1798,12 @@ function initPublicRequestsListener(){
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
           clientRef: req.clientRef || null,
           pendienteVerificarZona: !!req.pendienteVerificarZona,
-          phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9)
+          phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
+          // El cliente ya indicó en la web pública con qué billete va a pagar
+          // (o si va a pagar con tarjeta en persona) — así el reparto ya
+          // sabe cuánto cambio llevar sin tener que preguntarlo aparte.
+          metodoPagoLocal: req.metodoPagoLocal || null,
+          pagaCon: typeof req.pagaCon === 'number' ? req.pagaCon : null
         });
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){

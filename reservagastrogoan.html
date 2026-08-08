@@ -222,7 +222,7 @@ const I18N = {
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
     'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
-    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta',
+    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta', 'pago.metodoLocal':'¿Cómo vas a pagar?','pago.efectivo':'Efectivo','pago.tarjetaLocal':'Tarjeta (al recibir)','pago.pagaConLabel':'¿Con qué billete vas a pagar?','pago.pagaConPlaceholder':'Ej: 20, 50...','pago.pagaConHint':'Para que llevemos el cambio justo.','error.pagaCon':'Indica un importe igual o superior al total (%s).',
     'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).',
     'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
     'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
@@ -276,7 +276,7 @@ const I18N = {
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
     'no.services':'This restaurant has no online services available at the moment.',
-    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card',
+    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card', 'pago.metodoLocal':'How will you pay?','pago.efectivo':'Cash','pago.tarjetaLocal':'Card (on arrival)','pago.pagaConLabel':'What bill will you pay with?','pago.pagaConPlaceholder':'E.g: 20, 50...','pago.pagaConHint':'So we bring the right change.','error.pagaCon':'Enter an amount equal to or greater than the total (%s).',
     'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, date and time).',
     'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
     'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
@@ -330,7 +330,7 @@ const I18N = {
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
     'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
-    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta',
+    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta', 'pago.metodoLocal':'Com pagaràs?','pago.efectivo':'Efectiu','pago.tarjetaLocal':'Targeta (en rebre)','pago.pagaConLabel':'Amb quin bitllet pagaràs?','pago.pagaConPlaceholder':'Ex: 20, 50...','pago.pagaConHint':'Perquè portem el canvi just.','error.pagaCon':'Indica un import igual o superior al total (%s).',
     'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, data i hora).',
     'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
     'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
@@ -1184,15 +1184,44 @@ function renderOrderForm(){
       ${redsysConfigured ? `
       <div class="field">
         <label>${t('pago')}</label>
-        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago" value="local" checked style="width:20px;height:20px;flex-shrink:0"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
-        <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjeta')}</label>
+        ${p.permitirPagoLocal !== false ? `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago" value="local" checked onchange="updateLocalPaymentVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${isDelivery ? t('pago.local.delivery') : t('pago.local.takeaway')}</label>` : ''}
+        <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago" value="tarjeta" ${p.permitirPagoLocal === false ? 'checked' : ''} onchange="updateLocalPaymentVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjeta')}</label>
       </div>` : ''}
+      <div class="field" id="o-cash-block">
+        <label>${t('pago.metodoLocal')}</label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago-local" value="efectivo" checked onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.efectivo')}</label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:400;padding:6px 0"><input type="radio" name="o-pago-local" value="tarjeta" onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${t('pago.tarjetaLocal')}</label>
+        <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
+          <label>${t('pago.pagaConLabel')}</label>
+          <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
+          <small style="color:#888">${t('pago.pagaConHint')}</small>
+        </div>
+      </div>
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
     </div>
   `;
   renderCartSummary();
   updateTimeInputRange('o-date','o-time','o-hour-hint');
   applyLeadTime('o-date','o-time','o-hour-hint');
+  updateLocalPaymentVisibility();
+  updateCashAmountVisibility();
+}
+
+// Muestra la pregunta de "efectivo o tarjeta al recibir" solo cuando el
+// cliente NO va a pagar ya online con tarjeta (si no hay Redsys configurado,
+// siempre se paga en persona, así que se muestra directamente).
+function updateLocalPaymentVisibility(){
+  const outer = document.querySelector('input[name="o-pago"]:checked');
+  const block = document.getElementById('o-cash-block');
+  if(block) block.style.display = (outer && outer.value === 'tarjeta') ? 'none' : '';
+}
+// El importe del billete con el que se va a pagar solo tiene sentido si
+// eligen efectivo — si van a pagar con tarjeta en persona (datáfono del
+// repartidor/mostrador), no hace falta preparar cambio.
+function updateCashAmountVisibility(){
+  const sel = document.querySelector('input[name="o-pago-local"]:checked');
+  const wrap = document.getElementById('o-cash-amount-wrap');
+  if(wrap) wrap.style.display = (!sel || sel.value === 'efectivo') ? '' : 'none';
 }
 
 function getCartQty(recipeId){
@@ -1324,6 +1353,26 @@ async function submitOrder(){
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
   const total = subtotal + deliveryFee;
 
+  // Si va a pagar en persona (no online con tarjeta) y elige efectivo, pedimos
+  // con qué billete va a pagar — así el negocio/repartidor sabe de antemano
+  // cuánto cambio llevar, en vez de descubrirlo al llegar. Tiene que ser al
+  // menos el importe total, si no no tendría sentido.
+  const pagoTarjetaOnline = redsysConfigured && document.querySelector('input[name="o-pago"]:checked')?.value === 'tarjeta';
+  let metodoPagoLocal = null, pagaCon = null;
+  if(!pagoTarjetaOnline){
+    const localSel = document.querySelector('input[name="o-pago-local"]:checked');
+    metodoPagoLocal = localSel ? localSel.value : 'efectivo';
+    if(metodoPagoLocal === 'efectivo'){
+      const pagaConEl = document.getElementById('o-paga-con');
+      pagaCon = pagaConEl ? parseFloat(pagaConEl.value) : NaN;
+      if(isNaN(pagaCon) || pagaCon < total){
+        alert(t('error.pagaCon').replace('%s', fmtMoney(total)));
+        submittingRequest = false;
+        return;
+      }
+    }
+  }
+
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
     clienteNombre, clienteTelefono, clienteDireccion, codigoPostal, notas, date, time,
@@ -1332,6 +1381,8 @@ async function submitOrder(){
     createdAt: new Date().toISOString()
   };
   if(pendienteVerificarZona) req.pendienteVerificarZona = true;
+  if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
+  if(pagaCon != null) req.pagaCon = pagaCon;
 
   req.total = total;
 
