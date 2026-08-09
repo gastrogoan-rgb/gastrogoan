@@ -146,6 +146,66 @@ function geFijosForRange(startDate, endDate){
 function geGastosTotalForRange(startDate, endDate){
   return geVariablesTotalForRange(startDate, endDate) + geFijosForRange(startDate, endDate);
 }
+// Facturación NETA (sin IVA) de un mes, a partir del IVA real de cada línea
+// de venta (line.ivaPct) — mismo criterio que ventasIvaGroups/
+// facturacionNetaMes dentro del módulo Gestión Económica (js/hr.js), pero
+// como funciones globales reutilizables desde el Dashboard sin depender de
+// los closures internos de GE. Antes el "Resultado del mes" del Dashboard
+// se calculaba como facturación CON IVA (salesTotalForMonth) menos gastos
+// SIN IVA (netos), lo que inflaba el resultado mostrado en un 10-21% —
+// y encima nunca restaba comisiones de plataformas de delivery ni cuotas
+// de inversiones CAPEX financiadas, a diferencia de GE → Resultado/CDR
+// (resultadoAntesImpMes), que sí lo hacen bien. Con esto el Dashboard usa
+// exactamente la misma fórmula que esas dos pestañas.
+function geVentasIvaGroupsMes(year, month){
+  const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  const fallbackRate = (DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
+  const groups = {};
+  DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
+    const descPct = parseFloat(sale.descuentoPct)||0;
+    (sale.items||[]).forEach(line => {
+      const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
+      if(grossLine <= 0) return;
+      const rate = line.ivaPct != null ? parseFloat(line.ivaPct) : fallbackRate;
+      const base = grossLine / (1 + rate/100);
+      if(!groups[rate]) groups[rate] = {base:0, iva:0};
+      groups[rate].base += base;
+      groups[rate].iva += grossLine - base;
+    });
+  });
+  return groups;
+}
+function geFacturacionNetaMes(year, month){
+  return Object.values(geVentasIvaGroupsMes(year, month)).reduce((s,g)=>s+g.base, 0);
+}
+// Comisiones de plataformas de delivery (Glovo, Uber Eats...) cobradas en
+// ventas del mes, en BASE (sin IVA) — igual que comisionesMes en GE
+// (js/hr.js): sale.comisionPlataforma se guarda con el IVA de la plataforma
+// ya sumado, hay que descontarlo para no mezclar un bruto con el resto de
+// cifras netas de esta fórmula.
+function geComisionesMes(year, month){
+  const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
+  return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v) => {
+    const bruto = parseFloat(v.comisionPlataforma||0);
+    if(!bruto) return s;
+    const ivaPct = (v.plataforma && v.plataforma.ivaPct!=null) ? parseFloat(v.plataforma.ivaPct) : 0;
+    return s + bruto / (1 + ivaPct/100);
+  }, 0);
+}
+// Cuota mensual de inversiones CAPEX financiadas a plazos, mientras dure el pago.
+function geCapexCuotaMes(year, month){
+  return (DB.ge.capex||[]).filter(c=>c.financiado && c.cuotaMensual && c.fecha).reduce((s,c)=>{
+    const [fy,fm] = c.fecha.split('-').map(Number);
+    const elapsed = (year*12+month) - (fy*12+(fm-1));
+    const cuotas = parseInt(c.cuotas)||0;
+    return s + (elapsed>=0 && elapsed<cuotas ? parseFloat(c.cuotaMensual||0) : 0);
+  }, 0);
+}
+// Resultado antes de impuestos de un mes: facturación neta menos todos los
+// gastos netos — misma fórmula que GE → Resultado/CDR (resultadoAntesImpMes).
+function geResultadoAntesImpMes(year, month){
+  return geFacturacionNetaMes(year,month) - geTotalVariablesNetoMes(year,month) - geTotalFijosNetoForMonth(year,month) - geComisionesMes(year,month) - geCapexCuotaMes(year,month);
+}
 function renderDashboardBarTrend(elId, trend, allowNegative){
   const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);
   document.getElementById(elId).innerHTML = `
@@ -334,17 +394,29 @@ function renderDashboard(){
   }
 
   // Resultado del mes (P&L) — única fuente de verdad para las cifras del mes en curso.
+  // "Facturación" se muestra CON IVA (lo que de verdad ha entrado en caja,
+  // como en GE → CDR), pero el "Resultado" se calcula sobre la facturación
+  // NETA y todos los gastos netos, exactamente igual que GE → Resultado/CDR
+  // (geResultadoAntesImpMes) — antes mezclaba facturación bruta con gastos
+  // netos y no restaba comisiones de delivery ni cuotas CAPEX, ver comentario
+  // en geResultadoAntesImpMes.
   const year = today.getFullYear();
   const month = today.getMonth();
   const facturacion = salesTotalForMonth(year, month);
   const variables = geTotalVariablesNetoMes(year, month);
-  const fijos = geTotalFijosNeto();
-  const resultado = facturacion - variables - fijos;
+  const fijos = geTotalFijosNetoForMonth(year, month);
+  const resultado = geResultadoAntesImpMes(year, month);
 
+  const facturacionNeta = geFacturacionNetaMes(year, month);
   const fcPct = avgFoodCost;
-  const margenPct = facturacion > 0 ? (resultado/facturacion)*100 : 0;
-  const personalCost = geTotalPersonalNeto();
-  const staffCostPct = facturacion > 0 ? (personalCost/facturacion)*100 : 0;
+  // Los % se calculan sobre la facturación NETA (sin IVA), no la bruta: el
+  // IVA no es un ingreso real del negocio, así que dividir entre facturación
+  // con IVA infla artificialmente estos ratios (más cuanto más alto el tipo
+  // de IVA aplicado). Mismo criterio que food cost/prime cost, que ya se
+  // calculaban así.
+  const margenPct = facturacionNeta > 0 ? (resultado/facturacionNeta)*100 : 0;
+  const personalCost = geTotalPersonalNetoForMonth(year, month);
+  const staffCostPct = facturacionNeta > 0 ? (personalCost/facturacionNeta)*100 : 0;
   const hasFoodCost = weightedFcUnits>0||DB.recipes.length;
   const primeCostPct = (hasFoodCost?fcPct:0) + staffCostPct;
   document.getElementById('dashboard-resultado').innerHTML = `
@@ -375,7 +447,10 @@ function renderDashboard(){
     const label = monthFull(m).slice(0,3);
     ventasTrend.push({label, value: sales});
     gastosTrend.push({label, value: variablesM + fijosM});
-    resultadoTrend.push({label, value: sales - variablesM - fijosM});
+    // Misma fórmula que el KPI "Resultado del mes" de arriba (facturación
+    // neta menos todos los gastos netos, incluidas comisiones y CAPEX) —
+    // antes aquí se restaban gastos netos de la facturación CON IVA.
+    resultadoTrend.push({label, value: geResultadoAntesImpMes(y, m)});
   }
   if(hasAnySales){
     renderDashboardBarTrend('dashboard-trend-ventas', ventasTrend);

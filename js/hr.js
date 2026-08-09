@@ -170,16 +170,35 @@ const GE = (function(){
       return s;
     }, 0);
   }
+  // sale.comisionPlataforma se guarda ya con el IVA de la plataforma sumado
+  // (ver applyDeliveryCommission, js/tpv.js) — hay que descontarlo aquí para
+  // no mezclar un importe bruto con el resto de gastos de esta hoja, que
+  // están todos en base (ver comentario en gfMonthlyGross más arriba). Antes
+  // comisionesMes devolvía el bruto directamente, y resultadoAntesImpMes lo
+  // restaba junto a cifras netas; además ese IVA soportado en comisiones
+  // nunca se descontaba de ivaLiquidarMes, así que el IVA pagado a la
+  // plataforma de delivery no se recuperaba nunca en la liquidación.
+  function comisionPlataformaNeta(sale){
+    const bruto = parseFloat(sale.comisionPlataforma||0);
+    if(!bruto) return 0;
+    const ivaPct = (sale.plataforma && sale.plataforma.ivaPct!=null) ? parseFloat(sale.plataforma.ivaPct) : 0;
+    return bruto / (1 + ivaPct/100);
+  }
+  function ivaSoportadoComisionesMes(mes, año=currentYear){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+(parseFloat(v.comisionPlataforma||0) - comisionPlataformaNeta(v)),0);
+  }
   // IVA neto a liquidar con Hacienda (modelo 303): repercutido en ventas menos soportado en compras e inversiones.
   // Si es negativo, Hacienda te lo debe a ti (a tu favor).
   function ivaLiquidarMes(mes, año=currentYear){
-    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes(mes,año);
+    return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes(mes,año) - ivaSoportadoComisionesMes(mes,año);
   }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
-  // sobre las ventas del mes que llegaron por esas plataformas.
+  // sobre las ventas del mes que llegaron por esas plataformas — en BASE,
+  // como el resto de gastos de esta hoja.
   function comisionesMes(mes, año=currentYear){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.comisionPlataforma||0),0);
+    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+comisionPlataformaNeta(v),0);
   }
   // Cuota mensual de inversiones CAPEX financiadas a plazos, mientras dure el pago.
   function capexCuotaMes(mes, año=currentYear){
@@ -602,12 +621,25 @@ const GE = (function(){
     if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
     const ivaRaw = document.getElementById('gv-f-iva').value;
     if(ivaRaw === ''){ showToast(t('msg.chooseIvaForExpense')); return; }
+    const fecha = document.getElementById('gv-f-fecha').value;
+    if(!fecha){ showToast(t('msg.chooseDateForExpense')); return; }
+    // mes/año se derivan SIEMPRE de la fecha, tanto al crear como al editar.
+    // Antes solo se fijaban una vez al crear el gasto (mes: activeMonth, año:
+    // currentYear) y nunca se resincronizaban al editar la fecha — así que
+    // corregir la fecha de una compra para moverla a otro mes (caso muy
+    // habitual: registrar hoy una factura que llegó tarde y es del mes
+    // anterior) no la movía de verdad en ningún cálculo (CDR, Resultado,
+    // Tesorería, food cost real), que filtran todos por mes/año, no por
+    // fecha. El bloqueo de mes cerrado (isDateClosed) sí mira la fecha, así
+    // que antes podía usar un criterio distinto al que de verdad determinaba
+    // en qué mes contaba el gasto.
+    const [fy, fm] = fecha.split('-').map(Number);
     const data = {
       categoria: document.getElementById('gv-f-cat').value,
       proveedor: document.getElementById('gv-f-prov').value.trim().toUpperCase() || 'SIN PROVEEDOR',
       importe: imp,
       iva: parseFloat(ivaRaw),
-      fecha: document.getElementById('gv-f-fecha').value
+      fecha, mes: fm - 1, año: fy
     };
     if(editingGV){
       const existing = variables().find(x=>x.id===editingGV);
@@ -617,7 +649,7 @@ const GE = (function(){
       }
     }else{
       if(isDateClosed(data.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
-      variables().push({id: genId(), mes: activeMonth, año: currentYear, ...data});
+      variables().push({id: genId(), ...data});
     }
     saveDB();
     closeModal();

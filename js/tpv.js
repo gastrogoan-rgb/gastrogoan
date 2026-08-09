@@ -2636,6 +2636,25 @@ function resolveLineIvaPct(line){
   }
   return null;
 }
+
+// Líneas de la venta a partir del pedido, con el IVA de cada plato/bebida
+// resuelto Y una línea aparte para el coste de envío si lo hay. Antes el
+// envío solo vivía dentro de order.costeEnvio, sumado al total del pedido
+// pero SIN representación en sale.items — como toda la facturación neta y
+// el IVA repercutido del mes (Gestión Económica) se calculan iterando
+// sale.items, ese dinero cobrado por envío desaparecía de esos cálculos
+// (aunque sí contaba en el bruto del ticket), y su IVA nunca se declaraba
+// en la liquidación. El envío lleva el tipo general (21%), no el reducido
+// de la comida, por eso se le asigna su propio ivaPct explícito en vez de
+// dejar que resolveLineIvaPct lo intente resolver (fallaría, al no tener
+// platoId/recipeId, y caería en el tipo por defecto de las ventas).
+function buildSaleItemsForOrder(order){
+  const items = order.items.map(l => ({...l, ivaPct: resolveLineIvaPct(l)}));
+  if(order.costeEnvio > 0){
+    items.push({name: t('label.shippingLineItem'), price: order.costeEnvio, qty: 1, ivaPct: 21, bebida: false, isShipping: true});
+  }
+  return items;
+}
 // Para los pedidos "para llevar" (tickets rápidos), los platos pasan a cocina automáticamente
 // al añadirlos o aumentar su cantidad, sin necesidad de pulsar "Marchar".
 function autoSendTakeawayLine(order, line){
@@ -3315,7 +3334,7 @@ function finalizeCharge(orderId){
     if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
     if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
   }
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: order.items.map(l=>({...l, ivaPct: resolveLineIvaPct(l)}))};
+  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -3576,7 +3595,7 @@ function finalizeSplitOrder(orderId){
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
     metodoPago: metodos.length===1?metodos[0]:'Dividido',
-    pagos, items: order.items.map(l=>({...l, ivaPct: resolveLineIvaPct(l)}))
+    pagos, items: buildSaleItemsForOrder(order)
   };
   applyDeliveryCommission(order, sale);
   DB.sales.push(sale);
