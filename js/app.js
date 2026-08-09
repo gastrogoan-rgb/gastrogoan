@@ -4120,12 +4120,19 @@ function businessTypeLabel(name){
 // Renderiza los campos de un tramo (seguido o turno): horas de apertura/cierre.
 function renderTramoFields(prefix, tramo, label){
   tramo = tramo || {};
+  // El input de hora de cierre no puede mostrar literalmente "24:00" (no es
+  // un valor válido de <input type="time">), así que un cierre a medianoche
+  // guardado como "24:00" se muestra como "00:00" — es el valor más
+  // cercano representable, y readTramoFromForm ya sabe volver a
+  // interpretarlo como medianoche si se vuelve a guardar sin tocarlo.
+  const finDisplay = tramo.fin === '24:00' ? '00:00' : (tramo.fin||'');
   return `
-    <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+    <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
       <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
       <span style="color:var(--muted);font-size:12px">${t('common.to')}</span>
-      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(tramo.fin||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(finDisplay)}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+      <span style="font-size:11px;color:var(--muted)">${t('mn.schedule.midnightHint')}</span>
     </div>
   `;
 }
@@ -4175,10 +4182,20 @@ function toggleHorarioModo(i){
   saveBusiness(true);
 }
 
+// Un <input type="time"> nunca puede llevar el valor "24:00" (el navegador
+// lo rechaza y deja el campo vacío sin avisar) — así que cerrar "a
+// medianoche" es imposible de teclear literalmente, aunque sea la hora de
+// cierre más habitual de bares y restaurantes. Como convención, "00:00"
+// tecleado en el campo de HORA DE CIERRE (no en el de inicio, donde 00:00
+// sí es una apertura real de madrugada) se interpreta como medianoche y se
+// guarda internamente como "24:00", que si compara bien como texto contra
+// cualquier hora del día (isTimeAllowed, aforo, corte de pedidos...) sin
+// tocar esa lógica.
 function readTramoFromForm(prefix){
+  const finRaw = document.getElementById(`${prefix}-fin`).value;
   return {
     ini: document.getElementById(`${prefix}-ini`).value,
-    fin: document.getElementById(`${prefix}-fin`).value,
+    fin: finRaw === '00:00' ? '24:00' : finRaw,
   };
 }
 
