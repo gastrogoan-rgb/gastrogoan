@@ -205,7 +205,8 @@ const I18N = {
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'reserva.ok.emailHint':' Te enviaremos la confirmación a tu email en cuanto quede lista.',
-    'email.reserva.label':'Email (opcional)','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisamos aquí en cuanto tu reserva quede confirmada.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisaremos por aquí en cuanto tu reserva quede confirmada.',
+    'error.email.invalido':'Indica un email válido para que podamos avisarte cuando se confirme tu reserva.',
     'deposit.notice.title':'Esta reserva requiere señal',
     'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. El restaurante te contactará para gestionarla.',
     'nps.title':'¿Qué tal tu experiencia en ${business}?', 'nps.subtitle':'Tu opinión es privada y solo la ve el restaurante — no se publica en ningún sitio.',
@@ -225,7 +226,7 @@ const I18N = {
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
     'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
     'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta', 'pago.metodoLocal':'¿Cómo vas a pagar?','pago.efectivo':'Efectivo','pago.tarjetaLocal':'Tarjeta (al recibir)','pago.pagaConLabel':'¿Con qué billete vas a pagar?','pago.pagaConPlaceholder':'Ej: 20, 50...','pago.pagaConHint':'Para que llevemos el cambio justo.','error.pagaCon':'Indica un importe igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Este negocio solo acepta tarjeta al entregar/recoger.', 'pago.metodoFijado':'Pagarás con: %s',
-    'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, fecha y hora).',
+    'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, email, fecha y hora).',
     'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
     'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
     'error.horario.reservas':'reservas','error.horario.pedidos':'pedidos',
@@ -262,7 +263,8 @@ const I18N = {
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'reserva.ok.emailHint':' We\'ll email you the confirmation as soon as it\'s ready.',
-    'email.reserva.label':'Email (optional)','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
+    'error.email.invalido':'Enter a valid email so we can let you know when your booking is confirmed.',
     'deposit.notice.title':'This booking requires a deposit',
     'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. The restaurant will contact you about it.',
     'nps.title':'How was your experience at ${business}?', 'nps.subtitle':'Your answer is private and only seen by the restaurant — never published anywhere.',
@@ -282,7 +284,7 @@ const I18N = {
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
     'no.services':'This restaurant has no online services available at the moment.',
     'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card', 'pago.metodoLocal':'How will you pay?','pago.efectivo':'Cash','pago.tarjetaLocal':'Card (on arrival)','pago.pagaConLabel':'What bill will you pay with?','pago.pagaConPlaceholder':'E.g: 20, 50...','pago.pagaConHint':'So we bring the right change.','error.pagaCon':'Enter an amount equal to or greater than the total (%s).', 'pago.soloTarjetaLocal':'This business only accepts card on delivery/pickup.', 'pago.metodoFijado':'You will pay with: %s',
-    'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, date and time).',
+    'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, email, date and time).',
     'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
     'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
     'error.horario.reservas':'bookings','error.horario.pedidos':'orders',
@@ -319,7 +321,8 @@ const I18N = {
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'reserva.ok.emailHint':' T\'enviarem la confirmació al teu email en quant estigui llesta.',
-    'email.reserva.label':'Email (opcional)','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisem aquí quan la teva reserva quedi confirmada.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisarem aquí quan la teva reserva quedi confirmada.',
+    'error.email.invalido':'Indica un email vàlid perquè puguem avisar-te quan es confirmi la teva reserva.',
     'deposit.notice.title':'Aquesta reserva requereix senyal',
     'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. El restaurant et contactarà per gestionar-la.',
     'nps.title':'Què tal la teva experiència a ${business}?', 'nps.subtitle':'La teva opinió és privada i només la veu el restaurant — no es publica enlloc.',
@@ -339,7 +342,7 @@ const I18N = {
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
     'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
     'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta', 'pago.metodoLocal':'Com pagaràs?','pago.efectivo':'Efectiu','pago.tarjetaLocal':'Targeta (en rebre)','pago.pagaConLabel':'Amb quin bitllet pagaràs?','pago.pagaConPlaceholder':'Ex: 20, 50...','pago.pagaConHint':'Perquè portem el canvi just.','error.pagaCon':'Indica un import igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Aquest negoci només accepta targeta en entregar/recollir.', 'pago.metodoFijado':'Pagaràs amb: %s',
-    'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, data i hora).',
+    'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, email, data i hora).',
     'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
     'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
     'error.horario.reservas':'reserves','error.horario.pedidos':'comandes',
@@ -988,7 +991,7 @@ function renderReservaForm(){
       </div>
       <div class="field">
         <label>${t('email.reserva.label')}</label>
-        <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}">
+        <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" required>
         <small style="color:#888">${t('email.reserva.hint')}</small>
       </div>
       <div class="field-row">
@@ -1064,8 +1067,16 @@ function submitReserva(){
   const notes = document.getElementById('r-notes').value.trim();
   const referral = document.getElementById('r-referral')?.value || '';
 
-  if(!clientName || !clientPhone || !date || !time){
+  if(!clientName || !clientPhone || !clientEmail || !date || !time){
     alert(t('error.campos.reserva'));
+    submittingRequest = false;
+    return;
+  }
+  // Validación básica de formato: sin esto, un email mal escrito por prisa
+  // ("laura@gmial.con") pasaría como válido y la reserva se auto-confirmaría
+  // sin que el cliente llegase a enterarse nunca por ningún sitio.
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)){
+    alert(t('error.email.invalido'));
     submittingRequest = false;
     return;
   }
