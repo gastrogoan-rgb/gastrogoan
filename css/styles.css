@@ -168,8 +168,17 @@ body:not(.owner-session) .owner-strict{display:none !important}
    bajar mucho para verlo — así se queda siempre a la vista sin taparlo
    del todo (altura máxima con scroll propio si hay muchos pedidos). */
 .togo-panel{margin-top:16px;padding:14px 16px;border-radius:14px 14px 0 0;background:var(--brand-cream);border:1px solid var(--border);position:sticky;bottom:0;z-index:5;max-height:38vh;overflow-y:auto;box-shadow:0 -6px 16px rgba(0,0,0,.12)}
-.togo-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+/* Colapsado: solo se ve la cabecera (con el contador), el resto del panel
+   -avisos, tarjetas de pedidos- no ocupa espacio. En móvil el panel entero
+   (38vh) se comía la mitad de la pantalla y dejaba el plano de mesas
+   aplastado en un scroll diminuto, así que en pantallas estrechas arranca
+   colapsado por defecto (ver tpv.js: togoPanelCollapsed). */
+.togo-panel.collapsed{max-height:none;padding-bottom:14px}
+.togo-panel.collapsed .togo-panel-body{display:none}
+.togo-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;cursor:pointer}
 .togo-panel-head h3{margin:0}
+.togo-panel-toggle{transition:transform .15s}
+.togo-panel.collapsed .togo-panel-toggle{transform:rotate(-90deg)}
 .togo-card{border-top-width:4px;border-top-style:solid;background:var(--surface)}
 .togo-card.togo-card-pickup{border-top-color:var(--amber)}
 .togo-card.togo-card-delivery{border-top-color:var(--blue)}

@@ -762,6 +762,16 @@ function renderTpvMesas(tiposServicio){
   return html;
 }
 
+// Colapsado por defecto en pantallas estrechas (móvil), donde el panel fijo
+// de 38vh dejaba el plano de mesas de Sala aplastado en un hueco diminuto.
+// En pantallas anchas (PC/tablet, con sitio de sobra) arranca desplegado,
+// como hasta ahora. Una vez el usuario lo toca a mano, se respeta su
+// elección durante el resto de la sesión, no se vuelve a decidir solo.
+let togoPanelCollapsed = null;
+function toggleTogoPanel(){
+  togoPanelCollapsed = !(togoPanelCollapsed ?? window.innerWidth < 700);
+  renderTPV();
+}
 function renderTpvToGo(tiposServicio){
   // Este canal se muestra siempre que el negocio tenga para llevar o
   // delivery dado de alta, separado con su propio panel de las mesas del
@@ -777,10 +787,11 @@ function renderTpvToGo(tiposServicio){
     return ma - mb;
   });
   const pedidosOnlineOn = DB.business.pedidosOnlineActivos !== false;
+  const collapsed = togoPanelCollapsed ?? (typeof window!=='undefined' && window.innerWidth < 700);
   return `
-    <div class="togo-panel">
+    <div class="togo-panel${collapsed?' collapsed':''}">
       <div class="togo-panel-head">
-        <h3><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')}</h3>
+        <h3 style="cursor:pointer" onclick="toggleTogoPanel()"><i class="ti ti-chevron-down togo-panel-toggle"></i> <i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
             <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
@@ -789,8 +800,9 @@ function renderTpvToGo(tiposServicio){
           <button class="btn btn-sm btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-plus"></i> ${t('btn.expressOrder')}</button>
         </div>
       </div>
-      ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
-      <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('tpv.onlineOrdersAutoArrive')}</p>
+      <div class="togo-panel-body">
+      ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
+      <p style="font-size:12px;color:var(--muted);margin:10px 0">${t('tpv.onlineOrdersAutoArrive')}</p>
       ${!toGoOrders.length
         ? `<div class="empty" style="padding:18px"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div>`
         : `<div class="grid grid-4">${toGoOrders.map(o => {
@@ -816,6 +828,7 @@ function renderTpvToGo(tiposServicio){
               ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
             </div>
           `}).join('')}</div>`}
+      </div>
     </div>
   `;
 }
