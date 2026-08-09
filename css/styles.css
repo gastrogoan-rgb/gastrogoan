@@ -361,27 +361,101 @@ td.wrap{white-space:normal}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty i{font-size:32px;display:block;margin-bottom:10px;color:var(--border)}
 
-/* ===== Tour guiado: resalta la zona de la pantalla de la que se habla ===== */
-@keyframes tourPulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(223,112,57,.55)}
-  50%{box-shadow:0 0 0 9px rgba(223,112,57,0)}
+/* ===== Tour guiado: velo + foco recortado sobre lo que se explica =====
+   Tres piezas fijas, creadas una sola vez (tourBuildChrome, js/ui.js) y
+   reposicionadas en cada paso: #tour-overlay (oscurece y bloquea clics en
+   el resto de la app), #tour-spotlight (el "agujero" iluminado sobre el
+   elemento real, con box-shadow gigante haciendo de velo — así solo hace
+   falta animar top/left/width/height de UN elemento para que el foco se
+   mueva suavemente de una pantalla a otra) y #tour-arrow (la flecha que
+   conecta el foco con la burbuja de texto). */
+@keyframes tourSpotPulse{
+  0%,100%{outline-color:var(--olive)}
+  50%{outline-color:var(--olive-l)}
 }
-.tour-highlight{
-  outline:3px solid var(--brand-orange)!important;
-  outline-offset:3px;border-radius:14px;
-  animation:tourPulse 1.6s ease-in-out infinite;
-  position:relative;z-index:5;
+.tour-overlay{
+  position:fixed;inset:0;z-index:8997;background:transparent;
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
 }
+.tour-overlay.active{opacity:1;pointer-events:auto}
+.tour-spotlight{
+  position:fixed;z-index:8998;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(28,26,23,.72);
+  outline:3px solid var(--olive);outline-offset:2px;
+  opacity:0;
+  transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1),
+             width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),
+             opacity .3s ease;
+  animation:tourSpotPulse 1.8s ease-in-out infinite;
+}
+.tour-spotlight.active{opacity:1}
+.tour-spotlight.no-target{outline:none;border-radius:0}
+.tour-arrow{
+  position:fixed;z-index:8999;width:0;height:0;pointer-events:none;
+  border-left:9px solid transparent;border-right:9px solid transparent;
+  transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1);
+  filter:drop-shadow(0 -2px 2px rgba(0,0,0,.12));
+}
+.tour-arrow-bottom{border-bottom:10px solid #fff}
+.tour-arrow-top{border-top:10px solid #fff}
+
 .tour-bubble{
-  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
-  width:calc(100% - 32px);max-width:480px;
-  background:#fff;border:2px solid var(--brand-orange);border-radius:16px;
-  box-shadow:0 -8px 30px rgba(0,0,0,.22);padding:16px 18px;z-index:9000;
-  max-height:calc(100vh - 100px);overflow-y:auto;
-  bottom:calc(16px + env(safe-area-inset-bottom));
+  position:fixed;z-index:9000;
+  width:min(400px, calc(100% - 32px));
+  background:#fff;border-radius:18px;
+  box-shadow:0 18px 50px rgba(28,26,23,.32);padding:18px 20px 16px;
+  max-height:calc(100vh - 40px);overflow-y:auto;
+  transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1);
 }
-.tour-bubble h3{font-size:16px;display:flex;align-items:center;gap:8px;margin:0}
-.tour-bubble p{font-size:13.5px;line-height:1.6;margin:8px 0 10px}
+.tour-bubble-centered{
+  top:50%!important;left:50%!important;
+  transform:translate(-50%,-50%);
+  width:min(440px, calc(100% - 32px));
+}
+@keyframes tourBubbleIn{
+  from{opacity:0;transform:scale(.96) translateY(6px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+.tour-bubble-centered.tour-bubble-anim{animation:tourBubbleIn .3s cubic-bezier(.22,1,.36,1) both, tourBubbleInCentered .01s}
+@keyframes tourBubbleInCentered{ from{transform:translate(-50%,-50%) scale(.96)} to{transform:translate(-50%,-50%) scale(1)} }
+.tour-bubble:not(.tour-bubble-centered).tour-bubble-anim{animation:tourBubbleIn .3s cubic-bezier(.22,1,.36,1) both}
+
+.tour-bubble-head{display:flex;align-items:flex-start;gap:12px;margin-top:2px}
+.tour-icon-badge{
+  flex:none;width:42px;height:42px;border-radius:12px;
+  background:var(--olive-l);color:var(--olive);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.tour-icon-badge-finale{background:var(--dark);color:#fff}
+.tour-bubble h3{font-size:16px;margin:2px 0 0;line-height:1.3}
+.tour-step-count{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.tour-bubble-desc{font-size:13.5px;line-height:1.6;margin:12px 0 4px;color:var(--body)}
+.tour-bubble-footer{margin-top:14px;padding-top:12px}
+
+.tour-progress{height:4px;border-radius:2px;background:var(--border);margin-top:12px;overflow:hidden}
+.tour-progress-fill{height:100%;background:var(--olive);border-radius:2px;transition:width .35s ease}
+
+.tour-phase-nav{display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.tour-phase-pill{
+  flex:none;display:flex;align-items:center;gap:5px;
+  border:1px solid var(--border);background:var(--bg);color:var(--muted);
+  border-radius:999px;padding:5px 10px 5px 8px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s ease;white-space:nowrap;
+}
+.tour-phase-pill i{font-size:13px}
+.tour-phase-pill span{display:none}
+.tour-phase-pill.current{background:var(--dark);border-color:var(--dark);color:#fff}
+.tour-phase-pill.current span{display:inline}
+.tour-phase-pill.done{color:var(--olive);border-color:var(--olive-l)}
+.tour-phase-pill:hover{border-color:var(--olive)}
+
+.tour-bubble-finale{text-align:center;padding-top:28px}
+.tour-bubble-finale .tour-bubble-head{flex-direction:column;align-items:center;gap:10px}
+.tour-bubble-finale .tour-icon-badge{width:64px;height:64px;border-radius:50%;font-size:30px}
+.tour-bubble-finale h3{font-size:20px}
+.tour-bubble-finale .tour-bubble-desc{text-align:center}
+.tour-bubble-finale .modal-close{position:absolute;top:14px;right:14px}
+.tour-bubble-finale .tour-bubble-head{position:relative}
 
 /* Toast */
 .toast{
@@ -722,10 +796,10 @@ td.wrap{white-space:normal}
   /* Badges */
   .badge{font-size:10px;padding:2px 6px}
 
-  /* Tour bubble — reposition for tablet */
-  .tour-bubble{bottom:calc(20px + env(safe-area-inset-bottom));max-height:40vh;overflow-y:auto;padding:14px 16px}
+  /* Tour bubble — reposition for tablet (top/left ya los pone JS en cada paso) */
+  .tour-bubble{max-height:50vh;padding:14px 16px}
   .tour-bubble h3{font-size:15px}
-  .tour-bubble p{font-size:13px}
+  .tour-bubble-desc{font-size:13px}
 
   /* Toast — ensure visible */
   .toast{bottom:calc(24px + env(safe-area-inset-bottom));max-width:90%;font-size:13px}
@@ -909,12 +983,13 @@ td.wrap{white-space:normal}
   .kpi-row{flex-wrap:wrap}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important}
 
-  /* Tour bubble — mobile */
-  .tour-bubble{bottom:calc(14px + env(safe-area-inset-bottom));max-height:45vh;overflow-y:auto;padding:12px 14px;border-radius:14px}
+  /* Tour bubble — mobile (top/left ya los pone JS en cada paso, en modo
+     "hoja inferior" fija por debajo de cierto ancho — ver tourPositionUI) */
+  .tour-bubble{max-height:48vh;padding:12px 14px;border-radius:14px}
   .tour-bubble h3{font-size:14px}
-  .tour-bubble p{font-size:12.5px;margin:6px 0 8px}
-  .tour-bubble .modal-footer{flex-wrap:wrap;gap:4px}
-  .tour-bubble .modal-footer .btn{font-size:11px}
+  .tour-bubble-desc{font-size:12.5px;margin:8px 0 4px}
+  .tour-bubble-footer .btn{font-size:11px}
+  .tour-arrow{display:none!important}
 
   /* Toast — mobile */
   .toast{bottom:calc(20px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);font-size:12.5px;padding:10px 16px}

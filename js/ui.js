@@ -45,51 +45,65 @@ function printReportHeaderHtml(title, subtitle){
 /* ============== Tour virtual de bienvenida ==============
    Cada paso, además del texto, indica a qué pantalla ir (folder/view) y
    qué elemento resaltar (target), para que el tour navegue de verdad por
-   la app y muestre en vivo lo que está explicando. Orden: introducción,
-   Cocina, Sala y Gestión. */
+   la app y muestre en vivo lo que está explicando — no son diapositivas
+   sueltas, es la app real usándose sola delante del usuario. "phase"
+   agrupa los pasos en Introducción/Cocina/Sala/Gestión/Ayuda para la
+   mini-navegación por fases de la burbuja (ver TOUR_PHASES). */
+const TOUR_PHASES = [
+  {key:'intro',   labelKey:'tour.phase.intro',   icon:'ti-confetti'},
+  {key:'cocina',  labelKey:'tour.phase.cocina',  icon:'ti-tools-kitchen-2'},
+  {key:'sala',    labelKey:'tour.phase.sala',    icon:'ti-device-desktop'},
+  {key:'gestion', labelKey:'tour.phase.gestion', icon:'ti-layout-dashboard'},
+  {key:'ayuda',   labelKey:'tour.phase.ayuda',   icon:'ti-lifebuoy'},
+];
 const TOUR_STEPS = [
-  {icon:'ti-confetti', titleKey:'tour.s1.title', descKey:'tour.s1.desc'},
-  {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc', target:'.folder-grid'},
-  {icon:'ti-fingerprint', titleKey:'tour.s32.title', descKey:'tour.s32.desc'},
+  {icon:'ti-confetti', titleKey:'tour.s1.title', descKey:'tour.s1.desc', phase:'intro'},
+  {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc', target:'.folder-grid', phase:'intro'},
+  {icon:'ti-fingerprint', titleKey:'tour.s32.title', descKey:'tour.s32.desc', phase:'intro'},
 
   // ---- Cocina ----
-  {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc', folder:'cocina', view:'carta'},
-  {icon:'ti-download', titleKey:'tour.s14.title', descKey:'tour.s14.desc', folder:'cocina', view:'carta'},
-  {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc', folder:'cocina', view:'carta'},
-  {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc', folder:'cocina', view:'megalista'},
-  {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo'},
-  {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock'},
-  {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios'},
-  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios'},
-  {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina'},
+  {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc', folder:'cocina', view:'carta', phase:'cocina'},
+  {icon:'ti-download', titleKey:'tour.s14.title', descKey:'tour.s14.desc', folder:'cocina', view:'carta', phase:'cocina'},
+  {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc', folder:'cocina', view:'carta', phase:'cocina'},
+  {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc', folder:'cocina', view:'megalista', phase:'cocina'},
+  {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo', phase:'cocina'},
+  {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock', phase:'cocina'},
+  {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios', phase:'cocina'},
+  {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina'},
+  {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina', phase:'cocina'},
 
   // ---- Sala ----
-  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv'},
-  {icon:'ti-calendar-plus', titleKey:'tour.s16.title', descKey:'tour.s16.desc', folder:'sala', view:'reservas'},
-  {icon:'ti-users', titleKey:'tour.s17.title', descKey:'tour.s17.desc', folder:'sala', view:'reservas'},
-  {icon:'ti-address-book', titleKey:'tour.s18.title', descKey:'tour.s18.desc', folder:'sala', view:'clientes'},
-  {icon:'ti-speakerphone', titleKey:'tour.s23.title', descKey:'tour.s23.desc', folder:'sala', view:'promocion'},
+  {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-adjustments', titleKey:'tour.s6.title', descKey:'tour.s6.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-chef-hat', titleKey:'tour.s7.title', descKey:'tour.s7.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-cash', titleKey:'tour.s9.title', descKey:'tour.s9.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-shopping-bag', titleKey:'tour.s10.title', descKey:'tour.s10.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-world', titleKey:'tour.s11.title', descKey:'tour.s11.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-cash-register', titleKey:'tour.s12.title', descKey:'tour.s12.desc', folder:'sala', view:'tpv', phase:'sala'},
+  {icon:'ti-calendar-plus', titleKey:'tour.s16.title', descKey:'tour.s16.desc', folder:'sala', view:'reservas', phase:'sala'},
+  {icon:'ti-users', titleKey:'tour.s17.title', descKey:'tour.s17.desc', folder:'sala', view:'reservas', phase:'sala'},
+  {icon:'ti-address-book', titleKey:'tour.s18.title', descKey:'tour.s18.desc', folder:'sala', view:'clientes', phase:'sala'},
+  {icon:'ti-speakerphone', titleKey:'tour.s23.title', descKey:'tour.s23.desc', folder:'sala', view:'promocion', phase:'sala'},
 
   // ---- Gestión ----
-  {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true},
-  {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true},
-  {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true},
-  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true},
+  {icon:'ti-layout-dashboard', titleKey:'tour.s24.title', descKey:'tour.s24.desc', folder:'gestion', view:'dashboard', gestion:true, phase:'gestion'},
+  {icon:'ti-coin', titleKey:'tour.s25.title', descKey:'tour.s25.desc', folder:'gestion', view:'economia', gestion:true, phase:'gestion'},
+  {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
+  {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
 
   // ---- Otras ayudas ----
-  {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab'},
-  {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab'},
-  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav'},
+  {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab', phase:'ayuda'},
+  {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab', phase:'ayuda'},
+  {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav', phase:'ayuda'},
+
+  // ---- Cierre ----
+  {icon:'ti-rocket', titleKey:'tour.s33.title', descKey:'tour.s33.desc', phase:'ayuda', finale:true},
 ];
 let tourStepIndex = 0;
+let tourCurrentTargetEl = null;
+let tourReflowHandler = null;
 
 function promptAppTour(){
   openModal(`
@@ -111,18 +125,66 @@ function dismissTour(){
 function startAppTour(){
   closeModal();
   tourStepIndex = 0;
+  tourBuildChrome();
   renderTourStep();
 }
 
-/* Limpia el resalte (borde animado) de cualquier elemento del paso anterior. */
-function tourClearHighlight(){
-  document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+/* Crea (una sola vez) los elementos fijos del tour: el velo que oscurece el
+   resto de la pantalla y bloquea los clics, el "foco" recortado sobre el
+   elemento que se está explicando, la flecha que lo conecta con la burbuja,
+   y la propia burbuja. Antes solo existía la burbuja flotando siempre abajo
+   del todo, sin nada que dirigiera la vista hacia lo que se estaba
+   explicando de verdad. */
+function tourBuildChrome(){
+  if(!document.getElementById('tour-overlay')){
+    const overlay = document.createElement('div');
+    overlay.id = 'tour-overlay';
+    overlay.className = 'tour-overlay';
+    document.body.appendChild(overlay);
+  }
+  if(!document.getElementById('tour-spotlight')){
+    const spot = document.createElement('div');
+    spot.id = 'tour-spotlight';
+    spot.className = 'tour-spotlight';
+    document.body.appendChild(spot);
+  }
+  if(!document.getElementById('tour-arrow')){
+    const arrow = document.createElement('div');
+    arrow.id = 'tour-arrow';
+    arrow.className = 'tour-arrow';
+    document.body.appendChild(arrow);
+  }
+  if(!document.getElementById('tour-bubble')){
+    const b = document.createElement('div');
+    b.id = 'tour-bubble';
+    b.className = 'tour-bubble';
+    document.body.appendChild(b);
+  }
+  requestAnimationFrame(() => document.getElementById('tour-overlay').classList.add('active'));
+  if(!tourReflowHandler){
+    tourReflowHandler = () => tourPositionUI();
+    window.addEventListener('resize', tourReflowHandler);
+    window.addEventListener('scroll', tourReflowHandler, true);
+  }
+}
+function tourDestroyChrome(){
+  ['tour-overlay','tour-spotlight','tour-arrow','tour-bubble'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.remove();
+  });
+  if(tourReflowHandler){
+    window.removeEventListener('resize', tourReflowHandler);
+    window.removeEventListener('scroll', tourReflowHandler, true);
+    tourReflowHandler = null;
+  }
 }
 
-/* Lleva la app a la pantalla del paso actual y resalta el elemento que
-   corresponde, igual que si el usuario hubiera navegado a mano. */
+/* Lleva la app a la pantalla del paso actual — de verdad, navegando como lo
+   haría el usuario — y recuerda cuál es el elemento a enfocar para que
+   tourPositionUI() pueda recortar el foco sobre él en cuanto termine de
+   moverse/renderizarse. */
 function tourGoToStep(step){
-  tourClearHighlight();
+  tourCurrentTargetEl = null;
   if(step.gestion){
     if(!ownerUnlocked) tourOwnerUnlockedByTour = true;
     ownerUnlocked = true;
@@ -143,37 +205,148 @@ function tourGoToStep(step){
   else if(step.folder) navigate('folder');
   else navigate('home');
 
-  const sel = step.target || (step.view ? '#view-' + step.view : (step.folder ? '.folder-card.folder-' + step.folder : null));
-  if(!sel) return;
-  const els = document.querySelectorAll(sel);
-  els.forEach(el => el.classList.add('tour-highlight'));
-  if(els[0]) els[0].scrollIntoView({behavior:'smooth', block:'center'});
+  // Si el paso no trae un target explícito, se intenta primero la primera
+  // ".card" real de la vista (más concreta y vistosa para el foco) y solo
+  // si no hay ninguna se cae a la vista entera. OJO: esto tiene que ser un
+  // fallback en JS, no un selector con coma — "A .card, A" con querySelector
+  // no prioriza lo específico, devuelve el primero en orden del documento,
+  // y como el contenedor A aparece ANTES que sus propios hijos, siempre
+  // "ganaba" la vista entera y el foco acababa siendo gigante (tapando la
+  // pantalla casi entera, sin recorte real que se notara).
+  if(!step.target && !step.view && !step.folder){ tourPositionUI(); return; }
+  let el = null;
+  if(step.target){
+    el = document.querySelector(step.target);
+  }else if(step.view){
+    el = document.querySelector('#view-' + step.view + ' .card') || document.querySelector('#view-' + step.view);
+  }else if(step.folder){
+    el = document.querySelector('.folder-card.folder-' + step.folder);
+  }
+  tourCurrentTargetEl = el || null;
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  // Se espera a que termine el scroll suave (y el render de la vista nueva)
+  // antes de medir la posición real del elemento — si no, el foco se
+  // recortaría sobre dónde ESTABA el elemento antes de moverse la página.
+  setTimeout(tourPositionUI, el ? 380 : 0);
+}
+
+/* Coloca el foco (spotlight), la flecha y la burbuja según dónde esté AHORA
+   MISMO tourCurrentTargetEl — se llama tanto al cambiar de paso como en
+   cada resize/scroll mientras el tour está activo, para que el foco no se
+   quede descolgado del elemento real si la pantalla se mueve. */
+function tourPositionUI(){
+  const spot = document.getElementById('tour-spotlight');
+  const arrow = document.getElementById('tour-arrow');
+  const bubble = document.getElementById('tour-bubble');
+  if(!spot || !bubble) return;
+  const rect = tourCurrentTargetEl ? tourCurrentTargetEl.getBoundingClientRect() : null;
+  const hasRect = rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  if(!hasRect){
+    spot.classList.add('no-target');
+    spot.classList.add('active');
+    spot.style.top = '50%'; spot.style.left = '50%'; spot.style.width = '0px'; spot.style.height = '0px';
+    if(arrow) arrow.style.display = 'none';
+    bubble.classList.add('tour-bubble-centered');
+    return;
+  }
+  const pad = 10;
+  spot.classList.remove('no-target');
+  spot.classList.add('active');
+  spot.style.top = (rect.top - pad) + 'px';
+  spot.style.left = (rect.left - pad) + 'px';
+  spot.style.width = (rect.width + pad*2) + 'px';
+  spot.style.height = (rect.height + pad*2) + 'px';
+
+  bubble.classList.remove('tour-bubble-centered');
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+
+  // En pantallas estrechas, perseguir la posición exacta del elemento deja
+  // muy poco margen y la burbuja puede acabar recortada o tapando el propio
+  // foco — más fiable y "pro" es una hoja fija abajo del todo (con el foco
+  // igualmente animándose sobre el elemento real detrás), sin flecha.
+  if(vw < 640){
+    bubble.style.left = '16px';
+    bubble.style.top = (vh - bh - 16 - (window.visualViewport ? (vh - window.visualViewport.height) : 0)) + 'px';
+    if(arrow) arrow.style.display = 'none';
+    return;
+  }
+
+  const spaceBelow = vh - (rect.bottom + pad);
+  const spaceAbove = rect.top - pad;
+  let top, placement;
+  if(spaceBelow >= bh + 26 || spaceBelow >= spaceAbove){
+    top = Math.min(rect.bottom + pad + 16, vh - bh - 12);
+    placement = 'bottom';
+  }else{
+    top = Math.max(rect.top - pad - 16 - bh, 12);
+    placement = 'top';
+  }
+  let left = rect.left + rect.width/2 - bw/2;
+  left = Math.max(12, Math.min(left, vw - bw - 12));
+  bubble.style.top = top + 'px';
+  bubble.style.left = left + 'px';
+
+  if(arrow){
+    const showArrow = placement === 'top' ? (top + bh) < vh - 4 : top > 4;
+    arrow.style.display = showArrow ? '' : 'none';
+    arrow.className = 'tour-arrow tour-arrow-' + placement;
+    const arrowLeft = Math.max(18, Math.min(rect.left + rect.width/2 - 9, vw - 26));
+    arrow.style.left = arrowLeft + 'px';
+    arrow.style.top = placement === 'bottom' ? (top - 9) + 'px' : (top + bh + 1) + 'px';
+  }
+}
+
+// Fase a la que pertenece el paso actual, y su índice dentro de TOUR_PHASES
+// (para pintar la mini-navegación de fases arriba de la burbuja).
+function tourPhaseIndex(phaseKey){ return TOUR_PHASES.findIndex(p => p.key === phaseKey); }
+// Salta directamente al primer paso de una fase — permite repasar solo
+// "Sala" o solo "Gestión" sin tener que darle a Siguiente 20 veces.
+function tourJumpToPhase(phaseKey){
+  const idx = TOUR_STEPS.findIndex(s => s.phase === phaseKey);
+  if(idx === -1) return;
+  tourStepIndex = idx;
+  renderTourStep();
 }
 
 function renderTourStep(){
   const step = TOUR_STEPS[tourStepIndex];
-  const isLast = tourStepIndex === TOUR_STEPS.length - 1;
   tourGoToStep(step);
-  const dots = TOUR_STEPS.map((_,i)=>`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:${i===tourStepIndex?'var(--brand-orange)':'var(--border)'}"></span>`).join('');
-  let b = document.getElementById('tour-bubble');
-  if(!b){
-    b = document.createElement('div');
-    b.id = 'tour-bubble';
-    b.className = 'tour-bubble';
-    document.body.appendChild(b);
-  }
-  b.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <h3><i class="ti ${step.icon}"></i> ${escapeHtml(t(step.titleKey))}</h3>
-      <button class="modal-close" onclick="finishTour()">&times;</button>
+
+  const bubble = document.getElementById('tour-bubble');
+  if(!bubble) return;
+  const pct = Math.round(((tourStepIndex+1) / TOUR_STEPS.length) * 100);
+  const curPhaseIdx = tourPhaseIndex(step.phase);
+  const phasePills = TOUR_PHASES.map((p,i) => {
+    const state = i === curPhaseIdx ? 'current' : (i < curPhaseIdx ? 'done' : '');
+    return `<button class="tour-phase-pill ${state}" onclick="tourJumpToPhase('${p.key}')" title="${escapeHtml(t(p.labelKey))}"><i class="ti ${p.icon}"></i><span>${escapeHtml(t(p.labelKey))}</span></button>`;
+  }).join('');
+
+  bubble.classList.remove('tour-bubble-anim');
+  bubble.classList.toggle('tour-bubble-finale', !!step.finale);
+  void bubble.offsetWidth; // fuerza reflow para poder relanzar la animación de entrada en cada paso
+  bubble.classList.add('tour-bubble-anim');
+
+  bubble.innerHTML = `
+    ${step.finale ? '' : `<div class="tour-phase-nav">${phasePills}</div>`}
+    <div class="tour-bubble-head">
+      <div class="tour-icon-badge ${step.finale?'tour-icon-badge-finale':''}"><i class="ti ${step.icon}"></i></div>
+      <div style="flex:1;min-width:0">
+        <h3>${escapeHtml(t(step.titleKey))}</h3>
+        ${step.finale ? '' : `<div class="tour-step-count">${t('tour.stepCount').replace('${n}', tourStepIndex+1).replace('${total}', TOUR_STEPS.length)}</div>`}
+      </div>
+      <button class="modal-close" onclick="finishTour()" aria-label="${escapeHtml(t('common.close'))}">&times;</button>
     </div>
-    <p>${escapeHtml(t(step.descKey))}</p>
-    <div style="text-align:center;margin-bottom:10px">${dots}</div>
-    <div class="modal-footer" style="margin-top:0">
-      ${tourStepIndex > 0 ? `<button class="btn btn-sm" onclick="tourPrev()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.prev'))}</button>` : `<button class="btn btn-sm" onclick="finishTour()">${escapeHtml(t('common.skip'))}</button>`}
-      ${isLast
-        ? `<button class="btn btn-primary btn-sm" onclick="finishTour()"><i class="ti ti-check"></i> ${escapeHtml(t('common.finish'))}</button>`
-        : `<button class="btn btn-primary btn-sm" onclick="tourNext()">${escapeHtml(t('common.next'))} <i class="ti ti-arrow-right"></i></button>`}
+    <p class="tour-bubble-desc">${escapeHtml(t(step.descKey))}</p>
+    ${step.finale ? '' : `<div class="tour-progress"><div class="tour-progress-fill" style="width:${pct}%"></div></div>`}
+    <div class="modal-footer tour-bubble-footer">
+      ${step.finale
+        ? `<button class="btn btn-primary" style="width:100%" onclick="finishTour()"><i class="ti ti-rocket"></i> ${escapeHtml(t('tour.finale.cta'))}</button>`
+        : `
+          ${tourStepIndex > 0 ? `<button class="btn btn-sm" onclick="tourPrev()"><i class="ti ti-arrow-left"></i> ${escapeHtml(t('common.prev'))}</button>` : `<button class="btn btn-sm" onclick="finishTour()">${escapeHtml(t('common.skip'))}</button>`}
+          <button class="btn btn-primary btn-sm" onclick="tourNext()">${escapeHtml(t('common.next'))} <i class="ti ti-arrow-right"></i></button>
+        `}
     </div>
   `;
 }
@@ -182,9 +355,8 @@ function tourPrev(){ tourStepIndex = Math.max(tourStepIndex-1, 0); renderTourSte
 function finishTour(){
   DB.business.tourSeen = true;
   saveDB();
-  tourClearHighlight();
-  const b = document.getElementById('tour-bubble');
-  if(b) b.remove();
+  tourDestroyChrome();
+  tourCurrentTargetEl = null;
   // Solo bloqueamos Gestión aquí si fue el propio tour quien la desbloqueó.
   // Si el usuario ya la había desbloqueado de verdad con su PIN antes de
   // empezar el tour, terminar el tour no debe deshacer ese desbloqueo real.
@@ -998,6 +1170,16 @@ function applyEmployeeSessionEditRights(employeeId){
 
 function isGestionLocked(view){
   if(ownerUnlocked) return false;
+  // Quien ya entró por "Acceso Propietarios" no tiene que volver a meter el
+  // PIN del negocio para entrar en Gestión — ya se identificó como
+  // propietario a nivel de dispositivo/sesión, igual que ya pasa con Cocina
+  // y Sala (ver isOperationalAreaLocked). Antes esto solo miraba
+  // "ownerUnlocked" (que solo se pone a true metiendo el PIN aquí mismo),
+  // así que una sesión de propietario de verdad tenía que desbloquear
+  // Gestión con PIN de todos modos — justo lo contrario de "solo puede
+  // verlo él".
+  const session = getAccessSession();
+  if(session && session.type === 'owner') return false;
   if(MODULE_FOLDER[view] === 'gestion') return true;
   if(view === 'folder' && currentFolder === 'gestion') return true;
   return false;
