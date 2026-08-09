@@ -484,12 +484,20 @@ function init(){
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
   const pago = new URLSearchParams(location.search).get('pago');
+  // Tras el redirect de Redsys, la URL se queda con "?...&pago=ok/ko" — si el
+  // cliente no sabe que puede quitarlo a mano, esta pantalla era un callejón
+  // sin salida real (ni el botón atrás del navegador ayuda, porque la página
+  // anterior en el historial es el propio formulario ya enviado a Redsys).
+  // El botón vuelve a la MISMA página pero sin ese parámetro, para poder
+  // seguir navegando con normalidad.
+  const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : ''));
   if(pago === 'ok'){
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
         <h2>${t('pago.ok.title')}</h2>
         <p style="font-size:13px;color:#888">${t('pago.ok.msg')}</p>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
       </div>
     `;
     return;
@@ -500,6 +508,7 @@ function init(){
         <div class="icon">⚠️</div>
         <h2>${t('pago.ko.title')}</h2>
         <p style="font-size:13px;color:#888">${t('pago.ko.msg')}</p>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
       </div>
     `;
     return;

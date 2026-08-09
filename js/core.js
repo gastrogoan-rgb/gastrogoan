@@ -1107,7 +1107,7 @@ function showActivationGate(){
   const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
-      ${showBackBtn ? `<button onclick="backToBusinessSelectorFromGate()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
+      <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
@@ -1133,6 +1133,19 @@ function hideActivationGate(){
 function backToBusinessSelectorFromGate(){
   hideActivationGate();
   showBusinessSelectScreen();
+}
+
+// Vía de escape genérica para cualquiera de los "gates" de configuración
+// inicial (activación, nube, hosting) cuando NO hay más de un negocio dado
+// de alta (así que "volver a Negocios" no tiene sentido): antes, en ese
+// caso más común -instalación nueva-, no había ninguna forma de salir de
+// estas pantallas salvo recargar la página. Cierra la sesión y vuelve a la
+// pantalla inicial de "Acceso Empleados / Acceso Propietarios", sin perder
+// ningún dato (nada de lo escrito en el gate se había guardado todavía).
+function exitSetupGateToLogin(){
+  ['license-gate','firebase-gate','netlify-gate'].forEach(id => document.getElementById(id)?.remove());
+  clearAccessSession();
+  showAccessSelectScreen();
 }
 
 /* Reglas de seguridad de Firebase que el propietario debe pegar en
@@ -1383,7 +1396,7 @@ function showFirebaseSetupGate(){
   const showBackBtnFb = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      ${showBackBtnFb ? `<button onclick="hideFirebaseSetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
+      <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
         <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
@@ -1433,7 +1446,7 @@ function showNetlifySetupGate(){
   const showBackBtnNt = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      ${showBackBtnNt ? `<button onclick="hideNetlifySetupGate();showBusinessSelectScreen()" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${t('gate.businesses')}</button>` : ''}
+      <button onclick="${showBackBtnNt ? 'hideNetlifySetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnNt ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
         <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
