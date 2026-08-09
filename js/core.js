@@ -2297,7 +2297,7 @@ function renderOnlineCard(){
   const b = DB.business || {};
   if(!getTenantId()){
     return `
-      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needLicense')}</p>
       </div>
@@ -2305,7 +2305,7 @@ function renderOnlineCard(){
   }
   if(!getCloudConfig()){
     return `
-      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needCloud')}</p>
       </div>
@@ -2318,7 +2318,7 @@ function renderOnlineCard(){
     ? `<p style="font-size:12.5px;margin-bottom:12px"><i class="ti ti-book-2"></i> ${t('mn.online.activeCartaLabel')}<strong>${activeCartas.map(c=>escapeHtml(tItem(c))).join(', ')}</strong></p>`
     : `<p style="font-size:12.5px;margin-bottom:12px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.noActiveCarta')}</p>`;
   return `
-    <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+    <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       ${activeCartaLine}
@@ -2366,7 +2366,7 @@ function renderTableQrCard(){
   if((DB.business?.tiposServicio?.mesa === false) || !DB.tables.length) return '';
   if(!getTenantId()){
     return `
-      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needLicense')}</p>
       </div>
@@ -2374,7 +2374,7 @@ function renderTableQrCard(){
   }
   if(!getCloudConfig()){
     return `
-      <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.tableQr.needCloud')}</p>
       </div>
@@ -2400,7 +2400,7 @@ function renderTableQrCard(){
       </div>`;
   }).join('');
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-qrcode"></i> ${t('mn.tableQr.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.tableQr.desc').replace('${count}', DB.tables.length)}</p>
       ${zonasHtml}
@@ -2437,7 +2437,7 @@ function renderPedidosConfigCard(){
   const p = b.pedidos || {};
   const deliveryEnabled = b.tiposServicio?.delivery !== false;
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-clock-hour-4"></i> ${t('mn.pedidos.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px"><i class="ti ti-info-circle"></i> ${t('mn.pedidos.leadTimeInfo')}</p>
       <div class="field-row">
@@ -2611,7 +2611,7 @@ function updateTpvVirtualCheckboxAvailability(){
 function renderRedsysCard(){
   if(!getTenantId()) return '';
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-credit-card"></i> 💳 ${t('mn.redsys.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.desc')}</p>
       <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.checking')}</div>

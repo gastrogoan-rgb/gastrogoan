@@ -545,6 +545,21 @@ td.wrap{white-space:normal}
 .dia-pill{padding:6px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
 .dia-pill.active{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);font-weight:700}
 
+/* ===== Mi Negocio: rejilla de tarjetas =====
+   Antes cada tarjeta tenía max-width:720px y se apilaban todas en una
+   columna: en una pantalla ancha, la mitad derecha se quedaba vacía y había
+   que hacer scroll larguísimo para llegar a Impresión de comandas/Verifactu
+   al final. Con la rejilla, las tarjetas normales se colocan de a 2 (o 3 en
+   pantallas muy anchas) según quepan, y las que tienen contenido ancho de
+   verdad (horario semanal, plano de mesas, web pública con QR) ocupan las
+   columnas enteras con .mn-grid-full. align-items:start evita que una
+   tarjeta alta estire a su vecina de la misma fila. */
+.mn-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+@media (min-width:900px){.mn-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1440px){.mn-grid{grid-template-columns:repeat(3,1fr)}}
+.mn-grid .card{max-width:none;margin:0}
+.mn-grid .mn-grid-full{grid-column:1/-1}
+
 .manual-wrap{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
 .manual-nav{display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg)}
 .manual-chapter{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:all .15s}

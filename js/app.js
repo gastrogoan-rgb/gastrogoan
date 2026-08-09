@@ -4235,29 +4235,8 @@ function renderMiNegocio(){
     delivery: prevServ.delivery !== undefined ? prevServ.delivery : (b.tiposServicio?.delivery !== false),
   };
   document.getElementById('minegocio-content').innerHTML = `
-    <div class="card" style="max-width:720px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
-      <div class="field-row">
-        <div class="field">
-          <label>${t('mn.ownerAccess.newPin')}</label>
-          <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        </div>
-        <div class="field">
-          <label>${t('mn.ownerAccess.repeatPin')}</label>
-          <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
-    </div>
-
-    <div class="card" style="max-width:720px;border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
-      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
-      <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
-    </div>
-
-    <div class="card" style="max-width:720px">
+    <div class="mn-grid">
+    <div class="card">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
       <h4 style="margin-top:0"><i class="ti ti-id-badge-2"></i> ${t('mn.business.identity')}</h4>
@@ -4358,7 +4337,30 @@ function renderMiNegocio(){
       <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> ${t('mn.business.saveAll')}</button>
     </div>
 
-    <div class="card" style="max-width:720px">
+    <div class="card">
+      <h3><i class="ti ti-toggle-right"></i> ${t('mn.serviceTypes.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.serviceTypes.desc')}</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ ${t('mn.serviceTypes.table')}
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 ${t('mn.serviceTypes.takeaway')}
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 ${t('mn.serviceTypes.delivery')}
+        </label>
+      </div>
+    </div>
+
+    <div class="card mn-grid-full">
+      <h3><i class="ti ti-calendar-time"></i> ${t('mn.schedule.title')}</h3>
+      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc1')}</p>
+      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
+      <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
+    </div>
+
+    <div class="card mn-grid-full">
       <h3><i class="ti ti-layout-grid"></i> ${t('mn.ops.title')}</h3>
       <div class="field">
         <label>${t('mn.ops.capacity')}</label>
@@ -4421,35 +4423,6 @@ function renderMiNegocio(){
       <div id="mn-aforo-warning"></div>
     </div>
 
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-toggle-right"></i> ${t('mn.serviceTypes.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.serviceTypes.desc')}</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ ${t('mn.serviceTypes.table')}
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 ${t('mn.serviceTypes.takeaway')}
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 ${t('mn.serviceTypes.delivery')}
-        </label>
-      </div>
-    </div>
-
-    <div class="card" style="max-width:720px">
-      <h3><i class="ti ti-calendar-time"></i> ${t('mn.schedule.title')}</h3>
-      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc1')}</p>
-      <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
-      <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
-    </div>
-
-    ${renderTicketConfigCard()}
-
-    ${renderVerifactuConfigCard()}
-
-    ${renderComandaPrintCard()}
-
     ${renderRedsysCard()}
 
     ${renderPedidosConfigCard()}
@@ -4460,7 +4433,36 @@ function renderMiNegocio(){
 
     ${renderTableQrCard()}
 
+    ${renderTicketConfigCard()}
+
+    ${renderComandaPrintCard()}
+
+    ${renderVerifactuConfigCard()}
+
     ${renderDataMaintenanceCard()}
+
+    <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.ownerAccess.newPin')}</label>
+          <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+        <div class="field">
+          <label>${t('mn.ownerAccess.repeatPin')}</label>
+          <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
+    </div>
+
+    <div class="card" style="border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
+      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
+      <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
+    </div>
+    </div>
   `;
   loadRedsysCardStatus();
   renderMesasConfigList();
@@ -4650,7 +4652,7 @@ function renderDataMaintenanceCard(){
   const reservasAntiguas = DB.reservations.filter(r => r.date && r.date < dataMaintenanceCutoff() && (r.status==='completada'||r.status==='cancelada')).length;
   const cierresAntiguos = DB.cashClosures.filter(c => c.fecha && c.fecha < dataMaintenanceCutoff()).length;
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-database"></i> ${t('mn.data.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.data.sizeDesc').replace('${size}', sizeKB + ' KB')}</p>
       <button class="btn btn-sm" onclick="downloadFullBackup()"><i class="ti ti-download"></i> ${t('mn.data.downloadBackup')}</button>
@@ -5027,7 +5029,7 @@ function renderDeliveryPlatformsCard(){
   const platforms = (DB.business && DB.business.deliveryPlatforms) || [];
   const couriers = (DB.business && DB.business.ownCouriers) || [];
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-moped"></i> ${t('mn.delivery.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.delivery.desc')}</p>
       <div id="delivery-platforms-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
@@ -5197,7 +5199,7 @@ function deleteDeliveryPlatform(id){
 function renderTicketConfigCard(){
   const tc = (DB.business && DB.business.ticket) || defaultData().business.ticket;
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-receipt"></i> ${t('mn.ticket.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ticket.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
@@ -5276,7 +5278,7 @@ function renderVerifactuConfigCard(){
     `<option value="${k}" ${vf.provider===k?'selected':''}>${escapeHtml(VERIFACTU_PROVIDERS[k].label)}</option>`
   ).join('');
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}</h3>
       <div style="background:var(--amber-l,#FBF0DD);border:1px solid var(--brand-orange);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
         <p style="margin:0"><span class="badge badge-amber" style="margin-right:6px"><i class="ti ti-clock"></i> ${t('mn.verifactu.draftBadge')}</span>${t('mn.verifactu.draftNotice')}</p>
@@ -5324,12 +5326,12 @@ function renderVerifactuDeclarationRow(field, label, pendingLabel){
   const vf = (DB.business && DB.business.verifactu) || {};
   const url = vf[field] || '';
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;flex-wrap:wrap">
       <span style="min-width:170px">${label}</span>
       ${url
         ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:4px"><i class="ti ti-external-link"></i> ${t('common.view')}</a>`
         : `<span style="color:var(--muted)"><i class="ti ti-hourglass-empty"></i> ${pendingLabel}</span>`}
-      <input type="text" id="vf-${field}" value="${escapeHtml(url)}" placeholder="https://..." style="flex:1;font-size:12px;padding:3px 6px" onchange="setVerifactuDeclarationUrl('${field}', this.value)">
+      <input type="text" id="vf-${field}" value="${escapeHtml(url)}" placeholder="https://..." style="flex:1;min-width:160px;font-size:12px;padding:3px 6px" onchange="setVerifactuDeclarationUrl('${field}', this.value)">
     </div>
   `;
 }
@@ -5410,7 +5412,7 @@ function renderComandaPrintCard(){
   const printers = ensureComandaPrinters();
   const modo = (DB.business.comandas && DB.business.comandas.modo) || 'pantalla';
   return `
-    <div class="card" style="max-width:720px">
+    <div class="card">
       <h3><i class="ti ti-printer"></i> ${t('mn.comandas.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.comandas.desc')}</p>
       <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:10px">
@@ -7470,7 +7472,7 @@ const MANUAL_CHAPTERS = [
       <li>En la <strong>web pública de reservas</strong>, si un turno ya está completo, el cliente recibe un aviso para elegir otro horario, reducir comensales o llamar al restaurante — así evitas sobre-reservas automáticas</li>
     </ul>
     <h4>Formas de pago en pedidos online</h4>
-    <p>En <strong>Mi Negocio → Pedidos</strong> marcas qué formas de pago aceptas para pedidos a domicilio/para llevar: <strong>Efectivo</strong>, <strong>Tarjeta</strong> (datáfono al entregar/recoger) y <strong>TPV virtual</strong> (pagar ya online con tarjeta — necesita tener configurado el TPV virtual más abajo en esa misma pantalla, si no la casilla queda bloqueada). Si aceptas varias, el cliente elige en el propio pedido; si solo aceptas una, se la fija sin preguntarle. Para pedidos <strong>a domicilio</strong> pagados en efectivo, se le pregunta al cliente con qué billete va a pagar, y ese dato llega ya relleno a la tarjeta de reparto del TPV: el cambio a preparar sale calculado solo, sin que nadie tenga que preguntarlo por teléfono.</p>
+    <p>En <strong>Mi Negocio → Pedidos</strong> marcas qué formas de pago aceptas para pedidos a domicilio/para llevar: <strong>Efectivo</strong>, <strong>Tarjeta</strong> (datáfono al entregar/recoger) y <strong>TPV virtual</strong> (pagar ya online con tarjeta — necesita tener el TPV virtual configurado en su propia tarjeta de esa pantalla, si no la casilla queda bloqueada). Si aceptas varias, el cliente elige en el propio pedido; si solo aceptas una, se la fija sin preguntarle. Para pedidos <strong>a domicilio</strong> pagados en efectivo, se le pregunta al cliente con qué billete va a pagar, y ese dato llega ya relleno a la tarjeta de reparto del TPV: el cambio a preparar sale calculado solo, sin que nadie tenga que preguntarlo por teléfono.</p>
     <h4>Límites de pedidos</h4>
     <ul>
       <li><strong>Pedido mínimo</strong>: importe mínimo para poder pedir online.</li>
@@ -7503,7 +7505,7 @@ const MANUAL_CHAPTERS = [
       <li>A la <strong>web pública de reserves</strong>, si un torn ja està complet, el client rep un avís per triar un altre horari, reduir comensals o trucar al restaurant — així evites sobrereserves automàtiques</li>
     </ul>
     <h4>Formes de pagament en comandes en línia</h4>
-    <p>A <strong>El Meu Negoci → Comandes</strong> marques quines formes de pagament acceptes per a comandes a domicili/per emportar: <strong>Efectiu</strong>, <strong>Targeta</strong> (datàfon en entregar/recollir) i <strong>TPV virtual</strong> (pagar ja en línia amb targeta — necessita tenir configurat el TPV virtual més avall en aquesta mateixa pantalla, si no la casella queda bloquejada). Si n'acceptes diverses, el client tria a la mateixa comanda; si només n'acceptes una, se li fixa sense preguntar-li. Per a comandes <strong>a domicili</strong> pagades en efectiu, es pregunta al client amb quin bitllet pagarà, i aquesta dada arriba ja emplenada a la targeta de repartiment del TPV: el canvi a preparar surt calculat sol, sense que ningú l'hagi de preguntar per telèfon.</p>
+    <p>A <strong>El Meu Negoci → Comandes</strong> marques quines formes de pagament acceptes per a comandes a domicili/per emportar: <strong>Efectiu</strong>, <strong>Targeta</strong> (datàfon en entregar/recollir) i <strong>TPV virtual</strong> (pagar ja en línia amb targeta — necessita tenir el TPV virtual configurat a la seva pròpia targeta d'aquesta pantalla, si no la casella queda bloquejada). Si n'acceptes diverses, el client tria a la mateixa comanda; si només n'acceptes una, se li fixa sense preguntar-li. Per a comandes <strong>a domicili</strong> pagades en efectiu, es pregunta al client amb quin bitllet pagarà, i aquesta dada arriba ja emplenada a la targeta de repartiment del TPV: el canvi a preparar surt calculat sol, sense que ningú l'hagi de preguntar per telèfon.</p>
     <h4>Límits de comandes</h4>
     <ul>
       <li><strong>Comanda mínima</strong>: import mínim per poder demanar en línia.</li>
@@ -7536,7 +7538,7 @@ const MANUAL_CHAPTERS = [
       <li>On the <strong>public reservations website</strong>, if a slot is already full, the customer is prompted to choose another time, reduce the party size, or call the restaurant — this way you avoid automatic overbooking</li>
     </ul>
     <h4>Payment methods on online orders</h4>
-    <p>In <strong>My Business → Orders</strong>, choose which payment methods you accept for delivery/takeaway orders: <strong>Cash</strong>, <strong>Card</strong> (reader on delivery/pickup) and <strong>Virtual POS</strong> (pay now online by card — needs the virtual POS configured further down that same screen, otherwise the checkbox stays locked). If you accept several, the customer picks one on the order itself; if you only accept one, it's fixed without asking. For <strong>delivery</strong> orders paid in cash, the customer is asked what bill they'll pay with, and that reaches the POS delivery card already filled in: the change to prepare is worked out automatically, with nobody having to ask over the phone.</p>
+    <p>In <strong>My Business → Orders</strong>, choose which payment methods you accept for delivery/takeaway orders: <strong>Cash</strong>, <strong>Card</strong> (reader on delivery/pickup) and <strong>Virtual POS</strong> (pay now online by card — needs the virtual POS configured in its own card on that screen, otherwise the checkbox stays locked). If you accept several, the customer picks one on the order itself; if you only accept one, it's fixed without asking. For <strong>delivery</strong> orders paid in cash, the customer is asked what bill they'll pay with, and that reaches the POS delivery card already filled in: the change to prepare is worked out automatically, with nobody having to ask over the phone.</p>
     <h4>Order limits</h4>
     <ul>
       <li><strong>Minimum order</strong>: minimum amount to order online.</li>
