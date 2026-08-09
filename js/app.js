@@ -6765,13 +6765,22 @@ const MANUAL_CHAPTERS = [
     <p>Si al crear o confirmar una reserva se supera el aforo, la app te avisa con los números exactos (por ejemplo "ya hay 38 de 40 plazas, esta reserva añade 6") y te da a elegir entre <strong>confirmarla igualmente</strong> (si puedes habilitar mesas extra), <strong>ponerla en lista de espera</strong> (no cuenta para el aforo, y tiene su propio botón para confirmarla en cuanto haya sitio) o cancelarla.</p>
     <p>Una reserva confirmada se puede <strong>cancelar</strong> (queda registrada como "cancelada", no desaparece sin más) en vez de solo borrarla, y si un cliente ya ha fallado antes, al elegirlo en el desplegable del formulario verás un aviso con el número de no-shows anteriores. Al marcar la "llegada" de una reserva (tanto desde aquí como desde el TPV) puedes confirmar o corregir en qué mesa se ha sentado el grupo, por si al final se organizó en una distinta a la reservada.</p>
 
-    <h4>Solicitudes online pendientes</h4>
-    <p>Las reservas que un cliente hace desde tu página web pública no se confirman solas: llegan a la sección <strong>"Solicitudes online pendientes"</strong>, donde puedes revisarlas y decidir si las aceptas, las modificas (por ejemplo cambiar la mesa) o las rechazas si no tienes disponibilidad real.</p>
-    <div class="manual-tip">💡 Revisa las solicitudes pendientes varias veces al día, especialmente antes de cada servicio, para no dejar a un cliente esperando confirmación.</div>
+    <h4>Reservas online: confirmación automática</h4>
+    <p>Las reservas que un cliente hace desde tu página web pública se confirman <strong>solas</strong>: la app le asigna mesa automáticamente si hay una libre con plazas suficientes para esa hora, sin que tengas que hacer nada. Solo si ningún hueco encaja bien (por ejemplo un grupo grande y solo quedan mesas pequeñas sueltas), la reserva se queda en <strong>"Solicitudes online pendientes"</strong> esperando a que le asignes mesa tú a mano — ahí ya no hace falta revisar nada más, todo lo demás (aforo, horario) ya se comprobó al recibirla.</p>
+    <div class="manual-tip">💡 Revisa "Solicitudes online pendientes" varias veces al día, especialmente antes de cada servicio, por si ha quedado alguna reserva grande esperando mesa.</div>
+
+    <h4>Que el cliente se entere: confirmación por email</h4>
+    <p>Para que el cliente sepa con seguridad si su reserva está confirmada (y no se quede con la duda), puedes activar el envío automático de un email en cuanto se confirme —tanto si fue sola como si la confirmaste tú a mano—. Se configura en <strong>Mi Negocio → Confirmación de reservas por email</strong>, con una cuenta gratuita tuya de <strong>EmailJS</strong> (no hace falta programar nada):</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Entra en <strong>emailjs.com</strong> y crea una cuenta gratis.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">En <strong>"Email Services" → "Add New Email Service"</strong>, elige Gmail (o el correo que uses) y conéctalo con <strong>"Connect Account"</strong> — un solo clic, inicias sesión con Google y ya está. Copia el <strong>Service ID</strong> que te da.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">En <strong>"Email Templates"</strong>, coge una plantilla ya hecha de la galería (busca alguna de confirmación/reserva) en vez de crearla desde cero, y solo ajusta el texto a tu gusto. Usa estas variables tal cual: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copia el <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">En <strong>"Account" → "General"</strong>, copia tu <strong>Public Key</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Pega los 3 códigos en <strong>Mi Negocio → Confirmación de reservas por email</strong>, activa el interruptor y pulsa <strong>"Enviar email de prueba"</strong> para comprobar que llega.</div></div>
+    <div class="manual-tip">💡 Es totalmente gratis hasta 200 emails al mes — de sobra para las reservas de un solo restaurante.</div>
 
     <h4>En el Panel de Control</h4>
     <p>Las reservas de <strong>hoy y de mañana</strong> aparecen automáticamente en el Panel de Control, para que al abrir la app por la mañana ya sepas cuántos comensales esperas y puedas avisar a cocina y sala con tiempo.</p>
-    <div class="manual-warning">⚠️ Si cancelas o cambias una reserva confirmada desde la web pública, recuerda avisar al cliente por teléfono o WhatsApp: la cancelación no le envía un mensaje automático.</div>`,
+    <div class="manual-warning">⚠️ Si cancelas o cambias una reserva ya confirmada, recuerda avisar al cliente por teléfono o WhatsApp: cancelar no le envía ningún mensaje automático (el email automático solo se manda al confirmarla).</div>`,
     ca:`<h3>Què és i per a què serveix</h3>
     <p>Aquest mòdul és el teu llibre de reserves digital. Et permet veure i gestionar totes les reserves del teu negoci en tres vistes (Dia, Setmana, Mes), controlar l'aforament de cada torn i atendre automàticament les reserves que els teus clients facin des de la teva web pública (mòdul Reserves i Comandes en Línia).</p>
 
@@ -6802,13 +6811,22 @@ const MANUAL_CHAPTERS = [
     <p>Si en crear o confirmar una reserva se supera l'aforament, l'app t'avisa amb els números exactes (per exemple "ja hi ha 38 de 40 places, aquesta reserva n'afegeix 6") i et deixa triar entre <strong>confirmar-la igualment</strong> (si pots habilitar taules extra), <strong>posar-la en llista d'espera</strong> (no compta per a l'aforament, i té el seu propi botó per confirmar-la quan hi hagi lloc) o cancel·lar-la.</p>
     <p>Una reserva confirmada es pot <strong>cancel·lar</strong> (queda registrada com a "cancel·lada", no desapareix sense més) en comptes de només esborrar-la, i si un client ja ha fallat abans, en triar-lo al desplegable del formulari veuràs un avís amb el nombre de no-shows anteriors. En marcar l'"arribada" d'una reserva (tant des d'aquí com des del TPV) pots confirmar o corregir a quina taula s'ha assegut el grup, per si al final es va organitzar en una de diferent a la reservada.</p>
 
-    <h4>Sol·licituds en línia pendents</h4>
-    <p>Les reserves que un client fa des de la teva pàgina web pública no es confirmen soles: arriben a la secció <strong>"Sol·licituds en línia pendents"</strong>, on pots revisar-les i decidir si les acceptes, les modifiques (per exemple canviar la taula) o les rebutges si no tens disponibilitat real.</p>
-    <div class="manual-tip">💡 Revisa les sol·licituds pendents diverses vegades al dia, especialment abans de cada servei, per no deixar un client esperant confirmació.</div>
+    <h4>Reserves online: confirmació automàtica</h4>
+    <p>Les reserves que un client fa des de la teva pàgina web pública es confirmen <strong>soles</strong>: l'app li assigna taula automàticament si n'hi ha una lliure amb places suficients per a aquella hora, sense que hagis de fer res. Només si cap taula encaixa bé (per exemple un grup gran i només queden taules petites soltes), la reserva es queda a <strong>"Sol·licituds en línia pendents"</strong> esperant que li assignis taula tu a mà — aquí ja no cal revisar res més, la resta (aforament, horari) ja s'ha comprovat en rebre-la.</p>
+    <div class="manual-tip">💡 Revisa "Sol·licituds en línia pendents" diverses vegades al dia, especialment abans de cada servei, per si ha quedat alguna reserva gran esperant taula.</div>
+
+    <h4>Que el client s'assabenti: confirmació per email</h4>
+    <p>Perquè el client sàpiga amb seguretat si la seva reserva està confirmada (i no es quedi amb el dubte), pots activar l'enviament automàtic d'un email en quant es confirmi —tant si va ser sola com si la vas confirmar tu a mà—. Es configura a <strong>El Meu Negoci → Confirmació de reserves per email</strong>, amb un compte gratuït teu d'<strong>EmailJS</strong> (no cal programar res):</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Entra a <strong>emailjs.com</strong> i crea un compte gratis.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">A <strong>"Email Services" → "Add New Email Service"</strong>, tria Gmail (o el correu que facis servir) i connecta'l amb <strong>"Connect Account"</strong> — un sol clic, inicies sessió amb Google i ja està. Copia el <strong>Service ID</strong> que et dona.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">A <strong>"Email Templates"</strong>, agafa una plantilla ja feta de la galeria (busca'n alguna de confirmació/reserva) en lloc de crear-la des de zero, i només ajusta el text al teu gust. Usa aquestes variables tal qual: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copia el <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">A <strong>"Account" → "General"</strong>, copia la teva <strong>Public Key</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Enganxa els 3 codis a <strong>El Meu Negoci → Confirmació de reserves per email</strong>, activa l'interruptor i prem <strong>"Enviar email de prova"</strong> per comprovar que arriba.</div></div>
+    <div class="manual-tip">💡 És totalment gratis fins a 200 emails al mes — de sobres per a les reserves d'un sol restaurant.</div>
 
     <h4>Al Panell de Control</h4>
     <p>Les reserves d'<strong>avui i de demà</strong> apareixen automàticament al Panell de Control, perquè en obrir l'app al matí ja sàpigues quants comensals esperes i puguis avisar cuina i sala amb temps.</p>
-    <div class="manual-warning">⚠️ Si cancel·les o canvies una reserva confirmada des de la web pública, recorda avisar el client per telèfon o WhatsApp: la cancel·lació no li envia cap missatge automàtic.</div>`,
+    <div class="manual-warning">⚠️ Si cancel·les o canvies una reserva ja confirmada, recorda avisar el client per telèfon o WhatsApp: cancel·lar no li envia cap missatge automàtic (l'email automàtic només s'envia en confirmar-la).</div>`,
     en:`<h3>What it is and what it's for</h3>
     <p>This module is your digital reservation book. It lets you view and manage every reservation for your business in three views (Day, Week, Month), control each time slot's capacity, and automatically handle reservations your customers make from your public website (Reservations and Online Ordering module).</p>
 
@@ -6839,13 +6857,22 @@ const MANUAL_CHAPTERS = [
     <p>If creating or confirming a reservation would exceed capacity, the app warns you with the exact numbers (for example "already 38 of 40 seats, this reservation adds 6") and lets you choose between <strong>confirming it anyway</strong> (if you can open up extra tables), <strong>adding it to the waitlist</strong> (doesn't count towards capacity, with its own button to confirm it once there's room) or cancelling it.</p>
     <p>A confirmed reservation can be <strong>cancelled</strong> (it's kept on record as "cancelled", not just deleted) instead of only being deleted, and if a client has failed to show up before, picking them from the form's dropdown shows a warning with their previous no-show count. Marking a reservation as "arrived" (from here or from the POS) lets you confirm or correct which table the group actually sat at, in case it ended up being a different one than booked.</p>
 
-    <h4>Pending online requests</h4>
-    <p>Reservations a customer makes from your public website don't confirm themselves: they land in the <strong>"Pending online requests"</strong> section, where you can review them and decide whether to accept them, modify them (for example changing the table), or reject them if you don't have real availability.</p>
-    <div class="manual-tip">💡 Check pending requests several times a day, especially before each service, so you don't leave a customer waiting for confirmation.</div>
+    <h4>Online reservations: automatic confirmation</h4>
+    <p>Reservations a customer makes from your public website confirm <strong>themselves</strong>: the app assigns a table automatically if there's a free one with enough seats for that time, with nothing for you to do. Only if no table fits well (say, a large group when only small separate tables are left) does the reservation stay in <strong>"Pending online requests"</strong> waiting for you to assign a table by hand — at that point there's nothing else to check, everything else (capacity, opening hours) was already validated when it came in.</p>
+    <div class="manual-tip">💡 Check "Pending online requests" a few times a day, especially before each service, in case a large reservation is left waiting for a table.</div>
+
+    <h4>Letting the customer know: email confirmation</h4>
+    <p>So the customer knows for sure whether their reservation is confirmed (instead of being left wondering), you can turn on an automatic email as soon as it's confirmed — whether that happened on its own or you confirmed it by hand. Set it up in <strong>My Business → Reservation confirmation by email</strong>, with your own free <strong>EmailJS</strong> account (no coding needed):</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st">Go to <strong>emailjs.com</strong> and create a free account.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">Under <strong>"Email Services" → "Add New Email Service"</strong>, pick Gmail (or whichever email you use) and connect it with <strong>"Connect Account"</strong> — one click, sign in with Google, done. Copy the <strong>Service ID</strong> it gives you.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">Under <strong>"Email Templates"</strong>, pick a ready-made template from the gallery (look for a booking/confirmation one) instead of building one from scratch, and just tweak the wording. Use these variables as-is: <code>{{to_email}}</code>, <code>{{client_name}}</code>, <code>{{business_name}}</code>, <code>{{date}}</code>, <code>{{time}}</code>, <code>{{people}}</code>, <code>{{table_name}}</code>. Copy the <strong>Template ID</strong>.</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">Under <strong>"Account" → "General"</strong>, copy your <strong>Public Key</strong>.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">Paste the 3 codes into <strong>My Business → Reservation confirmation by email</strong>, turn the switch on, and press <strong>"Send test email"</strong> to check it arrives.</div></div>
+    <div class="manual-tip">💡 It's completely free up to 200 emails a month — plenty for a single restaurant's reservations.</div>
 
     <h4>On the Dashboard</h4>
     <p><strong>Today's and tomorrow's</strong> reservations show up automatically on the Dashboard, so when you open the app in the morning you already know how many guests to expect and can give the kitchen and floor advance notice.</p>
-    <div class="manual-warning">⚠️ If you cancel or change a reservation confirmed from the public website, remember to notify the customer by phone or WhatsApp: cancelling doesn't send them an automatic message.</div>`},
+    <div class="manual-warning">⚠️ If you cancel or change an already-confirmed reservation, remember to notify the customer by phone or WhatsApp: cancelling doesn't send them any automatic message (the automatic email is only sent when confirming).</div>`},
   },
   {
     title:{es:'<i class="ti ti-device-desktop"></i> TPV', ca:'<i class="ti ti-device-desktop"></i> TPV', en:'<i class="ti ti-device-desktop"></i> POS'},
@@ -7496,7 +7523,7 @@ const MANUAL_CHAPTERS = [
     <h4>Horario de reservas y pedidos</h4>
     <p>En <strong>Mi Negocio</strong>, configura el <strong>Horario de apertura</strong> (día por día, con turnos). La web de reservas y pedidos solo permitirá elegir fecha/hora dentro de tu horario de ese día. Si no configuras ningún horario, no se aplica ningún límite.</p>
     <h4>Solicitudes de clientes</h4>
-    <p>Las reservas y pedidos que hagan los clientes desde la web pública llegan a tu Kit automáticamente: las reservas aparecen en <strong>Reservas → Solicitudes online pendientes</strong>, y los pedidos en <strong>TPV</strong> como pedidos pendientes online.</p>
+    <p>Las reservas y pedidos que hagan los clientes desde la web pública se aceptan solos: las reservas se confirman con mesa asignada automáticamente (solo se quedan en <strong>Reservas → Solicitudes online pendientes</strong> si ningún hueco encaja), y los pedidos de Take Away/Delivery pasan a cocina sin intervención mientras el interruptor de <strong>TPV → Pedidos online</strong> esté en ON.</p>
     <h4>Aforo por turno</h4>
     <p>En <strong>Mi Negocio</strong> indica tu <strong>Aforo (plazas por turno)</strong>: el número máximo de comensales que puedes atender en cada turno de comida/cena (según tu Horario de apertura).</p>
     <ul>
@@ -7529,7 +7556,7 @@ const MANUAL_CHAPTERS = [
     <h4>Horari de reserves i comandes</h4>
     <p>A <strong>El Meu Negoci</strong>, configura l'<strong>Horari d'obertura</strong> (dia per dia, amb torns). La web de reserves i comandes només permetrà triar data/hora dins del teu horari d'aquell dia. Si no configures cap horari, no s'aplica cap límit.</p>
     <h4>Sol·licituds de clients</h4>
-    <p>Les reserves i comandes que facin els clients des de la web pública arriben al teu Kit automàticament: les reserves apareixen a <strong>Reserves → Sol·licituds en línia pendents</strong>, i les comandes a <strong>TPV</strong> com a comandes pendents en línia.</p>
+    <p>Les reserves i comandes que facin els clients des de la web pública s'accepten soles: les reserves es confirmen amb taula assignada automàticament (només es queden a <strong>Reserves → Sol·licituds en línia pendents</strong> si cap taula encaixa), i les comandes de Take Away/Delivery passen a cuina sense intervenció mentre l'interruptor de <strong>TPV → Comandes online</strong> estigui en ON.</p>
     <h4>Aforament per torn</h4>
     <p>A <strong>El Meu Negoci</strong> indica el teu <strong>Aforament (places per torn)</strong>: el nombre màxim de comensals que pots atendre en cada torn de dinar/sopar (segons el teu Horari d'obertura).</p>
     <ul>
@@ -7562,7 +7589,7 @@ const MANUAL_CHAPTERS = [
     <h4>Reservation and ordering hours</h4>
     <p>In <strong>My Business</strong>, set up the <strong>Opening hours</strong> (day by day, with time slots). The reservations and ordering website will only allow choosing a date/time within that day's hours. If you don't set any schedule, no limit is applied.</p>
     <h4>Customer requests</h4>
-    <p>Reservations and orders customers place from the public website reach your Kit automatically: reservations appear in <strong>Reservations → Pending online requests</strong>, and orders in the <strong>POS</strong> as pending online orders.</p>
+    <p>Reservations and orders customers place from the public website get accepted on their own: reservations get confirmed with a table assigned automatically (they only sit in <strong>Reservations → Pending online requests</strong> if no table fits), and Take Away/Delivery orders go straight to the kitchen with no intervention needed while the <strong>POS → Online orders</strong> switch is ON.</p>
     <h4>Capacity per time slot</h4>
     <p>In <strong>My Business</strong>, set your <strong>Capacity (seats per slot)</strong>: the maximum number of guests you can serve in each lunch/dinner slot (based on your Opening hours).</p>
     <ul>
