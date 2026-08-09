@@ -2477,7 +2477,7 @@ function renderTeamPulseHtml(){
   const longShifts = getLongShiftWarnings().filter(x => (x.employee.area||'cocina')===currentArea());
   if(longShifts.length){
     parts.push(`
-      <div class="card owner-only" style="margin-bottom:10px;border:1px solid var(--red);background:var(--red-l)">
+      <div class="card owner-strict" style="margin-bottom:10px;border:1px solid var(--red);background:var(--red-l)">
         <h4 style="margin-bottom:6px"><i class="ti ti-alert-triangle"></i> ${t('hr.descanso.longShiftTitle')}</h4>
         <div style="display:flex;flex-direction:column;gap:4px">
           ${longShifts.map(x => `<div style="font-size:13px">${escapeHtml(x.employee.name)} — ${x.horas.toFixed(1)}h ${t('hr.descanso.seguidas')}</div>`).join('')}
@@ -2498,7 +2498,7 @@ function renderTeamPulseHtml(){
     if(ranking.length){
       const medals = ['🥇','🥈','🥉'];
       parts.push(`
-        <div class="card owner-only" style="margin-bottom:10px">
+        <div class="card owner-strict" style="margin-bottom:10px">
           <h4 style="margin-bottom:6px"><i class="ti ti-trophy"></i> ${t('hr.ranking.title')}</h4>
           <div style="display:flex;flex-direction:column;gap:4px">
             ${ranking.map((r,i) => `<div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${medals[i]} ${escapeHtml(r.emp.name)}</span><strong>${fmtMoney(r.total)}</strong></div>`).join('')}
@@ -2512,7 +2512,7 @@ function renderTeamPulseHtml(){
     const avg = moodThisWeek.reduce((s,c)=>s+c.value,0) / moodThisWeek.length;
     const faces = ['😞','🙁','😐','🙂','😄'];
     parts.push(`
-      <div class="card owner-only" style="margin-bottom:10px">
+      <div class="card owner-strict" style="margin-bottom:10px">
         <h4 style="margin-bottom:4px"><i class="ti ti-mood-smile"></i> ${t('hr.moodPulse.title')}</h4>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:28px">${faces[Math.round(avg)-1]||'😐'}</span>
@@ -2554,7 +2554,7 @@ function renderHorariosPersonal(){
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
-          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${isTopSeller?`<span title="${t('hr.badge.topSeller')}">🏆</span>`:''}${tenureYears>=1?`<span title="${t('hr.badge.tenure').replace('${n}',tenureYears)}">${'⭐'.repeat(Math.min(tenureYears,3))}</span>`:''}</strong>
+          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${isTopSeller?`<span class="owner-strict" title="${t('hr.badge.topSeller')}">🏆</span>`:''}${tenureYears>=1?`<span title="${t('hr.badge.tenure').replace('${n}',tenureYears)}">${'⭐'.repeat(Math.min(tenureYears,3))}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}</div>
         </div>
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
