@@ -1249,6 +1249,69 @@ const FIREBASE_GATE_STEPS = [
         <span style="color:var(--muted)">Also save these two values somewhere safe (phone notes, etc.) so you can set up the other devices (waiters, kitchen) later — they just need to paste the same values, as the blue notice below explains.</span>`}},
 ];
 
+// Tras la nube (obligatoria), se ofrecen las otras dos conexiones externas
+// -Redsys y confirmación por email- en dos pantallas, una detrás de otra,
+// dejando clarísimo que son OPCIONALES: se puede saltar cada una sin
+// configurarla y seguir usando la app con normalidad, porque siempre
+// quedan disponibles en Mi Negocio → Conexiones externas para cuando el
+// negocio quiera activarlas. No se reutiliza el modal de Mi Negocio para
+// esto porque en ese momento (justo tras el alta) el negocio todavía no ha
+// visto la app por dentro — este flujo va sobre un lienzo propio, a pantalla
+// completa, igual que el resto de "gates" del arranque.
+let extConnPromptStep = 0;
+const EXT_CONN_PROMPT_STEPS = [
+  {icon:'💳', titleKey:'mn.redsys.title', descKey:'mn.redsys.desc', renderCard: () => renderRedsysCard()},
+  {icon:'✉️', titleKey:'mn.emailConfirm.title', descKey:'mn.emailConfirm.desc', renderCard: () => renderEmailConfirmCard()},
+];
+function showExternalConnectionsPrompt(){
+  extConnPromptStep = 0;
+  renderExternalConnectionsPromptStep();
+}
+function renderExternalConnectionsPromptStep(){
+  let g = document.getElementById('extconn-gate');
+  if(!g){
+    g = document.createElement('div');
+    g.id = 'extconn-gate';
+    g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px';
+    document.body.appendChild(g);
+  }
+  const step = EXT_CONN_PROMPT_STEPS[extConnPromptStep];
+  const isLast = extConnPromptStep === EXT_CONN_PROMPT_STEPS.length - 1;
+  g.innerHTML = `
+    <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--teal,#2a8f88);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">${step.icon}</div>
+        <p style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">${t('gate.extConn.stepLabel').replace('${n}', extConnPromptStep+1).replace('${total}', EXT_CONN_PROMPT_STEPS.length)}</p>
+        <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
+      </div>
+      <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
+        ${t(step.descKey)}<br><br>
+        <strong>${t('gate.extConn.optional')}</strong> ${t('gate.extConn.alwaysThere')}
+      </div>
+      ${step.renderCard()}
+      <button onclick="skipExternalConnectionsPromptStep()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px">
+        ${isLast ? t('gate.extConn.finishBtn') : t('gate.extConn.nextBtn')}
+      </button>
+      <p style="text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px">${t('gate.extConn.skipHint')}</p>
+    </div>`;
+  if(extConnPromptStep === 0) loadRedsysCardStatus();
+}
+// Se llama tanto al pulsar "ahora no" como después de guardar/probar una
+// conexión (las propias tarjetas de Redsys/Email no saben que están dentro
+// de este asistente, así que el avance de paso siempre lo dispara este
+// botón, se haya configurado algo en el paso o no).
+function skipExternalConnectionsPromptStep(){
+  if(extConnPromptStep < EXT_CONN_PROMPT_STEPS.length - 1){
+    extConnPromptStep++;
+    renderExternalConnectionsPromptStep();
+    return;
+  }
+  document.getElementById('extconn-gate')?.remove();
+  DB.business.extConnPromptSeen = true;
+  saveDB();
+  if(!DB.business.tourSeen) promptAppTour();
+}
+
 function showFirebaseSetupGate(){
   if(document.getElementById('firebase-gate')) return;
   const g = document.createElement('div');
@@ -1345,6 +1408,7 @@ function showNetlifySetupGate(){
     saveDB();
     if(!getLicense()) showActivationGate();
     else if(!getCloudConfig()) showFirebaseSetupGate();
+    else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
     else if(!DB.business.tourSeen) promptAppTour();
     return;
   }
@@ -1378,13 +1442,15 @@ function confirmNetlifyDone(){
   hideNetlifySetupGate();
   if(!getLicense()) showActivationGate();
   else if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.tourSeen) promptAppTour();
+  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
+    else if(!DB.business.tourSeen) promptAppTour();
 }
 function postponeNetlify(){
   hideNetlifySetupGate();
   if(!getLicense()) showActivationGate();
   else if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.tourSeen) promptAppTour();
+  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
+    else if(!DB.business.tourSeen) promptAppTour();
 }
 
 function activateLicenseFromGate(){
@@ -1416,7 +1482,8 @@ function activateLicenseFromGate(){
   // sentido pedirla, ya que sin licencia no había negocio real que
   // configurar.
   if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.tourSeen) promptAppTour();
+  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
+    else if(!DB.business.tourSeen) promptAppTour();
 }
 
 // Retoma, en orden, cualquier paso de la configuración inicial de un
@@ -1434,6 +1501,7 @@ function continuePendingOwnerSetup(){
   if(!DB.business.netlifySetupDone){ showNetlifySetupGate(); return true; }
   if(!getLicense()){ showActivationGate(); return true; }
   if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
+  if(!DB.business.extConnPromptSeen){ showExternalConnectionsPrompt(); return true; }
   if(!DB.business.tourSeen){ promptAppTour(); return true; }
   return false;
 }
