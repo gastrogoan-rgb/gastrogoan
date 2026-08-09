@@ -242,6 +242,7 @@ function confirmOwnerAccessSetup(){
   // arrastrar nada de negocios o pruebas anteriores en este mismo navegador.
   delete DB.business.ownFirebase;
   DB.business.netlifySetupDone = false;
+  DB.business.extConnPromptSeen = false;
   DB.business.tourSeen = false;
   saveDB();
   const slots = getBusinessSlots();
@@ -551,6 +552,16 @@ async function addSucursal(parentSlotId){
     stock: {},
     nextId: src.nextId || 1,
   };
+  // La nube (Firebase) sí se hereda del negocio padre -copiada dentro de
+  // `business` justo arriba- porque de ahí sale el resto del negocio
+  // clonado. Pero Redsys NO se hereda (vive en el Worker, ligado al
+  // tenantId de la licencia propia de esta sucursal, distinta a la del
+  // padre) y el email de confirmación normalmente también conviene
+  // revisarlo por local. Por eso el asistente de conexiones opcionales debe
+  // volver a aparecer para esta sucursal nueva, aunque el negocio padre ya
+  // lo hubiera visto — si no, nunca se le ofrecería configurar su propio
+  // Redsys.
+  snap.business.extConnPromptSeen = false;
 
   const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
