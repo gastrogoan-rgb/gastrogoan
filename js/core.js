@@ -1775,9 +1775,9 @@ function initPublicRequestsListener(){
         const autoTable = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
           .filter(tb => (tb.plazas || 0) >= (req.people || 1))
           .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
-        DB.reservations.push({
+        const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
-          clientName: req.clientName || '', clientPhone: req.clientPhone || '',
+          clientName: req.clientName || '', clientPhone: req.clientPhone || '', clientEmail: req.clientEmail || '',
           date: req.date, time: req.time, people: req.people || 1,
           tableId: autoTable ? autoTable.id : null, notes: req.notes || '', status: autoTable ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
@@ -1788,7 +1788,11 @@ function initPublicRequestsListener(){
           // confirmación un teléfono con menos de 9 dígitos): se marca aquí para
           // que el personal lo vea al gestionar la solicitud, no se descubre a ciegas.
           phoneOdd: !!(req.clientPhone && req.clientPhone.replace(/[^\d]/g,'').length < 9)
-        });
+        };
+        DB.reservations.push(newReservation);
+        if(autoTable && typeof sendReservationConfirmationEmail === 'function'){
+          sendReservationConfirmationEmail({...newReservation, tableName: autoTable.name}).catch(()=>{});
+        }
         notifyNewRequest = true;
       }else if(req.type === 'nps_response'){
         if(!DB.npsScores) DB.npsScores = [];
@@ -2735,6 +2739,117 @@ async function disableRedsysConfig(){
   showToast(t('mn.redsys.disabled'));
 }
 
+// Confirmación de reservas por email: como el negocio no tiene backend
+// propio, se envía directamente desde el navegador vía EmailJS (servicio
+// gratuito hasta cierto volumen), cargando su SDK solo si hace falta — así
+// el negocio que no lo use no paga el coste de cargarlo en vano. Cada
+// negocio usa su propia cuenta (serviceId/templateId/publicKey), igual que
+// con Firebase o Redsys: no hay ninguna cuenta compartida de GastroGoan.
+let emailjsSdkPromise = null;
+function loadEmailjsSdk(){
+  if(emailjsSdkPromise) return emailjsSdkPromise;
+  emailjsSdkPromise = new Promise((resolve, reject) => {
+    if(window.emailjs){ resolve(window.emailjs); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    s.onload = () => resolve(window.emailjs);
+    s.onerror = () => reject(new Error('No se pudo cargar EmailJS'));
+    document.head.appendChild(s);
+  });
+  return emailjsSdkPromise;
+}
+
+function renderEmailConfirmCard(){
+  const cfg = (DB.business && DB.business.emailConfirm) || {};
+  return `
+    <div class="card">
+      <h3><i class="ti ti-mail-check"></i> ✉️ ${t('mn.emailConfirm.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.emailConfirm.desc')}</p>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="ec-enabled" style="width:18px;height:18px" ${cfg.enabled?'checked':''}> ${t('mn.emailConfirm.enable')}
+        </label>
+      </div>
+      <div class="field">
+        <label>Service ID</label>
+        <input type="text" id="ec-service" placeholder="service_xxxxxxx" value="${escapeHtml(cfg.serviceId||'')}" style="font-family:monospace">
+      </div>
+      <div class="field">
+        <label>Template ID</label>
+        <input type="text" id="ec-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.templateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.templateHint')}</small>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Public Key</label>
+        <input type="text" id="ec-pubkey" placeholder="user_xxxxxxxxxxxxxxxx" value="${escapeHtml(cfg.publicKey||'')}" style="font-family:monospace">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveEmailConfirmConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
+        <button class="btn btn-sm" onclick="testEmailConfirmConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendTest')}</button>
+      </div>
+      <div id="ec-test-status" style="font-size:12.5px;color:var(--muted);margin-top:8px"></div>
+    </div>
+  `;
+}
+
+function saveEmailConfirmConfig(){
+  DB.business.emailConfirm = {
+    enabled: document.getElementById('ec-enabled').checked,
+    serviceId: document.getElementById('ec-service').value.trim(),
+    templateId: document.getElementById('ec-template').value.trim(),
+    publicKey: document.getElementById('ec-pubkey').value.trim()
+  };
+  saveDB();
+  showToast(t('msg.payConfigSaved'));
+}
+
+async function testEmailConfirmConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = {
+    serviceId: document.getElementById('ec-service').value.trim(),
+    templateId: document.getElementById('ec-template').value.trim(),
+    publicKey: document.getElementById('ec-pubkey').value.trim()
+  };
+  if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFields')); return; }
+  const testTo = prompt(t('mn.emailConfirm.testPrompt'));
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendReservationConfirmationEmail({
+      clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
+      date: todayStr(), time: '20:00', people: 2, tableName: t('mn.emailConfirm.testTableName')
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+
+// Dispara el email de confirmación de una reserva concreta. Se llama en dos
+// momentos: justo al auto-confirmarse con mesa asignada, y cuando el
+// personal confirma a mano una que se había quedado pendiente (mismo aviso
+// para el cliente en los dos casos, porque para él es la misma noticia:
+// "tu mesa ya está confirmada"). Si el negocio no tiene esto activado, o la
+// reserva no trae email, no hace nada — no es un requisito, es un extra.
+function sendReservationConfirmationEmail(reservation, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey) return Promise.resolve();
+  if(!reservation || !reservation.clientEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => {
+    const params = {
+      to_email: reservation.clientEmail,
+      client_name: reservation.clientName || '',
+      business_name: (DB.business && DB.business.name) || '',
+      date: reservation.date || '',
+      time: reservation.time || '',
+      people: reservation.people || '',
+      table_name: reservation.tableName || ''
+    };
+    return emailjs.send(cfg.serviceId, cfg.templateId, params, {publicKey: cfg.publicKey});
+  });
+}
+
 function copyPublicLinkFrom(elId){
   const el = document.getElementById(elId);
   el.select();
@@ -2962,6 +3077,11 @@ function defaultData(){
       // solo guarda su clave de API y llama a su servicio). Ver VERIFACTU_PROVIDERS
       // en js/tpv.js para la lista de proveedores soportados.
       verifactu: {enabled: false, provider: '', apiKey: ''},
+      // Confirmación de reservas por email al cliente (EmailJS: envía desde
+      // el propio navegador del negocio, sin backend propio). Cada negocio
+      // crea su propia cuenta gratuita y pega aquí sus 3 datos — igual que
+      // con ownFirebase, no es una cuenta compartida de GastroGoan.
+      emailConfirm: {enabled: false, serviceId: '', templateId: '', publicKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,

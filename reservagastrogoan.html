@@ -204,6 +204,8 @@ const I18N = {
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
+    'reserva.ok.emailHint':' Te enviaremos la confirmación a tu email en cuanto quede lista.',
+    'email.reserva.label':'Email (opcional)','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisamos aquí en cuanto tu reserva quede confirmada.',
     'deposit.notice.title':'Esta reserva requiere señal',
     'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. El restaurante te contactará para gestionarla.',
     'nps.title':'¿Qué tal tu experiencia en ${business}?', 'nps.subtitle':'Tu opinión es privada y solo la ve el restaurante — no se publica en ningún sitio.',
@@ -259,6 +261,8 @@ const I18N = {
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
+    'reserva.ok.emailHint':' We\'ll email you the confirmation as soon as it\'s ready.',
+    'email.reserva.label':'Email (optional)','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
     'deposit.notice.title':'This booking requires a deposit',
     'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. The restaurant will contact you about it.',
     'nps.title':'How was your experience at ${business}?', 'nps.subtitle':'Your answer is private and only seen by the restaurant — never published anywhere.',
@@ -314,6 +318,8 @@ const I18N = {
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
+    'reserva.ok.emailHint':' T\'enviarem la confirmació al teu email en quant estigui llesta.',
+    'email.reserva.label':'Email (opcional)','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisem aquí quan la teva reserva quedi confirmada.',
     'deposit.notice.title':'Aquesta reserva requereix senyal',
     'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. El restaurant et contactarà per gestionar-la.',
     'nps.title':'Què tal la teva experiència a ${business}?', 'nps.subtitle':'La teva opinió és privada i només la veu el restaurant — no es publica enlloc.',
@@ -980,6 +986,11 @@ function renderReservaForm(){
         <label>${t('telefono')}</label>
         <input type="tel" id="r-phone" placeholder="600 000 000">
       </div>
+      <div class="field">
+        <label>${t('email.reserva.label')}</label>
+        <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}">
+        <small style="color:#888">${t('email.reserva.hint')}</small>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
@@ -1046,6 +1057,7 @@ function submitReserva(){
   submittingRequest = true;
   const clientName = document.getElementById('r-name').value.trim();
   const clientPhone = document.getElementById('r-phone').value.trim();
+  const clientEmail = document.getElementById('r-email').value.trim();
   const date = document.getElementById('r-date').value;
   const time = document.getElementById('r-time').value;
   const people = parseInt(document.getElementById('r-people').value) || 1;
@@ -1099,7 +1111,7 @@ function submitReserva(){
 
   const depositRequired = !!(DB.business||{}).requireDeposit;
   const req = {
-    type:'reserva', clientName, clientPhone, date, time, people, notes, referral,
+    type:'reserva', clientName, clientPhone, clientEmail, date, time, people, notes, referral,
     depositRequired, depositAmount: depositRequired ? reservaDepositAmount() : '',
     createdAt: new Date().toISOString()
   };
@@ -1108,7 +1120,7 @@ function submitReserva(){
   if(btn) btn.disabled = true;
 
   if(!aforoInfo){
-    sendRequest(req, t('reserva.ok'));
+    sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
     return;
   }
 
@@ -1122,14 +1134,14 @@ function submitReserva(){
       alert(t('error.aforo.completo'));
       return;
     }
-    sendRequest(req, t('reserva.ok'));
+    sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
   }).catch(e => {
     console.error(e);
     if(btn) btn.disabled = false;
     // Si la transacción falla por un problema de conexión, dejamos seguir
     // con el envío normal en vez de bloquear al cliente por completo: es
     // preferible el pequeño riesgo de carrera a que no pueda reservar.
-    sendRequest(req, t('reserva.ok'));
+    sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
   });
 }
 

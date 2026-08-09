@@ -2351,10 +2351,19 @@ function setReservationStatus(id, status){
   // cuando se cobra la venta (tpv.js). Sumarlo también al confirmar duplicaba
   // el punto por una sola visita, y dejaba un punto "fantasma" si el cliente
   // acababa siendo un no-show.
+  const wasConfirmed = r.status === 'confirmada';
   r.status = status;
   saveDB();
   renderReservas();
   showToast(status==='confirmada' ? t('msg.reservationConfirmed') : status==='cancelada' ? t('msg.reservationCancelled') : t('msg.reservationRejected'));
+  // El aviso al cliente solo tiene sentido la primera vez que pasa a
+  // confirmada (p.ej. cuando el personal por fin le asigna mesa a una que se
+  // había quedado pendiente) — no en cada guardado posterior de una reserva
+  // que ya estaba confirmada.
+  if(status === 'confirmada' && !wasConfirmed && typeof sendReservationConfirmationEmail === 'function'){
+    const table = r.tableId ? DB.tables.find(t=>t.id===r.tableId) : null;
+    sendReservationConfirmationEmail({...r, tableName: table ? table.name : ''}).catch(()=>{});
+  }
 }
 
 function goToReservasDia(date){
@@ -4441,6 +4450,8 @@ function renderMiNegocio(){
     </div>
 
     ${renderRedsysCard()}
+
+    ${renderEmailConfirmCard()}
 
     ${renderPedidosConfigCard()}
 
