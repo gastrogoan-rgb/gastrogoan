@@ -1765,11 +1765,21 @@ function initPublicRequestsListener(){
         // la mesa ni los puntos de fidelidad se disparaban para un cliente
         // recurrente que reservaba por la web en vez de llamar o venir en persona.
         const matchedClient = req.clientPhone ? findClientByPhone(req.clientPhone) : null;
+        // El aforo del turno ya se comprobó de forma atómica al enviar la
+        // solicitud (reserveAforoAtomic, en la web pública) — aquí solo
+        // queda intentar asignar mesa automáticamente, igual que haría el
+        // personal a mano. Si hay una mesa libre con plazas suficientes, la
+        // reserva se confirma sola, sin ningún clic; si no (grupo grande
+        // fragmentado entre varias mesas pequeñas, etc.), se deja
+        // 'pendiente' para que el personal solo tenga que elegir la mesa.
+        const autoTable = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+          .filter(tb => (tb.plazas || 0) >= (req.people || 1))
+          .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
         DB.reservations.push({
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '',
           date: req.date, time: req.time, people: req.people || 1,
-          tableId: null, notes: req.notes || '', status: 'pendiente',
+          tableId: autoTable ? autoTable.id : null, notes: req.notes || '', status: autoTable ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
           origen: 'publico', createdAt: new Date().toISOString(),
@@ -1801,8 +1811,9 @@ function initPublicRequestsListener(){
         }
       }else if(req.type === 'pedido'){
         const onlineItems = (req.items || []).map(l => ({platoId: l.platoId||null, recipeId: l.recipeId||null, name: l.name||l.nombre||'', price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||''}));
+        const newOrderId = genId();
         DB.tpvOrders.push({
-          id: genId(), tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
+          id: newOrderId, tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
           clienteDireccion: req.clienteDireccion || '', clienteCodigoPostal: req.codigoPostal || '',
           notas: req.notas || '',
@@ -1818,6 +1829,13 @@ function initPublicRequestsListener(){
           metodoPagoLocal: req.metodoPagoLocal || null,
           pagaCon: typeof req.pagaCon === 'number' ? req.pagaCon : null
         });
+        // Con el interruptor de "Pedidos online" en ON (por defecto), el
+        // pedido se acepta solo, sin pasar por la bandeja de pendientes —
+        // salvo que necesite verificación manual de zona de reparto, en
+        // cuyo caso siempre se deja pendiente pase lo que pase el interruptor.
+        if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+          acceptOnlineOrder(newOrderId, true);
+        }
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
         // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida

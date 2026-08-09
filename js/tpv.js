@@ -776,15 +776,20 @@ function renderTpvToGo(tiposServicio){
     const mb = b.time ? (reservaTimeToMinutes(b.time) ?? 9999) : -1;
     return ma - mb;
   });
+  const pedidosOnlineOn = DB.business.pedidosOnlineActivos !== false;
   return `
     <div class="togo-panel">
       <div class="togo-panel-head">
         <h3><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')}</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+            <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
+          </button>
           ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
           <button class="btn btn-sm btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-plus"></i> ${t('btn.expressOrder')}</button>
         </div>
       </div>
+      ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin-bottom:10px"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
       <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('tpv.onlineOrdersAutoArrive')}</p>
       ${!toGoOrders.length
         ? `<div class="empty" style="padding:18px"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div>`
@@ -959,9 +964,27 @@ function findActiveDishByName(name){
   return null;
 }
 
-function acceptOnlineOrder(orderId){
+// Interruptor de emergencia para cuando la cocina va desbordada: con los
+// pedidos online en OFF, la web pública deja de aceptar Take Away/Delivery
+// (avisando al cliente de que lo intente en unos minutos) y, por si llega
+// alguno de todos modos por una carrera de tiempos, se queda en la bandeja
+// de pendientes en vez de descartarse. Vuelve a ON por defecto: apagarlo es
+// una decisión explícita del negocio, nunca el estado de partida.
+function toggleOnlineOrdersSwitch(){
+  DB.business.pedidosOnlineActivos = DB.business.pedidosOnlineActivos === false ? true : false;
+  saveDB();
+  renderTPV();
+}
+
+// `auto` distingue la aceptación automática (interruptor de Pedidos Online
+// en ON, ver renderTpvToGo) de la manual desde la bandeja de pendientes: en
+// automático nunca se puede mostrar un confirm() a nadie, así que si hay un
+// desajuste de precio/disponibilidad en un pedido YA PAGADO (tarjeta virtual)
+// se deja tal cual en pendiente-online para que el personal lo revise a
+// mano — es el único caso en el que el auto-aceptar no acepta.
+function acceptOnlineOrder(orderId, auto){
   const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
+  if(!order) return false;
   if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
     // Comprobación de precio/disponibilidad frente a la carta activa actual,
     // ANTES de tocar nada: si el pedido ya está pagado (Redsys) y hay algún
@@ -975,7 +998,10 @@ function acceptOnlineOrder(orderId){
         anyMismatch = true;
       }
     });
-    if(anyMismatch && order.pagado && !confirm(t('msg.confirmAcceptPaidMismatch'))) return;
+    if(anyMismatch && order.pagado){
+      if(auto) return false;
+      if(!confirm(t('msg.confirmAcceptPaidMismatch'))) return false;
+    }
 
     order.status = 'abierta';
     const ahora = new Date().toISOString();
@@ -999,14 +1025,13 @@ function acceptOnlineOrder(orderId){
     order.cerrada = false;
     if(esRepartoPropio(order)) autoAssignRepartidor(order);
     saveDB();
-    renderTPV();
-    showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted'));
-    return;
+    if(!auto){ renderTPV(); showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted')); }
+    return true;
   }
   order.status = 'abierta';
   saveDB();
-  renderTPV();
-  showToast(t('msg.orderAccepted'));
+  if(!auto){ renderTPV(); showToast(t('msg.orderAccepted')); }
+  return true;
 }
 
 function rejectOnlineOrder(orderId){
