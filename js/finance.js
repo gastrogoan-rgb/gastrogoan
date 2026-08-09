@@ -225,15 +225,20 @@ function renderDashboard(){
   // se sabe de un vistazo si hay entregas activas sin salir de Gestión.
   const activeRepartosCount = typeof getActiveRepartosOrders === 'function' ? getActiveRepartosOrders().length : 0;
 
+  // Orden pensado por urgencia/tipo, no por casualidad de cuándo se añadió
+  // cada chip: primero lo que de verdad necesita una acción (avisos en
+  // rojo — son literalmente lo más "atención" de toda la fila), luego lo
+  // que está pasando ahora mismo en el negocio (mesas, repartos, personal),
+  // y al final lo que mira hacia adelante (reservas de hoy y mañana).
   const attentionItems = [
-    {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
-    {count: clockedIn, icon:'ti-clock-check', label: t('dash.att.clockedIn'), onclick: `navigate('horarios')`},
-    {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
-    {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
-    {count: activeRepartosCount, icon:'ti-moped', label: t('dash.att.activeDeliveries'), onclick: `navigate('tpv'); openRepartosControlModal()`},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
+    {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
+    {count: activeRepartosCount, icon:'ti-moped', label: t('dash.att.activeDeliveries'), onclick: `navigate('tpv'); openRepartosControlModal()`},
+    {count: clockedIn, icon:'ti-clock-check', label: t('dash.att.clockedIn'), onclick: `navigate('horarios')`},
+    {count: pendingReservations, icon:'ti-calendar-event', label: t('dash.att.pendingReservations'), onclick: `navigate('reservas')`},
+    {count: tomorrowReservations, icon:'ti-calendar-plus', label: t('dash.att.tomorrowReservations'), onclick: `navigate('reservas'); goToReservasDia('${tomorrowDate}')`},
   ];
   const anyAttention = attentionItems.some(i => i.count > 0);
   document.getElementById('dashboard-attention').innerHTML = `
