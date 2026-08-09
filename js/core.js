@@ -1274,6 +1274,10 @@ function showFirebaseSetupGate(){
   const intro = `
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
         ${t('gate.cloudIntro')}
+      </div>
+      <div style="background:var(--teal-l,#eef7f6);border-left:4px solid var(--teal,#2a8f88);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.6;margin-bottom:18px;text-align:left">
+        <strong><i class="ti ti-plug-connected"></i> ${t('gate.externalConnections.title')}</strong><br>
+        ${t('gate.externalConnections.body')}
       </div>`;
 
   let bodyHtml;
@@ -2630,10 +2634,45 @@ function updateTpvVirtualCheckboxAvailability(){
     hint.textContent = redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
   }
 }
+// Resumen a la vista de las 3 conexiones externas que la app puede usar
+// (cada una un servicio de fuera, con su propia cuenta que conecta el
+// negocio): nube propia (Firebase, obligatoria para trabajar en equipo),
+// cobro con tarjeta online (Redsys, opcional) y confirmación de reservas
+// por email (EmailJS, opcional). Antes cada una vivía en su rincón de Mi
+// Negocio sin que quedara claro que son la misma "familia" de configuración
+// externa — este resumen las agrupa y dice de un vistazo cuáles están
+// conectadas.
+function renderExternalConnectionsCard(){
+  const fbConnected = !!(DB.business && DB.business.ownFirebase);
+  const redsysConnected = !!redsysIsConfigured;
+  const emailConnected = !!(DB.business && DB.business.emailConfirm && DB.business.emailConfirm.enabled);
+  const row = (icon, label, connected, onclick) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <i class="ti ${icon}" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>
+      <span style="flex:1;font-size:13.5px">${label}</span>
+      <span class="badge ${connected?'badge-green':'badge-gray'}">${connected ? t('mn.externalConn.connected') : t('mn.externalConn.notConnected')}</span>
+      <button class="btn btn-sm" onclick="${onclick}">${connected ? t('common.edit') : t('common.connect')}</button>
+    </div>
+  `;
+  return `
+    <div class="card mn-grid-full">
+      <h3><i class="ti ti-plug-connected"></i> ${t('mn.externalConn.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:6px">${t('mn.externalConn.desc')}</p>
+      ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()')}
+      ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')")}
+      ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')")}
+    </div>
+  `;
+}
+function scrollToMnCard(id){
+  const el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function renderRedsysCard(){
   if(!getTenantId()) return '';
   return `
-    <div class="card">
+    <div class="card" id="mn-card-redsys">
       <h3><i class="ti ti-credit-card"></i> 💳 ${t('mn.redsys.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.desc')}</p>
       <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.checking')}</div>
@@ -2762,7 +2801,7 @@ function loadEmailjsSdk(){
 function renderEmailConfirmCard(){
   const cfg = (DB.business && DB.business.emailConfirm) || {};
   return `
-    <div class="card">
+    <div class="card" id="mn-card-email">
       <h3><i class="ti ti-mail-check"></i> ✉️ ${t('mn.emailConfirm.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.emailConfirm.desc')}</p>
       <div class="field">

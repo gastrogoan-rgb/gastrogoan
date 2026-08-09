@@ -4262,6 +4262,7 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
+    ${renderExternalConnectionsCard()}
     <div class="card">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
