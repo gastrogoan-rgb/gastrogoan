@@ -28,6 +28,12 @@ const GE = (function(){
   let activeMonth = new Date().getMonth(), editingGF = null, editingCX = null, editingGV = null;
   let cdrYear = new Date().getFullYear();
   let teYear = new Date().getFullYear();
+  // Año que se está consultando en la pestaña Variables — antes esta
+  // pestaña no tenía selector de año (a diferencia de CDR/Tesorería, que sí
+  // navegan por año) y usaba siempre currentYear fijo, así que si el dueño
+  // estaba mirando el CDR de un año anterior no podía ver el detalle de
+  // compras de ese mismo mes/año en Variables.
+  let gvYear = new Date().getFullYear();
   let distPctLoaded = false;
   let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   let gvSearch = '';
@@ -484,19 +490,22 @@ const GE = (function(){
   }
 
   /* -- GASTOS VARIABLES -- */
+  function setGVYear(delta){ gvYear += delta; renderVariables(); }
   function renderVariables(){
+    const gvYearEl = document.getElementById('gv-year');
+    if(gvYearEl) gvYearEl.textContent = gvYear;
     document.getElementById('gv-months').innerHTML = getMeses().map((m,i)=>`
       <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonth(${i})">${m}</div>`).join('');
-    const mes = activeMonth, tvMes = totalVariablesMes(mes), tvNeto = totalVariablesNetoMes(mes), ivaSop = tvMes - tvNeto;
-    const facNeta = facturacionNetaMes(mes), fac = facturacionMes(mes);
+    const mes = activeMonth, tvMes = totalVariablesMes(mes,gvYear), tvNeto = totalVariablesNetoMes(mes,gvYear), ivaSop = tvMes - tvNeto;
+    const facNeta = facturacionNetaMes(mes,gvYear), fac = facturacionMes(mes,gvYear);
     const fcPct = facNeta>0 ? (tvNeto/facNeta*100) : 0;
-    document.getElementById('gv-sec-title').textContent = `${t('hr.lbl.purchases')} — ${getMeses()[mes]} ${currentYear}`;
+    document.getElementById('gv-sec-title').textContent = `${t('hr.lbl.purchases')} — ${getMeses()[mes]} ${gvYear}`;
     document.getElementById('gv-kpis').innerHTML = `
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realCostNoVat')}</div><div class="val">${fmtMoney(tvNeto)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.vatSupported')}</div><div class="val" style="color:var(--muted)">${fmtMoney(ivaSop)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.netRevenue')} <span class="ge-auto">TPV</span></div><div class="val">${fmtMoney(facNeta)}</div></div>
       <div class="ge-kpi"><div class="lbl">${t('hr.lbl.realFoodCost')}</div><div class="val" style="color:${fcPct>(config().foodCostObj||35)?'var(--red)':fcPct>0?'var(--green)':'var(--muted)'}">${facNeta>0?fcPct.toFixed(1)+'%':'—'}</div><div class="sub">${t('hr.lbl.target')}: ${config().foodCostObj||35}%</div></div>`;
-    const allItems = variablesMes(mes);
+    const allItems = variablesMes(mes,gvYear);
     const chartEl = document.getElementById('gv-cat-chart');
     if(chartEl){
       const catTotals = {};
@@ -558,7 +567,7 @@ const GE = (function(){
   function renderGastoHormiga(){
     const box = document.getElementById('gv-hormiga');
     if(!box) return;
-    const all = variables().filter(v => parseInt(v.año) === currentYear);
+    const all = variables().filter(v => parseInt(v.año) === gvYear);
     const byProv = {};
     all.forEach(v => {
       const key = v.proveedor || t('common.unknown');
@@ -583,7 +592,7 @@ const GE = (function(){
   function setGVSearch(v){ gvSearch = v; renderVariables(); }
   function newGV(){
     editingGV = null;
-    openGVModal({categoria:VARIABLE_CATEGORIES[0], proveedor:'', importe:'', iva:null, fecha:`${currentYear}-${String(activeMonth+1).padStart(2,'0')}-01`});
+    openGVModal({categoria:VARIABLE_CATEGORIES[0], proveedor:'', importe:'', iva:null, fecha:`${gvYear}-${String(activeMonth+1).padStart(2,'0')}-01`});
   }
   function editGV(id){
     const v = variables().find(x=>x.id===id); if(!v) return;
@@ -1896,7 +1905,7 @@ const GE = (function(){
     );
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, setSimPctPrecio, setSimCosteExtra};
+  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, setSimPctPrecio, setSimCosteExtra};
 })();
 
 /* ============================================================

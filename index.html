@@ -492,6 +492,11 @@
 
       <!-- GASTOS VARIABLES -->
       <div id="ge-variables" class="ge-tab-panel">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+          <button class="btn btn-sm btn-icon" onclick="GE.setGVYear(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:16px;font-weight:700" id="gv-year"></span>
+          <button class="btn btn-sm btn-icon" onclick="GE.setGVYear(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
         <div class="month-sel" id="gv-months"></div>
         <div class="ge-kpi-grid" id="gv-kpis"></div>
         <div class="vis-section" style="margin-bottom:14px">

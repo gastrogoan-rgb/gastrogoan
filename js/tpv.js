@@ -3678,8 +3678,15 @@ function applyDeliveryCommission(order, sale){
   if(!plat) return;
   const comisionPct = parseFloat(plat.comisionPct) || 0;
   const ivaPct = parseFloat(plat.ivaPct) || 0;
-  const comision = sale.total * (comisionPct/100) * (1 + ivaPct/100);
-  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct};
+  // Algunas plataformas (acuerdo comercial habitual con Glovo/Uber Eats)
+  // cobran su % de comisión solo sobre la comanda, no sobre el gasto de
+  // envío — antes esto no se podía distinguir y siempre se calculaba sobre
+  // sale.total completo (comanda + envío), sobrestimando la comisión real
+  // en negocios con ese tipo de acuerdo.
+  const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
+  const baseComision = comisionSobreEnvio ? sale.total : Math.max(0, sale.total - (order.costeEnvio || 0));
+  const comision = baseComision * (comisionPct/100) * (1 + ivaPct/100);
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct, comisionSobreEnvio};
   sale.comisionPlataforma = Math.round(comision * 100) / 100;
 }
 

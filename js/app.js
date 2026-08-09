@@ -5136,6 +5136,10 @@ function openDeliveryPlatformModal(title, p){
       <div class="field"><label>${t('mn.delivery.commission')}</label><input type="number" id="dp-f-comision" min="0" max="100" step="0.1" value="${p.comisionPct!=null?p.comisionPct:30}" oninput="updateDeliveryPlatformExample()"></div>
       <div class="field"><label>${t('mn.delivery.vatOnCommission')}</label><input type="number" id="dp-f-iva" min="0" max="100" step="0.1" value="${p.ivaPct!=null?p.ivaPct:21}" oninput="updateDeliveryPlatformExample()"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:400;margin-bottom:4px;cursor:pointer">
+      <input type="checkbox" id="dp-f-comision-envio" ${p.comisionSobreEnvio!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.delivery.commissionOnShipping')}
+    </label>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px">${t('mn.delivery.commissionOnShippingDesc')}</p>
     <p style="font-size:12px;color:var(--muted)">${t('mn.delivery.calcHint')}</p>
     <p style="font-size:13px;font-weight:600" id="dp-example"></p>
     <input type="hidden" id="dp-f-id" value="${p.id||''}">
@@ -5170,7 +5174,8 @@ function saveDeliveryPlatform(){
   // que darían comisiones ambiguas al atribuir una venta por nombre de plataforma.
   const dupe = DB.business.deliveryPlatforms.find(p => p.nombre.trim().toLowerCase()===nombre.toLowerCase() && String(p.id)!==idVal);
   if(dupe){ showToast(t('msg.platformNameDuplicate')); return; }
-  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct)};
+  const comisionSobreEnvio = document.getElementById('dp-f-comision-envio').checked;
+  const data = {nombre, comisionPct, ivaPct: (isNaN(ivaPct)||ivaPct<0) ? 0 : Math.min(100, ivaPct), comisionSobreEnvio};
   if(idVal){
     const p = DB.business.deliveryPlatforms.find(x=>x.id===parseInt(idVal));
     if(p){
