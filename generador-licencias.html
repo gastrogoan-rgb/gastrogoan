@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GastroGoan · Generador de licencias (PRIVADO)</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <style>
 :root{ --brand-orange:#DF7039; --brand-cream:#F6EDD5; --border:#E2DBC8; --muted:#777; }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -43,7 +46,8 @@ td.key{font-family:monospace;font-size:11px}
     <h2>1 · Genera código + contraseña para un cliente nuevo</h2>
     <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
     <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
-    <button class="gen" onclick="gen()">Generar código de negocio</button>
+    <button class="gen" id="gen-btn" onclick="gen()">Generar código de negocio</button>
+    <p id="uniqueness-status" class="muted" style="margin-top:8px"></p>
     <div id="out" style="display:none">
       <div class="key-out" id="key"></div>
       <div class="btns">
@@ -102,13 +106,100 @@ function generateBizCode(){
   return code;
 }
 
+/* ============================================================
+   UNICIDAD REAL DE CÓDIGOS — proyecto Firebase COMPARTIDO de la
+   plataforma (el mismo que ya usa la app para la lista de licencias
+   revocadas y la web pública de reservas/pedidos), en la ruta
+   gastrogoan/issuedCodes/{code}. Debe ser el MISMO PLATFORM_FIREBASE_CONFIG
+   que en js/core.js — si cambia allí, cámbialo también aquí.
+
+   Requiere que las reglas de seguridad de ese proyecto permitan ESCRIBIR
+   en gastrogoan/issuedCodes/$code a cualquier usuario autenticado (incluida
+   la autenticación anónima), solo si el nodo aún no existe, por ejemplo:
+
+     "issuedCodes": {
+       "$code": {
+         ".read": false,
+         ".write": "auth != null && !data.exists()"
+       }
+     }
+
+   Sin esa regla (o sin conexión), esto falla en silencio y el generador
+   sigue funcionando igual que antes -código aleatorio sin comprobar
+   duplicados-, con un aviso visible de que no se pudo verificar. Nunca
+   bloquea la generación de códigos, solo la hace más segura cuando puede.
+*/
+const PLATFORM_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+let platformAuthPromise = null;
+function getPlatformFirebaseApp(){
+  if(typeof firebase === 'undefined') return Promise.resolve(null);
+  try{
+    let app;
+    try{ app = firebase.app('platform'); }
+    catch(e){ app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+    if(!platformAuthPromise){
+      platformAuthPromise = app.auth().currentUser
+        ? Promise.resolve(app)
+        : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
+    }
+    return platformAuthPromise;
+  }catch(e){
+    console.error('Error iniciando la plataforma', e);
+    return Promise.resolve(null);
+  }
+}
+// Reclama un código como "ya emitido" de forma atómica (transaction: solo
+// se compromete si el nodo estaba vacío) y, si choca con uno ya existente,
+// prueba con otro — en la práctica nunca pasará de la primera vuelta, dado
+// el tamaño del espacio de códigos (32^8 ≈ 1,1 billones), pero así queda
+// matemáticamente garantizado que nunca se repite uno ya emitido.
+const MAX_UNIQUENESS_ATTEMPTS = 5;
+async function claimUniqueBizCode(){
+  const statusEl = document.getElementById('uniqueness-status');
+  const app = await getPlatformFirebaseApp();
+  if(!app){
+    statusEl.textContent = '⚠️ Sin conexión con la plataforma: código generado sin comprobar duplicados online.';
+    return generateBizCode();
+  }
+  for(let attempt = 1; attempt <= MAX_UNIQUENESS_ATTEMPTS; attempt++){
+    const code = generateBizCode();
+    statusEl.textContent = `Comprobando unicidad del código... (intento ${attempt})`;
+    try{
+      const ref = app.database().ref('gastrogoan/issuedCodes/' + code);
+      const result = await ref.transaction(current => current === null ? {issuedAt: Date.now()} : undefined);
+      if(result.committed){
+        statusEl.textContent = '✅ Código verificado como único contra el registro de la plataforma.';
+        return code;
+      }
+      // No debería pasar casi nunca (colisión real) — se reintenta con otro código.
+    }catch(e){
+      console.error('Error comprobando unicidad', e);
+      statusEl.textContent = '⚠️ No se pudo verificar contra la plataforma (revisa las reglas de seguridad): código generado sin comprobar duplicados online.';
+      return generateBizCode();
+    }
+  }
+  statusEl.textContent = '⚠️ No se pudo confirmar unicidad tras varios intentos: código generado sin comprobar duplicados online.';
+  return generateBizCode();
+}
+
 const LOG_KEY = 'gg_biz_sales_v2';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
 
-function gen(){
+async function gen(){
+  const genBtn = document.getElementById('gen-btn');
+  genBtn.disabled = true;
+  document.getElementById('uniqueness-status').textContent = 'Generando...';
   const raw = document.getElementById('name').value.trim();
-  const code = generateBizCode();
+  const code = await claimUniqueBizCode();
   const password = ggBizPassword(code);
   document.getElementById('key').innerHTML = `Código: ${code}<br>Contraseña: ${password}`;
   document.getElementById('out').style.display = 'block';
@@ -120,6 +211,7 @@ function gen(){
     localStorage.setItem(LOG_KEY, JSON.stringify(sales));
   }
   renderLog();
+  genBtn.disabled = false;
 }
 
 function copyKey(){
