@@ -206,6 +206,7 @@ const I18N = {
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
     'reserva.ok.emailHint':' Te enviaremos la confirmación a tu email en cuanto quede lista.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisaremos por aquí en cuanto tu reserva quede confirmada.',
+    'email.pedido.label':'Email (opcional)','email.pedido.hint':'Solo lo usamos para avisarte por aquí si el negocio tuviera que cancelar tu pedido.',
     'error.email.invalido':'Indica un email válido para que podamos avisarte cuando se confirme tu reserva.',
     'deposit.notice.title':'Esta reserva requiere señal',
     'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. El restaurante te contactará para gestionarla.',
@@ -264,6 +265,7 @@ const I18N = {
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
     'reserva.ok.emailHint':' We\'ll email you the confirmation as soon as it\'s ready.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
+    'email.pedido.label':'Email (optional)','email.pedido.hint':'We only use it to let you know here if the restaurant has to cancel your order.',
     'error.email.invalido':'Enter a valid email so we can let you know when your booking is confirmed.',
     'deposit.notice.title':'This booking requires a deposit',
     'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. The restaurant will contact you about it.',
@@ -322,6 +324,7 @@ const I18N = {
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
     'reserva.ok.emailHint':' T\'enviarem la confirmació al teu email en quant estigui llesta.',
     'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisarem aquí quan la teva reserva quedi confirmada.',
+    'email.pedido.label':'Email (opcional)','email.pedido.hint':'Només l\'usem per avisar-te aquí si el negoci hagués de cancel·lar la teva comanda.',
     'error.email.invalido':'Indica un email vàlid perquè puguem avisar-te quan es confirmi la teva reserva.',
     'deposit.notice.title':'Aquesta reserva requereix senyal',
     'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. El restaurant et contactarà per gestionar-la.',
@@ -1226,6 +1229,11 @@ function renderOrderForm(){
         <label>${t('telefono')}</label>
         <input type="tel" id="o-phone" placeholder="600 000 000">
       </div>
+      <div class="field">
+        <label>${t('email.pedido.label')}</label>
+        <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}">
+        <small style="color:#888">${t('email.pedido.hint')}</small>
+      </div>
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
@@ -1395,6 +1403,7 @@ async function submitOrder(){
   submittingRequest = true;
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
+  const clienteEmail = document.getElementById('o-email').value.trim();
   const date = document.getElementById('o-date').value;
   const time = document.getElementById('o-time').value;
   const isDelivery = currentTab === 'delivery';
@@ -1406,6 +1415,11 @@ async function submitOrder(){
 
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
     alert(t('error.campos'));
+    submittingRequest = false;
+    return;
+  }
+  if(clienteEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail)){
+    alert(t('error.email.invalido'));
     submittingRequest = false;
     return;
   }
@@ -1505,7 +1519,7 @@ async function submitOrder(){
 
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
-    clienteNombre, clienteTelefono, clienteDireccion, codigoPostal, notas, date, time,
+    clienteNombre, clienteTelefono, clienteEmail, clienteDireccion, codigoPostal, notas, date, time,
     costeEnvio: deliveryFee,
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
     createdAt: new Date().toISOString()

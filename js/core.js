@@ -1901,7 +1901,7 @@ function initPublicRequestsListener(){
         const newOrderId = genId();
         DB.tpvOrders.push({
           id: newOrderId, tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
-          clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '',
+          clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '', clienteEmail: req.clienteEmail || '',
           clienteDireccion: req.clienteDireccion || '', clienteCodigoPostal: req.codigoPostal || '',
           notas: req.notas || '',
           date: req.date || '', time: req.time || '',
@@ -2893,9 +2893,14 @@ function renderEmailConfirmCard(){
         <input type="text" id="ec-service" placeholder="service_xxxxxxx" value="${escapeHtml(cfg.serviceId||'')}" style="font-family:monospace">
       </div>
       <div class="field">
-        <label>Template ID</label>
+        <label>Template ID (${t('mn.emailConfirm.confirmationLabel')})</label>
         <input type="text" id="ec-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.templateId||'')}" style="font-family:monospace">
         <small style="color:var(--muted)">${t('mn.emailConfirm.templateHint')}</small>
+      </div>
+      <div class="field">
+        <label>Template ID (${t('mn.emailConfirm.cancelLabel')})</label>
+        <input type="text" id="ec-cancel-template" placeholder="template_xxxxxxx" value="${escapeHtml(cfg.cancelTemplateId||'')}" style="font-family:monospace">
+        <small style="color:var(--muted)">${t('mn.emailConfirm.cancelTemplateHint')}</small>
       </div>
       <div class="field" style="margin-bottom:10px">
         <label>Public Key</label>
@@ -2904,30 +2909,31 @@ function renderEmailConfirmCard(){
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveEmailConfirmConfig()"><i class="ti ti-device-floppy"></i> ${t('common.save')}</button>
         <button class="btn btn-sm" onclick="testEmailConfirmConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendTest')}</button>
+        <button class="btn btn-sm" onclick="testEmailCancelConfig()"><i class="ti ti-send"></i> ${t('mn.emailConfirm.sendCancelTest')}</button>
       </div>
       <div id="ec-test-status" style="font-size:12.5px;color:var(--muted);margin-top:8px"></div>
     </div>
   `;
 }
 
-function saveEmailConfirmConfig(){
-  DB.business.emailConfirm = {
+function readEmailConfirmFormConfig(){
+  return {
     enabled: document.getElementById('ec-enabled').checked,
     serviceId: document.getElementById('ec-service').value.trim(),
     templateId: document.getElementById('ec-template').value.trim(),
+    cancelTemplateId: document.getElementById('ec-cancel-template').value.trim(),
     publicKey: document.getElementById('ec-pubkey').value.trim()
   };
+}
+function saveEmailConfirmConfig(){
+  DB.business.emailConfirm = readEmailConfirmFormConfig();
   saveDB();
   showToast(t('msg.payConfigSaved'));
 }
 
 async function testEmailConfirmConfig(){
   const statusEl = document.getElementById('ec-test-status');
-  const cfg = {
-    serviceId: document.getElementById('ec-service').value.trim(),
-    templateId: document.getElementById('ec-template').value.trim(),
-    publicKey: document.getElementById('ec-pubkey').value.trim()
-  };
+  const cfg = readEmailConfirmFormConfig();
   if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFields')); return; }
   const testTo = prompt(t('mn.emailConfirm.testPrompt'));
   if(!testTo) return;
@@ -2936,6 +2942,23 @@ async function testEmailConfirmConfig(){
     await sendReservationConfirmationEmail({
       clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
       date: todayStr(), time: '20:00', people: 2, tableName: t('mn.emailConfirm.testTableName')
+    }, cfg);
+    statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
+  }catch(e){
+    statusEl.innerHTML = `<span style="color:var(--red)"><i class="ti ti-x"></i> ${t('mn.emailConfirm.testFailed')}: ${escapeHtml(e.message||'')}</span>`;
+  }
+}
+async function testEmailCancelConfig(){
+  const statusEl = document.getElementById('ec-test-status');
+  const cfg = readEmailConfirmFormConfig();
+  if(!cfg.serviceId || !cfg.cancelTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsCancel')); return; }
+  const testTo = prompt(t('mn.emailConfirm.testPrompt'));
+  if(!testTo) return;
+  statusEl.textContent = t('mn.emailConfirm.sending');
+  try{
+    await sendCancellationEmail(testTo, {
+      type: t('mn.emailConfirm.type.reserva'), client_name: t('mn.emailConfirm.testClientName'),
+      date: todayStr(), time: '20:00', people: 2
     }, cfg);
     statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
   }catch(e){
@@ -2965,6 +2988,38 @@ function sendReservationConfirmationEmail(reservation, overrideCfg){
       table_name: reservation.tableName || ''
     };
     return emailjs.send(cfg.serviceId, cfg.templateId, params, {publicKey: cfg.publicKey});
+  });
+}
+
+// Mismo mecanismo que sendReservationConfirmationEmail, pero para avisar de
+// una CANCELACIÓN — de una reserva o de un pedido para llevar/delivery, con
+// una única plantilla compartida (cancelTemplateId) para no pedirle al
+// negocio que configure una plantilla distinta por cada caso. La plantilla
+// puede usar {{type}} ("reserva"/"pedido para llevar"/"pedido a domicilio")
+// para adaptar el texto a cuál de los dos es.
+function sendCancellationEmail(toEmail, params, overrideCfg){
+  const cfg = overrideCfg || (DB.business && DB.business.emailConfirm);
+  if(!cfg || (!overrideCfg && !cfg.enabled)) return Promise.resolve();
+  if(!cfg.serviceId || !cfg.cancelTemplateId || !cfg.publicKey) return Promise.resolve();
+  if(!toEmail) return Promise.resolve();
+  return loadEmailjsSdk().then(emailjs => emailjs.send(cfg.serviceId, cfg.cancelTemplateId, {to_email: toEmail, business_name: (DB.business && DB.business.name) || '', ...params}, {publicKey: cfg.publicKey}));
+}
+function sendReservationCancellationEmail(reservation){
+  return sendCancellationEmail(reservation && reservation.clientEmail, {
+    type: t('mn.emailConfirm.type.reserva'),
+    client_name: (reservation && reservation.clientName) || '',
+    date: (reservation && reservation.date) || '',
+    time: (reservation && reservation.time) || '',
+    people: (reservation && reservation.people) || ''
+  });
+}
+function sendOrderCancellationEmail(order){
+  return sendCancellationEmail(order && order.clienteEmail, {
+    type: order && order.tipo === 'delivery' ? t('mn.emailConfirm.type.delivery') : t('mn.emailConfirm.type.takeaway'),
+    client_name: (order && order.clienteNombre) || '',
+    date: (order && order.date) || '',
+    time: (order && order.time) || '',
+    people: ''
   });
 }
 
@@ -3199,7 +3254,7 @@ function defaultData(){
       // el propio navegador del negocio, sin backend propio). Cada negocio
       // crea su propia cuenta gratuita y pega aquí sus 3 datos — igual que
       // con ownFirebase, no es una cuenta compartida de GastroGoan.
-      emailConfirm: {enabled: false, serviceId: '', templateId: '', publicKey: ''},
+      emailConfirm: {enabled: false, serviceId: '', templateId: '', cancelTemplateId: '', publicKey: ''},
       ticket: {
         pie: '',
         mostrarDireccion: true,

@@ -1038,12 +1038,33 @@ function rejectOnlineOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
+    if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
     moveToTrash('order', order);
     logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'));
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
     saveDB();
     renderTPV();
     showToast(t('msg.orderRejected'));
+  });
+}
+
+// A diferencia de rejectOnlineOrder (que solo aplica a un pedido AÚN pendiente
+// de aceptar), esto cancela un pedido para llevar/delivery que YA está
+// aceptado y en marcha (p.ej. se ha quedado sin un ingrediente a mitad de
+// servicio). Igual que rechazar, pide PIN por ser una acción sensible que
+// borra el pedido, y avisa al cliente por email si dejó su dirección.
+function cancelAcceptedOnlineOrder(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
+    if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
+    moveToTrash('order', order);
+    logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'));
+    DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
+    saveDB();
+    closeModal();
+    renderTPV();
+    showToast(t('msg.orderCancelled'));
   });
 }
 
@@ -1850,6 +1871,7 @@ function renderTableOrderModal(orderId){
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}</h3>
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
+      ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
     </div>
     ${renderOrderClientNotesHtml(order)}

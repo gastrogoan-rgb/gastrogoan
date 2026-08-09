@@ -2352,6 +2352,7 @@ function setReservationStatus(id, status){
   // el punto por una sola visita, y dejaba un punto "fantasma" si el cliente
   // acababa siendo un no-show.
   const wasConfirmed = r.status === 'confirmada';
+  const wasCancelled = r.status === 'cancelada';
   r.status = status;
   saveDB();
   renderReservas();
@@ -2363,6 +2364,12 @@ function setReservationStatus(id, status){
   if(status === 'confirmada' && !wasConfirmed && typeof sendReservationConfirmationEmail === 'function'){
     const table = r.tableId ? DB.tables.find(t=>t.id===r.tableId) : null;
     sendReservationConfirmationEmail({...r, tableName: table ? table.name : ''}).catch(()=>{});
+  }
+  // Igual con la cancelación: solo se avisa la primera vez que pasa a
+  // 'cancelada' (cubre tanto cancelar una ya confirmada como rechazar una
+  // que estaba pendiente — para el cliente es la misma noticia).
+  if(status === 'cancelada' && !wasCancelled && typeof sendReservationCancellationEmail === 'function'){
+    sendReservationCancellationEmail(r).catch(()=>{});
   }
 }
 
