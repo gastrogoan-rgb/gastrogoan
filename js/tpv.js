@@ -901,11 +901,18 @@ function renderTPV(){
   const box = document.getElementById('tpv-content');
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
 
+  // Orden pensado para tablet: lo primero que ve un camarero al entrar debe
+  // ser lo que usa constantemente (mesas, avisos urgentes), no las cifras
+  // del día — eso lo mira sobre todo el dueño, de vez en cuando, no hace
+  // falta que ocupe la parte más visible de la pantalla en cada entrada.
   box.innerHTML = `
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
-    ${renderTpvKpis()}
     ${renderLastCallBanner()}
+    ${renderTpvPendingOnline()}
+    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
+    ${renderTpvToGo(tiposServicio)}
+    ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
@@ -915,9 +922,6 @@ function renderTPV(){
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
     </div>
-    ${renderTpvPendingOnline()}
-    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
-    ${renderTpvToGo(tiposServicio)}
   `;
 }
 
