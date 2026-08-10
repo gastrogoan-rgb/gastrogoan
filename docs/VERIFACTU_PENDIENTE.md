@@ -26,16 +26,27 @@ cambiado de sitio y de forma.
   `lines[]` con `tax_base`/`tax_pctge`/`tax_amount` ya calculados por
   nosotros — la API no los calcula).
 
-**Pendiente, sin confirmar todavía**: el segundo paso para VALIDAR la factura
-recién creada y que se envíe de verdad a la AEAT. La respuesta de creación
-trae `"validated": false` y `"verifactu_status": null` — la factura se queda
-en borrador. `submitSaleToVerifactuApi()` ya crea la factura correctamente
-pero lanza un error controlado a propósito después de crearla, para que la
-venta quede en la cola de reintento en vez de darse por enviada sin estarlo.
-Cuando se retome: mirar en su Portal de Desarrolladores → categoría
-Facturación, endpoints hermanos de `POST /invoices` (algo tipo
-`POST /invoices/{id}/validate` o similar) para ver cómo se dispara el envío
-y cómo vienen la huella/QR en la respuesta.
+**Segundo paso ya confirmado también (mismo día, un rato después)**:
+`POST /invoice/{id}/validate` (sin body) — valida la factura y le asigna
+número definitivo. Probado en vivo: HTTP 200, `"validated":true`,
+`"invoicenumber":"TICKET-2026-000002"`, estado pasa a `ISSUED`. ⚠️ Su propia
+documentación avisa de que este endpoint **solo se puede llamar una vez por
+factura** — no reintentar automáticamente si falla, se quedaría la factura
+en un estado raro. Ya implementado en `submitSaleToVerifactuApi()`.
+
+**Lo único que queda pendiente de verdad**: justo después de validar,
+`verifactu_status` y `verifactu_log` siguen llegando vacíos/null — la AEAT
+los procesa de forma asíncrona, igual que en la versión antigua de la API.
+Falta:
+1. Confirmar el endpoint GET para volver a consultar la factura más tarde
+   (probablemente `GET /invoice/{id}`, a falta de probarlo).
+2. Ver los nombres reales de los campos con la huella y el QR dentro de
+   `verifactu_log` una vez la AEAT los haya procesado (puede tardar unos
+   minutos u horas, no se pudo esperar tanto en la sesión de pruebas).
+Mientras tanto, `submitSaleToVerifactuApi()` da la venta por **creada y
+validada de verdad** (que ya es un envío real y verificado a Invocash) pero
+sin huella/QR todavía — el ticket se imprime igual, solo sin ese sello por
+ahora.
 
 ## Estado actual (resto, sin cambios desde el 31/07)
 

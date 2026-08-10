@@ -4071,10 +4071,28 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
   if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de factura');
   sale.verifactuInvoiceId = item.id;
 
-  // Todavía sin confirmar cómo se dispara la validación/envío a la AEAT
-  // (ver aviso arriba) — se deja en cola para reintentar, no se marca como
-  // enviada de verdad hasta tener ese paso confirmado.
-  throw new Error(`VeriFactuAPI: factura #${item.id} creada correctamente, pendiente de confirmar el paso de validación/envío a la AEAT`);
+  // Validar la factura (dispara la generación del número definitivo y el
+  // envío a la AEAT) — CONFIRMADO en vivo el 10/08/2026: HTTP 200,
+  // "validated":true, número de factura asignado. OJO: este endpoint solo
+  // se puede llamar UNA VEZ por factura (su propia documentación lo avisa),
+  // así que si esto falla NO se debe reintentar creando o validando de
+  // nuevo la misma factura — solo queda registrada la incidencia.
+  const validateRes = await fetch(`${apiBase}/invoice/${item.id}/validate`, {method: 'POST', headers});
+  if(!validateRes.ok) throw new Error(`VeriFactuAPI (validar factura #${item.id}) respondió ${validateRes.status} — NO reintentar automáticamente, revisar a mano en su panel`);
+  const validated = await validateRes.json();
+  const vItem = validated.data && validated.data.items && validated.data.items[0];
+
+  // TODO (sin confirmar todavía): tras validar, verifactu_status/verifactu_log
+  // llegan vacíos — la AEAT los procesa de forma asíncrona. Falta confirmar
+  // el endpoint GET para consultarlos más tarde y los nombres exactos de los
+  // campos de huella/QR dentro de verifactu_log. Hasta entonces, se da la
+  // factura por CREADA Y VALIDADA (lo que sí es cierto y verificado) pero
+  // sin huella/QR todavía — el ticket se imprime igual, solo sin ese sello.
+  return {
+    invoiceId: (vItem && vItem.invoicenumber) || item.id,
+    hash: null,
+    qrData: null,
+  };
 }
 
 // FacturaHub: flujo documentado públicamente (crear factura → emitir a
