@@ -84,49 +84,56 @@ Con esto, aunque se llame a cualquiera de esas funciones directamente desde la c
 
 ### 🟠 ALTO
 
-#### A1. El hash de PIN de empleado es trivialmente crackable
+#### A1. El hash de PIN de empleado es trivialmente crackable — ✅ **RESUELTO (parcial, ver alcance)**
+**Fix aplicado** (10/08/2026): la sal de `hashPin` ya no es una constante global — incluye el código de licencia del propio negocio (`DB.license.code`), distinto por instalación. Confirmado con test real: una tabla arcoíris calculada contra un negocio ya no descifra nada de otro negocio distinto. **Lo que sigue sin resolver, a propósito**: el límite físico de 10.000 combinaciones para un PIN de 4 dígitos no depende de la sal — conociendo el código de UN negocio concreto (que no es secreto, se comparte con los empleados por diseño), su PIN se sigue pudiendo romper al instante. Cerrar esto del todo necesitaría además un límite de intentos fallidos en la propia UI, no implementado esta noche por ser un cambio de UX más amplio (¿cuántos intentos? ¿qué pasa al superarlo?) que merece decidirse aparte.
 **Módulo**: `js/core.js:1635-1644` (`hashPin`).
 **Verificado con**: test real, `test/audit-active.mjs` (sección D) — ✅ pasa: un PIN de 4 dígitos se recupera del hash en 54 ms probando las 10.000 combinaciones posibles.
 **Descripción**: `hashPin` usa FNV-1a con una sal **fija e idéntica para todas las instalaciones** (`'GG2024$p'`), embebida en el JS del cliente. Con solo 10.000 PINs posibles y sal pública, una tabla arcoíris de 10.000 entradas descifra cualquier PIN al instante — y sirve para todos los negocios por igual, porque la sal no varía.
 **Impacto real**: quien tenga acceso al JS (cualquiera) y a los datos sincronizados de un negocio (el propio empleado, o alguien con el `tenantId`) puede recuperar el PIN real de cualquier compañero, no solo intuirlo.
 **Fix sugerido**: usar una sal por negocio (derivada del `tenantId`, que sí es distinto por instalación) en vez de una constante global, y/o subir a un algoritmo lento (PBKDF2/bcrypt vía Web Crypto) en lugar de un hash rápido — aunque con solo 10.000 combinaciones posibles, ningún hash por sí solo es suficiente sin además limitar los intentos de PIN incorrecto en la propia UI (rate limiting local).
 
-#### A2. Los PINs por defecto se guardan en texto plano hasta que el empleado los cambia
+#### A2. Los PINs por defecto se guardan en texto plano hasta que el empleado los cambia — ✅ **RESUELTO (empleados; PIN de negocio antes de configurarlo, sin tocar — ver alcance)**
+**Fix aplicado** (10/08/2026): el PIN por defecto de un empleado (`'1234'`) se guarda ya hasheado desde el momento en que se crea o se resetea, tanto en el alta de un empleado nuevo como al recuperar datos antiguos sin `pin` al cargar la DB. **No se tocó** el PIN de negocio en `defaultData()` (el que existe antes de que el propietario configure uno real, con `pinSet:false`) porque en ese punto concreto `DB.license` puede no estar cargado todavía — la ventana de exposición ahí es además mucho más corta (se resuelve en el primer login real), así que se dejó fuera para no arriesgar un fallo en el arranque de la app por una ganancia pequeña.
 **Módulo**: `js/hr.js:2834` (reset a `'1234'`), `js/core.js:3325-3326`, `js/hr.js:3013-3020` (`pinMatchesEmployeeOrBusiness`, que contempla explícitamente ambos formatos, con y sin prefijo `H:`).
 **Verificado con**: solo lectura de código.
 **Descripción**: el PIN por defecto (`1234`) y cualquier PIN reseteado se guardan sin hashear hasta el primer cambio del empleado. Esos datos viajan a Firebase igual que el resto de la base de datos del negocio.
 **Impacto real**: ventana de exposición real cada vez que se da de alta o se resetea un PIN, hasta que el propio empleado lo cambia — que en la práctica puede no pasar nunca si nadie se lo recuerda.
 **Fix sugerido**: hashear también el valor por defecto al crearlo, en vez de esperar al primer cambio manual.
 
-#### A3. Voids de línea (antes de cobrar) no revierten el stock ya descontado
+#### A3. Voids de línea (antes de cobrar) no revierten el stock ya descontado — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): tanto `confirmVoidLine` como `cancelAcceptedOnlineOrder` ahora restituyen el stock de plato e ingredientes/elaboraciones exactamente por la cantidad que de verdad se había "marchado" (no toda la línea, si solo se había marchado una parte), reutilizando el mismo helper `restockForVoidedItems` que ya se había creado para B4 (anular una venta cobrada).
 **Módulo**: `js/tpv.js:2957-2995` (`confirmVoidLine`), y `cancelAcceptedOnlineOrder` (`tpv.js:1069-1082`).
 **Verificado con**: solo lectura de código.
 **Descripción**: cuando se "marcha" una línea a cocina, se llama a `decrementDishStock`. Si esa línea se anula después (pedido mal tomado, cliente cambia de opinión), el void queda registrado en `DB.voidLog` pero el stock descontado **no se restituye**.
 **Impacto real**: el contador de raciones disponibles de un plato con stock limitado queda permanentemente corto cada vez que esto ocurre, acumulando error durante el servicio sin que nadie lo note hasta que el plato se marca "no disponible" estando realmente disponible.
 **Fix sugerido**: añadir la reversión de stock (`p.stock = Math.min(original, p.stock + qty)`) dentro de `confirmVoidLine` y `cancelAcceptedOnlineOrder`, simétrica a `decrementDishStock`.
 
-#### A4. Borrar una receta base usada indirectamente no avisa, y deja referencias colgando que devalúan el coste silenciosamente
+#### A4. Borrar una receta base usada indirectamente no avisa, y deja referencias colgando que devalúan el coste silenciosamente — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): `recipesUsingBaseRecipe` ahora es recursiva (sigue la cadena completa de dependencias, no solo el nivel directo) — verificado con test real (base A dentro de base B dentro del plato C: borrar A avisa de B y C). Además, `confirmDeleteRecipe` limpia las líneas de otras recetas que quedarían apuntando a un `baseRecipeId` ya borrado, en vez de dejarlas devolver coste 0 en silencio — también verificado con test real.
 **Módulo**: `js/recipes.js:711-777` (`recipesUsingBaseRecipe`, `deleteRecipe`/`confirmDeleteRecipe`), coste en `js/recipes.js:27-31` (`recipeIngredientCost`).
 **Verificado con**: solo lectura de código.
 **Descripción**: `recipesUsingBaseRecipe` solo detecta referencias **directas** (nivel 1). Una base usada dentro de otra base, a su vez usada en un plato, no genera ningún aviso al borrar la primera. Además, al confirmar el borrado, las líneas de receta que apuntan a ese `baseRecipeId` no se limpian — quedan huérfanas. `recipeIngredientCost` maneja esa referencia nula devolviendo silenciosamente coste `0` en vez de avisar.
 **Impacto real**: el food cost mostrado para platos que dependen (aunque sea indirectamente) de esa base queda infravalorado sin ningún aviso posterior al primer momento del borrado — un propietario podría estar tomando decisiones de precio con márgenes de coste incorrectos sin saberlo.
 **Fix sugerido**: hacer `recipesUsingBaseRecipe` recursivo (seguir la cadena de dependencias, no solo el nivel 1), y limpiar (o marcar visiblemente como "receta base eliminada") las líneas huérfanas en vez de dejarlas devolver coste 0 en silencio.
 
-#### A5. `fichaModalState` puede construirse a partir de un `getRecipe()` sin comprobar null
+#### A5. `fichaModalState` puede construirse a partir de un `getRecipe()` sin comprobar null — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): `openFichaModal` comprueba ahora que la ficha (`getFicha(id)`) o la receta (`getRecipe(recipeId)`) existan de verdad antes de usarlas — si ya no existen (borradas desde otro dispositivo), avisa con un toast y no revienta.
 **Módulo**: `js/recipes.js:1025` (aprox., citado por el agente de auditoría de integridad).
 **Verificado con**: solo lectura de código.
 **Descripción**: si se abre la ficha técnica de una receta cuyo id ya no existe (borrada en otra pestaña/dispositivo mientras la UI seguía mostrándola), `getRecipe(recipeId)` devuelve `undefined` y el código lo desreferencia directamente (`r.name`, `r.id`).
 **Impacto real**: crash de la UI (pantalla en blanco / error) en un escenario perfectamente plausible con varios dispositivos sincronizando en un mismo negocio.
 **Fix sugerido**: `const r = getRecipe(recipeId); if(!r) { showToast(...); return; }` antes de usarla.
 
-#### A6. No hay cola de reintento persistente para escrituras offline — solo el buffer en memoria del SDK de Firebase
+#### A6. No hay cola de reintento persistente para escrituras offline — solo el buffer en memoria del SDK de Firebase — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): la causa raíz real, verificada con test, era más concreta de lo que sugería el título — `flushCloudSync()` marcaba un bloque como "ya sincronizado" (`lastSyncedSnapshot`) de forma **optimista**, antes de que Firebase confirmara el envío. Si el envío fallaba, ese bloque quedaba marcado como sincronizado sin estarlo, y nada volvía a reintentarlo jamás. Ahora el snapshot solo se actualiza tras la confirmación real (`.then()`), un fallo programa un reintento automático cada 15s, y un listener de `online` reintenta en cuanto vuelve la conexión — sin esperar al temporizador. Verificado con test real: un primer intento fallido NO marca el bloque como sincronizado; un segundo intento (reintento) con éxito sí lo marca.
 **Módulo**: `js/core.js` (`saveDB`:3358, `scheduleCloudSync`:3381, `flushCloudSync`:3396) — no se encontró ningún listener `online`/`offline` ni cola propia.
 **Verificado con**: solo lectura de código.
 **Descripción**: los datos se guardan primero en IndexedDB (esto sí es seguro localmente), pero el envío a Firebase depende enteramente de que el SDK reconecte con la pestaña **todavía abierta**. Si la tablet se queda sin conexión y se cierra o recarga la pestaña antes de reconectar, ese envío pendiente se pierde sin más reintento que el que el propio SDK intentaría si la pestaña siguiera viva.
 **Impacto real**: en el escenario exacto que preocupa ("wifi cayendo un viernes noche"), el dato sobrevive en el dispositivo que lo creó, pero no hay garantía de que llegue nunca a la nube ni de que otros dispositivos del negocio lo vean, más allá del indicador de estado (ver hallazgo Medio M3).
 **Fix sugerido**: mantener una cola explícita de operaciones pendientes en IndexedDB (no solo el snapshot de datos) que se reintente activamente al recuperar conexión, independientemente de si la pestaña se recargó.
 
-#### A7. Edición concurrente del mismo registro: gana el último en escribir, sin fusión ni aviso
+#### A7. Edición concurrente del mismo registro: gana el último en escribir, sin fusión ni aviso — ✅ **RESUELTO (con aviso, no con fusión — ver alcance)**
+**Fix aplicado** (10/08/2026): re-lectura del código mostró que `applyRemoteBlock` (el camino habitual de aplicar cambios remotos) **ya usaba** `mergeArraysById` para los arrays fusionables — la primera versión de este hallazgo lo había pasado por alto. El problema real que sí seguía sin resolver: `mergeArraysById` se queda con la versión remota **entera** de un registro si hay colisión, sin fusión campo a campo (fusionar de verdad, por ejemplo, dos ediciones distintas de la misma comanda, es arriesgado sin arriesgarse a corromper el pedido — no se intentó esa fusión esta noche por prudencia). Lo que sí se añadió: una detección real de colisión (¿cambió el registro localmente sin subir, Y también cambió en remoto, Y no es el mismo cambio?) que avisa con un toast y deja constancia en `DB.auditLog`, en vez de sobrescribir en silencio sin que nadie se entere — verificado con test real (colisión real avisa; cambio remoto normal sin edición local pendiente no avisa de nada).
 **Módulo**: `js/core.js:2249` (`mergeRemoteIntoLocal`), `:2234` (`attachCloudChildListeners`), `:1601` (`mergeArraysById`, usado solo en algunos caminos, no en la escritura habitual).
 **Verificado con**: solo lectura de código.
 **Descripción**: las escrituras se hacen por bloque completo (todo el array `tpvOrders`, todo `sales`, etc.), no por campo. La reconciliación remota compara si el JSON cambió, no marcas de tiempo por registro.
@@ -221,33 +228,33 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 
 ### Recuento de hallazgos por severidad
 
-**Actualizado 10/08/2026, tras la segunda ronda de correcciones y la reevaluación de B2**: los 5 hallazgos Bloqueantes originales están resueltos.
+**Actualizado 10/08/2026, tras la tercera ronda de correcciones**: los 5 hallazgos Bloqueantes y los 7 Altos de la auditoría original están todos resueltos (varios con matices de alcance documentados en su ficha — "resuelto" no siempre significa "cerrado sin ningún límite conocido", léase cada ficha).
 
 | Severidad | Cantidad | IDs |
 |---|---|---|
 | 🔴 Bloqueante — abierto | 0 | — |
 | 🔴 Bloqueante — resuelto | 5 | B1 (confirmado en vivo), B2 (resuelto por diseño), B3 (parcial), B4, B5 |
-| 🟠 Alto | 7 | A1, A2, A3, A4, A5, A6, A7 |
+| 🟠 Alto — abierto | 0 | — |
+| 🟠 Alto — resuelto | 7 | A1 (parcial), A2 (parcial), A3, A4, A5, A6, A7 (parcial) |
 | 🟡 Medio | 7 | M1, M2, M3, M4, M5, M6, M7 |
 | ⚪ Bajo | 2 | J1/J3, J2 |
 
-### Veredicto: **LISTO CON RESERVAS** (sin Bloqueantes abiertos; quedan Altos y Medios por decidir si se abordan antes de vender)
+### Veredicto: **LISTO CON RESERVAS** (sin Bloqueantes ni Altos abiertos; quedan Medios por decidir si se abordan antes de vender)
 
-Los 5 hallazgos Bloqueantes de la auditoría original están resueltos:
+Los 5 hallazgos Bloqueantes y los 7 Altos de la auditoría original están resueltos:
 
 - **B1** (licencias falsificables): resuelto y **confirmado en vivo contra el Firebase real de producción** — un código inventado con su contraseña recalculada correctamente se rechazó; el código generado legítimamente se aceptó. El hallazgo del informe verificado con mayor grado de confianza: no solo lectura de código, no solo test simulado, sino el ataque real ejecutado y bloqueado contra la infraestructura de producción.
-- **B2** (licencia sin límite de negocios): reevaluado tras aclarar con el negocio la política real deseada ("1 código = 1 negocio, tantos dispositivos como haga falta"). El diseño actual (`tenantId` como función determinista y única del código) ya la garantiza matemáticamente, sin necesitar ningún cambio de código — la primera versión de este hallazgo asumía un requisito distinto (limitar nº de dispositivos) que no era el real.
-- **B3, B4 y B5**: resueltos y verificados con tests reales donde fue posible (ver fichas arriba para el alcance exacto de cada uno, especialmente el matiz de B3).
+- **B2** (licencia sin límite de negocios): reevaluado tras aclarar con el negocio la política real deseada ("1 código = 1 negocio, tantos dispositivos como haga falta"). El diseño actual (`tenantId` como función determinista y única del código) ya la garantiza matemáticamente, sin necesitar ningún cambio de código.
+- **B3, B4, B5**: resueltos y verificados con tests reales donde fue posible.
+- **A1-A7** (PINs, stock en anulaciones, recetas base huérfanas, crashes por referencias borradas, sincronización sin reintento ni aviso de colisión): resueltos y verificados con tests reales donde fue posible — ver cada ficha arriba para el alcance exacto, varios quedan "resueltos con matices" documentados explícitamente (p.ej. A1: la sal ya no es global, pero 10.000 PINs posibles sigue siendo un límite físico; A7: se avisa de colisiones reales, pero no se fusionan campo a campo por prudencia).
 
-**Con esto ya no hay ningún Bloqueante abierto**, así que el veredicto pasa de NO LISTO a LISTO CON RESERVAS: quedan 7 hallazgos Altos (A1-A7, sobre todo A3/A4/A6/A7 — stock que se descuadra en anulaciones, coste de recetas infravalorado en silencio, pérdida/colisión de datos entre tablets) que conviene resolver antes de vender a negocios con varios dispositivos simultáneos, el caso de uso principal de la app, pero ninguno de ellos es ya un impedimento absoluto para un primer lanzamiento controlado (ej. unos pocos negocios piloto).
-
-Los Altos (A1-A7) no bloquean por sí solos un lanzamiento, pero varios de ellos (A3 stock que se descuadra solo, A4 coste de recetas infravalorado en silencio, A6/A7 pérdida/colisión de datos entre dispositivos) son justo el tipo de fallo que un hostelero real notará semanas después, sin saber por qué sus números no cuadran — conviene resolver al menos A3, A4 y A6/A7 antes de vender a negocios con varios dispositivos simultáneos, que es el caso de uso principal de la app.
+**Con esto no queda ningún Bloqueante ni Alto abierto.** Solo quedan los 7 Medios (M1-M7) y 2 Bajos (J1/J3, J2), ninguno de los cuales impide un lanzamiento — son mejoras de pulido (avisos de sincronización más finos, límites de tamaño de histórico, textos i18n sueltos, guarda de re-entrada en `finalizeCharge`) que se pueden abordar con calma después del lanzamiento, no antes.
 
 ### Qué se ha verificado con test real (alta confianza)
-Todos los hallazgos Bloqueantes de licencias/login (B1, B2, B3) y el de PINs (A1) — ejecutados de verdad contra el código real del repo, no supuestos. También toda la lógica de IVA/descuento y stock de la sesión anterior (`smoke.test.mjs`).
+Todos los hallazgos Bloqueantes de licencias/login (B1 — además confirmado en vivo contra Firebase de producción, B2, B3) y todos los Altos de PINs/recetas/sincronización (A1, A4, A6, A7) — ejecutados de verdad contra el código real del repo (`test/audit-active.mjs`, `test/smoke.test.mjs`), no supuestos. También toda la lógica de IVA/descuento, stock y el total facturado a VeriFactu sin propina (B5).
 
 ### Qué se ha verificado solo por lectura de código (confianza menor)
-El resto de hallazgos — money flow de TPV (B4, B5, J1/J3), integridad referencial (A4, A5, M1), sincronización (A6, A7, M3, M4), tiempo real de cocina y reservas (M5, M6), build/i18n (M7). Son hallazgos fundamentados en trazar el código real con citas exactas, pero no se han reproducido con un navegador y un Firebase reales.
+B4 (anulación de venta), A2, A3, A5 (se aplicó el fix y se comprobó sintaxis/comportamiento manualmente, pero sin un test automatizado que lo demuestre de forma aislada), y el resto de hallazgos Medios/Bajos — money flow de TPV (J1/J3), integridad referencial (M1), sincronización (M3, M4), tiempo real de cocina y reservas (M5, M6), build/i18n (M7). Son hallazgos y fixes fundamentados en trazar el código real con citas exactas, pero no se han reproducido con un navegador y un Firebase reales.
 
 ### Zonas de riesgo fuera del alcance de esta auditoría
 - Carga real con muchos dispositivos/usuarios simultáneos sobre un proyecto Firebase real (esta auditoría no tuvo acceso a un proyecto Firebase de prueba).
