@@ -894,6 +894,7 @@ async function idbSet(key, value){
    a partir de su clave de licencia.
    ============================================================ */
 let cloudRef = null;
+let socketConnected = false; // último valor conocido de .info/connected — ver flushCloudSync
 let cloudConfig = null;
 let platformAuthPromise = null;
 // Proyecto Firebase compartido de la plataforma GastroGoan, usado SOLO para
@@ -1713,6 +1714,12 @@ function updateSyncBadge(state){
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
   if(state === 'online'){ el.textContent = `☁ ${t('gate.cloudConnectedShort')}`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+  // 'pending': antes el badge solo distinguía conectado/desconectado, no si
+  // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
+  // siguen en camino — con esto queda un estado visible intermedio, en vez
+  // de que "conectado" dé a entender (sin garantizarlo) que todo ya está
+  // guardado.
+  else if(state === 'pending'){ el.textContent = `☁ ${t('gate.cloudPending')}`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
   else if(state === 'offline'){ el.textContent = `☁ ${t('gate.offline')}`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
   else { el.textContent = `☁ ${t('gate.cloudError')}`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
 }
@@ -2451,7 +2458,8 @@ function startCloudSync(tenantId){
       updateSyncBadge('error');
     });
     firebase.database().ref('.info/connected').on('value', s => {
-      updateSyncBadge(s.val() ? 'online' : 'offline');
+      socketConnected = !!s.val();
+      updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
     console.error('Error iniciando la nube', e);
@@ -3482,6 +3490,12 @@ function pushAllToCloud(){
 function scheduleCloudSync(){
   schedulePublicMirrorSync();
   if(!cloudRef) return;
+  // Antes el badge solo decía "conectado/desconectado" del socket, sin
+  // distinguir si el cambio que se acaba de hacer ya llegó de verdad o
+  // sigue en camino (los 800ms de debounce, más lo que tarde la subida).
+  // Si el socket está conectado, se muestra ahora ese estado intermedio
+  // en vez de dejar "conectado" dando a entender que ya está guardado.
+  if(socketConnected) updateSyncBadge('pending');
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(flushCloudSync, CLOUD_SYNC_DELAY);
 }
@@ -3531,6 +3545,12 @@ function flushCloudSync(){
   try{
     cloudRef.update(updates).then(() => {
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+      // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
+      // del último sincronizado — si mientras tanto se hizo otro cambio
+      // local (o el reintento de otro bloque sigue en curso), se queda en
+      // "pending" hasta que de verdad no falte nada por confirmar.
+      const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== JSON.stringify(DB[key]));
+      if(!stillPending && socketConnected) updateSyncBadge('online');
     }).catch(onFail);
   }catch(e){
     onFail(e);

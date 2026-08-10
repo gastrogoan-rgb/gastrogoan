@@ -17,6 +17,7 @@ const coreSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'ut
 // DOM mínimo: solo lo que isOwnerSession() necesita (document.body.classList).
 function makeFakeDocument(){
   const classes = new Set();
+  const syncBadgeEl = {textContent: '', style: {}};
   return {
     body: {
       classList: {
@@ -25,8 +26,9 @@ function makeFakeDocument(){
         contains: (c) => classes.has(c),
       },
     },
-    getElementById: () => null,
+    getElementById: (id) => (id === 'sync-badge' ? syncBadgeEl : null),
     _classes: classes,
+    _syncBadgeEl: syncBadgeEl,
   };
 }
 
@@ -87,6 +89,7 @@ function __setLastSyncedSnapshot(s){ lastSyncedSnapshot = s; }
 function __getLastSyncedSnapshot(){ return lastSyncedSnapshot; }
 function __setDB(d){ DB = d; }
 function __getDB(){ return DB; }
+function __setSocketConnected(v){ socketConnected = v; }
 function __getDbReadyPromise(){ return dbReadyPromise; }
 function __clearCloudSyncRetryTimer(){ clearTimeout(cloudSyncRetryTimer); cloudSyncRetryTimer = null; }`,
     sandbox,
@@ -299,6 +302,26 @@ await testAsync('warnIfConcurrentEditLost NO avisa si solo cambió un lado (caso
   const remote = [{id: 1, items: [{name:'Original'}, {name:'Cambio normal del otro dispositivo'}]}];
   sandbox.warnIfConcurrentEditLost('tpvOrders', local, remote);
   assert.equal(toasts.length, 0, 'un cambio remoto normal (sin edición local pendiente) no debería avisar de nada');
+});
+
+console.log('\n--- G. Indicador de sincronización: ¿distingue "conectado" de "guardado de verdad"? ---\n');
+
+await testAsync('FIX M3: el badge pasa a "pending" al programar un envío, y solo vuelve a "online" cuando se confirma', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setSocketConnected(true);
+  sandbox.__setDB({ingredients: ['dato nuevo']});
+  sandbox.__setLastSyncedSnapshot({ingredients: JSON.stringify([])});
+  sandbox.__setCloudRef({ update: async () => {} }); // éxito inmediato
+  sandbox.scheduleCloudSync();
+  assert.equal(sandbox.document._syncBadgeEl.textContent, '☁ gate.cloudPending',
+    'nada más programar el envío, el badge debe mostrar el estado intermedio, no "conectado" sin más');
+  sandbox.document._syncBadgeEl.textContent = ''; // limpia para distinguir el próximo cambio
+  await sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(sandbox.document._syncBadgeEl.textContent, '☁ gate.cloudConnectedShort',
+    'tras confirmarse el envío y no quedar nada pendiente, debe volver a "conectado"');
+  console.log('   → badge: pending mientras se envía → online solo tras confirmarse de verdad');
 });
 
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
