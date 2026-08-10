@@ -43,6 +43,11 @@ td.key{font-family:monospace;font-size:11px}
   </header>
 
   <div class="card">
+    <button class="copy" style="width:100%" onclick="ensureAdminLogin()">🔐 Iniciar sesión de administrador (necesario para que la licencia sea válida de verdad)</button>
+    <p id="admin-login-status" class="muted" style="margin-top:8px">Sin sesión de administrador todavía — los códigos que generes no se podrán activar en la app hasta iniciarla.</p>
+  </div>
+
+  <div class="card">
     <h2>1 · Genera código + contraseña para un cliente nuevo</h2>
     <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
     <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
@@ -107,27 +112,41 @@ function generateBizCode(){
 }
 
 /* ============================================================
-   UNICIDAD REAL DE CÓDIGOS — proyecto Firebase COMPARTIDO de la
-   plataforma (el mismo que ya usa la app para la lista de licencias
-   revocadas y la web pública de reservas/pedidos), en la ruta
+   UNICIDAD REAL DE CÓDIGOS + LISTA BLANCA DE LICENCIAS — proyecto
+   Firebase COMPARTIDO de la plataforma (el mismo que ya usa la app para
+   la web pública de reservas/pedidos), en la ruta
    gastrogoan/issuedCodes/{code}. Debe ser el MISMO PLATFORM_FIREBASE_CONFIG
    que en js/core.js — si cambia allí, cámbialo también aquí.
 
-   Requiere que las reglas de seguridad de ese proyecto permitan ESCRIBIR
-   en gastrogoan/issuedCodes/$code a cualquier usuario autenticado (incluida
-   la autenticación anónima), solo si el nodo aún no existe, por ejemplo:
+   Desde la auditoría del 10/08/2026 esta lista ya NO es solo para evitar
+   códigos repetidos: la app (js/core.js, activateBusinessLicense) exige
+   que el código exista aquí para poder activarse, así que ya no basta con
+   recalcular código+contraseña a mano para activar una copia sin pagar
+   (hallazgo B1 de AUDITORIA_PRELANZAMIENTO.md). Por eso las reglas de
+   seguridad de este nodo tienen que ser MÁS estrictas que antes: lectura
+   abierta (la necesita cualquier instalación de la app para poder
+   activarse), pero escritura restringida a un único usuario administrador
+   con email/contraseña — NUNCA a cualquier sesión anónima (si se dejara
+   "auth != null" sin más, cualquiera podría auto-emitirse un código
+   válido sin pasar por este generador ni pagar nada). Reglas exactas a
+   pegar en la consola de Firebase (Realtime Database → Reglas) del
+   proyecto plataforma-gastrogoan:
 
      "issuedCodes": {
        "$code": {
-         ".read": false,
-         ".write": "auth != null && !data.exists()"
+         ".read": true,
+         ".write": "auth != null && auth.token.email === 'TU-EMAIL-ADMIN@ejemplo.com' && !data.exists()"
        }
      }
 
-   Sin esa regla (o sin conexión), esto falla en silencio y el generador
-   sigue funcionando igual que antes -código aleatorio sin comprobar
-   duplicados-, con un aviso visible de que no se pudo verificar. Nunca
-   bloquea la generación de códigos, solo la hace más segura cuando puede.
+   Sustituye 'TU-EMAIL-ADMIN@ejemplo.com' por el email real que crees en
+   Firebase Authentication (Authentication → Users → Add user, con
+   contraseña) — ese es el único usuario que puede generar licencias desde
+   este archivo. Sin sesión iniciada con ese usuario, el generador sigue
+   funcionando igual que antes -código aleatorio sin comprobar
+   duplicados-, con un aviso visible de que no se pudo verificar/escribir.
+   Nunca bloquea la generación de códigos en sí, solo la hace más segura
+   cuando puede.
 */
 const PLATFORM_FIREBASE_CONFIG = {
   apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
@@ -138,6 +157,13 @@ const PLATFORM_FIREBASE_CONFIG = {
   messagingSenderId: "894218847556",
   appId: "1:894218847556:web:2fa1f699489790bb5f8311"
 };
+// A diferencia del resto de la app (que se autentica de forma anónima),
+// este generador necesita iniciar sesión como el usuario administrador
+// concreto que las reglas de Firebase autorizan a escribir en
+// issuedCodes/ — ver el bloque de comentario de arriba. Sin esa sesión,
+// sigue funcionando igual que siempre (código aleatorio sin comprobar
+// duplicados), solo que sin el registro real de "código emitido de
+// verdad" que ahora exige la app para poder activarse.
 let platformAuthPromise = null;
 function getPlatformFirebaseApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
@@ -148,12 +174,41 @@ function getPlatformFirebaseApp(){
     if(!platformAuthPromise){
       platformAuthPromise = app.auth().currentUser
         ? Promise.resolve(app)
-        : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
+        : Promise.resolve(null); // sin sesión de admin todavía: ver ensureAdminLogin()
     }
     return platformAuthPromise;
   }catch(e){
     console.error('Error iniciando la plataforma', e);
     return Promise.resolve(null);
+  }
+}
+// Pide email+contraseña del administrador (el usuario de Firebase Auth
+// creado a mano en la consola, ver comentario de arriba) e inicia sesión
+// con él. Se llama una vez al cargar la página, antes de poder generar
+// ninguna licencia — sin esto, claimUniqueBizCode() solo puede comprobar
+// duplicados (lectura, abierta a cualquiera) pero nunca escribir el
+// registro real de "código emitido".
+async function ensureAdminLogin(){
+  const statusEl = document.getElementById('admin-login-status');
+  try{
+    let app;
+    try{ app = firebase.app('platform'); }
+    catch(e){ app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
+    if(app.auth().currentUser){
+      platformAuthPromise = Promise.resolve(app);
+      if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada.';
+      return;
+    }
+    const email = prompt('Email de administrador (Firebase Authentication → Users):');
+    if(!email) return;
+    const password = prompt('Contraseña de ese usuario:');
+    if(!password) return;
+    await app.auth().signInWithEmailAndPassword(email, password);
+    platformAuthPromise = Promise.resolve(app);
+    if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada.';
+  }catch(e){
+    console.error('Error iniciando sesión de administrador', e);
+    if(statusEl) statusEl.textContent = '⚠️ No se pudo iniciar sesión de administrador (' + (e.message||e.code||'error') + '). Los códigos se generarán sin registrar en la plataforma.';
   }
 }
 // Reclama un código como "ya emitido" de forma atómica (transaction: solo

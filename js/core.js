@@ -226,11 +226,11 @@ function renderOwnerAccessFormHtml(){
 // contraseña queda guardada como el acceso de propietario de este
 // dispositivo — se puede cambiar después desde el panel de negocios
 // (changeOwnerAccessPassword), sin tener que volver a escribir la de compra.
-function confirmOwnerAccessSetup(){
+async function confirmOwnerAccessSetup(){
   const code = document.getElementById('acc-owner-code').value.trim();
   const password = document.getElementById('acc-owner-pass').value.trim();
-  const lic = activateBusinessLicense(code, password);
-  if(!lic){ showToast(t('access.badCredentials')); return; }
+  const {lic, offline} = await activateBusinessLicense(code, password);
+  if(!lic){ showToast(t(offline ? 'access.licenseOffline' : 'access.badCredentials')); return; }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   // "owner-setup" solo se ve cuando este dispositivo aún no tenía ningún
@@ -436,17 +436,17 @@ function switchToBusiness(slotId){
 // Registrar un negocio o sucursal nuevo exige una licencia nueva (comprada
 // aparte): pide el código+contraseña que se entrega en esa compra, igual
 // que al activar la app por primera vez.
-function promptBusinessLicense(){
+async function promptBusinessLicense(){
   const code = prompt(t('gate.newBusinessCodePrompt'));
   if(!code) return null;
   const password = prompt(t('gate.newBusinessPasswordPrompt'));
   if(!password) return null;
-  const lic = activateBusinessLicense(code, password);
-  if(!lic){ alert(t('access.badCredentials')); return null; }
+  const {lic, offline} = await activateBusinessLicense(code, password);
+  if(!lic){ alert(t(offline ? 'access.licenseOffline' : 'access.badCredentials')); return null; }
   return lic;
 }
-function addNewBusiness(){
-  const lic = promptBusinessLicense();
+async function addNewBusiness(){
+  const lic = await promptBusinessLicense();
   if(!lic) return;
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
@@ -989,14 +989,64 @@ function ggBizTenantId(code){
   }
   return out.join('');
 }
-// Valida un par código+contraseña y, si es correcto, devuelve la licencia
-// lista para guardar ({code, tenantId}). null si no coincide.
-function activateBusinessLicense(code, password){
+/* ============================================================
+   LICENCIA v2 — comprobación contra la lista de códigos emitidos
+   El par código+contraseña se puede recalcular por cualquiera que tenga
+   el JS del cliente (es la naturaleza de una app 100% cliente, no hay
+   forma de evitarlo del todo sin un backend). Lo que SÍ se puede evitar es
+   que ese cálculo por sí solo baste para activar la app: además tiene que
+   existir de verdad en "gastrogoan/issuedCodes" del proyecto Firebase
+   compartido de la plataforma (plataforma-gastrogoan — el mismo
+   PLATFORM_FIREBASE_CONFIG/getPlatformFirebaseApp() de más abajo, que ya
+   usa la app para el espejo público de reservas). Esa lista solo la
+   escribe el generador de licencias (autenticado como el vendedor); el
+   cliente solo puede leerla. getPlatformFirebaseApp() se define más abajo
+   en este mismo fichero (orden de declaración de función, no de uso —
+   está disponible aquí igualmente por hoisting).
+   ============================================================ */
+// Comprueba que este código de verdad se emitió desde generador-licencias.html
+// (existe en gastrogoan/issuedCodes). null si no se pudo comprobar (sin
+// conexión) — se distingue de "false" (comprobado y no existe) porque la
+// activación en sí decide qué hacer con cada caso de forma distinta.
+async function verifyCodeIssuedOnPlatform(code){
+  const app = await getPlatformFirebaseApp();
+  if(!app) return null;
+  try{
+    const snap = await app.database().ref('gastrogoan/issuedCodes/' + code).once('value');
+    return snap.exists();
+  }catch(e){
+    console.error('Error comprobando el código contra la plataforma', e);
+    return null;
+  }
+}
+// Comprobación local pura (recalcula y compara) — necesaria pero, desde
+// que existe la lista de emitidos, ya NO suficiente por sí sola: úsala
+// solo como paso previo rápido dentro de activateBusinessLicense(), o para
+// revalidar una licencia ya guardada (isStoredLicenseValid), donde no hace
+// falta red porque la comprobación online ya se hizo una vez al activar.
+function activateBusinessLicenseLocal(code, password){
   code = String(code||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   password = String(password||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(!code || !password) return null;
   if(ggBizPassword(code) !== password) return null;
   return {code, tenantId: ggBizTenantId(code)};
+}
+// Valida un par código+contraseña contra el cálculo local Y contra la
+// lista de códigos realmente emitidos. Devuelve {lic, offline} — lic es
+// null si no es válido; offline=true si no se pudo comprobar el código
+// contra la plataforma por falta de conexión (para poder avisar de forma
+// distinta a "código incorrecto"). La activación es un momento puntual y
+// deliberado (dar de alta un negocio nuevo), así que aquí SÍ se exige
+// conexión — a diferencia de la revocación de licencias ya activadas
+// (checkLicenseRevocation), que es fail-open a propósito para no dejar
+// tirado a un negocio que ya estaba usando la app sin wifi.
+async function activateBusinessLicense(code, password){
+  const lic = activateBusinessLicenseLocal(code, password);
+  if(!lic) return {lic: null, offline: false};
+  const issued = await verifyCodeIssuedOnPlatform(lic.code);
+  if(issued === null) return {lic: null, offline: true};
+  if(issued === false) return {lic: null, offline: false};
+  return {lic, offline: false};
 }
 
 // Una licencia guardada es válida si su tenantId es el que de verdad se
@@ -1117,7 +1167,7 @@ function showActivationGate(){
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('access.password')}</label>
         <input id="license-password-input" type="text" placeholder="XXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
-        <button onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
+        <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
       </div>
     </div>`;
   document.body.appendChild(g);
@@ -1477,13 +1527,16 @@ function postponeNetlify(){
     else if(!DB.business.tourSeen) promptAppTour();
 }
 
-function activateLicenseFromGate(){
+async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
   const password = (document.getElementById('license-password-input').value || '').trim();
-  const lic = activateBusinessLicense(code, password);
+  const btn = document.getElementById('license-activate-btn');
+  if(btn) btn.disabled = true;
+  const {lic, offline} = await activateBusinessLicense(code, password);
+  if(btn) btn.disabled = false;
   const err = document.getElementById('license-error');
   if(!lic){
-    err.textContent = t('gate.invalidLicenseKey');
+    err.textContent = t(offline ? 'gate.licenseOffline' : 'gate.invalidLicenseKey');
     err.style.display = 'block';
     return;
   }
