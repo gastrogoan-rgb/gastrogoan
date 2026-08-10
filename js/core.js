@@ -2237,10 +2237,47 @@ function initCloud(){
    concreto de la DB (p.ej. "tpvOrders" o "clients") y refresca la
    pantalla. Se usa tanto en la primera carga como en cada actualización
    incremental posterior. */
+// Detecta el caso de colisión real: un registro (misma mesa, mismo
+// ingrediente...) que este dispositivo modificó localmente sin haberlo
+// subido todavía Y que a la vez llegó cambiado de otro dispositivo. En
+// ese caso mergeArraysById se queda con la versión remota entera y
+// descarta la local en silencio — no hay forma segura de fusionar ambas
+// versiones campo a campo sin arriesgarse a corromper el pedido, así que
+// al menos se avisa de que ha pasado, en vez de que el camarero se
+// encuentre con datos distintos sin saber por qué. Envuelto en try/catch
+// a propósito: es una mejora de aviso, nunca debe poder romper el propio
+// guardado de la sincronización si algo de este cálculo falla.
+function warnIfConcurrentEditLost(key, localArr, remoteArr){
+  try{
+    if(!lastSyncedSnapshot || !lastSyncedSnapshot[key]) return;
+    let lastSynced;
+    try{ lastSynced = JSON.parse(lastSyncedSnapshot[key]); }catch(e){ return; }
+    if(!Array.isArray(lastSynced)) return;
+    const lastById = new Map(lastSynced.filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
+    const localById = new Map((localArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
+    const remoteById = new Map((remoteArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
+    const collided = [];
+    localById.forEach((localJson, id) => {
+      if(!remoteById.has(id)) return;
+      const lastJson = lastById.get(id);
+      const remoteJson = remoteById.get(id);
+      // Colisión real: los tres difieren entre sí (local cambió desde el
+      // último sync, remoto también cambió, y no son el mismo cambio).
+      if(localJson !== lastJson && remoteJson !== lastJson && localJson !== remoteJson) collided.push(id);
+    });
+    if(collided.length && typeof showToast === 'function'){
+      showToast(t('msg.concurrentEditOverwritten').replace('${count}', collided.length));
+    }
+    if(collided.length && DB.auditLog){
+      DB.auditLog.push({id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), tipo: 'sync_conflict', desc: `${key}: ${collided.join(',')}`});
+    }
+  }catch(e){ console.error('Error detectando conflicto de sincronización', e); }
+}
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
   if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
+    warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
   }
   if(key === 'tpvOrders'){
@@ -3457,27 +3494,53 @@ function schedulePublicMirrorSync(){
   publicMirrorSyncTimer = setTimeout(syncPublicMirror, CLOUD_SYNC_DELAY);
 }
 
+// Antes, lastSyncedSnapshot se actualizaba de forma OPTIMISTA (como si el
+// envío ya hubiera llegado) justo al construir el paquete a enviar, no al
+// confirmarse de verdad. Si cloudRef.update() fallaba (wifi cayendo a
+// media noche, el caso que más preocupa), ese bloque quedaba marcado como
+// "ya sincronizado" sin estarlo — y como nada más volvía a intentarlo
+// (sin listener de reconexión ni reintento), ese cambio se podía perder
+// del todo si nadie volvía a tocar ese mismo bloque de datos antes de
+// cerrar la pestaña/dispositivo. Ahora el snapshot solo se actualiza tras
+// la confirmación real, y un fallo programa un reintento automático.
+let cloudSyncRetryTimer = null;
+const CLOUD_SYNC_RETRY_MS = 15000; // reintenta cada 15s mientras haya cambios sin confirmar
+function scheduleCloudSyncRetry(){
+  clearTimeout(cloudSyncRetryTimer);
+  cloudSyncRetryTimer = setTimeout(flushCloudSync, CLOUD_SYNC_RETRY_MS);
+}
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
   const updates = {};
+  const pendingJson = {};
   Object.keys(DB).forEach(key => {
     const json = JSON.stringify(DB[key]);
     if(lastSyncedSnapshot[key] !== json){
       updates[key] = DB[key];
-      lastSyncedSnapshot[key] = json;
+      pendingJson[key] = json;
     }
   });
-  if(Object.keys(updates).length === 0) return;
-  try{
-    cloudRef.update(updates).catch(e => {
-      console.error('Error guardando en la nube', e);
-      updateSyncBadge('error');
-    });
-  }catch(e){
+  const keys = Object.keys(updates);
+  if(keys.length === 0) return;
+  const onFail = (e) => {
     console.error('Error guardando en la nube', e);
     updateSyncBadge('error');
+    scheduleCloudSyncRetry();
+  };
+  try{
+    cloudRef.update(updates).then(() => {
+      keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+    }).catch(onFail);
+  }catch(e){
+    onFail(e);
   }
+}
+if(typeof window !== 'undefined'){
+  // Reintenta en cuanto vuelve la conexión, sin esperar a los 15s del
+  // temporizador de reintento — así los cambios pendientes de un corte de
+  // wifi llegan a la nube en cuanto es posible, no cuando toque.
+  window.addEventListener('online', () => flushCloudSync());
 }
 
 /* ============================================================

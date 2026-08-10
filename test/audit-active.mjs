@@ -70,13 +70,25 @@ function loadCore(firebaseStub){
     document, window: undefined, console, t: (k) => k,
     localStorage: makeFakeLocalStorage(),
     navigator: { onLine: true, userAgent: 'node-audit-test' },
+    setTimeout, clearTimeout,
     firebase: firebaseStub, // undefined = sin conexión a la plataforma (comportamiento fail-closed)
   };
   vm.createContext(sandbox);
   // core.js referencia funciones/objetos de otros ficheros del bundle (DB, saveDB...)
   // que no hacen falta para las funciones puras de licencia/PIN que se prueban aquí.
+  // Los helpers __set*/__get* exponen variables `let` internas del script
+  // (cloudRef, lastSyncedSnapshot) que de otro modo no son visibles desde
+  // fuera del contexto vm — necesarios para probar flushCloudSync (A6).
   vm.runInContext(
-    `${coreSrc}\nfunction isOwnerSession(){ return document.body.classList.contains('owner-session'); }`,
+    `${coreSrc}
+function isOwnerSession(){ return document.body.classList.contains('owner-session'); }
+function __setCloudRef(r){ cloudRef = r; }
+function __setLastSyncedSnapshot(s){ lastSyncedSnapshot = s; }
+function __getLastSyncedSnapshot(){ return lastSyncedSnapshot; }
+function __setDB(d){ DB = d; }
+function __getDB(){ return DB; }
+function __getDbReadyPromise(){ return dbReadyPromise; }
+function __clearCloudSyncRetryTimer(){ clearTimeout(cloudSyncRetryTimer); cloudSyncRetryTimer = null; }`,
     sandbox,
     { filename: 'js/core.js' }
   );
@@ -212,6 +224,81 @@ test('FIX A1: la sal ahora es distinta por negocio — una tabla arcoíris de un
   assert.equal(rainbowTableA.get(hashBusinessB), undefined,
     'la tabla arcoíris del negocio A no debería encontrar nada para un hash del negocio B');
   console.log('   → tabla arcoíris de un negocio ya no sirve contra otro negocio distinto');
+});
+
+console.log('\n--- E. Sincronización: ¿se pierde un cambio si falla el envío a la nube? ---\n');
+
+await testAsync('FIX A6: un envío fallido a Firebase ya NO se marca como sincronizado — se reintenta hasta confirmarse', async () => {
+  const sandbox = loadCore();
+  // core.js reasigna DB de forma asíncrona al cargar (dbReadyPromise) —
+  // hay que dejar que eso termine ANTES de fijar el DB propio del test, si
+  // no la reasignación tardía lo pisa por detrás sin que se note.
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setDB({ingredients: ['dato local nuevo, aún no confirmado en la nube']});
+  sandbox.__setLastSyncedSnapshot({ingredients: JSON.stringify([])}); // la nube todavía tiene el estado viejo
+  let updateCalls = 0;
+  const fakeCloudRef = {
+    update: async (updates) => {
+      updateCalls++;
+      throw new Error('simulando wifi caída'); // primer intento: falla
+    },
+  };
+  sandbox.__setCloudRef(fakeCloudRef);
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 10)); // deja que se resuelva el .catch() async
+  assert.equal(updateCalls, 1, 'debería haber intentado el envío');
+  const snapshotAfterFailure = sandbox.__getLastSyncedSnapshot();
+  assert.equal(snapshotAfterFailure.ingredients, JSON.stringify([]),
+    'tras un fallo, el snapshot NO debe marcarse como sincronizado (antes del fix sí se marcaba, perdiendo el reintento)');
+  sandbox.__clearCloudSyncRetryTimer(); // no dejar el setTimeout de 15s real colgado en el test
+
+  // Segundo intento (simulando que vuelve la conexión): esta vez con éxito.
+  fakeCloudRef.update = async (updates) => { updateCalls++; };
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 10));
+  assert.equal(updateCalls, 2, 'debería haber reintentado el mismo cambio');
+  const snapshotAfterSuccess = sandbox.__getLastSyncedSnapshot();
+  assert.equal(snapshotAfterSuccess.ingredients, JSON.stringify(['dato local nuevo, aún no confirmado en la nube']),
+    'tras confirmarse, el snapshot ya sí debe reflejar el dato enviado');
+  console.log(`   → 1er intento falló y NO se marcó como sincronizado; 2º intento (reintento) tuvo éxito y sí se marcó`);
+});
+
+console.log('\n--- F. Sincronización: ¿se avisa si dos dispositivos editan el mismo registro a la vez? ---\n');
+
+await testAsync('FIX A7: una colisión real (local Y remoto cambiaron el mismo pedido) ahora se detecta y avisa', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  const toasts = [];
+  sandbox.showToast = (msg) => toasts.push(msg);
+  sandbox.todayStr = () => '2026-08-10';
+  sandbox.__setDB({auditLog: []});
+  sandbox.__setLastSyncedSnapshot({
+    tpvOrders: JSON.stringify([{id: 1, items: [{name:'Original'}]}]),
+  });
+  // Este dispositivo cambió el pedido 1 (añadió una línea) sin haberlo subido aún...
+  const local = [{id: 1, items: [{name:'Original'}, {name:'Añadido en este dispositivo'}]}];
+  // ...y a la vez llegó de OTRO dispositivo con un cambio DISTINTO del mismo pedido.
+  const remote = [{id: 1, items: [{name:'Original'}, {name:'Añadido en el otro dispositivo'}]}];
+  sandbox.warnIfConcurrentEditLost('tpvOrders', local, remote);
+  assert.equal(toasts.length, 1, 'debería haber avisado de la colisión con un toast');
+  const dbAfter = sandbox.__getDB ? sandbox.__getDB() : null;
+  assert.ok(dbAfter && dbAfter.auditLog.length === 1, 'debería quedar constancia en el registro de auditoría');
+  console.log('   → colisión real detectada y avisada: ' + toasts[0]);
+});
+
+await testAsync('warnIfConcurrentEditLost NO avisa si solo cambió un lado (caso normal, sin colisión)', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  const toasts = [];
+  sandbox.showToast = (msg) => toasts.push(msg);
+  sandbox.__setDB({auditLog: []});
+  sandbox.__setLastSyncedSnapshot({
+    tpvOrders: JSON.stringify([{id: 1, items: [{name:'Original'}]}]),
+  });
+  const local = [{id: 1, items: [{name:'Original'}]}]; // este dispositivo no tocó nada
+  const remote = [{id: 1, items: [{name:'Original'}, {name:'Cambio normal del otro dispositivo'}]}];
+  sandbox.warnIfConcurrentEditLost('tpvOrders', local, remote);
+  assert.equal(toasts.length, 0, 'un cambio remoto normal (sin edición local pendiente) no debería avisar de nada');
 });
 
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
