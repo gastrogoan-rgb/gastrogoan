@@ -194,10 +194,17 @@ async function ensureAdminLogin(){
     let app;
     try{ app = firebase.app('platform'); }
     catch(e){ app = firebase.initializeApp(PLATFORM_FIREBASE_CONFIG, 'platform'); }
-    if(app.auth().currentUser){
+    // OJO: currentUser puede existir ya por una sesión ANÓNIMA (la que usa
+    // claimUniqueBizCode() para comprobar duplicados, .read: true para
+    // cualquiera). Eso NO es una sesión de admin — hay que comprobar que
+    // tiene email, que es lo único que distingue un login real del tuyo.
+    if(app.auth().currentUser && app.auth().currentUser.email){
       platformAuthPromise = Promise.resolve(app);
-      if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada.';
+      if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada (' + app.auth().currentUser.email + ').';
       return;
+    }
+    if(app.auth().currentUser && !app.auth().currentUser.email){
+      await app.auth().signOut(); // cierra la sesión anónima para poder iniciar la de admin
     }
     const email = prompt('Email de administrador (Firebase Authentication → Users):');
     if(!email) return;
