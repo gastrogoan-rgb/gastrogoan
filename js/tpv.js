@@ -4082,16 +4082,25 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
   const validated = await validateRes.json();
   const vItem = validated.data && validated.data.items && validated.data.items[0];
 
-  // TODO (sin confirmar todavía): tras validar, verifactu_status/verifactu_log
-  // llegan vacíos — la AEAT los procesa de forma asíncrona. Falta confirmar
-  // el endpoint GET para consultarlos más tarde y los nombres exactos de los
-  // campos de huella/QR dentro de verifactu_log. Hasta entonces, se da la
-  // factura por CREADA Y VALIDADA (lo que sí es cierto y verificado) pero
-  // sin huella/QR todavía — el ticket se imprime igual, solo sin ese sello.
+  // verifactu_status/verifactu_log llegan vacíos justo tras validar — la AEAT
+  // los procesa de forma asíncrona (confirmado en vivo, tarda un rato). El
+  // PDF con el QR sí está disponible ya (GET /invoice/{id}/downloadPdf,
+  // devuelve el PDF en base64 dentro de JSON, no como binario directo) y es
+  // lo que se imprime/adjunta al ticket.
+  let pdfBase64 = null;
+  try{
+    const pdfRes = await fetch(`${apiBase}/invoice/${item.id}/downloadPdf`, {headers});
+    if(pdfRes.ok){
+      const pdfJson = await pdfRes.json();
+      if(pdfJson && pdfJson.success && pdfJson.data) pdfBase64 = pdfJson.data;
+    }
+  }catch(e){ /* el PDF es un extra, no bloquea la venta si falla */ }
+
   return {
     invoiceId: (vItem && vItem.invoicenumber) || item.id,
     hash: null,
     qrData: null,
+    pdfBase64,
   };
 }
 

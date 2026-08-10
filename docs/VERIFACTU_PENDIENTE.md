@@ -34,19 +34,35 @@ documentación avisa de que este endpoint **solo se puede llamar una vez por
 factura** — no reintentar automáticamente si falla, se quedaría la factura
 en un estado raro. Ya implementado en `submitSaleToVerifactuApi()`.
 
-**Lo único que queda pendiente de verdad**: justo después de validar,
-`verifactu_status` y `verifactu_log` siguen llegando vacíos/null — la AEAT
-los procesa de forma asíncrona, igual que en la versión antigua de la API.
-Falta:
-1. Confirmar el endpoint GET para volver a consultar la factura más tarde
-   (probablemente `GET /invoice/{id}`, a falta de probarlo).
-2. Ver los nombres reales de los campos con la huella y el QR dentro de
-   `verifactu_log` una vez la AEAT los haya procesado (puede tardar unos
-   minutos u horas, no se pudo esperar tanto en la sesión de pruebas).
-Mientras tanto, `submitSaleToVerifactuApi()` da la venta por **creada y
-validada de verdad** (que ya es un envío real y verificado a Invocash) pero
-sin huella/QR todavía — el ticket se imprime igual, solo sin ese sello por
-ahora.
+**PDF con QR: confirmado el endpoint, pero solo funciona de verdad con
+cuenta de pago.** `GET /invoice/{id}` (singular) funciona; `GET
+/invoices/{id}` (plural) da error 500 — no usar el plural para consultar
+por id. Para el PDF: `POST /invoice/{id}/generatePdf` es solo para
+borradores sin validar (según su documentación, si se llama sobre una
+factura ya validada **borra el QR y la integridad del documento** — no
+usar nunca sobre una factura validada). El correcto para facturas ya
+validadas es `GET /invoice/{id}/downloadPdf`, confirmado en vivo el
+10/08/2026: HTTP 200, pero el PDF no viene como binario directo, viene
+dentro de un JSON (`{"success":true,"data":"<base64 del PDF>"}`). Ya
+implementado en `submitSaleToVerifactuApi()`: se descarga y se guarda en
+`sale.verifactu.pdfBase64`.
+
+**El PDF real descargado (factura #3, cuenta trial) no lleva QR.** Trae
+bien grande el aviso **"FACTURA NO VÁLIDA, VERSIÓN DE PRUEBA"** en vez del
+sello de VeriFactu. No es un fallo de código: encaja con lo que avisaba el
+email de bienvenida de Invocash — con cuenta de prueba se puede probar todo
+el flujo de la API (crear, validar, descargar PDF) pero no se genera el
+sello/QR real ante la AEAT. Para eso hace falta contratar la cuenta de pago
+real de Invocash (ver punto 2 de "Pendiente antes de activar en
+producción" más abajo). `verifactu_status`/`verifactu_log` también
+seguían vacíos tras validar en esta cuenta trial — puede que solo se
+rellenen con cuenta de pago, sin confirmar todavía porque no se pudo
+probar con una.
+
+**Resumen de lo que YA funciona de verdad contra su API real** (probado en
+vivo, no solo contra la documentación): crear factura, validarla, y
+descargar su PDF. Solo falta la cuenta de pago para obtener el sello/QR
+real — el resto del flujo de código está terminado.
 
 ## Estado actual (resto, sin cambios desde el 31/07)
 
