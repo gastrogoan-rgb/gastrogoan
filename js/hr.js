@@ -2353,6 +2353,7 @@ function saveTurno(id){
 }
 
 function deleteTurno(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   if(!confirm(t('msg.confirmDeleteShift'))) return;
   const turno = (DB.turnos||[]).find(t => t.id===id);
   if(turno){
@@ -2820,12 +2821,15 @@ function openEmployeeModal(id){
 }
 
 function resetEmployeePin(id){
+  // El botón ya está oculto a quien no sea propietario (.owner-strict), pero
+  // eso solo esconde el botón — esta comprobación es la que de verdad impide
+  // que se llame desde la consola sin ser el propietario.
+  if(!isOwnerSession()) return;
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  // Solo el propietario llega a este botón (campo .owner-strict), así que no
-  // hace falta pedir otro PIN — pero sí una confirmación explícita, porque
-  // deja el PIN de esa persona en el valor por defecto (1234) hasta que
-  // vuelva a cambiarlo.
+  // Ya sabemos que es el propietario, así que no hace falta pedir otro PIN
+  // — pero sí una confirmación explícita, porque deja el PIN de esa persona
+  // en el valor por defecto (1234) hasta que vuelva a cambiarlo.
   if(!confirm(t('msg.confirmResetEmployeePin').replace('${name}', e.name))) return;
   e.pin = '1234';
   e.pinChanged = false;

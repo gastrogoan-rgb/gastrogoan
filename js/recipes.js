@@ -724,6 +724,7 @@ function recipesUsingBaseRecipe(id){
   return DB.recipes.filter(r => r.id!==id && (r.ingredients||[]).some(line => line.type==='base' && line.baseRecipeId===id));
 }
 function deleteRecipe(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const r = DB.recipes.find(x=>x.id===id);
   const cartaHits = cartaPlatosUsingRecipe(id);
   const dependentRecipes = recipesUsingBaseRecipe(id);
@@ -1314,6 +1315,7 @@ function saveFicha(){
 }
 
 function deleteFicha(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   if(!confirm(t('msg.confirmDeleteTechSheet'))) return;
   DB.fichas = DB.fichas.filter(f => f.id !== id);
   saveDB();

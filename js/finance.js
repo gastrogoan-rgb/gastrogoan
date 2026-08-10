@@ -1010,6 +1010,7 @@ function updateIngredientIva(id, val){
 // servir el proveedor, sin perder ni el histórico ni el vínculo con las
 // recetas que lo llevan.
 function toggleIngredientActivo(id){
+  if(!isOwnerSession()) return;
   const ing = DB.ingredients.find(i=>i.id===id);
   if(!ing) return;
   ing.activo = ing.activo===false ? true : false;
@@ -1024,6 +1025,7 @@ function recipesUsingIngredient(id){
   return DB.recipes.filter(r => (r.ingredients||[]).some(line => line.type!=='base' && line.ingredientId===id));
 }
 function deleteIngredient(id){
+  if(!isOwnerSession()) return;
   const ing = DB.ingredients.find(i=>i.id===id);
   const usedIn = recipesUsingIngredient(id);
   if(usedIn.length){

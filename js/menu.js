@@ -363,6 +363,7 @@ function backToCartaList(){
   renderCarta();
 }
 function deleteCarta(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   if(!confirm(t('msg.confirmDeleteCarta'))) return;
   DB.cartas = DB.cartas.filter(c=>c.id!==id);
   DB.activeCartaIds = (DB.activeCartaIds||[]).filter(cid=>cid!==id);
@@ -503,6 +504,7 @@ function confirmNewCartaSection(){
   renderCartaSecciones();
 }
 function removeCartaSection(secId){
+  if(!isOwnerSession() && !editUnlocked) return;
   if(!confirm(t('msg.confirmDeleteSection'))) return;
   cartaEdit.secciones = cartaEdit.secciones.filter(s=>s.id!==secId);
   renderCartaSecciones();
@@ -536,6 +538,7 @@ function setCartaPlatoStock(secId, platoId){
   renderCartaSecciones();
 }
 function removeCartaPlato(secId, platoId){
+  if(!isOwnerSession() && !editUnlocked) return;
   if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
