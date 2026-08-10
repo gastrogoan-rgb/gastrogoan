@@ -68,7 +68,13 @@ const GE = (function(){
 
   function proveedores(){ return [...new Set([...DB.ingredients.map(i=>i.supplier), ...(DB.providers||[]).map(p=>p.nombre)].filter(Boolean))]; }
 
-  function init(){ tab('fijos'); }
+  // Última barrera antes de pintar Gestión Económica, por si se llega
+  // aquí saltándose navigate()/renderView() (p.ej. GE.init() a mano desde
+  // la consola de un dispositivo de empleado).
+  function init(){
+    if(isGestionLocked('economia')){ requestOwnerPin('economia'); return; }
+    tab('fijos');
+  }
   function tab(name){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));

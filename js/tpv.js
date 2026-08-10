@@ -2993,6 +2993,77 @@ function confirmVoidLine(){
   renderTableOrderModal(orderId);
   showToast(t('msg.voidRegistered'));
 }
+// Anula una venta YA COBRADA (mesa equivocada, cobro duplicado, disputa de
+// tarjeta...). Antes no existía ningún camino para esto — una vez pagada,
+// la venta era permanente y había que retocar los datos a mano. Revierte
+// el stock que se descontó al marchar cada línea (raciones limitadas del
+// plato + ingredientes/elaboraciones de su receta) y deja constancia en
+// DB.voidLog en vez de borrar el ticket, para no perder el rastro contable.
+// Pide siempre el PIN del negocio: es la acción más delicada de TPV.
+function requestCancelSale(saleId){
+  const sale = (DB.sales||[]).find(s => s.id === saleId);
+  if(!sale || sale.status === 'anulada') return;
+  requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), () => reallyCancelSale(saleId));
+}
+function restockForVoidedItems(items){
+  (items||[]).forEach(line => {
+    if(!line.isShipping && line.platoId != null){
+      const p = findCartaPlatoById(line.platoId);
+      if(p && p.stock != null){
+        const wasOut = p.stock === 0;
+        p.stock = p.stock + (line.qty||0);
+        if(wasOut) p.disponible = true;
+      }
+    }
+    const recetas = [];
+    if(line.recipeId) recetas.push(line.recipeId);
+    else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
+    recetas.forEach(recipeId => {
+      const r = getRecipe(recipeId);
+      if(!r) return;
+      (r.ingredients||[]).forEach(ri => {
+        if(ri.type === 'base'){
+          const elab = (DB.elaboraciones||[]).find(e => e.recipeId === ri.baseRecipeId);
+          if(elab) elab.qty = (elab.qty||0) + ri.qty * (line.qty||0);
+          return;
+        }
+        const s = getStockEntry(ri.ingredientId);
+        s.qty = (s.qty||0) + ri.qty * (line.qty||0);
+      });
+    });
+  });
+}
+function reallyCancelSale(saleId){
+  const sale = (DB.sales||[]).find(s => s.id === saleId);
+  if(!sale || sale.status === 'anulada') return;
+  restockForVoidedItems(sale.items);
+  sale.status = 'anulada';
+  sale.anuladaAt = new Date().toISOString();
+  const loggedEmployeeId = loggedInEmployeeId();
+  const responsable = loggedEmployeeId != null ? DB.employees.find(e => e.id === loggedEmployeeId) : null;
+  sale.anuladaResponsableNombre = responsable ? responsable.name : '';
+  if(!DB.voidLog) DB.voidLog = [];
+  DB.voidLog.push({
+    id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
+    plato: t('label.wholeSaleVoided').replace('${amount}', fmtMoney(sale.total)),
+    cantidad: 1, estado: 'pagada', motivo: t('msg.saleVoidedAfterCharge'), mesa: '',
+    responsableId: loggedEmployeeId, responsableNombre: sale.anuladaResponsableNombre
+  });
+  // Si ya se había enviado a VeriFactu, NO se puede simplemente "deshacer" —
+  // hace falta una factura rectificativa. Como ese flujo con Invocash
+  // todavía no está probado en vivo (ver docs/VERIFACTU_PENDIENTE.md), se
+  // deja marcada para gestionarla a mano en su panel en vez de intentar
+  // automatizar algo sin confirmar.
+  if(sale.verifactu && sale.verifactu.status === 'sent'){
+    sale.verifactu.needsRectification = true;
+  }
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  closeModal();
+  renderTPV();
+  showToast(t('msg.saleVoided'));
+}
+
 function openVoidLogModal(){
   const log = [...(DB.voidLog||[])].reverse().slice(0, 100);
   openModal(`
@@ -4037,7 +4108,11 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
   const apiBase = `https://${cfg.domain}/api`;
   const headers = {'Content-Type': 'application/json', 'X-API-Key': cfg.apiKey};
   const groups = saleIvaGroupsForFiscal(sale);
-  const total = Math.round(sale.total*100)/100;
+  // La propina NO se factura ni se declara en el IVA (así lo confirma el
+  // negocio): sale.total sí la incluye (finalTotal = total - descuento +
+  // propina), así que aquí se resta para que el total enviado a VeriFactu
+  // cuadre exactamente con la suma de las líneas (que tampoco la llevan).
+  const total = Math.round((sale.total - (parseFloat(sale.propina)||0))*100)/100;
   const fecha = new Date(sale.date);
   const due = `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getDate()).padStart(2,'0')}`;
 
@@ -4389,6 +4464,7 @@ function openTicketDeliveryModal(saleId){
       <button class="btn" onclick="printInvoice(${saleId})"><i class="ti ti-file-invoice"></i> ${t('ticket.invoiceBtn')}</button>
       <button class="btn btn-primary" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printTicket(s);})()"><i class="ti ti-printer"></i> ${t('ticket.printTicket')}</button>
       ${thermalPrintingSupported() ? `<button class="btn" onclick="(()=>{const s=DB.sales.find(x=>x.id===${saleId});if(s)printToThermalPrinter(buildTicketText(s));})()" title="${t('thermal.hint')}"><i class="ti ti-device-usb"></i> ${t('thermal.printBtn')}</button>` : ''}
+      <button class="btn btn-danger" onclick="requestCancelSale(${saleId})" title="${t('title.cancelSale')}"><i class="ti ti-receipt-refund"></i> ${t('ticket.cancelSaleBtn')}</button>
     </div>
   `);
 }

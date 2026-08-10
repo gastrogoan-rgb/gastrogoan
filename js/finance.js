@@ -100,8 +100,14 @@ function geTotalVariablesMes(year, month){
   const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)*(1+p/100);},0);
 }
+// Ventas anuladas (ver requestCancelSale/tpv.js) se excluyen de todas las
+// cifras de facturación: siguen en DB.sales por trazabilidad, pero no son
+// ingreso real.
+function activeSales(){
+  return (DB.sales||[]).filter(s => s.status !== 'anulada');
+}
 function salesTotalForRange(startDate, endDate){
-  return DB.sales.filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);
+  return activeSales().filter(s=>s.date>=startDate && s.date<=endDate).reduce((sum,s)=>sum+s.total,0);
 }
 function salesTotalForMonth(year, month){
   const start = `${year}-${String(month+1).padStart(2,'0')}-01`;
@@ -161,7 +167,7 @@ function geVentasIvaGroupsMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
   const fallbackRate = (DB.business.ticket && DB.business.ticket.ivaPct!=null) ? parseFloat(DB.business.ticket.ivaPct) : 10;
   const groups = {};
-  DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
+  activeSales().filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
     const descPct = parseFloat(sale.descuentoPct)||0;
     (sale.items||[]).forEach(line => {
       const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
@@ -185,7 +191,7 @@ function geFacturacionNetaMes(year, month){
 // cifras netas de esta fórmula.
 function geComisionesMes(year, month){
   const mesStr = `${year}-${String(month+1).padStart(2,'0')}`;
-  return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v) => {
+  return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v) => {
     const bruto = parseFloat(v.comisionPlataforma||0);
     if(!bruto) return s;
     const ivaPct = (v.plataforma && v.plataforma.ivaPct!=null) ? parseFloat(v.plataforma.ivaPct) : 0;
@@ -235,7 +241,7 @@ function renderDashboard(){
 
   // Sales analysis (last 30 days): avg ticket, top products, sales by hour
   const last30Start = dateStr(new Date(today.getTime() - 29*86400000));
-  const salesLast30 = DB.sales.filter(s=>s.date>=last30Start && s.date<=todayDate);
+  const salesLast30 = activeSales().filter(s=>s.date>=last30Start && s.date<=todayDate);
   const totalLast30 = salesLast30.reduce((s,x)=>s+x.total,0);
   const avgTicket = salesLast30.length ? totalLast30 / salesLast30.length : 0;
 
@@ -316,7 +322,7 @@ function renderDashboard(){
 
   /* ---------- Hero: venta de hoy + comparativas ---------- */
   const todaySales = salesTotalForDate(todayDate);
-  const salesToday = DB.sales.filter(s=>s.date===todayDate);
+  const salesToday = activeSales().filter(s=>s.date===todayDate);
   const todayTicketCount = salesToday.length;
   const todayAvgTicket = todayTicketCount ? todaySales / todayTicketCount : 0;
 
@@ -580,7 +586,7 @@ function renderSalesHeatmap(){
   const today = new Date();
   const start = dateStr(new Date(today.getTime() - 55*86400000)); // 8 semanas
   const end = todayStr();
-  const sales = DB.sales.filter(s => s.date >= start && s.date <= end && s.createdAt);
+  const sales = activeSales().filter(s => s.date >= start && s.date <= end && s.createdAt);
   if(!sales.length){ el.innerHTML = `<div class="empty">${t('dash.noSalesYet')}</div>`; return; }
 
   const bands = [

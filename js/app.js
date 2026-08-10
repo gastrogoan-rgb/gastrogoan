@@ -4251,7 +4251,11 @@ function validateHorario(horario){
   return warnings;
 }
 
+// Última barrera antes de pintar Mi Negocio, por si se llega aquí
+// saltándose navigate()/renderView() (p.ej. renderMiNegocio() a mano desde
+// la consola de un dispositivo de empleado).
 function renderMiNegocio(){
+  if(isGestionLocked('minegocio')){ requestOwnerPin('minegocio'); return; }
   const b = DB.business || {};
   // Si el formulario ya estaba pintado y el usuario había cambiado los
   // checkboxes de "Tipos de servicio" sin pulsar aún "Guardar", conservamos

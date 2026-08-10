@@ -145,5 +145,51 @@ test('decrementDishStock ignora cantidades cero, negativas o platos inexistentes
   assert.equal(DB.cartas[0].secciones[0].platos[0].stock, 5);
 });
 
+// --- submitSaleToVerifactuApi: el total facturado debe cuadrar con las líneas ---
+
+async function testAsync(name, fn) {
+  try {
+    await fn();
+    console.log(`✅ ${name}`);
+  } catch (e) {
+    failures++;
+    console.error(`❌ ${name}`);
+    console.error('   ' + e.message);
+  }
+}
+
+await testAsync('submitSaleToVerifactuApi: el total facturado NO incluye la propina (no se declara IVA sobre ella)', async () => {
+  const DB = { business: { ticket: { ivaPct: 10 } } };
+  const sandbox = loadTpv(DB);
+  const sale = {
+    date: '2026-08-10',
+    total: 22, // 20€ de comida + 2€ de propina (finalTotal ya la incluye, como hace finalizeCharge)
+    propina: 2,
+    descuentoPct: 0,
+    items: [{ price: 20, qty: 1, ivaPct: 10, name: 'Menú del día' }],
+  };
+  const cfg = { domain: 'test.invo.cash', apiKey: 'TEST' };
+  let capturedBody = null;
+  sandbox.fetch = async (url, opts) => {
+    if (url.endsWith('/invoices')) {
+      capturedBody = JSON.parse(opts.body);
+      return { ok: true, json: async () => ({ data: { items: [{ id: 1 }] } }) };
+    }
+    if (url.includes('/validate')) {
+      return { ok: true, json: async () => ({ data: { items: [{ id: 1, invoicenumber: 'T-1' }] } }) };
+    }
+    if (url.includes('/downloadPdf')) {
+      return { ok: true, json: async () => ({ success: true, data: '' }) };
+    }
+    throw new Error('unexpected fetch: ' + url);
+  };
+  await sandbox.submitSaleToVerifactuApi(sale, cfg, {});
+  assert.ok(capturedBody, 'debería haber llamado a POST /invoices');
+  const sumLines = capturedBody.lines.reduce((s, l) => s + l.total, 0);
+  assert.equal(Math.round(sumLines * 100) / 100, capturedBody.total,
+    'la suma de las líneas de la factura debe cuadrar exactamente con el total del documento');
+  assert.equal(capturedBody.total, 20, 'el total facturado no debe incluir la propina');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todo OK' : `❌ ${failures} test(s) fallaron`}`);
 process.exit(failures === 0 ? 0 : 1);

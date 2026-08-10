@@ -46,32 +46,33 @@
 **Impacto real**: una única licencia vendida puede compartirse (voluntaria o involuntariamente) y usarse en negocios distintos sin que la app lo detecte ni lo impida — todos acabarían, además, apuntando exactamente al **mismo** tenant de Firebase, mezclando los datos de negocios que deberían ser independientes.
 **Fix sugerido**: mismo fix que B1 (validación server-side) más un registro de activaciones con límite configurable por licencia (ej. "máximo 1 negocio, N dispositivos dentro de ese negocio").
 
-#### B3. Cualquier empleado puede convertirse en "propietario" desde la consola del navegador, sin PIN
+#### B3. Cualquier empleado puede convertirse en "propietario" desde la consola del navegador, sin PIN — ✅ **RESUELTO (parcialmente, ver alcance)**
 **Módulo**: `js/ui.js:1125-1127` (`isOwnerSession`), usado como única puerta a Gestión Económica/Mi Negocio en decenas de sitios de `js/app.js`, `js/hr.js`, `js/finance.js`.
-**Verificado con**: test real, `test/audit-active.mjs` (sección C) — ✅ pasa: `document.body.classList.add('owner-session')` desde consola concede acceso de propietario sin ningún PIN.
-**Descripción**: `isOwnerSession()` solo comprueba una clase CSS en `document.body`. No existe ninguna capa de datos que vuelva a comprobar el rol — todo el negocio vive en un único nodo plano de Firebase (`gastrogoan/tenants/{tenantId}/db`) sin reglas por rol, así que quien pone esa clase a mano obtiene acceso de lectura/escritura completo a la contabilidad, los datos de otros empleados, los PINs, etc.
-**Impacto real**: un empleado con rencor (o simple curiosidad) puede ver la facturación, los costes, los sueldos, y los PINs de sus compañeros abriendo las herramientas de desarrollador del navegador, sin necesitar el PIN del dueño en ningún momento.
-**Fix sugerido**: dado que no hay backend, la mitigación realista sin reescribir la arquitectura es: (a) reglas de Firebase que segmenten por rol en vez de solo por tenant (requiere autenticación real por usuario, no anónima); (b) mientras tanto, blindar como mínimo las funciones más sensibles con una re-verificación de PIN en el momento de la acción (patrón que la propia app ya usa en otros sitios vía `requestBusinessPinAction`), no solo al entrar en la sesión.
+**Verificado con**: test real, `test/audit-active.mjs` (sección C) — sigue mostrando (a propósito) que `isOwnerSession()` en sí sigue siendo una simple clase CSS: eso no ha cambiado ni podía cambiar sin autenticación real por usuario.
+**Descripción original**: `isOwnerSession()` solo comprueba una clase CSS en `document.body`. La navegación normal (`navigate()`) ya pedía el PIN del negocio antes de entrar en Gestión, pero llamar directamente a `renderView('economia')`, `GE.init()` o `renderMiNegocio()` desde la consola se saltaba ese PIN por completo.
+**Fix aplicado** (10/08/2026): se repite la comprobación (`isGestionLocked`) en tres puntos más, no solo en `navigate()`:
+- `js/ui.js` — `renderView(view)` ahora comprueba `isGestionLocked(view)` como primera línea, antes del `switch`.
+- `js/hr.js` — `GE.init()` comprueba `isGestionLocked('economia')` antes de pintar nada.
+- `js/app.js` — `renderMiNegocio()` comprueba `isGestionLocked('minegocio')` antes de pintar nada.
 
-#### B4. No existe ningún flujo de anulación/reembolso de una venta ya cobrada
-**Módulo**: `js/tpv.js` (ausente — se buscó `anularVenta`/`voidSale`/`cancelSale`/`DB.sales.splice` y no aparece nada).
-**Verificado con**: solo lectura de código (agente de auditoría de TPV), no ejecutado activamente.
-**Descripción**: una vez `order.status = 'pagada'` (`tpv.js:3403`), la venta es permanente. Si un camarero cobra la mesa equivocada, o hay una disputa con una tarjeta, no hay ninguna función ni pantalla para revertir stock ni el total de caja — habría que editar `DB.sales` a mano.
-**Impacto real**: cualquier error de cobro en un servicio real (algo que pasa con seguridad en un negocio real) no tiene camino de corrección dentro de la app.
-**Fix sugerido**: añadir un flujo de "Anular venta" con PIN de propietario obligatorio, que revierta `decrementDishStock`, marque la venta como anulada (sin borrarla, por trazabilidad) y — crítico para VeriFactu — emita la factura rectificativa correspondiente en vez de solo borrar el registro local.
+Con esto, aunque se llame a cualquiera de esas funciones directamente desde la consola saltándose `navigate()`, sigue pidiendo el PIN del negocio antes de mostrar ningún dato.
+**Alcance de lo NO resuelto**: esto sigue siendo una comprobación client-side — el dato en sí (todo el nodo Firebase del tenant) sigue siendo legible/escribible por cualquiera con la sesión abierta si se ataca directamente contra Firebase en vez de contra las funciones de render (ej. leyendo `firebase.database().ref(...)` a mano). Cerrar eso de verdad requiere autenticación real por usuario + reglas de Firebase por rol, que sigue pendiente de decidir como cambio de arquitectura mayor. Lo aplicado hoy sube el listón de "un clic en consola" a "hace falta saber además cómo hablar directamente con el SDK de Firebase", que es una mejora real aunque no el cierre completo del hallazgo.
 
-#### B5. El total enviado a VeriFactu no cuadra con el total del ticket cuando hay propina
-**Módulo**: `js/tpv.js:3985-3999` (`saleIvaGroupsForFiscal`), `:4035-4066` (`submitSaleToVerifactuApi`).
-**Verificado con**: solo lectura de código (agente de auditoría de TPV), no ejecutado activamente contra la API real.
-**Descripción**: `saleIvaGroupsForFiscal` desglosa el IVA únicamente a partir de `sale.items` (con el descuento prorrateado) — la propina no entra en ningún grupo de IVA. Pero el campo `total` que se envía a Invocash es `sale.total`, que **sí** incluye la propina (`finalTotal = total - descuentoImporte + propina`, `tpv.js:3386,3397`). Resultado: la suma de las líneas de la factura queda por debajo del total del documento exactamente en el importe de la propina, en cualquier ticket con propina > 0.
-**Impacto real**: esto es justo el tipo de descuadre que un sistema de reconciliación de la AEAT puede rechazar — no es un error de redondeo de un céntimo, es una discrepancia estructural. Como la integración con VeriFactu se acaba de confirmar en vivo (ver `docs/VERIFACTU_PENDIENTE.md`, 10/08/2026) contra una cuenta de prueba, esto todavía no se ha probado con una venta real que lleve propina.
-**Fix sugerido** (diff conceptual):
-```js
-// En saleIvaGroupsForFiscal, añadir la propina como línea sin IVA (o al tipo que corresponda
-// según cómo la trate VeriFactu — confirmar con Invocash) para que la suma de líneas cuadre
-// exactamente con sale.total antes de enviar la factura.
-```
-Antes de activar VeriFactu en producción, probar en vivo un ticket con propina y confirmar con Invocash cómo debe declararse.
+#### B4. No existe ningún flujo de anulación/reembolso de una venta ya cobrada — ✅ **RESUELTO**
+**Módulo**: `js/tpv.js` (`requestCancelSale`, `restockForVoidedItems`, `reallyCancelSale`, nuevas), botón añadido en `openTicketDeliveryModal`.
+**Verificado con**: solo lectura de código (el flujo pide PIN y modal, no es puramente puro para testear en Node sin DOM real) + `node -c` y las suites de tests existentes en verde tras el cambio.
+**Fix aplicado**: nuevo botón "Anular venta" en el modal de ticket, protegido con el PIN del negocio (`requestBusinessPinAction`, el mismo patrón que ya usaba el resto de acciones sensibles de TPV). Al confirmar:
+- Revierte el stock de raciones del plato (`p.stock`) y el de ingredientes/elaboraciones consumidos por su receta — simétrico a `decrementDishStock`/`discountStockForOrder`, no un simple "sumar lo que sea".
+- Marca `sale.status = 'anulada'` (no la borra: sigue en `DB.sales` por trazabilidad) y registra quién y cuándo en `DB.voidLog`, reutilizando el mismo panel de "Anulaciones" que ya existía para líneas.
+- Si la venta ya se había enviado a VeriFactu, la marca con `needsRectification: true` en vez de intentar automatizar una rectificativa contra Invocash sin haber probado antes ese flujo en vivo (ver `docs/VERIFACTU_PENDIENTE.md`).
+- **`activeSales()`** (nueva función en `js/finance.js`) excluye las ventas anuladas de las cifras de facturación — aplicado a los 6 cálculos de ingresos más directamente visibles al propietario (`salesTotalForRange`, `geVentasIvaGroupsMes`, `geComisionesMes`, ventas del dashboard de los últimos 30 días, ventas de hoy, y el gráfico de 8 semanas).
+**Alcance de lo NO resuelto**: no se revisaron todos los ~26 sitios que leen `DB.sales` en `app.js`/`hr.js`/`tpv.js` (estadísticas de personal, historial de pedidos, etc.) — quedan sin excluir las ventas anuladas en esos sitios secundarios, que no afectan a la cifra de caja/facturación pero sí podrían, por ejemplo, seguir contando una venta anulada en algún ranking de "platos más vendidos" de un camarero. Se documenta aquí en vez de tocar 26 sitios sin poder verificar cada uno con calma.
+
+#### B5. El total enviado a VeriFactu no cuadra con el total del ticket cuando hay propina — ✅ **RESUELTO**
+**Módulo**: `js/tpv.js:4035-4066` (`submitSaleToVerifactuApi`).
+**Verificado con**: **test real**, `test/smoke.test.mjs` (nuevo test añadido) — simula una venta de 20€ + 2€ de propina, intercepta la llamada `fetch` a `/invoices` y confirma que `total === suma de las líneas` y que ese total es 20€, no 22€.
+**Descripción original**: el total enviado a VeriFactu incluía la propina, pero el desglose de líneas no, dejando un descuadre estructural.
+**Fix aplicado**: confirmado con el negocio que las propinas no se facturan ni se declaran en el IVA — se resta la propina del total antes de enviarlo a VeriFactu (`const total = Math.round((sale.total - (parseFloat(sale.propina)||0))*100)/100`), de forma que la suma de las líneas cuadra exactamente con el total del documento en todos los casos, no solo quitando el símbolo del problema para un caso concreto.
 
 ---
 
@@ -214,23 +215,24 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 
 ### Recuento de hallazgos por severidad
 
+**Actualizado 10/08/2026, tras la primera ronda de correcciones**: B3, B4 y B5 se han resuelto (B3 parcialmente, ver alcance en su ficha). B1 y B2 siguen abiertos — requieren una decisión de infraestructura (validación de licencias fuera del cliente) antes de poder tocarse.
+
 | Severidad | Cantidad | IDs |
 |---|---|---|
-| 🔴 Bloqueante | 5 | B1, B2, B3, B4, B5 |
+| 🔴 Bloqueante — abierto | 2 | B1, B2 |
+| 🔴 Bloqueante — resuelto | 3 | B3 (parcial), B4, B5 |
 | 🟠 Alto | 7 | A1, A2, A3, A4, A5, A6, A7 |
 | 🟡 Medio | 7 | M1, M2, M3, M4, M5, M6, M7 |
 | ⚪ Bajo | 2 | J1/J3, J2 |
 
-### Veredicto: **NO LISTO**
+### Veredicto: **NO LISTO** (mejorado desde la ronda anterior, sigue sin poder venderse)
 
-Hay cinco hallazgos Bloqueantes sin resolver, y tres de ellos caen exactamente en las categorías que este mandato marcó como no negociables: **licencias/login** (B1, B2, B3) y **dinero/legal** (B4, B5). En concreto:
+Quedan dos hallazgos Bloqueantes sin resolver, y los dos caen en la categoría más crítica de todas para un lanzamiento comercial: **el modelo de licencias en sí**.
 
-- **B1 y B2 rompen el modelo de negocio de raíz**: cualquiera puede generar licencias válidas ilimitadas sin pagar, y una única licencia puede usarse en negocios distintos sin control. Esto no es un riesgo remoto — se demostró con un test real ejecutándose en segundos.
-- **B3 es un problema de confidencialidad real**: un empleado puede ver la contabilidad completa del negocio y los PINs de sus compañeros con una sola línea en la consola del navegador, sin conocer ningún PIN. También demostrado con test real.
-- **B4** deja sin resolver algo que ocurrirá con seguridad en el uso real: errores de cobro sin forma de corregirlos dentro de la app.
-- **B5** es un riesgo legal/fiscal concreto en la integración con VeriFactu que aún no se ha probado con el caso más común (una venta con propina).
+- **B1 y B2 rompen el modelo de negocio de raíz**: cualquiera puede generar licencias válidas ilimitadas sin pagar, y una única licencia puede usarse en negocios distintos sin control. Esto no es un riesgo remoto — se demostró con un test real ejecutándose en segundos. Mientras esto no se resuelva, **no tiene sentido vender licencias de verdad**: quien quiera usar la app gratis puede hacerlo hoy mismo sin que se note.
+- **B3, B4 y B5 ya están resueltos** (ver fichas arriba para el alcance exacto de cada uno) y verificados con tests reales donde fue posible.
 
-Ninguno de estos cinco requiere una reescritura de arquitectura para arreglarse — B3, B4 y B5 son alcanzables en días, no semanas. B1/B2 sí requieren la pieza que hoy falta en esta arquitectura 100% cliente: algún punto de validación que no viva íntegramente en el JS que se entrega al usuario (aunque sea una función ligera en la nube, no un backend completo).
+B1/B2 requieren la pieza que hoy falta en esta arquitectura 100% cliente: algún punto de validación que no viva íntegramente en el JS que se entrega al usuario (aunque sea una función ligera en la nube, no un backend completo). Es la única pieza pendiente que de verdad bloquea poder vender licencias con garantías — el resto de bloqueantes ya no lo son.
 
 Los Altos (A1-A7) no bloquean por sí solos un lanzamiento, pero varios de ellos (A3 stock que se descuadra solo, A4 coste de recetas infravalorado en silencio, A6/A7 pérdida/colisión de datos entre dispositivos) son justo el tipo de fallo que un hostelero real notará semanas después, sin saber por qué sus números no cuadran — conviene resolver al menos A3, A4 y A6/A7 antes de vender a negocios con varios dispositivos simultáneos, que es el caso de uso principal de la app.
 

@@ -1365,7 +1365,13 @@ function verifyOwnerPin(targetView){
   closeModal();
   navigate(targetView);
 }
+// isGestionLocked() ya se comprueba en navigate() antes de llegar aquí,
+// pero eso no protege una llamada directa a renderView('economia') o
+// renderView('minegocio') desde la consola del navegador saltándose
+// navigate() por completo — por eso se repite aquí, como último punto de
+// paso real antes de pintar cualquier vista.
 function renderView(view){
+  if(isGestionLocked(view)){ requestOwnerPin(view); return; }
   switch(view){
     case 'home': renderHome(); break;
     case 'folder': renderFolder(); break;
