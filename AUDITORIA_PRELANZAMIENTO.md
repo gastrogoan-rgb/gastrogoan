@@ -144,59 +144,49 @@ Con esto, aunque se llame a cualquiera de esas funciones directamente desde la c
 
 ### 🟡 MEDIO
 
-#### M1. `deleteIngredient` avisa pero no bloquea el borrado de un ingrediente en uso
+#### M1. `deleteIngredient` avisa pero no bloquea el borrado de un ingrediente en uso — sin cambio (decisión consciente, no bug)
 **Módulo**: `js/finance.js:1026-1066`.
 **Verificado con**: solo lectura de código.
-**Descripción**: si el ingrediente está en uso, se muestra un aviso, pero el botón "Borrar de todas formas" lo permite igualmente. La limpieza posterior de las líneas de receta afectadas **sí se hace bien** (se filtran las líneas huérfanas), y el cálculo de coste ya está protegido con `if(!ing) return 0`. Riesgo bajo gracias a esa doble red, pero conviene documentarlo como decisión consciente de UX, no como bug.
+**Descripción**: si el ingrediente está en uso, se muestra un aviso, pero el botón "Borrar de todas formas" lo permite igualmente. La limpieza posterior de las líneas de receta afectadas **sí se hace bien** (se filtran las líneas huérfanas), y el cálculo de coste ya está protegido con `if(!ing) return 0`. Riesgo bajo gracias a esa doble red — se deja tal cual, documentado como decisión consciente de UX, no como bug pendiente.
 
-#### M2. Renombrar una categoría/proveedor puede filtrarse entre Cocina y Sala si coinciden en nombre
+#### M2. Renombrar una categoría/proveedor puede filtrarse entre Cocina y Sala si coinciden en nombre — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): `renameIngredientCategory` (finance.js), la propagación de renombrado de proveedor (operations.js) y el listado de proveedores sugeridos (hr.js) ahora filtran por `area` antes de tocar nada, igual que el resto de la app.
 **Módulo**: `js/finance.js:925` (`renameIngredientCategory`), `js/operations.js:594`, `js/hr.js:69` (`proveedores()`).
-**Verificado con**: solo lectura de código.
-**Descripción**: estas funciones concretas hacen `DB.ingredients.forEach(...)` filtrando solo por nombre coincidente, sin filtrar además por `area`. El resto de listados/renders de la app sí respetan `area` correctamente (verificado en la mayoría de sitios).
-**Impacto real**: si Cocina y Sala tienen, por coincidencia, una categoría o proveedor con el mismo nombre, renombrarlo en una zona lo renombra también en la otra sin avisar.
 
-#### M5. Reserva ↔ mesa: el aviso cruzado existe pero es descartable con un clic, sin dejar rastro
+#### M5. Reserva ↔ mesa: el aviso cruzado existe pero era descartable con un clic, sin dejar rastro — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): sentar a un walk-in pese al aviso de reserva próxima queda ahora registrado en `DB.auditLog` (mesa, cliente de la reserva, hora), reutilizando el mismo sistema de auditoría que ya usan otras acciones de TPV.
 **Módulo**: `js/tpv.js:1262-1304` (`confirmOpenTableOrder`), `js/app.js:2573-2596` (`getUpcomingReservationForTable`, ventana de 90 min).
-**Verificado con**: solo lectura de código.
-**Descripción**: al abrir una mesa como walk-in, la app sí comprueba si hay una reserva próxima (`±90 min`) para esa mesa y muestra un `confirm()` nativo — no son sistemas ciegos entre sí, como cabría temer. Pero es un aviso, no un bloqueo: un `confirm()` aceptado con un clic, sin registrar en ningún sitio que se ignoró.
-**Impacto real**: si luego llega el cliente de la reserva y la mesa está ocupada por el walk-in, no queda ningún rastro de que el sistema ya avisó — es una decisión de diseño razonable (el camarero manda), pero sin trazabilidad para revisar después qué pasó.
 
-#### M6. Cocina no tiene confirmación visible de que una comanda enviada desde sala "ha llegado"
+#### M6. Cocina no tenía confirmación visible de que una comanda enviada desde sala "ha llegado" — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): las comandas llevan ahora un sello `recibidoEnCocinaAt`, marcado la primera vez que la pantalla de Comandas de Cocina las pinta de verdad, y un badge visible en la mesa de Sala ("En cocina" en verde / "Enviando..." en ámbar) para que sala sepa si su comanda ha llegado, sin tener que ir físicamente a preguntar.
 **Módulo**: `js/core.js:2236-2242` (listener `child_added`/`child_changed` de Firebase), `js/tpv.js:2529` (`renderComandasCocina`).
-**Verificado con**: solo lectura de código.
-**Descripción**: el mecanismo en sí es sólido — listener en tiempo real de Firebase, no polling, con debounce de 800ms al escribir (nada de "cada 30s"). El problema es que es "fire and forget": sala no tiene ningún indicador de "visto en cocina". Si cocina pierde la conexión, el listener se resincroniza solo al reconectar y no se pierde ninguna comanda, pero mientras dura el corte, sala no tiene forma de saber que sus comandas no están llegando — solo lo descubre si alguien va físicamente a preguntar.
-**Impacto real**: fallo silencioso mientras dura un corte de wifi en cocina — el escenario exacto de "viernes noche con el wifi fallando" que preocupa para este audit.
 
-#### M7. Tres textos en español fijo se saltan el sistema de traducción, en pantallas de uso frecuente
-**Módulo**: `js/app.js:1481` (confirm de fusión de fichas), `js/tpv.js:1537` y `js/tpv.js:1545` (selección de carta activa en TPV).
-**Verificado con**: solo lectura de código.
-**Descripción**: la app aplica `t()` de forma consistente en la inmensa mayoría de la UI (`showToast`, la mayoría de `alert()`/`confirm()`), pero estos tres puntos concretos usan texto español fijo en template literals. Dos de ellos están en el flujo de selección de carta en TPV — una pantalla de uso frecuente.
-**Impacto real**: bajo si el negocio opera en español; se convierte en una rotura de coherencia de idioma real si el negocio está configurado en catalán o inglés, justo en la pantalla más usada del día (TPV).
-**Fix sugerido**: envolver esos tres strings con `t('nueva.clave')` y añadir las traducciones correspondientes en `js/i18n.js`.
+#### M7. Tres textos en español fijo se saltaban el sistema de traducción — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): los 3 strings (confirm de fusión de clientes, selección de carta múltiple en TPV — dos puntos) pasan ahora por `t()`, con sus claves nuevas traducidas en es/ca/en.
+**Módulo**: `js/app.js:1481`, `js/tpv.js:1537` y `js/tpv.js:1545`.
 
-#### M3. El indicador de sincronización existe pero es solo "conectado/desconectado", no "este dato concreto ya se guardó"
+#### M3. El indicador de sincronización existe pero es solo "conectado/desconectado", no "este dato concreto ya se guardó" — abierto (deliberadamente, ver alcance)
 **Módulo**: `js/core.js:1646` (`updateSyncBadge`), enganchado a `.info/connected` de Firebase.
 **Verificado con**: solo lectura de código.
 **Descripción**: sí existe un badge visible (verde/ámbar/rojo) — esto es un punto a favor, no ausente como cabría temer en esta arquitectura. Pero solo refleja el estado del socket, no si una escritura concreta ya llegó a confirmarse.
+**Por qué sigue abierto**: A6 (resuelto esta sesión) ya cierra el riesgo real de fondo — un fallo de envío ya no se pierde, se reintenta hasta confirmarse. Un indicador de "pendiente/confirmado" por registro concreto sería una mejora de UX real, pero es un cambio de interfaz más amplio (tocar cada pantalla que muestra datos "en vivo") que no aporta ya una garantía de datos que no exista, así que se deja para una iteración de pulido posterior al lanzamiento.
 
-#### M4. `DB.sales` crece sin límite ni paginación
+#### M4. `DB.sales` crece sin límite ni paginación — abierto (deliberadamente, ver alcance)
 **Módulo**: `js/tpv.js:3400,3661` (push sin cap), `js/finance.js` (reportes que recorren el array completo en cada render).
 **Verificado con**: solo lectura de código.
 **Descripción**: no hay archivado ni paginación de histórico. Con años de datos de un negocio activo (miles de tickets), cada render de dashboard/reportes reescanea el array completo, y ese mismo array completo se reenvía a Firebase en cada sincronización general — riesgo de lentitud progresiva, no de pérdida de datos.
+**Por qué sigue abierto**: es un riesgo de rendimiento a largo plazo (meses/años de uso), no de corrección ni de datos, y una solución real (paginación/archivado del histórico) toca prácticamente todos los reportes de Gestión Económica — demasiado riesgo de introducir una regresión en cálculos financieros para hacerlo sin poder probarlo con datos reales de un negocio. Recomendado revisar cuando el primer negocio piloto lleve varios meses de uso real y se pueda medir el impacto real, no antes.
 
 ---
 
 ### ⚪ BAJO
 
-#### J1. `finalizeCharge` no tiene guarda explícita de re-entrada (`order.status==='pagada'`)
-**Módulo**: `js/tpv.js:3383-3408`.
-**Verificado con**: solo lectura de código. El riesgo práctico hoy es bajo porque la función es totalmente síncrona (sin `await` de por medio) y JS es de un solo hilo, así que un doble-tap real del usuario no consigue colar una segunda ejecución antes de que el modal de ticket reemplace el botón — pero no hay ninguna comprobación explícita que lo impida si el código cambia en el futuro (p. ej. si alguien añade una llamada asíncrona antes de la línea 3400). Se recomienda añadir `if(order.status==='pagada') return;` como primera línea, es una red de seguridad barata para un punto tan sensible.
+#### J1/J3. `finalizeCharge` no tenía guarda explícita de re-entrada (`order.status==='pagada'`) — ✅ **RESUELTO**
+**Fix aplicado** (10/08/2026): `finalizeCharge` comprueba `order.status==='pagada'` como primera línea. El riesgo práctico ya era bajo (función síncrona, sin `await` de por medio), pero es una red de seguridad barata para un punto tan sensible, sobre todo de cara a futuros cambios en el código.
+**Módulo**: `js/tpv.js:3467-3474`.
 
-#### J2. Ausencia de tests de regresión más allá de los añadidos en esta sesión
-Ya cubierto en la sesión anterior (`test/smoke.test.mjs`, 8 tests) y ampliado hoy con `test/audit-active.mjs` (6 tests). Sigue siendo un área con margen de mejora, pero deja de ser "prácticamente inexistente".
-
-#### J3. `finalizeCharge` no re-verifica `order.status` al empezar
-Ver hallazgo J1 arriba — mismo módulo, mismo fix sugerido. Se lista aparte solo porque, aunque el riesgo práctico hoy es bajo (código síncrono, un solo hilo), es una guarda de una línea que cuesta muy poco añadir en un punto tan sensible como el cobro.
+#### J2. Ausencia de tests de regresión más allá de los añadidos en esta sesión — mejorado sustancialmente
+Ya cubierto en la sesión anterior (`test/smoke.test.mjs`, 8 tests) y ampliado en varias rondas hoy: 11 tests en `smoke.test.mjs`, 13 en `test/audit-active.mjs` — 24 tests reales en total, cubriendo dinero/stock/IVA, licencias/login (con Firebase real en vivo para B1), PINs, recetas base, y sincronización. Sigue siendo un área con margen de mejora (no hay tests end-to-end de UI más allá de `test-3years.mjs`), pero deja de ser "prácticamente inexistente".
 
 ---
 
@@ -228,7 +218,7 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 
 ### Recuento de hallazgos por severidad
 
-**Actualizado 10/08/2026, tras la tercera ronda de correcciones**: los 5 hallazgos Bloqueantes y los 7 Altos de la auditoría original están todos resueltos (varios con matices de alcance documentados en su ficha — "resuelto" no siempre significa "cerrado sin ningún límite conocido", léase cada ficha).
+**Actualizado 10/08/2026, tras la cuarta ronda de correcciones**: de 23 hallazgos totales, 19 están resueltos. Quedan 2 Medios abiertos deliberadamente (M3, M4 — riesgos de rendimiento/UX a largo plazo, no de corrección ni pérdida de datos) y 1 Bajo que no era un bug sino una decisión de diseño ya correcta (M1).
 
 | Severidad | Cantidad | IDs |
 |---|---|---|
@@ -236,19 +226,24 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 | 🔴 Bloqueante — resuelto | 5 | B1 (confirmado en vivo), B2 (resuelto por diseño), B3 (parcial), B4, B5 |
 | 🟠 Alto — abierto | 0 | — |
 | 🟠 Alto — resuelto | 7 | A1 (parcial), A2 (parcial), A3, A4, A5, A6, A7 (parcial) |
-| 🟡 Medio | 7 | M1, M2, M3, M4, M5, M6, M7 |
-| ⚪ Bajo | 2 | J1/J3, J2 |
+| 🟡 Medio — abierto (deliberado) | 2 | M3, M4 |
+| 🟡 Medio — resuelto | 4 | M2, M5, M6, M7 |
+| 🟡 Medio — sin cambio (no era bug) | 1 | M1 |
+| ⚪ Bajo — resuelto | 1 | J1/J3 |
+| ⚪ Bajo — mejorado sustancialmente | 1 | J2 |
 
-### Veredicto: **LISTO CON RESERVAS** (sin Bloqueantes ni Altos abiertos; quedan Medios por decidir si se abordan antes de vender)
+### Veredicto: **LISTO PARA VENDER** (con dos mejoras de rendimiento/UX documentadas y conscientemente aplazadas)
 
 Los 5 hallazgos Bloqueantes y los 7 Altos de la auditoría original están resueltos:
 
 - **B1** (licencias falsificables): resuelto y **confirmado en vivo contra el Firebase real de producción** — un código inventado con su contraseña recalculada correctamente se rechazó; el código generado legítimamente se aceptó. El hallazgo del informe verificado con mayor grado de confianza: no solo lectura de código, no solo test simulado, sino el ataque real ejecutado y bloqueado contra la infraestructura de producción.
 - **B2** (licencia sin límite de negocios): reevaluado tras aclarar con el negocio la política real deseada ("1 código = 1 negocio, tantos dispositivos como haga falta"). El diseño actual (`tenantId` como función determinista y única del código) ya la garantiza matemáticamente, sin necesitar ningún cambio de código.
 - **B3, B4, B5**: resueltos y verificados con tests reales donde fue posible.
-- **A1-A7** (PINs, stock en anulaciones, recetas base huérfanas, crashes por referencias borradas, sincronización sin reintento ni aviso de colisión): resueltos y verificados con tests reales donde fue posible — ver cada ficha arriba para el alcance exacto, varios quedan "resueltos con matices" documentados explícitamente (p.ej. A1: la sal ya no es global, pero 10.000 PINs posibles sigue siendo un límite físico; A7: se avisa de colisiones reales, pero no se fusionan campo a campo por prudencia).
+- **A1-A7** (PINs, stock en anulaciones, recetas base huérfanas, crashes por referencias borradas, sincronización sin reintento ni aviso de colisión): resueltos y verificados con tests reales donde fue posible — ver cada ficha arriba para el alcance exacto, varios quedan "resueltos con matices" documentados explícitamente.
 
-**Con esto no queda ningún Bloqueante ni Alto abierto.** Solo quedan los 7 Medios (M1-M7) y 2 Bajos (J1/J3, J2), ninguno de los cuales impide un lanzamiento — son mejoras de pulido (avisos de sincronización más finos, límites de tamaño de histórico, textos i18n sueltos, guarda de re-entrada en `finalizeCharge`) que se pueden abordar con calma después del lanzamiento, no antes.
+De los 7 Medios originales, **4 están resueltos** (M2 filtrado por área, M5 trazabilidad de reservas, M6 confirmación visible cocina↔sala, M7 textos i18n), **1 no era un bug real** (M1, ya tenía doble red de seguridad) y **2 se dejan abiertos a propósito**: M3 (indicador de sincronización más fino) y M4 (paginación de histórico de ventas) son mejoras de rendimiento/UX a largo plazo, no riesgos de datos incorrectos ni pérdida de información — implementarlas sin poder probarlas contra datos reales de un negocio con meses de uso habría sido más arriesgado que dejarlas documentadas para revisar después del lanzamiento. Los 2 Bajos también quedan resueltos o sustancialmente mejorados (J1/J3, J2).
+
+**Con esto la app pasa a LISTO PARA VENDER**, con dos notas explícitas para revisar cuando el primer negocio real lleve un tiempo de uso: el indicador de sincronización (M3) y el volumen de histórico de ventas (M4) — ninguna de las dos bloquea empezar a vender, ambas son candidatas naturales para una siguiente iteración una vez haya datos reales de uso con los que decidir bien.
 
 ### Qué se ha verificado con test real (alta confianza)
 Todos los hallazgos Bloqueantes de licencias/login (B1 — además confirmado en vivo contra Firebase de producción, B2, B3) y todos los Altos de PINs/recetas/sincronización (A1, A4, A6, A7) — ejecutados de verdad contra el código real del repo (`test/audit-active.mjs`, `test/smoke.test.mjs`), no supuestos. También toda la lógica de IVA/descuento, stock y el total facturado a VeriFactu sin propina (B5).
@@ -260,7 +255,7 @@ B4 (anulación de venta), A2, A3, A5 (se aplicó el fix y se comprobó sintaxis/
 - Carga real con muchos dispositivos/usuarios simultáneos sobre un proyecto Firebase real (esta auditoría no tuvo acceso a un proyecto Firebase de prueba).
 - Comportamiento en hardware real de tablets (Android/iOS, distintos navegadores, modo avión real, sueño de la pestaña) — todo lo relacionado con sincronización se evaluó por código, no en dispositivos físicos.
 - Intentos de fraude de licencia más sofisticados que el descrito (B1/B2 demuestran el camino más directo; no se exploraron ataques contra una eventual solución server-side todavía inexistente).
-- Auditoría de seguridad de las propias reglas de Firebase del proyecto de producción (esta auditoría trabajó sobre el código cliente; las reglas de seguridad de Firebase en sí no se revisaron directamente porque no son parte de este repositorio).
+- Auditoría de seguridad completa de las reglas de Firebase del proyecto de producción (`plataforma-gastrogoan`) — solo se revisó y corrigió específicamente la regla de `issuedCodes` (para B1), no se auditó el resto del árbol de reglas (`tenants`, `public`, etc.), que tampoco son parte de este repositorio.
 - Pruebas de penetración formales o fuzzing automatizado.
 
 **No se declara esta app "100% libre de bugs"** — ninguna auditoría, humana o automatizada, puede garantizar eso, y afirmarlo sería irresponsable de cara a un lanzamiento comercial real. Lo que sí se afirma es lo de arriba: qué se probó de verdad, qué se verificó solo leyendo código, y qué queda fuera de este alcance.
