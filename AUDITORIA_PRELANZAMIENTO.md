@@ -34,7 +34,7 @@
 
 #### B1. La licencia se puede falsificar sin usar el generador oficial — ✅ **RESUELTO**
 **Módulo**: `js/core.js:966-970` (`_ggBizSecret`), `:971-980` (`ggBizPassword`), ahora `:1011-1053` (`verifyCodeIssuedOnPlatform`, `activateBusinessLicenseLocal`, `activateBusinessLicense`), `generador-licencias.html`.
-**Verificado con**: test real, `test/audit-active.mjs` (sección A) — el mismo escenario que antes demostraba el fallo (recalcular `código+contraseña` sin pasar por el generador) ahora se **rechaza** correctamente; un código realmente emitido se sigue activando con normalidad; y sin conexión a la plataforma la activación falla de forma distinguible (`offline:true`) en vez de aceptar a ciegas.
+**Verificado con**: test real, `test/audit-active.mjs` (sección A, con un Firebase simulado) — el mismo escenario que antes demostraba el fallo ahora se **rechaza** correctamente. **Además, confirmado en vivo el mismo día contra el proyecto Firebase real** (`plataforma-gastrogoan`), tras publicar la regla de seguridad y crear el usuario administrador: un código inventado (`PIRATA01`) con su contraseña recalculada correctamente (`5KC8HJ`) se rechazó de verdad, y el código generado legítimamente con sesión de administrador (`8W86L9HS`/`JPEGKU`) se activó sin problema. Esto es la confirmación de mayor confianza de todo el informe — no solo lectura de código ni test simulado, sino el ataque real ejecutado contra la infraestructura real de producción y bloqueado.
 **Descripción original**: la "contraseña" de una licencia era `hash(code + SECRETO_FIJO)` recalculable por cualquiera, sin ninguna comprobación contra nada externo.
 **Fix aplicado** (10/08/2026, opción elegida: "nodo Firebase de solo-validación", sin Cloud Functions): se aprovechó que ya existía un proyecto Firebase compartido de la plataforma (`plataforma-gastrogoan`) con un nodo `gastrogoan/issuedCodes/{code}` que `generador-licencias.html` ya usaba para garantizar códigos únicos. Ahora **también sirve como lista blanca real**:
 - `activateBusinessLicense()` (`js/core.js`) pasó a ser `async`: primero recalcula localmente (como antes, sigue haciendo falta), y si cuadra, comprueba además que el código exista de verdad en `issuedCodes` de la plataforma antes de aceptar la activación. Sin eso, ya no basta con inventarse un código y calcular su contraseña.
@@ -42,7 +42,9 @@
 - **La activación exige internet** (a diferencia de la revocación de licencias ya activas, que sigue siendo fail-open a propósito para no dejar tirado a un negocio sin wifi en el día a día) — es razonable porque activar es un momento puntual y deliberado (dar de alta un negocio nuevo), casi siempre con el vendedor delante.
 - Las licencias ya guardadas localmente (`isStoredLicenseValid`) se siguen revalidando sin red, así que el uso diario offline no cambia en nada.
 - **`generador-licencias.html`** se actualizó para exigir el login del administrador (email+contraseña de Firebase Authentication, no autenticación anónima) antes de poder escribir en `issuedCodes` — con la regla de escritura anterior (`auth != null`, cualquier sesión anónima) cualquiera podría haberse auto-emitido un código válido igualmente. Ver el comentario en la cabecera del archivo con las reglas de Firebase exactas a pegar en la consola.
-**Pendiente de acción tuya (fuera del alcance de lo que puedo hacer sin acceso a internet)**: crear el usuario administrador en Firebase Authentication del proyecto `plataforma-gastrogoan` (Authentication → Users → Add user) y pegar las reglas de seguridad actualizadas en Realtime Database → Rules — ambas están documentadas literalmente en el comentario de `generador-licencias.html`. Hasta que eso esté hecho, el generador seguirá funcionando en modo degradado (código sin registrar en la plataforma, con aviso visible) y la app seguirá aceptando cualquier código+contraseña que cuadre, exactamente igual que antes de este fix — la protección solo entra en vigor una vez la regla de Firebase esté publicada.
+**Acción pendiente completada (10/08/2026)**: se creó el usuario administrador en Firebase Authentication y se publicó la regla de seguridad actualizada en `plataforma-gastrogoan` → Realtime Database → Rules. Confirmado en vivo con el test descrito arriba. Este hallazgo se da por cerrado sin condiciones pendientes.
+
+Nota: durante la verificación se detectó y corrigió un bug propio en `ensureAdminLogin()` (`generador-licencias.html`) — daba por válida cualquier sesión de Firebase ya abierta en el navegador, incluida la sesión anónima que usa el resto de la app, sin comprobar que fuera realmente el usuario administrador (las sesiones anónimas no tienen `.email`, ahora se distingue por eso). Sin ese arreglo, el botón de login se declaraba "iniciado" sin pedir nunca las credenciales reales.
 
 #### B2. Una sola licencia sirve para negocios/dispositivos ilimitados sin ningún control — sigue abierto
 **Módulo**: `js/core.js` (`ggBizTenantId`).
@@ -219,25 +221,25 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 
 ### Recuento de hallazgos por severidad
 
-**Actualizado 10/08/2026, tras la segunda ronda de correcciones**: B1, B3, B4 y B5 se han resuelto (B1 y B3 con matices, ver alcance en sus fichas). Solo B2 sigue abierto.
+**Actualizado 10/08/2026, tras la segunda ronda de correcciones**: B1, B3, B4 y B5 se han resuelto (B1 confirmado en vivo contra el Firebase real de producción, no solo por test simulado; B3 con matices, ver alcance en su ficha). Solo B2 sigue abierto.
 
 | Severidad | Cantidad | IDs |
 |---|---|---|
 | 🔴 Bloqueante — abierto | 1 | B2 |
-| 🔴 Bloqueante — resuelto | 4 | B1 (con acción pendiente tuya), B3 (parcial), B4, B5 |
+| 🔴 Bloqueante — resuelto | 4 | B1 (confirmado en vivo), B3 (parcial), B4, B5 |
 | 🟠 Alto | 7 | A1, A2, A3, A4, A5, A6, A7 |
 | 🟡 Medio | 7 | M1, M2, M3, M4, M5, M6, M7 |
 | ⚪ Bajo | 2 | J1/J3, J2 |
 
 ### Veredicto: **NO LISTO, pero cerca** (el modelo de licencias ya no es un colador; queda pulir el límite de uso por licencia)
 
-Queda un solo hallazgo Bloqueante sin resolver: **B2**, que una licencia legítima se pueda usar en más de un negocio sin ningún límite. Es real y hay que resolverlo antes de vender con garantías, pero ya no es "cualquiera puede tener la app gratis sin que se note" (eso era B1, ya cerrado) — ahora es "un cliente que comparta su código podría dar de alta un segundo negocio con él sin que la app lo impida". Menos grave, pero sigue bloqueando un lanzamiento serio.
+Queda un solo hallazgo Bloqueante sin resolver: **B2**, que una licencia legítima se pueda usar en más de un negocio sin ningún límite. Es real y hay que resolverlo antes de vender con garantías, pero ya no es "cualquiera puede tener la app gratis sin que se note" (eso era B1, ya cerrado y confirmado en producción) — ahora es "un cliente que comparta su código podría dar de alta un segundo negocio con él sin que la app lo impida". Menos grave, pero sigue bloqueando un lanzamiento serio.
 
-- **B1 se ha resuelto** con la opción que elegiste (nodo Firebase de solo-validación, sin Cloud Functions): la app ya no acepta cualquier código+contraseña que cuadre matemáticamente, exige además que el código exista en la lista de códigos realmente vendidos. **Importante**: la protección solo entra en vigor de verdad cuando publiques las reglas de Firebase y crees el usuario administrador — los pasos exactos están documentados en `generador-licencias.html`, son cosas que no puedo hacer yo sin acceso a internet.
+- **B1 resuelto y confirmado en producción**: se creó el usuario administrador en Firebase Authentication, se publicó la regla de seguridad, y se probó en vivo contra el Firebase real — un código inventado con su contraseña recalculada correctamente se rechazó; el código generado legítimamente se aceptó. Es el hallazgo del informe verificado con mayor grado de confianza: no solo lectura de código, no solo test simulado, sino el ataque real ejecutado y bloqueado contra la infraestructura de producción.
 - **B2 sigue abierto**: necesita decidir una política de negocio (¿cuántas activaciones por licencia?) antes de poder implementarlo bien.
 - **B3, B4 y B5 ya están resueltos** (ver fichas arriba para el alcance exacto de cada uno) y verificados con tests reales donde fue posible.
 
-Antes de considerar esto listo para vender, hacen falta dos cosas: (1) que completes los pasos pendientes de B1 en la consola de Firebase, y (2) resolver B2. Ninguna de las dos requiere ya rehacer la arquitectura.
+Antes de considerar esto listo para vender, solo queda resolver B2 — ya no requiere rehacer la arquitectura, y toda la infraestructura de Firebase necesaria ya está desplegada y probada.
 
 Los Altos (A1-A7) no bloquean por sí solos un lanzamiento, pero varios de ellos (A3 stock que se descuadra solo, A4 coste de recetas infravalorado en silencio, A6/A7 pérdida/colisión de datos entre dispositivos) son justo el tipo de fallo que un hostelero real notará semanas después, sin saber por qué sus números no cuadran — conviene resolver al menos A3, A4 y A6/A7 antes de vender a negocios con varios dispositivos simultáneos, que es el caso de uso principal de la app.
 
