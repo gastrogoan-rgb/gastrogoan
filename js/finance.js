@@ -928,7 +928,10 @@ function renameIngredientCategory(oldName){
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
   if(!trimmed || trimmed === oldName) return;
-  DB.ingredients.forEach(i => { if(i.category === oldName) i.category = trimmed; });
+  // Solo los ingredientes de ESTA área: Cocina y Sala pueden tener, por
+  // coincidencia, una categoría con el mismo nombre, y renombrarla en una
+  // no debe tocar la de la otra.
+  DB.ingredients.forEach(i => { if(i.category === oldName && (i.area||'cocina') === currentArea()) i.category = trimmed; });
   const idx = DB.ingredientCategories.indexOf(oldName);
   if(idx >= 0) DB.ingredientCategories.splice(idx, 1);
   if(!ingredientCategories().includes(trimmed) && !DB.ingredientCategories.includes(trimmed)) DB.ingredientCategories.push(trimmed);

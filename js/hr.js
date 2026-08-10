@@ -66,7 +66,16 @@ const GE = (function(){
     renderTesoreria();
   }
 
-  function proveedores(){ return [...new Set([...DB.ingredients.map(i=>i.supplier), ...(DB.providers||[]).map(p=>p.nombre)].filter(Boolean))]; }
+  // Solo proveedores del área actual (Cocina/Sala) — antes mezclaba los de
+  // ambas, así que Sala podía ver sugerencias de proveedores de Cocina y
+  // viceversa en el desplegable de gasto.
+  function proveedores(){
+    const area = currentArea();
+    return [...new Set([
+      ...DB.ingredients.filter(i => (i.area||'cocina') === area).map(i=>i.supplier),
+      ...(DB.providers||[]).filter(p => (p.area||'cocina') === area).map(p=>p.nombre),
+    ].filter(Boolean))];
+  }
 
   // Última barrera antes de pintar Gestión Económica, por si se llega
   // aquí saltándose navigate()/renderView() (p.ej. GE.init() a mano desde

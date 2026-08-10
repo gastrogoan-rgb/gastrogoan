@@ -591,8 +591,11 @@ function saveProvider(id){
     // ambos para que el proveedor siga siendo el mismo, solo con otro nombre.
     const oldName = prov.nombre;
     if(oldName !== nombre){
-      DB.ingredients.forEach(i => { if(i.supplier === oldName) i.supplier = nombre; });
-      (DB.purchaseOrders||[]).forEach(o => { if(o.supplier === oldName) o.supplier = nombre; });
+      // Solo del área de ESTE proveedor: Cocina y Sala pueden tener,
+      // por coincidencia, un proveedor con el mismo nombre.
+      const provArea = prov.area || 'cocina';
+      DB.ingredients.forEach(i => { if(i.supplier === oldName && (i.area||'cocina') === provArea) i.supplier = nombre; });
+      (DB.purchaseOrders||[]).forEach(o => { if(o.supplier === oldName && (o.area||'cocina') === provArea) o.supplier = nombre; });
     }
     Object.assign(prov, data);
   }else{

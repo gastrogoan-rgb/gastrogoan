@@ -1478,7 +1478,7 @@ function mergeClients(keepId, removeId){
   const keep = DB.clients.find(c => c.id === keepId);
   const remove = DB.clients.find(c => c.id === removeId);
   if(!keep || !remove) return;
-  if(!confirm(`¿Fusionar «${remove.name}» dentro de «${keep.name}»? Se traspasará su historial y se eliminará la ficha «${remove.name}».`)) return;
+  if(!confirm(t('msg.confirmMergeClients').replace(/\$\{remove\}/g, remove.name).replace('${keep}', keep.name))) return;
 
   DB.sales.forEach(s => { if(s.clientId === removeId) s.clientId = keepId; });
   DB.reservations.forEach(r => { if(r.clientId === removeId) r.clientId = keepId; });

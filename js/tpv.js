@@ -1292,6 +1292,12 @@ function confirmOpenTableOrder(tableId){
       const client = DB.clients.find(c=>c.id===upcoming.clientId);
       const name = client ? client.name : (upcoming.clientName||'');
       if(!confirm(t('msg.confirmSeatDespiteReservation').replace('${time}', upcoming.time).replace('${name}', name).replace('${people}', upcoming.people))) return;
+      // Antes este aviso no dejaba rastro: si luego llegaba el cliente de
+      // la reserva y la mesa estaba ocupada, no había forma de revisar que
+      // ya se había avisado y quién decidió sentar al walk-in de todas
+      // formas. Queda registrado en el mismo log de auditoría que ya usan
+      // otras acciones de TPV.
+      logAudit('reservation_warning_dismissed', t('audit.seatedDespiteReservation').replace('${table}', (DB.tables.find(t=>t.id===tableId)||{}).name||'').replace('${name}', name).replace('${time}', upcoming.time));
     }
   }
   // Si quien está fichado ahora mismo entró con su propio PIN de empleado,
@@ -1538,7 +1544,7 @@ function renderOrderMenuHtml(order){
   const comidaCartas = getActiveComidaCartas();
   if(comidaCartas.length > 1 && !comidaCartas.some(c => c.id === order.cartaElegidaId)){
     return menusHtml + `
-      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Hay varias cartas activas a esta hora. Elige cuál usar para esta comanda:</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">${t('msg.multipleCartasHint')}</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(tItem(c))}</button>`).join('')}
       </div>
@@ -1546,7 +1552,7 @@ function renderOrderMenuHtml(order){
   }
 
   const folders = getOrderMenuFolders(order);
-  if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">No hay platos disponibles. Selecciona al menos una carta activa en TPV con platos disponibles.</p>`;
+  if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">${t('msg.noDishesAvailableForOrder')}</p>`;
 
   if(tpvMenuOrderId !== order.id){ tpvMenuOrderId = order.id; tpvMenuFolder = null; }
 
@@ -1830,6 +1836,15 @@ function renderTableOrderModal(orderId){
   const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : t('label.assignWaiter')}</span>` : '';
   const allergensBadge = ` <span class="badge ${order.tableAllergens?'badge-red':''}" style="cursor:pointer" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
   const mergeBadge = table ? ` <span class="badge" style="cursor:pointer" onclick="openMergeMesaModal(${order.id})" title="${t('tpv.merge.hint')}"><i class="ti ti-arrows-join"></i> ${t('tpv.merge.btn')}</span>` : '';
+  // Confirmación visible de que la comanda llegó de verdad a la pantalla
+  // de Cocina (recibidoEnCocinaAt, ver renderComandasCocina) — antes sala
+  // no tenía forma de saberlo, solo el estado de sincronización general.
+  const hasFiredLines = (order.items||[]).some(l => l.estado && !l.bebida);
+  const kitchenAckBadge = hasFiredLines
+    ? (order.recibidoEnCocinaAt
+      ? ` <span class="badge badge-green" title="${t('tpv.kitchenAck.confirmed')}"><i class="ti ti-check"></i> ${t('tpv.kitchenAck.confirmedShort')}</span>`
+      : ` <span class="badge badge-amber" title="${t('tpv.kitchenAck.pending')}"><i class="ti ti-clock"></i> ${t('tpv.kitchenAck.pendingShort')}</span>`)
+    : '';
 
   const total = orderTotal(order);
   if(order.items.some(l => l.nuevo)){
@@ -1886,7 +1901,7 @@ function renderTableOrderModal(orderId){
 
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
-      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}</h3>
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}${kitchenAckBadge}</h3>
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
@@ -2535,6 +2550,21 @@ function renderComandasCocina(){
   if(!box) return;
 
   const allOrders = DB.tpvOrders.filter(o => o.status !== 'pagada');
+
+  // Sello de "ha llegado a la pantalla de Cocina", para que Sala tenga una
+  // confirmación visible (ver badge en renderTableOrderModal) en vez de
+  // mandar la comanda a ciegas sin saber si de verdad se está viendo en
+  // cocina. Se marca solo una vez, la primera vez que esta pantalla la
+  // pinta — no es prueba de que un humano la haya leído, pero sí de que
+  // ha llegado de verdad al dispositivo de cocina.
+  let stampedAny = false;
+  allOrders.forEach(o => {
+    if(!o.recibidoEnCocinaAt && (o.items||[]).some(l => l.estado && !l.bebida)){
+      o.recibidoEnCocinaAt = new Date().toISOString();
+      stampedAny = true;
+    }
+  });
+  if(stampedAny) saveDB();
 
   const tabsHtml = `
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
@@ -3467,6 +3497,12 @@ function updatePaymentChange(orderId){
 function finalizeCharge(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length) return;
+  // Guarda de re-entrada: aunque hoy la función es síncrona (sin await de
+  // por medio, así que un doble-tap real no consigue colar una segunda
+  // ejecución antes de que el modal de ticket sustituya el botón), esto
+  // es barato de comprobar y evita un doble cobro/doble descuento de stock
+  // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
+  if(order.status === 'pagada') return;
   const {total: subtotal, descuentoPct, descuentoImporte, propina, finalTotal: total} = computeFinalTotal(order);
   const metodoPago = document.getElementById('payment-method').value;
   let pagos = null;
