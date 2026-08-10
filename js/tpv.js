@@ -4006,65 +4006,75 @@ async function submitSaleToVerifactuProvider(sale, cfg){
   return submitSaleToGenericProvider(sale, cfg, provider);
 }
 
-// VeriFactuAPI (Invocash) — usa el esquema de campos oficial de la AEAT
-// (no una simplificación propia), confirmado vía su SDK público
-// (github.com/NemonInvocash/verifactu-php). CONFIRMADO contra su
-// documentación real (app.verifactuapi.es/docs/, aportada por el usuario
-// el 31-07-2026): endpoint base, nombres de campo, formato de fecha,
-// códigos de Desglose, y estructura de la respuesta (data.items[0]).
-// Autenticación por clave de emisor (Bearer, limitada al NIF de este
-// negocio, generada por el propio negocio desde su cuenta).
-// La huella (Huella) no llega en la respuesta inmediata de creación — la
-// AEAT la procesa de forma asíncrona — así que tras crear el registro se
-// consulta GET /api/alta-registro-facturacion/{id} unas pocas veces con
-// una pequeña espera; si todavía no está lista, la venta queda en la cola
-// normal de reintento (processVerifactuQueue) y se comprueba en la
-// siguiente pasada, sin bloquear nada.
+// VeriFactuAPI (Invocash) — REESCRITO Y CONFIRMADO EN VIVO el 10/08/2026
+// contra una llamada real (HTTP 200, factura creada) desde el Portal de
+// Desarrolladores de una cuenta real de Invocash. La versión anterior de
+// esta función usaba un esquema de campos y una URL fija que YA NO SON
+// LOS CORRECTOS (Invocash cambió de API en algún momento entre julio y
+// agosto de 2026) — daba siempre "Token inválido" sin que tuviera nada
+// que ver con la clave ni la cuenta. Lo confirmado ahora:
+//   - La URL NO es fija: cada negocio tiene su propio dominio de Invocash
+//     (el mismo que el de su panel, ej. "tunegocio.invo.cash"), guardado en
+//     DB.business.verifactu.domain. Base real: https://{domain}/api
+//   - Autenticación: cabecera "X-API-Key: <clave>" (NO "Authorization:
+//     Bearer" — ese formato es solo para el login de usuario del panel,
+//     no para integraciones de terceros, y da "Token inválido" en vez de
+//     avisar de que la cabecera es la equivocada).
+//   - Endpoint de creación: POST /invoices (no /api/alta-registro-facturacion).
+//   - Payload en su propio esquema (no los nombres de campo oficiales de la
+//     AEAT): due, comments, verifactu_issuer_territory, simplified, lines[]
+//     con tax_base/tax_pctge/tax_amount ya calculados por nosotros (la API
+//     NO los calcula), total.
+// PENDIENTE (no confirmado todavía): el endpoint para VALIDAR la factura
+// creada y que se envíe de verdad a la AEAT (la respuesta de creación trae
+// "validated": false, "verifactu_status": null — la factura se crea pero
+// se queda en borrador hasta ese segundo paso). Hasta que se localice ese
+// endpoint, se lanza un error controlado para que la venta quede en la
+// cola de reintento (processVerifactuQueue) en vez de darla por enviada
+// sin estarlo. Ver docs/VERIFACTU_PENDIENTE.md.
 async function submitSaleToVerifactuApi(sale, cfg, provider){
-  const nif = (DB.business && DB.business.cif) || '';
-  const numSerieFactura = sale.verifactuNumSerie || (sale.verifactuNumSerie = nextVerifactuNumSerieFactura());
-  const fecha = new Date(sale.date);
-  const fechaExpedicion = `${fecha.getFullYear()}-${fecha.getMonth()+1}-${fecha.getDate()}`; // formato confirmado en su doc: "2025-1-1"
+  if(!cfg.domain) throw new Error('VeriFactuAPI: falta configurar el dominio de tu cuenta Invocash en Mi Negocio → VeriFactu');
+  const apiBase = `https://${cfg.domain}/api`;
+  const headers = {'Content-Type': 'application/json', 'X-API-Key': cfg.apiKey};
   const groups = saleIvaGroupsForFiscal(sale);
-  const cuotaTotal = groups.reduce((s,g)=>s+g.cuota, 0);
-  const headers = {'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.apiKey}`};
+  const total = Math.round(sale.total*100)/100;
+  const fecha = new Date(sale.date);
+  const due = `${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getDate()).padStart(2,'0')}`;
+
   const body = {
-    IDEmisorFactura: nif,
-    NumSerieFactura: numSerieFactura,
-    FechaExpedicionFactura: fechaExpedicion,
-    TipoFactura: 'F2', // factura simplificada (tique), el caso normal de un restaurante; sin Destinatarios
-    DescripcionOperacion: sale.items.map(l => `${l.qty}x ${l.name}`).join(', ').slice(0, 500),
-    FacturaSimplificadaArt7273: 'S',
-    // Un grupo por cada tipo de IVA real presente en la venta (comida al
-    // 10%, alcohol al 21%...), no un único tipo adivinado para todo el
-    // ticket — así la declaración a Hacienda es correcta también cuando
-    // se mezclan platos con distinto IVA en la misma venta.
-    Desglose: groups.map(g => ({
-      Impuesto: '01', ClaveRegimen: 1, CalificacionOperacion: 1,
-      TipoImpositivo: g.ivaPct, BaseImponibleOImporteNoSujeto: g.base, CuotaRepercutida: g.cuota,
+    due,
+    comments: sale.items.map(l => `${l.qty}x ${l.name}`).join(', ').slice(0, 500),
+    verifactu_issuer_territory: 'MAINLAND',
+    simplified: true, // ticket a consumidor final, sin cliente registrado — el caso normal de un restaurante
+    lines: groups.map(g => ({
+      product_id: null,
+      description: sale.items.map(l => l.name).join(', ').slice(0, 250),
+      quantity: 1,
+      unit_price: Math.round(g.base*100)/100,
+      tax_base: Math.round(g.base*100)/100,
+      tax_pctge: g.ivaPct,
+      tax_amount: Math.round(g.cuota*100)/100,
+      tax_withholding_pctge: 0,
+      tax_withholding_amount: 0,
+      tax_type: 'IVA',
+      clave_regimen: '01',
+      qualification_operation: 'S1',
+      exempt_operation: null,
+      total: Math.round((g.base + g.cuota)*100)/100,
     })),
-    CuotaTotal: Math.round(cuotaTotal*100)/100,
-    ImporteTotal: Math.round(sale.total*100)/100,
+    total,
   };
-  const createRes = await fetch(`${provider.apiBase}/api/alta-registro-facturacion`, {method: 'POST', headers, body: JSON.stringify(body)});
-  if(!createRes.ok) throw new Error(`VeriFactuAPI (crear registro) respondió ${createRes.status}`);
+  const createRes = await fetch(`${apiBase}/invoices`, {method: 'POST', headers, body: JSON.stringify(body)});
+  if(!createRes.ok) throw new Error(`VeriFactuAPI (crear factura) respondió ${createRes.status}`);
   const created = await createRes.json();
   const item = created.data && created.data.items && created.data.items[0];
-  if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de registro');
+  if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de factura');
+  sale.verifactuInvoiceId = item.id;
 
-  // Consulta corta de la huella/QR ya procesados (unos segundos de margen;
-  // si la AEAT tarda más, la cola general lo reintentará más tarde).
-  for(let i=0; i<3; i++){
-    await new Promise(r => setTimeout(r, 1500));
-    const getRes = await fetch(`${provider.apiBase}/api/alta-registro-facturacion/${item.id}`, {headers});
-    if(!getRes.ok) continue;
-    const record = await getRes.json();
-    const data = (record.data && record.data.items ? record.data.items[0] : record.data) || {};
-    if(data.Huella){
-      return {invoiceId: numSerieFactura, hash: data.Huella, qrData: data.url_qr || null};
-    }
-  }
-  throw new Error('VeriFactuAPI: la huella todavía no estaba lista, se reintentará');
+  // Todavía sin confirmar cómo se dispara la validación/envío a la AEAT
+  // (ver aviso arriba) — se deja en cola para reintentar, no se marca como
+  // enviada de verdad hasta tener ese paso confirmado.
+  throw new Error(`VeriFactuAPI: factura #${item.id} creada correctamente, pendiente de confirmar el paso de validación/envío a la AEAT`);
 }
 
 // FacturaHub: flujo documentado públicamente (crear factura → emitir a

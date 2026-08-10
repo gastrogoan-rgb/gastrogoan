@@ -5335,7 +5335,7 @@ function renderVerifactuConfigCard(){
       ${vf.lockedOnce ? `<p style="font-size:12px;color:var(--muted);margin:0 0 10px"><i class="ti ti-lock"></i> ${t('mn.verifactu.lockedNotice')}</p>` : ''}
       <div class="field">
         <label>${t('mn.verifactu.provider')}</label>
-        <select id="vf-provider">
+        <select id="vf-provider" onchange="document.getElementById('vf-domain-field').style.display = this.value==='verifactuapi' ? '' : 'none'">
           <option value="">${t('mn.verifactu.selectProvider')}</option>
           ${providerOptions}
         </select>
@@ -5344,6 +5344,11 @@ function renderVerifactuConfigCard(){
         <label>${t('mn.verifactu.apiKey')}</label>
         <input type="text" id="vf-apikey" value="${escapeHtml(vf.apiKey||'')}" placeholder="${t('ph.verifactuApiKey')}" style="font-family:monospace;font-size:12px">
         <small style="color:var(--muted)">${t('mn.verifactu.apiKeyHint')}</small>
+      </div>
+      <div class="field" id="vf-domain-field" style="${vf.provider==='verifactuapi'?'':'display:none'}">
+        <label>${t('mn.verifactu.domain')}</label>
+        <input type="text" id="vf-domain" value="${escapeHtml(vf.domain||'')}" placeholder="tunegocio.invo.cash" style="font-family:monospace;font-size:12px">
+        <small style="color:var(--muted)">${t('mn.verifactu.domainHint')}</small>
       </div>
       <div class="field">
         <label>${t('mn.verifactu.serie')}</label>
@@ -5416,13 +5421,19 @@ function saveVerifactuConfig(){
   const enabled = vfPrev.lockedOnce ? true : document.getElementById('vf-enabled').checked;
   const provider = document.getElementById('vf-provider').value;
   const apiKey = document.getElementById('vf-apikey').value.trim();
+  // Invocash/VeriFactuAPI no tiene una URL fija de API: cada negocio tiene
+  // su propio dominio (el mismo que el de su panel, ej. "tunegocio.invo.cash"),
+  // confirmado en vivo el 10/08/2026 (antes el código apuntaba a un dominio
+  // fijo -app.verifactuapi.es- que ya no es el correcto para este esquema).
+  const domain = document.getElementById('vf-domain') ? document.getElementById('vf-domain').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'') : (vfPrev.domain||'');
   const serie = document.getElementById('vf-serie').value.trim();
   if(enabled && (!provider || !apiKey)){ showToast(t('msg.verifactuMissingFields')); return; }
+  if(enabled && provider === 'verifactuapi' && !domain){ showToast(t('msg.verifactuMissingDomain')); return; }
   if(enabled && !serie){ showToast(t('msg.verifactuMissingSerie')); return; }
   // La serie es POR DISPOSITIVO (localStorage), no se sincroniza entre
   // aparatos del mismo negocio — ver aviso en js/tpv.js sobre por qué.
   setVerifactuSerie(serie);
-  DB.business.verifactu = {...vfPrev, enabled, provider, apiKey, lockedOnce: vfPrev.lockedOnce || enabled};
+  DB.business.verifactu = {...vfPrev, enabled, provider, apiKey, domain, lockedOnce: vfPrev.lockedOnce || enabled};
   saveDB();
   renderMiNegocio();
   showToast(t('msg.verifactuConfigSaved'));
