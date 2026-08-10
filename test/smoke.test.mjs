@@ -22,6 +22,30 @@ function loadTpv(DB) {
   return sandbox;
 }
 
+const recipesSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'recipes.js'), 'utf8');
+function loadRecipes(DB) {
+  const sandbox = {
+    DB, t: (k) => k, window: undefined, console,
+    isOwnerSession: () => true, editUnlocked: true,
+    moveToTrash: () => {}, logAudit: () => {}, saveDB: () => {},
+    closeModal: () => {}, renderEscandallo: () => {}, showToast: () => {},
+    maybeShowCategoryIconHint: () => {},
+    ALLERGENS: [],
+    document: {
+      getElementById: () => ({value: '', style: {}, classList: {add(){}, remove(){}, contains(){return false;}}, addEventListener(){}, innerHTML: ''}),
+      querySelector: () => null, querySelectorAll: () => [],
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(recipesSource, sandbox, { filename: 'js/recipes.js' });
+  // recipes.js declara su propia renderEscandallo() (pinta UI real, con
+  // muchas dependencias de DOM/DB no relevantes para esta prueba de lógica
+  // pura) que pisa el stub inicial al cargar el script — se vuelve a
+  // sobrescribir aquí, después de cargar, para que gane el stub.
+  sandbox.renderEscandallo = () => {};
+  return sandbox;
+}
+
 let failures = 0;
 function test(name, fn) {
   try {
@@ -189,6 +213,42 @@ await testAsync('submitSaleToVerifactuApi: el total facturado NO incluye la prop
   assert.equal(Math.round(sumLines * 100) / 100, capturedBody.total,
     'la suma de las líneas de la factura debe cuadrar exactamente con el total del documento');
   assert.equal(capturedBody.total, 20, 'el total facturado no debe incluir la propina');
+});
+
+// --- recipesUsingBaseRecipe: dependencias de recetas base en cadena (A4) ---
+
+test('recipesUsingBaseRecipe detecta dependencias INDIRECTAS (base dentro de otra base)', () => {
+  const DB = {
+    recipes: [
+      {id: 1, name: 'Sofrito (base)', ingredients: []},
+      {id: 2, name: 'Salsa boloñesa (base)', ingredients: [{type:'base', baseRecipeId: 1, qty: 1}]},
+      {id: 3, name: 'Lasaña', ingredients: [{type:'base', baseRecipeId: 2, qty: 1}]},
+    ],
+  };
+  const sandbox = loadRecipes(DB);
+  const dependents = sandbox.recipesUsingBaseRecipe(1); // borrar el Sofrito
+  // Array.from (de este realm, no del sandbox vm) evita el problema de
+  // comparar arrays "cross-realm" con assert.deepEqual, que node trata
+  // como distintos aunque el contenido sea idéntico.
+  const ids = Array.from(dependents, r => r.id).sort();
+  assert.deepEqual(ids, [2, 3],
+    'debe avisar tanto de la Salsa (dependencia directa) como de la Lasaña (indirecta, a través de la Salsa)');
+});
+
+test('confirmDeleteRecipe limpia las líneas baseRecipeId que quedarían huérfanas', () => {
+  const DB = {
+    recipes: [
+      {id: 1, name: 'Sofrito (base)', ingredients: []},
+      {id: 2, name: 'Salsa boloñesa (base)', ingredients: [{type:'base', baseRecipeId: 1, qty: 1}, {type:'ingredient', ingredientId: 99, qty: 2}]},
+    ],
+    elaboraciones: [], fichas: [], cartas: [],
+  };
+  const sandbox = loadRecipes(DB);
+  sandbox.confirmDeleteRecipe(1); // borra el Sofrito "de todas formas"
+  const salsa = DB.recipes.find(r => r.id === 2);
+  assert.ok(salsa, 'la Salsa no debería borrarse, solo el Sofrito');
+  assert.equal(salsa.ingredients.length, 1, 'la línea que apuntaba al Sofrito borrado debe desaparecer');
+  assert.equal(salsa.ingredients[0].ingredientId, 99, 'la otra línea (un ingrediente normal) no debe tocarse');
 });
 
 console.log(`\n${failures === 0 ? '✅ Todo OK' : `❌ ${failures} test(s) fallaron`}`);

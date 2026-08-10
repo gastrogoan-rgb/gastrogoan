@@ -2837,9 +2837,8 @@ function resetEmployeePin(id){
   // — pero sí una confirmación explícita, porque deja el PIN de esa persona
   // en el valor por defecto (1234) hasta que vuelva a cambiarlo.
   if(!confirm(t('msg.confirmResetEmployeePin').replace('${name}', e.name))) return;
-  e.pin = '1234';
+  e.pin = hashPin('1234');
   e.pinChanged = false;
-  // PIN por defecto se guarda en plano; se hasheará cuando el empleado lo cambie
   logPersonalEvent('pinReset', {name: e.name});
   saveDB();
   showToast(t('msg.pinResetDone'));
@@ -2865,7 +2864,7 @@ function saveEmployee(id){
     if(empActiveEl) emp.active = empActiveEl.checked;
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:'1234', pinChanged:false, active:true, fechaAlta: todayStr()});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234'), pinChanged:false, active:true, fechaAlta: todayStr()});
     logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();

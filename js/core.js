@@ -1684,9 +1684,20 @@ const MERGEABLE_ARRAYS = new Set([
   'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations'
 ]);
 
-/* Hash simple para PINs (4 dígitos) — no almacenar en texto plano */
-function hashPin(pin){
-  const salt = 'GG2024$p';
+// Hash simple para PINs (4 dígitos) — no almacenar en texto plano.
+// La sal incluye el código de licencia del propio negocio (DB.license.code):
+// antes era una constante fija igual para TODAS las instalaciones, lo que
+// significa que una única tabla arcoíris de 10.000 hashes (el espacio
+// completo de PINs de 4 dígitos) servía para descifrar el PIN de
+// cualquier negocio con solo tener el JS del cliente (siempre igual) —
+// confirmado con test real en la auditoría del 10/08/2026 (54ms para
+// recuperar un PIN). Con la sal por negocio, cada tabla arcoíris solo
+// sirve para el negocio para el que se calculó — sigue siendo un espacio
+// pequeño (10.000 combinaciones) y por tanto rápido de romper SI se
+// conoce el código de ese negocio en concreto, pero ya no hay una única
+// tabla universal reutilizable contra cualquier cliente.
+function hashPin(pin, licenseCode){
+  const salt = 'GG2024$p:' + (licenseCode !== undefined ? licenseCode : ((DB.license && DB.license.code) || ''));
   let h = 0x811c9dc5;
   const s = salt + pin + salt;
   for(let i = 0; i < s.length; i++){
@@ -3399,7 +3410,7 @@ async function loadDB(){
     if(!merged.categoryIcons || typeof merged.categoryIcons !== 'object' || Array.isArray(merged.categoryIcons)) merged.categoryIcons = {recipe:{}, ingredient:{}};
     if(!merged.categoryIcons.recipe || typeof merged.categoryIcons.recipe !== 'object') merged.categoryIcons.recipe = {};
     if(!merged.categoryIcons.ingredient || typeof merged.categoryIcons.ingredient !== 'object') merged.categoryIcons.ingredient = {};
-    (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = '1234'; e.pinChanged = false; } if(!e.area) e.area = 'cocina'; });
+    (merged.employees||[]).forEach(e => { if(!e.pin){ e.pin = hashPin('1234', merged.license && merged.license.code); e.pinChanged = false; } if(!e.area) e.area = 'cocina'; });
     (merged.tpvOrders||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
     return merged;
   }catch(e){

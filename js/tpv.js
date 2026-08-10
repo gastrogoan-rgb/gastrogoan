@@ -1071,6 +1071,10 @@ function cancelAcceptedOnlineOrder(orderId){
   if(!order) return;
   requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
     if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
+    // El stock ya se había descontado al aceptar el pedido (líneas ya
+    // "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
+    // contador de raciones/ingredientes queda corto para siempre.
+    restockForVoidedItems(order.items);
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'));
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
@@ -2977,10 +2981,19 @@ function confirmVoidLine(){
     responsableId, responsableNombre: responsable ? responsable.name : ''
   });
 
+  // Solo se descontó stock por las raciones que de verdad se "marcharon"
+  // a cocina (line.marchada) — si la línea nunca llegó a marchar, no hay
+  // nada que devolver. Restaura justo esa parte, no toda la línea, para no
+  // sobre-restituir si solo se había marchado una parte de la cantidad.
+  const firedQty = line.marchada || 0;
   if(type === 'remove'){
+    if(firedQty > 0) restockForVoidedItems([{...line, qty: firedQty}]);
     order.items.splice(idx,1);
     reassignMenuBasePrice(order, line);
   } else {
+    const removedQty = Math.abs(delta);
+    const restockQty = Math.min(removedQty, firedQty);
+    if(restockQty > 0) restockForVoidedItems([{...line, qty: restockQty}]);
     line.qty += delta;
     if(line.qty <= 0){
       order.items.splice(idx,1);

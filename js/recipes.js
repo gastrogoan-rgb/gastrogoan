@@ -719,9 +719,19 @@ function cartaPlatosUsingRecipe(id){
 }
 // Otras recetas que usan esta (una elaboración base) como componente, para
 // avisar antes de borrarla — si no, esas recetas se quedan con un coste
-// más bajo del real, sin ningún aviso.
-function recipesUsingBaseRecipe(id){
-  return DB.recipes.filter(r => r.id!==id && (r.ingredients||[]).some(line => line.type==='base' && line.baseRecipeId===id));
+// más bajo del real, sin ningún aviso. Recursivo: una base usada dentro de
+// OTRA base (A dentro de B, B dentro del plato C) también cuenta — antes
+// solo se miraba el nivel directo, así que borrar A no avisaba de que C
+// también dependía de ella indirectamente.
+function recipesUsingBaseRecipe(id, seen){
+  seen = seen || new Set();
+  if(seen.has(id)) return [];
+  seen.add(id);
+  const direct = DB.recipes.filter(r => r.id!==id && (r.ingredients||[]).some(line => line.type==='base' && line.baseRecipeId===id));
+  const indirect = direct.flatMap(r => recipesUsingBaseRecipe(r.id, seen));
+  const all = [...direct, ...indirect];
+  const byId = new Map(all.map(r => [r.id, r]));
+  return [...byId.values()];
 }
 function deleteRecipe(id){
   if(!isOwnerSession() && !editUnlocked) return;
@@ -760,6 +770,15 @@ function confirmDeleteRecipe(id){
   const r0 = DB.recipes.find(r => r.id === id);
   if(r0){ moveToTrash('recipe', r0); logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name)); }
   DB.recipes = DB.recipes.filter(r => r.id !== id);
+  // Si se borra "de todas formas" pese al aviso, no dejar líneas de otras
+  // recetas apuntando a un baseRecipeId que ya no existe: recipeIngredientCost
+  // las trataría como coste 0 en silencio, infravalorando el food cost de
+  // cualquier receta que dependiera de esta, sin ningún aviso posterior al
+  // modal inicial. Se quitan (no se recalcula el precio de esas recetas
+  // automáticamente: mejor que el propietario vea el hueco y lo revise).
+  DB.recipes.forEach(r => {
+    r.ingredients = (r.ingredients||[]).filter(line => !(line.type==='base' && line.baseRecipeId===id));
+  });
   DB.elaboraciones = (DB.elaboraciones||[]).filter(e => e.recipeId !== id);
   // La ficha técnica vinculada documenta este plato en concreto: si el
   // plato se borra del Escandallo, se borra con él en vez de dejarla
@@ -1014,6 +1033,12 @@ function getFichaIngredientLines(f){
 function openFichaModal(id, recipeId){
   if(id){
     const f = getFicha(id);
+    // f puede no existir si se borró desde otro dispositivo mientras esta
+    // pantalla seguía mostrando el botón para abrirla (dato ya sincronizado
+    // vía Firebase en el otro dispositivo, pero esta vista aún no se había
+    // vuelto a pintar) — sin este guard, JSON.stringify(undefined) hace
+    // que JSON.parse reviente con un SyntaxError.
+    if(!f){ showToast(t('msg.recordNoLongerExists')); return; }
     fichaModalState = JSON.parse(JSON.stringify(f));
     // La nube no guarda listas vacías: restaurarlas si faltan
     if(!Array.isArray(fichaModalState.ingredients) || !fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
@@ -1023,6 +1048,7 @@ function openFichaModal(id, recipeId){
     if(!fichaModalState.produccion) fichaModalState.produccion = fichaModalState.comensales || fichaModalState.baseComensales;
   } else if(recipeId){
     const r = getRecipe(recipeId);
+    if(!r){ showToast(t('msg.recordNoLongerExists')); return; }
     fichaModalState = {
       id: null, name: r.name, recipeId: r.id, comensales: r.comensales||2,
       baseComensales: r.comensales||1, produccion: r.comensales||1,

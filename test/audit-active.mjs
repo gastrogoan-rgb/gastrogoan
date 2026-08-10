@@ -181,18 +181,37 @@ test('isOwnerSession() es una comprobación puramente de clase CSS en document.b
 
 console.log('\n--- D. PINs de empleado: ¿es viable un ataque de diccionario contra el hash? ---\n');
 
-test('El hash de PIN usa una sal fija embebida en el cliente y un espacio de 10.000 valores — precalculable al instante', () => {
+test('El espacio de 10.000 PINs sigue siendo precalculable al instante (límite físico, no depende de la sal)', () => {
   const sandbox = loadCore();
-  const target = sandbox.hashPin('7391'); // "PIN secreto" de un empleado
+  const target = sandbox.hashPin('7391', 'NEGOCIOTEST'); // "PIN secreto" de un empleado, negocio conocido
   const t0 = Date.now();
   let cracked = null;
   for (let i = 0; i < 10000; i++) {
     const candidate = String(i).padStart(4, '0');
-    if (sandbox.hashPin(candidate) === target) { cracked = candidate; break; }
+    if (sandbox.hashPin(candidate, 'NEGOCIOTEST') === target) { cracked = candidate; break; }
   }
   const ms = Date.now() - t0;
   assert.equal(cracked, '7391');
-  console.log(`   → PIN "secreto" recuperado del hash en ${ms} ms probando las 10.000 combinaciones posibles`);
+  console.log(`   → PIN "secreto" recuperado del hash en ${ms} ms probando las 10.000 combinaciones posibles (conociendo el código del negocio)`);
+});
+
+test('FIX A1: la sal ahora es distinta por negocio — una tabla arcoíris de un negocio ya NO sirve para otro', () => {
+  const sandbox = loadCore();
+  const pin = '7391';
+  const hashBusinessA = sandbox.hashPin(pin, 'CODIGO_NEGOCIO_A');
+  const hashBusinessB = sandbox.hashPin(pin, 'CODIGO_NEGOCIO_B');
+  assert.notEqual(hashBusinessA, hashBusinessB,
+    'el mismo PIN debe dar hashes distintos en negocios distintos — antes del fix daba siempre el mismo hash para todos');
+  // Confirma que una tabla arcoíris precalculada contra el negocio A no
+  // descifra nada del negocio B, aunque el PIN real sea el mismo:
+  const rainbowTableA = new Map();
+  for (let i = 0; i < 10000; i++) {
+    const candidate = String(i).padStart(4, '0');
+    rainbowTableA.set(sandbox.hashPin(candidate, 'CODIGO_NEGOCIO_A'), candidate);
+  }
+  assert.equal(rainbowTableA.get(hashBusinessB), undefined,
+    'la tabla arcoíris del negocio A no debería encontrar nada para un hash del negocio B');
+  console.log('   → tabla arcoíris de un negocio ya no sirve contra otro negocio distinto');
 });
 
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
