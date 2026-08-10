@@ -269,7 +269,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
    (por encima del mínimo táctil cómodo de ~36px) en cualquier tamaño de
    pantalla, no solo en el breakpoint móvil más estrecho — antes se
    quedaban en 32px en tablets y móviles en horizontal. */
-.comanda-qty-btn{width:36px;height:36px;min-width:36px;min-height:36px;padding:0;font-size:14px}
+.comanda-qty-btn{width:40px;height:40px;min-width:40px;min-height:40px;padding:0;font-size:14px}
 .btn i{flex-shrink:0}
 .ti{display:inline-flex;align-items:center;justify-content:center;min-width:1em;min-height:1em}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
