@@ -46,11 +46,11 @@
 
 Nota: durante la verificación se detectó y corrigió un bug propio en `ensureAdminLogin()` (`generador-licencias.html`) — daba por válida cualquier sesión de Firebase ya abierta en el navegador, incluida la sesión anónima que usa el resto de la app, sin comprobar que fuera realmente el usuario administrador (las sesiones anónimas no tienen `.email`, ahora se distingue por eso). Sin ese arreglo, el botón de login se declaraba "iniciado" sin pedir nunca las credenciales reales.
 
-#### B2. Una sola licencia sirve para negocios/dispositivos ilimitados sin ningún control — sigue abierto
+#### B2. Una sola licencia sirve para negocios/dispositivos ilimitados sin ningún control — ✅ **RESUELTO por diseño (sin cambio de código)**
 **Módulo**: `js/core.js` (`ggBizTenantId`).
-**Verificado con**: test real, `test/audit-active.mjs` (sección B) — sigue confirmando (a propósito, para no perder de vista que sigue sin resolverse) que el mismo `code` produce siempre el mismo `tenantId`.
-**Descripción**: el `tenantId` sigue siendo una función determinista de `code` únicamente. No hay vínculo a un dispositivo, a un pago, ni un contador de activaciones.
-**Por qué no se resolvió en esta misma pasada**: el fix de B1 (lista blanca de códigos emitidos) cierra "generar una licencia de la nada", pero no "una licencia legítima usada en más de un negocio a la vez" — eso necesita decidir una política real (¿cuántas activaciones por código? ¿qué pasa si se supera?) y, para hacerse cumplir de verdad, algo más que un nodo de solo-lectura (como mínimo, contar activaciones en el propio nodo `issuedCodes` con una regla que incremente un contador de forma atómica y rechace la activación por encima de un límite — technically posible con reglas de Firebase, `.validate` + `newData`, pero es un cambio más delicado que el de B1 y conviene decidir antes la política de negocio, no solo la mecánica).
+**Verificado con**: test real, `test/audit-active.mjs` (sección B) — confirma que el mismo `code` produce siempre el mismo `tenantId`.
+**Reevaluación (10/08/2026), tras aclarar con el negocio la política real que se quería**: el requisito de negocio es exactamente "1 código = 1 negocio, usable en tantos dispositivos como haga falta ese negocio; un negocio nuevo necesita sí o sí un código nuevo". Revisando `ggBizTenantId(code)` con ese requisito en mente (no con el que se asumió en la primera pasada del audit, "límite de activaciones/dispositivos"): al ser el `tenantId` una función **determinista y única** de `code`, es **matemáticamente imposible** que el mismo código acabe apuntando a dos negocios distintos, o que dos códigos distintos acaben compartiendo negocio. Reactivar el mismo código en 1 dispositivo o en 20 siempre resuelve al mismo `tenantId` — no hay ningún camino, ni siquiera reutilizando el código a propósito desde "Dar de alta un negocio nuevo" (`addNewBusiness`), para que un código sirva para dos negocios independientes: como mucho, un uso indebido ahí haría que el "negocio nuevo" acabara compartiendo los mismos datos del negocio original (confuso, pero no una licencia gratis para un negocio aparte).
+**Conclusión**: no hacía falta ningún límite de activaciones ni contador — el propio diseño ya garantiza la política deseada. La primera versión de este hallazgo asumía un requisito de negocio distinto (limitar dispositivos) que, aclarado con el negocio, no era el real.
 
 #### B3. Cualquier empleado puede convertirse en "propietario" desde la consola del navegador, sin PIN — ✅ **RESUELTO (parcialmente, ver alcance)**
 **Módulo**: `js/ui.js:1125-1127` (`isOwnerSession`), usado como única puerta a Gestión Económica/Mi Negocio en decenas de sitios de `js/app.js`, `js/hr.js`, `js/finance.js`.
@@ -221,25 +221,25 @@ Se ejecutaron dos suites reales contra el código real del repo (no contra una s
 
 ### Recuento de hallazgos por severidad
 
-**Actualizado 10/08/2026, tras la segunda ronda de correcciones**: B1, B3, B4 y B5 se han resuelto (B1 confirmado en vivo contra el Firebase real de producción, no solo por test simulado; B3 con matices, ver alcance en su ficha). Solo B2 sigue abierto.
+**Actualizado 10/08/2026, tras la segunda ronda de correcciones y la reevaluación de B2**: los 5 hallazgos Bloqueantes originales están resueltos.
 
 | Severidad | Cantidad | IDs |
 |---|---|---|
-| 🔴 Bloqueante — abierto | 1 | B2 |
-| 🔴 Bloqueante — resuelto | 4 | B1 (confirmado en vivo), B3 (parcial), B4, B5 |
+| 🔴 Bloqueante — abierto | 0 | — |
+| 🔴 Bloqueante — resuelto | 5 | B1 (confirmado en vivo), B2 (resuelto por diseño), B3 (parcial), B4, B5 |
 | 🟠 Alto | 7 | A1, A2, A3, A4, A5, A6, A7 |
 | 🟡 Medio | 7 | M1, M2, M3, M4, M5, M6, M7 |
 | ⚪ Bajo | 2 | J1/J3, J2 |
 
-### Veredicto: **NO LISTO, pero cerca** (el modelo de licencias ya no es un colador; queda pulir el límite de uso por licencia)
+### Veredicto: **LISTO CON RESERVAS** (sin Bloqueantes abiertos; quedan Altos y Medios por decidir si se abordan antes de vender)
 
-Queda un solo hallazgo Bloqueante sin resolver: **B2**, que una licencia legítima se pueda usar en más de un negocio sin ningún límite. Es real y hay que resolverlo antes de vender con garantías, pero ya no es "cualquiera puede tener la app gratis sin que se note" (eso era B1, ya cerrado y confirmado en producción) — ahora es "un cliente que comparta su código podría dar de alta un segundo negocio con él sin que la app lo impida". Menos grave, pero sigue bloqueando un lanzamiento serio.
+Los 5 hallazgos Bloqueantes de la auditoría original están resueltos:
 
-- **B1 resuelto y confirmado en producción**: se creó el usuario administrador en Firebase Authentication, se publicó la regla de seguridad, y se probó en vivo contra el Firebase real — un código inventado con su contraseña recalculada correctamente se rechazó; el código generado legítimamente se aceptó. Es el hallazgo del informe verificado con mayor grado de confianza: no solo lectura de código, no solo test simulado, sino el ataque real ejecutado y bloqueado contra la infraestructura de producción.
-- **B2 sigue abierto**: necesita decidir una política de negocio (¿cuántas activaciones por licencia?) antes de poder implementarlo bien.
-- **B3, B4 y B5 ya están resueltos** (ver fichas arriba para el alcance exacto de cada uno) y verificados con tests reales donde fue posible.
+- **B1** (licencias falsificables): resuelto y **confirmado en vivo contra el Firebase real de producción** — un código inventado con su contraseña recalculada correctamente se rechazó; el código generado legítimamente se aceptó. El hallazgo del informe verificado con mayor grado de confianza: no solo lectura de código, no solo test simulado, sino el ataque real ejecutado y bloqueado contra la infraestructura de producción.
+- **B2** (licencia sin límite de negocios): reevaluado tras aclarar con el negocio la política real deseada ("1 código = 1 negocio, tantos dispositivos como haga falta"). El diseño actual (`tenantId` como función determinista y única del código) ya la garantiza matemáticamente, sin necesitar ningún cambio de código — la primera versión de este hallazgo asumía un requisito distinto (limitar nº de dispositivos) que no era el real.
+- **B3, B4 y B5**: resueltos y verificados con tests reales donde fue posible (ver fichas arriba para el alcance exacto de cada uno, especialmente el matiz de B3).
 
-Antes de considerar esto listo para vender, solo queda resolver B2 — ya no requiere rehacer la arquitectura, y toda la infraestructura de Firebase necesaria ya está desplegada y probada.
+**Con esto ya no hay ningún Bloqueante abierto**, así que el veredicto pasa de NO LISTO a LISTO CON RESERVAS: quedan 7 hallazgos Altos (A1-A7, sobre todo A3/A4/A6/A7 — stock que se descuadra en anulaciones, coste de recetas infravalorado en silencio, pérdida/colisión de datos entre tablets) que conviene resolver antes de vender a negocios con varios dispositivos simultáneos, el caso de uso principal de la app, pero ninguno de ellos es ya un impedimento absoluto para un primer lanzamiento controlado (ej. unos pocos negocios piloto).
 
 Los Altos (A1-A7) no bloquean por sí solos un lanzamiento, pero varios de ellos (A3 stock que se descuadra solo, A4 coste de recetas infravalorado en silencio, A6/A7 pérdida/colisión de datos entre dispositivos) son justo el tipo de fallo que un hostelero real notará semanas después, sin saber por qué sus números no cuadran — conviene resolver al menos A3, A4 y A6/A7 antes de vender a negocios con varios dispositivos simultáneos, que es el caso de uso principal de la app.
 
