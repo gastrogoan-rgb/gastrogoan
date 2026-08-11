@@ -2561,25 +2561,41 @@ function renderHorariosPersonal(){
     monthSales = byWaiter;
   }
 
+  // Condecoración 🥇🥈🥉 para los 3 que más facturan este mes (solo entre
+  // activos) — se recalcula sola día a día según van entrando ventas, y al
+  // empezar el mes siguiente vuelve a partir de cero.
+  let medalByEmpId = null;
+  if(isSala){
+    const medals = ['🥇','🥈','🥉'];
+    const ranked = emps.filter(e => e.active !== false)
+      .map(e => ({id: e.id, total: (monthSales[String(e.id)]||{total:0}).total}))
+      .filter(r => r.total > 0)
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 3);
+    medalByEmpId = {};
+    ranked.forEach((r,i) => { medalByEmpId[String(r.id)] = medals[i]; });
+  }
+
   const cardHtml = e => {
     const open = getOpenFichaje(e.id);
     const isInactive = e.active === false;
     const tenureText = formatTenureText(e.fechaAlta);
     const w = monthSales ? (monthSales[String(e.id)] || {total:0, count:0}) : null;
+    const medal = medalByEmpId ? medalByEmpId[String(e.id)] : null;
     return `
     <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openEmployeePersonalCard(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="width:14px;height:14px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>
         <div style="min-width:0;flex:1">
-          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)}</strong>
+          <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${medal?`<span title="${t('hr.podium.title')}">${medal}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}${tenureText?` · ${tenureText}`:''}</div>
         </div>
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       ${w ? `
       <div style="display:flex;justify-content:center;gap:16px;margin-bottom:10px;font-size:12.5px;color:var(--muted)">
-        <span>${t('hr.podium.sales')}: <strong style="color:var(--text)">${fmtMoney(w.total)}</strong></span>
-        <span>${t('label.avgTicket')}: <strong style="color:var(--text)">${fmtMoney(w.count?w.total/w.count:0)}</strong></span>
+        <span style="white-space:nowrap">${t('hr.podium.sales')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.total)}</strong></span>
+        <span style="white-space:nowrap">${t('label.avgTicket')}: <strong style="color:var(--text);white-space:nowrap">${fmtMoney(w.count?w.total/w.count:0)}</strong></span>
       </div>` : ''}
       <div style="text-align:center;margin-bottom:10px">
         <span style="font-size:12px;font-weight:700;color:#fff;background:${isOwnerSession?'var(--teal)':'var(--brand-orange)'};padding:4px 10px;border-radius:999px;white-space:nowrap"><i class="ti ${isOwnerSession?'ti-id-badge-2':'ti-click'}"></i> ${isOwnerSession?t('label.viewEmployeeFile'):t('label.clickToClockIn')}</span>
@@ -2595,44 +2611,7 @@ function renderHorariosPersonal(){
     </div>
   `;};
 
-  let listHtml;
-  if(isSala && emps.length){
-    // Podio: los 3 con más ventas del mes (solo entre activos), el resto
-    // debajo con los mismos datos.
-    const ranked = emps.filter(e => e.active !== false)
-      .map(e => ({emp: e, total: (monthSales[String(e.id)]||{total:0}).total}))
-      .sort((a,b) => b.total - a.total);
-    const podiumIds = new Set(ranked.slice(0,3).map(r => r.emp.id));
-    const top3 = ranked.slice(0,3);
-    const rest = emps.filter(e => !podiumIds.has(e.id));
-    const medals = ['🥇','🥈','🥉'];
-    const order = top3.length===3 ? [1,0,2] : top3.map((_,i)=>i); // 2º-1º-3º visualmente
-    const heights = [140, 170, 115];
-    const podiumHtml = top3.length ? `
-      <div style="display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-bottom:16px">
-        ${order.map(i => {
-          const r = top3[i];
-          if(!r) return '';
-          return `
-          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:150px;cursor:pointer" onclick="openEmployeePersonalCard(${r.emp.id})">
-            <span style="width:44px;height:44px;border-radius:50%;background:${r.emp.color||'#DF7039'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px">${escapeHtml((r.emp.name||'?').charAt(0).toUpperCase())}</span>
-            <strong style="font-size:13.5px;text-align:center">${escapeHtml(r.emp.name)}</strong>
-            <div style="width:100%;background:var(--card-2, var(--card));border:1px solid var(--border);border-radius:10px 10px 0 0;height:${heights[i]}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-              <span style="font-size:26px">${medals[i]}</span>
-              <span style="font-size:13.5px;font-weight:700">${fmtMoney(r.total)}</span>
-              <span style="font-size:11px;color:var(--muted)">${t('label.avgTicket')}: ${fmtMoney((monthSales[String(r.emp.id)]||{count:0}).count ? r.total/monthSales[String(r.emp.id)].count : 0)}</span>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : '';
-    listHtml = `
-      ${podiumHtml}
-      ${rest.length ? `<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">${t('hr.podium.rest')}</div>` : ''}
-      <div class="grid grid-personal">${rest.map(cardHtml).join('')}</div>
-    `;
-  } else {
-    listHtml = `<div class="grid grid-personal">${emps.map(cardHtml).join('')}</div>`;
-  }
+  const listHtml = `<div class="grid grid-personal">${emps.map(cardHtml).join('')}</div>`;
 
   box.innerHTML = `
     ${renderTeamPulseHtml()}
