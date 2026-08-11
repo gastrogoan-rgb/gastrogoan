@@ -79,6 +79,7 @@ function openCashClosureModal(){
   const discounts = getDiscountsForClosure();
   const totalDiscounts = discounts.reduce((s,d)=>s+d.importe, 0);
   const voids = getVoidsForClosure();
+  const platforms = DB.business.deliveryPlatforms||[];
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-cash-register"></i> ${t('title.cashClosure')}</h3>
@@ -110,6 +111,17 @@ function openCashClosureModal(){
         <thead><tr><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
         <tbody>${voids.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${escapeHtml(v.plato)}</td><td>${v.cantidad}</td><td>${escapeHtml(v.responsableNombre||'—')}</td><td>${escapeHtml(v.motivo)}</td></tr>`).join('')}</tbody>
       </table>
+    </div>` : ''}
+    ${platforms.length ? `
+    <h3 style="font-size:14px;margin-top:14px"><i class="ti ti-moped"></i> ${t('title.platformSalesThisPeriod')}</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('closure.platformSalesHint')}</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      ${platforms.map(p => `
+        <div class="field-row" style="align-items:center;margin-bottom:0">
+          <label style="flex:1;font-weight:600;font-size:13.5px">${escapeHtml(p.nombre)}</label>
+          <input type="number" id="closure-platform-${p.id}" step="0.01" min="0" placeholder="0.00" style="max-width:140px">
+        </div>
+      `).join('')}
     </div>` : ''}
     <div class="field-row">
       <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
@@ -175,6 +187,32 @@ function detectClosureWarnings(diferencia, discounts, voids){
   return warnings;
 }
 
+// Registra el total bruto de ventas que ha reportado una plataforma de
+// delivery externa (Glovo, Uber Eats...) para el periodo de este cierre,
+// como una venta más — así entra automáticamente en Facturación, se le
+// calcula el IVA correspondiente y se le descuenta la comisión de la
+// plataforma como gasto, igual que si cada pedido se hubiera registrado
+// uno a uno en el TPV. Pensado para negocios que no dan de alta cada
+// pedido de la plataforma en la app y solo tienen el total del periodo.
+function registerPlatformSettlementSale(plat, totalBruto){
+  const ivaPct = verifactuIvaPct();
+  const sale = {
+    id: genId(), date: todayStr(), createdAt: new Date().toISOString(),
+    total: roundMoney(totalBruto), tipo: 'delivery', express: false,
+    clienteNombre: '', clientId: null, camareroId: null,
+    metodoPago: 'Otro',
+    items: [{name: t('label.platformSalesLineItem').replace('${platform}', plat.nombre), price: roundMoney(totalBruto), qty: 1, ivaPct}],
+    isPlatformSettlement: true,
+  };
+  const comisionPct = parseFloat(plat.comisionPct) || 0;
+  const platIvaPct = parseFloat(plat.ivaPct) || 0;
+  const comision = sale.total * (comisionPct/100) * (1 + platIvaPct/100);
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio: true};
+  sale.comisionPlataforma = roundMoney(comision);
+  DB.sales.push(sale);
+  return sale;
+}
+
 function performCashClosure(){
   const sales = getSalesForClosure();
   const {totales, total, ticketCount} = computeClosureTotals(sales);
@@ -190,11 +228,22 @@ function performCashClosure(){
   const hasta = document.getElementById('closure-hasta').value;
   const warnings = detectClosureWarnings(diferencia, discounts, voids);
 
+  const platformSales = [];
+  (DB.business.deliveryPlatforms||[]).forEach(p => {
+    const input = document.getElementById(`closure-platform-${p.id}`);
+    const amount = input ? (parseFloat(input.value) || 0) : 0;
+    if(amount > 0){
+      const sale = registerPlatformSettlementSale(p, amount);
+      platformSales.push({platformId: p.id, nombre: p.nombre, total: sale.total, comision: sale.comisionPlataforma});
+    }
+  });
+
   const closure = {
     id: genId(), fecha: todayStr(), desde, hasta,
     totales, total, ticketCount,
     descuentos: discounts, totalDescuentos: discounts.reduce((s,d)=>s+d.importe, 0),
     anulaciones: voids,
+    platformSales,
     fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, warnings,
     createdAt: new Date().toISOString()
   };
@@ -242,6 +291,10 @@ function printCashClosure(closure){
     <h2>${t('title.voidsThisPeriod')}</h2>
     <table><thead><tr><th>${t('common.time')}</th><th>${t('label.table')}</th><th>${t('common.item')}</th><th>${t('common.responsible')}</th></tr></thead>
     <tbody>${closure.anulaciones.map(v => `<tr><td>${escapeHtml(v.hora)}</td><td>${escapeHtml(v.mesa||'—')}</td><td>${v.cantidad}× ${escapeHtml(v.plato)}<div class="pr-note">${escapeHtml(v.motivo||'')}</div></td><td>${escapeHtml(v.responsableNombre||'—')}</td></tr>`).join('')}</tbody></table>` : '';
+  const platformSalesHtml = (closure.platformSales||[]).length ? `
+    <h2>${t('title.platformSalesThisPeriod')}</h2>
+    <table><thead><tr><th>${t('mn.delivery.platformName')}</th><th class="pr-num">${t('label.totalSales')}</th><th class="pr-num">${t('mn.delivery.commissionLabel')}</th></tr></thead>
+    <tbody>${closure.platformSales.map(p => `<tr><td>${escapeHtml(p.nombre)}</td><td class="pr-num">${fmtMoney(p.total)}</td><td class="pr-num">${fmtMoney(p.comision)}</td></tr>`).join('')}</tbody></table>` : '';
 
   const body = `
     ${printReportHeaderHtml(t('title.cashClosureReceipt'), `${t('label.from')} ${fmtDateTime(new Date(closure.desde))} — ${t('label.to')} ${fmtDateTime(new Date(closure.hasta))}`)}
@@ -252,7 +305,7 @@ function printCashClosure(closure){
         <tr class="pr-total-row"><td>${t('common.total')} (${closure.ticketCount} ${closure.ticketCount!==1?t('noun.tickets'):t('noun.ticket')})</td><td class="pr-num">${fmtMoney(closure.total)}</td></tr>
       </tbody>
     </table>
-    ${discountsHtml}${voidsHtml}
+    ${discountsHtml}${voidsHtml}${platformSalesHtml}
     <h2>${t('label.cash')}</h2>
     <div class="pr-meta">${t('label.initialFund')}: <strong>${fmtMoney(closure.fondoInicial)}</strong></div>
     <div class="pr-meta">${t('label.expectedCash')}: <strong>${fmtMoney(closure.efectivoEsperado)}</strong></div>
