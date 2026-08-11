@@ -1343,9 +1343,9 @@ function openStockLogModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="table-wrap">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('common.name')}</th><th>${t('megalista.qtyBefore')}</th><th>${t('megalista.qtyAfter')}</th><th>${t('megalista.change')}</th><th>${t('common.responsible')}</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.name)}</td><td>${fmtNum(e.before)}</td><td>${fmtNum(e.after)}</td><td style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td><td>${escapeHtml(e.actor||'—')}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
+        <tbody>${log.length ? log.map(e => `<tr><td data-label="${t('common.date')}">${escapeHtml(e.fecha)}</td><td data-label="${t('th.time')}">${escapeHtml(e.hora)}</td><td data-label="${t('common.name')}">${escapeHtml(e.name)}</td><td data-label="${t('megalista.qtyBefore')}">${fmtNum(e.before)}</td><td data-label="${t('megalista.qtyAfter')}">${fmtNum(e.after)}</td><td data-label="${t('megalista.change')}" style="color:${e.delta>=0?'var(--green)':'var(--red)'}">${e.delta>=0?'+':''}${fmtNum(e.delta)}</td><td data-label="${t('common.responsible')}">${escapeHtml(e.actor||'—')}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noStockLog')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">

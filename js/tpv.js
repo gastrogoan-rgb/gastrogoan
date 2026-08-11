@@ -2970,9 +2970,9 @@ function openVoidLogModal(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="table-wrap">
-      <table>
+      <table class="table-cards">
         <thead><tr><th>${t('common.date')}</th><th>${t('th.time')}</th><th>${t('label.tables')}</th><th>${t('label.dishElaboration')}</th><th>${t('label.quantity')}</th><th>${t('label.responsible')}</th><th>${t('label.voidReason')}</th></tr></thead>
-        <tbody>${log.length ? log.map(e => `<tr><td>${escapeHtml(e.fecha)}</td><td>${escapeHtml(e.hora)}</td><td>${escapeHtml(e.mesa||'—')}</td><td>${escapeHtml(e.plato)}</td><td>${e.cantidad}</td><td>${escapeHtml(e.responsableNombre||'—')}</td><td>${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
+        <tbody>${log.length ? log.map(e => `<tr><td data-label="${t('common.date')}">${escapeHtml(e.fecha)}</td><td data-label="${t('th.time')}">${escapeHtml(e.hora)}</td><td data-label="${t('label.tables')}">${escapeHtml(e.mesa||'—')}</td><td data-label="${t('label.dishElaboration')}">${escapeHtml(e.plato)}</td><td data-label="${t('label.quantity')}">${e.cantidad}</td><td data-label="${t('label.responsible')}">${escapeHtml(e.responsableNombre||'—')}</td><td data-label="${t('label.voidReason')}">${escapeHtml(e.motivo)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty" style="padding:14px">${t('empty.noVoidsRegistered')}</div></td></tr>`}</tbody>
       </table>
     </div>
     <div class="modal-footer">
