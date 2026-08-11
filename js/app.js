@@ -4630,7 +4630,7 @@ function removeLogo(){
 function renderHeader(){
   const b = DB.business || {};
   const icon = document.getElementById('app-logo-icon');
-  icon.innerHTML = b.logo ? `<img src="${b.logo}" alt="Logo">` : `<i class="ti ti-tools-kitchen-2"></i>`;
+  icon.innerHTML = `<img src="${b.logo || GASTROGOAN_LOGO_URI}" alt="Logo">`;
   const text = document.getElementById('app-logo-text');
   if(b.name){
     text.innerHTML = `${escapeHtml(b.name)}<span class="app-logo-sub" style="margin-left:8px">GastroGoan · ${t('hdr.subtitle')}</span>`;
