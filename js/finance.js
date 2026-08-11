@@ -1140,19 +1140,19 @@ function renderStock(){
     const low = row.qty <= row.min;
     const isElab = row.type === 'elab';
     const fromEscandallo = isElab && !!row.recipeId;
-    const statusBadge = low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>';
+    // Antes el aviso de "bajo mínimo" era una pequeña etiqueta roja/verde
+    // fácil de pasar por alto en una lista larga — ahora todo el recuadro
+    // se pone en rojo, así se ve de un vistazo qué hay que reponer sin
+    // tener que leer cada fila una a una.
     return `
-      <div class="list-row" style="padding:6px 10px;flex-wrap:wrap">
+      <div class="list-row" style="padding:8px 10px;flex-wrap:wrap;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
         <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
-        <span style="font-size:12.5px;color:var(--muted);white-space:nowrap">${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
         <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
           onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-        ${statusBadge}
+        <span style="font-size:12.5px;white-space:nowrap;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')} ${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
         <div class="actions-cell" style="gap:4px">
-          <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, 1)` : `adjustStock(${row.id}, 1)`}"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-sm btn-icon" onclick="${isElab ? `adjustElaboracion(${row.id}, -1)` : `adjustStock(${row.id}, -1)`}"><i class="ti ti-minus"></i></button>
-          <button class="btn btn-sm btn-icon" title="${t('common.adjust')}" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i> ${t('btn.adjustStock')}</button>
           ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
           ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="${t('title.editCostingSheet')}" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ${currentArea()==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i></button>` : ''}
@@ -1352,114 +1352,6 @@ function openStockLogModal(){
   `);
 }
 
-// Hoja imprimible para el recuento físico de stock (ingredientes + elaboraciones
-// del área actual), con una columna en blanco para anotar la cantidad real y
-// poder cuadrarla luego contra lo que la app tiene estimado.
-function printStockCountSheet(){
-  const area = currentArea();
-  const ings = DB.ingredients.filter(ing => (ing.area||'cocina')===area && ing.activo !== false)
-    .map(ing => ({name: ing.name, unit: ing.unit, category: ing.category?ingredientCategoryLabel(ing.category):t('label.noCategory'), qty: getStockEntry(ing.id).qty}))
-    .sort((a,b) => (a.category||'').localeCompare(b.category||'') || a.name.localeCompare(b.name));
-  const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
-    .map(e => ({name: e.name, unit: e.unit, category: t('label.elaborations'), qty: e.qty||0}))
-    .sort((a,b) => a.name.localeCompare(b.name));
-  const rows = [...ings, ...elabs].map(x => `<tr><td>${escapeHtml(x.category)}</td><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.unit)}</td><td class="pr-num">${fmtNum(x.qty)}</td><td></td></tr>`).join('');
-  const printLocale = getLang()==='en' ? 'en-GB' : getLang()==='ca' ? 'ca-ES' : 'es-ES';
-  const body = `
-    ${printReportHeaderHtml(t('btn.printStockSheet'), new Date().toLocaleDateString(printLocale))}
-    <table><thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th class="pr-num">${t('megalista.estimated')}</th><th class="pr-num">${t('megalista.real')}</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="5" class="pr-empty">${t('common.noResults')}</td></tr>`}</tbody></table>
-  `;
-  printReportWindow(t('btn.printStockSheet'), body, {winSize:'width=800,height=1000'});
-}
-
-// Recuento físico digital: lista de golpe todo lo activo del área con un
-// campo para anotar la cantidad realmente contada, en vez de tener que
-// entrar producto a producto con "Ajustar cantidad" — solo se ajusta (y se
-// registra en el historial) lo que de verdad cambió respecto a lo que la
-// app tenía estimado. La hoja impresa (printStockCountSheet) sigue
-// disponible para quien prefiera contar en papel primero.
-function openStockCountModal(){
-  const area = currentArea();
-  const ings = DB.ingredients.filter(i => (i.area||'cocina')===area && i.activo !== false)
-    .map(i => ({type:'ing', id:i.id, name:i.name, unit:i.unit, category: i.category?ingredientCategoryLabel(i.category):t('label.noCategory'), qty:getStockEntry(i.id).qty}))
-    .sort((a,b)=>(a.category||'').localeCompare(b.category||'')||a.name.localeCompare(b.name));
-  const elabs = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===area)
-    .map(e => ({type:'elab', id:e.id, name:e.name, unit:e.unit, category:t('label.elaborations'), qty:e.qty||0}))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  const all = [...ings, ...elabs];
-  if(!all.length){ showToast(t('common.noResults')); return; }
-  const rows = all.map(x => `
-    <tr>
-      <td>${escapeHtml(x.category)}</td>
-      <td>${escapeHtml(x.name)}</td>
-      <td>${escapeHtml(x.unit)}</td>
-      <td class="pr-num">${fmtNum(x.qty)}</td>
-      <td><input type="number" step="0.01" min="0" data-count-type="${x.type}" data-count-id="${x.id}" placeholder="${fmtNum(x.qty)}" style="width:85px;padding:3px 5px;border:1px solid var(--border);border-radius:6px"></td>
-    </tr>
-  `).join('');
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-clipboard-list"></i> ${t('title.stockPhysicalCount')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:13px;color:var(--muted)">${t('label.stockPhysicalCountHelp')}</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.category')}</th><th>${t('common.name')}</th><th>${t('common.unit')}</th><th>${t('megalista.estimated')}</th><th>${t('megalista.real')}</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="applyStockCount()">${t('btn.applyCount')}</button>
-    </div>
-  `, {xl:true});
-}
-function applyStockCount(){
-  const inputs = document.querySelectorAll('[data-count-id]');
-  let changes = 0;
-  inputs.forEach(inp => {
-    const val = inp.value.trim();
-    if(val === '') return;
-    const num = parseFloat(val);
-    if(isNaN(num) || num < 0) return;
-    const type = inp.getAttribute('data-count-type');
-    const id = parseInt(inp.getAttribute('data-count-id'));
-    if(type === 'ing'){
-      const s = getStockEntry(id);
-      const before = s.qty||0;
-      if(before === num) return;
-      s.qty = num;
-      const ing = getIngredient(id);
-      logStockAdjustment('ing', id, ing?ing.name:'', before, num);
-    } else {
-      const e = getElaboracion(id);
-      if(!e || (e.qty||0) === num) return;
-      const before = e.qty||0;
-      e.qty = num;
-      logStockAdjustment('elab', id, e.name, before, num);
-    }
-    changes++;
-  });
-  if(!changes){ showToast(t('msg.noStockCountChanges')); closeModal(); return; }
-  saveDB();
-  closeModal();
-  renderStock();
-  if(typeof renderDashboard === 'function') renderDashboard();
-  showToast(t('msg.stockCountApplied').replace('${n}', changes));
-}
-
-function adjustStock(ingredientId, delta){
-  const s = getStockEntry(ingredientId);
-  const before = s.qty||0;
-  s.qty = Math.max(0, before + delta);
-  const ing = getIngredient(ingredientId);
-  logStockAdjustment('ing', ingredientId, ing?ing.name:'', before, s.qty);
-  saveDB();
-  renderStock();
-}
-
 function setStockQty(ingredientId){
   const s = getStockEntry(ingredientId);
   openModal(`
@@ -1581,15 +1473,6 @@ function reallyDeleteElaboracion(id){
 function updateElaboracionMin(id, value){
   const e = getElaboracion(id); if(!e) return;
   e.min = parseFloat(value) || 0;
-  saveDB();
-  renderStock();
-}
-
-function adjustElaboracion(id, delta){
-  const e = getElaboracion(id); if(!e) return;
-  const before = e.qty||0;
-  e.qty = Math.max(0, before + delta);
-  logStockAdjustment('elab', id, e.name, before, e.qty);
   saveDB();
   renderStock();
 }
