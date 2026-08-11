@@ -1755,7 +1755,12 @@ function getReservasResumenForSync(){
   const resumen = {};
   const today = todayStr();
   DB.reservations.forEach(r => {
-    if(r.status !== 'pendiente' && r.status !== 'confirmada') return;
+    // "Completada" (el cliente ya llegó y está sentado) sigue ocupando sitio
+    // en el turno igual que "Confirmada" — si se excluyera aquí, la web
+    // pública pensaría que hay más aforo libre del que hay de verdad justo
+    // cuando el turno está más lleno, y podría dejar reservar por encima del
+    // aforo real. Mismo criterio que getReservedPeopleForTurno (js/menu.js).
+    if(r.status !== 'pendiente' && r.status !== 'confirmada' && r.status !== 'completada') return;
     if(!r.date || r.date < today) return;
     const turnoIdx = getTurnoIndexForTime(r.date, r.time);
     if(turnoIdx === null) return;
