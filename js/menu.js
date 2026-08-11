@@ -121,10 +121,14 @@ function getTurnoIndexForTime(dateStr, time){
   return idx === -1 ? null : idx;
 }
 
-// Suma de personas reservadas (pendientes + confirmadas) para un turno concreto de un día.
+// Suma de personas reservadas (pendientes + confirmadas + ya llegadas/completadas)
+// para un turno concreto de un día. "Completada" (el cliente ya está sentado)
+// sigue ocupando sitio en ese turno igual que "Confirmada" — antes se dejaba
+// de contar justo al marcar la llegada, así que el aforo caía a 0 en pleno
+// servicio, cuando el turno está más lleno de verdad.
 function getReservedPeopleForTurno(dateStr, turnoIdx, excludeId){
   return DB.reservations
-    .filter(r => r.date === dateStr && r.id !== excludeId && (r.status === 'pendiente' || r.status === 'confirmada'))
+    .filter(r => r.date === dateStr && r.id !== excludeId && (r.status === 'pendiente' || r.status === 'confirmada' || r.status === 'completada'))
     .filter(r => getTurnoIndexForTime(dateStr, r.time) === turnoIdx)
     .reduce((sum, r) => sum + (r.people||0), 0);
 }
