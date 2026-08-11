@@ -331,6 +331,12 @@ function moveProtocoloPaso(type,i,dir){
 // "registrar en nombre de" cualquier compañero sin verificar que fuera él.
 function registerProtocoloCompliance(type){
   const logKey = type==='apertura' ? 'aperturaLog' : 'cierreLog';
+  const area = currentArea();
+  const already = (DB.limpieza[logKey]||[]).find(e => e.fecha===todayStr() && (e.area||'cocina')===area);
+  if(already){
+    showToast(t('msg.complianceAlreadyToday').replace('${name}', already.responsableNombre || '?'));
+    return;
+  }
   const now = new Date();
   const authorId = getChatAuthor();
   DB.limpieza[logKey].push({
