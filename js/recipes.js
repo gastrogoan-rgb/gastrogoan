@@ -339,6 +339,7 @@ function renderRecipeModal(id, r){
         <input type="text" id="recipe-name" value="${escapeHtml(r.name)}" placeholder="${r.isBase ? (isSala ? t('ph.elaborationNameSala') : t('ph.elaborationName')) : (isSala ? t('ph.drinkName') : t('ph.dishName'))}">
       </div>
     </div>
+    ${r.isBase ? '' : `
     <div class="field-row">
       <div class="field">
         <label>${t('label.priceBaseNoVat')}</label>
@@ -355,6 +356,7 @@ function renderRecipeModal(id, r){
     <div class="field" style="margin-top:-8px">
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
+    `}
     <div class="field-row">
       ${r.isBase ? '' : `
       <div class="field">
@@ -611,18 +613,24 @@ function saveRecipe(id){
   // usado en Clientes/Proveedores/Mega Lista — fácil dar de alta "Ensalada
   // César" dos veces sin darse cuenta y que una de las dos fichas quede
   // huérfana sin usarse en ninguna carta.
-  const dupe = DB.recipes.find(r => r.id !== id && (r.area||'cocina')===currentArea() && !!r.isBase===!!(document.getElementById('recipe-is-base')?.checked) && r.name.trim().toLowerCase() === name.toLowerCase());
+  const isBaseEl = document.getElementById('recipe-is-base');
+  const isBase = isBaseEl ? isBaseEl.checked : false;
+  const dupe = DB.recipes.find(r => r.id !== id && (r.area||'cocina')===currentArea() && !!r.isBase===isBase && r.name.trim().toLowerCase() === name.toLowerCase());
   if(dupe && !confirm(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name))) return;
-  const priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
-  const ivaRaw = document.getElementById('recipe-iva').value;
-  if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
-  const ivaPct = parseFloat(ivaRaw);
-  const price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
+  // Una elaboración base no se vende directamente (no tiene precio de venta
+  // ni IVA repercutido propios) — lo que interesa de ella es su coste total
+  // y el coste por unidad de rendimiento, no un precio de venta.
+  let priceBase = 0, ivaPct = null, price = 0;
+  if(!isBase){
+    priceBase = Math.max(0, parseFloat(document.getElementById('recipe-price-base').value) || 0);
+    const ivaRaw = document.getElementById('recipe-iva').value;
+    if(ivaRaw === ''){ showToast(t('msg.chooseIvaForDish')); return; }
+    ivaPct = parseFloat(ivaRaw);
+    price = Math.round(priceBase * (1 + ivaPct/100) * 100) / 100;
+  }
   const consumiblesPct = Math.min(99, Math.max(0, parseFloat(document.getElementById('recipe-consumibles').value) || 0));
   const categoryEl = document.getElementById('recipe-category');
   const category = categoryEl ? categoryEl.value : '';
-  const isBaseEl = document.getElementById('recipe-is-base');
-  const isBase = isBaseEl ? isBaseEl.checked : false;
   // Un plato/bebida (no elaboración base) se calcula SIEMPRE para 1 ración:
   // las cantidades de ingredientes son las que lleva una sola unidad
   // vendida, así el coste, el precio y el descuento de stock al vender
