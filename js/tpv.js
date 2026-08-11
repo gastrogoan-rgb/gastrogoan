@@ -779,14 +779,12 @@ function renderTpvToGo(tiposServicio){
   });
   const pedidosOnlineOn = DB.business.pedidosOnlineActivos !== false;
   return `
-    <h3 style="margin-top:16px;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <span><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
-      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
-          <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
-        </button>
-        ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
-      </span>
+    <h3 style="margin-top:16px;display:flex;align-items:center;flex-wrap:nowrap;gap:8px;overflow-x:auto">
+      <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
+      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" style="white-space:nowrap" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+        <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
+      </button>
+      ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
     </h3>
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
     ${!toGoOrders.length
@@ -799,19 +797,24 @@ function renderTpvToGo(tiposServicio){
           // Sin chip de camarero aquí: estos pedidos entran por teléfono o
           // por la web, no los toma nadie de sala en persona.
           const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId, o.repartidorCourierId) : '';
+          const metodoPagoLabel = o.metodoPagoLocal === 'tarjeta' ? t('pay.card') : o.metodoPagoLocal === 'efectivo' ? t('pay.cash') : null;
           return `
           <div class="card mesa-card mesa-occupied ${urgent?'mesa-phase-kitchen':'mesa-phase-served'}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
-            <div class="mesa-name"><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</div>
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
               <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
-              ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
             </div>
-            ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
+            ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span></div>` : ''}
+            <div class="mesa-name">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</div>
+            <div class="mesa-total">${fmtMoney(orderTotal(o))}</div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+              ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : `<span class="badge badge-amber"><i class="ti ti-clock-exclamation"></i> ${t('label.paymentPending')}</span>`}
+              ${metodoPagoLabel ? `<span class="badge"><i class="ti ${o.metodoPagoLocal==='tarjeta'?'ti-credit-card':'ti-cash'}"></i> ${metodoPagoLabel}</span>` : ''}
+            </div>
             ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
             ${(o.clienteDireccion||o.clienteAddress) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
-            <div class="mesa-total">${fmtMoney(orderTotal(o))}</div>
             ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
+            ${(o.items||[]).length ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);text-align:left;font-size:11.5px;color:var(--muted)">${o.items.map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}</div>` : ''}
           </div>
         `}).join('')}</div>`}
   `;
@@ -885,17 +888,10 @@ function renderTPV(){
   const box = document.getElementById('tpv-content');
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
 
-  // Orden de arriba a abajo: primero las cifras del día (ventas, tickets...),
-  // luego las mesas, y al final Para Llevar/Delivery — mismo orden con el
-  // que ya se venía trabajando, todo en una sola pantalla sin paneles aparte.
+  // Orden de arriba a abajo: primero los botones de acciones rápidas (como
+  // estaban antes), luego las cifras del día, las mesas, y al final Para
+  // Llevar/Delivery — todo en una sola pantalla sin paneles aparte.
   box.innerHTML = `
-    ${renderTpvKpis()}
-    ${renderTpvCartaSelector()}
-    ${renderTpvMenuSelector()}
-    ${renderLastCallBanner()}
-    ${renderTpvPendingOnline()}
-    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
-    ${renderTpvToGo(tiposServicio)}
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
@@ -905,6 +901,13 @@ function renderTPV(){
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
       <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
     </div>
+    ${renderTpvKpis()}
+    ${renderTpvCartaSelector()}
+    ${renderTpvMenuSelector()}
+    ${renderLastCallBanner()}
+    ${renderTpvPendingOnline()}
+    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
+    ${renderTpvToGo(tiposServicio)}
   `;
 }
 
