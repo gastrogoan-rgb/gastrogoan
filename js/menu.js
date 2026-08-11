@@ -438,11 +438,17 @@ function renderCartaSecciones(){
       </div>
       ${visiblePlatos.length ? visiblePlatos.map(p => {
         const pi = platos.indexOf(p);
-        // Al importar desde Escandallo se copia el precio en ese momento; si
-        // luego cambia el precio de venta de la receta, esto avisa del
-        // desfase en vez de dejarlo desactualizado en silencio.
+        // El precio de venta se gestiona siempre desde el Escandallo — la
+        // Carta solo guarda una copia para no tener que recalcularla en
+        // cada render. Si el Escandallo cambió el precio desde que se
+        // importó, se sincroniza aquí solo (antes hacía falta pulsar
+        // "Actualizar precio" a mano cada vez).
         const linkedRecipe = p.recipeId ? getRecipe(p.recipeId) : null;
-        const priceStale = linkedRecipe && (linkedRecipe.price||0) !== (p.precio||0);
+        if(linkedRecipe && (linkedRecipe.price||0) !== (p.precio||0)){
+          p.precio = linkedRecipe.price||0;
+          p.precioBase = linkedRecipe.priceBase;
+          p.ivaPct = linkedRecipe.ivaPct;
+        }
         // Semáforo de rentabilidad: mismos umbrales que en Escandallo (food
         // cost sobre el precio de venta), para ver de un vistazo, sin salir
         // de la Carta, qué platos tienen buen margen y cuáles lo están
@@ -456,7 +462,6 @@ function renderCartaSecciones(){
           ${marginDot}
           <span class="carta-plato-name" style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
           <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
-          ${priceStale ? `<button class="btn btn-sm" style="color:var(--brand-orange);border-color:var(--brand-orange)" onclick="syncCartaPlatoPrice(${sec.id},${p.id})" title="El escandallo tiene un precio de venta distinto (${fmtMoney(linkedRecipe.price||0)})"><i class="ti ti-refresh-alert"></i> ${t('btn.updatePrice')}</button>` : ''}
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
           <button class="btn btn-sm ${p.stock!=null && p.stock<=0?'btn-danger':''}" style="${p.stock!=null && p.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setCartaPlatoStock(${sec.id},${p.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${p.stock!=null ? t('label.portionsLeft').replace('${n}', p.stock) : t('btn.limitPortions')}</button>
@@ -543,21 +548,6 @@ function removeCartaPlato(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
   renderCartaSecciones();
-}
-// El precio se copia del escandallo solo al importar; si luego cambia el
-// precio de venta de la receta, esto lo trae de vuelta a la carta (no se
-// hace solo, para no pisar en silencio un precio ajustado a mano en carta).
-function syncCartaPlatoPrice(secId, platoId){
-  const sec = cartaEdit.secciones.find(s=>s.id===secId);
-  const p = sec && sec.platos.find(x=>x.id===platoId);
-  if(!p || !p.recipeId) return;
-  const r = getRecipe(p.recipeId);
-  if(!r) return;
-  p.precio = r.price||0;
-  p.precioBase = r.priceBase;
-  p.ivaPct = r.ivaPct;
-  renderCartaSecciones();
-  showToast(t('msg.priceUpdated'));
 }
 function addCartaPlato(secId){
   const isBebidas = currentArea()==='sala';
