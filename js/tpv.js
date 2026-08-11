@@ -591,9 +591,20 @@ function getZonaOrder(){
 
 // Chip de camarero/a a cargo de la mesa: círculo con su color de identificación
 // (el mismo que en Personal/Distribución) y su nombre de pila, para saber de
-// un vistazo quién atiende cada mesa sin tener que entrar en ella.
-function mesaWaiterChipHtml(camareroId){
-  if(!camareroId) return '';
+// un vistazo quién atiende cada mesa sin tener que entrar en ella. Si la
+// abrió el propietario (sin PIN de empleado concreto), se muestra un chip
+// fijo de "Propietario" en vez de invitar a "asignar camarero" — ya se sabe
+// quién la abrió, no hace falta preguntarlo ni ofrecer completarlo.
+function mesaWaiterChipHtml(camareroId, openedByOwner){
+  if(!camareroId){
+    if(!openedByOwner) return '';
+    return `
+      <span class="mesa-waiter-chip" title="${escapeHtml(t('label.waiter'))}: ${escapeHtml(t('label.owner'))}">
+        <span class="mesa-waiter-avatar" style="background:#1C1A17">${escapeHtml(t('label.owner').charAt(0).toUpperCase())}</span>
+        ${escapeHtml(t('label.owner'))}
+      </span>
+    `;
+  }
   const emp = DB.employees.find(e => e.id === camareroId);
   if(!emp) return '';
   const initial = (emp.name||'?').trim().charAt(0).toUpperCase();
@@ -680,7 +691,7 @@ function renderMesaCard(table){
 
   const phase = mesaPhase(order);
   const phaseClass = order ? `mesa-phase-${phase ? phase.key : 'served'}` : '';
-  const waiterChip = order ? mesaWaiterChipHtml(order.camareroId) : '';
+  const waiterChip = order ? mesaWaiterChipHtml(order.camareroId, order.openedByOwner) : '';
   const upcomingRes = !order ? getUpcomingReservationForTable(table.id) : null;
 
   // "Mesa fría": todo servido pero lleva ya un rato sin que nadie la cobre
@@ -1114,21 +1125,19 @@ function camareroSalesInRange(empId, dateStrs){
   return {count: sales.length, total: sales.reduce((sum,s) => sum + (s.total||0), 0)};
 }
 
-// Selector de camarero/a que toma la comanda, para saber quién atiende cada
-// mesa. Al ABRIR una mesa nueva (required=true) es obligatorio elegir a
-// alguien (sin opción "sin asignar") — así queda escrito desde el primer
-// momento, en vez de tener que acordarse de rellenarlo luego. Al
-// REASIGNAR el camarero de una mesa ya abierta sí se deja "sin asignar",
-// por si hace falta corregirlo o dejarlo libre temporalmente.
-function renderCamareroFieldHtml(selectId, selectedId, required){
+// Selector de camarero/a que toma la comanda, para REASIGNAR el de una mesa
+// ya abierta (quien la abre se asigna solo, sin preguntar nada — ver
+// confirmOpenTableOrder). Se deja "sin asignar" como opción, por si hace
+// falta corregirlo o dejarlo libre temporalmente.
+function renderCamareroFieldHtml(selectId, selectedId){
   // Solo empleados del área sala que sean camareros
   const camareros = DB.employees.filter(e => (e.area||'cocina') === 'sala');
   if(!camareros.length) return '';
   return `
     <div class="field">
-      <label>${t('label.waiter')}${required ? ' *' : ''}</label>
+      <label>${t('label.waiter')}</label>
       <select id="${selectId}">
-        ${required ? `<option value="">${t('label.chooseWaiter')}</option>` : `<option value="">${t('common.unassigned')}</option>`}
+        <option value="">${t('common.unassigned')}</option>
         ${camareros.map(e => `<option value="${e.id}" ${e.id===selectedId?'selected':''}>${escapeHtml(e.name)}</option>`).join('')}
       </select>
     </div>
@@ -1237,7 +1246,6 @@ function openNewOrderPaxModal(tableId){
       <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
     </div>
-    ${loggedInEmployeeId() === null ? renderCamareroFieldHtml('new-order-camarero-sel', null, true) : ''}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
@@ -1289,16 +1297,15 @@ function confirmOpenTableOrder(tableId){
     }
   }
   // Si quien está fichado ahora mismo entró con su propio PIN de empleado,
-  // la app ya sabe quién es — se asigna solo, sin preguntar nada. Solo si
-  // entra como propietario (sin identidad de empleado concreta) hace falta
-  // elegirlo a mano en el desplegable, y sigue siendo obligatorio si hay
-  // camareros dados de alta en Sala.
+  // la app ya sabe quién es — se asigna solo, sin preguntar nada. Si entra
+  // como propietario (sin identidad de empleado concreta), también se
+  // asigna solo: la mesa queda a nombre de "Propietario" en vez de pedirle
+  // elegir a un camarero a mano cada vez que abre una mesa.
   const loggedEmployeeId = loggedInEmployeeId();
-  const camareroSel = document.getElementById('new-order-camarero-sel');
-  if(loggedEmployeeId === null && camareroSel && !camareroSel.value){ showToast(t('msg.selectWaiterRequired')); return; }
-  const camareroId = loggedEmployeeId !== null ? loggedEmployeeId : (camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null);
+  const camareroId = loggedEmployeeId;
+  const openedByOwner = loggedEmployeeId === null;
 
-  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, openedByOwner, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -1680,7 +1687,8 @@ function renderTableOrderModal(orderId){
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> ${t('label.reservationShort')}</span>` : '';
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
   const camarero = order.camareroId ? DB.employees.find(e=>e.id===order.camareroId) : null;
-  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camarero ? escapeHtml(camarero.name) : t('label.assignWaiter')}</span>` : '';
+  const camareroLabel = camarero ? escapeHtml(camarero.name) : (order.openedByOwner ? escapeHtml(t('label.owner')) : t('label.assignWaiter'));
+  const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>` : '';
   const allergensBadge = ` <span class="badge ${order.tableAllergens?'badge-red':''}" style="cursor:pointer" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
   const mergeBadge = table ? ` <span class="badge" style="cursor:pointer" onclick="openMergeMesaModal(${order.id})" title="${t('tpv.merge.hint')}"><i class="ti ti-arrows-join"></i> ${t('tpv.merge.btn')}</span>` : '';
   // Confirmación visible de que la comanda llegó de verdad a la pantalla
@@ -2286,7 +2294,7 @@ function comandaOrderTitle(order){
 // se sabe de quién es cada comanda sin tener que ir a preguntar a sala,
 // igual que ya se veía en la propia mesa.
 function comandaWaiterChipHtml(order){
-  return order.tableId ? mesaWaiterChipHtml(order.camareroId) : '';
+  return order.tableId ? mesaWaiterChipHtml(order.camareroId, order.openedByOwner) : '';
 }
 
 function timeAgo(iso){
