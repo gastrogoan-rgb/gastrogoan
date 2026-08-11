@@ -1713,15 +1713,21 @@ function updateSyncBadge(state){
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
   el.style.display = 'inline-block';
-  if(state === 'online'){ el.textContent = `☁ ${t('gate.cloudConnectedShort')}`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
+  // El texto va en un <span class="hdr-text"> para que, igual que el resto
+  // de botones de la cabecera, se oculte solo en móvil (queda solo el
+  // icono ☁) — antes era texto suelto con textContent y no se acortaba
+  // nunca, así que era el elemento que más desbordaba la cabecera en
+  // pantallas estrechas, obligando a hacer scroll horizontal para llegar a
+  // los demás botones.
+  if(state === 'online'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudConnectedShort')}</span>`; el.style.background = '#1F8A4C'; el.style.color = '#FFFFFF'; }
   // 'pending': antes el badge solo distinguía conectado/desconectado, no si
   // los cambios que se acaban de hacer YA llegaron de verdad a la nube o
   // siguen en camino — con esto queda un estado visible intermedio, en vez
   // de que "conectado" dé a entender (sin garantizarlo) que todo ya está
   // guardado.
-  else if(state === 'pending'){ el.textContent = `☁ ${t('gate.cloudPending')}`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
-  else if(state === 'offline'){ el.textContent = `☁ ${t('gate.offline')}`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
-  else { el.textContent = `☁ ${t('gate.cloudError')}`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
+  else if(state === 'pending'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudPending')}</span>`; el.style.background = '#2E6FBA'; el.style.color = '#FFFFFF'; }
+  else if(state === 'offline'){ el.innerHTML = `☁<span class="hdr-text"> ${t('gate.offline')}</span>`; el.style.background = '#B8860B'; el.style.color = '#FFFFFF'; }
+  else { el.innerHTML = `☁<span class="hdr-text"> ${t('gate.cloudError')}</span>`; el.style.background = '#C0392B'; el.style.color = '#FFFFFF'; }
 }
 
 function refreshAfterRemoteChange(){

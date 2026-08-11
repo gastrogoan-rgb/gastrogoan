@@ -17,7 +17,18 @@ const coreSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'ut
 // DOM mínimo: solo lo que isOwnerSession() necesita (document.body.classList).
 function makeFakeDocument(){
   const classes = new Set();
-  const syncBadgeEl = {textContent: '', style: {}};
+  // Un elemento real sincroniza textContent solo al leerlo (se deriva del
+  // marcado); este mock no es un Element de verdad, así que hay que simular
+  // ese derivado a mano cuando el código de producción usa innerHTML en vez
+  // de textContent (ver updateSyncBadge en js/core.js).
+  let syncBadgeHtml = '';
+  const syncBadgeEl = {
+    style: {},
+    get textContent(){ return syncBadgeHtml.replace(/<[^>]*>/g, ''); },
+    set textContent(v){ syncBadgeHtml = v; },
+    get innerHTML(){ return syncBadgeHtml; },
+    set innerHTML(v){ syncBadgeHtml = v; },
+  };
   return {
     body: {
       classList: {
