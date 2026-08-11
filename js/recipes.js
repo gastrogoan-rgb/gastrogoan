@@ -382,15 +382,12 @@ function renderRecipeModal(id, r){
       ${t('msg.escandalloForOnePerson')}
     </div>` : ''}
 
-    ${(r.isBase || isSala) ? `<input type="checkbox" id="recipe-is-base" style="display:none" ${r.isBase?'checked':''}>` : `
-    <div class="field">
-      <label style="display:flex;align-items:center;gap:8px;cursor:${id?'default':'pointer'};font-weight:400;${id?'opacity:.7':''}">
-        <input type="checkbox" id="recipe-is-base" style="width:auto" ${r.isBase?'checked':''} ${id?'disabled':''} onchange="renderRecipeModal(${id||'null'}, currentRecipeFormState(${id||'null'}))">
-        ${t('label.isBaseElaborationCheckbox')}
-      </label>
-      ${id ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.dishTypeLockedAfterCreation')}</p>` : ''}
-    </div>
-    `}
+    <!-- El tipo (plato normal o elaboración base) ya lo decide el botón por
+    el que se entró a este formulario ("+ Nuevo Plato" o "+ Nueva
+    Elaboración", ver openRecipeModal(id, forceBase)) — antes había además
+    una casilla aquí dentro para volver a elegirlo, redundante con esos dos
+    botones y que solo confundía. -->
+    <input type="checkbox" id="recipe-is-base" style="display:none" ${r.isBase?'checked':''}>
     ${r.isBase ? `
     <div class="field-row">
       <div class="field">
