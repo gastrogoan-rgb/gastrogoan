@@ -762,21 +762,12 @@ function renderTpvMesas(tiposServicio){
   return html;
 }
 
-// Colapsado por defecto en pantallas estrechas (móvil), donde el panel fijo
-// de 38vh dejaba el plano de mesas de Sala aplastado en un hueco diminuto.
-// En pantallas anchas (PC/tablet, con sitio de sobra) arranca desplegado,
-// como hasta ahora. Una vez el usuario lo toca a mano, se respeta su
-// elección durante el resto de la sesión, no se vuelve a decidir solo.
-let togoPanelCollapsed = null;
-function toggleTogoPanel(){
-  togoPanelCollapsed = !(togoPanelCollapsed ?? window.innerWidth < 700);
-  renderTPV();
-}
 function renderTpvToGo(tiposServicio){
   // Este canal se muestra siempre que el negocio tenga para llevar o
-  // delivery dado de alta, separado con su propio panel de las mesas del
-  // local — no solo cuando hay algún pedido abierto — para que sea un sitio
-  // fijo y predecible donde mirar, no algo que aparece y desaparece.
+  // delivery dado de alta — no solo cuando hay algún pedido abierto — para
+  // que sea un sitio fijo y predecible donde mirar. Se muestra con el mismo
+  // estilo de sección que las mesas (mismo tipo de encabezado y rejilla), no
+  // como un panel aparte, para que no se lea como "algo distinto".
   if(tiposServicio.takeaway === false && tiposServicio.delivery === false) return '';
   const toGoOrders = DB.tpvOrders.filter(o => o.status !== 'pagada' && o.status !== 'pendiente-online' && (o.tipo==='takeaway'||o.tipo==='delivery') && isTogoOrderVisibleNow(o));
   // Los pedidos sin hora programada (ASAP) van primero; el resto, por hora
@@ -787,49 +778,42 @@ function renderTpvToGo(tiposServicio){
     return ma - mb;
   });
   const pedidosOnlineOn = DB.business.pedidosOnlineActivos !== false;
-  const collapsed = togoPanelCollapsed ?? (typeof window!=='undefined' && window.innerWidth < 700);
   return `
-    <div class="togo-panel${collapsed?' collapsed':''}">
-      <div class="togo-panel-head">
-        <h3 style="cursor:pointer" onclick="toggleTogoPanel()"><i class="ti ti-chevron-down togo-panel-toggle"></i> <i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
-            <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
-          </button>
-          ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
-          <button class="btn btn-sm btn-primary" onclick="openNewToGoOrderModal()"><i class="ti ti-plus"></i> ${t('btn.expressOrder')}</button>
-        </div>
-      </div>
-      <div class="togo-panel-body">
-      ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
-      <p style="font-size:12px;color:var(--muted);margin:10px 0">${t('tpv.onlineOrdersAutoArrive')}</p>
-      ${!toGoOrders.length
-        ? `<div class="empty" style="padding:18px"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div>`
-        : `<div class="grid grid-4">${toGoOrders.map(o => {
-            const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
-            const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
-            const urgent = dueMins !== null && dueMins <= 30;
-            const isDelivery = o.tipo==='delivery';
-            // Sin chip de camarero aquí: estos pedidos entran por teléfono o
-            // por la web, no los toma nadie de sala en persona.
-            const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId, o.repartidorCourierId) : '';
-            return `
-            <div class="card togo-card ${isDelivery?'togo-card-delivery':'togo-card-pickup'}${urgent?' togo-card-urgent':''}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
-              <h3 style="justify-content:center"><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</h3>
-              <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
-                <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
-                ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
-                ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
-              </div>
-              ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
-              ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
-              ${(o.clienteDireccion||o.clienteAddress) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
-              <div style="margin-top:8px;font-weight:800;font-size:19px;color:var(--brand-orange)">${fmtMoney(orderTotal(o))}</div>
-              ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
+    <h3 style="margin-top:16px;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+          <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
+        </button>
+        ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
+      </span>
+    </h3>
+    ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
+    ${!toGoOrders.length
+      ? `<div class="grid grid-4"><div class="empty"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div></div>`
+      : `<div class="grid grid-mesas">${toGoOrders.map(o => {
+          const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
+          const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
+          const urgent = dueMins !== null && dueMins <= 30;
+          const isDelivery = o.tipo==='delivery';
+          // Sin chip de camarero aquí: estos pedidos entran por teléfono o
+          // por la web, no los toma nadie de sala en persona.
+          const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId, o.repartidorCourierId) : '';
+          return `
+          <div class="card mesa-card mesa-occupied ${urgent?'mesa-phase-kitchen':'mesa-phase-served'}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
+            <div class="mesa-name"><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+              <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
+              ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : ''}
+              ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
             </div>
-          `}).join('')}</div>`}
-      </div>
-    </div>
+            ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${t('label.scheduledFor')} ${escapeHtml(o.time)}</span></div>` : ''}
+            ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
+            ${(o.clienteDireccion||o.clienteAddress) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
+            <div class="mesa-total">${fmtMoney(orderTotal(o))}</div>
+            ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
+          </div>
+        `}).join('')}</div>`}
   `;
 }
 
@@ -901,18 +885,17 @@ function renderTPV(){
   const box = document.getElementById('tpv-content');
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
 
-  // Orden pensado para tablet: lo primero que ve un camarero al entrar debe
-  // ser lo que usa constantemente (mesas, avisos urgentes), no las cifras
-  // del día — eso lo mira sobre todo el dueño, de vez en cuando, no hace
-  // falta que ocupe la parte más visible de la pantalla en cada entrada.
+  // Orden de arriba a abajo: primero las cifras del día (ventas, tickets...),
+  // luego las mesas, y al final Para Llevar/Delivery — mismo orden con el
+  // que ya se venía trabajando, todo en una sola pantalla sin paneles aparte.
   box.innerHTML = `
+    ${renderTpvKpis()}
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
     ${renderLastCallBanner()}
     ${renderTpvPendingOnline()}
     ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
     ${renderTpvToGo(tiposServicio)}
-    ${renderTpvKpis()}
     <div class="toolbar">
       <div class="left"></div>
       <button class="btn ${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? 'btn-primary':''}" onclick="openWaitlistModal()"><i class="ti ti-users-group"></i> ${t('waitlist.btn')}${(DB.waitlist||[]).filter(w=>w.status==='esperando').length ? ` (${(DB.waitlist||[]).filter(w=>w.status==='esperando').length})` : ''}</button>
@@ -1315,147 +1298,6 @@ function confirmOpenTableOrder(tableId){
   const camareroId = loggedEmployeeId !== null ? loggedEmployeeId : (camareroSel && camareroSel.value ? parseInt(camareroSel.value) : null);
 
   const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
-  DB.tpvOrders.push(order);
-  saveDB();
-  renderTableOrderModal(order.id);
-}
-
-// Pedido Express: la única forma de crear a mano un pedido que no es de
-// mesa (llamadas por teléfono, avisos en barra...). Un mismo modal cubre
-// los dos casos (para recoger / a domicilio) y solo pide los datos que
-// corresponden a cada uno, en vez de tener un botón y un modal distintos
-// por cada tipo. Los platos de estos pedidos pasan a cocina automáticamente
-// al añadirlos, sin necesidad de "Marchar" (ver autoSendTakeawayLine).
-let toGoOrderTypeSelected = 'pickup';
-function openNewToGoOrderModal(){
-  const tiposServicio = (DB.business && DB.business.tiposServicio) || {};
-  const canPickup = tiposServicio.takeaway !== false;
-  const canDelivery = tiposServicio.delivery !== false;
-  toGoOrderTypeSelected = canPickup ? 'pickup' : 'delivery';
-  const platforms = (DB.business?.deliveryPlatforms||[]);
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-bolt"></i> ${t('title.expressOrder')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    ${(canPickup && canDelivery) ? `
-    <div class="field">
-      <label>${t('label.orderType')}</label>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="btn btn-primary" style="flex:1" id="togo-type-pickup" onclick="setToGoOrderType('pickup')"><i class="ti ti-shopping-bag"></i> ${t('label.pickupOrder')}</button>
-        <button type="button" class="btn" style="flex:1" id="togo-type-delivery" onclick="setToGoOrderType('delivery')"><i class="ti ti-moped"></i> ${t('label.homeDelivery')}</button>
-      </div>
-    </div>
-    ` : ''}
-    <div class="field">
-      <label>${t('label.clientNameOpt')}</label>
-      <input type="text" id="togo-cliente-nombre" placeholder="${t('common.name')}">
-    </div>
-    <div class="field">
-      <label>${t('label.phoneOpt')}</label>
-      <input type="text" id="togo-cliente-phone" placeholder="${t('common.phone')}">
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>${t('common.date')}</label>
-        <input type="date" id="togo-cliente-date" value="${todayStr()}">
-      </div>
-      <div class="field">
-        <label>${t('label.pickupDeliveryTime')}</label>
-        <input type="time" id="togo-cliente-time">
-      </div>
-    </div>
-    <div id="togo-delivery-fields" style="display:${canDelivery && toGoOrderTypeSelected==='delivery' ? '' : 'none'}">
-      <div class="field">
-        <label>${t('label.deliveryAddress')}</label>
-        <input type="text" id="togo-cliente-address" placeholder="${t('mn.business.addressPh')}" oninput="checkNewDeliveryZoneHint()">
-        <small id="togo-del-zone-hint" style="color:var(--brand-orange);display:none"><i class="ti ti-alert-triangle"></i> ${t('msg.postalCodeOutsideZone')}</small>
-      </div>
-      <div class="field">
-        <label>${t('label.platformOpt')}</label>
-        <select id="togo-plataforma">
-          <option value="">${t('label.directOrder')}</option>
-          ${platforms.map(p => `<option value="${p.id}">${escapeHtml(p.nombre)}</option>`).join('')}
-        </select>
-      </div>
-      ${renderRepartidorFieldHtml('togo-repartidor-sel')}
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmNewToGoOrder()"><i class="ti ti-check"></i> ${t('btn.createOrder')}</button>
-    </div>
-  `);
-}
-function setToGoOrderType(type){
-  toGoOrderTypeSelected = type;
-  const pickupBtn = document.getElementById('togo-type-pickup');
-  const deliveryBtn = document.getElementById('togo-type-delivery');
-  if(pickupBtn) pickupBtn.classList.toggle('btn-primary', type==='pickup');
-  if(deliveryBtn) deliveryBtn.classList.toggle('btn-primary', type==='delivery');
-  const fields = document.getElementById('togo-delivery-fields');
-  if(fields) fields.style.display = type==='delivery' ? '' : 'none';
-}
-
-// Aviso simple e informativo (no bloqueante) si en la dirección escrita se
-// detecta un código postal que no está en la lista configurada para reparto.
-// No hace geolocalización ni comprueba el radio (eso solo lo hace la web
-// pública), es solo una pista rápida para el personal al crear el pedido a mano.
-function checkNewDeliveryZoneHint(){
-  const input = document.getElementById('togo-cliente-address');
-  const hint = document.getElementById('togo-del-zone-hint');
-  if(!input || !hint) return;
-  const cpList = (DB.business?.pedidos?.cpList) || [];
-  const match = input.value.match(/\b\d{5}\b/);
-  const show = !!(cpList.length && match && !cpList.includes(match[0]));
-  hint.style.display = show ? '' : 'none';
-}
-
-function confirmNewToGoOrder(){
-  const clienteNombre = document.getElementById('togo-cliente-nombre').value.trim();
-  // Antes esto se guardaba como "clientePhone" (y la dirección como
-  // "clienteAddress"), pero el resto de la app — pedidos online, tickets,
-  // fichas de cliente — usa "clienteTelefono"/"clienteDireccion": ese
-  // desajuste de nombres hacía que el teléfono/dirección de un pedido creado
-  // a mano en el TPV nunca se mostrara en ningún sitio (campo "de solo
-  // escritura"). Se unifica al nombre que ya usa el resto de la app.
-  const clienteTelefono = document.getElementById('togo-cliente-phone').value.trim();
-  // Si el teléfono coincide con un cliente ya dado de alta, se vincula el
-  // pedido a su ficha — igual que ya pasa con mesas y reservas — para que
-  // sume puntos de fidelidad, aparezca en su historial, y el personal pueda
-  // ver sus alergias/notas. Antes esto solo pasaba si venía de una reserva.
-  // Si no hay teléfono o no coincide, se prueba también por nombre exacto
-  // (sin tildes/mayúsculas) para no crear una ficha duplicada de alguien que
-  // ya está dado de alta pero llamó sin dar el mismo teléfono registrado.
-  let matchedClient = clienteTelefono ? findClientByPhone(clienteTelefono) : null;
-  if(!matchedClient && clienteNombre){
-    const norm = stripAccents(clienteNombre.toLowerCase());
-    matchedClient = DB.clients.find(c => stripAccents((c.name||'').trim().toLowerCase()) === norm) || null;
-  }
-  const clientId = matchedClient ? matchedClient.id : null;
-  // Fecha/hora de recogida o entrega: por defecto es hoy sin hora concreta
-  // (se entiende "cuanto antes"), pero si se programa para otro día, el
-  // pedido no debe aparecer en el TPV hasta que llegue esa fecha (ver el
-  // filtro `!o.date || o.date <= todayStr()` en renderTpvToGo).
-  const dateEl = document.getElementById('togo-cliente-date');
-  const timeEl = document.getElementById('togo-cliente-time');
-  const date = dateEl && dateEl.value ? dateEl.value : todayStr();
-  const time = timeEl && timeEl.value ? timeEl.value : null;
-  const isDelivery = toGoOrderTypeSelected === 'delivery';
-  const order = {id: genId(), tableId: null, tipo: isDelivery ? 'delivery' : 'takeaway', clienteNombre: clientId ? matchedClient.name : clienteNombre, clienteTelefono, clientId, date, time, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
-  if(isDelivery){
-    const addressEl = document.getElementById('togo-cliente-address');
-    const plataformaEl = document.getElementById('togo-plataforma');
-    const repartidorEl = document.getElementById('togo-repartidor-sel');
-    order.clienteDireccion = addressEl ? addressEl.value.trim() : '';
-    order.plataformaId = plataformaEl && plataformaEl.value ? parseInt(plataformaEl.value) : null;
-    Object.assign(order, parseRepartidorFieldValue(repartidorEl ? repartidorEl.value : ''));
-    // El coste de envío configurado en Mi Negocio solo aplica cuando el
-    // reparto lo hace el propio negocio: si es una plataforma externa
-    // (Glovo, Uber Eats...), esa plataforma ya cobra su propio envío aparte,
-    // fuera de esta cuenta.
-    order.costeEnvio = !order.plataformaId ? (parseFloat(DB.business?.pedidos?.deliveryFee) || 0) : 0;
-    if(esRepartoPropio(order)) autoAssignRepartidor(order);
-  }
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
