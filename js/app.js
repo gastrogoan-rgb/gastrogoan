@@ -1419,93 +1419,6 @@ function setClientesSort(field){
   renderClientes();
 }
 
-// Escaneo de la ficha completa de clientes en busca de posibles duplicados
-// (mismo teléfono, mismo email o mismo nombre exacto). El aviso al guardar
-// un cliente (saveClient) solo detecta duplicados nuevos en el momento de
-// crear/editar una ficha; este escaneo revisa TODA la base ya existente,
-// para casos donde el duplicado se creó antes de tener ese aviso o entró
-// por otra vía (p.ej. import, o dos personas distintas dieron de alta al
-// mismo cliente sin saberlo).
-function findDuplicateClientGroups(){
-  const groups = [];
-  const seen = new Set();
-  DB.clients.forEach(c => {
-    if(seen.has(c.id)) return;
-    const matches = DB.clients.filter(x => x.id !== c.id && !seen.has(x.id) && (
-      (c.phone && x.phone && c.phone.replace(/\D/g,'') === x.phone.replace(/\D/g,'')) ||
-      (c.email && x.email && c.email.trim().toLowerCase() === x.email.trim().toLowerCase()) ||
-      c.name.trim().toLowerCase() === x.name.trim().toLowerCase()
-    ));
-    if(matches.length){
-      const group = [c, ...matches];
-      group.forEach(g => seen.add(g.id));
-      groups.push(group);
-    }
-  });
-  return groups;
-}
-
-// Fusiona dos fichas de cliente que resultaron ser la misma persona:
-// traspasa a "keepId" todo el historial de ventas y reservas de
-// "removeId" (si no, borrar sin más la ficha sobrante perdería ese
-// historial y contaría de menos las visitas reales del cliente), suma los
-// puntos de fidelidad de ambas, y rellena en la ficha que se queda los
-// campos que tuviera vacíos (teléfono, email, alergias...) con los de la
-// que se elimina. Por último borra la ficha sobrante.
-function mergeClients(keepId, removeId){
-  const keep = DB.clients.find(c => c.id === keepId);
-  const remove = DB.clients.find(c => c.id === removeId);
-  if(!keep || !remove) return;
-  if(!confirm(t('msg.confirmMergeClients').replace(/\$\{remove\}/g, remove.name).replace('${keep}', keep.name))) return;
-
-  DB.sales.forEach(s => { if(s.clientId === removeId) s.clientId = keepId; });
-  DB.reservations.forEach(r => { if(r.clientId === removeId) r.clientId = keepId; });
-  keep.points = (keep.points||0) + (remove.points||0);
-  keep.noShows = (keep.noShows||0) + (remove.noShows||0);
-  ['phone','email','cp','cumpleanos','allergies'].forEach(field => {
-    if(!keep[field] && remove[field]) keep[field] = remove[field];
-  });
-  if(remove.notes && remove.notes !== keep.notes){
-    keep.notes = keep.notes ? `${keep.notes} / ${remove.notes}` : remove.notes;
-  }
-  if(remove.marketingConsent === false) keep.marketingConsent = false;
-  DB.clients = DB.clients.filter(c => c.id !== removeId);
-
-  saveDB();
-  showToast(`Fichas fusionadas en «${keep.name}»`);
-  openDuplicateClientsModal();
-  renderClientes();
-}
-
-function openDuplicateClientsModal(){
-  const groups = findDuplicateClientGroups();
-  let html = `<div class="modal-header"><h3><i class="ti ti-users-group"></i> Posibles clientes duplicados</h3><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>`;
-  if(!groups.length){
-    html += `<div class="empty"><i class="ti ti-check"></i> No se han encontrado clientes con el mismo teléfono, email o nombre.</div>`;
-  } else {
-    html += `<div style="padding:8px 0;color:var(--muted);font-size:13px">Se han encontrado ${groups.length} grupo(s) de fichas que comparten teléfono, email o nombre. Revísalas y, si son la misma persona, edítalas para unificar los datos y elimina la ficha sobrante.</div>`;
-    groups.forEach(group => {
-      html += `<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px">`;
-      group.forEach(c => {
-        const stats = clientSalesStats(c);
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee">
-          <div>
-            <strong>${escapeHtml(c.name)}</strong>
-            <div style="font-size:12px;color:var(--muted)">${c.phone ? escapeHtml(c.phone) : ''}${c.phone && c.email ? ' · ' : ''}${c.email ? escapeHtml(c.email) : ''} · ${stats.visitas} visitas · ${fmtMoney(stats.total)}</div>
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-sm" onclick="closeModal();openClientModal(${c.id})"><i class="ti ti-edit"></i> Editar</button>
-            ${group.length > 1 ? group.filter(x=>x.id!==c.id).map(x => `<button class="btn btn-sm" onclick="mergeClients(${c.id}, ${x.id})" title="Traspasar el historial de '${escapeHtml(x.name)}' a esta ficha y eliminar la sobrante"><i class="ti ti-git-merge"></i> Fusionar con «${escapeHtml(x.name)}»</button>`).join('') : ''}
-            <button class="btn btn-sm btn-danger" onclick="closeModal();deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
-          </div>
-        </div>`;
-      });
-      html += `</div>`;
-    });
-  }
-  openModal(html, {xl:true});
-}
-
 function renderClientes(){
   const search = document.getElementById('clientes-search').value.toLowerCase();
   const filter = document.getElementById('clientes-filter')?.value || '';
@@ -1730,17 +1643,18 @@ function saveClient(id){
   const notes = document.getElementById('client-notes').value.trim();
   const marketingConsent = document.getElementById('client-marketing-consent').checked;
 
-  // Aviso (no bloqueante) de posible cliente duplicado: mismo teléfono/email
-  // ya dado de alta, o mismo nombre exacto, para no partir sus puntos e
-  // historial en dos fichas sin querer.
-  const dupe = DB.clients.find(x =>
+  // Aviso (no bloqueante) de posible cliente duplicado, para no partir sus
+  // puntos e historial en dos fichas sin querer. El nombre repetido tiene su
+  // propio mensaje, más claro, que el de coincidencia por teléfono/email.
+  const dupeName = DB.clients.find(x => x.id !== id && x.name.trim().toLowerCase() === name.trim().toLowerCase());
+  if(dupeName && !confirm(t('msg.confirmDuplicateClientName').replace('${name}', dupeName.name))) return;
+  const dupeContact = DB.clients.find(x =>
     x.id !== id && (
       (phone && x.phone && x.phone.replace(/\D/g,'') === phone.replace(/\D/g,'')) ||
-      (email && x.email && x.email.trim().toLowerCase() === email.trim().toLowerCase()) ||
-      x.name.trim().toLowerCase() === name.trim().toLowerCase()
+      (email && x.email && x.email.trim().toLowerCase() === email.trim().toLowerCase())
     )
   );
-  if(dupe && !confirm(t('msg.confirmDuplicateClient').replace('${name}', dupe.name))) return;
+  if(dupeContact && !confirm(t('msg.confirmDuplicateClient').replace('${name}', dupeContact.name))) return;
 
   if(id){
     const client = DB.clients.find(x=>x.id===id);
@@ -1808,141 +1722,6 @@ function openClientHistoryModal(id){
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `);
-}
-
-// Exporta la lista de clientes visible (respetando el buscador/filtro activo) a CSV.
-function exportClientsCSV(){
-  const search = document.getElementById('clientes-search').value.toLowerCase();
-  const filter = document.getElementById('clientes-filter')?.value || '';
-  let items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
-  if(filter === 'inactive') items = items.filter(c => { const r = clientSalesStats(c).recency; return r === null || r > 60; });
-  else if(filter === 'allergies') items = items.filter(c => (c.allergies||'').trim());
-  else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
-  else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
-  else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
-  else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
-  else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
-  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket'), 'Gasto total', t('label.lastVisit'), t('label.loyaltyPoints'), t('label.noShowCount'), t('label.allergiesPrefs'), t('th.notes')]];
-  items.forEach(c => {
-    const stats = clientSalesStats(c);
-    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio, stats.total, stats.lastDate||'', c.points||0, c.noShows||0, c.allergies||'', c.notes||'']);
-  });
-  downloadCSV(rows, `clientes-${todayStr()}.csv`);
-}
-
-// Exportación específica para campañas de marketing: solo clientes que han
-// dado consentimiento (marketingConsent !== false) y que tienen al menos
-// un contacto usable (teléfono o email). El CSV general de arriba incluye
-// a todo el mundo (útil para gestión interna) pero mandarlo tal cual a una
-// plataforma de WhatsApp/email masivo se saltaría el consentimiento y
-// mandaría a gente sin forma de contactar.
-function exportMarketingCSV(){
-  const items = DB.clients.filter(c => c.marketingConsent !== false && (c.phone || c.email));
-  if(!items.length){ showToast(t('empty.clients')); return; }
-  const rows = [[t('common.name'), t('common.phone'), t('common.email'), t('label.visits'), t('label.avgTicket')]];
-  items.forEach(c => {
-    const stats = clientSalesStats(c);
-    rows.push([c.name, c.phone||'', c.email||'', stats.visitas, stats.ticketMedio]);
-  });
-  downloadCSV(rows, `clientes-marketing-${todayStr()}.csv`);
-  showToast(`${items.length} clientes exportados para marketing`);
-}
-
-// Cumpleaños en los próximos 14 días (por día/mes, sin importar el año), para
-// poder felicitar a los clientes sin tener que acordarte tú de mirarlo cada día.
-function getUpcomingBirthdays(days){
-  const today = new Date();
-  const upcoming = [];
-  DB.clients.forEach(c => {
-    if(!c.cumpleanos) return;
-    const parts = c.cumpleanos.split('-');
-    if(parts.length !== 3) return;
-    const month = parseInt(parts[1]) - 1, day = parseInt(parts[2]);
-    for(let offset = 0; offset <= days; offset++){
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
-      if(d.getMonth() === month && d.getDate() === day){
-        upcoming.push({client: c, date: d, inDays: offset});
-        break;
-      }
-    }
-  });
-  return upcoming.sort((a,b) => a.inDays - b.inDays);
-}
-// Aviso proactivo de cumpleaños: hasta ahora había que acordarse de abrir
-// "Cumpleaños próximos" a mano cada día. Al abrir la app se comprueba una
-// vez por día (localStorage guarda la última fecha comprobada, para no
-// repetir el aviso varias veces el mismo día) si hay clientes que cumplen
-// años hoy, y si los hay se avisa con un toast que abre directamente el
-// modal de cumpleaños.
-function checkTodayBirthdaysReminder(){
-  const key = 'gg_birthday_reminder_last_check';
-  const today = todayStr();
-  if(localStorage.getItem(key) === today) return;
-  localStorage.setItem(key, today);
-  const upcoming = getUpcomingBirthdays(0);
-  if(upcoming.length){
-    const names = upcoming.map(u => u.client.name).join(', ');
-    showToast(`🎂 ${t('label.today')}: ${names}`, 8000);
-  }
-}
-function openBirthdaysModal(){
-  const upcoming = getUpcomingBirthdays(14);
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-cake"></i> ${t('title.upcomingBirthdays')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    ${upcoming.length ? upcoming.map(({client:c, inDays}) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <strong>${escapeHtml(c.name)}</strong>
-          <div style="font-size:12px;color:var(--muted)">${inDays===0?t('label.today'):inDays===1?t('label.tomorrow'):t('label.inNDays').replace('${n}', inDays)}</div>
-        </div>
-        <button class="btn btn-sm" onclick="openBirthdayGreetingModal(${c.id})" ${(!c.phone && !c.email)?'disabled':''}><i class="ti ti-bell"></i> ${t('btn.sendGreeting')}</button>
-      </div>
-    `).join('') : `<div class="empty"><i class="ti ti-cake"></i>${t('empty.noUpcomingBirthdays')}</div>`}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
-    </div>
-  `);
-}
-function birthdayGreetingText(c){
-  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
-  return t('msg.birthdayGreeting').replace('${name}', c.name).replace('${biz}', bizName);
-}
-function openBirthdayGreetingModal(id){
-  const c = DB.clients.find(x=>x.id===id);
-  if(!c) return;
-  const msg = birthdayGreetingText(c);
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-cake"></i> ${escapeHtml(c.name)}</h3>
-      <button class="modal-close" onclick="openBirthdaysModal()">&times;</button>
-    </div>
-    <div class="field"><textarea id="birthday-greeting-text" rows="4">${escapeHtml(msg)}</textarea></div>
-    <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendBirthdayWhatsapp(${id})" ${!c.phone?'disabled':''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
-      <button class="btn" style="flex:1" onclick="sendBirthdayEmail(${id})" ${!c.email?'disabled':''}><i class="ti ti-mail"></i> Email</button>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="openBirthdaysModal()">${t('common.back')}</button>
-    </div>
-  `);
-}
-function sendBirthdayWhatsapp(id){
-  const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.phone){ showToast(t('msg.noPhone')); return; }
-  const tel = c.phone.replace(/\D/g,'');
-  const txt = encodeURIComponent(document.getElementById('birthday-greeting-text').value);
-  window.open('https://wa.me/'+tel+'?text='+txt, '_blank', 'noopener');
-}
-function sendBirthdayEmail(id){
-  const c = DB.clients.find(x=>x.id===id);
-  if(!c || !c.email){ showToast(t('msg.noEmail')); return; }
-  const bizName = (DB.business && DB.business.name) || t('mn.online.ourRestaurant');
-  const subject = encodeURIComponent(t('msg.birthdaySubject').replace('${name}', bizName));
-  const body = encodeURIComponent(document.getElementById('birthday-greeting-text').value);
-  window.location.href = 'mailto:'+encodeURIComponent(c.email)+'?subject='+subject+'&body='+body;
 }
 
 function openRewardModal(id){
@@ -7708,7 +7487,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateAutoActiveCarta();
   updateAutoActiveMenu();
   setInterval(() => { updateAutoActiveCarta(); updateAutoActiveMenu(); purgePaidOrders(); }, 60000);
-  checkTodayBirthdaysReminder();
 
   setTimeout(() => {
     const splash = document.getElementById('app-splash');
