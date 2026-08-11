@@ -1150,9 +1150,11 @@ function renderStock(){
         <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
         <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
           onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-        <span style="font-size:12.5px;white-space:nowrap;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')} ${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
+        <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
+        <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+          onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
+        <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
         <div class="actions-cell" style="gap:4px">
-          <button class="btn btn-sm" onclick="${isElab ? `setElaboracionQty(${row.id})` : `setStockQty(${row.id})`}"><i class="ti ti-edit"></i> ${t('btn.adjustStock')}</button>
           ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}
           ${fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" title="${t('title.editCostingSheet')}" onclick="navigate('escandallo');openRecipeModal(${row.recipeId})"><i class="ti ${currentArea()==='sala'?'ti-glass-cocktail':'ti-chef-hat'}"></i></button>` : ''}
@@ -1352,35 +1354,19 @@ function openStockLogModal(){
   `);
 }
 
-function setStockQty(ingredientId){
+// Cantidad "Actual" editable directamente en la propia fila, sin pasar por
+// un modal — antes hacía falta abrir un modal aparte solo para escribir un
+// número. Sigue quedando registrado en el Historial igual que antes.
+function updateStockQty(ingredientId, value){
   const s = getStockEntry(ingredientId);
-  openModal(`
-    <div class="modal-header">
-      <h3>${t('btn.adjustStock')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${t('label.stockQty')}</label>
-      <input type="number" id="stock-qty-value" value="${s.qty}" step="0.01" min="0">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmSetStockQty(${ingredientId})">${t('common.save')}</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('stock-qty-value')?.focus(), 50);
-}
-function confirmSetStockQty(ingredientId){
-  const s = getStockEntry(ingredientId);
-  const val = document.getElementById('stock-qty-value').value;
-  const num = parseFloat(val);
-  if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
+  const num = parseFloat(value);
+  if(isNaN(num) || num < 0) return;
   const before = s.qty||0;
+  if(before === num) return;
   s.qty = num;
   const ing = getIngredient(ingredientId);
   logStockAdjustment('ing', ingredientId, ing?ing.name:'', before, num);
   saveDB();
-  closeModal();
   renderStock();
 }
 
@@ -1477,33 +1463,14 @@ function updateElaboracionMin(id, value){
   renderStock();
 }
 
-function setElaboracionQty(id){
+function updateElaboracionQty(id, value){
   const e = getElaboracion(id); if(!e) return;
-  openModal(`
-    <div class="modal-header">
-      <h3>${t('btn.adjustStock')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <div class="field">
-      <label>${t('label.stockQty')}</label>
-      <input type="number" id="elaboracion-qty-value" value="${e.qty||0}" step="0.01" min="0">
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmSetElaboracionQty(${id})">${t('common.save')}</button>
-    </div>
-  `);
-  setTimeout(()=>document.getElementById('elaboracion-qty-value')?.focus(), 50);
-}
-function confirmSetElaboracionQty(id){
-  const e = getElaboracion(id); if(!e){ closeModal(); return; }
-  const val = document.getElementById('elaboracion-qty-value').value;
-  const num = parseFloat(val);
-  if(isNaN(num) || num < 0){ showToast(t('msg.invalidQty')); return; }
+  const num = parseFloat(value);
+  if(isNaN(num) || num < 0) return;
   const before = e.qty||0;
+  if(before === num) return;
   e.qty = num;
   logStockAdjustment('elab', id, e.name, before, num);
   saveDB();
-  closeModal();
   renderStock();
 }
