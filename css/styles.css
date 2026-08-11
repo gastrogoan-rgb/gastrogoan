@@ -135,7 +135,14 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 
+/* min-width:0 en los hijos directos: por defecto un item de grid no se
+   encoge por debajo del ancho mínimo de su CONTENIDO (min-width:auto), así
+   que una fila interna con varios botones/inputs en línea (p.ej. un paso
+   del Plan de Limpieza) podía forzar la columna del grid a ser más ancha
+   que el propio contenedor, desbordando la página en móvil aunque el grid
+   ya estuviera en una sola columna. */
 .grid{display:grid;gap:14px}
+.grid>*{min-width:0}
 .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
