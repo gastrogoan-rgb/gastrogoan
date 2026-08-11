@@ -1454,19 +1454,19 @@ function renderClientes(){
     }
     return `
     <tr>
-      <td><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
-      <td>
+      <td data-label="${t('common.name')}"><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
+      <td data-label="${t('label.contact')}">
         ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
         ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
         ${!c.phone && !c.email ? '—' : ''}
       </td>
-      <td><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas}</span></button></td>
-      <td>${fmtMoney(stats.ticketMedio)}</td>
-      <td>${fmtMoney(stats.total)}</td>
-      <td>${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
-      <td><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
-      <td class="wrap">${escapeHtml(c.notes||'—')}</td>
-      <td class="actions-cell">
+      <td data-label="${t('label.visits')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas}</span></button></td>
+      <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
+      <td data-label="${t('common.total')}">${fmtMoney(stats.total)}</td>
+      <td data-label="${t('label.lastVisit')}">${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
+      <td data-label="${t('label.loyaltyPoints')}"><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
+      <td class="wrap" data-label="${t('common.notes')}">${escapeHtml(c.notes||'—')}</td>
+      <td class="actions-cell" data-label="">
         <button class="btn btn-sm btn-icon" onclick="openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
       </td>
