@@ -1081,8 +1081,14 @@ function updateFichaProduccion(value){
 
 function renderFichaModal(){
   const f = fichaModalState;
-  const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || currentArea();
+  const linkedRecipe = f.recipeId ? getRecipe(f.recipeId) : null;
+  const fArea = f.area || (linkedRecipe && linkedRecipe.area) || currentArea();
   const isSala = fArea === 'sala';
+  // Una elaboración base (caldo, sofrito, masa...) no se sirve ni se
+  // emplata directamente a un cliente — solo se usa como ingrediente en
+  // otros platos — así que no tiene sentido pedirle foto ni notas de
+  // emplatado.
+  const isBaseElaboration = !!(linkedRecipe && linkedRecipe.isBase);
   const ro = !editUnlocked;
   const roAttr = ro ? 'disabled' : '';
   // Cuando la ficha está vinculada a un escandallo, el nombre/comensales vienen de
@@ -1171,6 +1177,7 @@ function renderFichaModal(){
       <button class="owner-only btn btn-sm" onclick="addFichaStep()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
     </div>
 
+    ${isBaseElaboration ? '' : `
     <div class="field">
       <label>${t('label.plating')}</label>
       <textarea id="ficha-presentation" placeholder="${t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
@@ -1186,6 +1193,7 @@ function renderFichaModal(){
         `)}
       </div>
     </div>
+    `}
 
     <div class="field">
       <label>${t('label.allergens')}</label>
@@ -1390,6 +1398,7 @@ function printFicha(id){
   const ingredientLines = getFichaIngredientLines(f);
   const ings = ingredientLines.map(l=>`<li style="margin:3px 0">${l.qty!=null ? `${fmtNum(l.qty*factor)} ${escapeHtml(l.unit)} — ` : ''}${escapeHtml(l.name)}</li>`).join('');
   const fArea = f.area || (f.recipeId && (getRecipe(f.recipeId)||{}).area) || 'cocina';
+  const isBaseElaboration = !!(liveRecipe && liveRecipe.isBase);
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px;display:flex;gap:10px"><strong style="flex-shrink:0;color:#999">${i+1}.</strong><span>${escapeHtml(p)}</span></div>`).join('');
   const metaChips = [
     produccion ? `<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
@@ -1399,10 +1408,10 @@ function printFicha(id){
   const body = `
     ${printReportHeaderHtml(displayName)}
     ${metaChips ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px">${metaChips.replace(/<span>/g,'<span style="background:#f5f5f3;padding:4px 10px;border-radius:4px;font-size:11.5px;color:#555">')}</div>` : ''}
-    ${f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : ''}
+    ${isBaseElaboration ? '' : (f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : '')}
     <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
     <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
-    <h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>
+    ${isBaseElaboration ? '' : `<h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
     <h2>${t('label.allergens')}</h2><div>${algs}</div>
   `;
   printReportWindow(displayName, body, {winSize:'width=800,height=1000'});
