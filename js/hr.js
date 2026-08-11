@@ -1487,11 +1487,11 @@ const GE = (function(){
       <thead><tr><th>${t('hr.platos.dish')}</th><th style="text-align:left">${t('common.category')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.lbl.revenue')}</th><th>${t('hr.platos.pctOfTotal')}</th></tr></thead>
       <tbody>${list.map(i=>`
         <tr>
-          <td>${escapeHtml(i.name)}</td>
-          <td style="text-align:left;font-family:inherit;font-weight:400;background:none;border-left:none">${escapeHtml(i.category)}</td>
-          <td>${fmtNum(i.units,0)}</td>
-          <td>${fmtMoney(i.revenue)}</td>
-          <td>${totalIngresos>0?(i.revenue/totalIngresos*100).toFixed(1)+'%':'—'}</td>
+          <td data-label="${t('hr.platos.dish')}">${escapeHtml(i.name)}</td>
+          <td style="text-align:left;font-family:inherit;font-weight:400;background:none;border-left:none" data-label="${t('common.category')}">${escapeHtml(i.category)}</td>
+          <td data-label="${t('hr.lbl.unitsAbbrev')}">${fmtNum(i.units,0)}</td>
+          <td data-label="${t('hr.lbl.revenue')}">${fmtMoney(i.revenue)}</td>
+          <td data-label="${t('hr.platos.pctOfTotal')}">${totalIngresos>0?(i.revenue/totalIngresos*100).toFixed(1)+'%':'—'}</td>
         </tr>`).join('')}</tbody>
     `;
   }
@@ -1552,12 +1552,12 @@ const GE = (function(){
       <thead><tr><th>${t('hr.platos.dish')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.lbl.revenue')}</th><th>${t('hr.lbl.cost')}</th><th>${t('hr.lbl.margin')}</th><th>${t('hr.platos.pctMargin')}</th></tr></thead>
       <tbody>${list.map(i=>`
         <tr>
-          <td>${escapeHtml(i.name)}</td>
-          <td>${fmtNum(i.units,0)}</td>
-          <td>${fmtMoney(i.revenue)}</td>
-          <td>${fmtMoney(i.cost)}</td>
-          <td class="${i.margin>=0?'pos':'neg'}">${fmtMoney(i.margin)}</td>
-          <td class="${i.marginPct>=0?(i.marginPct<25?'':'pos'):'neg'}">${i.marginPct!=null?i.marginPct.toFixed(1)+'%':'—'}</td>
+          <td data-label="${t('hr.platos.dish')}">${escapeHtml(i.name)}</td>
+          <td data-label="${t('hr.lbl.unitsAbbrev')}">${fmtNum(i.units,0)}</td>
+          <td data-label="${t('hr.lbl.revenue')}">${fmtMoney(i.revenue)}</td>
+          <td data-label="${t('hr.lbl.cost')}">${fmtMoney(i.cost)}</td>
+          <td class="${i.margin>=0?'pos':'neg'}" data-label="${t('hr.lbl.margin')}">${fmtMoney(i.margin)}</td>
+          <td class="${i.marginPct>=0?(i.marginPct<25?'':'pos'):'neg'}" data-label="${t('hr.platos.pctMargin')}">${i.marginPct!=null?i.marginPct.toFixed(1)+'%':'—'}</td>
         </tr>`).join('')}</tbody>
     `;
   }

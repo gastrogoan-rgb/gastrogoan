@@ -287,22 +287,22 @@ tr:last-child td{border-bottom:none}
 td.wrap{white-space:normal}
 .actions-cell{display:flex;gap:6px;flex-wrap:wrap}
 
-/* Tabla de Clientes en móvil: en vez de forzar scroll horizontal dentro de
-   la tabla para llegar a las columnas de la derecha (9 columnas no caben
-   en una pantalla estrecha), cada fila se convierte en una tarjeta y cada
-   celda en una línea con su etiqueta delante (tomada de data-label, puesto
-   en cada <td> desde renderClientes). Solo aplica a esta tabla en concreto
-   — otras tablas del Kit no tienen data-label todavía. */
+/* Tablas anchas (muchas columnas) en móvil: en vez de forzar scroll
+   horizontal para llegar a las columnas de la derecha, cada fila se
+   convierte en una tarjeta y cada celda en una línea con su etiqueta
+   delante (tomada de data-label, puesto en cada <td> al generar la
+   tabla). Se activa marcando la tabla con la clase .table-cards — solo
+   las tablas que ya tienen sus <td> con data-label la usan. */
 @media (max-width:700px){
-  #view-clientes table,#view-clientes thead,#view-clientes tbody,#view-clientes tr{display:block;width:100%}
-  #view-clientes thead{display:none}
-  #view-clientes tbody tr{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:10px 12px;background:var(--surface)}
-  #view-clientes tbody tr:last-child{margin-bottom:0}
-  #view-clientes td{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);white-space:normal;text-align:left}
-  #view-clientes td:last-child{border-bottom:none}
-  #view-clientes td[data-label]::before{content:attr(data-label);flex:0 0 40%;max-width:40%;font-weight:700;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.3px}
-  #view-clientes td[data-label=""]::before{content:none}
-  #view-clientes td.actions-cell{justify-content:flex-end}
+  .table-cards,.table-cards thead,.table-cards tbody,.table-cards tr{display:block;width:100%}
+  .table-cards thead{display:none}
+  .table-cards tbody tr{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:10px 12px;background:var(--surface)}
+  .table-cards tbody tr:last-child{margin-bottom:0}
+  .table-cards td{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);white-space:normal;text-align:left}
+  .table-cards td:last-child{border-bottom:none}
+  .table-cards td[data-label]::before{content:attr(data-label);flex:0 0 40%;max-width:40%;font-weight:700;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.3px}
+  .table-cards td[data-label=""]::before{content:none}
+  .table-cards td.actions-cell{justify-content:flex-end}
 }
 
 /* ===== Badges ===== */

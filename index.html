@@ -154,11 +154,11 @@
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-flame"></i> <span data-i18n="dash.mostSoldByUnits">Más vendidos (por unidades)</span></h4></div>
-            <div class="ge-grid"><table id="platos-mas-vendidos"></table></div>
+            <div class="ge-grid"><table id="platos-mas-vendidos" class="table-cards"></table></div>
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-snowflake"></i> <span data-i18n="dash.leastSold">Menos vendidos</span></h4></div>
-            <div class="ge-grid"><table id="platos-menos-vendidos"></table></div>
+            <div class="ge-grid"><table id="platos-menos-vendidos" class="table-cards"></table></div>
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-chart-dots"></i> <span data-i18n="dash.menuEngineeringTitle">Matriz de rentabilidad (margen × popularidad)</span> <span class="ge-auto">AUTO</span></h4></div>
@@ -168,11 +168,11 @@
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-diamond"></i> <span data-i18n="dash.mostProfitableMargin">Más rentables (margen)</span></h4></div>
-            <div class="ge-grid"><table id="platos-mas-rentables"></table></div>
+            <div class="ge-grid"><table id="platos-mas-rentables" class="table-cards"></table></div>
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4><i class="ti ti-alert-triangle"></i> <span data-i18n="dash.leastProfitable">Menos rentables</span></h4></div>
-            <div class="ge-grid"><table id="platos-menos-rentables"></table></div>
+            <div class="ge-grid"><table id="platos-menos-rentables" class="table-cards"></table></div>
           </div>
           <div class="ge-section">
             <div class="ge-sec-head"><h4>👻 <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
@@ -716,7 +716,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="table-cards">
           <thead>
             <tr><th data-i18n="common.name">Nombre</th><th data-i18n="label.contact">Contacto</th><th class="th-sort" onclick="setClientesSort('visitas')" style="cursor:pointer;user-select:none" title="Ordenar"><span data-i18n="label.visits">Visitas</span> <i class="ti ti-arrows-sort" id="clientes-sort-visitas" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('ticket')" style="cursor:pointer;user-select:none"><span data-i18n="label.avgTicket">Ticket medio</span> <i class="ti ti-arrows-sort" id="clientes-sort-ticket" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('total')" style="cursor:pointer;user-select:none">Gasto total <i class="ti ti-arrows-sort" id="clientes-sort-total" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('lastDate')" style="cursor:pointer;user-select:none"><span data-i18n="label.lastVisit">Última visita</span> <i class="ti ti-arrows-sort" id="clientes-sort-lastDate" style="font-size:12px;opacity:.5"></i></th><th><span data-i18n="label.loyaltyPoints">Puntos de fidelidad</span> <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" data-i18n-title="title.howDoesItWork" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th data-i18n="common.notes">Notas</th><th></th></tr>
           </thead>

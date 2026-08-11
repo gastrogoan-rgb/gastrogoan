@@ -2133,7 +2133,7 @@ function renderReservasDia(){
 
   const tableHtml = !items.length
     ? `<div class="empty"><i class="ti ti-calendar-event"></i>${t('empty.noReservationsDay')}</div>`
-    : `<div class="table-wrap"><table>
+    : `<div class="table-wrap"><table class="table-cards">
         <thead><tr><th>${t('th.time')}</th><th>${t('th.client')}</th><th>${t('th.people')}</th><th>${t('th.table')}</th><th>${t('th.notes')}</th><th>${t('th.status')}</th><th>${t('th.arrival')}</th><th></th></tr></thead>
         <tbody>
           ${items.map(r => {
@@ -2141,13 +2141,13 @@ function renderReservasDia(){
             const table = DB.tables.find(t=>t.id===r.tableId);
             return `
               <tr>
-                <td><strong>${escapeHtml(r.time)}</strong></td>
-                <td>${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
-                <td>${r.people}</td>
-                <td>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</td>
-                <td class="wrap">${escapeHtml(r.notes||'—')}</td>
-                <td>${reservationStatusBadge(r.status)}</td>
-                <td>
+                <td data-label="${t('th.time')}"><strong>${escapeHtml(r.time)}</strong></td>
+                <td data-label="${t('th.client')}">${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
+                <td data-label="${t('th.people')}">${r.people}</td>
+                <td data-label="${t('th.table')}">${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</td>
+                <td class="wrap" data-label="${t('th.notes')}">${escapeHtml(r.notes||'—')}</td>
+                <td data-label="${t('th.status')}">${reservationStatusBadge(r.status)}</td>
+                <td data-label="${t('th.arrival')}">
                   ${r.status==='confirmada' ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
                       <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
@@ -2155,7 +2155,7 @@ function renderReservasDia(){
                     </div>
                   ` : '—'}
                 </td>
-                <td class="actions-cell">
+                <td class="actions-cell" data-label="">
                   ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
                   ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
                   ${r.status==='confirmada' ? `<button class="btn btn-sm btn-icon" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
