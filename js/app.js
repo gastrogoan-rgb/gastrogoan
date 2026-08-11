@@ -4016,7 +4016,7 @@ function renderMiNegocio(){
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
     ${renderExternalConnectionsCard()}
-    <div class="card">
+    <div class="card mn-grid-full">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
       <h4 style="margin-top:0"><i class="ti ti-id-badge-2"></i> ${t('mn.business.identity')}</h4>
@@ -4033,15 +4033,14 @@ function renderMiNegocio(){
           </div>
         </div>
       </div>
-      <div class="field">
-        <label>${t('mn.business.name')}</label>
-        <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="${t('mn.business.namePh')}" onchange="saveBusiness(true)">
-      </div>
-      <div class="field">
-        <label>${t('mn.business.brandColor')}</label>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="color" id="mn-brand-color" value="${escapeHtml(b.brandColor||'#4A5D4E')}" style="width:48px;height:36px;padding:2px;cursor:pointer" onchange="saveBusiness(true)">
-          <span style="font-size:12px;color:var(--muted)">${t('mn.business.brandColorHint')}</span>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.business.name')}</label>
+          <input type="text" id="business-name" value="${escapeHtml(b.name||'')}" placeholder="${t('mn.business.namePh')}" onchange="saveBusiness(true)">
+        </div>
+        <div class="field">
+          <label>${t('mn.business.owner')}</label>
+          <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="${t('mn.business.ownerPh')}" onchange="saveBusiness(true)">
         </div>
       </div>
       <div class="field-row">
@@ -4055,10 +4054,13 @@ function renderMiNegocio(){
           <label>${t('mn.business.yearOpened')}</label>
           <input type="number" id="mn-anyo" value="${escapeHtml(b.anyo||'')}" placeholder="2020" onchange="saveBusiness(true)">
         </div>
-      </div>
-      <div class="field">
-        <label>${t('mn.business.owner')}</label>
-        <input type="text" id="mn-prop" value="${escapeHtml(b.prop||'')}" placeholder="${t('mn.business.ownerPh')}" onchange="saveBusiness(true)">
+        <div class="field">
+          <label>${t('mn.business.brandColor')}</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="color" id="mn-brand-color" value="${escapeHtml(b.brandColor||'#4A5D4E')}" style="width:48px;height:36px;padding:2px;cursor:pointer" onchange="saveBusiness(true)">
+            <span style="font-size:12px;color:var(--muted)">${t('mn.business.brandColorHint')}</span>
+          </div>
+        </div>
       </div>
 
       <h4><i class="ti ti-notes"></i> ${t('mn.business.description')}</h4>
