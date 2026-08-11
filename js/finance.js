@@ -1103,18 +1103,13 @@ function renderStock(){
   maybeShowCategoryIconHint();
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
-  // Un ingrediente descatalogado ya no se compra: seguía apareciendo en
-  // Stock como cualquier otro, se podía seguir ajustando y contaba en las
-  // alertas de bajo mínimo aunque nadie fuera a reponerlo — igual que ya se
-  // excluye en Mega Lista y Pedidos, aquí queda oculto por defecto.
-  const showDiscontinued = document.getElementById('stock-show-discontinued')?.checked;
 
   // Un solo getStockEntry() por ingrediente (antes se llamaba una vez para
   // filtrar y otra para pintar la fila, el doble de trabajo en cada
   // render — y esto se repinta en cada +/- que se pulsa).
   let items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
-    .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), discontinued: ing.activo===false, activo: ing.activo, ...getStockEntry(ing.id)}))
-    .filter(row => (onlyAlerts ? row.qty <= row.min : true) && (showDiscontinued || row.activo !== false));
+    .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}))
+    .filter(row => onlyAlerts ? row.qty <= row.min : true);
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
@@ -1140,7 +1135,6 @@ function renderStock(){
       <div class="kpi ${lowElabCount?'warn':''}"><div class="label">${t('label.elaborationsBelowMin')}</div><div class="value">${lowElabCount}</div></div>
     `;
   }
-  renderMermasHtml();
 
   const renderRow = row => {
     const low = row.qty <= row.min;
@@ -1149,7 +1143,7 @@ function renderStock(){
     const statusBadge = low ? `<span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('label.belowMin')}</span>` : '<span class="badge badge-green" style="font-size:10px">OK</span>';
     return `
       <div class="list-row" style="padding:6px 10px;flex-wrap:wrap">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}${row.discontinued ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.discontinued')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
         <span style="font-size:12.5px;color:var(--muted);white-space:nowrap">${fmtNum(row.qty)} ${escapeHtml(row.unit)}</span>
         <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
         <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
@@ -1269,37 +1263,6 @@ function renderStock(){
   }
 }
 
-// Informe de mermas: agrupa, de los últimos 30 días, las correcciones de
-// stock a la BAJA hechas a mano (source:'manual'), que es la señal más
-// fiable que ya se registraba de "hemos contado menos de lo que decía la
-// app" — sin necesitar ningún conteo nuevo, solo mirar lo que ya se
-// corrige cuando alguien hace inventario.
-function renderMermasHtml(){
-  const box = document.getElementById('stock-mermas');
-  if(!box) return;
-  // Merma es un dato de negocio (cuánto se ha tirado/descuadrado), no algo
-  // que un empleado sin permiso de editar necesite ver — se oculta igual
-  // que el resto de módulos de coste/margen que no le corresponden.
-  if(!editUnlocked){ box.innerHTML = ''; return; }
-  const since = dateStr(new Date(Date.now() - 30*86400000));
-  const entries = (DB.stockLog||[]).filter(e => e.source==='manual' && e.delta < 0 && e.fecha >= since && e.area === currentArea());
-  if(!entries.length){ box.innerHTML = ''; return; }
-  const byItem = {};
-  entries.forEach(e => {
-    const key = e.type + ':' + e.refId;
-    if(!byItem[key]) byItem[key] = {name: e.name, qty: 0, unit: e.type==='ing' ? (DB.ingredients.find(i=>i.id===e.refId)?.unit||'') : (DB.elaboraciones.find(el=>el.id===e.refId)?.unit||'')};
-    byItem[key].qty += Math.abs(e.delta);
-  });
-  const rows = Object.values(byItem).sort((a,b) => b.qty - a.qty).slice(0, 8);
-  box.innerHTML = `
-    <div class="card" style="margin-bottom:14px;border:1px solid var(--red);background:var(--red-l)">
-      <h4 style="margin-bottom:4px"><i class="ti ti-trash-x"></i> ${t('stock.merma.title')}</h4>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('stock.merma.desc')}</p>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        ${rows.map(r => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escapeHtml(r.name)}</span><strong>-${r.qty.toFixed(2)} ${escapeHtml(r.unit)}</strong></div>`).join('')}
-      </div>
-    </div>`;
-}
 
 function updateStockMin(ingredientId, value){
   const s = getStockEntry(ingredientId);

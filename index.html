@@ -401,16 +401,12 @@
       <div class="view-subtitle" data-i18n="view.stock.subtitle">Inventario con alertas de mínimos</div>
 
       <div class="grid grid-4" id="stock-kpis" style="margin-bottom:14px"></div>
-      <div id="stock-mermas"></div>
 
       <div class="toolbar">
         <div class="left">
           <input type="text" class="search-input" id="stock-search" data-i18n-ph="ph.searchStock" placeholder="Buscar en stock..." oninput="renderStock()">
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
             <input type="checkbox" id="stock-only-alerts" onchange="renderStock()" style="width:auto"> <span data-i18n="label.onlyAlerts">Solo alertas</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600">
-            <input type="checkbox" id="stock-show-discontinued" onchange="renderStock()" style="width:auto"> <span data-i18n="megalista.showDiscontinued">Mostrar descatalogados</span>
           </label>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
