@@ -1562,12 +1562,12 @@ function openClientModal(id){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field">
-      <label>${t('common.name')}</label>
+      <label>${t('common.name')} *</label>
       <input type="text" id="client-name" value="${escapeHtml(c.name)}" placeholder="${t('ph.clientName')}">
     </div>
     <div class="field-row">
       <div class="field">
-        <label>${t('common.phone')}</label>
+        <label>${t('common.phone')} *</label>
         <input type="text" id="client-phone" value="${escapeHtml(c.phone)}" placeholder="${t('ph.phoneExample')}">
       </div>
       <div class="field">
@@ -1634,6 +1634,7 @@ function saveClient(id){
   if(!name.includes(' ')){ showToast(t('msg.fullNameRequired')); return; }
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
+  if(!phone){ showToast(t('msg.phoneRequired')); return; }
   // Aviso (no bloqueante) de un teléfono/email con pinta de mal escrito —
   // antes no se comprobaba nada aquí, y el error solo se descubría mucho
   // más tarde y lejos de esta ficha, al fallar en silencio el envío de un
