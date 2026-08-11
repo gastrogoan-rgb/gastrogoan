@@ -1233,7 +1233,6 @@ function renderDistDetail(){
         </span>
       </h3>
       <p style="font-size:12px;color:var(--muted);margin:-4px 0 8px">${t('msg.unifiedTasksDesc')}</p>
-      <button class="btn btn-sm" style="margin-bottom:8px" onclick="copyPrevWeekUniqueTasks()"><i class="ti ti-copy"></i> ${t('btn.copyPrevWeekTasks')}</button>
       ${diasHtml}
     </div>
   `;
@@ -1338,33 +1337,6 @@ function removeDistTareaUnica(ds, taskId){
     saveDB();
     renderDistDetail();
   }
-}
-
-// Copia las tareas ÚNICAS (puntuales, no la plantilla recurrente que ya se
-// repite sola cada semana) de la semana anterior a la semana que se está
-// viendo ahora, día a día (lunes con lunes, martes con martes...) — evita
-// tener que volver a escribirlas a mano cada semana cuando el plan se
-// repite con pequeños cambios. No duplica una tarea que ya esté puesta ese
-// día con el mismo texto.
-function copyPrevWeekUniqueTasks(){
-  const d = getDistEmpData(distCurrentEmployeeId);
-  const thisWeek = getWeekDates(distWeekOffset).map(dt => dateStr(dt));
-  const prevWeek = getWeekDates(distWeekOffset - 1).map(dt => dateStr(dt));
-  let copied = 0;
-  prevWeek.forEach((prevDs, idx) => {
-    const tasks = d.tareasUnicas[prevDs] || [];
-    if(!tasks.length) return;
-    const targetDs = thisWeek[idx];
-    if(!d.tareasUnicas[targetDs]) d.tareasUnicas[targetDs] = [];
-    tasks.forEach(task => {
-      const exists = d.tareasUnicas[targetDs].some(t => t.text.trim().toLowerCase() === task.text.trim().toLowerCase());
-      if(!exists){ d.tareasUnicas[targetDs].push({id: genId(), text: task.text, bySelf: task.bySelf}); copied++; }
-    });
-  });
-  if(!copied){ showToast(t('msg.noTasksToCopy')); return; }
-  saveDB();
-  renderDistDetail();
-  showToast(t('msg.tasksCopied').replace('${n}', copied));
 }
 
 function printDistribucion(empId){
