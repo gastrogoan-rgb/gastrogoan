@@ -818,19 +818,18 @@ function getPromosForDate(ds){
   return DB.promos.filter(p => promoOccursOn(p, ds));
 }
 // Como cada aparición de una promo recurrente es la misma ficha en varias
-// fechas, "hecha"/canjes se guardan por fecha concreta (igual que ya hacen
-// las tareas de producción de Distribución), no como un booleano único que
-// se compartiría entre todas las semanas.
+// fechas, "hecha" se guarda por fecha concreta (igual que ya hacen las
+// tareas de producción de Distribución), no como un booleano único que se
+// compartiría entre todas las semanas.
 function promoDoneInfo(p, ds){
   if(p.recurrence === 'weekly') return (p.doneDates && p.doneDates[ds]) || null;
-  return p.done ? {done:true, doneAt:p.doneAt, redemptions:p.redemptions||0} : null;
+  return p.done ? {done:true, doneAt:p.doneAt} : null;
 }
 function setPromoDone(p, ds, checked){
   const now = new Date().toISOString();
   if(p.recurrence === 'weekly'){
     if(!p.doneDates) p.doneDates = {};
-    const prevRedemptions = (p.doneDates[ds] && p.doneDates[ds].redemptions) || 0;
-    p.doneDates[ds] = checked ? {done:true, doneAt:now, redemptions:prevRedemptions} : null;
+    p.doneDates[ds] = checked ? {done:true, doneAt:now} : null;
   } else {
     p.done = checked;
     p.doneAt = checked ? now : null;
@@ -851,23 +850,6 @@ function togglePromoDone(promoId, checked, ds){
   saveDB();
   if(document.getElementById('distribucion-content')) renderDistDetail();
   if(document.getElementById('promo-tab-content')) renderPromocion();
-}
-
-// Contador de veces que se canjeó la promo ese día (independiente de
-// marcarla como "hecha"), para saber si de verdad tuvo tirón o solo se
-// planificó y nadie la pidió.
-function incrementPromoRedemption(promoId, ds){
-  const p = DB.promos.find(x=>x.id===promoId);
-  if(!p) return;
-  if(p.recurrence === 'weekly'){
-    if(!p.doneDates) p.doneDates = {};
-    if(!p.doneDates[ds]) p.doneDates[ds] = {done:false, doneAt:null, redemptions:0};
-    p.doneDates[ds].redemptions = (p.doneDates[ds].redemptions||0) + 1;
-  } else {
-    p.redemptions = (p.redemptions||0) + 1;
-  }
-  saveDB();
-  renderPromocion();
 }
 
 // Promo con descuento real activa HOY para un plato/bebida concreto (por
@@ -2927,7 +2909,6 @@ function renderPromoDia(){
         ${items.map(p => {
           const info = promoDoneInfo(p, date);
           const done = !!(info && info.done);
-          const redemptions = (info && info.redemptions) || (p.recurrence!=='weekly' ? (p.redemptions||0) : 0);
           return `
           <div class="card">
             <h3 style="justify-content:space-between;font-size:14px">
@@ -2941,9 +2922,6 @@ function renderPromoDia(){
             ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px"><span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span></div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-              <button class="btn btn-sm" onclick="incrementPromoRedemption(${p.id},'${date}')" title="${t('promo.day.redemptionHint')}"><i class="ti ti-plus"></i> ${t('promo.day.redemptions').replace('${n}', redemptions)}</button>
-            </div>
             <div class="actions-cell owner-strict" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -3868,7 +3846,7 @@ function savePromo(id){
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
     Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct, done:false, doneAt:null, redemptions:0, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
   pendingPromoIdeaRef = null;
   saveDB();
@@ -6794,7 +6772,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Día / Semana / Mes</h4>
     <p>El calendario de acciones de promoción. Cada acción tiene un título, una descripción, un responsable (de tu equipo de Sala) y una casilla para marcarla como hecha (queda registrada la fecha y hora exacta en la que se completó).</p>
-    <p>Una acción puede ser solo un recordatorio, o tener un <strong>efecto real en el TPV</strong>: marca "Aplica un descuento real" y elige un plato/bebida de la carta y un %; ese día, al añadir ese artículo en una comanda, el precio rebajado se aplica solo, sin que nadie tenga que acordarse de hacer nada a mano. También puedes marcar <strong>"Se repite cada semana"</strong> para no tener que recrear la misma acción cada vez (por ejemplo, un 2x1 todos los martes); el estado de "hecha" y el contador de <strong>veces canjeada</strong> (un botón "+1" independiente de marcarla como hecha) se llevan por cada día concreto, no se comparten entre semanas.</p>
+    <p>Una acción puede ser solo un recordatorio, o tener un <strong>efecto real en el TPV</strong>: marca "Aplica un descuento real" y elige un plato/bebida de la carta y un %; ese día, al añadir ese artículo en una comanda, el precio rebajado se aplica solo, sin que nadie tenga que acordarse de hacer nada a mano. También puedes marcar <strong>"Se repite cada semana"</strong> para no tener que recrear la misma acción cada vez (por ejemplo, un 2x1 todos los martes); el estado de "hecha" se lleva por cada día concreto, no se comparte entre semanas.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Pulsa <strong>"+ Nueva Acción"</strong> desde cualquiera de las tres vistas, o el "+" de un día concreto en la vista semanal.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">En la vista de Día puedes filtrar por responsable y por estado (hechas/pendientes), y marcar directamente la casilla de "hecha".</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">En la vista de Mes tienes un resumen rápido: cuántas acciones hay planificadas, cuántas completadas, y cuántas categorías de la biblioteca de ideas has usado ya.</div></div>
@@ -6813,7 +6791,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Dia / Setmana / Mes</h4>
     <p>El calendari d'accions de promoció. Cada acció té un títol, una descripció, un responsable (del teu equip de Sala) i una casella per marcar-la com a feta (queda registrada la data i hora exacta en què es va completar).</p>
-    <p>Una acció pot ser només un recordatori, o tenir un <strong>efecte real al TPV</strong>: marca "Aplica un descompte real" i tria un plat/beguda de la carta i un %; aquell dia, en afegir aquell article en una comanda, el preu rebaixat s'aplica sol, sense que ningú s'hagi de recordar de fer res a mà. També pots marcar <strong>"Es repeteix cada setmana"</strong> per no haver de recrear la mateixa acció cada vegada (per exemple, un 2x1 tots els dimarts); l'estat de "feta" i el comptador de <strong>vegades bescanviada</strong> (un botó "+1" independent de marcar-la com a feta) es porten per cada dia concret, no es comparteixen entre setmanes.</p>
+    <p>Una acció pot ser només un recordatori, o tenir un <strong>efecte real al TPV</strong>: marca "Aplica un descompte real" i tria un plat/beguda de la carta i un %; aquell dia, en afegir aquell article en una comanda, el preu rebaixat s'aplica sol, sense que ningú s'hagi de recordar de fer res a mà. També pots marcar <strong>"Es repeteix cada setmana"</strong> per no haver de recrear la mateixa acció cada vegada (per exemple, un 2x1 tots els dimarts); l'estat de "feta" es porta per cada dia concret, no es comparteix entre setmanes.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Prem <strong>"+ Nova Acció"</strong> des de qualsevol de les tres vistes, o el "+" d'un dia concret a la vista setmanal.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">A la vista de Dia pots filtrar per responsable i per estat (fetes/pendents), i marcar directament la casella de "feta".</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">A la vista de Mes tens un resum ràpid: quantes accions hi ha planificades, quantes completades, i quantes categories de la biblioteca d'idees ja has fet servir.</div></div>
@@ -6832,7 +6810,7 @@ const MANUAL_CHAPTERS = [
 
     <h4>Day / Week / Month</h4>
     <p>The promotional actions calendar. Each action has a title, a description, a person responsible (from your Floor team) and a checkbox to mark it done (the exact date and time it was completed is logged).</p>
-    <p>An action can be just a reminder, or have a <strong>real effect at the till</strong>: tick "Applies a real discount" and pick a dish/drink from the menu and a %; that day, adding that item to an order applies the discounted price on its own, with nobody having to remember to do anything by hand. You can also tick <strong>"Repeats every week"</strong> so you don't have to recreate the same action every time (e.g. a 2-for-1 every Tuesday); the "done" status and the <strong>redemption count</strong> (a "+1" button separate from marking it done) are tracked per specific day, not shared across weeks.</p>
+    <p>An action can be just a reminder, or have a <strong>real effect at the till</strong>: tick "Applies a real discount" and pick a dish/drink from the menu and a %; that day, adding that item to an order applies the discounted price on its own, with nobody having to remember to do anything by hand. You can also tick <strong>"Repeats every week"</strong> so you don't have to recreate the same action every time (e.g. a 2-for-1 every Tuesday); the "done" status is tracked per specific day, not shared across weeks.</p>
     <div class="manual-step"><div class="sn">1</div><div class="st">Press <strong>"+ New Action"</strong> from any of the three views, or the "+" on a specific day in the week view.</div></div>
     <div class="manual-step"><div class="sn">2</div><div class="st">In the Day view you can filter by person responsible and by status (done/pending), and tick the "done" checkbox directly.</div></div>
     <div class="manual-step"><div class="sn">3</div><div class="st">In the Month view you get a quick summary: how many actions are planned, how many completed, and how many categories from the idea library you've already used.</div></div>
