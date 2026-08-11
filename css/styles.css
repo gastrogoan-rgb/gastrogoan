@@ -53,15 +53,6 @@ a{color:var(--text)}a:hover{color:var(--olive)}
    escritorio), con el mismo cuadrado negro que ya tenían de fábrica. */
 .hdr-icon-btn{background:#1C1A17 !important;border-color:#1C1A17 !important;color:#fff !important}
 .hdr-icon-btn:hover{background:var(--olive) !important}
-/* Si en pantallas muy estrechas los botones de la cabecera no caben ni en
-   modo solo-icono, se puede hacer scroll horizontal; este degradado avisa
-   de que hay más botones fuera de la vista, en vez de que parezca que se
-   han cortado sin más. */
-.app-header::after{
-  content:'';position:absolute;top:0;right:0;bottom:0;width:18px;
-  background:linear-gradient(to right,transparent,var(--dark));
-  pointer-events:none;
-}
 .app-header #lock-btn{margin-left:auto}
 .lang-menu-item:hover{background:var(--brand-cream, #F5EFE6)}
 .lang-menu-item.active{font-weight:700}
