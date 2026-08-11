@@ -280,10 +280,7 @@ function renderEscandalloFull(r){
           <div class="kpi"><div class="label">${t('label.foodCost')}</div><div class="value" style="font-size:18px">${isFinite(pct)?pct.toFixed(1)+'%':'—'}</div></div>
           `}
         </div>
-        ${(r.isBase && r.comensales) || r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          ${r.isBase && r.comensales ? ((r.area||'cocina')==='sala' ? `🥂 ${r.comensales} ${r.comensales!==1?t('noun.rations'):t('noun.ration')}` : `👥 ${r.comensales} ${r.comensales!==1?t('noun.diners'):t('noun.diner')}`) : ''}
-          ${r.consumiblesPct ? ` · ${t('label.consumablesInline')}: ${r.consumiblesPct}%` : ''}
-        </div>` : ''}
+        ${r.consumiblesPct ? `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.consumablesInline')}: ${r.consumiblesPct}%</div>` : ''}
         ${!r.isBase ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px"><i class="ti ti-info-circle"></i> ${t('msg.escandalloForOnePersonShort')}</div>` : ''}
         <div class="table-wrap">
           <table>
@@ -359,12 +356,7 @@ function renderRecipeModal(id, r){
       <span style="font-size:12.5px;color:var(--muted)">${t('label.finalPriceWithVat')}: <strong id="recipe-price-final-display">${fmtMoney(r.priceBase!=null && r.ivaPct!=null ? r.priceBase*(1+r.ivaPct/100) : (r.price||0))}</strong></span>
     </div>
     <div class="field-row">
-      ${r.isBase ? `
-      <div class="field">
-        <label>${isSala ? t('label.servings') : t('label.diners')}</label>
-        <input type="number" id="recipe-comensales" value="${r.comensales||2}" step="1" min="1">
-      </div>
-      ` : `
+      ${r.isBase ? '' : `
       <div class="field">
         <label>${isSala ? t('label.servings') : t('label.diners')}</label>
         <input type="number" id="recipe-comensales" value="1" step="1" min="1" disabled style="background:var(--bg);color:var(--muted)">
@@ -636,7 +628,10 @@ function saveRecipe(id){
   // vendida, así el coste, el precio y el descuento de stock al vender
   // coinciden sin depender de que alguien recuerde dividir a mano. Se
   // fuerza aquí además de deshabilitar el campo, por si acaso.
-  const comensales = isBase ? (parseInt(document.getElementById('recipe-comensales').value) || 1) : 1;
+  // Una elaboración base ya no se mide en "comensales": se mide en
+  // rendimiento (baseYield/baseUnit, ver más abajo) — cuánto produce el
+  // lote, no para cuánta gente.
+  const comensales = 1;
   const baseYield = isBase ? (parseFloat(document.getElementById('recipe-base-yield').value) || 1) : 1;
   const baseUnit = isBase ? document.getElementById('recipe-base-unit').value : 'L';
   const ingredients = recipeModalLines.map(l => ({...l}));
