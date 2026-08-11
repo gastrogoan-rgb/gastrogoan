@@ -1626,8 +1626,12 @@ function openClientModal(id){
 }
 
 function saveClient(id){
-  const name = document.getElementById('client-name').value.trim();
+  const name = document.getElementById('client-name').value.trim().replace(/\s+/g, ' ');
   if(!name){ showToast(t('msg.nameRequired')); return; }
+  // Nombre y apellidos: exige al menos dos palabras, para no acabar con
+  // fichas de un solo nombre de pila que luego son imposibles de distinguir
+  // entre sí (p.ej. varios clientes llamados "Juan").
+  if(!name.includes(' ')){ showToast(t('msg.fullNameRequired')); return; }
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
   // Aviso (no bloqueante) de un teléfono/email con pinta de mal escrito —
@@ -1643,11 +1647,13 @@ function saveClient(id){
   const notes = document.getElementById('client-notes').value.trim();
   const marketingConsent = document.getElementById('client-marketing-consent').checked;
 
-  // Aviso (no bloqueante) de posible cliente duplicado, para no partir sus
-  // puntos e historial en dos fichas sin querer. El nombre repetido tiene su
-  // propio mensaje, más claro, que el de coincidencia por teléfono/email.
-  const dupeName = DB.clients.find(x => x.id !== id && x.name.trim().toLowerCase() === name.trim().toLowerCase());
-  if(dupeName && !confirm(t('msg.confirmDuplicateClientName').replace('${name}', dupeName.name))) return;
+  // Un mismo nombre no puede repetirse: bloquea el guardado sin más, en vez
+  // de solo avisar — así no hay que confiar en que quien lo está creando se
+  // dé cuenta y decida bien.
+  const dupeName = DB.clients.find(x => x.id !== id && x.name.trim().toLowerCase() === name.toLowerCase());
+  if(dupeName){ showToast(t('msg.duplicateClientNameBlocked').replace('${name}', dupeName.name)); return; }
+  // Teléfono/email repetido sí se deja avisar y continuar: puede ser un
+  // familiar en la misma casa, o dos negocios que comparten un teléfono fijo.
   const dupeContact = DB.clients.find(x =>
     x.id !== id && (
       (phone && x.phone && x.phone.replace(/\D/g,'') === phone.replace(/\D/g,'')) ||
