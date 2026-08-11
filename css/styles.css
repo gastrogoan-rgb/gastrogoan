@@ -160,8 +160,21 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
 
-/* Canal de Para Llevar / Delivery: usa el mismo estilo de sección y tarjeta
-   que las mesas (mesa-card), para que se vea igual, no como un panel aparte. */
+/* Canal de Para Llevar / Delivery: usa el mismo tipo de sección que las
+   mesas (mismo encabezado), pero con su propia tarjeta más ancha: lo que
+   importa de verdad en cocina/sala es la comida, así que va grande y en su
+   propio bloque; el resto (tipo, hora, cliente, precio, pago...) se agrupa
+   arriba en chips pequeños para no competir por atención. */
+.grid-togo{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.togo-order-card{text-align:left;cursor:pointer;border-top:4px solid var(--amber)}
+.togo-order-card.togo-order-urgent{border-top-color:var(--red);background:var(--red-l)}
+.togo-order-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:11px;color:var(--muted);padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)}
+.togo-order-meta .badge{font-size:10px}
+.togo-order-client{font-size:13px;color:var(--text);font-weight:800}
+.togo-order-price{font-size:13px;color:var(--brand-orange);font-weight:800}
+.togo-order-address{display:inline-flex;align-items:center;gap:3px;width:100%;font-size:11px}
+.togo-order-items{font-size:19px;font-weight:800;line-height:1.5}
+.togo-order-items div{display:flex;align-items:baseline;gap:6px}
 
 /* min-height fijo para que TODAS las mesas midan igual, estén en la zona que
    estén y tengan o no comanda abierta — antes cada zona era una rejilla CSS

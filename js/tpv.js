@@ -789,7 +789,7 @@ function renderTpvToGo(tiposServicio){
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
     ${!toGoOrders.length
       ? `<div class="grid grid-4"><div class="empty"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div></div>`
-      : `<div class="grid grid-mesas">${toGoOrders.map(o => {
+      : `<div class="grid grid-togo">${toGoOrders.map(o => {
           const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
           const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
           const urgent = dueMins !== null && dueMins <= 30;
@@ -799,22 +799,20 @@ function renderTpvToGo(tiposServicio){
           const repartidorChip = isDelivery ? mesaRepartidorChipHtml(o.repartidorId, o.repartidorCourierId) : '';
           const metodoPagoLabel = o.metodoPagoLocal === 'tarjeta' ? t('pay.card') : o.metodoPagoLocal === 'efectivo' ? t('pay.cash') : null;
           return `
-          <div class="card mesa-card mesa-occupied ${urgent?'mesa-phase-kitchen':'mesa-phase-served'}" style="text-align:center;cursor:pointer" onclick="openTableOrder(null, ${o.id})">
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+          <div class="card togo-order-card ${urgent?'togo-order-urgent':''}" onclick="openTableOrder(null, ${o.id})">
+            <div class="togo-order-meta">
               <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
+              ${o.time ? `<span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span>` : ''}
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
-            </div>
-            ${o.time ? `<div style="margin-top:6px"><span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span></div>` : ''}
-            <div class="mesa-name">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</div>
-            <div class="mesa-total">${fmtMoney(orderTotal(o))}</div>
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+              <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
+              <span class="togo-order-price">${fmtMoney(orderTotal(o))}</span>
               ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : `<span class="badge badge-amber"><i class="ti ti-clock-exclamation"></i> ${t('label.paymentPending')}</span>`}
               ${metodoPagoLabel ? `<span class="badge"><i class="ti ${o.metodoPagoLocal==='tarjeta'?'ti-credit-card':'ti-cash'}"></i> ${metodoPagoLabel}</span>` : ''}
+              ${isDelivery ? `<span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span>` : ''}
+              ${(o.clienteDireccion||o.clienteAddress) ? `<span class="togo-order-address"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</span>` : ''}
+              ${repartidorChip}
             </div>
-            ${isDelivery ? `<div style="margin-top:6px"><span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span></div>` : ''}
-            ${(o.clienteDireccion||o.clienteAddress) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
-            ${repartidorChip ? `<div style="margin-top:4px">${repartidorChip}</div>` : ''}
-            ${(o.items||[]).length ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);text-align:left;font-size:11.5px;color:var(--muted)">${o.items.map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}</div>` : ''}
+            ${(o.items||[]).length ? `<div class="togo-order-items">${o.items.map(l => `<div>${l.qty}× ${escapeHtml(l.name)}</div>`).join('')}</div>` : ''}
           </div>
         `}).join('')}</div>`}
   `;
