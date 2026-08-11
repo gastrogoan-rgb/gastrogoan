@@ -306,9 +306,19 @@ td.wrap{white-space:normal}
 .step-num{width:24px;height:24px;border-radius:50%;background:var(--brand-orange);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px}
 
 /* ===== Modal ===== */
+/* Con align-items/justify-content:center, un modal más alto que la pantalla
+   queda centrado "por igual" hacia arriba y hacia abajo: el sobrante de
+   arriba (con el botón de cerrar) queda fuera de la parte visible Y fuera
+   de alcance del scroll (el navegador no deja hacer scroll "hacia arriba"
+   del punto de centrado). En un modal largo en móvil (p.ej. la comanda de
+   una mesa con muchos platos) esto dejaba el header con la × inalcanzable
+   sin ninguna forma de cerrar o salir. Con margin:auto en el propio .modal
+   en vez de centrar el contenedor, se sigue viendo centrado cuando cabe
+   entero, pero si no cabe, el scroll empieza desde el principio real del
+   modal (su header), no desde un punto intermedio invisible. */
 .modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
-  align-items:center;justify-content:center;z-index:300;padding:16px;
+  z-index:300;padding:16px;
   overflow-y:auto;
 }
 .modal-overlay.active{display:flex}
@@ -318,19 +328,26 @@ td.wrap{white-space:normal}
    hace scroll de forma independiente, así el pie de botones nunca puede
    solaparse con contenido — el cuerpo se detiene justo donde empieza el
    pie, en vez de compartir el mismo scroll con él. */
+/* vh en móvil se calcula sobre el viewport "grande" (con la barra del
+   navegador escondida), no sobre el espacio realmente visible en cada
+   momento — así que un modal al 90vh podía en realidad ser más alto que
+   el hueco visible mientras la barra de direcciones estaba a la vista,
+   dejando su cabecera fuera de la pantalla. dvh sí se ajusta al espacio
+   visible real; se declara vh primero como fallback para navegadores que
+   no soporten dvh, y dvh después para que gane en los que sí. */
 .modal{
   background:#fff;border-radius:var(--radius);width:100%;max-width:540px;
-  max-height:90vh;padding:20px;
+  max-height:90vh;max-height:90dvh;padding:20px;margin:auto;
   display:flex;flex-direction:column;overflow:hidden;
 }
 .modal-body{overflow-y:auto;min-height:0;flex:1}
-.modal.modal-xl{max-width:920px;max-height:95vh}
-.modal.modal-order{max-width:1200px;max-height:96vh;width:98%}
+.modal.modal-xl{max-width:920px;max-height:95vh;max-height:95dvh}
+.modal.modal-order{max-width:1200px;max-height:96vh;max-height:96dvh;width:98%}
 /* Mesa/comanda: carta a un lado y el pedido en curso al otro. En pantalla
    ancha van lado a lado, cada uno con su propio scroll interno acotado a
    casi toda la altura del modal — con una mesa grande y muchos platos
    pedidos, se ve de golpe en vez de un cuadro diminuto con scroll propio. */
-.tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px)}
+.tpv-order-cols{display:flex;gap:12px;flex-wrap:wrap;min-height:400px;max-height:calc(96vh - 170px);max-height:calc(96dvh - 170px)}
 .tpv-order-col{flex:1 1 280px;min-width:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px}
 .tpv-order-col-comanda{background:var(--brand-cream)}
 /* En móvil se apilan (no caben lado a lado) — sin esto, cada bloque crecía
@@ -341,7 +358,7 @@ td.wrap{white-space:normal}
    cada una con su scroll — nunca hay que perseguir el otro bloque. */
 @media (max-width: 720px){
   .tpv-order-cols{max-height:none}
-  .tpv-order-col{flex-basis:100%;max-height:38vh}
+  .tpv-order-col{flex-basis:100%;max-height:38vh;max-height:38dvh}
 }
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
 .modal-header h3{font-size:19px}
@@ -820,7 +837,7 @@ td.wrap{white-space:normal}
   .help-panel{max-height:calc(100vh - var(--header-h) - 20px)}
 
   /* Modals — ensure content visible */
-  .modal{max-height:85vh}
+  .modal{max-height:85vh;max-height:85dvh}
   .modal-header h3{font-size:15px}
   .modal-footer{flex-wrap:wrap;gap:6px}
   .modal-footer .btn{min-width:100px}
