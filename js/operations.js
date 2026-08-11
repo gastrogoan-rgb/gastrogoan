@@ -1334,7 +1334,7 @@ function orderFormBodyHtml(){
     suppliers.map(s => `<option value="${escapeHtml(s)}" ${orderModalSupplier===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
 
   const dateField = document.getElementById('order-date');
-  const dateVal = dateField ? dateField.value : todayStr();
+  const dateVal = dateField ? dateField.value : tomorrowStr();
   const searchField = document.getElementById('order-item-search');
   const searchVal = searchField ? searchField.value : orderModalSearch;
   orderModalSearch = searchVal || '';
@@ -1363,7 +1363,7 @@ function orderFormBodyHtml(){
       </div>
       <div class="field">
         <label>${t('label.deliveryDate')}</label>
-        <input type="date" id="order-date" value="${dateVal || todayStr()}" onchange="validateOrderDate(this)">
+        <input type="date" id="order-date" value="${dateVal || tomorrowStr()}" min="${tomorrowStr()}" onchange="validateOrderDate(this)">
         <div id="order-date-hint" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
       </div>
     </div>
@@ -1435,7 +1435,7 @@ function orderFormButtonsHtml(){
 // Tras renderizar el formulario, restaura los valores de fecha y búsqueda.
 function afterOrderFormRender(dateVal){
   const dEl = document.getElementById('order-date');
-  if(dEl) dEl.value = dateVal || todayStr();
+  if(dEl) dEl.value = dateVal || tomorrowStr();
   if(dEl) validateOrderDate(dEl, !orderSupplierJustChanged);
   orderSupplierJustChanged = false;
   const sEl = document.getElementById('order-item-search');
@@ -1561,6 +1561,25 @@ function pendingOrderForSupplier(supplier){
 function buildNewPedido(estado){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return null; }
   const date = document.getElementById('order-date').value || todayStr();
+  // Un pedido para hoy mismo no da tiempo a que el proveedor lo prepare y
+  // lo traiga — se bloquea aquí de forma explícita, no solo con un aviso
+  // que se pueda pasar por alto.
+  if(date <= todayStr()){ showToast(t('msg.orderDateMustBeFuture')); return null; }
+  // Repite la comprobación de días de reparto justo antes de crear el
+  // pedido de verdad (no solo al elegir la fecha en el formulario) — así
+  // queda garantizado que nunca se guarda un pedido para un día que el
+  // proveedor no reparte, pase lo que pase con el aviso en vivo del campo
+  // de fecha.
+  const provider = getProviderByName(orderModalSupplier);
+  const diasEntrega = provider ? getProviderDiasEntrega(provider) : [];
+  if(diasEntrega.length){
+    const dayIdx = new Date(date + 'T00:00:00').getDay();
+    const weekDayName = WEEK_DAYS[(dayIdx + 6) % 7];
+    if(!diasEntrega.includes(weekDayName)){
+      showToast(`${orderModalSupplier} ${t('msg.onlyDeliversOn')}: ${diasEntrega.map(weekDayLabelFromStored).join(', ')}`);
+      return null;
+    }
+  }
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return null; }
   const pending = pendingOrderForSupplier(orderModalSupplier);

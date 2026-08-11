@@ -628,6 +628,14 @@ function renderSalesHeatmap(){
 function todayStr(){
   return dateStr(new Date());
 }
+// Igual que todayStr() pero para mañana — usado, por ejemplo, para no
+// dejar pedir a un proveedor con fecha de entrega de hoy mismo (no le da
+// tiempo a prepararlo y traerlo).
+function tomorrowStr(){
+  const d = new Date();
+  d.setDate(d.getDate()+1);
+  return dateStr(d);
+}
 // Navega a Stock y activa el filtro "Solo alertas" (usado desde el panel
 // Hoy — Atención del Dashboard).
 function dashboardGoToStockAlerts(){
