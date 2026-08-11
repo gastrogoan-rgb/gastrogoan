@@ -931,11 +931,6 @@ td.wrap{white-space:normal}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
   .mesa-card{min-height:84px;padding:16px 10px;font-size:12px}
-  /* Para Llevar/Delivery: en móvil, dos tarjetas caben una junto a otra con
-     minmax(260px,1fr) pero quedan tan estrechas que las insignias (tipo,
-     hora, estado de pago...) se amontonan y envuelven mal — una sola
-     columna a ancho completo se lee mucho más claro. */
-  .grid-togo{grid-template-columns:1fr}
 
   /* Buttons & toolbars */
   .btn{padding:7px 10px;font-size:12px;border-radius:8px}

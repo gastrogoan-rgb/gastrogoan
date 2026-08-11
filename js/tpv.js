@@ -792,15 +792,15 @@ function renderTpvToGo(tiposServicio){
   return `
     <h3 style="margin-top:16px;display:flex;align-items:center;flex-wrap:nowrap;gap:8px;overflow-x:auto">
       <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
-      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" style="white-space:nowrap" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" style="white-space:nowrap;margin-left:auto" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
         <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
       </button>
       ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
     </h3>
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
     ${!toGoOrders.length
-      ? `<div class="grid grid-4"><div class="empty"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div></div>`
-      : `<div class="grid grid-togo">${toGoOrders.map(o => {
+      ? `<div class="grid grid-4" style="margin-top:14px"><div class="empty"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div></div>`
+      : `<div class="grid grid-togo" style="margin-top:14px">${toGoOrders.map(o => {
           const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
           const dueMins = o.time ? minutesUntilScheduled(o.time) : null;
           const urgent = dueMins !== null && dueMins <= 30;
