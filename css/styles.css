@@ -164,15 +164,20 @@ body:not(.owner-session) .owner-strict{display:none !important}
    propio bloque; el resto (tipo, hora, cliente, precio, pago...) se agrupa
    arriba en chips pequeños para no competir por atención. */
 .grid-togo{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.togo-order-card{text-align:left;cursor:pointer;border-top:4px solid var(--amber)}
+/* La tarjeta de Para Llevar/Delivery en el TPV es solo para identificar y
+   localizar el pedido de un vistazo (tipo, cliente, dirección, pago, hora)
+   — la comida en sí (qué ha pedido) solo se ve en Comandas Cocina, donde
+   de verdad hace falta para prepararlo. Cada dato va en su propia línea en
+   vez de amontonado en una sola fila de chips, para que se lea de un
+   vistazo sin sentirse apelotonado. */
+.togo-order-card{text-align:left;cursor:pointer;border-top:4px solid var(--amber);display:flex;flex-direction:column;gap:6px}
 .togo-order-card.togo-order-urgent{border-top-color:var(--red);background:var(--red-l)}
-.togo-order-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:11px;color:var(--muted);padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)}
-.togo-order-meta .badge{font-size:10px}
-.togo-order-client{font-size:13px;color:var(--text);font-weight:800}
-.togo-order-price{font-size:13px;color:var(--brand-orange);font-weight:800}
-.togo-order-address{display:inline-flex;align-items:center;gap:3px;width:100%;font-size:11px}
-.togo-order-items{font-size:19px;font-weight:800;line-height:1.5}
-.togo-order-items div{display:flex;align-items:baseline;gap:6px}
+.togo-order-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.togo-order-row .badge{font-size:10px}
+.togo-order-row-top{padding-bottom:6px;border-bottom:1px solid var(--border)}
+.togo-order-client{font-size:15px;color:var(--text);font-weight:800}
+.togo-order-price{font-size:14px;color:var(--brand-orange);font-weight:800}
+.togo-order-address{display:flex;align-items:flex-start;gap:4px;font-size:12px;color:var(--muted)}
 
 /* min-height fijo para que TODAS las mesas midan igual, estén en la zona que
    estén y tengan o no comanda abierta — antes cada zona era una rejilla CSS

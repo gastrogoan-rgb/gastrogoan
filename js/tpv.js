@@ -811,19 +811,22 @@ function renderTpvToGo(tiposServicio){
           const metodoPagoLabel = o.metodoPagoLocal === 'tarjeta' ? t('pay.card') : o.metodoPagoLocal === 'efectivo' ? t('pay.cash') : null;
           return `
           <div class="card togo-order-card ${urgent?'togo-order-urgent':''}" onclick="openTableOrder(null, ${o.id})">
-            <div class="togo-order-meta">
+            <div class="togo-order-row togo-order-row-top">
               <span class="badge ${isDelivery?'badge-blue':'badge-amber'}"><i class="ti ${isDelivery?'ti-moped':'ti-walk'}"></i> ${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
               ${o.time ? `<span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span>` : ''}
               ${urgent ? `<span class="badge badge-red"><i class="ti ti-alarm"></i> ${t('label.dueSoon')}</span>` : ''}
-              <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
+            </div>
+            <strong class="togo-order-client">${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</strong>
+            ${(o.clienteDireccion||o.clienteAddress) ? `<div class="togo-order-address"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</div>` : ''}
+            <div class="togo-order-row">
               <span class="togo-order-price">${fmtMoney(orderTotal(o))}</span>
               ${o.pagado ? `<span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}</span>` : `<span class="badge badge-amber"><i class="ti ti-clock-exclamation"></i> ${t('label.paymentPending')}</span>`}
               ${metodoPagoLabel ? `<span class="badge"><i class="ti ${o.metodoPagoLocal==='tarjeta'?'ti-credit-card':'ti-cash'}"></i> ${metodoPagoLabel}</span>` : ''}
-              ${isDelivery ? `<span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span>` : ''}
-              ${(o.clienteDireccion||o.clienteAddress) ? `<span class="togo-order-address"><i class="ti ti-map-pin"></i> ${escapeHtml(o.clienteDireccion||o.clienteAddress)}</span>` : ''}
-              ${repartidorChip}
             </div>
-            ${(o.items||[]).length ? `<div class="togo-order-items">${o.items.map(l => `<div>${l.qty}× ${escapeHtml(l.name)}</div>`).join('')}</div>` : ''}
+            ${isDelivery ? `<div class="togo-order-row">
+              <span class="badge">${plat ? escapeHtml(plat.nombre) : t('label.directOrder')}</span>
+              ${repartidorChip}
+            </div>` : ''}
           </div>
         `}).join('')}</div>`}
   `;
@@ -1766,7 +1769,6 @@ function renderTableOrderModal(orderId){
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
-      ${order.tipo==='delivery' || order.tipo==='takeaway' ? `<button class="btn btn-sm" style="margin-left:auto" onclick="openPasteOrderModal(${order.id})" title="${t('title.pasteOrderHint')}"><i class="ti ti-clipboard-text"></i> ${t('btn.pasteOrder')}</button>` : ''}
     </div>
     <!-- Layout a dos columnas: selector + comanda (ver .tpv-order-cols en styles.css) -->
     <div class="tpv-order-cols">
@@ -1781,98 +1783,6 @@ function renderTableOrderModal(orderId){
       ${actionButtons}
     </div>
   `, {order:true});
-}
-
-// Recopila todos los platos de todas las cartas activas (aunque no sea la
-// pestaña seleccionada) para poder buscar por nombre, con su sección para
-// poder añadirlos a la comanda con addOrderItem.
-function allActivePlatosFlat(){
-  const cartas = getActiveCartas();
-  const out = [];
-  cartas.forEach(c => {
-    (c.secciones||[]).forEach(sec => {
-      (sec.platos||[]).filter(p=>p.disponible!==false).forEach(p => {
-        out.push({secId: sec.id, platoId: p.id, name: tItem(p), hasMods: !!(p.modificadores||[]).length});
-      });
-    });
-  });
-  return out;
-}
-
-// "Pegar pedido": para agilizar meter a mano un pedido que ha llegado por
-// Glovo/Uber Eats/Just Eat (u otra plataforma) sin necesidad de ir tocando
-// plato a plato en la carta. El personal copia el texto del pedido de la
-// plataforma y lo pega aquí; la app intenta emparejar cada línea con un
-// plato de la carta por nombre y prepara todo para añadirlo con un click.
-// No hay integración real con esas plataformas (requeriría acuerdos de API
-// con cada una), esto solo agiliza la parte manual.
-function openPasteOrderModal(orderId){
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-clipboard-text"></i> ${t('title.pasteOrder')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:12.5px;color:var(--muted)">${t('msg.pasteOrderHint')}</p>
-    <div class="field">
-      <textarea id="paste-order-text" rows="6" placeholder="${t('ph.pasteOrderExample')}"></textarea>
-    </div>
-    <div id="paste-order-preview"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="analyzePastedOrder(${orderId})"><i class="ti ti-search"></i> ${t('btn.analyzeOrder')}</button>
-    </div>
-  `);
-}
-
-function analyzePastedOrder(orderId){
-  const raw = document.getElementById('paste-order-text').value;
-  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
-  const catalog = allActivePlatosFlat();
-  const parsed = lines.map(line => {
-    const m = line.match(/^(\d+)\s*[x×]?\s*(.+)$/i) || line.match(/^(.+?)\s*[x×]\s*(\d+)$/i);
-    let qty = 1, text = line;
-    if(m){
-      if(/^\d+$/.test(m[1])){ qty = parseInt(m[1]); text = m[2]; }
-      else { text = m[1]; qty = parseInt(m[2]); }
-    }
-    const norm = stripAccents(text.trim().toLowerCase());
-    let match = catalog.find(p => stripAccents(p.name.toLowerCase()) === norm);
-    if(!match) match = catalog.find(p => stripAccents(p.name.toLowerCase()).includes(norm) || norm.includes(stripAccents(p.name.toLowerCase())));
-    return {raw: line, qty, text: text.trim(), match};
-  });
-  window._pasteOrderParsed = parsed;
-  const preview = document.getElementById('paste-order-preview');
-  preview.innerHTML = `
-    <div class="table-wrap" style="margin-top:6px">
-      <table>
-        <thead><tr><th>${t('hr.lbl.unitsAbbrev')}</th><th style="text-align:left">${t('hr.platos.dish')}</th><th></th></tr></thead>
-        <tbody>${parsed.map((p,i) => `
-          <tr>
-            <td>${p.qty}</td>
-            <td style="text-align:left;font-family:inherit;font-weight:400;background:none;border-left:none">${escapeHtml(p.text)}</td>
-            <td>${p.match ? (p.match.hasMods ? `<span class="badge badge-amber" title="${t('msg.hasModsAddManually')}">${escapeHtml(p.match.name)} — ${t('msg.hasModsShort')}</span>` : `<span class="badge badge-green">✓ ${escapeHtml(p.match.name)}</span>`) : `<span class="badge badge-red">${t('msg.dishNotFoundInCarta')}</span>`}</td>
-          </tr>`).join('')}</tbody>
-      </table>
-    </div>
-    ${parsed.some(p=>!p.match || p.match.hasMods) ? `<small style="color:var(--muted)">${t('msg.unmatchedLinesHint')}</small>` : ''}
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmPastedOrder(${orderId})" ${parsed.some(p=>p.match && !p.match.hasMods)?'':'disabled'}><i class="ti ti-check"></i> ${t('btn.addMatchedItems')}</button>
-    </div>
-  `;
-}
-
-function confirmPastedOrder(orderId){
-  const parsed = window._pasteOrderParsed || [];
-  let added = 0;
-  parsed.filter(p=>p.match && !p.match.hasMods).forEach(p => {
-    for(let i=0;i<p.qty;i++) addOrderItem(orderId, p.match.secId, p.match.platoId);
-    added += p.qty;
-  });
-  window._pasteOrderParsed = null;
-  closeModal();
-  showToast(t('msg.nItemsAddedFromPaste').replace('${n}', added));
-  renderTableOrderModal(orderId);
 }
 
 // Selector de platos dentro de una carta concreta (secciones + platos visibles).
