@@ -906,7 +906,7 @@ function renderChatMessages(){
   const msgs = (DB.chatMessages||[]).filter(m => m.channel === currentChatChannel);
   box.innerHTML = msgs.map(m => `
     <div class="help-msg ${String(m.authorId)===String(author) ? 'own' : 'other'}${m.urgent?' chat-msg-urgent':''}">
-      <span class="chat-meta">${m.urgent?'🚨 ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
+      <span class="chat-meta">${m.urgent?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
       ${escapeHtml(m.text)}
       <button class="btn btn-sm" style="margin-top:4px;font-size:10px;padding:2px 6px" onclick="pinChatMessage(${m.id})" title="${t('chat.pinMessage')}"><i class="ti ti-pin"></i></button>
     </div>
@@ -1003,7 +1003,7 @@ function updateChatBadge(){
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
-    icon:'ti-tools-kitchen-2', color:'var(--teal)', emoji:'👨‍🍳',
+    icon:'ti-tools-kitchen-2', color:'var(--teal)',
     modules:[
       {id:'comandascocina', icon:'ti-bell-ringing'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
@@ -1019,7 +1019,7 @@ const FOLDERS = {
     ]
   },
   sala: {
-    icon:'ti-users', color:'var(--brand-yellow)', emoji:'🍽️',
+    icon:'ti-users', color:'var(--brand-yellow)',
     modules:[
       {id:'tpv', icon:'ti-device-desktop'},
       {id:'reservas', icon:'ti-calendar-event'},
@@ -1038,7 +1038,7 @@ const FOLDERS = {
     ]
   },
   gestion: {
-    icon:'ti-coin', color:'var(--teal)', emoji:'📊',
+    icon:'ti-coin', color:'var(--teal)',
     modules:[
       {id:'manual', icon:'ti-book'},
       {id:'minegocio', icon:'ti-building-store'},

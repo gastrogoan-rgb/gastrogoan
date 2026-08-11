@@ -254,7 +254,7 @@ function renderLimpiezaManos(){
           </ul>
         </div>
         <div class="card">
-          <h3>✅ ${t('title.minimumDuration')}</h3>
+          <h3><i class="ti ti-check"></i> ${t('title.minimumDuration')}</h3>
           <p style="font-size:28px;font-weight:800;color:var(--brand-orange);margin:0">${t('label.20seconds')}</p>
           <p style="font-size:13px;color:var(--muted);margin-top:4px">${t('msg.happyBirthdayEquivalent')}</p>
         </div>
@@ -584,7 +584,7 @@ function renderLimpiezaLog(key){
     const i = cfg.fields.indexOf(f);
     let input;
     if(f === 'estado' && key === 'temperaturas') input = `<div style="font-size:12px;color:var(--muted);padding-top:8px">${t('label.autoCalculated')}</div>`;
-    else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">✅ OK</option><option value="NOK">❌ No OK</option></select>`;
+    else if(f === 'estado') input = `<select id="lp-${key}-${f}"><option value="OK">OK</option><option value="NOK">No OK</option></select>`;
     else if(f === 'tipo' && key === 'temperaturas') input = `<select id="lp-${key}-${f}">${limpiezaTempTipoOptions().map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`;
     else if(f === 'fecha') input = `<input type="date" id="lp-${key}-${f}" value="${todayStr()}" max="${todayStr()}">`;
     else if(f === 'proxima' && key === 'plagas') input = `<input type="date" id="lp-${key}-${f}">`;
@@ -597,9 +597,9 @@ function renderLimpiezaLog(key){
   const rows = entries.length ? [...entries].slice().reverse().map(e => `
     <tr>${cfg.fields.map(f => {
       if(f === 'estado'){
-        if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)">✅ OK</td>`;
-        if(e[f]==='NOK') return `<td style="font-weight:700;color:var(--red)">❌ No OK</td>`;
-        return `<td style="color:var(--muted)">ℹ️ ${t('status.notEvaluated')}</td>`;
+        if(e[f]==='OK') return `<td style="font-weight:700;color:var(--green)"><i class="ti ti-check"></i> OK</td>`;
+        if(e[f]==='NOK') return `<td style="font-weight:700;color:var(--red)"><i class="ti ti-x"></i> No OK</td>`;
+        return `<td style="color:var(--muted)"><i class="ti ti-info-circle"></i> ${t('status.notEvaluated')}</td>`;
       }
       if(f === 'tipo' && key === 'temperaturas') return `<td>${escapeHtml(limpiezaTempTipoLabel(e[f]))}</td>`;
       if(f === 'proxima' && key === 'plagas'){
@@ -2003,7 +2003,7 @@ function renderReservasPendingOnline(){
             if(waitMin < 30) return '';
             return `<div style="font-size:12px;color:var(--red);margin-bottom:2px"><i class="ti ti-clock-exclamation"></i> ${t('label.waitingSince').replace('${min}', waitMin)}</div>`;
           })()}
-          <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · 👥 ${r.people}</div>
+          <div style="font-size:13px"><i class="ti ti-calendar"></i> ${escapeHtml(r.date)} · <i class="ti ti-clock"></i> ${escapeHtml(r.time)} · <i class="ti ti-users"></i> ${r.people}</div>
           ${r.clientPhone ? `<div style="font-size:12px;color:${r.phoneOdd?'var(--red)':'var(--muted)'}"><i class="ti ti-phone"></i> ${escapeHtml(r.clientPhone)}${r.phoneOdd ? ` <i class="ti ti-alert-triangle" title="${t('msg.phoneLooksOdd')}"></i>` : ''}</div>` : ''}
           ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note"></i> ${escapeHtml(r.notes)}</div>` : ''}
           ${r.depositRequired ? `<div style="margin-top:4px">${r.depositConfirmed
@@ -2803,7 +2803,7 @@ function renderReservasRemindersDue(){
         return `
         <div class="card">
           <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
-          <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · 👥 ${r.people}</div>
+          <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · <i class="ti ti-users"></i> ${r.people}</div>
           <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#25D366;color:#fff;border-color:#25D366" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
         </div>`;
       }).join('')}
@@ -3065,7 +3065,7 @@ function printPromoMes(year, month){
     items.forEach(p => {
       const resp = p.responsableId ? DB.employees.find(e=>e.id===p.responsableId) : null;
       const done = !!(promoDoneInfo(p, ds)||{}).done;
-      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'✅':'—'}</td></tr>`);
+      rows.push(`<tr><td>${ds}</td><td>${escapeHtml(p.titulo)}</td><td>${escapeHtml(p.descripcion||'')}</td><td>${resp?escapeHtml(resp.name):'—'}</td><td>${done?'<i class="ti ti-check"></i>':'—'}</td></tr>`);
     });
   }
   const printTitle = t('promo.print.title').replace('${month}', monthFull(month)).replace('${year}', year);
@@ -4124,13 +4124,13 @@ function renderMiNegocio(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.serviceTypes.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> 🍽️ ${t('mn.serviceTypes.table')}
+          <input type="checkbox" id="mn-serv-mesa" ${tiposServicio.mesa?'checked':''} onchange="toggleTipoServicio('mesa', this.checked)" style="width:18px;height:18px"> <i class="ti ti-tools-kitchen-2"></i> ${t('mn.serviceTypes.table')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> 🥡 ${t('mn.serviceTypes.takeaway')}
+          <input type="checkbox" id="mn-serv-takeaway" ${tiposServicio.takeaway?'checked':''} onchange="toggleTipoServicio('takeaway', this.checked)" style="width:18px;height:18px"> <i class="ti ti-shopping-bag"></i> ${t('mn.serviceTypes.takeaway')}
         </label>
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> 🛵 ${t('mn.serviceTypes.delivery')}
+          <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> <i class="ti ti-moped"></i> ${t('mn.serviceTypes.delivery')}
         </label>
       </div>
     </div>
@@ -4446,13 +4446,13 @@ function renderDataMaintenanceCard(){
       <button class="btn btn-sm" onclick="openTrashModal()"><i class="ti ti-trash"></i> ${t('trash.title')}${(DB.trash||[]).length ? ` (${DB.trash.length})` : ''}</button>
       <button class="btn btn-sm" onclick="openAuditLogModal()"><i class="ti ti-list-details"></i> ${t('audit.title')}</button>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px">🔔 ${t('notif.title')}</p>
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-bell"></i> ${t('notif.title')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('notif.desc')}</p>
       ${desktopNotificationsEnabled()
         ? `<span class="badge badge-green" style="margin-bottom:8px;display:inline-block"><i class="ti ti-bell-check"></i> ${t('notif.enabledBadge')}</span><br><button class="btn btn-sm" onclick="disableDesktopNotifications()">${t('notif.disable')}</button>`
         : `<button class="btn btn-sm btn-primary" onclick="requestDesktopNotifications()"><i class="ti ti-bell"></i> ${t('notif.enableBtn')}</button>`}
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <p style="font-size:13px;font-weight:700;margin-bottom:6px">📦 ${t('mn.data.archiveTitle')}</p>
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-archive"></i> ${t('mn.data.archiveTitle')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('mn.data.archiveDesc')}</p>
       <div class="field">
         <label>${t('mn.data.archiveBefore')}</label>

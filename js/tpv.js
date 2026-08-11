@@ -664,13 +664,13 @@ function mesaPhase(order){
   const allFoodLines = (order.items||[]).filter(l => !l.bebida);
   const foodItems = allFoodLines.filter(l => l.estado);
   const allDelivered = allFoodLines.length > 0 && allFoodLines.every(l => l.estado === 'entregado');
-  if(allDelivered) return {key:'served', icon:'✅', label: t('status.served')};
+  if(allDelivered) return {key:'served', icon:'ti-check', label: t('status.served')};
   const preparing = foodItems.some(l => l.estado === 'preparando');
-  if(preparing) return {key:'preparing', icon:'🔥', label: t('status.inKitchen')};
+  if(preparing) return {key:'preparing', icon:'ti-flame', label: t('status.inKitchen')};
   const inKitchen = foodItems.some(l => l.estado === 'cocina');
-  if(inKitchen) return {key:'kitchen', icon:'⏳', label: t('status.sentToKitchen')};
+  if(inKitchen) return {key:'kitchen', icon:'ti-clock', label: t('status.sentToKitchen')};
   const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
-  if(pending) return {key:'taking', icon:'📝', label: t('status.takingOrder')};
+  if(pending) return {key:'taking', icon:'ti-pencil', label: t('status.takingOrder')};
   return null;
 }
 
@@ -719,7 +719,7 @@ function renderMesaCard(table){
       <div class="mesa-name">${escapeHtml(displayName)}</div>
       ${order
         ? `
-          ${phase ? `<div class="mesa-phase-row"><span>${phase.icon}</span> <span class="mesa-phase-label">${escapeHtml(phase.label)}</span></div>` : ''}
+          ${phase ? `<div class="mesa-phase-row"><i class="ti ${phase.icon}"></i> <span class="mesa-phase-label">${escapeHtml(phase.label)}</span></div>` : ''}
           <div class="mesa-total">${fmtMoney(total)}</div>
           <div class="mesa-meta-row">
             ${order.pax ? `<span class="mesa-pax"><i class="ti ti-users"></i> ${order.pax}</span>` : ''}
@@ -1736,7 +1736,7 @@ function renderTableOrderModal(orderId){
 
   // Pestañas de cartas/menús
   const cartaTabs = allCartas.map(c => `<button class="btn btn-sm ${tpvSelectedCartaId===c.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${c.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})">${escapeHtml(tItem(c))}</button>`).join('');
-  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})">📋 ${escapeHtml(tItem(m))}</button>`).join('');
+  const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
   let selectorHtml = '';
@@ -1842,10 +1842,10 @@ function renderTandaGroupCard(order, g, isMenu){
   const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
   const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
   let statusBadge = '';
-  if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px">✅ ${t('tpv.pickedUp')}</span>`;
-  else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px">🍽️ ${t('tpv.readyToPickup')}</span>`;
-  else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px">🔥 ${t('kitchen.preparing')}</span>`;
-  else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px">⏳ ${t('tpv.fired')}</span>`;
+  if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+  else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+  else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+  else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
 
   return `
   <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
@@ -1863,13 +1863,13 @@ function renderTandaGroupCard(order, g, isMenu){
       // solo lectura como el resto de platos (que se controlan desde Cocina).
       let lineStatus = '';
       if(line.bebida && line.estado){
-        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
-        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}">🔥 ${t('kitchen.preparing')}</button>`;
-        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}">⏳ ${t('kitchen.waiting')}</button>`;
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px"><i class="ti ti-check"></i></span>';
+        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
+        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
       } else {
-        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px">✅</span>';
-        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px">🔥</span>';
-        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px">⏳</span>';
+        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px"><i class="ti ti-check"></i></span>';
+        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-flame"></i></span>';
+        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px"><i class="ti ti-clock"></i></span>';
       }
       // Distinción visual clara entre lo que viene de un menú (combo de
       // varios platos a precio cerrado) y lo que es carta suelta — además
@@ -1997,7 +1997,7 @@ function openWaitlistModal(){
         <div class="card" style="padding:10px 12px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
-              <strong>${escapeHtml(w.name)}</strong> · 👥 ${w.people}
+              <strong>${escapeHtml(w.name)}</strong> · <i class="ti ti-users"></i> ${w.people}
               ${w.phone ? `<div style="font-size:12px;color:var(--muted)"><i class="ti ti-phone"></i> ${escapeHtml(w.phone)}</div>` : ''}
               ${w.notes ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(w.notes)}</div>` : ''}
               <div style="font-size:11px;color:var(--muted)">${waitlistMinutesWaiting(w)} ${t('waitlist.minutesWaiting')}</div>

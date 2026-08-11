@@ -977,7 +977,7 @@ const GE = (function(){
         if(restantes==null){
           financInfo = `<span style="color:var(--red)">${t('hr.capex.notConfigured')}</span>`;
         } else {
-          const overdueTag = (restantes===0 && c.estadoPago!=='PAGADO') ? ` <span style="color:var(--amber-dark)" title="${t('hr.capex.overdueDesc')}">⚠️</span>` : '';
+          const overdueTag = (restantes===0 && c.estadoPago!=='PAGADO') ? ` <span style="color:var(--amber-dark)" title="${t('hr.capex.overdueDesc')}"><i class="ti ti-alert-triangle"></i></span>` : '';
           financInfo = `${fmtMoney(c.cuotaMensual||0)}${t('hr.capex.perMonth')} · ${restantes>0?t('hr.capex.installmentsRemaining').replace('${n}', restantes):t('hr.capex.paidOff')}${overdueTag}`;
         }
       }
@@ -1207,7 +1207,7 @@ const GE = (function(){
     const teYearEl = document.getElementById('te-year');
     if(teYearEl) teYearEl.textContent = teYear;
     document.getElementById('te-months').innerHTML = getMeses().map((m,i)=>`
-      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}${isMonthClosed(teYear,i)?' 🔒':''}</div>`).join('');
+      <div class="month-pill${i===activeMonth?' active':''}" onclick="GE.setMonthTe(${i})">${m}${isMonthClosed(teYear,i)?' <i class="ti ti-lock"></i>':''}</div>`).join('');
     const closeBtn = document.getElementById('te-close-month-btn');
     if(closeBtn){
       const closed = isMonthClosed(teYear, activeMonth);
@@ -1280,7 +1280,7 @@ const GE = (function(){
           <span></span>
           <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
           <span style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
-          <span style="text-align:center;font-size:16px">💰</span>
+          <span style="text-align:center;font-size:16px"><i class="ti ti-pig-money"></i></span>
         </div>`;
       }
       const diff = r.real - r.obj;
@@ -1290,7 +1290,7 @@ const GE = (function(){
       // Para las filas de gasto (Personal, Fijos, Variables, Otros), es al revés:
       // superar el objetivo de gasto es MALO, así que se invierte el criterio.
       const isGood = r.isBen ? diff >= 0 : diff <= 0;
-      const estado = !r.real ? '—' : (pctDev < 0.1 ? '✅' : isGood ? '✅' : pctDev < 0.2 ? '⚠️' : '❌');
+      const estado = !r.real ? '—' : (pctDev < 0.1 ? '<i class="ti ti-check" style="color:var(--green)"></i>' : isGood ? '<i class="ti ti-check" style="color:var(--green)"></i>' : pctDev < 0.2 ? '<i class="ti ti-alert-triangle" style="color:var(--amber-dark)"></i>' : '<i class="ti ti-x" style="color:var(--red)"></i>');
       const diffColor = !r.real ? '' : isGood ? 'var(--green)' : 'var(--red)';
       const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : '';
       const diffText = r.real ? `${diffSign}${fmtMoney(absDiff)}` : '—';
@@ -1528,10 +1528,10 @@ const GE = (function(){
     classified.forEach(i => counts[i.cls]++);
     const badgeColor = {star:'var(--green)', review:'var(--brand-orange)', promote:'var(--blue)', drop:'var(--red)'};
     kpisEl.innerHTML = `
-      <div class="ge-kpi"><div class="lbl">⭐ ${t('dash.menuEngStar')}</div><div class="val" style="color:${badgeColor.star}">${counts.star}</div></div>
-      <div class="ge-kpi"><div class="lbl">🔍 ${t('dash.menuEngReview')}</div><div class="val" style="color:${badgeColor.review}">${counts.review}</div></div>
-      <div class="ge-kpi"><div class="lbl">📣 ${t('dash.menuEngPromote')}</div><div class="val" style="color:${badgeColor.promote}">${counts.promote}</div></div>
-      <div class="ge-kpi"><div class="lbl">✂️ ${t('dash.menuEngDrop')}</div><div class="val" style="color:${badgeColor.drop}">${counts.drop}</div></div>
+      <div class="ge-kpi"><div class="lbl"><i class="ti ti-star"></i> ${t('dash.menuEngStar')}</div><div class="val" style="color:${badgeColor.star}">${counts.star}</div></div>
+      <div class="ge-kpi"><div class="lbl"><i class="ti ti-search"></i> ${t('dash.menuEngReview')}</div><div class="val" style="color:${badgeColor.review}">${counts.review}</div></div>
+      <div class="ge-kpi"><div class="lbl"><i class="ti ti-speakerphone"></i> ${t('dash.menuEngPromote')}</div><div class="val" style="color:${badgeColor.promote}">${counts.promote}</div></div>
+      <div class="ge-kpi"><div class="lbl"><i class="ti ti-scissors"></i> ${t('dash.menuEngDrop')}</div><div class="val" style="color:${badgeColor.drop}">${counts.drop}</div></div>
     `;
     tbl.innerHTML = `
       <thead><tr><th>${t('hr.platos.dish')}</th><th>${t('hr.lbl.unitsAbbrev')}</th><th>${t('hr.platos.pctMargin')}</th><th>${t('dash.menuEngClassification')}</th></tr></thead>

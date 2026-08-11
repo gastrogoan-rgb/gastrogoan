@@ -177,7 +177,7 @@
             <div class="ge-grid"><table id="platos-menos-rentables" class="table-cards"></table></div>
           </div>
           <div class="ge-section">
-            <div class="ge-sec-head"><h4>👻 <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
+            <div class="ge-sec-head"><h4><i class="ti ti-mood-empty"></i> <span data-i18n="dash.noSalesInPeriod">Sin ventas en el periodo</span></h4></div>
             <div id="platos-sin-ventas"></div>
           </div>
         </div>
@@ -564,7 +564,7 @@
         <div id="te-forecast"></div>
         <div class="ge-section" id="te-upcoming" style="display:none"></div>
         <div class="dist-config">
-          <span style="font-weight:600;font-size:13px;margin-right:4px">⚙️ <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
+          <span style="font-weight:600;font-size:13px;margin-right:4px"><i class="ti ti-settings"></i> <span data-i18n="ge.configureDistribution">Configurar distribución objetivo (suma 100%):</span></span>
           <div class="dist-field"><span data-i18n="label.staff">Personal</span> <input type="number" id="te-pct-per" value="30" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-per')">%</div>
           <div class="dist-field"><span data-i18n="label.gFixed">G.Fijos</span> <input type="number" id="te-pct-gf" value="20" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-gf')">%</div>
           <div class="dist-field"><span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span> <input type="number" id="te-pct-mp" value="35" min="0" max="100" step="0.5" oninput="GE.adjustDistPct('te-pct-mp')">%</div>
@@ -591,7 +591,7 @@
           <span class="ge-link-note"><i class="ti ti-plug"></i> <span data-i18n="ge.fixedCostsLinkedNote">Costes fijos vinculados a Gastos Fijos</span></span>
         </div>
         <div class="dist-config" style="margin-bottom:14px;align-items:center">
-          <span style="font-weight:600;font-size:13px;margin-right:4px">🗂️ <span data-i18n="hr.pe.scenarioLabel">Escenario</span></span>
+          <span style="font-weight:600;font-size:13px;margin-right:4px"><i class="ti ti-folder"></i> <span data-i18n="hr.pe.scenarioLabel">Escenario</span></span>
           <select id="pe-scenario-sel" onchange="GE.peLoadScenario(this.value)" style="min-width:160px"></select>
           <button class="btn btn-sm" onclick="GE.peSaveScenario()"><i class="ti ti-device-floppy"></i> <span data-i18n="hr.pe.saveScenarioBtn">Guardar como escenario</span></button>
           <button class="btn btn-sm btn-danger" onclick="GE.peDeleteScenario()"><i class="ti ti-trash"></i> <span data-i18n="hr.pe.deleteScenarioBtn">Eliminar escenario</span></button>
@@ -778,7 +778,7 @@
 
       <div class="card" style="margin-bottom:14px;border:2px solid var(--brand-orange);background:var(--brand-cream)">
         <h3 style="color:var(--brand-orange)"><i class="ti ti-map-2"></i> <span data-i18n="manual.tourTitle">Tour guiado interactivo</span></h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px" data-i18n="manual.tourDesc">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> 💬 (botón inferior derecho) para preguntas concretas del día a día.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px" data-i18n="manual.tourDesc">El tour te lleva en vivo por cada pantalla de la app y te explica, paso a paso, qué hace y cómo se usa. Es el punto de partida ideal si acabas de empezar, y puedes repetirlo siempre que quieras. Combínalo con los capítulos de este manual (explicaciones detalladas con ejemplos) y con el <strong>Centro de ayuda</strong> (botón inferior derecho) para preguntas concretas del día a día.</p>
         <button class="btn btn-sm btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> <span data-i18n="btn.startTour">Iniciar tour guiado</span></button>
       </div>
 

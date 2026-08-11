@@ -1139,7 +1139,7 @@ function showRevokedGate(){
   g.style.cssText = 'position:fixed;inset:0;z-index:100001;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
-      <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🔒</div>
+      <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-lock"></i></div>
       <h2 style="margin-bottom:4px">Licencia desactivada</h2>
       <p style="color:#444;font-size:13.5px;line-height:1.6">Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.</p>
     </div>`;
@@ -1163,11 +1163,11 @@ function showActivationGate(){
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
       <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
-      <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🍽</div>
+      <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-tools-kitchen-2"></i></div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">🔑 ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
+        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px"><i class="ti ti-key"></i> ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
         <input id="license-code-input" type="text" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('access.password')}</label>
         <input id="license-password-input" type="text" placeholder="XXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase">
@@ -1339,8 +1339,8 @@ const FIREBASE_GATE_STEPS = [
 // completa, igual que el resto de "gates" del arranque.
 let extConnPromptStep = 0;
 const EXT_CONN_PROMPT_STEPS = [
-  {icon:'💳', titleKey:'mn.redsys.title', descKey:'mn.redsys.desc', renderCard: () => renderRedsysCard()},
-  {icon:'✉️', titleKey:'mn.emailConfirm.title', descKey:'mn.emailConfirm.desc', renderCard: () => renderEmailConfirmCard()},
+  {icon:'ti-credit-card', titleKey:'mn.redsys.title', descKey:'mn.redsys.desc', renderCard: () => renderRedsysCard()},
+  {icon:'ti-mail-check', titleKey:'mn.emailConfirm.title', descKey:'mn.emailConfirm.desc', renderCard: () => renderEmailConfirmCard()},
 ];
 function showExternalConnectionsPrompt(){
   extConnPromptStep = 0;
@@ -1359,7 +1359,7 @@ function renderExternalConnectionsPromptStep(){
   g.innerHTML = `
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px">
       <div style="text-align:center;margin-bottom:18px">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--teal,#2a8f88);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">${step.icon}</div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--teal,#2a8f88);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ${step.icon}"></i></div>
         <p style="font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">${t('gate.extConn.stepLabel').replace('${n}', extConnPromptStep+1).replace('${total}', EXT_CONN_PROMPT_STEPS.length)}</p>
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
@@ -1409,7 +1409,7 @@ function showFirebaseSetupGate(){
 
   const employeeBoxHtml = `
       <div style="background:#F1EFE9;border-left:4px solid #4A5D4E;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:left">
-        📱 <strong>${t('gate.employeeQuestion')}</strong> ${t('gate.employeeBody')}
+        <i class="ti ti-device-mobile"></i> <strong>${t('gate.employeeQuestion')}</strong> ${t('gate.employeeBody')}
       </div>`;
 
   const role = localStorage.getItem(ONBOARDING_ROLE_LS) || 'owner';
@@ -1437,10 +1437,10 @@ function showFirebaseSetupGate(){
   }else{
     bodyHtml = `
       ${intro}
-      <h3 style="font-size:14px;margin-bottom:12px;text-align:left">👤 ${t('gate.followSteps')}</h3>
+      <h3 style="font-size:14px;margin-bottom:12px;text-align:left"><i class="ti ti-user"></i> ${t('gate.followSteps')}</h3>
       ${stepsHtml}
       <details style="margin:14px 0 6px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">📱 ${t('gate.shareWithEmployees')}</summary>
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-device-mobile"></i> ${t('gate.shareWithEmployees')}</summary>
         <div style="margin-top:10px">${employeeBoxHtml}</div>
       </details>
       <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:6px">
@@ -1453,7 +1453,7 @@ function showFirebaseSetupGate(){
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">☁️</div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-cloud"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
         <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${t('gate.cloudStepLabel')}</p>
       </div>
@@ -1503,11 +1503,11 @@ function showNetlifySetupGate(){
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       <button onclick="${showBackBtnNt ? 'hideNetlifySetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnNt ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
-        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px">🌐</div>
+        <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-world"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
       </div>
-      <div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">⚠️ ${t('gate.nt.notHostedBody')}</div>
-      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px">✅ ${t('gate.nt.doneBtn')}</button>
+      <div style="background:#F5EBE7;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left"><i class="ti ti-alert-triangle"></i> ${t('gate.nt.notHostedBody')}</div>
+      <button onclick="confirmNetlifyDone()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:8px"><i class="ti ti-check"></i> ${t('gate.nt.doneBtn')}</button>
     </div>`;
   document.body.appendChild(g);
 }
@@ -2540,7 +2540,7 @@ function renderOnlineCard(){
   if(!getTenantId()){
     return `
       <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needLicense')}</p>
       </div>
     `;
@@ -2548,7 +2548,7 @@ function renderOnlineCard(){
   if(!getCloudConfig()){
     return `
       <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+        <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
         <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.needCloud')}</p>
       </div>
     `;
@@ -2561,16 +2561,16 @@ function renderOnlineCard(){
     : `<p style="font-size:12.5px;margin-bottom:12px;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.noActiveCarta')}</p>`;
   return `
     <div class="card mn-grid-full" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> 📱 ${t('mn.online.title')}</h3>
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</h3>
       <p style="font-size:13.5px;margin-bottom:12px">${t('mn.online.shareDesc')}${ (b.tiposServicio?.takeaway!==false || b.tiposServicio?.delivery!==false) ? ' '+t('mn.online.andOrder') : ''}${t('mn.online.shareDescEnd')}</p>
       ${activeCartaLine}
       <details style="margin-bottom:12px">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)">⚠️ ${t('mn.online.hostingSummary')}</summary>
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--brand-orange)"><i class="ti ti-alert-triangle"></i> ${t('mn.online.hostingSummary')}</summary>
         <div style="margin-top:8px;background:var(--brand-cream);border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6">
           ${t('mn.online.hostingP1')}<br><br>
           ${t('mn.online.hostingP2')}<br><br>
           ${t('mn.online.hostingP3')}<br><br>
-          📘 <strong>${t('mn.online.hostingTutorialLabel')}</strong> ${t('mn.online.hostingTutorialText')} <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> ${t('mn.online.hostingTutorialSuffix')}
+          <i class="ti ti-book"></i> <strong>${t('mn.online.hostingTutorialLabel')}</strong> ${t('mn.online.hostingTutorialText')} <a href="tutorial-netlify.html" target="_blank" rel="noopener"><strong>tutorial-netlify.html</strong></a> ${t('mn.online.hostingTutorialSuffix')}
         </div>
       </details>
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
@@ -2875,7 +2875,7 @@ function renderExternalConnectionsCard(){
       <h3><i class="ti ti-plug-connected"></i> ${t('mn.externalConn.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px">${t('mn.externalConn.desc')}</p>
       ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()')}
-      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 8px 28px">☁️ ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
+      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 8px 28px"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
       ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')")}
       ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')")}
     </div>
@@ -2890,7 +2890,7 @@ function renderRedsysCard(){
   if(!getTenantId()) return '';
   return `
     <div class="card" id="mn-card-redsys">
-      <h3><i class="ti ti-credit-card"></i> 💳 ${t('mn.redsys.title')}</h3>
+      <h3><i class="ti ti-credit-card"></i> ${t('mn.redsys.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.desc')}</p>
       <div id="redsys-status" style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.redsys.checking')}</div>
       <div class="field">
@@ -3019,7 +3019,7 @@ function renderEmailConfirmCard(){
   const cfg = (DB.business && DB.business.emailConfirm) || {};
   return `
     <div class="card" id="mn-card-email">
-      <h3><i class="ti ti-mail-check"></i> ✉️ ${t('mn.emailConfirm.title')}</h3>
+      <h3><i class="ti ti-mail-check"></i> ${t('mn.emailConfirm.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.emailConfirm.desc')}</p>
       <div class="field">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
@@ -3204,7 +3204,7 @@ function openCloudWizard(){
         <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
+      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
         ${t('gate.cloudIntro')}
       </div>
@@ -3228,11 +3228,11 @@ function openCloudWizard(){
       <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px">🔑 ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
+    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
     <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>
     <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.key}</code>`)}</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <p style="font-size:13.5px;margin-bottom:8px"><strong>📱 ${t('mn.online.title')}</strong></p>
+    <p style="font-size:13.5px;margin-bottom:8px"><strong><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</strong></p>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <img src="${qrUrl}" alt="${t('mn.online.qrAlt')}" style="width:120px;height:120px;border-radius:10px;border:1px solid var(--border);background:#fff;padding:6px">
@@ -3246,7 +3246,7 @@ function openCloudWizard(){
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <details>
-      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)">⚙️ ${t('gate.changeFirebaseConfig')}</summary>
+      <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
       <div style="margin-top:10px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>
         ${renderOwnFirebaseForm()}

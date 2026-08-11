@@ -1413,8 +1413,8 @@ function printFicha(id){
   const isBaseElaboration = !!(liveRecipe && liveRecipe.isBase);
   const steps = (f.pasos||[]).map((p,i)=>`<div style="margin-bottom:10px;display:flex;gap:10px"><strong style="flex-shrink:0;color:#999">${i+1}.</strong><span>${escapeHtml(p)}</span></div>`).join('');
   const metaChips = [
-    produccion ? `<span>${fArea==='sala'?'🥂':'👥'} ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
-    f.tiempo ? `<span>⏱ ${f.tiempo} min</span>` : '',
+    produccion ? `<span><i class="ti ${fArea==='sala'?'ti-glass-cocktail':'ti-users'}"></i> ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
+    f.tiempo ? `<span><i class="ti ti-clock"></i> ${f.tiempo} min</span>` : '',
     f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : ''
   ].filter(Boolean).join('');
   const body = `
