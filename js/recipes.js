@@ -50,14 +50,26 @@ function areaRecipeCategories(){
   return DB.recipeCategories.filter(c => typeof c !== 'object' || !c.area || c.area === currentArea());
 }
 
-function populateRecipeCategoryFilter(selectId){
+// Antes este desplegable enseñaba SIEMPRE todas las categorías del área
+// (platos Y elaboraciones mezcladas), aunque estuvieras en la pestaña de
+// Elaboraciones y esa categoría fuera solo de un plato normal (o al
+// revés) — elegirla no daba ningún error, solo una lista vacía sin
+// explicación. Ahora, si se pasan `recipesInScope` (los platos o
+// elaboraciones de la pestaña activa, ya filtrados), solo se listan las
+// categorías que de verdad tienen algo en esa pestaña — mismo criterio
+// que ya usaba la vista de carpetas (getEscandalloFolders).
+function populateRecipeCategoryFilter(selectId, recipesInScope){
   const sel = document.getElementById(selectId);
   if(!sel) return;
   const current = sel.value;
+  const catNames = areaRecipeCategories().map(c => typeof c === 'object' ? c.name : c);
+  const relevantNames = recipesInScope
+    ? catNames.filter(name => recipesInScope.some(r => (r.category||'') === name))
+    : catNames;
   sel.innerHTML = `<option value="">${t('label.allCategories')}</option>` +
-    areaRecipeCategories().map(c => { const name = typeof c === 'object' ? c.name : c; return `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`; }).join('') +
+    relevantNames.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('') +
     `<option value="__none__">${t('label.noCategory')}</option>`;
-  sel.value = current;
+  sel.value = relevantNames.includes(current) || current === '__none__' || current === '' ? current : '';
 }
 
 function groupRecipesByCategory(recipes){
@@ -141,11 +153,11 @@ function getEscandalloFolders(recipes){
 
 function renderEscandallo(){
   maybeShowCategoryIconHint();
-  populateRecipeCategoryFilter('escandallo-filter-cat');
-  const search = document.getElementById('escandallo-search').value.toLowerCase();
-  const cat = document.getElementById('escandallo-filter-cat').value;
   const isElab = escandalloTab === 'elaboraciones';
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && (isElab ? !!r.isBase : !r.isBase));
+  populateRecipeCategoryFilter('escandallo-filter-cat', areaRecipes);
+  const search = document.getElementById('escandallo-search').value.toLowerCase();
+  const cat = document.getElementById('escandallo-filter-cat').value;
   const recipes = areaRecipes.filter(r => {
     const matchSearch = !search || r.name.toLowerCase().includes(search);
     const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
@@ -880,11 +892,11 @@ function backToFichaFolders(){
 
 function renderFichas(){
   maybeShowCategoryIconHint();
-  populateRecipeCategoryFilter('fichas-filter-cat');
-  const search = document.getElementById('fichas-search').value.toLowerCase();
-  const cat = document.getElementById('fichas-filter-cat').value;
   const isElab = fichasTab === 'elaboraciones';
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && (isElab ? !!r.isBase : !r.isBase));
+  populateRecipeCategoryFilter('fichas-filter-cat', areaRecipes);
+  const search = document.getElementById('fichas-search').value.toLowerCase();
+  const cat = document.getElementById('fichas-filter-cat').value;
   const recipes = areaRecipes.filter(r => {
     const matchSearch = !search || r.name.toLowerCase().includes(search);
     const matchCat = !cat || (cat==='__none__' ? !r.category : r.category===cat);
