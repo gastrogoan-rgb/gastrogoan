@@ -721,7 +721,6 @@ function renderMegalistaTable(items){
         </td>
         <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
         <td class="actions-cell">
-          <button class="owner-only btn btn-sm ${ing.activo===false?'':''}" onclick="toggleIngredientActivo(${ing.id})" title="${ing.activo===false?t('title.reactivateIngredient'):t('title.discontinueIngredient')}"><i class="ti ${ing.activo===false?'ti-rotate':'ti-ban'}"></i></button>
           <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
         </td>
