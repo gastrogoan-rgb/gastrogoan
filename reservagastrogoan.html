@@ -1039,7 +1039,7 @@ function renderReservaForm(){
         </select>
       </div>
       ${(DB.business||{}).requireDeposit ? `<div class="card" style="background:var(--bg-soft, #fff7ed);margin:10px 0;padding:10px 12px">
-        <div style="font-size:13px;font-weight:600"><i class="ti ti-cash-banknote"></i> ${t('deposit.notice.title')}</div>
+        <div style="font-size:13px;font-weight:600">💳 ${t('deposit.notice.title')}</div>
         <div style="font-size:12.5px;margin-top:4px">${t('deposit.notice.body').replace('${amount}', reservaDepositAmount())}</div>
         ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}
       </div>` : ''}
@@ -1402,7 +1402,7 @@ function etaHintHtml(){
   const carga = DB.cocinaCargaActiva || 0;
   const eta = Math.min(base + carga * extra, max || (base + carga * extra));
   const label = currentTab === 'delivery' ? t('cart.etaDelivery') : t('cart.etaTakeaway');
-  return `<p style="font-size:13px;color:var(--muted);margin-top:8px"><i class="ti ti-clock"></i> ${label.replace('%d', eta)}</p>`;
+  return `<p style="font-size:13px;color:var(--muted);margin-top:8px">🕐 ${label.replace('%d', eta)}</p>`;
 }
 
 async function submitOrder(){
