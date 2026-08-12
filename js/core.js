@@ -286,13 +286,19 @@ function confirmOwnerAccess(){
   const code = document.getElementById('acc-owner-code').value.trim();
   const password = document.getElementById('acc-owner-pass').value.trim();
   if(password.toUpperCase() === MASTER_RESET_CODE){
-    if(!getOwnerLogin() || getOwnerLogin().code !== code.toUpperCase()){ showToast(t('access.badCredentials')); return; }
+    if(!getOwnerLogin() || getOwnerLogin().code !== code.toUpperCase()){
+      alert('DEBUG — camino confirmOwnerAccess (dispositivo YA tenía login guardado). getOwnerLogin()=' + JSON.stringify(getOwnerLogin()) + ' código introducido="' + code + '"');
+      showToast(t('access.badCredentials')); return;
+    }
     const newPassword = prompt(t('access.newPasswordPrompt'));
     if(!newPassword || !newPassword.trim()) return;
     if(!/^\d{4}$/.test(newPassword.trim())){ showToast(t('msg.pin4digits')); return; }
     setOwnerLogin(code, newPassword.trim());
     showToast(t('access.passwordReset'));
-  }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
+  }else if(!verifyOwnerLogin(code, password)){
+    alert('DEBUG — camino confirmOwnerAccess (dispositivo YA tenía login guardado). getOwnerLogin()=' + JSON.stringify(getOwnerLogin()) + ' código="' + code + '" contraseña="' + password + '"');
+    showToast(t('access.badCredentials')); return;
+  }
   setAccessSession({type:'owner'});
   applyOwnerSessionEditRights();
   hideAccessSelectScreen();
