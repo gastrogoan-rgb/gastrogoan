@@ -1,0 +1,53 @@
+{
+  "rules": {
+    "gastrogoan": {
+      ".read": false,
+      ".write": false,
+      "tenants": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60"
+        }
+      },
+      "public": {
+        "$publicId": {
+          "info": {
+            ".read": "auth != null",
+            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+          },
+          "requests": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$requestId": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
+              ".validate": "newData.hasChildren(['tipo', 'creadoEn']) && newData.child('tipo').isString() && (newData.child('tipo').val() === 'reserva' || newData.child('tipo').val() === 'pedido')"
+            }
+          },
+          "aforoHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$turnoIdx": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "pedidosHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$slot": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          }
+        }
+      },
+      "issuedCodes": {
+        "$code": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && !data.exists()"
+        }
+      }
+    }
+  }
+}
