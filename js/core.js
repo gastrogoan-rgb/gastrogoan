@@ -220,7 +220,7 @@ function renderOwnerAccessFormHtml(){
         <label>${t('access.password')}</label>
         <input type="password" id="acc-owner-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')${isSetup?'confirmOwnerAccessSetup':'confirmOwnerAccess'}()">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="alert('DEBUG — clic detectado, isSetup=${isSetup}'); ${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
     </div>
   `;
 }
@@ -1460,6 +1460,7 @@ function showFirebaseSetupGate(){
   g.innerHTML = `
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
       <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
+      <button onclick="DB.business.ownFirebase={apiKey:'DEBUG',databaseURL:'DEBUG'};saveDB();g=document.getElementById('firebase-gate');if(g)g.remove();continuePendingOwnerSetup();" style="position:absolute;top:8px;right:8px;background:#c0392b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;padding:8px 10px">DEBUG saltar (solo pruebas)</button>
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-cloud"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
