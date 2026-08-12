@@ -81,7 +81,7 @@ const GE = (function(){
   // aquí saltándose navigate()/renderView() (p.ej. GE.init() a mano desde
   // la consola de un dispositivo de empleado).
   function init(){
-    if(isGestionLocked('economia')){ requestOwnerPin('economia'); return; }
+    if(isGestionLocked('economia')){ denyGestionAccess(); return; }
     tab('fijos');
   }
   function tab(name){

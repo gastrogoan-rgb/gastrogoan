@@ -1091,7 +1091,7 @@ function goHome(){
     return;
   }
   if(!(session && session.type === 'owner')) lockEditMode();
-  if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
+  if(ownerUnlocked){ ownerUnlocked = false; const lockBtn = document.getElementById('lock-btn'); if(lockBtn) lockBtn.style.display = 'none'; }
   areaUnlocked = {cocina:false, sala:false};
   navigate('home');
 }
@@ -1100,7 +1100,7 @@ function openFolder(key){
   // Un empleado solo puede estar en su propia área — nunca en la otra.
   if(session && session.type === 'employee' && session.area) key = session.area;
   if(!(session && session.type === 'owner')) lockEditMode();
-  if(ownerUnlocked){ ownerUnlocked = false; document.getElementById('lock-btn').style.display = 'none'; }
+  if(ownerUnlocked){ ownerUnlocked = false; const lockBtn = document.getElementById('lock-btn'); if(lockBtn) lockBtn.style.display = 'none'; }
   // Igual que Gestión: salir de Cocina/Sala (o simplemente volver a entrar)
   // vuelve a pedir el PIN del área la próxima vez.
   areaUnlocked = {cocina:false, sala:false};
@@ -1259,19 +1259,13 @@ function confirmAreaGatePin(){
   navigate(view);
 }
 
-function lockOwnerArea(){
-  ownerUnlocked = false;
-  document.getElementById('lock-btn').style.display = 'none';
-  goHome();
-}
-
 function navigate(view){
   if(view === 'home'){
     const session = getAccessSession();
     if(session && session.type === 'employee'){ goHome(); return; }
   }
   if(isGestionLocked(view)){
-    requestOwnerPin(view);
+    denyGestionAccess();
     return;
   }
   if(isOperationalAreaLocked(view)){
@@ -1298,72 +1292,17 @@ function navigate(view){
   location.hash = view;
 }
 
-function requestOwnerPin(targetView){
-  const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
-  if(!DB.business.pinSet){
-    openModal(`
-      <div class="modal-header">
-        <h3><i class="ti ti-lock"></i> ${t('title.configAccess')}</h3>
-      </div>
-      <p style="font-size:13px;color:var(--muted)">${t('title.configAccessDesc')}</p>
-      <div class="field">
-        <label>${t('label.currentPin')}</label>
-        <input type="password" id="owner-pin-input" ${pinInputAttrs}>
-      </div>
-      <div class="field">
-        <label>${t('label.newPin')}</label>
-        <input type="password" id="owner-pin-new" ${pinInputAttrs}>
-      </div>
-      <div class="field">
-        <label>${t('label.repeatPin')}</label>
-        <input type="password" id="owner-pin-new2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
-      </div>
-      <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">${t('common.continue')}</button>
-      </div>
-    `);
-  } else {
-    openModal(`
-      <div class="modal-header">
-        <h3><i class="ti ti-lock"></i> ${t('title.protectedAccess')}</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div class="field">
-        <label>${t('label.accessPin')}</label>
-        <input type="password" id="owner-pin-input" ${pinInputAttrs} onkeydown="if(event.key==='Enter')verifyOwnerPin('${targetView}')">
-      </div>
-      <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-        <button class="btn btn-primary" onclick="verifyOwnerPin('${targetView}')">${t('common.unlock')}</button>
-      </div>
-    `);
-  }
-  setTimeout(()=>document.getElementById('owner-pin-input')?.focus(), 50);
-}
-
-function verifyOwnerPin(targetView){
-  const val = document.getElementById('owner-pin-input').value;
-  const bp = DB.business.pin;
-  const bMatch = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
-  if(!bMatch){
-    showToast(t('msg.pinIncorrect'));
-    return;
-  }
-  if(!DB.business.pinSet){
-    const n1 = document.getElementById('owner-pin-new').value;
-    const n2 = document.getElementById('owner-pin-new2').value;
-    if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pin4digits')); return; }
-    if(n1 !== n2){ showToast(t('msg.pinNoMatch')); return; }
-    DB.business.pin = hashPin(n1);
-    DB.business.pinSet = true;
-    saveDB();
-    showToast(t('msg.pinUpdated'));
-  }
-  ownerUnlocked = true;
-  document.getElementById('lock-btn').style.display = '';
-  closeModal();
-  navigate(targetView);
+// Gestión (Gestión Económica, Mi Negocio) es exclusiva del propietario: una
+// sesión de propietario ya pasa de largo en isGestionLocked() (ver esa
+// función), así que si se llega aquí es siempre una sesión de empleado —
+// antes se ofrecía un PIN compartido para entrar igualmente, pero ese PIN
+// quedaba en su valor por defecto hasta que alguien lo cambiara, así que
+// cualquier empleado que lo supiera (o lo adivinara) podía entrar y
+// quedarse con acceso exclusivo. Ahora Gestión simplemente no es
+// accesible fuera de una sesión de propietario, sin PIN de por medio.
+function denyGestionAccess(){
+  showToast(t('msg.gestionOwnerOnly'));
+  goHome();
 }
 // isGestionLocked() ya se comprueba en navigate() antes de llegar aquí,
 // pero eso no protege una llamada directa a renderView('economia') o
@@ -1371,7 +1310,7 @@ function verifyOwnerPin(targetView){
 // navigate() por completo — por eso se repite aquí, como último punto de
 // paso real antes de pintar cualquier vista.
 function renderView(view){
-  if(isGestionLocked(view)){ requestOwnerPin(view); return; }
+  if(isGestionLocked(view)){ denyGestionAccess(); return; }
   switch(view){
     case 'home': renderHome(); break;
     case 'folder': renderFolder(); break;

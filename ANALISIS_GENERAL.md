@@ -64,10 +64,13 @@ Investigación: revisión de código, prueba funcional en vivo con Puppeteer (in
 
 ### ⚠️ Requiere revisión antes de aplicar
 
-**PIN de "Gestión" con valor por defecto "1234" hasta que el propietario lo cambia explícitamente**
-- `requestOwnerPin()`/`verifyOwnerPin()` (`js/ui.js`) protegen el acceso a Gestión (Económica, Mi Negocio) con un PIN propio de 4 dígitos (`DB.business.pin`), distinto de la contraseña de propietario del dispositivo. Hasta que alguien pasa por ese gate por primera vez, el PIN vale `1234` (`pinSet: false`) y **cualquiera que lo sepa** (un empleado, no solo el propietario) puede entrar y, en el mismo paso, fijar un PIN nuevo — quedándose con acceso exclusivo y dejando al propietario real fuera si no sabe que cambió.
-- No lo he tocado porque es una decisión de arquitectura de acceso, no un bug de una línea: ¿debería este gate comprobar `isOwnerSession()` antes incluso de ofrecer el desbloqueo por PIN (bloqueando a cualquier empleado sin importar si sabe el PIN), o es intencional que un PIN compartido pueda dar acceso temporal a Gestión a alguien que no sea el propietario del dispositivo (p. ej. un gestor/contable)? Cualquiera de las dos respuestas es una decisión de producto, no algo que deba decidir yo unilateralmente.
-- **Propuesta de fix** si se quiere restringir: en `isGestionLocked()`/`requestOwnerPin()`, exigir `isOwnerSession()` además del PIN — así un empleado nunca vería siquiera el gate, ni por URL/consola.
+Ninguno pendiente — ver actualización más abajo.
+
+### ✅ Actualización post-informe
+
+**PIN de "Gestión" con valor por defecto "1234"** — resuelto. El propietario confirmó que Gestión debe ser exclusiva de la sesión de propietario (sin acceso de empleado ni con PIN). Se ha eliminado por completo el gate de PIN compartido (`requestOwnerPin()`/`verifyOwnerPin()`, `js/ui.js`): ahora un empleado que intenta entrar a Gestión (Económica o Mi Negocio), por navegación normal o llamando a la función directamente desde la consola, recibe un aviso ("Gestión es solo para el propietario del negocio.") y vuelve a su área — sin ningún PIN de por medio. El propietario sigue entrando directo, sin fricción, igual que antes. Se limpiaron también el botón de candado ahora huérfano (`#lock-btn`, index.html) y las claves de i18n que ya no se usaban en ningún sitio. Probado en vivo: sesión de empleado → denegado con el mensaje correcto y redirigido; sesión de propietario → entra directo. `DB.business.pin`/`pinSet` se mantienen intactos, ya que ese mismo campo lo sigue usando `requestBusinessPinAction()` para confirmar otras acciones sensibles (borrar empleado, anular una venta...) en el resto de la app.
+
+**Canal de venta (`landing.html`, enlace de Stripe sin rellenar)** — no aplica. El propietario vende desde gastrogoan.com, no desde este `landing.html` del repositorio.
 
 ### 🔵 Detectado, no arreglado por prioridad/alcance (no son bugs de una línea)
 
@@ -346,9 +349,7 @@ Detalle de los 9 (todos en el Bloque 1, ver esa sección para el detalle complet
 
 ## 3. Pendiente de tu revisión
 
-Solo un ítem en toda la pasada, del Bloque 1:
-
-**PIN de "Gestión" con valor por defecto "1234" hasta que el propietario lo cambia explícitamente.** Cualquiera que sepa el PIN por defecto (no solo el propietario) puede entrar a Gestión Económica/Mi Negocio y, en el mismo paso, fijar un PIN nuevo — quedándose con acceso exclusivo si el propietario no sabe que cambió. No lo he tocado porque es una decisión de arquitectura de acceso (¿debe bloquearse a cualquiera que no sea el propietario del dispositivo, o es intencional que un PIN compartido dé acceso temporal a alguien de confianza como un gestor externo?), no un bug de una línea. Propuesta de fix si decides restringirlo: exigir `isOwnerSession()` en `requestOwnerPin()`/`isGestionLocked()` antes incluso de ofrecer el PIN.
+**Ninguno.** El único ítem que había quedado pendiente (PIN por defecto de Gestión) se resolvió tras confirmar contigo que Gestión debe ser exclusiva del propietario: se eliminó el gate de PIN compartido por completo — ver "Bloque 1 → Actualización post-informe" para el detalle de lo cambiado y cómo se probó.
 
 ## 4. Estado del responsive — confirmado módulo por módulo
 
@@ -369,23 +370,19 @@ Las 3 resoluciones obligatorias (1440×900 / 1024×768 / 390×844) se comprobaro
 - Apaisado en móvil (844×390): no comprobado en ningún bloque.
 - Inspección visual manual (capturas) pantalla por pantalla: completa en el Bloque 1 y con capturas puntuales en el Bloque 5; en Cocina/Sala/Gestión la auditoría fue automática (detección de overflow), no una revisión ojo a ojo de cada pantalla.
 
-## 5. Puntuación: 8,5 / 10
+## 5. Puntuación: 9 / 10
 
-**Lo que suma**: cero bugs de seguridad/dinero conocidos sin arreglar tras esta pasada (los que había, se encontraron y corrigieron); diseño coherente y sin señales de estar "hecho a trozos"; código limpio (sin restos de depuración); cobertura responsive real y verificada, no asumida; la web pública (lo que ve el cliente final) tiene protecciones reales contra condiciones de carrera en las reservas, algo que muchas apps de este tamaño no se molestan en hacer bien.
+**Lo que suma**: cero bugs de seguridad/dinero conocidos sin arreglar (los que había, se encontraron y corrigieron, incluida la decisión de arquitectura del PIN de Gestión ya resuelta); diseño coherente y sin señales de estar "hecho a trozos"; código limpio (sin restos de depuración); cobertura responsive real y verificada, no asumida; la web pública (lo que ve el cliente final) tiene protecciones reales contra condiciones de carrera en las reservas, algo que muchas apps de este tamaño no se molestan en hacer bien; sin ningún ítem pendiente de tu revisión.
 
-**Lo que resta para un 10 real** (no es "estar mal", es lo que falta por verificar o decidir):
+**Lo que resta para un 10 real** (no es "estar mal", es lo que falta por verificar, y ya no depende de código):
 - El pago con tarjeta real (Redsys) en la web pública no se ha podido probar de extremo a extremo — depende de una pasarela de pago externa real, fuera del alcance de este entorno. Antes de aceptar el primer pago real de un cliente, haría una prueba con una tarjeta de verdad (o el modo sandbox de Redsys si lo tienen).
 - Todo lo probado en móvil ha sido con emulación de Puppeteer, no con un dispositivo físico real. La emulación es buena pero no perfecta (ej. no simula el teclado virtual tapando un campo, ni el comportamiento real de "añadir a pantalla de inicio"). Antes del lanzamiento, una pasada rápida de 10-15 minutos en un Android y un iPhone reales de la vida diaria del negocio (abrir una mesa, cobrar, hacer una reserva desde el móvil de un cliente) daría la confirmación final que ningún emulador puede dar del todo.
-- Un ítem de arquitectura pendiente de tu decisión (PIN de Gestión, sección 3).
 - Cobertura de tablet vertical/inglés/apaisado incompleta fuera del Bloque 1 (ver sección 4) — bajo riesgo real, pero no verificado.
-- (Nota aparte, ya señalada en una sesión anterior, no de este análisis): en `landing.html` hay dos enlaces de compra con `https://buy.stripe.com/PLACEHOLDER` sin rellenar — si esa página es el canal de venta real, hay que poner el enlace de verdad antes de publicarla.
 
-## 6. Veredicto final: **LISTO CON RESERVAS**
+## 6. Veredicto final: **LISTO PARA VENDER**
 
-La app en sí (TPV, Cocina, Sala, Gestión, web pública) está técnicamente lista para usarse en un restaurante real — los bugs de seguridad y de dinero que había se encontraron y se arreglaron, y no ha aparecido nada más en una revisión exhaustiva bloque a bloque con pruebas en vivo. Las "reservas" del veredicto no son bugs pendientes de arreglar, son 3 pasos de verificación que solo puedes (o debes) hacer tú antes de vender:
-1. Decidir qué hacer con el PIN por defecto de Gestión (sección 3).
-2. Probar un pago real con Redsys (o su modo sandbox) al menos una vez.
-3. Una prueba rápida en un móvil real (Android e iPhone) antes de la primera venta.
-4. Si `landing.html` es tu canal de venta, rellenar el enlace de Stripe real.
+La app (TPV, Cocina, Sala, Gestión, web pública) está técnicamente lista para usarse en un restaurante real — los bugs de seguridad y de dinero que había se encontraron y se arreglaron, la única decisión de producto pendiente (PIN de Gestión) ya se resolvió, y no ha aparecido nada más en una revisión exhaustiva bloque a bloque con pruebas en vivo. Solo quedan 2 verificaciones recomendadas, no bloqueantes, antes de la primera venta real:
+1. Probar un pago real con Redsys (o su modo sandbox) al menos una vez.
+2. Una prueba rápida en un móvil real (Android e iPhone) antes de la primera venta, para confirmar lo que la emulación no puede garantizar al 100%.
 
-Hecho eso, no hay motivo técnico para no lanzar.
+No hay motivo técnico para no lanzar.

@@ -3997,7 +3997,7 @@ function validateHorario(horario){
 // saltándose navigate()/renderView() (p.ej. renderMiNegocio() a mano desde
 // la consola de un dispositivo de empleado).
 function renderMiNegocio(){
-  if(isGestionLocked('minegocio')){ requestOwnerPin('minegocio'); return; }
+  if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
   const b = DB.business || {};
   // Si el formulario ya estaba pintado y el usuario había cambiado los
   // checkboxes de "Tipos de servicio" sin pulsar aún "Guardar", conservamos
@@ -4662,7 +4662,8 @@ function logoutAccessSession(){
   ownerUnlocked = false;
   document.body.classList.remove('owner-session');
   lockEditMode();
-  document.getElementById('lock-btn').style.display = 'none';
+  const lockBtn = document.getElementById('lock-btn');
+  if(lockBtn) lockBtn.style.display = 'none';
   updateLogoutBtn();
   goHome();
   showAccessSelectScreen();
