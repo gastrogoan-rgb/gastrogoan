@@ -1112,7 +1112,7 @@ function requestBusinessPinAction(title, desc, actionFn){
 function confirmBusinessPinAction(){
   const val = document.getElementById('biz-pin-action-input').value;
   const bp = DB.business.pin;
-  const match = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  const match = pinMatchesHash(val, bp);
   if(!match){ showToast(t('msg.pinIncorrect')); return; }
   const fn = businessPinPendingAction;
   businessPinPendingAction = null;

@@ -86,7 +86,7 @@ function setOwnerLogin(code, passwordPlain){
 function verifyOwnerLogin(code, passwordPlain){
   const login = getOwnerLogin();
   if(!login) return false;
-  return login.code === code.trim().toUpperCase() && login.passHash === hashPin(passwordPlain);
+  return login.code === code.trim().toUpperCase() && pinMatchesHash(passwordPlain, login.passHash);
 }
 
 // Si ha pasado más de ACCESS_INACTIVITY_TIMEOUT_MS desde el último toque
@@ -310,7 +310,7 @@ function findEmployeeMatch(employees, name, pin, licenseCode){
     if(e.active === false) return false;
     if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) return false;
     const storedPin = e.pin || '1234';
-    return storedPin.startsWith('H:') ? hashPin(pin, licenseCode) === storedPin : pin === storedPin;
+    return pinMatchesHash(pin, storedPin, licenseCode);
   });
 }
 
@@ -1709,7 +1709,19 @@ const MERGEABLE_ARRAYS = new Set([
 // pequeño (10.000 combinaciones) y por tanto rápido de romper SI se
 // conoce el código de ese negocio en concreto, pero ya no hay una única
 // tabla universal reutilizable contra cualquier cliente.
-function hashPin(pin, licenseCode){
+// Un solo golpe de FNV-1a de 32 bits (formato antiguo "H:") tarda
+// microsegundos en calcularse, así que probar los 10.000 PIN de 4 dígitos
+// posibles (o un diccionario de contraseñas del propietario) es cuestión de
+// milisegundos si alguien consigue el código de licencia — una auditoría
+// externa lo señaló como el hash siendo débil de verdad, no solo "mejorable".
+// No podemos cambiar el algoritmo sin más: negocios reales ya tienen PIN y
+// contraseñas guardadas en formato "H:", y perderían el acceso de golpe. En
+// vez de eso, encarecemos el cálculo miles de veces (como hace PBKDF2:
+// muchas rondas del mismo mezclado, no una) con un formato nuevo "H2:" para
+// lo que se guarde a partir de ahora, y seguimos verificando "H:" para lo ya
+// existente — así ningún PIN/contraseña ya guardado deja de funcionar.
+const HASH_PIN_ROUNDS = 8000;
+function hashPinRaw(pin, licenseCode){
   const salt = 'GG2024$p:' + (licenseCode !== undefined ? licenseCode : ((DB.license && DB.license.code) || ''));
   let h = 0x811c9dc5;
   const s = salt + pin + salt;
@@ -1717,7 +1729,26 @@ function hashPin(pin, licenseCode){
     h ^= s.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
-  return 'H:' + (h >>> 0).toString(36);
+  return (h >>> 0).toString(36);
+}
+function hashPin(pin, licenseCode){
+  let v = pin;
+  for(let round = 0; round < HASH_PIN_ROUNDS; round++){
+    v = hashPinRaw(v, licenseCode);
+  }
+  return 'H2:' + v;
+}
+// Compatibilidad: verifica tanto el formato nuevo (H2:, miles de rondas)
+// como el antiguo (H:, una sola ronda) para no invalidar PIN/contraseñas
+// que negocios reales ya tienen guardados. Se usa en todas las
+// comparaciones; hashPin() en cambio solo se usa para GUARDAR uno nuevo,
+// así que cualquier PIN que se cambie a partir de ahora migra solo al
+// formato fuerte la próxima vez que se guarde.
+function pinMatchesHash(pin, storedHash, licenseCode){
+  if(!storedHash) return false;
+  if(storedHash.startsWith('H2:')) return hashPin(pin, licenseCode) === storedHash;
+  if(storedHash.startsWith('H:')) return 'H:' + hashPinRaw(pin, licenseCode) === storedHash;
+  return pin === storedHash;
 }
 
 function updateSyncBadge(state){

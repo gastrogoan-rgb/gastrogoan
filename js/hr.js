@@ -3057,10 +3057,10 @@ function requestEmployeePersonalPin(employeeId){
 function pinMatchesEmployeeOrBusiness(val, employee){
   if(employee.active === false) return false;
   const storedPin = employee.pin || '1234';
-  const empMatch = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  const empMatch = pinMatchesHash(val, storedPin);
   if(empMatch) return true;
   const bp = DB.business.pin;
-  return bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  return pinMatchesHash(val, bp);
 }
 function confirmEmployeePersonalPin(){
   const e = DB.employees.find(x=>x.id===personalPendingPinEmployeeId);
@@ -3068,7 +3068,7 @@ function confirmEmployeePersonalPin(){
   const val = document.getElementById('personal-pin-input').value;
   if(!pinMatchesEmployeeOrBusiness(val, e)){ showToast(t('msg.pinIncorrect')); return; }
   const storedPin = e.pin || '1234';
-  const wasOwnPin = storedPin.startsWith('H:') ? hashPin(val) === storedPin : val === storedPin;
+  const wasOwnPin = pinMatchesHash(val, storedPin);
   personalFicharAuthMethod = wasOwnPin ? 'self' : 'business_pin';
   if(!hasAnsweredMoodThisWeek(e.id)){ promptMoodCheckin(e.id); return; }
   openEmployeeFicharModal(e.id);
@@ -3442,7 +3442,7 @@ function confirmFichajeEditPin(){
   if(!f) return;
   const val = document.getElementById('fichaje-edit-pin-input').value;
   const bp = DB.business.pin;
-  const match = bp.startsWith('H:') ? hashPin(val) === bp : val === bp;
+  const match = pinMatchesHash(val, bp);
   if(!match){
     showToast(t('msg.pinIncorrect'));
     return;
@@ -3530,7 +3530,7 @@ function employeePinCollides(pinPlain, excludeId){
   return DB.employees.some(e => {
     if(e.id === excludeId || !e.pinChanged) return false;
     const stored = e.pin || '1234';
-    return stored.startsWith('H:') ? stored === hashPin(pinPlain) : stored === pinPlain;
+    return pinMatchesHash(pinPlain, stored);
   });
 }
 
