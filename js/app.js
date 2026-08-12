@@ -1363,8 +1363,11 @@ function printDistribucion(empId){
 function clientSales(c){
   return DB.sales.filter(s => s.clientId != null ? s.clientId === c.id : (s.clienteNombre && s.clienteNombre.trim().toLowerCase() === c.name.trim().toLowerCase()));
 }
-function clientSalesStats(c){
-  const matches = clientSales(c);
+// Cálculo compartido a partir de un array de ventas YA filtradas para un
+// cliente (separado de clientSalesStats para poder reutilizarlo desde
+// renderClientes con un índice precalculado — ver computeClientStatsIndexed
+// — en vez de recorrer DB.sales entero una vez por cliente).
+function computeClientStatsFromSales(matches){
   const visitas = matches.length;
   const total = matches.reduce((sum,s)=>sum+s.total,0);
   const ticketMedio = visitas ? total/visitas : 0;
@@ -1387,6 +1390,39 @@ function clientSalesStats(c){
   const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
   return {visitas, ticketMedio, total, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
 }
+function clientSalesStats(c){
+  return computeClientStatsFromSales(clientSales(c));
+}
+// Construye un índice de DB.sales agrupado por cliente en UNA sola pasada
+// (clientId cuando lo hay, nombre normalizado como respaldo para ventas
+// antiguas sin vincular) — evita que renderClientes() recorra TODO el
+// historial de ventas una vez POR CADA cliente (con años de datos reales y
+// cientos de clientes, esto pasa de tardar cerca de un segundo a ser
+// instantáneo). Devuelve una función getStats(c) memoizada por cliente,
+// para que tampoco se recalculen las estadísticas de un mismo cliente más
+// de una vez si se usan en el filtro, la ordenación y la fila a la vez.
+function computeClientStatsIndexed(){
+  const byId = new Map();
+  const byName = new Map();
+  (DB.sales||[]).forEach(s => {
+    if(s.clientId != null){
+      if(!byId.has(s.clientId)) byId.set(s.clientId, []);
+      byId.get(s.clientId).push(s);
+    }else if(s.clienteNombre){
+      const key = s.clienteNombre.trim().toLowerCase();
+      if(!byName.has(key)) byName.set(key, []);
+      byName.get(key).push(s);
+    }
+  });
+  const statsCache = new Map();
+  return function getStats(c){
+    if(statsCache.has(c.id)) return statsCache.get(c.id);
+    const matches = byId.get(c.id) || byName.get((c.name||'').trim().toLowerCase()) || [];
+    const stats = computeClientStatsFromSales(matches);
+    statsCache.set(c.id, stats);
+    return stats;
+  };
+}
 
 // Estado de ordenación de la tabla de clientes (se mantiene mientras dure la sesión).
 let clientesSortField = null;
@@ -1402,20 +1438,21 @@ function setClientesSort(field){
 }
 
 function renderClientes(){
+  const getStats = computeClientStatsIndexed();
   const search = document.getElementById('clientes-search').value.toLowerCase();
   const filter = document.getElementById('clientes-filter')?.value || '';
   let items = DB.clients.filter(c => !search || c.name.toLowerCase().includes(search) || (c.phone||'').includes(search));
-  if(filter === 'inactive') items = items.filter(c => { const r = clientSalesStats(c).recency; return r === null || r > 60; });
+  if(filter === 'inactive') items = items.filter(c => { const r = getStats(c).recency; return r === null || r > 60; });
   else if(filter === 'allergies') items = items.filter(c => (c.allergies||'').trim());
   else if(filter === 'vip') items = items.filter(c => (c.points||0) >= 7);
   else if(filter === 'noshows') items = items.filter(c => (c.noShows||0) > 0);
   else if(filter === 'noconsent') items = items.filter(c => c.marketingConsent === false);
-  else if(filter === 'new') items = items.filter(c => clientSalesStats(c).isNew);
-  else if(filter === 'atrisk') items = items.filter(c => clientSalesStats(c).atRisk);
+  else if(filter === 'new') items = items.filter(c => getStats(c).isNew);
+  else if(filter === 'atrisk') items = items.filter(c => getStats(c).atRisk);
 
   if(clientesSortField){
     const dir = clientesSortDir === 'asc' ? 1 : -1;
-    items = items.map(c => ({c, stats: clientSalesStats(c)}))
+    items = items.map(c => ({c, stats: getStats(c)}))
       .sort((a,b) => {
         let va, vb;
         if(clientesSortField === 'visitas'){ va = a.stats.visitas; vb = b.stats.visitas; }
@@ -1440,7 +1477,7 @@ function renderClientes(){
   }
 
   tbody.innerHTML = items.map(c => {
-    const stats = clientSalesStats(c);
+    const stats = getStats(c);
     const segmentBadge = stats.isNew ? `<span class="badge badge-blue" style="font-size:9px" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
       : stats.atRisk ? `<span class="badge badge-amber" style="font-size:9px" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
     const points = c.points||0;
