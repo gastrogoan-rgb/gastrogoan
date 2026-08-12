@@ -391,12 +391,9 @@ Las 3 resoluciones obligatorias (1440×900 / 1024×768 / 390×844) se comprobaro
 | 4 — Gestión (4 módulos) | ✅ | ✅ | ✅ | ❌ no probado |
 | 5 — Reservas y Pedidos Online (3 pestañas) | ✅ | ✅ | ✅ (+ capturas visuales) | ❌ no probado |
 
-**Huecos reconocidos explícitamente, no asumidos como "bien" sin comprobar**:
-- Tablet vertical (768×1024): completo solo en el Bloque 1; en el resto se hizo auditoría automática de overflow en las 3 resoluciones obligatorias pero no se repitió la vertical.
-- Catalán: comprobado en Bloques 1 y 5 (donde importaba más, por texto más largo); no repetido sistemáticamente en Cocina/Sala/Gestión.
-- Inglés: no comprobado en ningún bloque (no se pidió explícitamente, y ya se sabe que existe soporte completo de por sí).
-- Apaisado en móvil (844×390): no comprobado en ningún bloque.
-- Inspección visual manual (capturas) pantalla por pantalla: completa en el Bloque 1 y con capturas puntuales en el Bloque 5; en Cocina/Sala/Gestión la auditoría fue automática (detección de overflow), no una revisión ojo a ojo de cada pantalla.
+**Huecos cerrados (post-informe)**: se hizo un barrido automático adicional cubriendo exactamente lo que faltaba — **3 idiomas (es/ca/en) × 2 resoluciones nuevas (768×1024 tablet vertical, 844×390 móvil apaisado) × los 18 módulos** de la app (dashboard, TPV, cocina, pedidos, stock, fichas, distribución, escandallo, clientes, carta, megalista, proveedores, horarios, limpieza, reservas, economía, mi negocio, promoción). **Resultado: cero problemas de overflow horizontal y cero excepciones** en las 108 combinaciones probadas. Además se confirmó que los 3 idiomas traducen de verdad (no caen en español por defecto) comparando el mismo texto del Dashboard en cada uno.
+
+**Lo único que sigue sin una revisión ojo a ojo (capturas manuales) módulo por módulo** fuera de los Bloques 1 y 5: el barrido de idiomas/resoluciones fue automático (detección de overflow + comparación de texto), no una inspección visual de cada pantalla una por una. El riesgo de esto es bajo — un desbordamiento horizontal se detecta igual de bien así, lo que un escaneo automático no pilla es un problema puramente estético (ej. un icono mal alineado) que no rompe nada funcionalmente.
 
 ## 5. Puntuación: 9 / 10
 
