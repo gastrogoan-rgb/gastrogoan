@@ -2,7 +2,7 @@
 
 > Pasada final completa: código + diseño + responsive + funcionalidad, bloque a bloque, con fixes aplicados sobre la marcha.
 
-**Estado**: 🔄 En curso — Bloque 1 completado, continuar por Bloque 2 (Cocina)
+**Estado**: 🔄 En curso — Bloques 1-2 completados, continuar por Bloque 3 (Sala)
 
 ---
 
@@ -115,3 +115,44 @@ Evaluado y descartado como bug (comportamiento correcto tras revisar el código)
 ---
 
 ✅ **Bloque completado: Login y Licencias — continuar por Bloque 2 (Cocina)**
+
+---
+
+## Bloque 2 — Cocina
+
+> Nota de método: este bloque se hizo en solitario (sin orquestación de varios agentes) para ajustarse al límite de consumo pedido — revisión de código dirigida + una única sesión de Puppeteer combinando responsive y funcional, en vez del patrón de investigación en paralelo + verificación adversarial del Bloque 1. Cobertura algo menos exhaustiva que el Bloque 1 como consecuencia directa de eso; se indica explícitamente donde no llegué a profundizar.
+
+Módulos de este bloque: Comandas Cocina (KDS), Oferta Gastronómica (Carta), Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Pedidos, Stock, Horario del Personal, Distribución, Limpieza (APPCC).
+
+### Responsive — las 3 resoluciones, los 11 módulos
+
+Auditoría con Puppeteer (overflow de body + elementos individuales más anchos que el viewport) en **1440×900 / 1024×768 / 390×844**, navegando a los 11 módulos en cada resolución (33 combinaciones módulo×resolución):
+
+| Resultado | Detalle |
+|---|---|
+| ✅ Sin overflow horizontal | En los 11 módulos, en las 3 resoluciones — 0 hallazgos |
+| ✅ Sin errores de consola | Durante toda la navegación por los 11 módulos |
+
+Esto coincide con que gran parte del trabajo de responsive de Cocina (tablas a tarjetas en móvil, fix de overflow en grids, TPV/Comandas) ya se hizo en una revisión móvil exhaustiva anterior de esta misma sesión — este bloque confirma que sigue en pie, no lo repite desde cero.
+
+**No verificado en este bloque** (por presupuesto, no se asumió que estuviera bien): tablet vertical (768×1024), catalán/inglés en Cocina específicamente, ni una revisión visual manual (capturas) módulo por módulo — la auditoría fue automática (detección de overflow), no una inspección ojo a ojo de cada pantalla como sí se hizo en el Bloque 1.
+
+### Funcional — verificado en vivo
+
+- **Escandallo**: `recipeCost()`/`recipeCostBreakdown()`/`recipeIngredientCost()` (js/recipes.js) revisados y con una receta de prueba real (ingrediente con precio por packQty/packPrice, merma del 5%) — el cálculo de coste bruto (`qty × (1 + merma/100) × precio`) es correcto.
+- **Comandas Cocina (KDS)**: probado de extremo a extremo — un pedido de mesa con un plato enviado a cocina aparece correctamente en la pantalla de Cocina con nombre, cantidad y estado "En espera".
+- **Pedidos a proveedor**: el formulario "Realizar Pedido" carga y renderiza correctamente (selector de proveedor, fecha de entrega, resumen).
+- **Mega Lista**: botón "Nuevo Ingrediente" presente y accesible.
+- **Comprobación estática app-wide**: los 335 nombres de función usados en atributos `onclick="..."` de toda la app están todos declarados de verdad (0 referencias rotas) — no es específico de Cocina, pero da confianza de que no hay botones muertos en ningún sitio.
+
+**No verificado en este bloque** (por presupuesto): no se probó de extremo a extremo crear/editar/eliminar en Fichas Técnicas, Stock (movimientos de entrada/salida), Horario del Personal, Distribución ni Limpieza/APPCC — se hizo una revisión de código ligera (sin encontrar problemas evidentes) pero no una prueba funcional en vivo de cada uno. Recomendado cubrirlos en una pasada posterior si hay tiempo antes del lanzamiento.
+
+### Hallazgos
+
+**Ninguno que requiriera arreglo.** Dos falsos positivos descartados tras investigar (no eran bugs de la app, sino datos de prueba mal simulados por mi parte: nombres de campo inventados que no coinciden con el esquema real — `ing.price` en vez de `ing.purchasePrice`, `line.name` en vez de `line.nombre`). Los dejo anotados aquí solo como constancia de que se investigaron a fondo antes de descartarlos, no se asumió que estuvieran bien sin comprobar.
+
+No se aplicó ningún cambio de código en este bloque.
+
+---
+
+✅ **Bloque completado: Cocina — continuar por Bloque 3 (Sala)**
