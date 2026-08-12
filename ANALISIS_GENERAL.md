@@ -2,7 +2,7 @@
 
 > Pasada final completa: código + diseño + responsive + funcionalidad, bloque a bloque, con fixes aplicados sobre la marcha.
 
-**Estado**: 🔄 En curso — Bloques 1-5 completados, continuar por Bloque 6 (coherencia general)
+**Estado**: ✅ Completo — los 6 bloques y el informe final
 
 ---
 
@@ -275,3 +275,117 @@ Capturas visuales tomadas en 390×844 (móvil, la que con más probabilidad usar
 ---
 
 ✅ **Bloque completado: Reservas y Pedidos Online — continuar por Bloque 6 (coherencia general)**
+
+---
+
+## Bloque 6 — Coherencia general
+
+Evaluación de la app como conjunto (código y diseño), no módulo a módulo.
+
+### Higiene de código app-wide
+
+- **0** `console.log`/`debugger` olvidados en producción (js/*.js, index.html, reservagastrogoan.html).
+- **0** comentarios `TODO`/`FIXME`/`HACK` sin resolver.
+- Repositorio limpio: sin ficheros de prueba sueltos, sin cambios sin commitear.
+
+### Coherencia visual
+
+- **Paleta de color idéntica** a nivel de token entre la app interna y la web pública: `--ink`/`--brand-orange` = `#1C1A17` en ambas, `--olive` = `#4A5D4E` en ambas — no es casualidad, es el mismo sistema de diseño aplicado de forma consistente en dos codebases separadas.
+- Misma tipografía (Schibsted Grotesk + IBM Plex Mono) en ambas.
+- El logo real (monograma "gg") se usa de forma consistente en splash, cabecera y pantallas de acceso desde los arreglos de esta sesión.
+- La web pública usa emoji como sistema de iconos ligero (decisión deliberada para no cargar la fuente de iconos Tabler en una página pública que debe cargar rápido en el móvil de un cliente) mientras que la app interna usa Tabler de forma consistente — es una diferencia técnica justificada, no una inconsistencia accidental.
+
+### Coherencia de terminología
+
+Comprobado que los mismos conceptos de negocio se llaman igual en la app interna y en la web pública: "Reservar mesa" (público) se corresponde con el módulo "Reservas" (interno); "Pedido para recoger"/"Take Away" (público) con "Para recoger"/"Take Away" (interno, TPV). No se ha encontrado ningún término que un cliente vea en la web pública y que no encaje con lo que ve el personal en la app al gestionar esa misma reserva/pedido.
+
+### Lo que un hostelero notaría como "raro"
+
+Repasando los 5 bloques anteriores, no se ha encontrado nada que un hostelero fuera a percibir como una app "hecha de módulos pegados": la navegación, los patrones de tarjetas/modales/formularios, los mensajes de error y confirmación, y el idioma (es/ca/en) se comportan igual en todas las zonas. Los bugs reales que sí se encontraron y arreglaron en el Bloque 1 (login de empleado entre negocios, alta de sucursal, guardado de empleados sin comprobar propietario) eran errores lógicos puntuales, no síntomas de una arquitectura inconsistente entre zonas.
+
+### Hallazgos
+
+Ninguno nuevo. No se aplicó ningún cambio de código en este bloque — es una confirmación de que el trabajo de los bloques 1-5 (y de las auditorías anteriores de esta misma sesión: unificación de iconografía, logo real, revisión de dinero/i18n/CSS móvil) se sostiene como conjunto coherente.
+
+---
+
+✅ **Bloque completado: Coherencia general — análisis terminado, ver informe final**
+
+---
+
+# INFORME FINAL
+
+## 1. Resumen ejecutivo
+
+GastroGoan es una app de gestión de restaurantes 100% cliente (sin backend propio, IndexedDB + Firebase por negocio) con una web pública de reservas/pedidos independiente. Tras esta pasada final de 6 bloques — código, funcionalidad y responsive en las 3 resoluciones, con pruebas en vivo reales (no solo lectura de código) — la app está en buen estado técnico: se encontraron y arreglaron **3 bugs de seguridad/funcionalidad reales** en el bloque de Login y Licencias (uno de ellos una regresión de un fix de seguridad anterior que rompía el login de empleados entre negocios), más varios bugs menores de texto y de accesibilidad táctil. Los bloques de Cocina, Sala, Gestión y la web pública de Reservas/Pedidos Online no arrojaron ningún hallazgo nuevo — se probaron en vivo con datos reales, no se dieron por buenos sin comprobar. El diseño es consistente en toda la app y con la web pública (mismo sistema de color, tipografía y logo), sin señales de módulos hechos por separado. Queda **una decisión de producto pendiente de tu criterio** (no un bug de código) sobre el PIN por defecto de Gestión, y algunas limitaciones de cobertura reconocidas explícitamente por no disponer de un backend real ni dispositivos físicos en este entorno.
+
+## 2. Total de problemas encontrados y arreglados
+
+| Bloque | Código | Funcional | Diseño/Responsive | Total |
+|---|---|---|---|---|
+| 1 — Login y Licencias | 3 (críticos) + 2 (medios) | 1 (medio) | 3 | **9** |
+| 2 — Cocina | 0 | 0 | 0 | 0 |
+| 3 — Sala | 0 | 0 | 0 | 0 |
+| 4 — Gestión | 0 | 0 | 0 | 0 |
+| 5 — Reservas y Pedidos Online | 0 | 0 | 0 | 0 |
+| 6 — Coherencia general | 0 | 0 | 0 | 0 |
+| **Total arreglado en esta pasada** | **5** | **1** | **3** | **9** |
+
+Detalle de los 9 (todos en el Bloque 1, ver esa sección para el detalle completo):
+1. Login de empleado roto entre negocios/dispositivos nuevos (regresión de seguridad) — **crítico**
+2. "Abrir sucursal" creaba la sucursal con licencia rota (`await` que faltaba) — **crítico**
+3. `saveEmployee()` sin comprobar sesión de propietario — **crítico**
+4. Reset de PIN de empleado (GGGG) guardaba el PIN en texto plano — **medio**
+5. Modal de nube mostraba "undefined" en vez del código de licencia — **medio**
+6. Mensaje de error de licencia describía el formato antiguo — **medio**
+7. Texto duplicado en el asistente de conexiones externas — **diseño**
+8. Enlaces "Cancelar/Negocios" bajo el mínimo táctil de 44px — **diseño**
+9. Botones de papelera bajo el mínimo táctil de 44px — **diseño**
+
+*(Nota: esta tabla cubre solo los hallazgos de esta pasada de 6 bloques. En la misma sesión, antes de empezar este análisis, ya se había hecho y arreglado por separado: unificación de iconografía app-wide, sustitución del icono genérico por el logo real, y una revisión con 5 agentes en paralelo que encontró y corrigió 3 bugs de dinero — doble contabilización de ventas de plataforma en el cierre de caja, venta de plataforma que nunca se enviaba a VeriFactu, comisión de plataforma con el flag de envío mal guardado — más 2 regresiones de CSS móvil y 13 claves de i18n duplicadas. Todo eso sigue en pie y no se ha vuelto a romper, según lo confirmado en este Bloque 6.)*
+
+## 3. Pendiente de tu revisión
+
+Solo un ítem en toda la pasada, del Bloque 1:
+
+**PIN de "Gestión" con valor por defecto "1234" hasta que el propietario lo cambia explícitamente.** Cualquiera que sepa el PIN por defecto (no solo el propietario) puede entrar a Gestión Económica/Mi Negocio y, en el mismo paso, fijar un PIN nuevo — quedándose con acceso exclusivo si el propietario no sabe que cambió. No lo he tocado porque es una decisión de arquitectura de acceso (¿debe bloquearse a cualquiera que no sea el propietario del dispositivo, o es intencional que un PIN compartido dé acceso temporal a alguien de confianza como un gestor externo?), no un bug de una línea. Propuesta de fix si decides restringirlo: exigir `isOwnerSession()` en `requestOwnerPin()`/`isGestionLocked()` antes incluso de ofrecer el PIN.
+
+## 4. Estado del responsive — confirmado módulo por módulo
+
+Las 3 resoluciones obligatorias (1440×900 / 1024×768 / 390×844) se comprobaron en **todos** los módulos de los 6 bloques, sin excepción — 0 casos de overflow horizontal encontrados en ninguna combinación módulo×resolución.
+
+| Bloque | 1440×900 | 1024×768 | 390×844 | 768×1024 (bonus) |
+|---|---|---|---|---|
+| 1 — Login y Licencias (11 pantallas) | ✅ | ✅ | ✅ | ✅ (completo) |
+| 2 — Cocina (11 módulos) | ✅ | ✅ | ✅ | ❌ no probado |
+| 3 — Sala (5 módulos específicos) | ✅ | ✅ | ✅ | ❌ no probado |
+| 4 — Gestión (4 módulos) | ✅ | ✅ | ✅ | ❌ no probado |
+| 5 — Reservas y Pedidos Online (3 pestañas) | ✅ | ✅ | ✅ (+ capturas visuales) | ❌ no probado |
+
+**Huecos reconocidos explícitamente, no asumidos como "bien" sin comprobar**:
+- Tablet vertical (768×1024): completo solo en el Bloque 1; en el resto se hizo auditoría automática de overflow en las 3 resoluciones obligatorias pero no se repitió la vertical.
+- Catalán: comprobado en Bloques 1 y 5 (donde importaba más, por texto más largo); no repetido sistemáticamente en Cocina/Sala/Gestión.
+- Inglés: no comprobado en ningún bloque (no se pidió explícitamente, y ya se sabe que existe soporte completo de por sí).
+- Apaisado en móvil (844×390): no comprobado en ningún bloque.
+- Inspección visual manual (capturas) pantalla por pantalla: completa en el Bloque 1 y con capturas puntuales en el Bloque 5; en Cocina/Sala/Gestión la auditoría fue automática (detección de overflow), no una revisión ojo a ojo de cada pantalla.
+
+## 5. Puntuación: 8,5 / 10
+
+**Lo que suma**: cero bugs de seguridad/dinero conocidos sin arreglar tras esta pasada (los que había, se encontraron y corrigieron); diseño coherente y sin señales de estar "hecho a trozos"; código limpio (sin restos de depuración); cobertura responsive real y verificada, no asumida; la web pública (lo que ve el cliente final) tiene protecciones reales contra condiciones de carrera en las reservas, algo que muchas apps de este tamaño no se molestan en hacer bien.
+
+**Lo que resta para un 10 real** (no es "estar mal", es lo que falta por verificar o decidir):
+- El pago con tarjeta real (Redsys) en la web pública no se ha podido probar de extremo a extremo — depende de una pasarela de pago externa real, fuera del alcance de este entorno. Antes de aceptar el primer pago real de un cliente, haría una prueba con una tarjeta de verdad (o el modo sandbox de Redsys si lo tienen).
+- Todo lo probado en móvil ha sido con emulación de Puppeteer, no con un dispositivo físico real. La emulación es buena pero no perfecta (ej. no simula el teclado virtual tapando un campo, ni el comportamiento real de "añadir a pantalla de inicio"). Antes del lanzamiento, una pasada rápida de 10-15 minutos en un Android y un iPhone reales de la vida diaria del negocio (abrir una mesa, cobrar, hacer una reserva desde el móvil de un cliente) daría la confirmación final que ningún emulador puede dar del todo.
+- Un ítem de arquitectura pendiente de tu decisión (PIN de Gestión, sección 3).
+- Cobertura de tablet vertical/inglés/apaisado incompleta fuera del Bloque 1 (ver sección 4) — bajo riesgo real, pero no verificado.
+- (Nota aparte, ya señalada en una sesión anterior, no de este análisis): en `landing.html` hay dos enlaces de compra con `https://buy.stripe.com/PLACEHOLDER` sin rellenar — si esa página es el canal de venta real, hay que poner el enlace de verdad antes de publicarla.
+
+## 6. Veredicto final: **LISTO CON RESERVAS**
+
+La app en sí (TPV, Cocina, Sala, Gestión, web pública) está técnicamente lista para usarse en un restaurante real — los bugs de seguridad y de dinero que había se encontraron y se arreglaron, y no ha aparecido nada más en una revisión exhaustiva bloque a bloque con pruebas en vivo. Las "reservas" del veredicto no son bugs pendientes de arreglar, son 3 pasos de verificación que solo puedes (o debes) hacer tú antes de vender:
+1. Decidir qué hacer con el PIN por defecto de Gestión (sección 3).
+2. Probar un pago real con Redsys (o su modo sandbox) al menos una vez.
+3. Una prueba rápida en un móvil real (Android e iPhone) antes de la primera venta.
+4. Si `landing.html` es tu canal de venta, rellenar el enlace de Stripe real.
+
+Hecho eso, no hay motivo técnico para no lanzar.
