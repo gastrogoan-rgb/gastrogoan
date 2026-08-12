@@ -245,6 +245,8 @@ async function confirmOwnerAccessSetup(){
     showToast(t(offline ? 'access.licenseOffline' : 'access.badCredentials'));
     return;
   }
+  alert('DEBUG — activación OK, lic=' + JSON.stringify(lic) + '. Continuando con el resto de la configuración...');
+  try{
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   // "owner-setup" solo se ve cuando este dispositivo aún no tenía ningún
@@ -270,6 +272,10 @@ async function confirmOwnerAccessSetup(){
   initPublicRequestsListener();
   checkLicenseRevocation();
   linkBusinessToOwnerProfile(lic.tenantId, lic.tenantId, lic.code, DB.business && DB.business.name);
+  }catch(e){
+    alert('DEBUG — excepción DESPUÉS de activar, en el resto de la configuración: ' + (e && e.stack || e));
+    return;
+  }
   // Justo después de activar la licencia por primera vez, toca terminar el
   // resto de la configuración inicial (aviso de hosting local si aplica,
   // nube propia, tour) antes de dar por hecho que el negocio ya está listo.
