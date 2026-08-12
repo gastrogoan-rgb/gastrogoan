@@ -145,7 +145,14 @@ Esto coincide con que gran parte del trabajo de responsive de Cocina (tablas a t
 - **Mega Lista**: botón "Nuevo Ingrediente" presente y accesible.
 - **Comprobación estática app-wide**: los 335 nombres de función usados en atributos `onclick="..."` de toda la app están todos declarados de verdad (0 referencias rotas) — no es específico de Cocina, pero da confianza de que no hay botones muertos en ningún sitio.
 
-**No verificado en este bloque** (por presupuesto): no se probó de extremo a extremo crear/editar/eliminar en Fichas Técnicas, Stock (movimientos de entrada/salida), Horario del Personal, Distribución ni Limpieza/APPCC — se hizo una revisión de código ligera (sin encontrar problemas evidentes) pero no una prueba funcional en vivo de cada uno. Recomendado cubrirlos en una pasada posterior si hay tiempo antes del lanzamiento.
+~~**No verificado en este bloque** (por presupuesto): no se probó de extremo a extremo crear/editar/eliminar en Fichas Técnicas, Stock (movimientos de entrada/salida), Horario del Personal, Distribución ni Limpieza/APPCC.~~ **[Actualización tras el Bloque 3]**: se pidió explícitamente cerrar este hueco antes de seguir, así que se probó en vivo cada uno de los 5:
+- **Fichas Técnicas**: `openFichaModal()` + `saveFicha()` crea la ficha correctamente y queda enlazada a la receta.
+- **Stock**: `updateStockQty()` actualiza la cantidad y queda registrado en el log de ajustes de stock (`logStockAdjustment`).
+- **Horario del Personal**: la vista carga con el personal y sus turnos por día/semana/mes.
+- **Distribución**: la vista carga correctamente mostrando platos/tareas asignadas por empleado.
+- **Limpieza/APPCC**: probado de extremo a extremo el registro de una temperatura real (nevera, 4°C) vía `addLimpiezaLogEntry('temperaturas')` — se guarda con el estado calculado automáticamente ("OK"), la zona y el responsable auditado según la sesión activa, sin necesidad de elegirlo a mano.
+- Sin overflow en los 5 módulos en las 3 resoluciones, sin errores de consola.
+- Sin hallazgos — los 5 funcionan correctamente.
 
 ### Hallazgos
 
