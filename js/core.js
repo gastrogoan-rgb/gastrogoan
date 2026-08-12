@@ -165,6 +165,30 @@ function setAccessScreenMode(mode){
   accessScreenMode = mode;
   renderAccessScreen();
 }
+// Un dispositivo que ya había activado un negocio se quedaba SIN SALIDA: la
+// pantalla de propietario solo valida contra el código guardado, así que era
+// imposible activar otra licencia distinta en el mismo dispositivo — le pasa
+// a cualquiera que pruebe una demo y luego compre su licencia de verdad, a
+// una tablet que se reasigna de un negocio a otro, o a quien se equivoque de
+// código al activar. No basta con aceptar el código nuevo sobre el negocio
+// activo: los datos del anterior (clientes, ventas, empleados) seguirían en
+// este dispositivo y acabarían subiendo a la nube del negocio nuevo. Por eso
+// la salida deja el dispositivo como recién instalado, avisando antes de que
+// se borra todo lo local (que en la nube sigue intacto si estaba sincronizado).
+function resetDeviceForAnotherLicense(){
+  if(!confirm(t('access.resetDeviceConfirm'))) return;
+  try{
+    getBusinessSlots().forEach(s => {
+      indexedDB.deleteDatabase(slotIdbName(s.id));
+      localStorage.removeItem(slotLicenseKey(s.id));
+    });
+  }catch(e){ console.error('Error borrando los datos locales', e); }
+  // Cualquier clave de la app, sin depender de tener la lista al día.
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('gastrogoan') || k.startsWith('gg_'))
+    .forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
 function renderAccessSelectScreenHtml(){
   if(accessScreenMode === 'employee') return renderEmployeeAccessFormHtml();
   if(accessScreenMode === 'owner' || accessScreenMode === 'owner-setup') return renderOwnerAccessFormHtml();
@@ -221,6 +245,8 @@ function renderOwnerAccessFormHtml(){
         <input type="password" id="acc-owner-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')${isSetup?'confirmOwnerAccessSetup':'confirmOwnerAccess'}()">
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
+      ${isSetup ? '' : `
+      <button type="button" onclick="resetDeviceForAnotherLicense()" style="display:block;width:100%;margin-top:14px;background:none;border:none;color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:10px;min-height:44px">${t('access.useAnotherCode')}</button>`}
     </div>
   `;
 }
