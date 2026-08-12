@@ -559,7 +559,7 @@ function renderTpvKpis(){
         <div style="font-size:11px;color:var(--muted);margin-top:2px"><i class="ti ti-list-details"></i> ${t('tpv.salesToday.clickHint')}</div>
       </div>
       <div class="kpi"><div class="label">${t('label.ticketsToday')}</div><div class="value">${ticketCount}</div></div>
-      <div class="kpi"><div class="label">${t('label.avgTicket')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
+      <div class="kpi"><div class="label">${t('label.avgTicketPerCover')}</div><div class="value">${fmtMoney(avgTicket)}</div></div>
       <div class="kpi ${comandasEnCocina ? 'ok' : ''}"><div class="label"><i class="ti ti-tools-kitchen-2"></i> ${t('label.inKitchen')}</div><div class="value">${comandasEnCocina}</div></div>
     </div>
   `;

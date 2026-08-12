@@ -194,10 +194,15 @@ function detectClosureWarnings(diferencia, discounts, voids){
 // plataforma como gasto, igual que si cada pedido se hubiera registrado
 // uno a uno en el TPV. Pensado para negocios que no dan de alta cada
 // pedido de la plataforma en la app y solo tienen el total del periodo.
-function registerPlatformSettlementSale(plat, totalBruto){
+function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
   const ivaPct = verifactuIvaPct();
+  // createdAt se fija al instante "hasta" del cierre (no al momento real de
+  // guardar, que puede ser unos minutos después) para que la venta quede
+  // dentro del periodo de ESTE cierre y no se cuele, sin etiquetar, en el
+  // rango del cierre siguiente del mismo día (getSalesForClosure filtra por
+  // fecha > desde y <= hasta del cierre correspondiente).
   const sale = {
-    id: genId(), date: todayStr(), createdAt: new Date().toISOString(),
+    id: genId(), date: todayStr(), createdAt: closureHasta,
     total: roundMoney(totalBruto), tipo: 'delivery', express: false,
     clienteNombre: '', clientId: null, camareroId: null,
     metodoPago: 'Otro',
@@ -206,10 +211,20 @@ function registerPlatformSettlementSale(plat, totalBruto){
   };
   const comisionPct = parseFloat(plat.comisionPct) || 0;
   const platIvaPct = parseFloat(plat.ivaPct) || 0;
+  // A diferencia de un pedido individual (applyDeliveryCommission, js/tpv.js),
+  // aquí no hay un coste de envío desglosado que restar de la base: el total
+  // introducido es una cifra agregada que la propia plataforma ya reporta
+  // así, sin separar comanda de envío. Por eso la comisión se calcula
+  // siempre sobre el bruto completo, independientemente de si la plataforma
+  // tiene marcado "comisión sobre envío" — no hay forma de aplicar ese
+  // matiz sin ese desglose. Se guarda el valor real configurado (no true a
+  // fuego) para que quede constancia fiel de la configuración del negocio.
+  const comisionSobreEnvio = plat.comisionSobreEnvio !== false;
   const comision = sale.total * (comisionPct/100) * (1 + platIvaPct/100);
-  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio: true};
+  sale.plataforma = {id: plat.id, nombre: plat.nombre, comisionPct, ivaPct: platIvaPct, comisionSobreEnvio};
   sale.comisionPlataforma = roundMoney(comision);
   DB.sales.push(sale);
+  enqueueVerifactuSubmission(sale);
   return sale;
 }
 
@@ -233,7 +248,7 @@ function performCashClosure(){
     const input = document.getElementById(`closure-platform-${p.id}`);
     const amount = input ? (parseFloat(input.value) || 0) : 0;
     if(amount > 0){
-      const sale = registerPlatformSettlementSale(p, amount);
+      const sale = registerPlatformSettlementSale(p, amount, hasta);
       platformSales.push({platformId: p.id, nombre: p.nombre, total: sale.total, comision: sale.comisionPlataforma});
     }
   });
@@ -1342,7 +1357,7 @@ function markPedidoSentIfDraft(o){
 function printPedido(){
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
-  printReportWindow(t('label.order'), buildPedidoPrintHtml(o));
+  printReportWindow(t('label.purchaseOrder'), buildPedidoPrintHtml(o));
 }
 
 // Cuerpo compartido por printPedido() (pedido ya guardado) y
@@ -1667,7 +1682,7 @@ function printPedidoBorrador(){
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return; }
   const date = document.getElementById('order-date').value || todayStr();
   const o = {supplier: orderModalSupplier, date, items, notas:''};
-  printReportWindow(t('label.order'), buildPedidoPrintHtml(o));
+  printReportWindow(t('label.purchaseOrder'), buildPedidoPrintHtml(o));
 }
 
 function sendNewPedido(method){
