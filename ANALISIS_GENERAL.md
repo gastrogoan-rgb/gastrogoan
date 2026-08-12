@@ -2,7 +2,7 @@
 
 > Pasada final completa: código + diseño + responsive + funcionalidad, bloque a bloque, con fixes aplicados sobre la marcha.
 
-**Estado**: 🔄 En curso — Bloques 1-3 completados, continuar por Bloque 4 (Gestión)
+**Estado**: 🔄 En curso — Bloques 1-4 completados, continuar por Bloque 5 (Reservas y Pedidos Online)
 
 ---
 
@@ -196,3 +196,38 @@ Auditoría de overflow en **1440×900 / 1024×768 / 390×844** para los 5 módul
 ---
 
 ✅ **Bloque completado: Sala — continuar por Bloque 4 (Gestión)**
+
+---
+
+## Bloque 4 — Gestión
+
+Módulos: Manual de Uso, Mi Negocio, Panel de Control (Dashboard), Gestión Económica (Gastos Fijos, Gastos Variables, Cuenta de Resultados, Resultado, Tesorería, Punto de Equilibrio, CAPEX).
+
+### Funcional — verificado en vivo, con datos reales
+
+- **Mi Negocio**: cambio de nombre del negocio (`saveBusiness()`) persiste correctamente en `DB.business.name`. Alta de una plataforma de delivery (Uber Eats, 28% comisión, 21% IVA) guardada con los campos correctos.
+- **Panel de Control**: con una venta real seeded (100€, hoy), el dashboard muestra correctamente "Ventas de hoy: 100,00€", "Tickets hoy: 1", "Ticket medio: 100,00€" — enlazado de verdad a `DB.sales`, no a datos de relleno.
+- **Gestión Económica**:
+  - **Gastos Fijos**: un gasto de personal (Nómina, 1500€/mes) se refleja correctamente en el KPI "Personal (sin IVA)" y en "Coste real mensual", exactos.
+  - **Cuenta de Resultados**: con la venta de 100€ (IVA 10%) seeded, la fila de agosto muestra "Facturación (TPV, IVA incl.): 100,00€", "IVA repercutido: 9,09€", "Facturación neta: 90,91€" — matemáticamente exacto (100/1,10 = 90,909...).
+  - **Resultado** y **Punto de Equilibrio**: cargan sin errores, con las fórmulas y textos explicativos correctos.
+- **Manual de Uso**: la búsqueda (`renderManual()`/`manualChapterMatches()`) probada con el término "GGGG" (el código maestro de recuperación de contraseña/PIN) — encuentra correctamente el único capítulo que lo menciona ("Cómo empezar"), confirmando que el motor de búsqueda funciona de verdad sobre el contenido real, no solo sobre títulos.
+- Sin errores de consola de JavaScript en todo el bloque (solo un `ERR_CONNECTION_RESET` de red, entorno de pruebas sin salida a internet real, no relacionado con la app).
+
+### Investigación de una falsa alarma (documentada por transparencia)
+
+Durante las pruebas, el KPI "Personal (sin IVA)" de Gastos Fijos pareció mostrar un valor incorrecto (573-617€ en vez de 1500€) al comprobarlo ~100-900ms después de navegar a la pestaña. Investigado a fondo antes de descartarlo (interceptando la función de cálculo en vivo, comprobando con y sin sincronización en la nube activada): **no es un bug** — es una animación deliberada de "conteo" en las cifras de KPI (`js/polish.js`, `animateKpiNumbers()`, 600ms de duración con easing), y mis primeras comprobaciones simplemente leían el DOM a mitad de la animación. Repetido esperando a que la animación termine (1,2s): la cifra es exacta en todos los casos. Se documenta aquí en vez de omitirlo para que quede constancia de que se investigó a fondo antes de descartarlo, no se asumió sin más.
+
+### Responsive — las 3 resoluciones
+
+Auditoría de overflow en **1440×900 / 1024×768 / 390×844** para los 4 módulos de Gestión: **0 hallazgos**.
+
+**No verificado en este bloque**: tablet vertical (768×1024), catalán/inglés, ni una revisión visual manual (capturas) de cada pantalla — auditoría automática de overflow, como en el Bloque 2.
+
+### Hallazgos
+
+**Ninguno que requiriera arreglo.** No se aplicó ningún cambio de código en este bloque.
+
+---
+
+✅ **Bloque completado: Gestión — continuar por Bloque 5 (Reservas y Pedidos Online)**
