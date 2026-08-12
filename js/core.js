@@ -220,7 +220,7 @@ function renderOwnerAccessFormHtml(){
         <label>${t('access.password')}</label>
         <input type="password" id="acc-owner-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')${isSetup?'confirmOwnerAccessSetup':'confirmOwnerAccess'}()">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="alert('DEBUG — clic detectado, isSetup=${isSetup}'); ${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
     </div>
   `;
 }
