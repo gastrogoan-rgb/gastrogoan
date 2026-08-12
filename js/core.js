@@ -1022,11 +1022,23 @@ function ggBizTenantId(code){
 // (existe en gastrogoan/issuedCodes). null si no se pudo comprobar (sin
 // conexión) — se distingue de "false" (comprobado y no existe) porque la
 // activación en sí decide qué hacer con cada caso de forma distinta.
+// Sin límite de tiempo, una conexión lenta o que se cuelga a medias (no un
+// error claro, sino sin respuesta) dejaba este paso esperando para siempre
+// sin ningún aviso — el botón de activación parecía "colgado" sin más. Con
+// este límite, pasados 12s se trata igual que "sin conexión" (activateBusinessLicense
+// ya sabe mostrar ese aviso), en vez de quedarse indefinidamente en silencio.
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve(null), ms))
+  ]);
+}
 async function verifyCodeIssuedOnPlatform(code){
-  const app = await getPlatformFirebaseApp();
+  const app = await withTimeout(getPlatformFirebaseApp(), 12000);
   if(!app) return null;
   try{
-    const snap = await app.database().ref('gastrogoan/issuedCodes/' + code).once('value');
+    const snap = await withTimeout(app.database().ref('gastrogoan/issuedCodes/' + code).once('value'), 12000);
+    if(snap === null) return null;
     return snap.exists();
   }catch(e){
     console.error('Error comprobando el código contra la plataforma', e);
