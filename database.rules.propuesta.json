@@ -19,7 +19,7 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
-              ".validate": "newData.hasChildren(['tipo', 'creadoEn']) && newData.child('tipo').isString() && (newData.child('tipo').val() === 'reserva' || newData.child('tipo').val() === 'pedido')"
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response')"
             }
           },
           "aforoHold": {
