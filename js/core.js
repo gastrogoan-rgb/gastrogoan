@@ -233,18 +233,8 @@ function renderOwnerAccessFormHtml(){
 async function confirmOwnerAccessSetup(){
   const code = document.getElementById('acc-owner-code').value.trim();
   const password = document.getElementById('acc-owner-pass').value.trim();
-  let lic, offline;
-  try{
-    ({lic, offline} = await activateBusinessLicense(code, password));
-  }catch(e){
-    alert('DEBUG — excepción al activar: ' + (e && e.message || e));
-    return;
-  }
-  if(!lic){
-    alert('DEBUG — código="' + code + '" contraseña="' + password + '" offline=' + offline + ' → ' + (offline ? 'no se pudo verificar contra la plataforma (conexión)' : 'código o contraseña incorrectos'));
-    showToast(t(offline ? 'access.licenseOffline' : 'access.badCredentials'));
-    return;
-  }
+  const {lic, offline} = await activateBusinessLicense(code, password);
+  if(!lic){ showToast(t(offline ? 'access.licenseOffline' : 'access.badCredentials')); return; }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   // "owner-setup" solo se ve cuando este dispositivo aún no tenía ningún
