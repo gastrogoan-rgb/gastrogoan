@@ -2,7 +2,7 @@
 
 > Pasada final completa: código + diseño + responsive + funcionalidad, bloque a bloque, con fixes aplicados sobre la marcha.
 
-**Estado**: 🔄 En curso — Bloques 1-4 completados, continuar por Bloque 5 (Reservas y Pedidos Online)
+**Estado**: 🔄 En curso — Bloques 1-5 completados, continuar por Bloque 6 (coherencia general)
 
 ---
 
@@ -231,3 +231,47 @@ Auditoría de overflow en **1440×900 / 1024×768 / 390×844** para los 4 módul
 ---
 
 ✅ **Bloque completado: Gestión — continuar por Bloque 5 (Reservas y Pedidos Online)**
+
+---
+
+## Bloque 5 — Reservas y Pedidos Online
+
+> Esta es la única cara pública de la app orientada al cliente final (no al hostelero), así que se ha tratado con más detalle que el resto, tal y como se pidió.
+
+Archivo: `reservagastrogoan.html` — página independiente, autocontenida, que se conecta a la plataforma compartida de GastroGoan (Firebase de producción) para leer los datos del negocio y enviar solicitudes de reserva/pedido.
+
+**Limitación del entorno de pruebas, declarada explícitamente**: este entorno no tiene acceso a un backend real, y por prudencia no se ha intentado escribir ni leer nada contra la Firebase de producción real (sería tocar datos compartidos de verdad). Para probar la lógica de la página sin ese riesgo, se bloquearon a propósito las peticiones de red hacia Firebase/gstatic con Puppeteer, y se simuló manualmente el estado `DB` tal y como lo dejaría `loadBusinessInfo()` tras una carga real — permite probar toda la lógica de validación, cálculo de aforo, construcción del menú y renderizado, sin tocar la nube real. Lo que **no** se ha podido probar de extremo a extremo por esta limitación: la llegada real de la solicitud a Firebase y su recepción por el listener del panel interno — para eso sí se ha hecho una revisión exhaustiva de código en su lugar (ver más abajo).
+
+### Código — revisión a fondo
+
+- **Cálculo de aforo** (`getAforoInfo`/`getAforoDisponible`): usa el mismo criterio de turno "cierre exclusivo salvo el último turno del día" que el panel interno (`getTurnoIndexForTime`, js/menu.js) — el comentario del propio código documenta que esto ya se corrigió en una sesión anterior para evitar un desajuste justo en la hora de cambio de turno.
+- **Reserva atómica de aforo** (`reserveAforoAtomic`) y **límite de pedidos por franja** (`reservePedidoSlotAtomic`): ambas usan transacciones reales de Firebase sobre un contador de "holds" independiente, específicamente para que dos clientes reservando casi a la vez no puedan juntos superar el aforo aunque ninguno de los dos lo viera en su momento — protección real contra condiciones de carrera, no solo una comprobación optimista.
+- **Envío de la solicitud** (`sendRequest`): empuja a `gastrogoan/public/{publicId}/requests`, que el panel interno escucha en tiempo real (`initPublicRequestsListener`, js/core.js) — confirmado leyendo ambos lados: al llegar una reserva, se busca automáticamente si el teléfono coincide con un cliente ya existente (para no perder alergias/fidelidad), se intenta asignar mesa automáticamente si hay una libre con plazas suficientes (si no, queda "pendiente" para que el personal solo tenga que elegir mesa), se envía el email de confirmación si se auto-asignó mesa, y la solicitud se elimina de la cola tras procesarla (`reqRef.remove()`) — sin duplicados ni reprocesamiento.
+- **Carta/menú realmente conectada**: `getActiveCartasConPlatos()`/`buildMenuHtml()` leen de `DB.cartas`/`DB.activeCartaIds` (los mismos datos que Oferta Gastronómica/Bebidas sincroniza), filtrando por `disponible!==false` — no es una carta de relleno desconectada.
+- **Interruptor de emergencia de pedidos** (`pedidosOnlineActivos`): si el negocio lo apaga desde el TPV, la página pública lo refleja al instante (ya sincronizado en vivo por el listener de `loadBusinessInfo`), sin que el cliente pueda seguir pidiendo.
+
+### Funcional — probado en vivo (con Firebase bloqueado a propósito, ver nota arriba)
+
+- **Formulario de reserva**: validación de campos obligatorios (nombre, teléfono, email con formato válido), consentimiento de privacidad obligatorio, y tres mensajes de error probados explícitamente y confirmados con el texto exacto que vería un cliente:
+  - Negocio cerrado ese día: *"El restaurante está cerrado el domingo. Por favor elige otra fecha."*
+  - Fuera de horario: *"El restaurante solo acepta reservas el lunes en este horario: 13:00–16:00 y 20:00–23:00. Por favor elige otra hora."*
+  - Sin plazas disponibles: *"Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad."*
+- **Formulario de pedido (Take Away/Delivery)**: renderiza correctamente la carta real (plato de prueba "Paella, 14,00€" con su selector de cantidad), carrito, formulario de datos, forma de pago.
+- **Resiliencia ante fallo de conexión real**: con Firebase completamente bloqueado (simulando estar sin red), la página muestra un mensaje de error claro ("No se ha podido conectar con el restaurante") en vez de quedarse en blanco o colgada.
+- Sin errores de JavaScript no capturados en ningún momento (los únicos errores de consola son los fallos de red esperados, provocados a propósito al bloquear Firebase).
+
+### Responsive — las 3 resoluciones, con capturas visuales en móvil
+
+Auditoría de overflow en **1440×900 / 1024×768 / 390×844** en las 3 pestañas (Reservar mesa / Take Away / Delivery): **0 hallazgos**.
+
+Capturas visuales tomadas en 390×844 (móvil, la que con más probabilidad usará un cliente final) para el formulario de reserva y el de pedido: diseño limpio, sin recortes, botones +/- de cantidad con buen tamaño táctil, campos de formulario legibles.
+
+**No verificado en este bloque**: tablet vertical (768×1024), inglés (solo se probó ES, aunque el catalán se confirmó ya funcionando en sesiones anteriores para esta misma página), ni el flujo real de pago con tarjeta (Redsys) — depende de una pasarela de pago real externa, fuera del alcance de lo que se puede probar en este entorno.
+
+### Hallazgos
+
+**Ninguno que requiriera arreglo.** No se aplicó ningún cambio de código en este bloque — la página pública ya estaba sólida, con protecciones reales contra condiciones de carrera y buena resiliencia ante fallos de red.
+
+---
+
+✅ **Bloque completado: Reservas y Pedidos Online — continuar por Bloque 6 (coherencia general)**
