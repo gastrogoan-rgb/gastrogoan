@@ -2879,6 +2879,12 @@ function resetEmployeePin(id){
 }
 
 function saveEmployee(id){
+  // El botón "Añadir/Editar empleado" ya está oculto a quien no sea
+  // propietario (.owner-strict), pero eso solo esconde el botón — esta
+  // comprobación es la que de verdad impide dar de alta un empleado o
+  // tocar canUnlockEdit (acceso a costes/márgenes) llamando a la función
+  // directamente sin ser el propietario.
+  if(!isOwnerSession()) return;
   const name = document.getElementById('emp-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const rol = document.getElementById('emp-rol').value.trim();

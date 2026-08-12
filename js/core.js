@@ -298,12 +298,19 @@ function changeOwnerAccessPassword(newPassword){
   setOwnerLogin(login.code, newPassword);
 }
 
-function findEmployeeMatch(employees, name, pin){
+// licenseCode es el código del negocio AL QUE PERTENECE el empleado que se
+// está comprobando — no tiene por qué coincidir con el negocio activo en
+// este dispositivo (ver confirmEmployeeAccess: el empleado puede estar
+// entrando a un negocio distinto del que ya tenía cargado, o a uno que este
+// dispositivo aún no conocía). El PIN se guardó hasheado con la sal de SU
+// propio negocio (hr.js: confirmNewPin/confirmFirstPinChange), así que hay
+// que verificarlo con esa misma sal, no con la del negocio activo global.
+function findEmployeeMatch(employees, name, pin, licenseCode){
   return (employees||[]).find(e => {
     if(e.active === false) return false;
     if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) return false;
     const storedPin = e.pin || '1234';
-    return storedPin.startsWith('H:') ? hashPin(pin) === storedPin : pin === storedPin;
+    return storedPin.startsWith('H:') ? hashPin(pin, licenseCode) === storedPin : pin === storedPin;
   });
 }
 
@@ -356,12 +363,14 @@ async function confirmEmployeeAccess(){
       if(!owner){ showToast(t('access.badCredentials')); return; }
       const newPin = prompt(t('access.newPinPrompt'));
       if(!newPin || !newPin.trim()){ return; }
-      owner.pin = newPin.trim();
+      if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
+      owner.pin = hashPin(newPin.trim(), localSlot.code);
+      owner.pinChanged = true;
       try{ await writeSlotDB(localSlot.id, slotData); }catch(e){ showToast(t('access.connectFailed')); return; }
       showToast(t('access.pinReset'));
       return;
     }
-    const match = findEmployeeMatch(slotData.employees, name, pin);
+    const match = findEmployeeMatch(slotData.employees, name, pin, localSlot.code);
     if(!match){ showToast(t('access.badCredentials')); return; }
     setAccessSession({type:'employee', employeeId: match.id, area: match.area||'cocina', slotId: localSlot.id});
     if(localSlot.id !== ACTIVE_SLOT){
@@ -384,7 +393,7 @@ async function confirmEmployeeAccess(){
   try{ remoteData = await fetchRemoteTenantDB(tenantId, fbConfig); }
   catch(e){ console.error('Error conectando con el negocio remoto', e); showToast(t('access.connectFailed')); return; }
   if(!remoteData){ showToast(t('access.badCredentials')); return; }
-  const match = findEmployeeMatch(remoteData.employees, name, pin);
+  const match = findEmployeeMatch(remoteData.employees, name, pin, code);
   if(!match){ showToast(t('access.badCredentials')); return; }
   let newSlotId;
   try{ newSlotId = await registerRemoteBusinessLocally(tenantId, code, remoteData); }
@@ -504,7 +513,7 @@ async function writeSlotDB(slotId, data){
    parentSlotId: slot del que se copian los datos (el negocio "padre").
    Si no se pasa, usa el slot activo. */
 async function addSucursal(parentSlotId){
-  const lic = promptBusinessLicense();
+  const lic = await promptBusinessLicense();
   if(!lic) return;
   parentSlotId = parentSlotId || ACTIVE_SLOT;
   const slots = getBusinessSlots();
@@ -729,7 +738,7 @@ function renderBsGroups(allSlots){
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
         </div>`;
     }
@@ -744,7 +753,7 @@ function renderBsGroups(allSlots){
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-            ${total>1 ? `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
+            ${total>1 ? `<button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(root.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>` : ''}
           </div>
         </div>
         ${sucursales.map(s => {
@@ -757,7 +766,7 @@ function renderBsGroups(allSlots){
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
               ${sActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}
-              <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
+              <button class="btn btn-sm btn-danger" style="min-width:44px;min-height:44px" onclick="event.stopPropagation();removeBusinessSlot('${escapeHtml(s.id)}')" title="${t('bs.remove')}"><i class="ti ti-trash"></i></button>
             </div>
           </div>`;
         }).join('')}
@@ -1162,7 +1171,7 @@ function showActivationGate(){
   const showBackBtn = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
-      <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
+      <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-tools-kitchen-2"></i></div>
       <h2 style="margin-bottom:4px">GastroGoan</h2>
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
@@ -1364,7 +1373,6 @@ function renderExternalConnectionsPromptStep(){
         <h2 style="margin-bottom:4px">${t(step.titleKey)}</h2>
       </div>
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:18px;text-align:left">
-        ${t(step.descKey)}<br><br>
         <strong>${t('gate.extConn.optional')}</strong> ${t('gate.extConn.alwaysThere')}
       </div>
       ${step.renderCard()}
@@ -1451,7 +1459,7 @@ function showFirebaseSetupGate(){
   const showBackBtnFb = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:560px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
+      <button onclick="${showBackBtnFb ? 'hideFirebaseSetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtnFb ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-cloud"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.setupCloud')}</h2>
@@ -1501,7 +1509,7 @@ function showNetlifySetupGate(){
   const showBackBtnNt = getBusinessSlots().length > 1;
   g.innerHTML = `
     <div style="max-width:520px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;margin:10px 0 30px;position:relative">
-      <button onclick="${showBackBtnNt ? 'hideNetlifySetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:16px;left:16px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> ${showBackBtnNt ? t('gate.businesses') : t('gate.exitSetup')}</button>
+      <button onclick="${showBackBtnNt ? 'hideNetlifySetupGate();showBusinessSelectScreen()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtnNt ? t('gate.businesses') : t('gate.exitSetup')}</button>
       <div style="text-align:center">
         <div style="width:54px;height:54px;border-radius:14px;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-world"></i></div>
         <h2 style="margin-bottom:4px">${t('gate.nt.title')}</h2>
@@ -3204,7 +3212,7 @@ function openCloudWizard(){
         <h3><i class="ti ti-cloud"></i> ${t('gate.setupCloud')}</h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
-      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
+      <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
       <div style="background:#F5F0E3;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:14px">
         ${t('gate.cloudIntro')}
       </div>
@@ -3228,9 +3236,9 @@ function openCloudWizard(){
       <h3><i class="ti ti-cloud"></i> ${t('gate.cloudModalTitle')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.name}</strong></p>
+    <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
     <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>
-    <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.key}</code>`)}</p>
+    <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <p style="font-size:13.5px;margin-bottom:8px"><strong><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</strong></p>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${t('mn.online.shareDesc')}${otrosServicios}${t('mn.online.shareDescEnd')}</p>
