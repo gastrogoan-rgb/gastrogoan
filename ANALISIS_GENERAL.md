@@ -2,7 +2,7 @@
 
 > Pasada final completa: código + diseño + responsive + funcionalidad, bloque a bloque, con fixes aplicados sobre la marcha.
 
-**Estado**: 🔄 En curso — Bloques 1-2 completados, continuar por Bloque 3 (Sala)
+**Estado**: 🔄 En curso — Bloques 1-3 completados, continuar por Bloque 4 (Gestión)
 
 ---
 
@@ -156,3 +156,36 @@ No se aplicó ningún cambio de código en este bloque.
 ---
 
 ✅ **Bloque completado: Cocina — continuar por Bloque 3 (Sala)**
+
+---
+
+## Bloque 3 — Sala
+
+> Nota de método: se pidió explícitamente subir el nivel de exhaustividad respecto al Bloque 2 ("dale caña"), así que aquí sí se hicieron pruebas funcionales en vivo completas (no solo lectura de código), corrigiendo el patrón de datos de prueba (usar `genId()` numérico para IDs de mesa en vez de strings inventados, y los nombres de campo reales verificados por grep antes de seedear) que causó falsos positivos en el Bloque 2.
+
+Módulos de este bloque: TPV, Reservas, Clientes, Oferta Gastronómica (Carta, vista bebidas), Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Stock, Pedidos, Horario del Personal, Distribución, Limpieza, Promoción.
+
+Los módulos **compartidos con Cocina** (Proveedores, Mega Lista, Escandallo, Fichas Técnicas, Stock, Pedidos, Horarios, Distribución, Limpieza — mismo código, misma vista, solo cambia la carpeta desde la que se accede) **no se han vuelto a probar aquí**: ya se verificaron en el Bloque 2 y son literalmente el mismo código ejecutándose, así que repetirlos habría sido tiempo duplicado sin valor añadido. Este bloque se centra en los módulos específicos de Sala: TPV, Reservas, Clientes, Carta (bebidas) y Promoción.
+
+### Funcional — verificado en vivo, de extremo a extremo
+
+- **TPV — ciclo de vida completo de un pedido de mesa**: abrir mesa → modal de comensales → confirmar apertura (`confirmOpenTableOrder`, crea el pedido con `status:'abierta'` y el nº de comensales correcto) → añadir plato → marcar todo entregado → total calculado correctamente (`orderTotal()` = 14€ para un plato de 14€, sin desviaciones de redondeo).
+- **Clientes**: creación bloqueada sin teléfono (confirmado en vivo: 0 clientes creados al intentarlo sin teléfono), creación correcta con teléfono. Bloqueo de nombre duplicado confirmado leyendo el código (`saveClient()`, js/app.js): usa `showToast()` + `return` — bloqueo duro, no solo aviso — coincide con el trabajo de una sesión anterior ("bloquear nombres duplicados y exigir nombre y apellidos").
+- **Reservas**: el modal de nueva reserva abre correctamente. Lógica de aforo por turno (`getReservedPeopleForTurno`, js/menu.js) revisada: cuenta reservas en estado pendiente/confirmada/**completada** — confirmado que el fix de una sesión anterior (el aforo no caía a 0 cuando el cliente llegaba) sigue intacto, no se ha regresionado.
+- **Sincronización pública de reservas** (`getReservasResumenForSync`, js/core.js): mismo criterio de estados (pendiente/confirmada/completada) que el cálculo de aforo interno — confirmado que el fix de sobre-reserva de una sesión anterior tampoco se ha regresionado.
+- **Promoción**: la vista carga sin errores, con calendario (día/semana/mes), filtros por cliente/responsable/estado, y el aviso de conectar redes sociales.
+- Sin errores de consola en ningún momento de todo el flujo.
+
+### Responsive — las 3 resoluciones
+
+Auditoría de overflow en **1440×900 / 1024×768 / 390×844** para los 5 módulos específicos de Sala (TPV, Reservas, Clientes, Carta, Promoción): **0 hallazgos** — sin overflow horizontal en ninguna combinación.
+
+**No verificado en este bloque** (reconocido explícitamente, no asumido): tablet vertical (768×1024), catalán/inglés en las pantallas específicas de Sala, ni una prueba en vivo de "Marchar vale"/dividir cuenta/cierre de caja con plataformas dentro de este bloque (esas funciones concretas ya se probaron y arreglaron en profundidad en sesiones anteriores de este mismo proyecto — el rediseño de las tarjetas de Para Llevar/Delivery, el flujo del propietario abriendo mesa, y el cierre de caja con ventas de plataforma se verificaron en su momento con Puppeteer y tests siguen en verde).
+
+### Hallazgos
+
+**Ninguno que requiriera arreglo.** No se aplicó ningún cambio de código en este bloque — el trabajo de sesiones anteriores en TPV, Reservas y Clientes se mantiene sólido, sin regresiones detectadas.
+
+---
+
+✅ **Bloque completado: Sala — continuar por Bloque 4 (Gestión)**
