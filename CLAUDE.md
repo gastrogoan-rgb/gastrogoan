@@ -173,11 +173,12 @@ Verificado con pruebas reales, no solo revisión de código: concurrencia genuin
 
 1. Subir `dist/` a gastrogoan.com (la prueba se hizo en Netlify Drop). Si el acceso fallara desde ese dominio, añadirlo en Firebase → Authentication → Settings → Dominios autorizados.
 2. Configurar en Stripe los **dos campos personalizados** que distinguen cliente nuevo de cliente que repite (ver `DOCS-INTERNO-vender.md`, sección 2). Sin ellos hay que adivinarlo en cada venta.
-3. Borrar la cuenta de prueba `pruebamia` desde la consola de Firebase (`gastrogoan/ownerNames` y `gastrogoan/ownerAuth`), y su código de `issuedCodes`/`codeClaims`.
-4. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
-5. Un pago real con **Redsys** (o su sandbox).
-6. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
-7. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
+3. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
+4. Un pago real con **Redsys** (o su sandbox).
+5. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
+6. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
+
+> La cuenta de prueba `pruebamia` **se deja a propósito**: sirve para verificar el alta completa tras cualquier cambio en el acceso, sin gastar un código real ni tocar datos de un cliente. Conviene marcarla como prueba en el registro de ventas del generador para no contarla como venta al revisar el CSV.
 
 ### Limitaciones asumidas conscientemente
 
