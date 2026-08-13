@@ -1,4 +1,8 @@
-# 💬 Mensajes de venta — GastroGoan
+<!--
+titulo: Mensajes de venta
+subtitulo: Textos listos para WhatsApp, email y redes
+kicker: GastroGoan · Material comercial
+-->
 
 Pricing: **100 € pago único** · sin suscripción · sin comisiones · para siempre.
 Enlace de compra (Stripe): `https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01`

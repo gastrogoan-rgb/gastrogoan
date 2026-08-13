@@ -1,4 +1,8 @@
-# 🔒 GastroGoan — Manual interno de venta (PRIVADO)
+<!--
+titulo: Manual interno de venta
+subtitulo: Cómo vender GastroGoan, emitir licencias y atender a un cliente
+kicker: GastroGoan · Uso interno
+-->
 
 > **NO compartas este documento ni los archivos marcados como PRIVADOS con ningún cliente.**
 > Quien tenga el generador de licencias puede crear claves gratis.

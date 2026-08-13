@@ -1,4 +1,8 @@
-# 🍽️ Bienvenido a GastroGoan
+<!--
+titulo: Bienvenido a GastroGoan
+subtitulo: Todo lo que necesitas para empezar, en unos minutos
+kicker: GastroGoan · Guía de bienvenida
+-->
 
 Gracias por confiar en GastroGoan. Acabas de sustituir un montón de apps con cuota mensual
 por **una sola aplicación que es tuya para siempre**. Aquí tienes todo para empezar en minutos.
