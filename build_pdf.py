@@ -144,14 +144,14 @@ pdf.set_text_color(*DARK)
 pdf.multi_cell(0, 6.5,
     "Sigue esta guía de principio a fin, en el orden indicado, sin saltarte pasos. "
     "No necesitas conocimientos técnicos: solo ir despacio y seguir cada paso tal y como se explica.\n\n"
-    "Al terminar el Paso 3, tu app estará completamente lista: con tu licencia activada, "
+    "Al terminar el Paso 3, tu app estará completamente lista: con tu negocio dado de alta, "
     "tu propia carta digital online y un código QR para que tus clientes reserven mesa o hagan pedidos desde el móvil.")
 
 pdf.ln(8)
 callout(pdf,
     "Antes de empezar, asegúrate de tener a mano: los dos archivos que te han enviado "
-    "(la app de gestión y el archivo \"reservagastrogoan.html\") y tu clave de licencia "
-    "personal (te la habrán dado por WhatsApp o email).")
+    "(la app de gestión y el archivo \"reservagastrogoan.html\"), tu usuario y PIN, y tu "
+    "código de negocio (te los habrán dado por WhatsApp o email).")
 
 pdf.ln(10)
 pdf.set_x(20)
@@ -160,7 +160,7 @@ pdf.set_text_color(*DARK)
 pdf.cell(0, 8, "Resumen de los 3 pasos:", ln=1)
 resumen = [
     ("1", "Sube los archivos a internet (Netlify)", "~10 min"),
-    ("2", "Activa tu licencia", "~2 min"),
+    ("2", "Entra y da de alta tu negocio", "~2 min"),
     ("3", "Configura tu nube (Firebase)", "~10 min"),
 ]
 pdf.set_font("DejaVu", "", 11)
@@ -224,33 +224,40 @@ callout(pdf,
 
 # ---------- PASO 2 ----------
 pdf.add_page()
-section_title(pdf, 2, "Activa tu licencia", "~2 minutos")
+section_title(pdf, 2, "Entra con tu cuenta y da de alta tu negocio", "~2 minutos")
 
 pdf.set_x(20)
 pdf.set_font("DejaVu", "", 10.5)
 pdf.multi_cell(0, 6,
-    "Cada copia de GastroGoan tiene una clave de licencia única, asociada a tu negocio. "
-    "Esta clave se te ha proporcionado por email (o WhatsApp) junto con esta guía.")
+    "Al comprar has recibido dos cosas distintas, y cada una sirve para algo:\n"
+    "  ·  Un usuario y un PIN: son TU cuenta. Con ellos entras desde cualquier "
+    "dispositivo (la tablet de la barra, tu móvil, el ordenador de la oficina).\n"
+    "  ·  Un código de negocio de 8 caracteres: es la licencia de este local. "
+    "Si algún día abres otro, comprarás otro código, pero tu cuenta seguirá siendo la misma.")
 pdf.ln(2)
 
 sub_step(pdf, "1", "Abre la dirección web de Netlify que has guardado en el Paso 1 "
     "(la primera vez tardará unos segundos en cargar).")
 
-sub_step(pdf, "2", "Automáticamente aparecerá una pantalla pidiéndote que elijas si eres "
-    "\"el/la propietario/a\" o \"empleado/a\". Si eres el dueño del negocio, elige "
-    "\"Soy el dueño/a\".")
+sub_step(pdf, "2", "Pulsa \"Acceso Propietarios\" y escribe tu usuario y tu PIN. "
+    "No importa si escribes el usuario con mayúsculas o con acentos: la app lo entiende igual. "
+    "Esta primera vez necesitas conexión a internet; después podrás entrar sin ella.")
 
-sub_step(pdf, "3", "A continuación, pega tu clave de licencia en el campo correspondiente "
-    "(puedes copiarla directamente del mensaje que te enviaron) y pulsa el botón para activarla.")
+sub_step(pdf, "3", "La app te propondrá cambiar el PIN por uno de 4 cifras que recuerdes "
+    "mejor. Es recomendable: el nuevo te valdrá en todos tus dispositivos.")
 
-sub_step(pdf, "4", "Si la clave es correcta, la app se desbloqueará y pasará automáticamente "
-    "al Paso 3 (configuración de la nube). Si te indica que la clave no es válida, "
-    "revisa que la has copiado completa, sin espacios al principio o al final.")
+sub_step(pdf, "4", "Verás la pantalla de negocios vacía, porque todavía no has dado de alta "
+    "ninguno. Pulsa \"Canjear negocio\", escribe tu código de 8 caracteres y confirma. "
+    "Si te dice que no es correcto, revisa que lo has copiado entero y sin espacios.")
+
+sub_step(pdf, "5", "Listo: tu local queda dado de alta y la app pasa sola al Paso 3 "
+    "(configuración de la nube), que es obligatorio para terminar.")
 
 callout(pdf,
-    "Guarda tu clave de licencia en un lugar seguro (notas del móvil, por ejemplo). "
-    "La necesitarás solo esta vez, pero conviene tenerla a mano por si en algún momento "
-    "necesitas reinstalar la app.")
+    "Guarda tu usuario, tu PIN y tu código en un lugar seguro (las notas del móvil, por "
+    "ejemplo). Si olvidas el PIN pero te queda algún dispositivo donde ya hubieras entrado, "
+    "puedes cambiarlo tú mismo sin escribirnos: escribe GGGG en la casilla del PIN y elige "
+    "uno nuevo.")
 
 # ---------- PASO 3 ----------
 pdf.add_page()
@@ -313,18 +320,22 @@ pdf.set_x(20)
 pdf.set_font("DejaVu", "", 10.5)
 pdf.set_text_color(*DARK)
 pdf.multi_cell(0, 6,
-    "Cuando quieras dar acceso a un camarero, cocinero o encargado, no necesitan ninguna "
-    "clave de licencia ni hacer nada de lo anterior. Solo tienes que:")
+    "Cuando quieras dar acceso a un camarero, cocinero o encargado, no necesitan tu cuenta "
+    "ni tu PIN, ni configurar nada. Solo tienes que:")
 pdf.ln(1)
 
-sub_step(pdf, "1", "Enviarles la misma dirección web de Netlify (la del Paso 1).")
+sub_step(pdf, "1", "Darles de alta en el módulo Personal de la app, con su nombre y su PIN.")
 
-sub_step(pdf, "2", "Al abrirla por primera vez, la app les preguntará si son "
-    "\"el/la propietario/a\" o \"empleado/a\": deben elegir \"Soy empleado/a\".")
+sub_step(pdf, "2", "Enviarles la misma dirección web de Netlify (la del Paso 1) junto con "
+    "el código de tu negocio, el de 8 caracteres.")
 
-sub_step(pdf, "3", "La app les pedirá la \"Clave de API\" y la \"URL de la base de datos\" "
-    "que guardaste en el Paso 3. Pégaselas (puedes enviárselas por WhatsApp) y listo: "
-    "su dispositivo quedará sincronizado con el resto del restaurante al instante.")
+sub_step(pdf, "3", "Que pulsen \"Acceso Empleados\" y escriban su nombre, su PIN y ese "
+    "código. La app encuentra sola tu restaurante y su dispositivo queda sincronizado con "
+    "el resto al instante, sin que tengan que copiar ningún dato técnico.")
+
+callout(pdf,
+    "Tus empleados NUNCA ven la Gestión Económica ni los ajustes de Mi Negocio: eso es "
+    "solo tuyo, y para entrar ahí hace falta tu cuenta de propietario.")
 
 pdf.ln(4)
 
@@ -357,16 +368,27 @@ faq_item(pdf,
 
 faq_item(pdf,
     "¿Puedo usar la app en varios dispositivos a la vez (móvil, tablet, ordenador)?",
-    "Sí. Abre la misma dirección web de Netlify en cada dispositivo. La primera vez que "
-    "entres en uno nuevo, sigue las instrucciones del apartado \"Compartir la app con tus "
-    "empleados\" de esta guía (pega los datos del Paso 3) y quedará sincronizado con los demás.")
+    "Sí. Abre la misma dirección web en cada dispositivo y entra con tu usuario y tu PIN. "
+    "Tus negocios aparecerán solos, sin tener que volver a canjear ningún código.")
 
 faq_item(pdf,
-    "¿Qué pasa si pierdo la clave de licencia o los datos del Paso 3?",
+    "¿Qué pasa si olvido mi PIN?",
+    "Si te queda algún dispositivo donde ya hubieras entrado, lo arreglas tú mismo: escribe "
+    "GGGG en la casilla del PIN y te dejará elegir uno nuevo, que te valdrá en todos tus "
+    "dispositivos. Si has perdido el PIN y todos los dispositivos a la vez, escríbenos: te "
+    "damos un PIN nuevo y recuperas tus locales volviendo a canjear tus códigos. No se pierde "
+    "ningún dato.")
+
+faq_item(pdf,
+    "¿Qué pasa si pierdo los datos del Paso 3?",
     "Dentro de la app, en el menú de Nube, puedes volver a consultar los datos de conexión "
-    "(Clave de API y URL de la base de datos) en cualquier momento. La clave de licencia "
-    "conviene guardarla aparte (notas del móvil, email) por si tuvieras que reinstalar la app "
-    "desde cero.")
+    "(Clave de API y URL de la base de datos) en cualquier momento.")
+
+faq_item(pdf,
+    "Voy a abrir otro local. ¿Tengo que crearme otra cuenta?",
+    "No. Tu cuenta es la misma para siempre. Compra otra licencia, te enviaremos solo un "
+    "código nuevo, y lo canjeas desde el botón \"Negocios\". Puedes abrirlo como local "
+    "independiente o como sucursal, que hereda carta, recetas y proveedores del primero.")
 
 faq_item(pdf,
     "¿Necesito saber programar o tener conocimientos técnicos?",
