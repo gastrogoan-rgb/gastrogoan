@@ -77,11 +77,11 @@ const ACCESS_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
 // La cuenta de propietario guardada en ESTE dispositivo:
 //   user    — nombre de usuario ya normalizado (ggOwnerUser)
 //   authKey — ruta de su nodo en la nube de plataforma, derivada del PIN
-//             con el que entró la primera vez. Se guarda porque de ahí
-//             cuelga su lista de negocios, y tiene que seguir siendo
-//             accesible aunque después cambie el PIN de este dispositivo.
-//   pinHash — el PIN que vale AHORA MISMO aquí, que puede ser distinto del
-//             que se le entregó al comprar (ver changeOwnerAccessPin).
+//             actual. De ahí cuelga su lista de negocios. Al cambiar el PIN
+//             el nodo se muda a la ruta nueva y esto se actualiza con ella
+//             (ver changeOwnerAccessPin).
+//   pinHash — el mismo PIN, hasheado, para poder validarlo sin internet en
+//             el día a día.
 function getOwnerLogin(){
   try{ return JSON.parse(localStorage.getItem(OWNER_LOGIN_LS)); }catch(e){ return null; }
 }
@@ -279,7 +279,11 @@ async function confirmOwnerAccess(){
     const newPin = prompt(t('access.newPasswordPrompt'));
     if(!newPin || !newPin.trim()) return;
     if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
-    changeOwnerAccessPin(newPin.trim());
+    // Muda la cuenta igual que un cambio normal: quien olvidó su PIN lo
+    // recupera desde cualquier aparato donde ya hubiera entrado, y el nuevo
+    // le vale también en el resto.
+    const res = await changeOwnerAccessPin(newPin.trim());
+    if(!res.ok){ showErr(res.reason === 'offline' ? 'access.pinChangeOffline' : 'access.badCredentials'); return; }
     showToast(t('access.passwordReset'));
     enterAsOwner();
     return;
@@ -304,16 +308,44 @@ async function confirmOwnerAccess(){
   enterAsOwner();
 }
 
-// Cambia el PIN de propietario de ESTE dispositivo. El usuario y el authKey
-// no cambian: el authKey es la ruta de la cuenta en la nube, derivada del
-// PIN con el que se entró la primera vez, y tiene que seguir siendo el
-// mismo para no perder de vista la lista de negocios. Por eso, en un
-// dispositivo NUEVO hay que volver a entrar con el PIN original que se
-// entregó al comprar; el PIN de aquí solo protege este aparato.
-function changeOwnerAccessPin(newPin){
+/* Cambia el PIN de propietario EN TODAS PARTES, no solo en este aparato.
+   Como la cuenta vive en una ruta derivada de usuario+PIN, cambiar el PIN
+   significa MUDAR el nodo entero a su ruta nueva, llevándose consigo la
+   lista de negocios.
+
+   El nodo nuevo se crea ANTES de borrar el viejo, a propósito: si se corta
+   la luz o el wifi a mitad, lo que queda es el PIN antiguo todavía
+   funcionando (y como mucho un nodo huérfano), nunca un cliente sin ningún
+   PIN que le sirva. Por eso el borrado del viejo no aborta la operación si
+   falla — a esas alturas el PIN nuevo ya vale.
+
+   Exige internet: es lo que permite que el PIN nuevo funcione también en el
+   móvil del socio o en la tablet de la barra. Devuelve {ok, reason}. */
+async function changeOwnerAccessPin(newPin){
   const login = getOwnerLogin();
-  if(!login) return;
-  setOwnerLogin(login.user, login.authKey, newPin);
+  if(!login || !login.user) return {ok: false, reason: 'nologin'};
+  const newAuthKey = ggOwnerAuthKey(login.user, newPin);
+  if(!newAuthKey) return {ok: false, reason: 'badpin'};
+  // Mismo PIN de siempre: no hay nada que mudar.
+  if(newAuthKey === login.authKey){
+    setOwnerLogin(login.user, login.authKey, newPin);
+    return {ok: true};
+  }
+  const app = await withTimeout(getPlatformFirebaseApp(), 12000);
+  if(!app) return {ok: false, reason: 'offline'};
+  try{
+    const oldRef = app.database().ref('gastrogoan/ownerAuth/' + login.authKey);
+    const snap = await withTimeout(oldRef.once('value'), 12000);
+    const payload = (snap && snap.val()) || {createdAt: Date.now()};
+    payload.user = login.user; // por si el nodo viniera sin él
+    await app.database().ref('gastrogoan/ownerAuth/' + newAuthKey).set(payload);
+    setOwnerLogin(login.user, newAuthKey, newPin);
+    try{ await oldRef.remove(); }catch(e){ console.error('No se pudo borrar la ruta antigua de la cuenta', e); }
+    return {ok: true};
+  }catch(e){
+    console.error('Error cambiando el PIN de la cuenta', e);
+    return {ok: false, reason: 'offline'};
+  }
 }
 
 // licenseCode es el código del negocio AL QUE PERTENECE el empleado que se
@@ -859,17 +891,24 @@ function promptChangeOwnerPassword(duringSetup){
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeOwnerPassPrompt()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="confirmChangeOwnerPassword()">${t('common.save')}</button>
+      <button class="btn btn-primary" id="owner-pin-save-btn" onclick="confirmChangeOwnerPassword()">${t('common.save')}</button>
     </div>
   `);
   setTimeout(()=>document.getElementById('owner-new-pass-1')?.focus(), 50);
 }
-function confirmChangeOwnerPassword(){
+async function confirmChangeOwnerPassword(){
   const p1 = document.getElementById('owner-new-pass-1').value.trim();
   const p2 = document.getElementById('owner-new-pass-2').value.trim();
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pin4digits')); return; }
   if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
-  changeOwnerAccessPin(p1);
+  // Cambiar el PIN muda la cuenta de sitio en la nube, así que tarda y puede
+  // fallar por falta de conexión: sin deshabilitar el botón se puede pulsar
+  // dos veces y lanzar dos mudanzas a la vez.
+  const btn = document.getElementById('owner-pin-save-btn');
+  if(btn){ btn.disabled = true; btn.textContent = t('gate.newLicenseChecking'); }
+  const {ok, reason} = await changeOwnerAccessPin(p1);
+  if(btn){ btn.disabled = false; btn.textContent = t('common.save'); }
+  if(!ok){ showToast(t(reason === 'offline' ? 'access.pinChangeOffline' : 'access.badCredentials')); return; }
   closeModal();
   showToast(t('msg.pinUpdated'));
   if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
@@ -1213,6 +1252,17 @@ function ggOwnerAuthKey(user, pin){
   if(!u || !p) return null;
   return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
 }
+// Identificador ESTABLE del dueño, derivado solo del usuario: no cambia
+// nunca, ni siquiera al cambiar el PIN. Es lo que se guarda en codeClaims
+// para saber de quién es cada código. Usar el authKey ahí sería un error
+// grave: cambia con cada cambio de PIN, así que el dueño se quedaría
+// bloqueado de su PROPIO negocio ("ese código ya está en uso en otra
+// cuenta") la primera vez que reinstalara tras cambiarlo.
+function ggOwnerId(user){
+  const u = ggOwnerUser(user);
+  if(!u) return null;
+  return ggOwnerDerive(u + _ggOwnerSecret() + '·owner', 5);
+}
 /* ============================================================
    LICENCIA v3 — comprobación contra la lista de códigos emitidos
    Cualquiera con el JS del cliente puede inventarse un código con la pinta
@@ -1278,22 +1328,24 @@ async function redeemBusinessCode(code){
   if(issued === false) return {lic: null, reason: 'unknown'};
 
   const lic = {code, tenantId: ggBizTenantId(code)};
-  const authKey = getOwnerAuthKey();
+  const login = getOwnerLogin();
   // Sin cuenta (dispositivo a medio configurar) se canjea igual: la lista
   // de negocios se vinculará en cuanto entre con su cuenta.
-  if(!authKey) return {lic, reason: null};
+  if(!login || !login.user) return {lic, reason: null};
+  const ownerId = ggOwnerId(login.user);
 
-  // Un código pertenece a UNA cuenta. Sin esto, un cliente podría pasarle
-  // su código a un conocido y tener los dos el mismo negocio pagando una
-  // sola licencia. La reserva es atómica: si dos cuentas lo intentan a la
-  // vez, solo una se lo queda.
+  // Un código pertenece a UN dueño. Sin esto, un cliente podría pasarle su
+  // código a un conocido y tener los dos el mismo negocio pagando una sola
+  // licencia. La reserva es atómica: si dos cuentas lo intentan a la vez,
+  // solo una se lo queda. Se guarda el ggOwnerId (estable), NO el authKey:
+  // ver el comentario de ggOwnerId.
   try{
     const app = await withTimeout(getPlatformFirebaseApp(), 12000);
     if(!app) return {lic: null, reason: 'offline'};
     const ref = app.database().ref('gastrogoan/codeClaims/' + code);
-    const result = await ref.transaction(current => current === null ? authKey : undefined);
-    const owner = result.committed ? authKey : result.snapshot.val();
-    if(owner && owner !== authKey) return {lic: null, reason: 'claimed'};
+    const result = await ref.transaction(current => current === null ? ownerId : undefined);
+    const owner = result.committed ? ownerId : result.snapshot.val();
+    if(owner && owner !== ownerId) return {lic: null, reason: 'claimed'};
   }catch(e){
     console.error('Error reservando el código para esta cuenta', e);
     return {lic: null, reason: 'offline'};

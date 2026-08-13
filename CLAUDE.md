@@ -40,6 +40,8 @@ js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
 
 **La identidad del dueño y la licencia de un negocio son cosas separadas.** El cliente compra una **cuenta** (usuario + PIN) y, dentro de ella, va canjeando un **código de negocio** por cada local. Ambos se emiten con `generador-licencias.html` (requiere iniciar sesión como admin `gastrogoan@gmail.com` — sin eso ni la cuenta ni el código sirven).
 
+Los dos pasos del generador son **independientes**: a un cliente que ya tiene cuenta y compra otro local se le genera **solo un código** (paso 2). El botón **"¿Ya tiene cuenta?"** consulta `ownerNames` para no equivocarse al vender.
+
 ### Cuenta de propietario (usuario + PIN)
 
 - El nombre se **normaliza** con `ggOwnerUser()`: minúsculas, sin acentos ni espacios (`Casa Paco` → `casapaco`). Así nadie se queda fuera por escribirlo distinto.
@@ -47,14 +49,15 @@ js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
 - ⚠️ **El PIN no se guarda en ningún sitio, ni hasheado.** Lo que se guarda es un nodo cuya **ruta** se deriva de usuario+PIN: `ggOwnerAuthKey()` → `gastrogoan/ownerAuth/{authKey}`. Entrar = leer esa ruta y ver si existe. Sin el PIN no se puede ni construir, y las reglas solo dan lectura a nivel de `$authKey` (nunca del padre), así que tampoco se puede listar para ir probando.
 - De ese mismo nodo cuelga `businesses/{tenantId}` = la lista de negocios del dueño, que es lo que hace que aparezcan solos en cualquier dispositivo (`syncOwnerBusinessList()`).
 - El login guarda `{user, authKey, pinHash}` en `gastrogoan_owner_login`. Solo la primera vez en cada dispositivo hace falta internet; después se valida contra `pinHash` en local.
-- ⚠️ **Cambiar el PIN es local a cada dispositivo** (`changeOwnerAccessPin`): el `authKey` se deriva del PIN **original**, así que en un dispositivo nuevo hay que volver a usar el que se entregó al comprar. Cambiar el PIN canónico exige reemitir la cuenta desde el generador.
+- **Cambiar el PIN vale en todos los dispositivos** (`changeOwnerAccessPin`): como la ruta se deriva del PIN, cambiarlo **muda el nodo entero** a la ruta nueva, con la lista de negocios dentro. Se crea el nodo nuevo **antes** de borrar el viejo a propósito: si se corta a mitad, lo que queda es el PIN antiguo funcionando, nunca un cliente sin ningún PIN válido. Exige internet.
+- ⚠️ **`ggOwnerId(user)` es el identificador ESTABLE del dueño** (solo del usuario, no del PIN) y es lo que se guarda en `codeClaims`. Usar el `authKey` ahí sería un error grave: al cambiar el PIN el dueño se quedaría bloqueado de su **propio** negocio con un "ese código ya está en uso en otra cuenta".
 
 ### Código de negocio
 
 - 8 caracteres, registrado en `gastrogoan/issuedCodes`. **Ya no lleva contraseña**: se calculaba a partir del propio código con un algoritmo que viaja en el JS del cliente, así que no demostraba nada.
 - `ggBizTenantId(code)` deriva el `tenantId`. `getPublicId()` deriva el id público (reservas) del tenantId.
 - Canjear exige **internet**: `redeemBusinessCode()` devuelve `{lic, reason}` con `reason` ∈ `offline` | `unknown` | `claimed`.
-- **Un código pertenece a una sola cuenta**: se reserva de forma atómica en `gastrogoan/codeClaims/{code}`. La misma cuenta sí puede volver a canjear el suyo (reinstalación).
+- **Un código pertenece a un solo dueño**: se reserva de forma atómica en `gastrogoan/codeClaims/{code}`, guardando el `ggOwnerId`. El mismo dueño sí puede volver a canjear el suyo (reinstalación, o tras cambiar de PIN).
 - **Revocación**: `checkLicenseRevocation()` lee `revoked-licenses.json` de GitHub. Es *fail-open* a propósito (sin internet no bloquea a nadie) y asíncrona, no bloquea el arranque.
 - **Código maestro `GGGG`**: se escribe en el campo del PIN para resetear el acceso (de propietario o el PIN de un empleado) sin perder datos. Solo funciona en un dispositivo donde esa cuenta ya entró alguna vez.
 
@@ -90,7 +93,7 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
 
 - `issuedCodes/$code`: lectura por cualquiera autenticado, escritura **solo** `gastrogoan@gmail.com`.
 - `ownerNames/$user`: igual — la reserva de nombres solo la escribe el generador.
-- `ownerAuth/$authKey`: lectura solo **a nivel de `$authKey`** (nunca del padre: si no, se podría listar y probar). El nodo lo crea el generador; el cliente solo puede escribir bajo `businesses/`.
+- `ownerAuth/$authKey`: lectura solo **a nivel de `$authKey`** (nunca del padre: si no, se podría listar y probar). El cliente puede crear un nodo **solo en una ruta libre** y borrar uno existente — es lo que permite mudar la cuenta al cambiar el PIN — y se le exige que el `user` sea un nombre ya vendido (existe en `ownerNames`), para que nadie llene la base de cuentas inventadas.
 - `codeClaims/$code`: cualquiera autenticado puede reservarlo **si está libre** (`!data.exists()`); solo el admin puede liberarlo.
 - `public/$publicId/requests/$id`: exige `type` (`reserva`|`pedido`|`nps_response`) y `createdAt`; no se puede sobrescribir una existente.
 - `public/$publicId/aforoHold` y `pedidosHold`: solo números 0–500 (impide manipular el aforo saltándose la app).

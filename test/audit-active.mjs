@@ -250,6 +250,31 @@ test('La ruta de la cuenta depende del PIN: sin el PIN correcto no se puede ni c
   assert.equal(s.ggOwnerAuthKey('casapaco', ''), null, 'sin PIN no hay ruta');
 });
 
+test('El identificador del dueño NO depende del PIN — si dependiera, cambiarlo le bloquearía de su propio código', () => {
+  const s = loadCore();
+  // ggOwnerId es lo que se guarda en codeClaims. Tiene que sobrevivir a un
+  // cambio de PIN, al revés que el authKey, que cambia a propósito.
+  assert.equal(s.ggOwnerId('casapaco'), s.ggOwnerId('Casa Paco'), 'debe normalizar igual que el resto');
+  assert.notEqual(s.ggOwnerId('casapaco'), s.ggOwnerId('otrobar'), 'dos dueños distintos, dos identificadores');
+  assert.notEqual(
+    s.ggOwnerAuthKey('casapaco', 'ABC234'), s.ggOwnerAuthKey('casapaco', '4321'),
+    'el authKey SÍ cambia con el PIN (es lo que hace que el PIN viejo deje de valer)',
+  );
+  assert.ok(s.ggOwnerId('casapaco').length >= 16);
+});
+
+await testAsync('Tras cambiar de PIN, el dueño sigue pudiendo canjear su propio código', async () => {
+  const fb = makeFakePlatformFirebase(['REAL0001']);
+  const antes = loadCore(fb);
+  antes.localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'casapaco', authKey:'VIEJA1111VIEJA1111VIEJA1', pinHash:'x'}));
+  assert.ok((await antes.redeemBusinessCode('REAL0001')).lic);
+  // Mismo usuario, authKey distinto: exactamente lo que queda tras cambiar el PIN.
+  const despues = loadCore(fb);
+  despues.localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'casapaco', authKey:'NUEVA2222NUEVA2222NUEVA2', pinHash:'x'}));
+  const {lic, reason} = await despues.redeemBusinessCode('REAL0001');
+  assert.ok(lic, `no debería bloquearse a sí mismo tras cambiar el PIN (reason=${reason})`);
+});
+
 await testAsync('Una cuenta que no existe en la plataforma NO deja entrar, aunque el usuario sea real', async () => {
   const s = loadCore(makeFakePlatformFirebase([]));
   const authKey = s.ggOwnerAuthKey('casapaco', 'ABC234');

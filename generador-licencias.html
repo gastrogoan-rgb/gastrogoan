@@ -51,7 +51,11 @@ td.key{font-family:monospace;font-size:11px}
     <h2>1 · Cuenta de propietario (usuario + PIN)</h2>
     <p class="muted" style="margin-bottom:12px">Se crea <strong>una sola vez por cliente</strong>, con el nombre de usuario que haya pedido al pagar. Con ella entra en la app desde cualquier dispositivo; los negocios se le añaden después con los códigos del paso 2.</p>
     <label>Nombre de usuario que ha pedido el cliente</label>
-    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()">
+    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()" oninput="document.getElementById('owner-check-status').textContent=''">
+    <div class="btns">
+      <button class="copy" onclick="checkOwnerName()">🔎 ¿Ya tiene cuenta?</button>
+    </div>
+    <p id="owner-check-status" class="muted" style="margin-top:8px"></p>
     <button class="gen" id="owner-btn" onclick="genOwner()">Crear cuenta de propietario</button>
     <p id="owner-status" class="muted" style="margin-top:8px"></p>
     <div id="owner-out" style="display:none">
@@ -69,6 +73,8 @@ td.key{font-family:monospace;font-size:11px}
     <p class="muted" style="margin-bottom:12px">Uno por cada local que compre. El cliente lo canjea desde dentro de la app, en la pantalla de negocios. <strong>Ya no lleva contraseña</strong>: el código es lo único que hace falta.</p>
     <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
     <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
+    <label style="margin-top:12px">Usuario de la cuenta a la que va (opcional, solo para tu registro)</label>
+    <input id="code-owner" type="text" placeholder="Ej: casapaco" onkeydown="if(event.key==='Enter')gen()">
     <button class="gen" id="gen-btn" onclick="gen()">Generar código de negocio</button>
     <p id="uniqueness-status" class="muted" style="margin-top:8px"></p>
     <div id="out" style="display:none">
@@ -85,7 +91,7 @@ td.key{font-family:monospace;font-size:11px}
     <h2>3 · Registro de ventas <span class="muted" id="count"></span></h2>
     <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente (se guarda en este navegador).</p>
     <table id="log-table" style="display:none">
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>PIN</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>PIN</th><th></th></tr></thead>
       <tbody id="log"></tbody>
     </table>
     <p class="muted" id="empty">Aún no has generado nada.</p>
@@ -176,6 +182,15 @@ function ggOwnerAuthKey(user, pin){
   const p = String(pin || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   if(!u || !p) return null;
   return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
+}
+// Identificador ESTABLE del dueño, derivado solo del usuario: no cambia ni
+// al cambiar el PIN. La app lo usa para saber de quién es cada código
+// (codeClaims). Aquí no se usa, pero se mantiene para que este bloque siga
+// siendo idéntico al de js/core.js.
+function ggOwnerId(user){
+  const u = ggOwnerUser(user);
+  if(!u) return null;
+  return ggOwnerDerive(u + _ggOwnerSecret() + '·owner', 5);
 }
 function generateOwnerPin(){ return ggRandomChars(6); }
 
@@ -367,6 +382,29 @@ async function claimOwnerAccount(rawName){
   return {error: 'Demasiados nombres parecidos ya en uso. Pídele al cliente otro nombre distinto.'};
 }
 
+/* ¿Este cliente ya tiene cuenta? Evita el error de cobrarle una cuenta
+   nueva a quien solo quería otro local -o al revés, darle un código suelto
+   a alguien que todavía no tiene dónde canjearlo-. Mira la reserva de
+   nombres, que es la fuente de verdad; el registro de ventas local solo
+   sirve de apoyo si cambiaste de ordenador. */
+async function checkOwnerName(){
+  const el = document.getElementById('owner-check-status');
+  const user = ggOwnerUser(document.getElementById('owner-name').value);
+  if(!user){ el.textContent = 'Escribe primero el nombre.'; return; }
+  el.textContent = `Consultando "${user}"...`;
+  const app = await getPlatformFirebaseApp();
+  if(!app){ el.textContent = '⚠️ Sin sesión de administrador: inicia sesión arriba para poder consultarlo.'; return; }
+  try{
+    const snap = await app.database().ref('gastrogoan/ownerNames/' + user).once('value');
+    el.textContent = snap.exists()
+      ? `⚠️ "${user}" YA tiene cuenta. Si solo ha comprado otro local, no crees otra: genera únicamente un código de negocio (paso 2).`
+      : `✅ "${user}" está libre: es un cliente nuevo, créale la cuenta y además un código de negocio.`;
+  }catch(e){
+    console.error('Error consultando el nombre', e);
+    el.textContent = '⚠️ No se pudo consultar (' + (e.message || e.code || 'error') + ').';
+  }
+}
+
 const LOG_KEY = 'gg_biz_sales_v3';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
@@ -404,7 +442,7 @@ async function genOwner(){
   const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te he enviado aparte.\n\nEl PIN lo puedes cambiar en cualquier momento desde la app.';
   document.getElementById('owner-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
   document.getElementById('owner-email').href = 'mailto:?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin });
+  sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user });
   saveSales();
   renderLog();
   btn.disabled = false;
@@ -422,7 +460,8 @@ async function gen(){
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
   document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
   if(!sales.some(s => s.value === code)){
-    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '' });
+    const paraUsuario = ggOwnerUser(document.getElementById('code-owner').value);
+    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '', owner: paraUsuario });
     saveSales();
   }
   renderLog();
@@ -447,12 +486,12 @@ function renderLog(){
   document.getElementById('export-row').style.display = has ? 'flex' : 'none';
   document.getElementById('count').textContent = has ? '· ' + sales.length + ' entrada' + (sales.length === 1 ? '' : 's') : '';
   document.getElementById('log').innerHTML = sales.map((s, i) =>
-    `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td><td class="key">${s.value}</td><td class="key">${s.pin || '—'}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
+    `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td><td class="key">${s.value}</td><td class="key">${s.owner || '—'}</td><td class="key">${s.pin || '—'}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
   ).join('');
 }
 
 function exportCSV(){
-  const csv = 'Fecha;Cliente;Tipo;Dato;PIN\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.pin || ''}`).join('\n');
+  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;PIN\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner || ''};${s.pin || ''}`).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'ventas-gastrogoan.csv';
