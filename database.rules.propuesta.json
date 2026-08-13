@@ -51,7 +51,7 @@
 
       "ownerNames": {
         "$user": {
-          ".read": "auth != null",
+          ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
           ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $user.length <= 40"
         }
       },
@@ -60,7 +60,6 @@
         "$authKey": {
           ".read": "auth != null && $authKey.length >= 16",
 
-          "//": "Cambiar el PIN muda el nodo entero a la ruta nueva derivada de ese PIN, para que el PIN nuevo valga en TODOS los dispositivos del dueño. Por eso el cliente necesita poder crear un nodo en una ruta libre y borrar el de la ruta vieja. Crear solo se permite si la ruta está libre (!data.exists()), así que nunca se puede pisar la cuenta de otro; y para dar con la ruta de alguien hay que saber su PIN, que es de donde sale. Se exige además que el 'user' sea un nombre ya vendido (existe en ownerNames), para que nadie pueda llenar la base de cuentas inventadas.",
           ".write": "auth != null && $authKey.length >= 16 && (auth.token.email === 'gastrogoan@gmail.com' || !newData.exists() || (!data.exists() && newData.hasChild('user') && root.child('gastrogoan/ownerNames').child(newData.child('user').val()).exists()))",
 
           "businesses": {
