@@ -1861,6 +1861,7 @@ async function activateLicenseFromGate(){
   // Que quede en la cuenta del dueño: así este negocio aparece solo en
   // cualquier otro dispositivo donde entre, sin volver a canjear el código.
   linkBusinessToOwnerAccount(lic.tenantId, lic.code, DB.business && DB.business.name);
+  updateActiveSlotName(DB.business && DB.business.name);
   hideActivationGate();
   showToast(t('msg.licenseActivated'));
   initCloud();

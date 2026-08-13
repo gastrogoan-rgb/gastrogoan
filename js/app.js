@@ -4815,6 +4815,12 @@ function saveBusiness(silent){
   DB.business.horario = horarioRechazado ? (DB.business.horario||newHorario) : newHorario;
   const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMin);
   saveDB();
+  // El selector de negocios mostraba siempre "Mi negocio", el nombre de
+  // relleno con el que nace el hueco: nadie sincronizaba el nombre real con
+  // él (updateActiveSlotName existía pero no la llamaba nadie). Con un solo
+  // negocio se notaba poco; con varios, todos se llamaban igual y no había
+  // forma de distinguirlos en la pantalla desde la que se elige.
+  updateActiveSlotName(DB.business.name);
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);
