@@ -150,11 +150,15 @@ body:not(.owner-session) .owner-strict{display:none !important}
    demasiadas columnas en pantallas anchas y el nombre del plato quedaba
    pisado por el botón (nombres largos como "Hamburguesa Clásica" no caben
    en esa anchura). Rejilla propia, más ancha, sin tocar el resto de la app. */
-/* align-items:start para que cada comanda ocupe solo lo que necesita: por
-   defecto la rejilla estira todas las tarjetas de una fila a la altura de
-   la más larga, y una comanda de un solo plato quedaba como un cuadro casi
-   vacío al lado de otra de tres tandas. */
-.grid-kds{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}
+/* Columnas en vez de rejilla: con una rejilla, una comanda larga (varias
+   tandas) marca la altura de TODA su fila, y las comandas cortas de al lado
+   dejaban un vacío enorme hasta la fila siguiente. Con columnas, cada
+   comanda se coloca justo debajo de la anterior, como un tablero de tickets
+   real, sin huecos muertos. El ancho mínimo de columna (280px) es el que
+   necesita "1 × Nombre del plato" con su botón de estado al lado; el
+   navegador decide cuántas caben, y en móvil queda 1 sola. */
+.grid-kds{display:block;columns:280px;column-gap:14px}
+.grid-kds>*{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:14px}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
@@ -920,7 +924,7 @@ td.wrap{white-space:normal}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
-  .grid-kds{grid-template-columns:1fr !important}
+  .grid-kds{columns:1 !important}
   .grid-personal{grid-template-columns:1fr !important}
   .grid-modules{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
