@@ -2891,7 +2891,21 @@ async function savePublicSlug(){
     if(oldSlug && oldSlug !== slug){
       app.database().ref('gastrogoan/publicSlugs/' + oldSlug).remove().catch(()=>{});
     }
-  }catch(e){ console.error('Error guardando el enlace personalizado', e); showToast(t('access.connectFailed')); return; }
+  }catch(e){
+    // La comprobación de arriba y esta escritura son dos pasos: entre medias,
+    // otro negocio puede haberse quedado con el mismo nombre. Quien pierda la
+    // carrera recibe un rechazo de las reglas, que sin esto se le contaba como
+    // "no se pudo conectar" — y se quedaría reintentando sin entender que el
+    // problema es que el nombre ya no está libre.
+    let ocupado = false;
+    try{
+      const ahora = await ref.once('value');
+      ocupado = !!ahora.val() && ahora.val() !== publicId;
+    }catch(_){}
+    console.error('Error guardando el enlace personalizado', e);
+    showToast(t(ocupado ? 'mn.online.slugTaken' : 'access.connectFailed'));
+    return;
+  }
   DB.business.publicSlug = slug;
   saveDB();
   showToast(t('mn.online.slugSaved'));
