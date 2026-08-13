@@ -74,19 +74,29 @@ const ACCESS_LAST_ACTIVITY_LS = 'gastrogoan_access_last_activity';
 // interrumpe pidiendo login de nuevo.
 const ACCESS_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
 
+// La cuenta de propietario guardada en ESTE dispositivo:
+//   user    — nombre de usuario ya normalizado (ggOwnerUser)
+//   authKey — ruta de su nodo en la nube de plataforma, derivada del PIN
+//             con el que entró la primera vez. Se guarda porque de ahí
+//             cuelga su lista de negocios, y tiene que seguir siendo
+//             accesible aunque después cambie el PIN de este dispositivo.
+//   pinHash — el PIN que vale AHORA MISMO aquí, que puede ser distinto del
+//             que se le entregó al comprar (ver changeOwnerAccessPin).
 function getOwnerLogin(){
   try{ return JSON.parse(localStorage.getItem(OWNER_LOGIN_LS)); }catch(e){ return null; }
 }
-// La contraseña del día a día puede ser distinta de la que vino con la
-// licencia (ver confirmOwnerAccessSetup/changeOwnerAccessPassword) — el
-// código en cambio es siempre el de la licencia real, no cambia.
-function setOwnerLogin(code, passwordPlain){
-  localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({code: code.toUpperCase(), passHash: hashPin(passwordPlain)}));
+function setOwnerLogin(user, authKey, pinPlain){
+  const u = ggOwnerUser(user);
+  localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({user: u, authKey, pinHash: hashPin(pinPlain, u)}));
 }
-function verifyOwnerLogin(code, passwordPlain){
+// Comprobación puramente local: una vez la cuenta se validó online al
+// entrar la primera vez en este dispositivo, las siguientes veces no hace
+// falta internet (un restaurante no puede quedarse sin poder abrir la caja
+// porque se le haya caído el wifi).
+function verifyOwnerLogin(user, pinPlain){
   const login = getOwnerLogin();
   if(!login) return false;
-  return login.code === code.trim().toUpperCase() && pinMatchesHash(passwordPlain, login.passHash);
+  return login.user === ggOwnerUser(user) && pinMatchesHash(pinPlain, login.pinHash, login.user);
 }
 
 // Si ha pasado más de ACCESS_INACTIVITY_TIMEOUT_MS desde el último toque
@@ -124,7 +134,7 @@ function clearAccessSession(){
   localStorage.removeItem(ACCESS_LAST_ACTIVITY_LS);
 }
 
-let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner' | 'owner-setup'
+let accessScreenMode = 'choice'; // 'choice' | 'employee' | 'owner'
 // Selector de idioma visible desde el primer instante, antes incluso de
 // identificarse — muy probable que la app se venda también a negocios que
 // no hablan español, así que hace falta poder elegir idioma nada más
@@ -167,7 +177,7 @@ function setAccessScreenMode(mode){
 }
 function renderAccessSelectScreenHtml(){
   if(accessScreenMode === 'employee') return renderEmployeeAccessFormHtml();
-  if(accessScreenMode === 'owner' || accessScreenMode === 'owner-setup') return renderOwnerAccessFormHtml();
+  if(accessScreenMode === 'owner') return renderOwnerAccessFormHtml();
   return `
     <div class="access-card">
       <div class="access-choice-list">
@@ -175,7 +185,7 @@ function renderAccessSelectScreenHtml(){
           <span class="aci"><i class="ti ti-users"></i></span>
           <span class="act"><b>${t('access.employeeBtn')}</b><small>${t('access.employeeHint')}</small></span>
         </button>
-        <button class="access-choice-btn secondary" onclick="setAccessScreenMode('${getOwnerLogin()?'owner':'owner-setup'}')">
+        <button class="access-choice-btn secondary" onclick="setAccessScreenMode('owner')">
           <span class="aci"><i class="ti ti-user-shield"></i></span>
           <span class="act"><b>${t('access.ownerBtn')}</b><small>${t('access.ownerHint')}</small></span>
         </button>
@@ -206,96 +216,104 @@ function renderEmployeeAccessFormHtml(){
   `;
 }
 function renderOwnerAccessFormHtml(){
-  const isSetup = accessScreenMode === 'owner-setup';
+  // Un solo formulario, sin el antiguo desdoble "primera vez / ya conocido":
+  // confirmOwnerAccess ya distingue solo si la cuenta hay que comprobarla
+  // online o basta con el PIN guardado aquí. El usuario se rellena con el
+  // último que entró en este dispositivo, que en un restaurante es
+  // prácticamente siempre el mismo.
+  const login = getOwnerLogin();
   return `
     <div class="access-card">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="showAccessSelectScreen()" title="${t('common.back')}"><i class="ti ti-arrow-left"></i></button>
       <div class="access-card-title">${t('access.ownerBtn')}</div>
-      <p class="access-card-lead">${isSetup ? t('access.ownerSetupDesc') : t('access.ownerDesc')}</p>
+      <p class="access-card-lead">${login ? t('access.ownerDesc') : t('access.ownerSetupDesc')}</p>
       <div class="field">
-        <label>${t('access.businessCode')}</label>
-        <input type="text" id="acc-owner-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" value="${isSetup ? '' : escapeHtml(getOwnerLogin()?.code||'')}">
+        <label>${t('access.ownerUser')}</label>
+        <input type="text" id="acc-owner-user" autocomplete="username" placeholder="${t('ph.ownerUser')}" style="font-size:18px;text-align:center" value="${escapeHtml(login?.user || '')}">
       </div>
       <div class="field">
-        <label>${t('access.password')}</label>
-        <input type="password" id="acc-owner-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')${isSetup?'confirmOwnerAccessSetup':'confirmOwnerAccess'}()">
+        <label>${t('access.ownerPin')}</label>
+        <input type="password" id="acc-owner-pin" autocomplete="current-password" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmOwnerAccess()">
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="${isSetup?'confirmOwnerAccessSetup()':'confirmOwnerAccess()'}">${t('common.unlock')}</button>
+      <div id="acc-owner-error" style="display:none;font-size:13px;color:var(--red);margin-top:2px"></div>
+      <button class="btn btn-primary" id="acc-owner-btn" style="width:100%;margin-top:6px" onclick="confirmOwnerAccess()">${t('common.unlock')}</button>
     </div>
   `;
 }
 
-// Primera vez en este dispositivo: se valida el código+contraseña que se
-// entregó al comprar la licencia (activateBusinessLicense), y esa misma
-// contraseña queda guardada como el acceso de propietario de este
-// dispositivo — se puede cambiar después desde el panel de negocios
-// (changeOwnerAccessPassword), sin tener que volver a escribir la de compra.
-async function confirmOwnerAccessSetup(){
-  const code = document.getElementById('acc-owner-code').value.trim();
-  const password = document.getElementById('acc-owner-pass').value.trim();
-  const {lic, offline} = await activateBusinessLicense(code, password);
-  if(!lic){ showToast(t(offline ? 'access.licenseOffline' : 'access.badCredentials')); return; }
-  localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
-  DB.license = lic;
-  // "owner-setup" solo se ve cuando este dispositivo aún no tenía ningún
-  // login de propietario guardado — es decir, la primera vez de verdad
-  // para este negocio en este dispositivo. Por si el slot activo llevaba
-  // restos de alguna prueba anterior (nube mal configurada, aviso de
-  // hosting ya descartado, tour ya visto...), se limpia todo eso para que
-  // la configuración inicial (nube, tour) se pida siempre de cero, sin
-  // arrastrar nada de negocios o pruebas anteriores en este mismo navegador.
-  delete DB.business.ownFirebase;
-  DB.business.netlifySetupDone = false;
-  DB.business.extConnPromptSeen = false;
-  DB.business.tourSeen = false;
-  saveDB();
-  const slots = getBusinessSlots();
-  const slot = slots.find(s => s.id === ACTIVE_SLOT);
-  if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
-  setOwnerLogin(lic.code, password);
+// Código maestro oculto de recuperación: si alguien olvida su PIN
+// (propietario o empleado), escribiéndolo en el campo del PIN se le pide
+// fijar uno nuevo en el momento, sin tener que contactar con soporte. Solo
+// vale para el PIN LOCAL de un dispositivo donde la cuenta ya entró alguna
+// vez — no sirve para colarse en una cuenta ajena. No se comunica a los
+// clientes.
+const MASTER_RESET_CODE = 'GGGG';
+
+// Entra de verdad como propietario, una vez la cuenta ya está validada
+// (online la primera vez en este dispositivo, o contra el PIN guardado las
+// siguientes).
+function enterAsOwner(){
   setAccessSession({type:'owner'});
   applyOwnerSessionEditRights();
   hideAccessSelectScreen();
+  if(continuePendingOwnerSetup()) return;
+  showBusinessSelectScreen();
+  // La lista de negocios de la cuenta puede tardar en llegar: la pantalla
+  // se pinta ya con lo que este dispositivo conoce y se repinta al volver.
+  syncOwnerBusinessList().then(() => {
+    const s = getAccessSession();
+    if(s && s.type === 'owner') showBusinessSelectScreen();
+  });
+}
+
+async function confirmOwnerAccess(){
+  const user = (document.getElementById('acc-owner-user')?.value || '').trim();
+  const pin = (document.getElementById('acc-owner-pin')?.value || '').trim();
+  const errEl = document.getElementById('acc-owner-error');
+  const showErr = key => { if(errEl){ errEl.textContent = t(key); errEl.style.display = 'block'; } else showToast(t(key)); };
+  if(!user || !pin){ showErr('access.badCredentials'); return; }
+
+  if(pin.toUpperCase() === MASTER_RESET_CODE){
+    const login = getOwnerLogin();
+    if(!login || login.user !== ggOwnerUser(user)){ showErr('access.badCredentials'); return; }
+    const newPin = prompt(t('access.newPasswordPrompt'));
+    if(!newPin || !newPin.trim()) return;
+    if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
+    changeOwnerAccessPin(newPin.trim());
+    showToast(t('access.passwordReset'));
+    enterAsOwner();
+    return;
+  }
+
+  // Camino rápido y sin internet: esta cuenta ya entró en este dispositivo.
+  if(verifyOwnerLogin(user, pin)){ enterAsOwner(); return; }
+
+  // Primera vez aquí (o PIN de la compra en un dispositivo donde ya se
+  // cambió por otro): hay que comprobar la cuenta contra la plataforma.
+  const btn = document.getElementById('acc-owner-btn');
+  if(btn){ btn.disabled = true; btn.textContent = t('gate.newLicenseChecking'); }
+  const authKey = ggOwnerAuthKey(user, pin);
+  const ok = await verifyOwnerAccountOnPlatform(authKey);
+  if(btn){ btn.disabled = false; btn.textContent = t('common.unlock'); }
+  if(ok === null){ showErr('access.licenseOffline'); return; }
+  if(!ok){ showErr('access.badCredentials'); return; }
+  setOwnerLogin(user, authKey, pin);
   initCloud();
   initPublicRequestsListener();
   checkLicenseRevocation();
-  linkBusinessToOwnerProfile(lic.tenantId, lic.tenantId, lic.code, DB.business && DB.business.name);
-  // Justo después de activar la licencia por primera vez, toca terminar el
-  // resto de la configuración inicial (aviso de hosting local si aplica,
-  // nube propia, tour) antes de dar por hecho que el negocio ya está listo.
-  if(continuePendingOwnerSetup()) return;
-  showBusinessSelectScreen();
-  syncOwnerBusinessList(lic.code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
+  enterAsOwner();
 }
-// Código maestro oculto de recuperación: si alguien olvida su contraseña
-// (propietario) o su PIN (empleado), escribiéndolo en el campo de
-// contraseña/PIN se le pide fijar uno nuevo en el momento, sin tener que
-// contactar con soporte. No se comunica a los clientes.
-const MASTER_RESET_CODE = 'GGGG';
-function confirmOwnerAccess(){
-  const code = document.getElementById('acc-owner-code').value.trim();
-  const password = document.getElementById('acc-owner-pass').value.trim();
-  if(password.toUpperCase() === MASTER_RESET_CODE){
-    if(!getOwnerLogin() || getOwnerLogin().code !== code.toUpperCase()){ showToast(t('access.badCredentials')); return; }
-    const newPassword = prompt(t('access.newPasswordPrompt'));
-    if(!newPassword || !newPassword.trim()) return;
-    if(!/^\d{4}$/.test(newPassword.trim())){ showToast(t('msg.pin4digits')); return; }
-    setOwnerLogin(code, newPassword.trim());
-    showToast(t('access.passwordReset'));
-  }else if(!verifyOwnerLogin(code, password)){ showToast(t('access.badCredentials')); return; }
-  setAccessSession({type:'owner'});
-  applyOwnerSessionEditRights();
-  hideAccessSelectScreen();
-  if(continuePendingOwnerSetup()) return;
-  showBusinessSelectScreen();
-  syncOwnerBusinessList(code).then(() => { if(getAccessSession() && getAccessSession().type === 'owner') showBusinessSelectScreen(); });
-}
-// Cambia la contraseña de acceso de propietario de ESTE dispositivo (el
-// código de negocio no cambia, sigue siendo el de la licencia).
-function changeOwnerAccessPassword(newPassword){
+
+// Cambia el PIN de propietario de ESTE dispositivo. El usuario y el authKey
+// no cambian: el authKey es la ruta de la cuenta en la nube, derivada del
+// PIN con el que se entró la primera vez, y tiene que seguir siendo el
+// mismo para no perder de vista la lista de negocios. Por eso, en un
+// dispositivo NUEVO hay que volver a entrar con el PIN original que se
+// entregó al comprar; el PIN de aquí solo protege este aparato.
+function changeOwnerAccessPin(newPin){
   const login = getOwnerLogin();
   if(!login) return;
-  setOwnerLogin(login.code, newPassword);
+  setOwnerLogin(login.user, login.authKey, newPin);
 }
 
 // licenseCode es el código del negocio AL QUE PERTENECE el empleado que se
@@ -447,15 +465,14 @@ function switchToBusiness(slotId){
 }
 
 // Registrar un negocio o sucursal nuevo exige una licencia nueva (comprada
-// aparte): pide el código+contraseña que se entrega en esa compra, igual
-// que al activar la app por primera vez.
-// Pide código + contraseña de una licencia nueva en un modal propio de la
-// app. Antes eran dos prompt() del navegador seguidos y un alert() si
-// fallaba: justo en el momento en que el cliente acaba de pagar otra
-// licencia, se le enseñaban tres ventanas grises del sistema, sin el
-// diseño del resto de la app y sin poder ver los dos campos a la vez para
-// repasarlos antes de enviar. Devuelve una promesa con la licencia válida,
-// o null si se cancela, para no cambiar cómo la usan sus llamadores.
+// aparte): pide el código que se entrega en esa compra, igual que al dar de
+// alta el primer negocio de la cuenta.
+// Se pide en un modal propio de la app. Antes eran prompt() del navegador
+// seguidos y un alert() si fallaba: justo en el momento en que el cliente
+// acaba de pagar otra licencia, se le enseñaban varias ventanas grises del
+// sistema, sin el diseño del resto de la app. Devuelve una promesa con la
+// licencia válida, o null si se cancela, para no cambiar cómo la usan sus
+// llamadores.
 function promptBusinessLicense(){
   return new Promise(resolve => {
     pendingLicensePromptResolve = resolve;
@@ -467,11 +484,7 @@ function promptBusinessLicense(){
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px">${t('gate.newLicenseDesc')}</p>
       <div class="field">
         <label>${t('access.businessCode')}</label>
-        <input type="text" id="new-lic-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase">
-      </div>
-      <div class="field">
-        <label>${t('access.password')}</label>
-        <input type="password" id="new-lic-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmBusinessLicensePrompt()">
+        <input type="text" id="new-lic-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmBusinessLicensePrompt()">
       </div>
       <div id="new-lic-error" style="display:none;font-size:13px;color:var(--red);margin-top:4px"></div>
       <div class="modal-footer">
@@ -528,19 +541,26 @@ function cancelBusinessLicensePrompt(){
   closeModal();
   if(resolve) resolve(null);
 }
+// Traduce el porqué de un canje fallido al aviso que ve el cliente. Los
+// tres casos se distinguen a propósito: "no existe" y "ya está en uso en
+// otra cuenta" llevan a acciones muy distintas por parte de quien lo lee.
+function redeemErrorKey(reason){
+  if(reason === 'offline') return 'access.licenseOffline';
+  if(reason === 'claimed') return 'gate.codeAlreadyClaimed';
+  return 'gate.newLicenseBad';
+}
 async function confirmBusinessLicensePrompt(){
   const code = (document.getElementById('new-lic-code')?.value || '').trim();
-  const password = (document.getElementById('new-lic-pass')?.value || '').trim();
   const errEl = document.getElementById('new-lic-error');
   const showErr = msg => { if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; } };
-  if(!code || !password){ showErr(t('gate.newLicenseMissing')); return; }
+  if(!code){ showErr(t('gate.newLicenseMissing')); return; }
   // La comprobación contra la plataforma tarda: sin deshabilitar el botón se
-  // puede pulsar dos veces y lanzar dos activaciones a la vez.
+  // puede pulsar dos veces y lanzar dos canjes a la vez.
   const btn = document.getElementById('new-lic-ok');
   if(btn){ btn.disabled = true; btn.textContent = t('gate.newLicenseChecking'); }
-  const {lic, offline} = await activateBusinessLicense(code, password);
+  const {lic, reason} = await redeemBusinessCode(code);
   if(!lic){
-    showErr(t(offline ? 'access.licenseOffline' : 'gate.newLicenseBad'));
+    showErr(t(redeemErrorKey(reason)));
     if(btn){ btn.disabled = false; btn.textContent = t('common.continue'); }
     return;
   }
@@ -557,7 +577,7 @@ async function addNewBusiness(){
   slots.push({ id, name: 'Nuevo negocio', code: lic.code });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(id), JSON.stringify(lic));
-  linkBusinessToOwnerProfile(getPrimaryTenantId(), lic.tenantId, lic.code, 'Nuevo negocio');
+  linkBusinessToOwnerAccount(lic.tenantId, lic.code, 'Nuevo negocio');
   switchToBusiness(id);
 }
 
@@ -689,7 +709,7 @@ async function addSucursal(parentSlotId){
   slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
-  linkBusinessToOwnerProfile(getPrimaryTenantId(), lic.tenantId, lic.code, nombre);
+  linkBusinessToOwnerAccount(lic.tenantId, lic.code, nombre);
   switchToBusiness(newId);
 }
 
@@ -705,6 +725,13 @@ function removeBusinessSlot(slotId){
   }
 
   indexedDB.deleteDatabase(slotIdbName(slotId));
+  // Sacarlo también de la cuenta en la nube: si solo se borrara de aquí,
+  // syncOwnerBusinessList lo volvería a añadir en el siguiente arranque y
+  // daría la sensación de que "no se deja borrar".
+  try{
+    const lic = JSON.parse(localStorage.getItem(slotLicenseKey(slotId)));
+    if(lic && lic.tenantId) unlinkBusinessFromOwnerAccount(lic.tenantId);
+  }catch(e){}
   localStorage.removeItem(slotLicenseKey(slotId));
   const remaining = slots.filter(s => s.id !== slotId);
   saveBusinessSlots(remaining.length ? remaining : [{id:'default', name:'Mi negocio'}]);
@@ -742,8 +769,40 @@ function showBusinessSelectScreen(){
 /* IDs de grupos actualmente expandidos en el selector */
 let _bsOpenGroups = new Set();
 
+// ¿Esta cuenta tiene ya algún negocio de verdad en este dispositivo? Un
+// slot sin `code` es solo el hueco vacío que existe desde el arranque
+// (getBusinessSlots siempre devuelve al menos uno), no un negocio canjeado.
+function ownerHasAnyBusiness(){
+  return getBusinessSlots().some(s => s.code);
+}
+
+// Canjea el primer negocio dentro del hueco que ya existe, en vez de crear
+// uno nuevo al lado: si no, el hueco vacío se quedaría para siempre en la
+// lista, encima del negocio recién dado de alta.
+function redeemFirstBusiness(){
+  hideBusinessSelectScreen();
+  showActivationGate();
+}
+
 function renderBusinessSelectScreenHtml(){
   const slots = getBusinessSlots();
+  // Cuenta nueva: todavía no ha canjeado ningún negocio. Sin este caso
+  // aparte se vería una lista con un "Mi negocio" fantasma que no lleva a
+  // ninguna parte, y los botones de "nuevo" y "sucursal" sin nada de lo que
+  // partir.
+  if(!ownerHasAnyBusiness()){
+    return `
+      <div class="bs-box">
+        <div class="bs-title">
+          <div class="splash-icon" style="position:static"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain;border-radius:14px"></div>
+          ${t('bs.title')}
+        </div>
+        <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
+        <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
+        <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+      </div>
+    `;
+  }
   // Pre-abrir el grupo que contiene el slot activo
   const activeSlot = slots.find(s => s.id === ACTIVE_SLOT);
   if(activeSlot?.parentId) _bsOpenGroups.add(activeSlot.parentId);
@@ -769,10 +828,10 @@ function renderBusinessSelectScreenHtml(){
     </div>
   `;
 }
-// La contraseña de la licencia (6 caracteres, letras y números) es difícil
-// de recordar de memoria — por eso, en cuanto el propietario la cambia por
-// la suya, se le obliga a que sea un PIN numérico de 4 dígitos, mucho más
-// fácil de recordar y de teclear cada vez. El código de negocio no cambia.
+// El PIN que se entrega al crear la cuenta (6 caracteres, letras y números)
+// es difícil de recordar de memoria — por eso, en cuanto el propietario lo
+// cambia por el suyo, se le obliga a que sea un PIN numérico de 4 dígitos,
+// mucho más fácil de recordar y de teclear cada vez. El usuario no cambia.
 // duringSetup=true solo cuando se llama desde la configuración inicial: al
 // cerrar el modal hay que reanudar los asistentes que falten. Desde Mi
 // Negocio (cambio voluntario, con la app ya configurada) NO debe reanudar
@@ -810,7 +869,7 @@ function confirmChangeOwnerPassword(){
   const p2 = document.getElementById('owner-new-pass-2').value.trim();
   if(!/^\d{4}$/.test(p1)){ showToast(t('msg.pin4digits')); return; }
   if(p1 !== p2){ showToast(t('msg.pinNoMatch')); return; }
-  changeOwnerAccessPassword(p1);
+  changeOwnerAccessPin(p1);
   closeModal();
   showToast(t('msg.pinUpdated'));
   if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
@@ -1087,14 +1146,6 @@ function _ggBizSecret(){
   const c = [117,117,197,112,119,136,197,64,62,64,68,197,127,65];
   return c.map(x => String.fromCharCode(x - 14)).join('');
 }
-function ggBizPassword(code){
-  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const secret = _ggBizSecret();
-  let h = ggLicHash(code + secret);
-  let pass = '', x = h;
-  for(let c = 0; c < 6; c++){ pass += A[x % 32]; x = Math.floor(x / 32); }
-  return pass;
-}
 function ggBizTenantId(code){
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const secret = _ggBizSecret() + '·tenant';
@@ -1108,13 +1159,67 @@ function ggBizTenantId(code){
   }
   return out.join('');
 }
+
 /* ============================================================
-   LICENCIA v2 — comprobación contra la lista de códigos emitidos
-   El par código+contraseña se puede recalcular por cualquiera que tenga
-   el JS del cliente (es la naturaleza de una app 100% cliente, no hay
-   forma de evitarlo del todo sin un backend). Lo que SÍ se puede evitar es
-   que ese cálculo por sí solo baste para activar la app: además tiene que
-   existir de verdad en "gastrogoan/issuedCodes" del proyecto Firebase
+   CUENTAS DE PROPIETARIO — usuario + PIN
+   Debe ser IDÉNTICO al de generador-licencias.html (mismo bloque) — si
+   cambias algo aquí, cámbialo también allí.
+
+   Antes, la identidad del dueño era "la primera licencia que compró": el
+   par código+contraseña servía a la vez de credencial y de negocio, así que
+   comprar un segundo local significaba otra credencial más que recordar, y
+   el "perfil de propietario" que agrupaba sus negocios colgaba de un
+   tenantId elegido por accidente. Ahora el dueño tiene UNA cuenta
+   (usuario + PIN) y los negocios se le van canjeando dentro.
+
+   El PIN no se guarda en ningún sitio, ni siquiera hasheado: lo que se
+   guarda en la nube de plataforma es un nodo cuya RUTA se deriva de
+   usuario+PIN (ggOwnerAuthKey). Comprobar el acceso es leer esa ruta y ver
+   si existe. Quien no sepa el PIN no puede ni construirla, y como las
+   reglas solo conceden lectura a nivel de $authKey (nunca del padre),
+   tampoco se puede listar el conjunto para ir probando: adivinar a ciegas
+   obliga a una petición de red por intento contra 32^6 ≈ mil millones.
+   ============================================================ */
+const GG_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin I, O, 0, 1: ilegibles al dictarlos
+// "Casa Paco", "casa paco" y "CASA PACÓ" tienen que ser el mismo usuario:
+// si no, un cliente que escriba su nombre con una mayúscula o un acento
+// distintos a los del día que lo compró se queda fuera sin entender nada.
+function ggOwnerUser(raw){
+  return String(raw || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos: pacó → paco
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+function _ggOwnerSecret(){
+  const c = [117,117,197,125,133,124,115,128,197,64,62,64,68,197,121,69];
+  return c.map(x => String.fromCharCode(x - 14)).join('');
+}
+// Misma construcción que ggBizTenantId (encadenar el hash y sacar grupos de
+// 4 caracteres), ya probada en producción para los tenantId.
+function ggOwnerDerive(input, groups){
+  const out = [];
+  let h = ggLicHash(input);
+  for(let g = 0; g < groups; g++){
+    h = ggLicHash(input + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += GG_ALPHABET[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
+}
+function ggOwnerAuthKey(user, pin){
+  const u = ggOwnerUser(user);
+  const p = String(pin || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(!u || !p) return null;
+  return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
+}
+/* ============================================================
+   LICENCIA v3 — comprobación contra la lista de códigos emitidos
+   Cualquiera con el JS del cliente puede inventarse un código con la pinta
+   correcta (es la naturaleza de una app 100% cliente, no hay forma de
+   evitarlo del todo sin un backend). Lo que SÍ se puede evitar es que eso
+   baste para dar de alta un negocio: además tiene que existir de verdad en
+   "gastrogoan/issuedCodes" del proyecto Firebase
    compartido de la plataforma (plataforma-gastrogoan — el mismo
    PLATFORM_FIREBASE_CONFIG/getPlatformFirebaseApp() de más abajo, que ya
    usa la app para el espejo público de reservas). Esa lista solo la
@@ -1150,34 +1255,50 @@ async function verifyCodeIssuedOnPlatform(code){
     return null;
   }
 }
-// Comprobación local pura (recalcula y compara) — necesaria pero, desde
-// que existe la lista de emitidos, ya NO suficiente por sí sola: úsala
-// solo como paso previo rápido dentro de activateBusinessLicense(), o para
-// revalidar una licencia ya guardada (isStoredLicenseValid), donde no hace
-// falta red porque la comprobación online ya se hizo una vez al activar.
-function activateBusinessLicenseLocal(code, password){
-  code = String(code||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-  password = String(password||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-  if(!code || !password) return null;
-  if(ggBizPassword(code) !== password) return null;
-  return {code, tenantId: ggBizTenantId(code)};
-}
-// Valida un par código+contraseña contra el cálculo local Y contra la
-// lista de códigos realmente emitidos. Devuelve {lic, offline} — lic es
-// null si no es válido; offline=true si no se pudo comprobar el código
-// contra la plataforma por falta de conexión (para poder avisar de forma
-// distinta a "código incorrecto"). La activación es un momento puntual y
-// deliberado (dar de alta un negocio nuevo), así que aquí SÍ se exige
-// conexión — a diferencia de la revocación de licencias ya activadas
-// (checkLicenseRevocation), que es fail-open a propósito para no dejar
-// tirado a un negocio que ya estaba usando la app sin wifi.
-async function activateBusinessLicense(code, password){
-  const lic = activateBusinessLicenseLocal(code, password);
-  if(!lic) return {lic: null, offline: false};
-  const issued = await verifyCodeIssuedOnPlatform(lic.code);
-  if(issued === null) return {lic: null, offline: true};
-  if(issued === false) return {lic: null, offline: false};
-  return {lic, offline: false};
+/* Canjea un código de negocio contra la cuenta del propietario que está
+   dentro ahora mismo. Sustituye a la antigua activación con código+
+   contraseña: la contraseña se calculaba a partir del propio código con un
+   algoritmo que viaja en el JS del cliente, así que cualquiera que tuviera
+   el código podía deducirla — no demostraba nada y solo era un dato más
+   que memorizar. Ahora la barrera real es doble y sí está del lado del
+   servidor: el código tiene que existir en issuedCodes (solo lo escribe el
+   generador) y no puede estar ya canjeado por OTRA cuenta.
+
+   Devuelve {lic, reason} — lic null si no se pudo canjear, y reason dice
+   por qué: 'offline' (no se pudo comprobar), 'unknown' (no existe) o
+   'claimed' (ya está en uso en otra cuenta). Aquí SÍ se exige conexión, a
+   diferencia de la revocación de licencias ya activas
+   (checkLicenseRevocation), que es fail-open a propósito para no dejar
+   tirado a un negocio que ya estaba trabajando sin wifi. */
+async function redeemBusinessCode(code){
+  code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(code.length !== 8) return {lic: null, reason: 'unknown'};
+  const issued = await verifyCodeIssuedOnPlatform(code);
+  if(issued === null) return {lic: null, reason: 'offline'};
+  if(issued === false) return {lic: null, reason: 'unknown'};
+
+  const lic = {code, tenantId: ggBizTenantId(code)};
+  const authKey = getOwnerAuthKey();
+  // Sin cuenta (dispositivo a medio configurar) se canjea igual: la lista
+  // de negocios se vinculará en cuanto entre con su cuenta.
+  if(!authKey) return {lic, reason: null};
+
+  // Un código pertenece a UNA cuenta. Sin esto, un cliente podría pasarle
+  // su código a un conocido y tener los dos el mismo negocio pagando una
+  // sola licencia. La reserva es atómica: si dos cuentas lo intentan a la
+  // vez, solo una se lo queda.
+  try{
+    const app = await withTimeout(getPlatformFirebaseApp(), 12000);
+    if(!app) return {lic: null, reason: 'offline'};
+    const ref = app.database().ref('gastrogoan/codeClaims/' + code);
+    const result = await ref.transaction(current => current === null ? authKey : undefined);
+    const owner = result.committed ? authKey : result.snapshot.val();
+    if(owner && owner !== authKey) return {lic: null, reason: 'claimed'};
+  }catch(e){
+    console.error('Error reservando el código para esta cuenta', e);
+    return {lic: null, reason: 'offline'};
+  }
+  return {lic, reason: null};
 }
 
 // Una licencia guardada es válida si su tenantId es el que de verdad se
@@ -1278,8 +1399,9 @@ const ONBOARDING_ROLE_LS = 'gastrogoan_onboarding_role';
 // nuevo es siempre algo que hace quien lo compró, así que se quitó el
 // selector "¿quién eres? dueño/empleado" — un empleado nunca llega aquí,
 // entra siempre por "Acceso Empleados" con nombre+PIN+código, sin licencia
-// que pegar. Reutiliza el mismo código+contraseña corto de la compra en vez
-// de la antigua clave larga.
+// que pegar. Basta con el código corto de la compra: la contraseña que lo
+// acompañaba se calculaba a partir del propio código, así que no demostraba
+// nada y solo era un dato más que memorizar.
 function showActivationGate(){
   if(document.getElementById('license-gate')) return;
   const g = document.createElement('div');
@@ -1294,9 +1416,7 @@ function showActivationGate(){
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:18px">${t('gate.lic.stepLabel')}</p>
       <div style="text-align:left">
         <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px"><i class="ti ti-key"></i> ${t('access.businessCode')} <span style="font-weight:400;color:var(--muted)">(${t('gate.lic.givenByVendor')})</span></label>
-        <input id="license-code-input" type="text" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">
-        <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:6px">${t('access.password')}</label>
-        <input id="license-password-input" type="text" placeholder="XXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase">
+        <input id="license-code-input" type="text" maxlength="8" placeholder="XXXXXXXX" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-family:monospace;font-size:16px;letter-spacing:2px;text-transform:uppercase" onkeydown="if(event.key==='Enter')activateLicenseFromGate()">
         <div id="license-error" style="display:none;background:#F5EBE7;color:#8A4A3B;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px"></div>
         <button id="license-activate-btn" onclick="activateLicenseFromGate()" style="width:100%;background:var(--brand-orange);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;margin-top:12px">${t('gate.lic.activateBtn')}</button>
       </div>
@@ -1644,14 +1764,22 @@ function confirmNetlifyDone(){
   DB.business.netlifySetupDone = true;
   saveDB();
   hideNetlifySetupGate();
-  if(!getLicense()) showActivationGate();
+  // Sin ningún negocio canjeado todavía, el siguiente paso es el selector
+  // vacío (de donde sale el canje), no el asistente de un negocio que aún
+  // no existe.
+  if(!ownerHasAnyBusiness()) showBusinessSelectScreen();
+  else if(!getLicense()) showActivationGate();
   else if(!getCloudConfig()) showFirebaseSetupGate();
   else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
     else if(!DB.business.tourSeen) promptAppTour();
 }
 function postponeNetlify(){
   hideNetlifySetupGate();
-  if(!getLicense()) showActivationGate();
+  // Sin ningún negocio canjeado todavía, el siguiente paso es el selector
+  // vacío (de donde sale el canje), no el asistente de un negocio que aún
+  // no existe.
+  if(!ownerHasAnyBusiness()) showBusinessSelectScreen();
+  else if(!getLicense()) showActivationGate();
   else if(!getCloudConfig()) showFirebaseSetupGate();
   else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
     else if(!DB.business.tourSeen) promptAppTour();
@@ -1659,14 +1787,13 @@ function postponeNetlify(){
 
 async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
-  const password = (document.getElementById('license-password-input').value || '').trim();
   const btn = document.getElementById('license-activate-btn');
   if(btn) btn.disabled = true;
-  const {lic, offline} = await activateBusinessLicense(code, password);
+  const {lic, reason} = await redeemBusinessCode(code);
   if(btn) btn.disabled = false;
   const err = document.getElementById('license-error');
   if(!lic){
-    err.textContent = t(offline ? 'gate.licenseOffline' : 'gate.invalidLicenseKey');
+    err.textContent = t(reason === 'offline' ? 'gate.licenseOffline' : redeemErrorKey(reason));
     err.style.display = 'block';
     return;
   }
@@ -1675,10 +1802,13 @@ async function activateLicenseFromGate(){
   saveDB();
   // El código de negocio de este slot es el mismo que el de la licencia —
   // es lo que se usará después para que los empleados entren desde
-  // "Acceso Empleados" sin tener que repetir la contraseña de la licencia.
+  // "Acceso Empleados".
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === ACTIVE_SLOT);
   if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
+  // Que quede en la cuenta del dueño: así este negocio aparece solo en
+  // cualquier otro dispositivo donde entre, sin volver a canjear el código.
+  linkBusinessToOwnerAccount(lic.tenantId, lic.code, DB.business && DB.business.name);
   hideActivationGate();
   showToast(t('msg.licenseActivated'));
   initCloud();
@@ -1702,10 +1832,14 @@ async function activateLicenseFromGate(){
 // continuar con el arranque normal de la app).
 function continuePendingOwnerSetup(){
   // Lo primero de todo, antes incluso del resto de la configuración
-  // inicial: si acaba de activar la licencia, se le anima a cambiar la
-  // contraseña que venía con ella justo al entrar, no al final del todo.
+  // inicial: si acaba de entrar por primera vez, se le anima a cambiar el
+  // PIN que venía con su cuenta justo al entrar, no al final del todo.
   if(getOwnerLogin() && !localStorage.getItem(OWNER_PASS_PROMPTED_LS)){ promptChangeOwnerPasswordFirstTime(); return true; }
   if(!DB.business.netlifySetupDone){ showNetlifySetupGate(); return true; }
+  // Cuenta recién creada, todavía sin ningún negocio canjeado: lo que toca
+  // es el selector de negocios vacío, con su botón de canjear — no el
+  // asistente de configuración de un negocio que aún no existe.
+  if(!ownerHasAnyBusiness()) return false;
   if(!getLicense()){ showActivationGate(); return true; }
   if(!getCloudConfig()){ showFirebaseSetupGate(); return true; }
   if(!DB.business.extConnPromptSeen){ showExternalConnectionsPrompt(); return true; }
@@ -2314,51 +2448,71 @@ async function fetchRemoteTenantDB(tenantId, fbConfig){
 }
 
 /* ============================================================
-   PERFIL DE PROPIETARIO — ver todos tus negocios en cualquier dispositivo
-   Registrar un negocio/sucursal nuevo SIEMPRE exige su propio código+
-   contraseña (se demuestra la licencia una vez, al vincularlo). Pero una
-   vez vinculado, no hace falta volver a demostrarlo en cada dispositivo:
-   basta con entrar como propietario con CUALQUIERA de tus negocios para
-   que aparezcan todos, sin tener que "Registrar" cada uno otra vez ahí.
-   Se apoya en la misma nube de plataforma que ya usa el login remoto de
-   empleados — un pequeño índice, nada de datos operativos del negocio.
+   CUENTA DE PROPIETARIO EN LA NUBE — tus negocios en cualquier dispositivo
+   Todo cuelga de un único nodo, gastrogoan/ownerAuth/{authKey}, cuya ruta
+   solo se puede construir sabiendo usuario+PIN (ver ggOwnerAuthKey):
+     { user, createdAt, businesses: { {tenantId}: {code, name} } }
+   Es a la vez la prueba de que la cuenta existe (si la ruta se puede leer,
+   el PIN es correcto) y la lista de negocios del dueño. Un negocio se
+   canjea UNA vez con su código; a partir de ahí aparece solo en cualquier
+   dispositivo donde entre con su cuenta.
+
+   La versión anterior usaba dos nodos, ownerLink y ownerProfiles, colgados
+   del tenantId del primer negocio comprado. Nunca llegaron a funcionar:
+   no tenían reglas publicadas, así que todas sus escrituras se rechazaban
+   en silencio (iban con .catch vacío). Este nodo sí las tiene.
    ============================================================ */
-// El negocio con el que activaste "Acceso Propietarios" por primera vez EN
-// ESTE DISPOSITIVO — sirve de "ancla" para vincular el resto de negocios
-// que vayas registrando aquí, da igual con cuál de todos vuelvas a entrar
-// luego (todos apuntan al mismo perfil).
-function getPrimaryTenantId(){
+function getOwnerAuthKey(){
   const login = getOwnerLogin();
-  return login ? ggBizTenantId(login.code) : null;
+  return login ? login.authKey : null;
 }
-// Vincula (newTenantId, newCode) al perfil de propietario "ancla" en la
-// nube de plataforma: ownerLink permite, dado CUALQUIER tenantId del
-// propietario, encontrar su perfil; ownerProfiles guarda la lista completa.
-function linkBusinessToOwnerProfile(anchorTenantId, tenantId, code, name){
-  if(!anchorTenantId || !tenantId) return;
+// ¿Existe de verdad esta cuenta? Devuelve true/false, o null si no se pudo
+// comprobar por falta de conexión — que es un caso distinto de "el PIN está
+// mal" y hay que poder avisar de otra forma.
+async function verifyOwnerAccountOnPlatform(authKey){
+  if(!authKey) return false;
+  const app = await withTimeout(getPlatformFirebaseApp(), 12000);
+  if(!app) return null;
+  try{
+    const snap = await withTimeout(app.database().ref('gastrogoan/ownerAuth/' + authKey).once('value'), 12000);
+    if(snap === null) return null;
+    return snap.exists();
+  }catch(e){
+    console.error('Error comprobando la cuenta de propietario', e);
+    return null;
+  }
+}
+// Añade (o actualiza el nombre de) un negocio en la lista de la cuenta.
+function linkBusinessToOwnerAccount(tenantId, code, name){
+  const authKey = getOwnerAuthKey();
+  if(!authKey || !tenantId) return;
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
-    app.database().ref('gastrogoan/ownerLink/' + tenantId).set(anchorTenantId).catch(()=>{});
-    app.database().ref('gastrogoan/ownerProfiles/' + anchorTenantId + '/businesses/' + tenantId).set({
+    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).set({
       code, name: name || ''
-    }).catch(e => console.error('Error vinculando el negocio al perfil de propietario', e));
+    }).catch(e => console.error('Error vinculando el negocio a la cuenta', e));
   }).catch(()=>{});
 }
-// Tras un login de propietario válido, mira si este negocio pertenece a un
-// perfil con más negocios vinculados y, si hay alguno que este dispositivo
-// todavía no conozca, lo da de alta aquí como una "ficha" ligera (código +
-// licencia) — sin descargar sus datos todavía: eso ya lo hace la
-// sincronización normal en cuanto se entra de verdad en ese negocio, igual
-// que con cualquier negocio nuevo. No hace falta volver a pedir su
-// contraseña: ya quedó demostrada una vez, al vincularlo.
-async function syncOwnerBusinessList(code){
+function unlinkBusinessFromOwnerAccount(tenantId){
+  const authKey = getOwnerAuthKey();
+  if(!authKey || !tenantId) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses/' + tenantId).remove()
+      .catch(e => console.error('Error desvinculando el negocio de la cuenta', e));
+  }).catch(()=>{});
+}
+// Tras entrar como propietario, trae los negocios de la cuenta que este
+// dispositivo todavía no conozca y los da de alta como "fichas" ligeras
+// (código + licencia), sin descargar sus datos: de eso ya se encarga la
+// sincronización normal en cuanto se entre de verdad en cada uno.
+async function syncOwnerBusinessList(){
+  const authKey = getOwnerAuthKey();
+  if(!authKey) return;
   try{
-    const tenantId = ggBizTenantId(code);
     const app = await getPlatformFirebaseApp();
     if(!app) return;
-    const linkSnap = await app.database().ref('gastrogoan/ownerLink/' + tenantId).once('value');
-    const anchorTenantId = linkSnap.val() || tenantId;
-    const bizSnap = await app.database().ref('gastrogoan/ownerProfiles/' + anchorTenantId + '/businesses').once('value');
+    const bizSnap = await app.database().ref('gastrogoan/ownerAuth/' + authKey + '/businesses').once('value');
     const businesses = bizSnap.val() || {};
     const slots = getBusinessSlots();
     let changed = false;

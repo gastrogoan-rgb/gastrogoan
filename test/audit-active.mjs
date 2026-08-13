@@ -53,28 +53,60 @@ function makeFakeLocalStorage(){
 }
 
 // Simula el proyecto Firebase compartido de la plataforma
-// (plataforma-gastrogoan) con una "lista blanca" de códigos realmente
-// emitidos por generador-licencias.html — para probar de verdad que
-// activateBusinessLicense() ya exige estar en esta lista, no solo que el
+// (plataforma-gastrogoan): una "lista blanca" de códigos realmente emitidos
+// por generador-licencias.html y las cuentas de propietario creadas ahí
+// mismo — para probar de verdad que redeemBusinessCode() exige estar en esa
+// lista y que el acceso de propietario comprueba la cuenta, no solo que el
 // cálculo local cuadre.
-function makeFakePlatformFirebase(issuedCodes){
+//
+// Es un árbol clave→valor en memoria con las cuatro operaciones que usa la
+// app (once/set/remove/transaction), no solo lecturas: hace falta para
+// probar el canje de un código, que ESCRIBE la reserva en codeClaims.
+function makeFakePlatformDb(initial){
+  const data = new Map(Object.entries(initial || {}));
   return {
-    app: () => { throw new Error('no default platform app yet'); },
-    initializeApp: () => ({
-      auth: () => ({
-        currentUser: {},
-        signInAnonymously: async () => {},
-      }),
-      database: () => ({
-        ref: (path) => ({
-          once: async (event) => {
-            const code = path.split('/').pop();
-            return { exists: () => issuedCodes.has(code) };
+    data,
+    ref(path){
+      return {
+        once: async () => ({
+          exists: () => data.has(path),
+          val: () => {
+            if(data.has(path)) return data.get(path);
+            // Lectura de una rama entera (p.ej. .../businesses): se
+            // reconstruye a partir de las hojas, como haría Firebase.
+            const prefix = path + '/';
+            const out = {};
+            for(const [k, v] of data) if(k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+            return Object.keys(out).length ? out : null;
           },
         }),
-      }),
+        set: async (v) => { data.set(path, v); },
+        remove: async () => { data.delete(path); },
+        transaction: async (fn) => {
+          const current = data.has(path) ? data.get(path) : null;
+          const next = fn(current);
+          const committed = next !== undefined;
+          if(committed) data.set(path, next);
+          return { committed, snapshot: { val: () => (data.has(path) ? data.get(path) : null) } };
+        },
+      };
+    },
+  };
+}
+function makeFakePlatformFirebase(issuedCodes, extra){
+  const initial = {};
+  for(const c of (issuedCodes || [])) initial['gastrogoan/issuedCodes/' + c] = {issuedAt: 1};
+  Object.assign(initial, extra || {});
+  const db = makeFakePlatformDb(initial);
+  const stub = {
+    app: () => { throw new Error('no default platform app yet'); },
+    initializeApp: () => ({
+      auth: () => ({ currentUser: {}, signInAnonymously: async () => {} }),
+      database: () => db,
     }),
   };
+  stub._db = db;
+  return stub;
 }
 
 function loadCore(firebaseStub){
@@ -131,7 +163,7 @@ async function testAsync(name, fn) {
   }
 }
 
-console.log('--- A. Licencias: tras el fix del 10/08/2026, ¿sigue bastando con recalcular código+contraseña? ---\n');
+console.log('--- A. Licencias: ¿basta con inventarse un código para dar de alta un negocio? ---\n');
 
 test('El secreto de firma es una función pura extraíble del propio JS del cliente (esto no ha cambiado, es inherente a una app 100% cliente)', () => {
   const sandbox = loadCore();
@@ -140,32 +172,103 @@ test('El secreto de firma es una función pura extraíble del propio JS del clie
   assert.ok(secret.length > 5);
 });
 
-await testAsync('FIX B1: un código+contraseña "correctos" pero que NO se emitió desde generador-licencias.html ahora se RECHAZA', async () => {
-  const issuedCodes = new Set(['REAL0001']); // solo este código "se vendió de verdad"
-  const sandbox = loadCore(makeFakePlatformFirebase(issuedCodes));
-  const forgedCode = 'FORJADO1'; // cualquier string, recalculado sin pasar por el generador
-  const forgedPassword = sandbox.ggBizPassword(forgedCode);
-  const {lic, offline} = await sandbox.activateBusinessLicense(forgedCode, forgedPassword);
-  assert.equal(lic, null, 'la licencia forjada debería ser rechazada — antes del fix se aceptaba');
-  assert.equal(offline, false, 'se pudo comprobar contra la plataforma (no es un falso negativo por desconexión)');
-  console.log(`   → Licencia forjada (${forgedCode}) correctamente rechazada: no está en issuedCodes`);
+await testAsync('FIX B1: un código que NO se emitió desde generador-licencias.html se RECHAZA', async () => {
+  const sandbox = loadCore(makeFakePlatformFirebase(['REAL0001'])); // solo este se "vendió de verdad"
+  const {lic, reason} = await sandbox.redeemBusinessCode('FORJADO1');
+  assert.equal(lic, null, 'un código inventado no debería poder canjearse');
+  assert.equal(reason, 'unknown', 'se pudo comprobar contra la plataforma (no es un falso negativo por desconexión)');
+  console.log('   → Código inventado (FORJADO1) correctamente rechazado: no está en issuedCodes');
 });
 
-await testAsync('Un código que SÍ se emitió desde el generador se activa con normalidad', async () => {
-  const issuedCodes = new Set(['REAL0001']);
-  const sandbox = loadCore(makeFakePlatformFirebase(issuedCodes));
-  const password = sandbox.ggBizPassword('REAL0001');
-  const {lic} = await sandbox.activateBusinessLicense('REAL0001', password);
-  assert.ok(lic, 'un código realmente emitido debería activarse');
+await testAsync('Un código que SÍ se emitió desde el generador se canjea con normalidad', async () => {
+  const sandbox = loadCore(makeFakePlatformFirebase(['REAL0001']));
+  const {lic, reason} = await sandbox.redeemBusinessCode('REAL0001');
+  assert.ok(lic, 'un código realmente emitido debería canjearse');
   assert.equal(lic.code, 'REAL0001');
+  assert.equal(reason, null);
 });
 
-await testAsync('Sin conexión con la plataforma, la activación falla de forma distinguible (offline:true), no se acepta a ciegas', async () => {
+await testAsync('Sin conexión con la plataforma, el canje falla de forma distinguible (offline), no se acepta a ciegas', async () => {
   const sandbox = loadCore(undefined); // sin `firebase` global = sin conexión posible
-  const password = sandbox.ggBizPassword('CUALQUIERA');
-  const {lic, offline} = await sandbox.activateBusinessLicense('CUALQUIERA', password);
+  const {lic, reason} = await sandbox.redeemBusinessCode('CUALQUIE'); // 8 caracteres, como todos los emitidos
   assert.equal(lic, null);
-  assert.equal(offline, true, 'debe distinguirse de "código incorrecto" para poder avisar bien al usuario');
+  assert.equal(reason, 'offline', 'debe distinguirse de "código incorrecto" para poder avisar bien al usuario');
+});
+
+await testAsync('Un código con una longitud imposible se descarta sin consultar la red — decir "no hay conexión" ahí sería engañoso', async () => {
+  const sandbox = loadCore(undefined);
+  const {reason} = await sandbox.redeemBusinessCode('CORTO');
+  assert.equal(reason, 'unknown');
+});
+
+await testAsync('Un código ya canjeado por OTRA cuenta se rechaza — no se puede compartir una licencia entre dos dueños', async () => {
+  const fb = makeFakePlatformFirebase(['REAL0001']);
+  // Cuenta A canjea el código
+  const a = loadCore(fb);
+  a.localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'casapaco', authKey:'AAAA1111AAAA1111AAAA1111', pinHash:'x'}));
+  const {lic: licA} = await a.redeemBusinessCode('REAL0001');
+  assert.ok(licA, 'la primera cuenta sí debe poder canjearlo');
+
+  // Cuenta B, con el mismo código, contra la MISMA plataforma
+  const b = loadCore(fb);
+  b.localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'otrobar', authKey:'BBBB2222BBBB2222BBBB2222', pinHash:'x'}));
+  const {lic: licB, reason} = await b.redeemBusinessCode('REAL0001');
+  assert.equal(licB, null, 'una segunda cuenta no debería poder canjear el mismo código');
+  assert.equal(reason, 'claimed');
+  console.log('   → El código queda reservado para la cuenta que lo canjeó primero (codeClaims)');
+});
+
+await testAsync('La misma cuenta puede volver a canjear su propio código (reinstalación) sin quedarse fuera', async () => {
+  const fb = makeFakePlatformFirebase(['REAL0001']);
+  const login = JSON.stringify({user:'casapaco', authKey:'AAAA1111AAAA1111AAAA1111', pinHash:'x'});
+  const a = loadCore(fb);
+  a.localStorage.setItem('gastrogoan_owner_login', login);
+  await a.redeemBusinessCode('REAL0001');
+  const b = loadCore(fb); // "otro dispositivo", misma cuenta
+  b.localStorage.setItem('gastrogoan_owner_login', login);
+  const {lic, reason} = await b.redeemBusinessCode('REAL0001');
+  assert.ok(lic, 'su propio código no puede bloquearle a él mismo');
+  assert.equal(reason, null);
+});
+
+console.log('\n--- A bis. Cuentas de propietario: usuario + PIN ---\n');
+
+test('El usuario se normaliza: mayúsculas, acentos y espacios no dejan a nadie fuera de su propia cuenta', () => {
+  const s = loadCore();
+  const esperado = 'casapaco';
+  for(const variante of ['Casa Paco', 'casa paco', 'CASA PACÓ', '  Casa   Paco  ', 'Càsa-Paco!'])
+    assert.equal(s.ggOwnerUser(variante), esperado, `"${variante}" debería normalizarse a ${esperado}`);
+});
+
+test('La ruta de la cuenta depende del PIN: sin el PIN correcto no se puede ni construir', () => {
+  const s = loadCore();
+  const buena = s.ggOwnerAuthKey('Casa Paco', 'ABC234');
+  assert.equal(s.ggOwnerAuthKey('casapaco', 'abc234'), buena, 'debe ser estable frente a la forma de escribirlo');
+  assert.notEqual(s.ggOwnerAuthKey('casapaco', 'ABC235'), buena, 'un PIN distinto debe dar otra ruta');
+  assert.notEqual(s.ggOwnerAuthKey('otrobar', 'ABC234'), buena, 'otro usuario debe dar otra ruta');
+  assert.ok(buena.length >= 16, 'la ruta debe ser larga para no poder adivinarse');
+  assert.equal(s.ggOwnerAuthKey('casapaco', ''), null, 'sin PIN no hay ruta');
+});
+
+await testAsync('Una cuenta que no existe en la plataforma NO deja entrar, aunque el usuario sea real', async () => {
+  const s = loadCore(makeFakePlatformFirebase([]));
+  const authKey = s.ggOwnerAuthKey('casapaco', 'ABC234');
+  assert.equal(await s.verifyOwnerAccountOnPlatform(authKey), false);
+});
+
+await testAsync('Una cuenta creada por el generador sí deja entrar, y solo con SU PIN', async () => {
+  const s = loadCore(makeFakePlatformFirebase([], {
+    // lo que habría escrito generador-licencias.html al crear la cuenta
+    ['gastrogoan/ownerAuth/' + loadCore().ggOwnerAuthKey('casapaco', 'ABC234')]: {user:'casapaco', createdAt: 1},
+  }));
+  assert.equal(await s.verifyOwnerAccountOnPlatform(s.ggOwnerAuthKey('casapaco', 'ABC234')), true);
+  assert.equal(await s.verifyOwnerAccountOnPlatform(s.ggOwnerAuthKey('casapaco', 'ZZZ999')), false,
+    'con otro PIN la ruta es otra y no existe: no se entra');
+});
+
+await testAsync('Sin conexión, comprobar la cuenta devuelve null (no "PIN incorrecto") para poder avisar bien', async () => {
+  const s = loadCore(undefined);
+  assert.equal(await s.verifyOwnerAccountOnPlatform('AAAA1111AAAA1111AAAA1111'), null);
 });
 
 test('Una licencia YA guardada localmente se revalida sin red (isStoredLicenseValid) — así el día a día sigue funcionando offline', () => {
@@ -178,18 +281,20 @@ test('Una licencia YA guardada localmente se revalida sin red (isStoredLicenseVa
 console.log('\n--- B. ¿La misma licencia sirve para "negocios" (tenants) distintos sin límite de dispositivos? ---\n');
 
 await testAsync('El mismo código produce SIEMPRE el mismo tenantId — sigue sin haber límite de instalaciones (B2, todavía abierto)', async () => {
-  const issuedCodes = new Set(['MISMOCODIGO']);
-  const password = 'X'; // se recalcula abajo por instancia, la password real es determinista igualmente
-  const sandboxA = loadCore(makeFakePlatformFirebase(issuedCodes));
-  const sandboxB = loadCore(makeFakePlatformFirebase(issuedCodes));
-  const pass = sandboxA.ggBizPassword('MISMOCODIGO');
-  // Simula dos "negocios"/instalaciones distintas activando el mismo par código+contraseña
-  const {lic: businessA} = await sandboxA.activateBusinessLicense('MISMOCODIGO', pass);
-  const {lic: businessB} = await sandboxB.activateBusinessLicense('MISMOCODIGO', pass);
-  assert.ok(businessA && businessB, 'el fix de B1 no debía romper la activación de un código legítimo');
+  // Dos dispositivos de la MISMA cuenta canjeando su código: es el caso
+  // legítimo (el dueño reinstala, o entra desde la tablet y desde el móvil).
+  const fb = makeFakePlatformFirebase(['MISMOCOD']);
+  const login = JSON.stringify({user:'casapaco', authKey:'AAAA1111AAAA1111AAAA1111', pinHash:'x'});
+  const sandboxA = loadCore(fb);
+  const sandboxB = loadCore(fb);
+  sandboxA.localStorage.setItem('gastrogoan_owner_login', login);
+  sandboxB.localStorage.setItem('gastrogoan_owner_login', login);
+  const {lic: businessA} = await sandboxA.redeemBusinessCode('MISMOCOD');
+  const {lic: businessB} = await sandboxB.redeemBusinessCode('MISMOCOD');
+  assert.ok(businessA && businessB, 'la reserva por cuenta no debía romper el canje legítimo del propio dueño');
   assert.equal(businessA.tenantId, businessB.tenantId,
     'si fueran negocios distintos deberían acabar en tenants distintos, pero comparten exactamente el mismo — B2 sigue sin resolver');
-  console.log(`   → Ambas "instalaciones" comparten tenantId=${businessA.tenantId} (mismo dato en Firebase para ambas) — pendiente de B2`);
+  console.log(`   → Ambas instalaciones comparten tenantId=${businessA.tenantId} (mismo dato en Firebase para ambas) — pendiente de B2`);
 });
 
 console.log('\n--- C. Escalado de privilegios: ¿puede un "empleado" convertirse en "propietario" sin PIN, solo tocando el estado local? ---\n');
