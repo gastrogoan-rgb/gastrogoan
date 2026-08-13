@@ -49,7 +49,18 @@ Marca las dos como **obligatorias**. Con eso, cada notificación de cobro te lle
 4. **Genera** lo que te haya dicho y **envíaselo** con el botón de WhatsApp o email.
 5. Todo queda apuntado en el **Registro de ventas** del generador. **Descarga el CSV de vez en cuando**: vive solo en ese navegador.
 
-⚠️ **El PIN no se puede recuperar.** No se guarda en ningún sitio (ni siquiera hasheado): lo que se guarda es una ruta derivada de usuario+PIN. Si el cliente lo pierde y no le queda ningún dispositivo donde ya hubiera entrado, hay que crearle una cuenta nueva. Guarda el CSV.
+### Si un cliente pierde su PIN
+
+El PIN **no se guarda en ningún sitio**, ni siquiera hasheado (lo que se guarda es una ruta derivada de usuario+PIN), así que no se puede "consultar". Pero sí se recupera, de dos formas según el caso:
+
+| Situación | Qué se hace |
+|---|---|
+| **Le queda algún dispositivo donde ya hubiera entrado** (lo normal) | No tienes que hacer nada. Que escriba `GGGG` en el campo del PIN y elija uno nuevo. Le vale al momento en todos sus dispositivos. |
+| **Ha perdido el PIN Y todos los dispositivos** | Paso 3 del generador: **Restablecer el PIN**. Le emite uno nuevo con su mismo usuario. Reenvíale también sus **códigos de negocio** (los tienes en el registro): al canjearlos otra vez recupera sus locales **con todos sus datos**, que nunca salieron de su propia nube. |
+
+⚠️ Al restablecer desde el generador, **el PIN viejo sigue funcionando**: para poder anularlo haría falta conocerlo, que es justo lo que se ha perdido. Para un PIN olvidado da igual. Si lo que sospechas es que se lo han robado, emite una cuenta con **otro usuario** y revoca los códigos antiguos.
+
+📋 **Descarga el CSV del registro de ventas de vez en cuando.** Vive solo en el navegador donde generas, y es de donde sacas los códigos del cliente si hay que recuperarle la cuenta.
 
 ---
 

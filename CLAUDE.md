@@ -59,7 +59,8 @@ Los dos pasos del generador son **independientes**: a un cliente que ya tiene cu
 - Canjear exige **internet**: `redeemBusinessCode()` devuelve `{lic, reason}` con `reason` ∈ `offline` | `unknown` | `claimed`.
 - **Un código pertenece a un solo dueño**: se reserva de forma atómica en `gastrogoan/codeClaims/{code}`, guardando el `ggOwnerId`. El mismo dueño sí puede volver a canjear el suyo (reinstalación, o tras cambiar de PIN).
 - **Revocación**: `checkLicenseRevocation()` lee `revoked-licenses.json` de GitHub. Es *fail-open* a propósito (sin internet no bloquea a nadie) y asíncrona, no bloquea el arranque.
-- **Código maestro `GGGG`**: se escribe en el campo del PIN para resetear el acceso (de propietario o el PIN de un empleado) sin perder datos. Solo funciona en un dispositivo donde esa cuenta ya entró alguna vez.
+- **Código maestro `GGGG`**: se escribe en el campo del PIN para resetear el acceso (de propietario o el PIN de un empleado) sin perder datos. Solo funciona en un dispositivo donde esa cuenta ya entró alguna vez, porque necesita el `authKey` guardado en local para poder mudar el nodo.
+- **Si el cliente pierde el PIN y todos los dispositivos**: el generador (paso 3) reemite la cuenta con el mismo usuario y un PIN nuevo. Recupera sus negocios volviendo a canjear sus códigos — lo permite que `codeClaims` guarde el `ggOwnerId`, estable. La ruta antigua queda **huérfana** (no se puede borrar sin el PIN viejo), así que el PIN antiguo sigue siendo válido: sirve para un olvido, no para un robo.
 
 ### Sesión
 

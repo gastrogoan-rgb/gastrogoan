@@ -94,7 +94,24 @@ td.key{font-family:monospace;font-size:11px}
   </div>
 
   <div class="card">
-    <h2>3 · Registro de ventas <span class="muted" id="count"></span></h2>
+    <h2>3 · Restablecer el PIN de un cliente</h2>
+    <p class="muted" style="margin-bottom:12px">Solo si ha perdido el PIN <strong>y</strong> ya no le queda ningún dispositivo dentro. Si aún tiene alguno donde entrara alguna vez, no hace falta esto: que escriba <code>GGGG</code> en el campo del PIN y elija uno nuevo él mismo.</p>
+    <label>Usuario del cliente</label>
+    <input id="reset-user" type="text" placeholder="Ej: casapaco" onkeydown="if(event.key==='Enter')resetOwnerPin()">
+    <button class="gen" id="reset-btn" onclick="resetOwnerPin()">Darle un PIN nuevo</button>
+    <p id="reset-status" class="muted" style="margin-top:8px"></p>
+    <div id="reset-out" style="display:none">
+      <div class="key-out" id="reset-key"></div>
+      <div class="btns">
+        <button class="copy" onclick="copyBox('reset-key')">📋 Copiar</button>
+        <a class="wa" id="reset-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+        <a class="copy" id="reset-email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4 · Registro de ventas <span class="muted" id="count"></span></h2>
     <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente (se guarda en este navegador).</p>
     <table id="log-table" style="display:none">
       <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>PIN</th><th></th></tr></thead>
@@ -435,6 +452,61 @@ async function checkOwnerName(){
   return existe
     ? veredicto(AMBAR, `⚠️ "${user}" ya tiene cuenta. Si tu comprador ES esa misma persona, genera solo un código. Si es otro que casualmente quiere el mismo nombre, créale la cuenta y se le asignará una variante.`)
     : veredicto(AMBAR, `"${user}" está libre, así que no es un cliente que repita con ese nombre. Si es su primera licencia: cuenta + código.`);
+}
+
+/* Último recurso: el cliente perdió el PIN Y ya no le queda ningún
+   dispositivo dentro (si le queda alguno, GGGG lo resuelve él solo y sin
+   molestarte). Le crea la cuenta otra vez en la ruta de un PIN nuevo,
+   manteniendo su MISMO usuario.
+
+   No se pierde nada, y esto es exactamente para lo que ggOwnerId se deriva
+   solo del usuario: la reserva de cada código va a nombre del dueño, no de
+   su PIN, así que con el PIN nuevo puede volver a canjear sus códigos de
+   siempre (los tienes en el registro de ventas) y recupera sus negocios con
+   todos sus datos, que nunca salieron de su propia nube.
+
+   ⚠️ La ruta antigua no se puede borrar: para dar con ella haría falta el
+   PIN viejo, que es justo lo que se ha perdido. Queda ahí huérfana, así que
+   si alguien llegara a tener el PIN antiguo seguiría entrando. Para un PIN
+   olvidado da igual; si lo que sospechas es que se lo han robado, emite una
+   cuenta con OTRO usuario y revoca los códigos viejos. */
+async function resetOwnerPin(){
+  const btn = document.getElementById('reset-btn');
+  const el = document.getElementById('reset-status');
+  const user = ggOwnerUser(document.getElementById('reset-user').value);
+  if(!user){ el.textContent = 'Escribe el usuario del cliente.'; return; }
+  btn.disabled = true;
+  el.textContent = 'Comprobando...';
+  const app = await getPlatformFirebaseApp();
+  if(!app){ el.textContent = '⚠️ Sin sesión de administrador: inicia sesión arriba.'; btn.disabled = false; return; }
+  try{
+    // Que exista de verdad: si no, lo que toca es crear una cuenta normal
+    // (paso 1), no "restablecer" la de alguien que nunca compró.
+    const existe = (await app.database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
+    if(!existe){
+      el.textContent = `⚠️ "${user}" no tiene ninguna cuenta. Si es un cliente nuevo, créala en el paso 1; si no, comprueba cómo se escribe su usuario exacto.`;
+      btn.disabled = false;
+      return;
+    }
+    const pin = generateOwnerPin();
+    await app.database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({ user, createdAt: Date.now() });
+    el.textContent = '✅ PIN nuevo listo. Reenvíale también sus códigos de negocio (los tienes abajo en el registro): tendrá que canjearlos otra vez para recuperar sus locales.';
+    document.getElementById('reset-key').innerHTML = `Usuario: ${user}<br>PIN nuevo: ${pin}`;
+    document.getElementById('reset-out').style.display = 'block';
+    const codigos = sales.filter(v => v.kind === 'negocio' && v.owner === user).map(v => v.value);
+    const msg = 'Tu nuevo PIN de GastroGoan 🍽\n\nUsuario: ' + user + '\nPIN: ' + pin +
+      '\n\nEntra con estos datos y vuelve a canjear tus códigos de negocio desde la pantalla de negocios. Tus datos siguen intactos.' +
+      (codigos.length ? '\n\nTus códigos: ' + codigos.join(', ') : '');
+    document.getElementById('reset-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    document.getElementById('reset-email').href = 'mailto:?subject=' + encodeURIComponent('Tu nuevo PIN de GastroGoan') + '&body=' + encodeURIComponent(msg);
+    sales.unshift({ date: new Date().toISOString().slice(0,10), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
+    saveSales();
+    renderLog();
+  }catch(e){
+    console.error('Error restableciendo el PIN', e);
+    el.textContent = '⚠️ No se pudo restablecer (' + (e.message || e.code || 'error') + ').';
+  }
+  btn.disabled = false;
 }
 
 const LOG_KEY = 'gg_biz_sales_v3';
