@@ -166,13 +166,15 @@ Verificado con pruebas reales, no solo revisión de código: concurrencia genuin
 
 ### Hecho (14 ago 2026)
 
-- **Reglas de Firebase publicadas** con los nodos del modelo de cuentas (`ownerNames`, `ownerAuth`, `codeClaims`).
+- **Reglas de Firebase publicadas** con los nodos del modelo de cuentas (`ownerNames`, `ownerAuth`, `codeClaims`) y con `tenantLookup`, sin el cual **ningún empleado podía entrar desde un dispositivo nuevo**.
 - **Alta completa verificada contra la plataforma real**, servida por HTTP: crear cuenta y código en el generador → entrar con usuario+PIN → canjear el código → negocio dado de alta.
+- **Campos personalizados de Stripe configurados**: cada venta llega ya con la respuesta de si el cliente es nuevo o repite.
+- **Documentos rehechos** con el sistema de diseño real (`build_docs.py`, un solo generador para los cuatro PDF).
 
 ### Pendiente — solo lo puede hacer el dueño
 
 1. Subir `dist/` a gastrogoan.com (la prueba se hizo en Netlify Drop). Si el acceso fallara desde ese dominio, añadirlo en Firebase → Authentication → Settings → Dominios autorizados.
-2. Configurar en Stripe los **dos campos personalizados** que distinguen cliente nuevo de cliente que repite (ver `DOCS-INTERNO-vender.md`, sección 2). Sin ellos hay que adivinarlo en cada venta.
+2. Probar el **acceso de un empleado** desde un dispositivo que no conozca el negocio (nombre + PIN + código). Es lo que arreglan las reglas de `tenantLookup`, y no se ha probado aún contra la plataforma real.
 3. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
 4. Un pago real con **Redsys** (o su sandbox).
 5. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
