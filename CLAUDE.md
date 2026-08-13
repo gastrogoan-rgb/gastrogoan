@@ -171,14 +171,14 @@ Verificado con pruebas reales, no solo revisión de código: concurrencia genuin
 - **Campos personalizados de Stripe configurados**: cada venta llega ya con la respuesta de si el cliente es nuevo o repite.
 - **Documentos rehechos** con el sistema de diseño real (`build_docs.py`, un solo generador para los cuatro PDF).
 - **Acceso de empleado verificado** contra la plataforma real desde un dispositivo que no conocía el negocio (nombre + PIN + código). Con esto, todo el modelo de acceso -propietario y empleado- está probado de punta a punta.
+- **Configuración de la nube probada** como cliente nuevo, de principio a fin. Era el paso que se daba por más frágil: el único del alta donde un cliente podía atascarse.
 
 ### Pendiente — solo lo puede hacer el dueño
 
 1. Subir `dist/` a gastrogoan.com (la prueba se hizo en Netlify Drop). Si el acceso fallara desde ese dominio, añadirlo en Firebase → Authentication → Settings → Dominios autorizados.
-2. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
-3. Un pago real con **Redsys** (o su sandbox).
-4. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
-5. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
+2. Un pago real con **Redsys** (o su sandbox).
+3. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
+4. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
 
 > La cuenta de prueba `pruebamia` **se deja a propósito**: sirve para verificar el alta completa tras cualquier cambio en el acceso, sin gastar un código real ni tocar datos de un cliente. Conviene marcarla como prueba en el registro de ventas del generador para no contarla como venta al revisar el CSV.
 
