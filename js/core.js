@@ -25,7 +25,7 @@ function getActiveSlot(){
 
 // El código corto de cada negocio (usado tanto para activar la licencia
 // como para el login de empleados) ya no se genera aquí al azar: es el
-// mismo código de la licencia comprada (ver activateBusinessLicense), y se
+// mismo código de la licencia comprada (ver redeemBusinessCode), y se
 // guarda en slot.code en el momento de activarla o de registrar un negocio/
 // sucursal nuevo.
 function getBusinessSlots(){
@@ -1235,7 +1235,7 @@ function ggOwnerAuthKey(user, pin){
 // Sin límite de tiempo, una conexión lenta o que se cuelga a medias (no un
 // error claro, sino sin respuesta) dejaba este paso esperando para siempre
 // sin ningún aviso — el botón de activación parecía "colgado" sin más. Con
-// este límite, pasados 12s se trata igual que "sin conexión" (activateBusinessLicense
+// este límite, pasados 12s se trata igual que "sin conexión" (redeemBusinessCode
 // ya sabe mostrar ese aviso), en vez de quedarse indefinidamente en silencio.
 function withTimeout(promise, ms){
   return Promise.race([

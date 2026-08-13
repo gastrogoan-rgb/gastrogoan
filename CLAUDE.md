@@ -38,11 +38,25 @@ js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
 
 ## Licencias y acceso
 
-- El **código de licencia** (8 caracteres) y su contraseña se generan con `generador-licencias.html`, que además los registra en `gastrogoan/issuedCodes` (requiere iniciar sesión como admin `gastrogoan@gmail.com` en ese archivo — sin eso el código **no se podrá activar**).
-- `ggBizTenantId(code)` deriva el `tenantId` del código. `getPublicId()` deriva el id público (reservas) del tenantId.
-- Activar exige **internet**: `activateBusinessLicense()` comprueba el código contra `issuedCodes`.
+**La identidad del dueño y la licencia de un negocio son cosas separadas.** El cliente compra una **cuenta** (usuario + PIN) y, dentro de ella, va canjeando un **código de negocio** por cada local. Ambos se emiten con `generador-licencias.html` (requiere iniciar sesión como admin `gastrogoan@gmail.com` — sin eso ni la cuenta ni el código sirven).
+
+### Cuenta de propietario (usuario + PIN)
+
+- El nombre se **normaliza** con `ggOwnerUser()`: minúsculas, sin acentos ni espacios (`Casa Paco` → `casapaco`). Así nadie se queda fuera por escribirlo distinto.
+- El generador **reserva el nombre** de forma atómica en `gastrogoan/ownerNames/{usuario}`; si ya existe propone `casapaco2`. La colisión se resuelve **al emitir**, no en la cara del cliente.
+- ⚠️ **El PIN no se guarda en ningún sitio, ni hasheado.** Lo que se guarda es un nodo cuya **ruta** se deriva de usuario+PIN: `ggOwnerAuthKey()` → `gastrogoan/ownerAuth/{authKey}`. Entrar = leer esa ruta y ver si existe. Sin el PIN no se puede ni construir, y las reglas solo dan lectura a nivel de `$authKey` (nunca del padre), así que tampoco se puede listar para ir probando.
+- De ese mismo nodo cuelga `businesses/{tenantId}` = la lista de negocios del dueño, que es lo que hace que aparezcan solos en cualquier dispositivo (`syncOwnerBusinessList()`).
+- El login guarda `{user, authKey, pinHash}` en `gastrogoan_owner_login`. Solo la primera vez en cada dispositivo hace falta internet; después se valida contra `pinHash` en local.
+- ⚠️ **Cambiar el PIN es local a cada dispositivo** (`changeOwnerAccessPin`): el `authKey` se deriva del PIN **original**, así que en un dispositivo nuevo hay que volver a usar el que se entregó al comprar. Cambiar el PIN canónico exige reemitir la cuenta desde el generador.
+
+### Código de negocio
+
+- 8 caracteres, registrado en `gastrogoan/issuedCodes`. **Ya no lleva contraseña**: se calculaba a partir del propio código con un algoritmo que viaja en el JS del cliente, así que no demostraba nada.
+- `ggBizTenantId(code)` deriva el `tenantId`. `getPublicId()` deriva el id público (reservas) del tenantId.
+- Canjear exige **internet**: `redeemBusinessCode()` devuelve `{lic, reason}` con `reason` ∈ `offline` | `unknown` | `claimed`.
+- **Un código pertenece a una sola cuenta**: se reserva de forma atómica en `gastrogoan/codeClaims/{code}`. La misma cuenta sí puede volver a canjear el suyo (reinstalación).
 - **Revocación**: `checkLicenseRevocation()` lee `revoked-licenses.json` de GitHub. Es *fail-open* a propósito (sin internet no bloquea a nadie) y asíncrona, no bloquea el arranque.
-- **Código maestro `GGGG`**: se escribe en el campo de contraseña para resetear el acceso (de propietario o el PIN de un empleado) sin perder datos.
+- **Código maestro `GGGG`**: se escribe en el campo del PIN para resetear el acceso (de propietario o el PIN de un empleado) sin perder datos. Solo funciona en un dispositivo donde esa cuenta ya entró alguna vez.
 
 ### Sesión
 
@@ -56,16 +70,17 @@ js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
 
 - Cada negocio = un *slot* con su propia IndexedDB (`slotIdbName(id)`) y su propia licencia (`slotLicenseKey(id)`).
 - `DB` y `DB.license` reflejan **solo el slot activo**.
-- **Diseño previsto**: entras con tu primera licencia y **desde el botón "Negocios" añades las demás**:
+- Una cuenta recién creada **no tiene ningún negocio**: `ownerHasAnyBusiness()` es false y el selector se pinta vacío, con un botón de canjear (`redeemFirstBusiness()`), que canjea dentro del hueco que ya existe en vez de crear otro al lado.
+- **Diseño previsto**: entras con tu cuenta, canjeas tu primer negocio y **desde el botón "Negocios" añades los demás**:
   - `addNewBusiness()` → "Nuevo independiente": negocio aparte, vacío, con su propia nube.
   - `addSucursal(parentId)` → "Abrir sucursal": copia carta/recetas/ingredientes/proveedores/protocolos del padre; **no** copia mesas, empleados ni datos operativos; **hereda la nube del padre**.
   - Ambos requieren **otra licencia** (otra venta).
 
 ### Hash de PIN/contraseña
 
-`hashPin(pin, licenseCode)` → formato `H2:` con **8.000 rondas** (encarece la fuerza bruta).
-`pinMatchesHash(pin, hash, licenseCode)` verifica **tanto `H2:` como el antiguo `H:`** (compatibilidad — no romper el acceso de negocios ya activos).
-⚠️ La sal es el **código de licencia**; al validar el PIN de un empleado de *otro* negocio hay que pasar el código de ESE negocio.
+`hashPin(pin, salt)` → formato `H2:` con **8.000 rondas** (encarece la fuerza bruta).
+`pinMatchesHash(pin, hash, salt)` verifica **tanto `H2:` como el antiguo `H:`** (compatibilidad — no romper el acceso de negocios ya activos).
+⚠️ La sal depende de qué se valida: para el PIN de un **empleado** es el **código de su negocio** (al validar uno de *otro* negocio hay que pasar el código de ESE negocio); para el PIN local del **propietario** es su **nombre de usuario**.
 
 ---
 
@@ -74,6 +89,9 @@ js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
 Publicadas y verificadas con una reserva real. Copia de referencia en `database.rules.propuesta.json`.
 
 - `issuedCodes/$code`: lectura por cualquiera autenticado, escritura **solo** `gastrogoan@gmail.com`.
+- `ownerNames/$user`: igual — la reserva de nombres solo la escribe el generador.
+- `ownerAuth/$authKey`: lectura solo **a nivel de `$authKey`** (nunca del padre: si no, se podría listar y probar). El nodo lo crea el generador; el cliente solo puede escribir bajo `businesses/`.
+- `codeClaims/$code`: cualquiera autenticado puede reservarlo **si está libre** (`!data.exists()`); solo el admin puede liberarlo.
 - `public/$publicId/requests/$id`: exige `type` (`reserva`|`pedido`|`nps_response`) y `createdAt`; no se puede sobrescribir una existente.
 - `public/$publicId/aforoHold` y `pedidosHold`: solo números 0–500 (impide manipular el aforo saltándose la app).
 
