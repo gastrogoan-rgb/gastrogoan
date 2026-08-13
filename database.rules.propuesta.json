@@ -42,6 +42,14 @@
           }
         }
       },
+      "publicSlugs": {
+        "$slug": {
+          ".read": "auth != null && $slug.length >= 2 && $slug.length <= 40",
+          ".write": "auth != null && $slug.length >= 2 && $slug.length <= 40 && (!data.exists() || data.val() === newData.val() || auth.token.email === 'gastrogoan@gmail.com')",
+          ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 30"
+        }
+      },
+
       "tenantLookup": {
         "$tenantId": {
           ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
