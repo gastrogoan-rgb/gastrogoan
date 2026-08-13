@@ -1619,11 +1619,11 @@ const FIREBASE_GATE_STEPS = [
   {title:{es:'Pégalos aquí abajo y guarda', ca:'Enganxa-les aquí sota i desa', en:'Paste them below and save'},
    body:{
      es:`Pega esos dos valores en los campos siguientes y pulsa "Guardar y conectar". La app se recargará y quedará lista.<br><br>
-        <span style="color:var(--muted)">Guarda también estos dos datos en un sitio seguro (notas del móvil, etc.) para poder configurar el resto de dispositivos (camareros, cocina) más adelante — solo tienen que pegar lo mismo, como indica el aviso azul de abajo.</span>`,
+        <span style="color:var(--muted)">Guárdalos también en un sitio seguro (las notas del móvil, por ejemplo). Tus empleados <strong>no</strong> los necesitan: entran desde "Acceso Empleados" con su nombre, su PIN y el código del negocio, y la app encuentra tu restaurante sola. Estos dos datos son para ti, por si algún día tienes que volver a conectar un dispositivo a mano.</span>`,
      ca:`Enganxa aquests dos valors als camps següents i prem "Desar i connectar". L'app es recarregarà i quedarà a punt.<br><br>
-        <span style="color:var(--muted)">Desa també aquestes dues dades en un lloc segur (notes del mòbil, etc.) per poder configurar la resta de dispositius (cambrers, cuina) més endavant — només han d'enganxar el mateix, tal com indica l'avís blau de sota.</span>`,
+        <span style="color:var(--muted)">Desa'ls també en un lloc segur (les notes del mòbil, per exemple). Els teus empleats <strong>no</strong> els necessiten: entren des d'"Accés Empleats" amb el seu nom, el seu PIN i el codi del negoci, i l'app troba el teu restaurant sola. Aquestes dues dades són per a tu, per si algun dia has de tornar a connectar un dispositiu a mà.</span>`,
      en:`Paste those two values into the fields below and click "Save and connect". The app will reload and be ready.<br><br>
-        <span style="color:var(--muted)">Also save these two values somewhere safe (phone notes, etc.) so you can set up the other devices (waiters, kitchen) later — they just need to paste the same values, as the blue notice below explains.</span>`}},
+        <span style="color:var(--muted)">Also keep them somewhere safe (your phone notes, for example). Your staff do <strong>not</strong> need them: they sign in from "Staff access" with their name, their PIN and the business code, and the app finds your restaurant on its own. These two values are for you, in case you ever need to reconnect a device by hand.</span>`}},
 ];
 
 // Tras la nube (obligatoria), se ofrecen las otras dos conexiones externas

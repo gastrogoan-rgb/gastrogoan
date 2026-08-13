@@ -42,6 +42,14 @@
           }
         }
       },
+      "tenantLookup": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".validate": "newData.hasChildren(['apiKey', 'databaseURL']) && newData.child('apiKey').isString() && newData.child('databaseURL').isString() && newData.child('databaseURL').val().length <= 300"
+        }
+      },
+
       "issuedCodes": {
         "$code": {
           ".read": "auth != null",
