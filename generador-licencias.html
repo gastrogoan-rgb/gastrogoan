@@ -19,7 +19,7 @@ header h1 span{display:block;font-size:11.5px;font-weight:400;color:#FFD60A;marg
 .card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
 .card h2{font-size:15px;margin-bottom:12px}
 label{font-size:12.5px;font-weight:700;display:block;margin-bottom:6px}
-input{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-size:14px;font-family:inherit}
+input,select{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:12px;font-size:14px;font-family:inherit;background:#fff}
 .key-out{background:var(--brand-cream);border:2px dashed var(--brand-orange);border-radius:10px;padding:16px;font-family:monospace;font-size:17px;font-weight:700;text-align:center;letter-spacing:1px;word-break:break-all;margin-top:14px}
 .btns{display:flex;gap:8px;margin-top:12px}
 button,.wa,#email{flex:1;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none}
@@ -51,9 +51,15 @@ td.key{font-family:monospace;font-size:11px}
     <h2>1 · Cuenta de propietario (usuario + PIN)</h2>
     <p class="muted" style="margin-bottom:12px">Se crea <strong>una sola vez por cliente</strong>, con el nombre de usuario que haya pedido al pagar. Con ella entra en la app desde cualquier dispositivo; los negocios se le añaden después con los códigos del paso 2.</p>
     <label>Nombre de usuario que ha pedido el cliente</label>
-    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()" oninput="document.getElementById('owner-check-status').textContent=''">
+    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()" oninput="document.getElementById('owner-check-status').innerHTML=''">
+    <label style="margin-top:12px">Qué contestó al pagar en Stripe</label>
+    <select id="stripe-answer" onchange="document.getElementById('owner-check-status').innerHTML=''">
+      <option value="">— No lo sé / no contestó —</option>
+      <option value="nuevo">Dijo que es su PRIMERA licencia</option>
+      <option value="existente">Dijo que YA tiene cuenta</option>
+    </select>
     <div class="btns">
-      <button class="copy" onclick="checkOwnerName()">🔎 ¿Ya tiene cuenta?</button>
+      <button class="copy" onclick="checkOwnerName()">🔎 ¿Qué le tengo que dar?</button>
     </div>
     <p id="owner-check-status" class="muted" style="margin-top:8px"></p>
     <button class="gen" id="owner-btn" onclick="genOwner()">Crear cuenta de propietario</button>
@@ -387,22 +393,48 @@ async function claimOwnerAccount(rawName){
    a alguien que todavía no tiene dónde canjearlo-. Mira la reserva de
    nombres, que es la fuente de verdad; el registro de ventas local solo
    sirve de apoyo si cambiaste de ordenador. */
+/* Cruza lo que el cliente contestó al pagar con lo que de verdad hay en la
+   plataforma, y dice qué generar. Las dos fuentes por separado engañan: la
+   respuesta de Stripe identifica a la PERSONA pero se puede equivocar al
+   escribir su usuario, y ownerNames dice si ese NOMBRE existe pero no si es
+   de esta misma persona (dos clientes distintos pueden querer llamarse
+   "casapaco"). Los casos en que no cuadran son justo los que hay que parar
+   a mirar, y son los que antes se colaban. */
 async function checkOwnerName(){
   const el = document.getElementById('owner-check-status');
   const user = ggOwnerUser(document.getElementById('owner-name').value);
+  const dijo = document.getElementById('stripe-answer').value;
   if(!user){ el.textContent = 'Escribe primero el nombre.'; return; }
   el.textContent = `Consultando "${user}"...`;
   const app = await getPlatformFirebaseApp();
   if(!app){ el.textContent = '⚠️ Sin sesión de administrador: inicia sesión arriba para poder consultarlo.'; return; }
+  let existe;
   try{
-    const snap = await app.database().ref('gastrogoan/ownerNames/' + user).once('value');
-    el.textContent = snap.exists()
-      ? `⚠️ "${user}" YA tiene cuenta. Si solo ha comprado otro local, no crees otra: genera únicamente un código de negocio (paso 2).`
-      : `✅ "${user}" está libre: es un cliente nuevo, créale la cuenta y además un código de negocio.`;
+    existe = (await app.database().ref('gastrogoan/ownerNames/' + user).once('value')).exists();
   }catch(e){
     console.error('Error consultando el nombre', e);
     el.textContent = '⚠️ No se pudo consultar (' + (e.message || e.code || 'error') + ').';
+    return;
   }
+  const veredicto = (color, txt) => { el.innerHTML = `<span style="color:${color}">${txt}</span>`; };
+  const VERDE = '#1F8A4C', AMBAR = '#B8860B', ROJO = '#C0392B';
+
+  if(dijo === 'existente' && existe)
+    return veredicto(VERDE, `✅ <strong>Genera SOLO un código</strong> (paso 2). Ya tiene cuenta ("${user}") y dice que repite: todo cuadra.`);
+
+  if(dijo === 'nuevo' && !existe)
+    return veredicto(VERDE, `✅ <strong>Créale la cuenta (paso 1) Y un código (paso 2).</strong> Es cliente nuevo y "${user}" está libre.`);
+
+  if(dijo === 'existente' && !existe)
+    return veredicto(ROJO, `🛑 <strong>No generes nada todavía.</strong> Dice que ya tiene cuenta, pero "${user}" no existe. Seguramente lo escribió distinto de como lo compró. Pregúntale su usuario exacto: si le mandas solo un código, no tendrá dónde canjearlo.`);
+
+  if(dijo === 'nuevo' && existe)
+    return veredicto(AMBAR, `⚠️ <strong>Créale la cuenta igual (paso 1) + un código.</strong> Dice que es nuevo pero "${user}" ya lo cogió otro cliente. No pasa nada: al crearla se le asignará una variante libre ("${user}2"). <strong>Avísale de cuál es su usuario exacto</strong>, o no podrá entrar.`);
+
+  // Sin respuesta de Stripe: solo se puede informar, no decidir por él.
+  return existe
+    ? veredicto(AMBAR, `⚠️ "${user}" ya tiene cuenta. Si tu comprador ES esa misma persona, genera solo un código. Si es otro que casualmente quiere el mismo nombre, créale la cuenta y se le asignará una variante.`)
+    : veredicto(AMBAR, `"${user}" está libre, así que no es un cliente que repita con ese nombre. Si es su primera licencia: cuenta + código.`);
 }
 
 const LOG_KEY = 'gg_biz_sales_v3';

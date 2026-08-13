@@ -15,25 +15,51 @@
 
 ---
 
-## 2. Proceso completo de una venta (paso a paso)
+## 2. Prepara Stripe UNA VEZ (antes de la primera venta)
 
-1. **El cliente paga** los 100 € (Stripe o el método que acuerdes).
-2. **Generas su licencia:**
-   - Abre **`generador-licencias.html`** (🔑 ARCHIVO PRIVADO) en tu navegador.
-   - Escribe el **nombre del restaurante** tal cual quieres que aparezca en su app (ej: `Casa Paco`).
-   - Pulsa **Generar clave**. Cópiala o envíala directamente por WhatsApp / email con el botón.
-   - Cada clave queda apuntada en el **Registro de ventas** del propio generador. Descarga el **CSV** de vez en cuando como copia de seguridad (vive solo en ese navegador).
-3. **Entregas al cliente** (ver sección 4 — "Lo que SÍ se entrega").
-4. **El cliente activa** la app pegando la clave en la pantalla de activación la primera vez que la abre.
+El cliente compra **una cuenta** (usuario + PIN) y, dentro de ella, **un código por cada local**. Quien ya es cliente y abre otro local solo necesita el código.
+
+Para saber cuál es el caso **sin tener que acordarte**, añade dos preguntas al enlace de pago. En Stripe: **Payment links → tu enlace → Editar → Campos personalizados (custom fields)**.
+
+| Tipo | Etiqueta | Opciones |
+|---|---|---|
+| Desplegable | `¿Ya tienes cuenta de GastroGoan?` | `No, es mi primera licencia` / `Sí, ya tengo cuenta` |
+| Texto | `Tu usuario (el que ya tienes, o el que quieres)` | — |
+
+Marca las dos como **obligatorias**. Con eso, cada notificación de cobro te llega ya con la respuesta.
+
+> **Por qué las dos y no solo el usuario:** el nombre de usuario NO identifica a la persona. Dos clientes distintos pueden querer llamarse `casapaco`. La pregunta del desplegable es la que te dice si es alguien nuevo; el usuario es solo el dato con el que trabajas.
 
 ---
 
-## 3. Cómo funciona la licencia (para que entiendas qué entregas)
+## 3. Proceso de una venta (paso a paso)
 
-- La clave tiene el formato: `NOMBRE-XXXX-XXXX-XXXX-TENANT(5 grupos)`.
-- Lleva una **firma** calculada con un secreto (`ggLicSig`) que la app valida offline: no se puede falsificar sin el generador.
-- Incluye un **tenant ID** único de 20 caracteres → es el identificador de la nube privada de ese restaurante (cada cliente tiene sus datos aislados).
-- **Revocación (opcional):** el archivo `revoked-licenses.json` permite anular una clave (p. ej. un impago o reembolso). La comprobación es *fail-open*: si el archivo no es accesible, la app sigue funcionando para no penalizar a clientes legítimos. Para revocar, añade la clave al JSON y publícalo en la URL que la app consulta.
+1. **El cliente paga.** En el aviso de Stripe verás sus dos respuestas.
+2. **Abre `generador-licencias.html`** (🔑 PRIVADO) e **inicia sesión de administrador** (botón de arriba). Sin eso, nada de lo que generes servirá.
+3. **Escribe el usuario que ha puesto, elige qué contestó y pulsa "¿Qué le tengo que dar?"**. Te responde una de estas cinco cosas:
+
+| Te dice | Qué haces |
+|---|---|
+| ✅ Genera SOLO un código | Solo el paso 2. |
+| ✅ Créale la cuenta Y un código | Paso 1 y paso 2. |
+| ⚠️ Ya lo cogió otro cliente | Paso 1 igual: se le asignará `casapaco2`. **Dile cuál es su usuario exacto** o no podrá entrar. |
+| 🛑 No generes nada todavía | Dice que ya es cliente pero ese usuario no existe: lo habrá escrito distinto. Pregúntale el suyo exacto antes de nada. |
+| ⚠️ (sin respuesta de Stripe) | Solo te informa. Decide tú si tu comprador es esa misma persona. |
+
+4. **Genera** lo que te haya dicho y **envíaselo** con el botón de WhatsApp o email.
+5. Todo queda apuntado en el **Registro de ventas** del generador. **Descarga el CSV de vez en cuando**: vive solo en ese navegador.
+
+⚠️ **El PIN no se puede recuperar.** No se guarda en ningún sitio (ni siquiera hasheado): lo que se guarda es una ruta derivada de usuario+PIN. Si el cliente lo pierde y no le queda ningún dispositivo donde ya hubiera entrado, hay que crearle una cuenta nueva. Guarda el CSV.
+
+---
+
+## 3 bis. Cómo funciona la licencia (para que entiendas qué entregas)
+
+- **Cuenta:** un usuario normalizado (`Casa Paco` → `casapaco`) y un PIN de 6 caracteres. Con eso entra desde cualquier dispositivo, y ahí le aparecen todos sus negocios.
+- **Código de negocio:** 8 caracteres, uno por local. **No lleva contraseña.** Queda registrado en la plataforma al generarlo; si no existe ahí, no se puede canjear.
+- **Un código es de un solo dueño:** en cuanto lo canjea alguien, nadie más puede. Así una licencia no se puede compartir entre dos negocios.
+- **El cliente puede cambiar su PIN** cuando quiera, y el nuevo le vale en todos sus dispositivos.
+- **Revocación:** añade el `tenantId` a `revoked-licenses.json` y publícalo. Es *fail-open* a propósito: si el archivo no es accesible, la app sigue funcionando para no penalizar a clientes legítimos.
 
 ---
 
