@@ -449,14 +449,105 @@ function switchToBusiness(slotId){
 // Registrar un negocio o sucursal nuevo exige una licencia nueva (comprada
 // aparte): pide el código+contraseña que se entrega en esa compra, igual
 // que al activar la app por primera vez.
-async function promptBusinessLicense(){
-  const code = prompt(t('gate.newBusinessCodePrompt'));
-  if(!code) return null;
-  const password = prompt(t('gate.newBusinessPasswordPrompt'));
-  if(!password) return null;
+// Pide código + contraseña de una licencia nueva en un modal propio de la
+// app. Antes eran dos prompt() del navegador seguidos y un alert() si
+// fallaba: justo en el momento en que el cliente acaba de pagar otra
+// licencia, se le enseñaban tres ventanas grises del sistema, sin el
+// diseño del resto de la app y sin poder ver los dos campos a la vez para
+// repasarlos antes de enviar. Devuelve una promesa con la licencia válida,
+// o null si se cancela, para no cambiar cómo la usan sus llamadores.
+function promptBusinessLicense(){
+  return new Promise(resolve => {
+    pendingLicensePromptResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-license"></i> ${t('gate.newLicenseTitle')}</h3>
+        <button class="modal-close" onclick="cancelBusinessLicensePrompt()">&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">${t('gate.newLicenseDesc')}</p>
+      <div class="field">
+        <label>${t('access.businessCode')}</label>
+        <input type="text" id="new-lic-code" maxlength="8" placeholder="XXXXXXXX" style="letter-spacing:2px;font-size:18px;text-align:center;text-transform:uppercase">
+      </div>
+      <div class="field">
+        <label>${t('access.password')}</label>
+        <input type="password" id="new-lic-pass" style="letter-spacing:4px;font-size:18px;text-align:center;text-transform:uppercase" onkeydown="if(event.key==='Enter')confirmBusinessLicensePrompt()">
+      </div>
+      <div id="new-lic-error" style="display:none;font-size:13px;color:var(--red);margin-top:4px"></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelBusinessLicensePrompt()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" id="new-lic-ok" onclick="confirmBusinessLicensePrompt()">${t('common.continue')}</button>
+      </div>
+    `);
+    setTimeout(()=>document.getElementById('new-lic-code')?.focus(), 50);
+  });
+}
+// Sustituto de prompt() con el diseño de la app, para los sitios donde se
+// pide un texto suelto (p.ej. el nombre de una sucursal recién creada).
+// Mantiene la misma forma de uso: devuelve el texto, o null si se cancela.
+let pendingTextPromptResolve = null;
+function promptText(label, defaultValue, opts){
+  opts = opts || {};
+  return new Promise(resolve => {
+    pendingTextPromptResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ${escapeHtml(opts.icon || 'ti-pencil')}"></i> ${escapeHtml(opts.title || label)}</h3>
+        <button class="modal-close" onclick="cancelTextPrompt()">&times;</button>
+      </div>
+      ${opts.title ? `<p style="font-size:13px;color:var(--muted);margin-bottom:14px">${escapeHtml(label)}</p>` : ''}
+      <div class="field">
+        <input type="text" id="generic-text-prompt" value="${escapeHtml(defaultValue || '')}" onkeydown="if(event.key==='Enter')confirmTextPrompt()">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelTextPrompt()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmTextPrompt()">${t('common.confirm')}</button>
+      </div>
+    `);
+    setTimeout(()=>{ const el = document.getElementById('generic-text-prompt'); if(el){ el.focus(); el.select(); } }, 50);
+  });
+}
+function cancelTextPrompt(){
+  const resolve = pendingTextPromptResolve;
+  pendingTextPromptResolve = null;
+  closeModal();
+  if(resolve) resolve(null);
+}
+function confirmTextPrompt(){
+  const val = (document.getElementById('generic-text-prompt')?.value || '').trim();
+  if(!val) return; // vacío: no cierra, se queda esperando un nombre
+  const resolve = pendingTextPromptResolve;
+  pendingTextPromptResolve = null;
+  closeModal();
+  if(resolve) resolve(val);
+}
+let pendingLicensePromptResolve = null;
+function cancelBusinessLicensePrompt(){
+  const resolve = pendingLicensePromptResolve;
+  pendingLicensePromptResolve = null;
+  closeModal();
+  if(resolve) resolve(null);
+}
+async function confirmBusinessLicensePrompt(){
+  const code = (document.getElementById('new-lic-code')?.value || '').trim();
+  const password = (document.getElementById('new-lic-pass')?.value || '').trim();
+  const errEl = document.getElementById('new-lic-error');
+  const showErr = msg => { if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; } };
+  if(!code || !password){ showErr(t('gate.newLicenseMissing')); return; }
+  // La comprobación contra la plataforma tarda: sin deshabilitar el botón se
+  // puede pulsar dos veces y lanzar dos activaciones a la vez.
+  const btn = document.getElementById('new-lic-ok');
+  if(btn){ btn.disabled = true; btn.textContent = t('gate.newLicenseChecking'); }
   const {lic, offline} = await activateBusinessLicense(code, password);
-  if(!lic){ alert(t(offline ? 'access.licenseOffline' : 'access.badCredentials')); return null; }
-  return lic;
+  if(!lic){
+    showErr(t(offline ? 'access.licenseOffline' : 'gate.newLicenseBad'));
+    if(btn){ btn.disabled = false; btn.textContent = t('common.continue'); }
+    return;
+  }
+  const resolve = pendingLicensePromptResolve;
+  pendingLicensePromptResolve = null;
+  closeModal();
+  if(resolve) resolve(lic);
 }
 async function addNewBusiness(){
   const lic = await promptBusinessLicense();
@@ -521,7 +612,11 @@ async function addSucursal(parentSlotId){
   const parentName = parentSlot?.name || t('gate.branchDefaultName');
   const sucursalesExistentes = slots.filter(s => s.parentId === parentSlotId).length;
   const nombreSugerido = t('gate.branchSuggestedName').replace('${parent}', parentName).replace('${n}', sucursalesExistentes + 2);
-  const nombre = prompt(t('gate.newBranchPrompt').replace('${parent}', parentName), nombreSugerido);
+  const nombre = await promptText(
+    t('gate.newBranchPrompt').replace('${parent}', parentName),
+    nombreSugerido,
+    {title: t('btn.openBranch'), icon: 'ti-building-store'}
+  );
   if(!nombre) return;
 
   // Leer datos del padre (puede ser el activo u otro slot)
