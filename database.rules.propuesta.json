@@ -47,6 +47,34 @@
           ".read": "auth != null",
           ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && !data.exists()"
         }
+      },
+
+      "ownerNames": {
+        "$user": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $user.length <= 40"
+        }
+      },
+
+      "ownerAuth": {
+        "$authKey": {
+          ".read": "auth != null && $authKey.length >= 16",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $authKey.length >= 16",
+          "businesses": {
+            "$tenantId": {
+              ".write": "auth != null && $authKey.length >= 16 && $tenantId.length >= 4 && $tenantId.length <= 60",
+              ".validate": "newData.hasChild('code') && newData.child('code').isString() && newData.child('code').val().length <= 16"
+            }
+          }
+        }
+      },
+
+      "codeClaims": {
+        "$code": {
+          ".read": "auth != null && $code.length == 8",
+          ".write": "auth != null && $code.length == 8 && (!data.exists() || auth.token.email === 'gastrogoan@gmail.com')",
+          ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 40"
+        }
       }
     }
   }

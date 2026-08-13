@@ -48,7 +48,25 @@ td.key{font-family:monospace;font-size:11px}
   </div>
 
   <div class="card">
-    <h2>1 · Genera código + contraseña para un cliente nuevo</h2>
+    <h2>1 · Cuenta de propietario (usuario + PIN)</h2>
+    <p class="muted" style="margin-bottom:12px">Se crea <strong>una sola vez por cliente</strong>, con el nombre de usuario que haya pedido al pagar. Con ella entra en la app desde cualquier dispositivo; los negocios se le añaden después con los códigos del paso 2.</p>
+    <label>Nombre de usuario que ha pedido el cliente</label>
+    <input id="owner-name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')genOwner()">
+    <button class="gen" id="owner-btn" onclick="genOwner()">Crear cuenta de propietario</button>
+    <p id="owner-status" class="muted" style="margin-top:8px"></p>
+    <div id="owner-out" style="display:none">
+      <div class="key-out" id="owner-key"></div>
+      <div class="btns">
+        <button class="copy" onclick="copyBox('owner-key')">📋 Copiar</button>
+        <a class="wa" id="owner-wa" target="_blank" rel="noopener">📱 WhatsApp</a>
+        <a class="copy" id="owner-email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Código de negocio</h2>
+    <p class="muted" style="margin-bottom:12px">Uno por cada local que compre. El cliente lo canjea desde dentro de la app, en la pantalla de negocios. <strong>Ya no lleva contraseña</strong>: el código es lo único que hace falta.</p>
     <label>Nombre del restaurante (solo para tu registro de ventas, no se guarda en la app)</label>
     <input id="name" type="text" placeholder="Ej: Casa Paco" onkeydown="if(event.key==='Enter')gen()">
     <button class="gen" id="gen-btn" onclick="gen()">Generar código de negocio</button>
@@ -56,7 +74,7 @@ td.key{font-family:monospace;font-size:11px}
     <div id="out" style="display:none">
       <div class="key-out" id="key"></div>
       <div class="btns">
-        <button class="copy" onclick="copyKey()">📋 Copiar los dos</button>
+        <button class="copy" onclick="copyBox('key')">📋 Copiar</button>
         <a class="wa" id="wa" target="_blank" rel="noopener">📱 WhatsApp</a>
         <a class="copy" id="email" style="background:#fff;color:#444;border:1.5px solid var(--border);text-decoration:none">✉️ Email</a>
       </div>
@@ -64,13 +82,13 @@ td.key{font-family:monospace;font-size:11px}
   </div>
 
   <div class="card">
-    <h2>2 · Registro de ventas <span class="muted" id="count"></span></h2>
-    <p class="muted" style="margin-bottom:10px">Cada código generado se apunta aquí automáticamente (se guarda en este navegador).</p>
+    <h2>3 · Registro de ventas <span class="muted" id="count"></span></h2>
+    <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente (se guarda en este navegador).</p>
     <table id="log-table" style="display:none">
-      <thead><tr><th>Fecha</th><th>Restaurante</th><th>Código</th><th>Contraseña</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>PIN</th><th></th></tr></thead>
       <tbody id="log"></tbody>
     </table>
-    <p class="muted" id="empty">Aún no has generado ningún código.</p>
+    <p class="muted" id="empty">Aún no has generado nada.</p>
     <div class="btns" id="export-row" style="display:none">
       <button class="copy" onclick="exportCSV()">⬇ Descargar registro (CSV)</button>
     </div>
@@ -82,8 +100,14 @@ td.key{font-family:monospace;font-size:11px}
 </div>
 
 <script>
-/* Debe ser IDÉNTICO al de la app (js/core.js: ggLicHash, _ggBizSecret,
-   ggBizPassword, ggBizTenantId) — si cambias algo aquí, cámbialo también allí. */
+/* Debe ser IDÉNTICO al de la app (js/core.js: ggLicHash, ggOwnerUser,
+   _ggOwnerSecret, ggOwnerDerive, ggOwnerAuthKey) — si cambias algo aquí,
+   cámbialo también allí.
+
+   Ya no se genera contraseña de negocio: desde el modelo de cuentas de
+   propietario, el código de negocio se canjea solo (ver el paso 2), y quien
+   demuestra ser el dueño es la cuenta usuario+PIN, no un par código+
+   contraseña que además se podía recalcular con solo leer este archivo. */
 function ggLicHash(str){
   let h = 0x811c9dc5 >>> 0;
   for(let i = 0; i < str.length; i++){
@@ -92,24 +116,68 @@ function ggLicHash(str){
   }
   return h >>> 0;
 }
-function ggBizSecret(){
-  const c = [117,117,197,112,119,136,197,64,62,64,68,197,127,65];
+const GG_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin I, O, 0, 1: ilegibles al dictarlos
+// Math.random() es predecible: quien observe unos cuantos códigos emitidos
+// podría llegar a adivinar los siguientes. Los códigos y los PIN son la
+// única barrera de pago, así que se sacan del generador criptográfico del
+// navegador.
+function ggRandomChars(n){
+  const rnd = new Uint32Array(n);
+  crypto.getRandomValues(rnd);
+  let out = '';
+  for(let i = 0; i < n; i++) out += GG_ALPHABET[rnd[i] % 32];
+  return out;
+}
+function generateBizCode(){ return ggRandomChars(8); }
+
+/* ============================================================
+   CUENTAS DE PROPIETARIO — usuario + PIN
+   Debe ser IDÉNTICO al de la app (js/core.js, mismo bloque) — si cambias
+   algo aquí, cámbialo también allí.
+
+   El PIN NO se guarda en ningún sitio, ni siquiera hasheado: lo que se
+   guarda en Firebase es un nodo cuya RUTA se deriva de usuario+PIN
+   (ggOwnerAuthKey). Comprobar el acceso es leer esa ruta y ver si existe.
+   Así, aunque el nodo sea legible por cualquiera que sepa la ruta, quien
+   no conozca el PIN no puede ni construirla — y como la lectura está
+   permitida solo a nivel de $authKey (nunca del padre), tampoco se puede
+   listar el conjunto para ir probando. Adivinar a ciegas obliga a lanzar
+   una petición de red por intento contra un espacio de 32^6 ≈ mil
+   millones: inviable.
+   ============================================================ */
+// "Casa Paco", "casa paco" y "CASA PACÓ" tienen que ser el mismo usuario:
+// si no, un cliente que escriba su nombre con una mayúscula distinta a la
+// del día que lo compró se queda fuera sin entender por qué.
+function ggOwnerUser(raw){
+  return String(raw || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos: pacó → paco
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+function _ggOwnerSecret(){
+  const c = [117,117,197,125,133,124,115,128,197,64,62,64,68,197,121,69];
   return c.map(x => String.fromCharCode(x - 14)).join('');
 }
-function ggBizPassword(code){
-  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const secret = ggBizSecret();
-  let h = ggLicHash(code + secret);
-  let pass = '', x = h;
-  for(let c = 0; c < 6; c++){ pass += A[x % 32]; x = Math.floor(x / 32); }
-  return pass;
+// Misma construcción que ggBizTenantId (encadenar el hash y sacar grupos de
+// 4 caracteres), ya probada en producción para los tenantId.
+function ggOwnerDerive(input, groups){
+  const out = [];
+  let h = ggLicHash(input);
+  for(let g = 0; g < groups; g++){
+    h = ggLicHash(input + h + g);
+    let grp = '', x = h;
+    for(let c = 0; c < 4; c++){ grp += GG_ALPHABET[x % 32]; x = Math.floor(x / 32); }
+    out.push(grp);
+  }
+  return out.join('');
 }
-function generateBizCode(){
-  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for(let i = 0; i < 8; i++) code += A[Math.floor(Math.random() * 32)];
-  return code;
+function ggOwnerAuthKey(user, pin){
+  const u = ggOwnerUser(user);
+  const p = String(pin || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(!u || !p) return null;
+  return ggOwnerDerive(u + '·' + p + _ggOwnerSecret() + '·auth', 6);
 }
+function generateOwnerPin(){ return ggRandomChars(6); }
 
 /* ============================================================
    UNICIDAD REAL DE CÓDIGOS + LISTA BLANCA DE LICENCIAS — proyecto
@@ -252,9 +320,95 @@ async function claimUniqueBizCode(){
   return generateBizCode();
 }
 
-const LOG_KEY = 'gg_biz_sales_v2';
+/* Reserva el nombre de usuario y crea la cuenta del propietario.
+   Dos escrituras atómicas, en este orden y no al revés:
+     1. gastrogoan/ownerNames/{usuario} — reserva el NOMBRE. Es la que
+        detecta que dos clientes han pedido el mismo, y por eso va primero:
+        si falla, no se ha creado nada y se puede probar con otra variante.
+     2. gastrogoan/ownerAuth/{authKey}  — la cuenta en sí, en una ruta que
+        solo se puede construir sabiendo el PIN (ver ggOwnerAuthKey).
+   El nombre queda reservado aunque el PIN se regenere después, así que
+   nunca puede haber dos clientes distintos con el mismo usuario. */
+const MAX_OWNER_NAME_ATTEMPTS = 20;
+async function claimOwnerAccount(rawName){
+  const statusEl = document.getElementById('owner-status');
+  const base = ggOwnerUser(rawName);
+  if(!base) return {error: 'Ese nombre no deja ninguna letra ni número utilizable. Prueba con otro.'};
+  const app = await getPlatformFirebaseApp();
+  if(!app) return {error: 'Sin sesión de administrador: inicia sesión arriba antes de crear la cuenta, o el cliente no podrá entrar.'};
+
+  for(let attempt = 0; attempt < MAX_OWNER_NAME_ATTEMPTS; attempt++){
+    // casapaco, casapaco2, casapaco3... — la colisión se resuelve aquí, no
+    // en la cara del cliente cuando intente entrar.
+    const user = attempt === 0 ? base : base + (attempt + 1);
+    statusEl.textContent = `Reservando el nombre "${user}"...`;
+    let claimed;
+    try{
+      const ref = app.database().ref('gastrogoan/ownerNames/' + user);
+      const result = await ref.transaction(current => current === null ? {createdAt: Date.now()} : undefined);
+      claimed = result.committed;
+    }catch(e){
+      console.error('Error reservando el nombre de usuario', e);
+      return {error: 'No se pudo reservar el nombre (revisa las reglas de Firebase y la sesión de administrador): ' + (e.message || e.code || 'error')};
+    }
+    if(!claimed) continue; // ese nombre ya es de otro cliente: prueba la siguiente variante
+
+    const pin = generateOwnerPin();
+    try{
+      await app.database().ref('gastrogoan/ownerAuth/' + ggOwnerAuthKey(user, pin)).set({
+        user, createdAt: Date.now()
+      });
+    }catch(e){
+      console.error('Error creando la cuenta de propietario', e);
+      return {error: 'El nombre quedó reservado pero no se pudo crear la cuenta: ' + (e.message || e.code || 'error')};
+    }
+    return {user, pin, renamed: user !== base};
+  }
+  return {error: 'Demasiados nombres parecidos ya en uso. Pídele al cliente otro nombre distinto.'};
+}
+
+const LOG_KEY = 'gg_biz_sales_v3';
 let sales = [];
 try{ sales = JSON.parse(localStorage.getItem(LOG_KEY)) || []; }catch(e){}
+function saveSales(){ localStorage.setItem(LOG_KEY, JSON.stringify(sales)); }
+// El registro cambió de forma (antes {code, password}; ahora {kind, value,
+// pin}, que cubre tanto cuentas como negocios). Se convierte lo que hubiera
+// en el formato viejo para no perder el histórico de ventas anteriores.
+if(!sales.length){
+  try{
+    const old = JSON.parse(localStorage.getItem('gg_biz_sales_v2')) || [];
+    if(old.length){
+      sales = old.map(s => ({ date: s.date, name: s.name, kind: 'negocio', value: s.code, pin: '' }));
+      saveSales();
+    }
+  }catch(e){}
+}
+
+async function genOwner(){
+  const btn = document.getElementById('owner-btn');
+  btn.disabled = true;
+  const statusEl = document.getElementById('owner-status');
+  statusEl.textContent = 'Creando la cuenta...';
+  const raw = document.getElementById('owner-name').value.trim();
+  const res = await claimOwnerAccount(raw);
+  if(res.error){
+    statusEl.textContent = '⚠️ ' + res.error;
+    btn.disabled = false;
+    return;
+  }
+  statusEl.textContent = res.renamed
+    ? `⚠️ "${ggOwnerUser(raw)}" ya estaba cogido por otro cliente. Se ha creado como "${res.user}" — avísale de que ese es su usuario exacto.`
+    : '✅ Cuenta creada y nombre reservado en la plataforma.';
+  document.getElementById('owner-key').innerHTML = `Usuario: ${res.user}<br>PIN: ${res.pin}`;
+  document.getElementById('owner-out').style.display = 'block';
+  const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te he enviado aparte.\n\nEl PIN lo puedes cambiar en cualquier momento desde la app.';
+  document.getElementById('owner-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  document.getElementById('owner-email').href = 'mailto:?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin });
+  saveSales();
+  renderLog();
+  btn.disabled = false;
+}
 
 async function gen(){
   const genBtn = document.getElementById('gen-btn');
@@ -262,28 +416,27 @@ async function gen(){
   document.getElementById('uniqueness-status').textContent = 'Generando...';
   const raw = document.getElementById('name').value.trim();
   const code = await claimUniqueBizCode();
-  const password = ggBizPassword(code);
-  document.getElementById('key').innerHTML = `Código: ${code}<br>Contraseña: ${password}`;
+  document.getElementById('key').innerHTML = `Código de negocio: ${code}`;
   document.getElementById('out').style.display = 'block';
-  const msg = 'Tus credenciales de GastroGoan 🍽\n\nCódigo de negocio: ' + code + '\nContraseña: ' + password + '\n\nAbre la app, pulsa "Acceso Propietarios" y usa estos dos datos para activarla la primera vez. Después podrás cambiar la contraseña por una que prefieras.\n\nGuarda también el código: lo necesitarás para dar de alta a tus empleados desde "Acceso Empleados".';
+  const msg = 'Tu código de negocio de GastroGoan 🍽\n\nCódigo: ' + code + '\n\nEntra en la app con tu usuario y PIN, y en la pantalla de negocios pulsa "Canjear negocio" para introducirlo.\n\nGuarda el código: lo necesitarás también para dar de alta a tus empleados desde "Acceso Empleados".';
   document.getElementById('wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tus credenciales de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  if(!sales.some(s => s.code === code)){
-    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', code, password });
-    localStorage.setItem(LOG_KEY, JSON.stringify(sales));
+  document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
+  if(!sales.some(s => s.value === code)){
+    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '' });
+    saveSales();
   }
   renderLog();
   genBtn.disabled = false;
 }
 
-function copyKey(){
-  navigator.clipboard.writeText(document.getElementById('key').innerText).then(() => alert('Copiado'));
+function copyBox(id){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => alert('Copiado'));
 }
 
 function delSale(i){
   if(!confirm('¿Borrar esta entrada del registro?')) return;
   sales.splice(i, 1);
-  localStorage.setItem(LOG_KEY, JSON.stringify(sales));
+  saveSales();
   renderLog();
 }
 
@@ -292,14 +445,14 @@ function renderLog(){
   document.getElementById('log-table').style.display = has ? 'table' : 'none';
   document.getElementById('empty').style.display = has ? 'none' : 'block';
   document.getElementById('export-row').style.display = has ? 'flex' : 'none';
-  document.getElementById('count').textContent = has ? '· ' + sales.length + ' venta' + (sales.length === 1 ? '' : 's') : '';
+  document.getElementById('count').textContent = has ? '· ' + sales.length + ' entrada' + (sales.length === 1 ? '' : 's') : '';
   document.getElementById('log').innerHTML = sales.map((s, i) =>
-    `<tr><td>${s.date}</td><td>${s.name}</td><td class="key">${s.code}</td><td class="key">${s.password}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
+    `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td><td class="key">${s.value}</td><td class="key">${s.pin || '—'}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
   ).join('');
 }
 
 function exportCSV(){
-  const csv = 'Fecha;Restaurante;Código;Contraseña\n' + sales.map(s => `${s.date};${s.name};${s.code};${s.password}`).join('\n');
+  const csv = 'Fecha;Cliente;Tipo;Dato;PIN\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.pin || ''}`).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'ventas-gastrogoan.csv';
