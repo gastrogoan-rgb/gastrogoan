@@ -164,13 +164,20 @@ localStorage.setItem('gastrogoan_owner_pass_prompted','1');
 
 Verificado con pruebas reales, no solo revisión de código: concurrencia genuina en reservas (20 simultáneas contra aforo 10), volumen realista (500 clientes / 10.000 ventas), inyección XSS, responsive en 3 idiomas × 5 resoluciones × 18 módulos, y una auditoría ciega por una sesión de IA independiente (7,5/10 antes de corregir su hallazgo del hash débil).
 
+### Hecho (14 ago 2026)
+
+- **Reglas de Firebase publicadas** con los nodos del modelo de cuentas (`ownerNames`, `ownerAuth`, `codeClaims`).
+- **Alta completa verificada contra la plataforma real**, servida por HTTP: crear cuenta y código en el generador → entrar con usuario+PIN → canjear el código → negocio dado de alta.
+
 ### Pendiente — solo lo puede hacer el dueño
 
-1. Subir `dist/` a gastrogoan.com.
-2. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
-3. Un pago real con **Redsys** (o su sandbox).
-4. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
-5. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
+1. Subir `dist/` a gastrogoan.com (la prueba se hizo en Netlify Drop). Si el acceso fallara desde ese dominio, añadirlo en Firebase → Authentication → Settings → Dominios autorizados.
+2. Configurar en Stripe los **dos campos personalizados** que distinguen cliente nuevo de cliente que repite (ver `DOCS-INTERNO-vender.md`, sección 2). Sin ellos hay que adivinarlo en cada venta.
+3. Borrar la cuenta de prueba `pruebamia` desde la consola de Firebase (`gastrogoan/ownerNames` y `gastrogoan/ownerAuth`), y su código de `issuedCodes`/`codeClaims`.
+4. Probar el paso de **configurar la nube** como cliente nuevo (único punto donde un cliente puede atascarse).
+5. Un pago real con **Redsys** (o su sandbox).
+6. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
+7. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
 
 ### Limitaciones asumidas conscientemente
 

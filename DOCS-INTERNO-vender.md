@@ -78,8 +78,9 @@ El PIN **no se guarda en ningún sitio**, ni siquiera hasheado (lo que se guarda
 
 | Archivo | Para qué |
 |---|---|
-| **`kit-gastrogoan (52).html`** | La aplicación. Es el producto. (Puedes renombrarlo a `GastroGoan.html` al enviarlo.) |
-| **Clave de licencia** | Generada con el generador. Se envía por WhatsApp/email. |
+| **`index.html`** (de la carpeta `dist/`) | La aplicación. Es el producto. (Puedes renombrarlo a `GastroGoan.html` al enviarlo.) |
+| **Usuario + PIN** | Su cuenta. Solo en su **primera** compra. |
+| **Código de negocio** | La licencia de ese local. **Uno por cada local** que compre. |
 | **`Guia-puesta-en-marcha-GastroGoan.pdf`** | Guía de primeros pasos. |
 | **`tutorial-nube.html`** | Cómo configurar la nube (Firebase) para sincronizar dispositivos. |
 | **`tutorial-netlify.html`** | Cómo publicar la app online para pedidos/reservas con QR. |
@@ -97,6 +98,7 @@ El PIN **no se guarda en ningún sitio**, ni siquiera hasheado (lo que se guarda
 | **`revoked-licenses.json`** | Control interno de revocaciones. |
 | **`build_pdf.py`** | Herramienta interna. |
 | **`landing.html`** | Web de venta (es tuya, no del cliente). |
+| **`build_docs_pdf.py`** | Herramienta interna. |
 | **`kit-gastrogoan-PREVIEW.html`** | Versión con licencia/nube **desactivadas**: quien la tenga usaría la app gratis para siempre. Solo para tus demos/capturas. |
 | **`kit-gastrogoan-DEMO.html`** | Igual, uso interno. |
 
@@ -106,12 +108,13 @@ El PIN **no se guarda en ningún sitio**, ni siquiera hasheado (lo que se guarda
 
 La app guía al cliente con pantallas en orden:
 
-1. **Activación** → pega la clave de licencia.
-2. **Configurar la nube (Firebase)** → opcional pero recomendado; sincroniza varios dispositivos (cocina, barra, móviles). Tutorial: `tutorial-nube.html`.
-3. **Publicar online (Netlify)** → opcional; necesario solo si quiere pedidos/reservas por QR. Tutorial: `tutorial-netlify.html`.
-4. **Tour guiado** dentro de la app.
+1. **Acceso Propietarios** → entra con su usuario y su PIN. Se le ofrece cambiar el PIN por uno de 4 cifras; el nuevo le vale en todos sus dispositivos.
+2. **Pantalla de negocios vacía** → pulsa "Canjear negocio" e introduce su código de 8 caracteres.
+3. **Configurar la nube (Firebase)** → **obligatorio**, la app no deja seguir sin ello. Tiene asistente propio. Tutorial: `tutorial-nube.html`.
+4. **Publicar online (Netlify)** → opcional; solo si quiere pedidos/reservas por QR. Tutorial: `tutorial-netlify.html`.
+5. **Tour guiado** dentro de la app.
 
-> Si el cliente solo quiere un TPV en una tablet sin internet, puede saltarse los pasos 2 y 3 y empezar a trabajar directamente.
+> ⚠️ El paso 3 es el único donde un cliente se puede atascar de verdad. Si te escribe agobiado, casi seguro es ahí.
 
 ---
 
@@ -119,9 +122,11 @@ La app guía al cliente con pantallas en orden:
 
 ```
 [ ] Pago de 100 € recibido
-[ ] Licencia generada en generador-licencias.html (nombre correcto del restaurante)
-[ ] Clave enviada al cliente (WhatsApp/email)
-[ ] App enviada (kit-gastrogoan.html renombrado)
+[ ] Mirado en el generador qué le toca (botón "¿Qué le tengo que dar?")
+[ ] Cuenta creada -SOLO si es cliente nuevo- y usuario+PIN apuntados
+[ ] Código de negocio generado
+[ ] Usuario, PIN y código enviados al cliente (WhatsApp/email)
+[ ] App enviada (index.html renombrado)
 [ ] Guía de puesta en marcha (PDF) enviada
 [ ] Tutoriales de nube y Netlify enviados (si los necesita)
 [ ] reservagastrogoan.html enviado (si quiere reservas/pedidos online)
