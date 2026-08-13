@@ -145,6 +145,16 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .grid>*{min-width:0}
 .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
 .grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+/* Comandas de cocina: cada línea es "1 × Nombre del plato" + un botón de
+   estado AL LADO, así que con el mínimo de 180px de .grid-3 se abrían
+   demasiadas columnas en pantallas anchas y el nombre del plato quedaba
+   pisado por el botón (nombres largos como "Hamburguesa Clásica" no caben
+   en esa anchura). Rejilla propia, más ancha, sin tocar el resto de la app. */
+/* align-items:start para que cada comanda ocupe solo lo que necesita: por
+   defecto la rejilla estira todas las tarjetas de una fila a la altura de
+   la más larga, y una comanda de un solo plato quedaba como un cuadro casi
+   vacío al lado de otra de tres tandas. */
+.grid-kds{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
@@ -910,6 +920,7 @@ td.wrap{white-space:normal}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
+  .grid-kds{grid-template-columns:1fr !important}
   .grid-personal{grid-template-columns:1fr !important}
   .grid-modules{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}

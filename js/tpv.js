@@ -2357,7 +2357,7 @@ function renderComandasCocina(){
       return;
     }
 
-    box.innerHTML = tabsHtml + `<div class="grid grid-3">${closed.map(({order, lines, maxMs}) => `
+    box.innerHTML = tabsHtml + `<div class="grid grid-kds">${closed.map(({order, lines, maxMs}) => `
       <div class="card" style="overflow-y:auto;display:flex;flex-direction:column">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
           <strong>${escapeHtml(comandaOrderTitle(order))}</strong> ${comandaWaiterChipHtml(order)}
@@ -2392,7 +2392,7 @@ function renderComandasCocina(){
     return;
   }
 
-  box.innerHTML = tabsHtml + `<div class="grid grid-3">${tickets.map(({order, allLines}) => {
+  box.innerHTML = tabsHtml + `<div class="grid grid-kds">${tickets.map(({order, allLines}) => {
     const tandaOrder = [...new Set(allLines.map(({line}) => line.tanda || ''))];
     const groups = tandaOrder.map(t => ({
       tanda: t,
@@ -2415,25 +2415,25 @@ function renderComandasCocina(){
         const hasPreparando = g.lines.some(({line}) => line.estado === 'preparando');
         const allEntregado = g.lines.every(({line}) => line.estado === 'entregado');
         let groupBtn = '';
-        if(allEntregado) groupBtn = `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
-        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.deliverAll')}</button>`;
+        if(allEntregado) groupBtn = `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
+        else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
+        else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.deliverAll')}</button>`;
         return `
         <div style="margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            ${g.tanda ? `<div style="font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+            ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupBtn}
           </div>
           ${g.lines.map(({line, idx}) => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
-              <div style="flex:1;min-width:0">
+              <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
                 ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
-              ${!line.estado ? `<span class="badge badge-gray"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
+              ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
               : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
               : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
-              : `<span class="badge badge-green"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`}
+              : `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`}
             </div>
           `).join('')}
         </div>
