@@ -766,7 +766,6 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
       <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
-      <button class="btn" style="width:100%;margin-top:4px;background:none;border:none;color:var(--muted);font-size:12.5px" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('access.changePassword')}</button>
     </div>
   `;
 }
@@ -774,14 +773,21 @@ function renderBusinessSelectScreenHtml(){
 // de recordar de memoria — por eso, en cuanto el propietario la cambia por
 // la suya, se le obliga a que sea un PIN numérico de 4 dígitos, mucho más
 // fácil de recordar y de teclear cada vez. El código de negocio no cambia.
-function promptChangeOwnerPassword(){
+// duringSetup=true solo cuando se llama desde la configuración inicial: al
+// cerrar el modal hay que reanudar los asistentes que falten. Desde Mi
+// Negocio (cambio voluntario, con la app ya configurada) NO debe reanudar
+// nada, o cerrar este modal podría lanzar el tour o el asistente de
+// conexiones externas sin que nadie lo haya pedido.
+let ownerPassPromptDuringSetup = false;
+function promptChangeOwnerPassword(duringSetup){
   const login = getOwnerLogin();
   if(!login) return;
+  ownerPassPromptDuringSetup = !!duringSetup;
   const pinInputAttrs = `maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:22px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-key"></i> ${t('access.changePassword')}</h3>
-      <button class="modal-close" onclick="closeModal();continuePendingOwnerSetup()">&times;</button>
+      <button class="modal-close" onclick="closeOwnerPassPrompt()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('access.newPasswordPrompt')}</p>
     <div class="field">
@@ -793,7 +799,7 @@ function promptChangeOwnerPassword(){
       <input type="password" id="owner-new-pass-2" ${pinInputAttrs} onkeydown="if(event.key==='Enter')confirmChangeOwnerPassword()">
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal();continuePendingOwnerSetup()">${t('common.cancel')}</button>
+      <button class="btn" onclick="closeOwnerPassPrompt()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmChangeOwnerPassword()">${t('common.save')}</button>
     </div>
   `);
@@ -807,7 +813,11 @@ function confirmChangeOwnerPassword(){
   changeOwnerAccessPassword(p1);
   closeModal();
   showToast(t('msg.pinUpdated'));
-  continuePendingOwnerSetup();
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
+}
+function closeOwnerPassPrompt(){
+  closeModal();
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
 }
 
 function renderBsGroups(allSlots){
@@ -1716,7 +1726,7 @@ function promptChangeOwnerPasswordFirstTime(){
     <p style="font-size:13px;color:var(--muted)">${t('access.changePasswordFirstDesc')}</p>
     <div class="modal-footer">
       <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();continuePendingOwnerSetup()">${t('common.later')}</button>
-      <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword()">${t('access.changePassword')}</button>
+      <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword(true)">${t('access.changePassword')}</button>
     </div>
   `);
 }

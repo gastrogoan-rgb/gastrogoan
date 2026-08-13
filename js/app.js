@@ -4278,6 +4278,18 @@ function renderMiNegocio(){
       <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
     </div>
 
+    <!-- Ojo: esto NO es el PIN de arriba. El PIN del negocio confirma acciones
+         sueltas dentro de la app; esta es la contraseña con la que se ENTRA, y
+         se guarda por dispositivo (gastrogoan_owner_login), no por negocio —
+         por eso el texto lo avisa: cambiarla aquí la cambia para todos los
+         negocios de este dispositivo. Antes solo se podía cambiar desde la
+         pantalla de elegir negocio, un sitio poco evidente para buscarla. -->
+    <div class="card">
+      <h3><i class="ti ti-lock-password"></i> ${t('mn.ownerPass.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerPass.desc')}</p>
+      <button class="btn btn-sm" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('mn.ownerPass.btn')}</button>
+    </div>
+
     <div class="card" style="border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
       <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
@@ -5404,7 +5416,7 @@ function changeOwnerPin(){
   requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
     DB.business.pin = n1;
     DB.business.pinSet = true;
-    logBusinessSettingChange('PIN de acceso a Gestión cambiado');
+    logBusinessSettingChange('PIN del negocio cambiado');
     saveDB();
     renderMiNegocio();
     showToast(isWeak ? t('msg.pinTooWeak') : t('msg.pinUpdated'));
