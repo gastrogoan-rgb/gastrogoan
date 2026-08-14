@@ -294,6 +294,11 @@ function renderDashboard(){
   // entrando a TPV → Para Llevar/Delivery → Control de repartos; con esto
   // se sabe de un vistazo si hay entregas activas sin salir de Gestión.
   const activeRepartosCount = typeof getActiveRepartosOrders === 'function' ? getActiveRepartosOrders().length : 0;
+  // Antes nada avisaba si un turno terminaba sin cerrar caja: quedaba a la
+  // memoria de cada uno. Se avisa solo cuando ya pasó la hora de cierre de
+  // hoy Y quedan ventas sin cuadrar en el periodo abierto — con el negocio
+  // todavía en servicio no tiene sentido pedir un arqueo a medio turno.
+  const cashClosurePendingCount = (typeof isPastTodayClosingTime === 'function' && isPastTodayClosingTime() && typeof getSalesForClosure === 'function') ? getSalesForClosure().length : 0;
 
   // Orden pensado por urgencia/tipo, no por casualidad de cuándo se añadió
   // cada chip: primero lo que de verdad necesita una acción (avisos en
@@ -305,6 +310,7 @@ function renderDashboard(){
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
+    {count: cashClosurePendingCount, icon:'ti-cash-register', label: t('dash.att.cashClosurePending'), onclick: `navigate('tpv'); openCashClosureModal()`, warn:true},
     {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
     {count: activeRepartosCount, icon:'ti-moped', label: t('dash.att.activeDeliveries'), onclick: `navigate('tpv'); openRepartosControlModal()`},
     {count: clockedIn, icon:'ti-clock-check', label: t('dash.att.clockedIn'), onclick: `navigate('horarios')`},

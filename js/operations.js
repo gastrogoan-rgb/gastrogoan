@@ -5,6 +5,24 @@ function fmtDateTime(d){
   return d.toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 
+// ¿Ya pasó hoy la hora de cierre configurada del negocio? Sirve para avisar
+// de un cierre de caja pendiente solo cuando tiene sentido — con el negocio
+// todavía abierto no hay nada real que cuadrar todavía. Mismo patrón de
+// lectura del horario que renderLastCallBanner() en TPV.
+function isPastTodayClosingTime(){
+  try{
+    const horarioHoy = (DB.business.horario||[])[new Date().getDay()===0?6:new Date().getDay()-1];
+    if(!horarioHoy || horarioHoy.abierto===false) return false;
+    const tramos = horarioHoy.modo==='seguido' ? [horarioHoy.seguido] : (horarioHoy.turnos||[]);
+    const toMin = hhmm => { const [h,m] = (hhmm||'').split(':').map(Number); return isNaN(h)?null:h*60+(m||0); };
+    const now = new Date();
+    const nowMin = now.getHours()*60+now.getMinutes();
+    const fins = tramos.map(tr => toMin(tr && tr.fin)).filter(f => f!=null);
+    if(!fins.length) return false;
+    return nowMin > Math.max(...fins);
+  }catch(e){ return false; }
+}
+
 function getCashClosurePeriod(){
   const today = todayStr();
   const todaysClosures = DB.cashClosures.filter(c => c.fecha === today).sort((a,b)=> new Date(a.hasta) - new Date(b.hasta));
@@ -296,6 +314,14 @@ function performCashClosure(){
   const desde = document.getElementById('closure-desde').value;
   const hasta = document.getElementById('closure-hasta').value;
   const warnings = detectClosureWarnings(diferencia, discounts, voids);
+  // Quién hizo el cierre lo dice la sesión con la que se ha entrado, igual
+  // que el resto de registros de este tipo (cumplimiento de apertura/cierre,
+  // gasto registrado...) — no un campo a elegir a mano. Antes no quedaba
+  // constancia de quién cerró caja cada turno, así que no había forma real
+  // de saber si de verdad se estaba haciendo o quién.
+  const authorId = getChatAuthor();
+  const responsableId = authorId==='owner' ? null : authorId;
+  const responsableNombre = getChatAuthorName(authorId);
 
   const platformSales = [];
   (DB.business.deliveryPlatforms||[]).forEach(p => {
@@ -314,6 +340,7 @@ function performCashClosure(){
     anulaciones: voids,
     platformSales,
     fondoInicial, efectivoEsperado, efectivoContado, diferencia, notas, warnings,
+    responsableId, responsableNombre,
     createdAt: new Date().toISOString()
   };
   DB.cashClosures.push(closure);
@@ -366,7 +393,7 @@ function printCashClosure(closure){
     <tbody>${closure.platformSales.map(p => `<tr><td>${escapeHtml(p.nombre)}</td><td class="pr-num">${fmtMoney(p.total)}</td><td class="pr-num">${fmtMoney(p.comision)}</td></tr>`).join('')}</tbody></table>` : '';
 
   const body = `
-    ${printReportHeaderHtml(t('title.cashClosureReceipt'), `${t('label.from')} ${fmtDateTime(new Date(closure.desde))} — ${t('label.to')} ${fmtDateTime(new Date(closure.hasta))}`)}
+    ${printReportHeaderHtml(t('title.cashClosureReceipt'), `${t('label.from')} ${fmtDateTime(new Date(closure.desde))} — ${t('label.to')} ${fmtDateTime(new Date(closure.hasta))}${closure.responsableNombre ? ` · ${t('label.responsible')}: ${escapeHtml(closure.responsableNombre)}` : ''}`)}
     <h2>${t('label.totalSales')}</h2>
     <table><thead><tr><th>${t('ticket.payment')}</th><th class="pr-num">${t('common.amount')}</th></tr></thead>
       <tbody>
@@ -394,12 +421,13 @@ function openCashClosureHistory(){
     ${closures.length ? `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.totalSales')}</th><th>${t('label.difference')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('common.date')}</th><th>${t('label.closingTime')}</th><th>${t('label.responsible')}</th><th>${t('label.totalSales')}</th><th>${t('label.difference')}</th><th></th></tr></thead>
         <tbody>
           ${closures.map(c => `
             <tr>
               <td>${escapeHtml(c.fecha)}</td>
               <td>${fmtDateTime(new Date(c.hasta))}</td>
+              <td>${escapeHtml(c.responsableNombre||'—')}</td>
               <td>${fmtMoney(c.total)}</td>
               <td>${c.diferencia===null ? '—' : (c.diferencia>0?'+':'')+fmtMoney(c.diferencia)}</td>
               <td><button class="btn btn-sm btn-icon" onclick="(()=>{const x=DB.cashClosures.find(z=>z.id===${c.id});if(x)printCashClosure(x);})()"><i class="ti ti-printer"></i></button>
