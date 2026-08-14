@@ -533,6 +533,11 @@ function renderProveedores(){
       ${p.tel ? `<div><i class="ti ti-phone"></i> <a href="tel:${escapeHtml(p.tel)}">${escapeHtml(p.tel)}</a> · <a href="https://wa.me/${escapeHtml(p.tel.replace(/\D/g,''))}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
       ${p.email ? `<div><i class="ti ti-mail"></i> <a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a></div>` : ''}
       ${getProviderDiasEntrega(p).length ? `<div><i class="ti ti-truck-delivery"></i> ${t('label.delivery')}: ${getProviderDiasEntrega(p).map(d=>escapeHtml(weekDayLabelFromStored(d))).join(', ')}${p.horaEntrega?` · ${escapeHtml(p.horaEntrega)}${t('label.hoursApprox')}`:''}</div>` : ''}
+      ${p.envioTipo ? `<div><i class="ti ti-cash"></i> ${t('label.shipping')}: ${
+        p.envioTipo === 'fijo'
+          ? `${fmtMoney(p.envioCoste||0)} ${t('label.shippingFixedTag')}`
+          : `${t('label.shippingFreeFrom')} ${fmtMoney(p.envioMinimo||0)} (${t('label.shippingOtherwise')} ${fmtMoney(p.envioCoste||0)})`
+      }</div>` : ''}
       ${p.dir ? `<div><i class="ti ti-map-pin"></i> ${escapeHtml(p.dir)}</div>` : ''}
       ${p.iban ? `<div><i class="ti ti-credit-card"></i> ${escapeHtml(p.iban)}</div>` : ''}
       ${p.pago ? `<span class="badge badge-gray">${escapeHtml(paymentMethodLabel(p.pago))}</span>` : ''}
@@ -586,7 +591,7 @@ function getProviderDiasEntrega(p){
 }
 
 function openProviderModal(id){
-  const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:'',diaEntrega:'',horaEntrega:''};
+  const p = id ? DB.providers.find(x=>x.id===id) : {nombre:'',tel:'',email:'',contacto:'',pago:'Contado',dir:'',iban:'',notas:'',diaEntrega:'',horaEntrega:'',envioTipo:'',envioCoste:0,envioMinimo:0};
   const diasEntrega = getProviderDiasEntrega(p);
   openModal(`
     <div class="modal-header">
@@ -618,6 +623,24 @@ function openProviderModal(id){
       </div>
     </div>
     <div class="field"><label>${t('label.approxDeliveryTime')}</label><input type="time" id="prov-hora-entrega" value="${escapeHtml(p.horaEntrega||'')}"></div>
+    <div class="field">
+      <label>${t('label.shippingCost')}</label>
+      <select id="prov-envio-tipo" onchange="toggleProviderEnvioFields()">
+        <option value="" ${!p.envioTipo?'selected':''}>${t('label.shippingNone')}</option>
+        <option value="fijo" ${p.envioTipo==='fijo'?'selected':''}>${t('label.shippingFixed')}</option>
+        <option value="minimo" ${p.envioTipo==='minimo'?'selected':''}>${t('label.shippingMinimum')}</option>
+      </select>
+    </div>
+    <div id="prov-envio-fields" class="field-row" style="display:${p.envioTipo?'flex':'none'}">
+      <div class="field" id="prov-envio-minimo-field" style="display:${p.envioTipo==='minimo'?'block':'none'}">
+        <label>${t('label.shippingMinAmount')}</label>
+        <input type="number" id="prov-envio-minimo" min="0" step="0.01" value="${p.envioMinimo||''}">
+      </div>
+      <div class="field">
+        <label>${t('label.shippingFeeAmount')}</label>
+        <input type="number" id="prov-envio-coste" min="0" step="0.01" value="${p.envioCoste||''}">
+      </div>
+    </div>
     <div class="field"><label>${t('common.address')}</label><input type="text" id="prov-dir" value="${escapeHtml(p.dir)}"></div>
     <div class="field"><label>IBAN</label><input type="text" id="prov-iban" value="${escapeHtml(p.iban)}"></div>
     <div class="field"><label>${t('common.notes')}</label><textarea id="prov-notas" rows="2">${escapeHtml(p.notas)}</textarea></div>
@@ -626,6 +649,12 @@ function openProviderModal(id){
       <button class="btn btn-primary" onclick="saveProvider(${id||'null'})">${t('common.save')}</button>
     </div>
   `);
+}
+
+function toggleProviderEnvioFields(){
+  const tipo = document.getElementById('prov-envio-tipo').value;
+  document.getElementById('prov-envio-fields').style.display = tipo ? 'flex' : 'none';
+  document.getElementById('prov-envio-minimo-field').style.display = tipo==='minimo' ? 'block' : 'none';
 }
 
 function saveProvider(id){
@@ -647,6 +676,9 @@ function saveProvider(id){
     iban: document.getElementById('prov-iban').value.trim(),
     diasEntrega: WEEK_DAYS.filter((_,i)=>document.getElementById(`prov-dia-entrega-${i}`).checked),
     horaEntrega: document.getElementById('prov-hora-entrega').value,
+    envioTipo: document.getElementById('prov-envio-tipo').value,
+    envioCoste: parseFloat(document.getElementById('prov-envio-coste').value) || 0,
+    envioMinimo: parseFloat(document.getElementById('prov-envio-minimo').value) || 0,
     notas: document.getElementById('prov-notas').value.trim()
   };
   if(id){
@@ -684,6 +716,26 @@ function deleteProvider(id){
 
 function getProviderByName(name){
   return DB.providers.find(p => p.nombre.trim().toLowerCase() === (name||'').trim().toLowerCase());
+}
+
+// Coste de envío de un proveedor para un pedido de un importe (base, sin
+// IVA) dado. 'fijo' se cobra siempre; 'minimo' solo si no se llega al
+// importe pactado — por eso se calcula sobre lo PEDIDO (pedidoOrderedBase),
+// no sobre lo finalmente recibido: es lo que el proveedor mira al preparar
+// el envío, antes de saber si luego falta algo.
+function providerShippingCost(provider, baseSubtotal){
+  if(!provider || !provider.envioTipo) return 0;
+  if(provider.envioTipo === 'fijo') return provider.envioCoste || 0;
+  if(provider.envioTipo === 'minimo') return baseSubtotal >= (provider.envioMinimo||0) ? 0 : (provider.envioCoste || 0);
+  return 0;
+}
+function pedidoOrderedBase(o){
+  let base = 0;
+  (o.items||[]).forEach(line => {
+    const ing = getIngredient(line.ingredientId);
+    if(ing) base += (line.cantidad||0) * (ing.price||0);
+  });
+  return base;
 }
 
 /* ============================================================
@@ -908,6 +960,7 @@ function pedidoTotalConIva(o){
     const ivaPct = ing.iva != null ? ing.iva : 0;
     total += base * (1 + ivaPct/100);
   });
+  total += providerShippingCost(getProviderByName(o.supplier), pedidoOrderedBase(o));
   return total;
 }
 
@@ -935,13 +988,15 @@ function renderPedidoIvaBreakdownHtml(o, isRecibido){
   if(!rates.length && !missingIva) return '';
   const totalBase = rates.reduce((s,r)=>s+groups[r], 0);
   const totalIva = rates.reduce((s,r)=>s+groups[r]*r/100, 0);
+  const envio = providerShippingCost(getProviderByName(o.supplier), pedidoOrderedBase(o));
   return `
   <div style="padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:10px;font-size:13px">
     ${rates.map(r => `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:4px">
       <div><span style="color:var(--muted)">${t('label.taxBase')} ${r}%:</span> <strong>${fmtMoney(groups[r])}</strong></div>
       <div><span style="color:var(--muted)">${t('label.vat')}:</span> <strong>${fmtMoney(groups[r]*r/100)}</strong></div>
     </div>`).join('')}
-    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBase+totalIva)}</strong></div>` : ''}
+    ${envio > 0 ? `<div style="margin-bottom:4px"><span style="color:var(--muted)">${t('label.shipping')}:</span> <strong>${fmtMoney(envio)}</strong></div>` : ''}
+    ${rates.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">${t('common.total')}:</span> <strong style="color:var(--teal)">${fmtMoney(totalBase+totalIva+envio)}</strong></div>` : ''}
     ${missingIva ? `<div style="color:var(--red);margin-top:6px"><i class="ti ti-alert-triangle"></i> ${t('msg.someIngredientsMissingIva')}</div>` : ''}
   </div>`;
 }
@@ -1251,7 +1306,10 @@ function registerPedidoComoGastoVariable(o){
     if(!byGroup[key]) byGroup[key] = {cat, iva: ivaPct, base: 0};
     byGroup[key].base += costBase;
   });
-  if(!Object.keys(byGroup).length){ o.gvCreated = true; return; }
+  // El envío se calcula sobre lo PEDIDO (no sobre lo recibido, como el resto
+  // de este gasto): es lo que decide el proveedor al preparar el envío.
+  const envio = providerShippingCost(getProviderByName(o.supplier), pedidoOrderedBase(o));
+  if(!Object.keys(byGroup).length && envio <= 0){ o.gvCreated = true; return; }
   const fecha = todayStr();
   const d = new Date(fecha);
   // Fecha de pago por defecto: 30 días desde la recepción (el plazo más
@@ -1271,6 +1329,17 @@ function registerPedidoComoGastoVariable(o){
     if(iva != null) rec.iva = iva;
     DB.ge.variables.push(rec);
   });
+  if(envio > 0){
+    // Sin categoría propia (envío/transporte no tiene una en Gastos
+    // Variables): 'OTROS' es la pensada precisamente para un extra así,
+    // distinto de la materia prima del propio pedido.
+    DB.ge.variables.push({
+      id: genId(), mes: d.getMonth(), año: d.getFullYear(),
+      categoria: 'OTROS', proveedor: o.supplier, importe: Math.round(envio*100)/100,
+      fecha, pedidoId: o.id, auto: true,
+      fechaPago, pagada: false
+    });
+  }
   o.gvCreated = true;
 }
 
@@ -1584,11 +1653,24 @@ function orderSummaryHtml(){
     ? `<div style="font-size:11.5px;color:var(--amber,#8A7440);padding:6px 10px"><i class="ti ti-alert-triangle"></i> ${t('msg.orderItemsWithoutPrice').replace('${n}', sinPrecio)}</div>`
     : '';
 
-  return filas + aviso + `
+  // Si el proveedor cobra envío por no llegar a un mínimo, se avisa aquí
+  // mismo mientras se compone el pedido — es el momento en que sirve de
+  // algo saberlo, para poder añadir más artículos y evitarlo.
+  const provider = getProviderByName(orderModalSupplier);
+  const envio = providerShippingCost(provider, base);
+  let envioAviso = '';
+  if(provider && provider.envioTipo === 'minimo'){
+    envioAviso = envio > 0
+      ? `<div style="font-size:11.5px;color:var(--amber,#8A7440);padding:6px 10px"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingMinimumNotReached').replace('${missing}', fmtMoney(Math.max(0,(provider.envioMinimo||0)-base))).replace('${min}', fmtMoney(provider.envioMinimo||0))}</div>`
+      : `<div style="font-size:11.5px;color:var(--olive);padding:6px 10px"><i class="ti ti-truck-delivery"></i> ${t('msg.shippingFreeReached').replace('${min}', fmtMoney(provider.envioMinimo||0))}</div>`;
+  }
+
+  return filas + aviso + envioAviso + `
     <div style="border-top:1px solid var(--border);margin-top:6px;padding:8px 10px;font-size:13px">
       <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.subtotal')}</span><span>${fmtMoney(base)}</span></div>
       <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.vat')}</span><span>${fmtMoney(iva)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px"><span>${t('common.total')}</span><span>${fmtMoney(base + iva)}</span></div>
+      ${envio > 0 ? `<div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.shipping')}</span><span>${fmtMoney(envio)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px"><span>${t('common.total')}</span><span>${fmtMoney(base + iva + envio)}</span></div>
     </div>`;
 }
 function renderOrderSummary(){
