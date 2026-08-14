@@ -3832,6 +3832,29 @@ async function loadDB(){
     (merged.providers||[]).forEach(p => { if(!p.area) p.area = 'cocina'; });
     (merged.elaboraciones||[]).forEach(e => { if(!e.area) e.area = 'cocina'; });
     (merged.fichas||[]).forEach(f => { if(!f.area) f.area = 'cocina'; });
+    // Desde que la ficha técnica se crea sola con el escandallo, los platos
+    // dados de alta antes se quedaban sin ella y seguirían apareciendo como
+    // "Sin ficha" para siempre. Se les crea aquí la suya, vacía y ya
+    // vinculada, para que el módulo se comporte igual con los platos viejos
+    // que con los nuevos.
+    if(!Array.isArray(merged.fichas)) merged.fichas = [];
+    // Misma fórmula que genId(), que aquí no se puede llamar todavía porque
+    // usa DB y DB aún no está asignado. El contador evita que dos fichas
+    // creadas en el mismo milisegundo compartan id.
+    let nFichaMigrada = 0;
+    (merged.recipes||[]).forEach(r => {
+      if(merged.fichas.some(f => f.recipeId === r.id)) return;
+      merged.fichas.push({
+        id: Date.now() * 1000 + Math.floor(Math.random() * 1000) + (nFichaMigrada++),
+        name: r.name, recipeId: r.id,
+        comensales: r.comensales || 2,
+        baseComensales: r.comensales || 2,
+        produccion: r.comensales || 2,
+        tiempo: '', temp: (r.area||'cocina') === 'sala' ? 'FRÍO' : 'CALIENTE',
+        ingredients: [], pasos: [], allergens: [], presentation: '', photo: '',
+        area: r.area || 'cocina'
+      });
+    });
     (merged.purchaseOrders||[]).forEach(o => { if(!o.area) o.area = 'cocina'; });
     if(!Array.isArray(merged.activeCartaIds)){
       merged.activeCartaIds = merged.activeCartaId ? [merged.activeCartaId] : [];

@@ -679,10 +679,49 @@ function saveRecipe(id){
     DB.recipes.push({id: recipeId, name, price, priceBase, ivaPct, comensales, consumiblesPct, category, ingredients, allergens:[...allergenSet], area: currentArea(), isBase, baseYield, baseUnit});
   }
   syncElaboracionForRecipe(recipeId, isBase, name, baseUnit);
+  ensureFichaForRecipe(recipeId);
   saveDB();
   closeModal();
   renderEscandallo();
   showToast(t('msg.dishSaved'));
+}
+
+/* Cada plato del Escandallo tiene su hoja de ficha técnica desde el momento
+   en que se crea, sin que nadie tenga que vincularla a mano. Antes había que
+   crear el escandallo y después ir a Fichas Técnicas a elegirlo de una lista,
+   un paso que no decidía nada -la ficha de un plato es la de ESE plato- y que
+   además se podía olvidar, dejando platos sin ficha y fichas sueltas sin
+   vincular.
+
+   La ficha nace con lo que ya se sabe del plato (nombre y comensales) y con
+   el resto en blanco: los ingredientes salen del propio escandallo, y pasos,
+   alérgenos, foto y emplatado se rellenan cuando se quiera. Ser una ficha
+   vacía no molesta: la tarjeta ya aparecía en la lista aunque no existiera. */
+function ensureFichaForRecipe(recipeId){
+  if(!recipeId) return null;
+  const r = getRecipe(recipeId);
+  if(!r) return null;
+  const yaTiene = (DB.fichas||[]).find(f => f.recipeId === recipeId);
+  if(yaTiene) return yaTiene;
+  const ficha = {
+    id: genId(),
+    name: r.name,
+    recipeId: r.id,
+    comensales: r.comensales || 2,
+    baseComensales: r.comensales || 2,
+    produccion: r.comensales || 2,
+    tiempo: '',
+    temp: (r.area||'cocina') === 'sala' ? 'FRÍO' : 'CALIENTE',
+    ingredients: [],   // los ingredientes reales vienen del escandallo
+    pasos: [],
+    allergens: [],
+    presentation: '',
+    photo: '',
+    area: r.area || currentArea()
+  };
+  if(!Array.isArray(DB.fichas)) DB.fichas = [];
+  DB.fichas.push(ficha);
+  return ficha;
 }
 
 // Mantiene sincronizada la entrada de Stock > Elaboraciones con los platos
@@ -1107,10 +1146,6 @@ function renderFichaModal(){
   // ahí y quedan bloqueados; una ficha sin vincular permite editarlos a mano.
   const lockedAttr = (ro || f.recipeId) ? 'disabled' : '';
 
-  const recipeOptions = `<option value="">— ${t('label.notLinked')} —</option>` + DB.recipes.filter(r => (r.area||'cocina') === currentArea()).map(r =>
-    `<option value="${r.id}"${r.id===f.recipeId?' selected':''}${(r.id!==f.recipeId && DB.fichas.some(other=>other.id!==f.id && other.recipeId===r.id))?' disabled':''}>${escapeHtml(r.name)}</option>`
-  ).join('');
-
   const baseComensales = getFichaBaseComensales(f);
   const produccion = f.produccion || baseComensales;
   const factor = (baseComensales && baseComensales > 0) ? (produccion / baseComensales) : 1;
@@ -1155,8 +1190,10 @@ function renderFichaModal(){
         <input type="text" id="ficha-name" value="${escapeHtml(f.name)}" placeholder="${isSala ? t('ph.drinkName') : t('ph.dishName')}" ${lockedAttr}>
       </div>
       <div class="field">
-        <label>${t('label.linkToCosting')}</label>
-        <select id="ficha-recipe" onchange="onFichaRecipeChange(this.value)" ${roAttr}>${recipeOptions}</select>
+        <label>${t('label.fromCosting')}</label>
+        ${linkedRecipe
+          ? `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px"><i class="ti ti-calculator"></i> ${escapeHtml(linkedRecipe.name)}</div>`
+          : `<div style="padding:10px 12px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--muted)">${t('label.notLinked')}</div>`}
       </div>
     </div>
     <div class="field-row">
@@ -1222,44 +1259,17 @@ function renderFichaModal(){
 function syncFichaModalFields(){
   const f = fichaModalState;
   const nameEl = document.getElementById('ficha-name');
-  const recipeEl = document.getElementById('ficha-recipe');
   const comensalesEl = document.getElementById('ficha-comensales');
   const tiempoEl = document.getElementById('ficha-tiempo');
   const tempEl = document.getElementById('ficha-temp');
   const presEl = document.getElementById('ficha-presentation');
   if(nameEl) f.name = nameEl.value;
-  if(recipeEl) f.recipeId = recipeEl.value ? parseInt(recipeEl.value) : '';
   if(comensalesEl) f.comensales = comensalesEl.value;
   if(tiempoEl) f.tiempo = tiempoEl.value;
   if(tempEl) f.temp = tempEl.value;
   if(presEl) f.presentation = presEl.value;
 }
 
-
-function onFichaRecipeChange(value){
-  syncFichaModalFields();
-  const f = fichaModalState;
-  const recipeId = value ? parseInt(value) : '';
-  if(recipeId && DB.fichas.some(other => other.id !== f.id && other.recipeId === recipeId)){
-    showToast(t('msg.recipeAlreadyHasTechSheet'));
-    renderFichaModal();
-    return;
-  }
-  f.recipeId = recipeId;
-  if(recipeId){
-    const r = getRecipe(recipeId);
-    if(r){
-      f.name = r.name;
-      f.comensales = r.comensales || 2;
-      f.baseComensales = r.comensales || 1;
-      f.produccion = r.comensales || 1;
-      if(!(f.pasos||[]).filter(Boolean).length) f.pasos = r.steps ? r.steps.split('\n').filter(Boolean) : [''];
-      if(!f.pasos.length) f.pasos = [''];
-      if(!f.presentation) f.presentation = r.presentation || '';
-    }
-  }
-  renderFichaModal();
-}
 
 function updateFichaIngredientText(idx, value){ fichaModalState.ingredients[idx] = value; }
 function addFichaIngredientText(){ syncFichaModalFields(); fichaModalState.ingredients.push(''); renderFichaModal(); }
