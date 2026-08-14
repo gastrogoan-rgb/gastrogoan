@@ -2582,6 +2582,7 @@ function renderHorariosPersonal(){
     const tenureText = formatTenureText(e.fechaAlta);
     const w = monthSales ? (monthSales[String(e.id)] || {total:0, count:0}) : null;
     const medal = medalByEmpId ? medalByEmpId[String(e.id)] : null;
+    const unreadMsgs = isOwnerSession ? directChatUnreadCount(e.id, true) : 0;
     return `
     <div class="card" style="cursor:pointer${isInactive?';opacity:.6':''}" onclick="openEmployeePersonalCard(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -2590,6 +2591,7 @@ function renderHorariosPersonal(){
           <strong style="display:block;overflow:visible;text-overflow:clip;white-space:normal">${escapeHtml(e.name)} ${medal?`<span title="${t('hr.podium.title')}">${medal}</span>`:''}</strong>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(e.rol||t('label.noRole'))}${tenureText?` · ${tenureText}`:''}</div>
         </div>
+        ${unreadMsgs ? `<span class="badge badge-red" style="white-space:nowrap"><i class="ti ti-message"></i> ${unreadMsgs}</span>` : ''}
         ${isInactive ? `<span class="badge badge-gray" style="white-space:nowrap">${t('label.inactive')}</span>` : open ? `<span class="badge badge-green" style="white-space:nowrap"><i class="ti ti-clock-play"></i> ${t('hr2.checkedIn')}</span>` : ''}
       </div>
       ${w ? `
@@ -3127,6 +3129,15 @@ function openEmployeeFicharModal(employeeId){
   const isSala = (e.area||'cocina') === 'sala';
   const ventasSemana = isSala ? camareroSalesInRange(e.id, weekDates) : null;
   const ventasMes = isSala ? camareroSalesInRange(e.id, monthDates) : null;
+  // El dueño ve la ficha de gestión (horas, fichajes y chat, todo en solo
+  // lectura salvo el mensaje), no el kiosko de autoservicio con el que el
+  // propio empleado ficha y pide turnos/vacaciones — fichar por otra
+  // persona sin su PIN no debería ser posible desde aquí. (Con el PIN del
+  // negocio en vez del suyo propio SÍ se sigue pudiendo: es un atajo
+  // distinto y deliberado para "se me olvidó mi PIN", no este caso.)
+  const asOwner = personalFicharAuthMethod === 'owner_session';
+  const unreadMsgs = directChatUnreadCount(e.id, asOwner);
+  const msgBtn = `<button class="btn btn-sm ${unreadMsgs?'btn-primary':''}" onclick="openEmployeeDirectChat(${e.id}, ${asOwner})"><i class="ti ti-message"></i> ${t('btn.messages')}${unreadMsgs?` <span class="badge badge-red" style="margin-left:2px">${unreadMsgs}</span>`:''}</button>`;
   openModal(`
     <div class="modal-header">
       <h3><span style="width:12px;height:12px;border-radius:50%;background:${e.color||'#DF7039'};display:inline-block"></span> ${escapeHtml(e.name)}</h3>
@@ -3134,23 +3145,27 @@ function openEmployeeFicharModal(employeeId){
     </div>
     <div style="text-align:center">
       ${open ? `<span class="badge badge-green"><i class="ti ti-clock-play"></i> ${t('hr2.checkedInSince').replace('${time}', fmtHora(open.entrada))}</span>` : `<span class="badge badge-gray">${t('hr2.offDuty')}</span>`}
+      ${asOwner ? '' : `
       <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
         <button class="btn btn-sm btn-primary" ${open?'disabled':''} onclick="quickFichaje(${e.id}, 'entrada')"><i class="ti ti-login"></i> ${t('hr2.clockIn')}</button>
         <button class="btn btn-sm btn-danger" ${!open?'disabled':''} onclick="quickFichaje(${e.id}, 'salida')"><i class="ti ti-logout"></i> ${t('hr2.clockOut')}</button>
-      </div>
+      </div>`}
       <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.hoursThisWeek')}: <strong>${fmtDuracion(horasSemana)}</strong></div>
       <div style="font-size:12px;color:var(--muted)">${t('hr2.hoursThisMonth')}: <strong>${fmtDuracion(horasMes)}</strong></div>
       ${isSala ? `
       <div style="margin-top:8px;font-size:12px;color:var(--muted)">${t('hr2.salesServedWeek')}: <strong>${ventasSemana.count}</strong> (${fmtMoney(ventasSemana.total)})</div>
       <div style="font-size:12px;color:var(--muted)">${t('hr2.salesServedMonth')}: <strong>${ventasMes.count}</strong> (${fmtMoney(ventasMes.total)})</div>
       ` : ''}
-      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center">
+      <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="openFichajeHistoryModal(${e.id})"><i class="ti ti-history"></i> ${t('hr2.viewLastClockIns')}</button>
+        ${asOwner ? '' : `
         <button class="btn btn-sm" onclick="openTurnoSwapRequestModal(${e.id})"><i class="ti ti-replace"></i> ${t('swap.requestBtn')}</button>
         <button class="btn btn-sm" onclick="openVacationRequestModal(${e.id})"><i class="ti ti-beach"></i> ${t('vacation.requestBtn')}</button>
+        `}
+        ${msgBtn}
       </div>
-      ${renderIncomingSwapRequestsHtml(e.id)}
-      ${renderMyVacationRequestsHtml(e.id)}
+      ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
+      ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
       <div class="field" style="margin-top:12px;text-align:left">
         <label>${t('handoff.label')}</label>
         <textarea id="handoff-note-input" rows="2" placeholder="${t('handoff.placeholder')}" onchange="saveShiftHandoffNote('${(e.area||'cocina')}', this.value)">${escapeHtml(getShiftHandoffNote(e.area||'cocina'))}</textarea>

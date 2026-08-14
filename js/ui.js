@@ -1270,6 +1270,80 @@ function updateChatBadge(){
   }
 }
 
+/* ===== Chat directo dueño-empleado =====
+   Reutiliza DB.chatMessages (ya en MERGEABLE_ARRAYS, ya sincroniza solo)
+   con un canal 'dm:<employeeId>' por empleado — solo dos participantes,
+   dueño y ese empleado. Funciones aparte de las del chat de equipo
+   (renderChatMessages/sendChatMessage) porque esas usan los ids fijos
+   #chat-messages/#chat-input del panel de chat interno, que está SIEMPRE
+   en el DOM (aunque oculto): reusar esos mismos ids en un modal aparte
+   pisaría uno de los dos con un id duplicado.
+   El autor NO se decide con getChatAuthor() (la sesión general del
+   dispositivo) sino con el parámetro asOwner, que refleja con qué se
+   desbloqueó ESTA tarjeta en concreto: sesión de propietario, o el PIN
+   del propio empleado — es más fiable en un dispositivo compartido donde
+   la sesión general no tiene por qué coincidir con quién está mirando
+   la ficha en ese momento. */
+function directChatChannel(employeeId){ return 'dm:' + employeeId; }
+let dmChatEmployeeId = null;
+let dmChatAsOwner = false;
+function directChatUnreadCount(employeeId, asOwner){
+  const channel = directChatChannel(employeeId);
+  const lastRead = localStorage.getItem('chatLastRead_'+channel);
+  const otherAuthor = asOwner ? String(employeeId) : 'owner';
+  return (DB.chatMessages||[]).filter(m => m.channel===channel && String(m.authorId)===otherAuthor && (!lastRead || m.ts > lastRead)).length;
+}
+function openEmployeeDirectChat(employeeId, asOwner){
+  const e = DB.employees.find(x=>x.id===employeeId);
+  if(!e) return;
+  dmChatEmployeeId = employeeId;
+  dmChatAsOwner = asOwner;
+  const otherName = asOwner ? e.name : t('common.chef');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-message"></i> ${escapeHtml(otherName)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="help-chat-messages" id="dm-chat-messages" style="max-height:50vh"></div>
+    <div class="help-chat-input-row">
+      <input type="text" id="dm-chat-input" placeholder="${t('ph.writeMessage')}" onkeydown="if(event.key==='Enter') sendDirectChatMessage()">
+      <button onclick="sendDirectChatMessage()"><i class="ti ti-send"></i></button>
+    </div>
+  `);
+  renderDirectChatMessages();
+  markChatRead(directChatChannel(employeeId));
+}
+function renderDirectChatMessages(){
+  const box = document.getElementById('dm-chat-messages');
+  if(!box || dmChatEmployeeId == null) return;
+  const author = dmChatAsOwner ? 'owner' : String(dmChatEmployeeId);
+  const msgs = (DB.chatMessages||[]).filter(m => m.channel === directChatChannel(dmChatEmployeeId));
+  box.innerHTML = msgs.map(m => `
+    <div class="help-msg ${String(m.authorId)===author ? 'own' : 'other'}">
+      <span class="chat-meta">${escapeHtml(m.authorName)} · ${fmtHora(m.ts)}</span>
+      ${escapeHtml(m.text)}
+    </div>
+  `).join('') || `<div class="empty" style="padding:20px"><i class="ti ti-messages-off"></i> ${t('chat.dmEmpty')}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+function sendDirectChatMessage(){
+  const input = document.getElementById('dm-chat-input');
+  const text = input.value.trim();
+  if(!text || dmChatEmployeeId == null) return;
+  const authorId = dmChatAsOwner ? 'owner' : dmChatEmployeeId;
+  DB.chatMessages.push({
+    id: genId(),
+    channel: directChatChannel(dmChatEmployeeId),
+    authorId,
+    authorName: getChatAuthorName(authorId),
+    text,
+    ts: new Date().toISOString()
+  });
+  saveDB();
+  input.value = '';
+  renderDirectChatMessages();
+}
+
 /* ============== Áreas de trabajo ============== */
 const FOLDERS = {
   cocina: {
