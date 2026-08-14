@@ -1818,9 +1818,14 @@ function renderTandaGroupCard(order, g, isMenu){
       // solo lectura como el resto de platos (que se controlan desde Cocina).
       let lineStatus = '';
       if(line.bebida && line.estado){
+        // Mismo botón (tamaño y color) que usa Cocina para avanzar el estado
+        // de un plato — antes este era diminuto (9px) junto al nombre y
+        // competía visualmente con el badge de la cabecera de la tanda (ese
+        // sí de solo lectura), así que parecía "el botón que no hace nada"
+        // mientras el que de verdad actualizaba el estado pasaba desapercibido.
         if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px"><i class="ti ti-check"></i></span>';
-        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
-        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
+        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
+        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
       } else {
         // Un plato terminado por cocina pero aún en el pase lleva el icono de
         // la campana: de un vistazo se ve qué falta por recoger sin tener que
