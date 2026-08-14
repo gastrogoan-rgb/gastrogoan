@@ -2534,7 +2534,15 @@ function renderHorariosPersonal(){
   const box = document.getElementById('horarios-tab-content');
   if(!box) return;
   const allEmps = areaEmployees();
-  const emps = personalSearch ? allEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : allEmps;
+  // Un empleado que entró con su propio usuario (Acceso Empleados) solo ve
+  // su propia tarjeta aquí, no la de sus compañeros — antes veía a todo el
+  // equipo del área igual que el dueño, y solo el PIN por tarjeta impedía
+  // tocar la de otro, pero ni siquiera debería poder verla. El dueño (y
+  // cualquier dispositivo sin una sesión de empleado concreta) sigue viendo
+  // a todo el equipo, que es quien necesita gestionarlo.
+  const myEmployeeId = loggedInEmployeeId();
+  const visibleEmps = myEmployeeId != null ? allEmps.filter(e => e.id === myEmployeeId) : allEmps;
+  const emps = personalSearch ? visibleEmps.filter(e => e.name.toLowerCase().includes(personalSearch) || (e.rol||'').toLowerCase().includes(personalSearch)) : visibleEmps;
   // El dueño ya se identificó a nivel de sesión al entrar: no tiene sentido
   // volver a pedirle el PIN del empleado (o del negocio) solo para abrir su
   // ficha de fichaje/horas, y la tarjeta debe dejar claro que está viendo la
@@ -2567,7 +2575,10 @@ function renderHorariosPersonal(){
   let medalByEmpId = null;
   if(isSala){
     const medals = ['🥇','🥈','🥉'];
-    const ranked = emps.filter(e => e.active !== false)
+    // Sobre allEmps (todo el equipo), no sobre emps (lo que se ve en
+    // pantalla) — si no, la vista de un solo empleado (la suya propia) le
+    // pondría siempre 🥇 sea cual sea su facturación real.
+    const ranked = allEmps.filter(e => e.active !== false)
       .map(e => ({id: e.id, total: (monthSales[String(e.id)]||{total:0}).total}))
       .filter(r => r.total > 0)
       .sort((a,b) => b.total - a.total)
@@ -2617,6 +2628,7 @@ function renderHorariosPersonal(){
 
   box.innerHTML = `
     ${renderTeamPulseHtml()}
+    ${myEmployeeId == null ? `
     <div class="toolbar">
       <div class="left">
         <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
@@ -2626,6 +2638,7 @@ function renderHorariosPersonal(){
         <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>
+    ` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
