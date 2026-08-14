@@ -963,7 +963,11 @@ function renderDistList(){
   const box = document.getElementById('distribucion-content');
   const isSala = currentArea() === 'sala';
   const allEmps = areaEmployees();
-  const emps = distSearch ? allEmps.filter(e => e.name.toLowerCase().includes(distSearch) || (e.rol||'').toLowerCase().includes(distSearch)) : allEmps;
+  // Igual que en Personal: en sesión de empleado (Acceso Empleados) solo se
+  // ve la propia tarjeta, no la de los compañeros.
+  const myEmployeeId = loggedInEmployeeId();
+  const visibleEmps = myEmployeeId != null ? allEmps.filter(e => e.id === myEmployeeId) : allEmps;
+  const emps = distSearch ? visibleEmps.filter(e => e.name.toLowerCase().includes(distSearch) || (e.rol||'').toLowerCase().includes(distSearch)) : visibleEmps;
   const cards = emps.map(emp => {
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
@@ -989,10 +993,12 @@ function renderDistList(){
   }).join('');
 
   box.innerHTML = `
+    ${myEmployeeId == null ? `
     <div class="toolbar">
       <div class="left"><input type="text" class="search-input" value="${escapeHtml(distSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setDistSearch(this.value)"></div>
       <button class="btn btn-default" onclick="printDistribucion()"><i class="ti ti-printer"></i> ${t('btn.printAll')}</button>
     </div>
+    ` : ''}
     ${emps.length ? `<div class="grid grid-3">${cards}</div>` : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t('empty.employees')}</div>`}
   `;
 }
@@ -1003,6 +1009,10 @@ let distPendingPinEmployeeId = null;
 function openDistEmployee(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
+  // El dueño ya se identificó a nivel de sesión al entrar: no tiene sentido
+  // volver a pedirle el PIN del empleado solo para ver o repartir su
+  // trabajo (igual que en Personal — openEmployeePersonalCard).
+  if(isOwnerSession()){ openDistEmployeeAuthed(id); return; }
   distPendingPinEmployeeId = id;
   openModal(`
     <div class="modal-header">
