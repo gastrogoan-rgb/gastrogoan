@@ -1445,10 +1445,16 @@ function openMenuConfigModal(orderId, menuId){
       <div class="field">
         <label>${escapeHtml(tItem(g))}</label>
         <div style="display:flex;flex-direction:column;gap:6px">
-          ${(g.opciones||[]).map((o,i) => `
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===0?'checked':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
-              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}
+          ${(() => {
+            // Marcar una opción como agotada tiene que impedir pedirla, no solo
+            // avisar: se deshabilita, y la primera marcada por defecto es la
+            // primera DISPONIBLE (si no, el radio preseleccionado podía ser
+            // justo el plato que se acaba de terminar).
+            const primeraLibre = (g.opciones||[]).findIndex(o => o.disponible !== false);
+            return (g.opciones||[]).map((o,i) => `
+            <label style="display:flex;align-items:center;gap:8px;${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
+              <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:auto" onchange="toggleMenuExtras(${g.id})">
+              ${escapeHtml(tItem(o))}${o.suplemento ? ` <span style="color:var(--brand-orange);font-weight:600">+${fmtMoney(o.suplemento)}</span>` : ''}${o.disponible===false ? ` <span class="badge badge-red" style="font-size:9px"><i class="ti ti-flame-off"></i> ${t('common.unavailable')}</span>` : ''}
             </label>
             ${(o.modificadores||[]).length ? `<div class="menu-extras-${g.id}-${o.id}" style="margin-left:28px;display:${i===0?'block':'none'}">
               ${o.modificadores.map(mod => `
@@ -1458,7 +1464,8 @@ function openMenuConfigModal(orderId, menuId){
                 </label>
               `).join('')}
             </div>` : ''}
-          `).join('')}
+          `).join('');
+          })()}
         </div>
       </div>
     `).join('')}
@@ -1727,7 +1734,12 @@ function renderTableOrderModal(orderId){
   // terminado a mitad de servicio y ya no esté en activeMenuIds — si no, su
   // pestaña desaparecía y el camarero no podía añadir el 2º/3er plato de un
   // menú que el cliente ya había empezado a comer.
-  const activeMenusBase = getActiveMenus ? getActiveMenus() : (DB.menus||[]);
+  // Un menú marcado como agotado desaparece de las pestañas: si se ha
+  // terminado, no tiene sentido poder empezar uno nuevo. Los ya empezados en
+  // esta misma comanda siguen apareciendo por el motivo de abajo — al cliente
+  // que ya se está comiendo el primer plato hay que poder servirle el segundo.
+  const activeMenusBase = (getActiveMenus ? getActiveMenus() : (DB.menus||[]))
+    .filter(m => m.disponible !== false);
   const inProgressMenuIds = new Set(order.items.filter(l=>l.menuId).map(l=>l.menuId));
   const inProgressExtraMenus = (DB.menus||[]).filter(m => inProgressMenuIds.has(m.id) && !activeMenusBase.some(x=>x.id===m.id));
   const activeMenus = [...activeMenusBase, ...inProgressExtraMenus];
@@ -2319,6 +2331,28 @@ function quickToggleDishAvailability(cartaId, secId, platoId){
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-carta' && typeof renderCartaSecciones === 'function') renderCartaSecciones();
 }
+/* Los menús también se agotan, y de dos formas distintas: puede acabarse una
+   OPCIÓN concreta (el solomillo de los Segundos) sin que el menú deje de
+   servirse, o puede acabarse el menú entero. Antes este modal solo recorría
+   DB.cartas, así que lo único que se podía marcar era carta suelta y quien
+   quisiera avisar de que se había terminado un plato del menú del día tenía
+   que ir a buscar a alguien con permiso de edición. */
+function quickToggleMenuOptionAvailability(menuId, grupoId, opcionId){
+  const m = (DB.menus||[]).find(x => x.id === menuId);
+  const g = m && (m.grupos||[]).find(x => x.id === grupoId);
+  const o = g && (g.opciones||[]).find(x => x.id === opcionId);
+  if(!o) return;
+  o.disponible = o.disponible === false ? true : false;
+  saveDB();
+  renderMarkDishOutModal();
+}
+function quickToggleMenuAvailability(menuId){
+  const m = (DB.menus||[]).find(x => x.id === menuId);
+  if(!m) return;
+  m.disponible = m.disponible === false ? true : false;
+  saveDB();
+  renderMarkDishOutModal();
+}
 function openMarkDishOutModal(){
   renderMarkDishOutModal();
 }
@@ -2341,13 +2375,37 @@ function renderMarkDishOutModal(){
     `).join('');
     return secsHtml ? `<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:700">${escapeHtml(c.nombre)}</div>${secsHtml}</div>` : '';
   }).join('');
+
+  // Menús de precio cerrado del área actual: el menú entero arriba y debajo
+  // cada opción de cada grupo, que es lo que de verdad se agota a media
+  // comanda.
+  const menusHtml = (DB.menus||[]).filter(m => (m.area||'cocina') === area).map(m => {
+    const gruposHtml = (m.grupos||[]).filter(g => (g.opciones||[]).length).map(g => `
+      <div style="font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700;text-transform:uppercase">${escapeHtml(tItem(g))}</div>
+      ${g.opciones.map(o => `
+        <div class="list-row" style="padding:6px 10px">
+          <div class="list-row-name"><span>${escapeHtml(tItem(o))}</span></div>
+          <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="quickToggleMenuOptionAvailability(${m.id},${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
+        </div>
+      `).join('')}
+    `).join('');
+    return `
+      <div style="margin-bottom:10px">
+        <div class="list-row" style="padding:6px 10px;background:var(--bg)">
+          <div class="list-row-name"><span style="font-size:13px;font-weight:700"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(m))}</span></div>
+          <button class="btn btn-sm ${m.disponible===false?'btn-danger':''}" onclick="quickToggleMenuAvailability(${m.id})">${m.disponible===false?t('common.unavailable'):t('common.available')}</button>
+        </div>
+        ${gruposHtml}
+      </div>`;
+  }).join('');
+
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-flame-off"></i> ${t('title.markDishOut')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('label.markDishOutHelp')}</p>
-    ${rowsHtml || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`}
+    ${(rowsHtml + menusHtml) || `<div class="empty" style="padding:14px">${t('empty.noDishesToday')}</div>`}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
