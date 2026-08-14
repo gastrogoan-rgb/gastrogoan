@@ -722,7 +722,11 @@ function askHelpTopic(idx){
   switchHelpTab('asistente');
   document.getElementById('help-suggestions').innerHTML = '';
   if(label) appendHelpMessage(escapeHtml(label), 'user');
-  appendHelpMessage(faq.answers[lang] || faq.answers.es, 'bot');
+  // Entrar por un tema también fija el contexto: a partir de aquí un "¿y
+  // cómo?" se resuelve contra este tema, igual que si se hubiera preguntado.
+  helpConvo.lastIdx = idx;
+  helpConvo.misses = 0;
+  appendHelpMessage((faq.answers[lang] || faq.answers.es) + helpButtonsHtml(helpRelatedIdxs(idx, 2)), 'bot');
 }
 let helpChatStarted = false;
 function applyHelpI18n(){
@@ -769,34 +773,300 @@ function sendHelpMessage(){
   input.value = '';
   respondHelp(text);
 }
-function respondHelp(text){
-  const answer = findFaqAnswer(text);
-  appendHelpMessage(answer || t('help.assistant.fallback'), 'bot');
-}
+/* ============================================================
+   ASISTENTE DEL CENTRO DE AYUDA
+   Antes era una búsqueda por palabras clave sin memoria: cada mensaje se
+   comparaba contra HELP_FAQS y, si no llegaba a la puntuación mínima, se
+   contestaba siempre lo mismo. No entendía "¿y cómo?" ni "eso no me
+   funciona", no sabía nada del negocio de quien preguntaba, y ante una
+   pregunta ambigua elegía una respuesta a ciegas en vez de preguntar.
+
+   Sigue sin haber ninguna IA detrás -a propósito: cuesta dinero por
+   consulta, necesita internet y mandaría fuera datos del negocio-, pero
+   ahora hace cuatro cosas que antes no:
+     1. Mira el estado real de la app antes de responder (helpDynamicAnswer).
+        Es lo que ningún asistente externo podría hacer: sabe si quien
+        pregunta es el dueño o un empleado, si la nube está configurada, si
+        hay mesas dadas de alta...
+     2. Recuerda de qué se estaba hablando, así que resuelve los "¿y cómo?"
+        y los "no me funciona" contra la última respuesta.
+     3. Si duda entre dos temas parecidos, pregunta cuál en vez de acertar
+        por casualidad.
+     4. Cuando falla dos veces seguidas, ofrece contactar en vez de repetir
+        el mismo "no lo he encontrado".
+   ============================================================ */
+
+// De qué se está hablando ahora mismo. Es lo que convierte una lista de
+// preguntas sueltas en algo que se parece a una conversación.
+let helpConvo = { lastIdx: null, candidates: [], misses: 0 };
+
+// Palabras que aparecen en casi cualquier pregunta y solo añaden ruido al
+// comparar ("como", "puedo", "quiero"...).
+const HELP_STOPWORDS = new Set([
+  'como','com','how','que','qué','quin','what','donde','on','where','cual','quina','which',
+  'para','per','for','con','amb','with','del','de','la','el','los','las','un','una','uns','unes',
+  'the','and','and','por','pel','puedo','puc','can','quiero','vull','want','hacer','fer','make',
+  'tengo','tinc','have','hay','hi','there','mi','meu','my','me','em','se','es','en','al','als',
+  'si','yes','no','y','i','o','or','a','sobre','about','desde','des','from','esto','aixo','this'
+]);
+
+// Un hostelero no escribe "comanda", escribe "pedido", "orden" o "ticket".
+// Cada fila agrupa formas de decir lo mismo: si el usuario usa cualquiera,
+// cuentan todas al buscar.
+const HELP_SYNONYMS = [
+  ['mesa','mesas','taula','taules','table','tables'],
+  ['comanda','comandas','pedido','pedidos','orden','ordenes','ticket','tickets','order','orders'],
+  ['cobrar','cobro','pagar','pago','cuenta','factura','charge','pay','bill','invoice'],
+  ['carta','menu','menus','menú','menús','platos','plats','dishes','dish'],
+  ['empleado','empleados','camarero','camareros','personal','trabajador','treballador','staff','employee','waiter'],
+  ['nube','núvol','cloud','firebase','sincronizar','sincronizacion','sync','sincronitzar'],
+  ['reserva','reservas','reservar','reserves','booking','bookings'],
+  ['qr','enlace','link','url','web','online'],
+  ['pin','contrasena','contraseña','clave','password','acceso','access','entrar','login'],
+  ['licencia','llicencia','license','codigo','codi','code','activar','activate'],
+  ['stock','inventario','existencias','inventari','inventory'],
+  ['escandallo','escandall','coste','cost','costo','ficha','fitxa','costing'],
+  ['caja','caixa','cierre','tancament','arqueo','closure'],
+  ['cocina','cuina','kitchen','kds'],
+  ['sala','floor','comedor'],
+  ['borrar','eliminar','quitar','esborrar','delete','remove'],
+  ['cambiar','modificar','editar','canviar','change','edit'],
+  ['crear','anadir','añadir','nuevo','afegir','nou','add','new','create'],
+  ['agotado','agotados','agotar','acabado','acabar','acabo','terminado','esgotat','esgotar','acabat','soldout','sold','out'],
+  ['nota','notas','comentario','observacion','anotacion','nota','notes','comment'],
+  ['dividir','separar','partir','dividir','split','separate'],
+  ['tanda','tandas','marchar','torn','torns','course','courses','fire'],
+];
+// Índice inverso: palabra -> grupo al que pertenece, para no recorrer la
+// tabla entera en cada comparación.
+const HELP_SYNONYM_INDEX = (() => {
+  const idx = {};
+  HELP_SYNONYMS.forEach((grupo, i) => grupo.forEach(w => { idx[w] = i; }));
+  return idx;
+})();
+
 function normalizeHelpText(s){
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[¿?¡!.,]/g,'').trim();
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[¿?¡!.,;:()"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
-function helpStems(s){
-  return normalizeHelpText(s).split(/\s+/).filter(w=>w.length>=3).map(w=>w.length>=4?w.slice(0,3):w);
+// Reduce una palabra a su raíz aproximada quitando los finales más comunes
+// del castellano y el catalán, para que "abriendo", "abrir" y "abro" cuenten
+// como la misma. No es un lematizador de verdad, pero acierta mucho más que
+// cortar a 3 letras como se hacía antes: "mesa" y "menu" ya no colisionan.
+function helpStem(w){
+  if(w.length <= 3) return w;
+  // Se quitan terminaciones de más a menos larga, incluida la vocal final:
+  // sin eso "abro" (4 letras) se quedaba entero mientras "abrir" pasaba a
+  // "abr", y no casaban. Cortar la vocal junta también singular y plural
+  // ("mesa"/"mesas" → "mes") sin necesidad de reglas aparte.
+  const raiz = w
+    .replace(/(ciones|cions|mientos|ments|iendo|endo|ando|ados|idos|adas|idas)$/, '')
+    .replace(/(cion|cio|miento|ment|ado|ido|ada|ida|ar|er|ir|an|en|as|os|es|a|o|e|s)$/, '');
+  return raiz.length >= 3 ? raiz : w;
 }
-function findFaqAnswer(text){
+function helpTokens(s){
+  const out = new Set();
+  normalizeHelpText(s).split(' ').forEach(w => {
+    if(!w || w.length < 2 || HELP_STOPWORDS.has(w)) return;
+    out.add(helpStem(w));
+    // Si la palabra pertenece a un grupo de sinónimos, se añade el grupo
+    // entero como una marca común, de modo que "pedido" case con "comanda".
+    const g = HELP_SYNONYM_INDEX[w];
+    if(g !== undefined) out.add('§' + g);
+  });
+  return out;
+}
+
+// Etiquetas de la pestaña Temas indexadas por pregunta: son formas naturales
+// de nombrar cada tema ("Marcar un plato agotado") y funcionan como palabras
+// clave extra sin tener que duplicarlas a mano.
+const HELP_LABELS_BY_IDX = (() => {
+  const m = {};
+  HELP_TOPIC_GROUPS.forEach(g => g.items.forEach(it => { m[it.idx] = it.label; }));
+  return m;
+})();
+
+/* Puntúa cada pregunta frecuente contra lo que ha escrito el usuario y
+   devuelve la lista ordenada. Se separa de "responder" para poder decidir
+   fuera si hay una ganadora clara, si hay empate (y toca preguntar) o si no
+   hay nada. */
+function scoreHelpFaqs(text){
   const lang = getLang();
   const norm = normalizeHelpText(text);
-  const inputStems = new Set(helpStems(text));
-  let best = null, bestScore = 0;
-  HELP_FAQS.forEach(faq => {
-    let score = 0;
-    const faqStems = new Set();
-    const kws = (faq.keywords[lang] || faq.keywords.es).concat(faq.keywords.es);
-    kws.forEach(k => {
+  const tokens = helpTokens(text);
+  if(!tokens.size) return [];
+  // Se puntúa cada frase clave POR SEPARADO y se queda la mejor, en vez de
+  // juntar las palabras de todas. Sumándolas, un tema con muchas frases
+  // acumulaba coincidencias sueltas y empataba con el que trata justo de lo
+  // preguntado: "cómo abro una mesa" puntuaba igual en "Abrir una mesa" que
+  // en "Vincular una reserva al abrir mesa", porque su etiqueta también
+  // contiene "abrir" y "mesa".
+  return HELP_FAQS.map((faq, idx) => {
+    const label = HELP_LABELS_BY_IDX[idx];
+    const frases = (faq.keywords[lang] || faq.keywords.es)
+      .concat(faq.keywords.es)
+      .concat(label ? [label[lang] || label.es] : []);
+    let mejorFrase = 0, frasesQueTocan = 0;
+    frases.forEach(k => {
       const kn = normalizeHelpText(k);
-      if(norm.includes(kn)) score += kn.split(' ').length * 3;
-      helpStems(k).forEach(st => faqStems.add(st));
+      if(!kn) return;
+      const kTokens = helpTokens(k);
+      if(!kTokens.size) return;
+      let comunes = 0;
+      kTokens.forEach(tk => { if(tokens.has(tk)) comunes++; });
+      if(!comunes) return;
+      frasesQueTocan++;
+      // cobertura = qué parte de la frase clave cubre la pregunta. Es el
+      // factor que más pesa: una frase corta cubierta del todo ("abrir mesa")
+      // describe la intención mucho mejor que media etiqueta larga.
+      const cobertura = comunes / kTokens.size;
+      const cuantoUsa = comunes / tokens.size;
+      let puntos = comunes * 2 + cobertura * 8 + cuantoUsa * 4;
+      if(norm.includes(kn)) puntos += kn.split(' ').length * 6; // frase literal
+      if(puntos > mejorFrase) mejorFrase = puntos;
     });
-    faqStems.forEach(st => { if(inputStems.has(st)) score += 1; });
-    if(score > bestScore){ bestScore = score; best = faq; }
-  });
-  return bestScore > 1 ? (best.answers[lang] || best.answers.es) : null;
+    // Que varias frases del mismo tema toquen algo es señal débil pero real.
+    const score = mejorFrase ? mejorFrase + Math.min(frasesQueTocan - 1, 3) * 0.5 : 0;
+    return {idx, faq, score};
+  }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+}
+
+function helpAnswerOf(idx){
+  const lang = getLang();
+  const faq = HELP_FAQS[idx];
+  return faq ? (faq.answers[lang] || faq.answers.es) : '';
+}
+function helpLabelOf(idx){
+  const lang = getLang();
+  const l = HELP_LABELS_BY_IDX[idx];
+  return l ? (l[lang] || l.es) : '';
+}
+
+/* ------------------------------------------------------------
+   Respuestas que dependen del estado real de este negocio.
+   Se comprueban ANTES que las preguntas frecuentes: si alguien pregunta por
+   qué no puede entrar en Gestión Económica, la respuesta correcta depende de
+   si ha entrado como dueño o como empleado, y ninguna respuesta enlatada
+   puede acertar siempre.
+   ------------------------------------------------------------ */
+function helpDynamicAnswer(text, idxDetectado){
+  const tokens = helpTokens(text);
+  const tiene = (...ws) => ws.some(w => tokens.has(helpStem(normalizeHelpText(w))));
+  const session = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  const esEmpleado = session && session.type === 'employee';
+
+  // "No puedo entrar en Gestión Económica / Mi Negocio"
+  if(tiene('gestion','economica','economia','minegocio') || /mi negocio|gestion economica/.test(normalizeHelpText(text))){
+    if(esEmpleado) return t('help.dyn.gestionEmployee');
+    return t('help.dyn.gestionOwner');
+  }
+  // Nube: la respuesta útil depende de si ya está configurada
+  if(tiene('nube','cloud','firebase','sincronizar')){
+    const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
+    return cfg ? t('help.dyn.cloudOk') : t('help.dyn.cloudMissing');
+  }
+  // Reservas y pedidos online: sin nube no funcionan, y conviene decirlo antes
+  if(tiene('reserva','qr','enlace','online')){
+    const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
+    if(!cfg) return t('help.dyn.onlineNeedsCloud');
+  }
+  // Empleados: si no hay ninguno dado de alta, eso es lo que hay que decir
+  if(tiene('empleado','personal','camarero')){
+    const emps = (typeof DB !== 'undefined' && DB && DB.employees) ? DB.employees.filter(e => e.active !== false) : [];
+    if(!emps.length) return t('help.dyn.noEmployees');
+  }
+  // Mesas: igual — sin mesas configuradas, el TPV no puede abrir ninguna.
+  // El tema 0 es "Abrir una mesa": si el buscador ya ha llegado ahí, da igual
+  // cómo lo haya escrito el usuario.
+  if(idxDetectado === 0 || idxDetectado === 1 || (tiene('mesa') && tiene('abrir','crear','anadir'))){
+    const mesas = (typeof DB !== 'undefined' && DB && DB.tables) ? DB.tables : [];
+    if(!mesas.length) return t('help.dyn.noTables');
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------
+   Continuaciones: mensajes que no se entienden por sí solos y solo tienen
+   sentido respecto a lo último que se dijo.
+   ------------------------------------------------------------ */
+const HELP_FOLLOWUP_RE = /^(y |i |and )?(como|com|how|que|qué|cual|quina|y eso|i aixo|mas|més|mes|more|otra|una altra|another|no entiendo|no ho entenc|i don'?t understand|explicame|explica'm|explain|no funciona|no va|no em funciona|doesn'?t work|not working|no me sirve|no serveix|sigue igual|segueix igual|still)\b/i;
+const HELP_NEGATIVE_RE = /(no funciona|no va|no me sirve|no sirve|no serveix|no em funciona|doesn'?t work|not working|no era eso|no es eso|no es aixo|sigue igual|segueix igual|still)/i;
+
+// Temas de la misma categoría que el último respondido: es lo más parecido a
+// "cuéntame más" que se puede ofrecer sin inventarse contenido nuevo.
+function helpRelatedIdxs(idx, max){
+  const grupo = HELP_TOPIC_GROUPS.find(g => g.items.some(it => it.idx === idx));
+  if(!grupo) return [];
+  return grupo.items.map(it => it.idx).filter(i => i !== idx).slice(0, max || 3);
+}
+function helpButtonsHtml(idxs){
+  if(!idxs.length) return '';
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
+    idxs.map(i => `<button class="help-suggestion" onclick="askHelpTopic(${i})">${escapeHtml(helpLabelOf(i))}</button>`).join('') +
+    '</div>';
+}
+
+function respondHelp(text){
+  // 1. ¿Es una continuación de lo anterior? ("¿y cómo?", "no me funciona")
+  const esContinuacion = HELP_FOLLOWUP_RE.test(normalizeHelpText(text)) && helpTokens(text).size <= 3;
+  // Si venimos de una desambiguación todavía no hay respuesta dada, pero sí
+  // sabemos entre qué temas dudábamos: sirven igual para continuar.
+  const contexto = helpConvo.lastIdx !== null ? helpConvo.lastIdx
+                 : (helpConvo.candidates.length ? helpConvo.candidates[0] : null);
+  if(esContinuacion && contexto !== null){
+    const relacionados = helpConvo.lastIdx !== null
+      ? helpRelatedIdxs(helpConvo.lastIdx, 3)
+      : helpConvo.candidates.slice(0, 3);
+    if(HELP_NEGATIVE_RE.test(text)){
+      appendHelpMessage(t('help.assistant.notWorking') + helpButtonsHtml(relacionados), 'bot');
+    }else{
+      appendHelpMessage(t('help.assistant.related') + helpButtonsHtml(relacionados), 'bot');
+    }
+    return;
+  }
+
+  // 2. Buscar entre las preguntas frecuentes (hace falta antes que el paso 3:
+  //    saber de qué tema se habla es lo que permite responder con el estado
+  //    real sin tener que adivinar el verbo que ha usado el usuario).
+  const res = scoreHelpFaqs(text);
+  const mejor = res[0];
+
+  // 3. ¿La respuesta depende del estado real del negocio?
+  const dinamica = helpDynamicAnswer(text, mejor ? mejor.idx : null);
+  if(dinamica){
+    helpConvo.misses = 0;
+    if(mejor) helpConvo.lastIdx = mejor.idx;
+    appendHelpMessage(dinamica, 'bot');
+    return;
+  }
+
+  if(!mejor || mejor.score < 4){
+    helpConvo.misses++;
+    // Al segundo fallo seguido no tiene sentido repetir "no lo encuentro":
+    // se ofrece hablar con una persona.
+    appendHelpMessage(helpConvo.misses >= 2 ? t('help.assistant.escalate') : t('help.assistant.fallback'), 'bot');
+    return;
+  }
+
+  // 4. Empate: dos temas casi igual de probables. Preguntar en vez de acertar
+  //    por casualidad — equivocarse aquí manda al usuario a otra pantalla.
+  const segundo = res[1];
+  if(segundo && segundo.score >= mejor.score * 0.9 && mejor.score < 10){
+    helpConvo.candidates = [mejor.idx, segundo.idx];
+    const tercero = res[2] && res[2].score >= mejor.score * 0.9 ? [res[2].idx] : [];
+    appendHelpMessage(
+      t('help.assistant.disambiguate') + helpButtonsHtml(helpConvo.candidates.concat(tercero)),
+      'bot');
+    return;
+  }
+
+  // 5. Respuesta clara
+  helpConvo.misses = 0;
+  helpConvo.lastIdx = mejor.idx;
+  appendHelpMessage(helpAnswerOf(mejor.idx) + helpButtonsHtml(helpRelatedIdxs(mejor.idx, 2)), 'bot');
 }
 function appendHelpMessage(html, who){
   const box = document.getElementById('help-chat-messages');
