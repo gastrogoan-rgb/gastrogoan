@@ -1967,7 +1967,8 @@ function openWaitlistModal(){
               <div style="font-size:11px;color:var(--muted)">${waitlistMinutesWaiting(w)} ${t('waitlist.minutesWaiting')}</div>
             </div>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-sm btn-primary" onclick="seatWaitlistEntry(${w.id})" title="${t('waitlist.seatHint')}"><i class="ti ti-armchair"></i></button>
+              ${w.phone ? `<a class="btn btn-sm btn-icon" href="tel:${escapeHtml(w.phone)}" title="${t('waitlist.callHint')}"><i class="ti ti-phone"></i></a>` : ''}
+              <button class="btn btn-sm btn-primary" onclick="openSeatWaitlistTableModal(${w.id})" title="${t('waitlist.seatHint')}"><i class="ti ti-armchair"></i></button>
               <button class="btn btn-sm btn-danger" onclick="cancelWaitlistEntry(${w.id})" title="${t('waitlist.cancelHint')}"><i class="ti ti-x"></i></button>
             </div>
           </div>
@@ -2001,13 +2002,45 @@ function addWaitlistEntry(){
   saveDB();
   openWaitlistModal();
 }
-function seatWaitlistEntry(id){
+// Sentar a alguien de la lista de espera ya no era más que marcarlo como
+// "sentado" sin más: no abría ninguna mesa, así que había que ir aparte a
+// TPV > Mesas y abrir una a mano, tecleando otra vez el nombre y el número
+// de personas que ya se había apuntado en la lista de espera. Ahora se
+// elige la mesa libre y se abre directamente con esos datos ya puestos.
+function openSeatWaitlistTableModal(id){
   const w = (DB.waitlist||[]).find(x => x.id === id);
   if(!w) return;
+  const freeTables = DB.tables.filter(t2 => !getOpenOrderForTable(t2.id));
+  if(!freeTables.length){ showToast(t('waitlist.noFreeTables')); return; }
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-armchair"></i> ${t('waitlist.seatTitle')} — ${escapeHtml(w.name)}</h3>
+      <button class="modal-close" onclick="openWaitlistModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted)">${t('waitlist.seatPickTableDesc')}</p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${freeTables.map(t2 => `<button class="btn" onclick="confirmSeatWaitlistAtTable(${w.id}, ${t2.id})">${escapeHtml(t2.name)}${t2.zona?` · ${escapeHtml(t2.zona)}`:''}${t2.plazas?` · ${t2.plazas} ${t('common.persAbbr')}`:''}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openWaitlistModal()">${t('common.cancel')}</button>
+    </div>
+  `);
+}
+function confirmSeatWaitlistAtTable(waitlistId, tableId){
+  const w = (DB.waitlist||[]).find(x => x.id === waitlistId);
+  if(!w) return;
+  // Otro camarero pudo haber ocupado esa mesa entre elegirla y confirmar
+  // (la lista de espera sincroniza entre dispositivos, así que dos personas
+  // mirando la misma lista es el caso normal, no la excepción).
+  if(getOpenOrderForTable(tableId)){ showToast(t('waitlist.tableNoLongerFree')); openSeatWaitlistTableModal(waitlistId); return; }
+  const loggedEmployeeId = loggedInEmployeeId();
+  const order = {id: genId(), tableId, tipo:'mesa', pax: w.people, clienteNombre: w.name, clientId: null, reservationId: null, camareroId: loggedEmployeeId, openedByOwner: loggedEmployeeId === null, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  DB.tpvOrders.push(order);
   w.status = 'sentado';
   w.seatedAt = new Date().toISOString();
+  w.tableId = tableId;
   saveDB();
-  openWaitlistModal();
+  renderTableOrderModal(order.id);
   showToast(t('waitlist.seatedOk').replace('${name}', w.name));
 }
 function cancelWaitlistEntry(id){
