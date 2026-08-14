@@ -123,9 +123,13 @@ function openCashClosureModal(){
         </div>
       `).join('')}
     </div>` : ''}
-    <div class="field-row">
-      <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
-      <div class="field"><label>${t('label.cashCounted')}</label><input type="number" id="closure-contado" step="0.01" placeholder="0.00" oninput="updateClosureDiffPreview()"></div>
+    <div class="field"><label>${t('label.initialCashFund')}</label><input type="number" id="closure-fondo" step="0.01" value="0" oninput="updateClosureDiffPreview()"></div>
+    <div class="field">
+      <label>${t('label.cashCounted')}</label>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('label.cashCountHint')}</p>
+      ${cashDenominationsHtml()}
+      <input type="hidden" id="closure-contado">
+      <div style="font-weight:700;margin-top:4px">${t('label.cashCountTotal')}: <span id="cash-count-total">${fmtMoney(0)}</span></div>
     </div>
     <div id="closure-diff-preview" style="font-size:13px;font-weight:600;margin:6px 0"></div>
     <div class="field"><label>${t('label.notesOptional')}</label><textarea id="closure-notas" rows="2" placeholder="${t('ph.closureObservations')}"></textarea></div>
@@ -136,6 +140,56 @@ function openCashClosureModal(){
       <button class="btn btn-primary" onclick="performCashClosure()"><i class="ti ti-check"></i> ${t('btn.confirmClosure')}</button>
     </div>
   `);
+  updateClosureDiffPreview();
+}
+
+// Monedas y billetes de curso legal en la eurozona, en céntimos (para sumar
+// sin errores de coma flotante). Contar cuántos hay de cada uno es más
+// fiable que teclear un total a ojo, y de paso deja el desglose real por si
+// hay que revisar luego cómo se llegó a esa cifra.
+const CASH_DENOMINATIONS = [
+  {cents: 1, kind:'coin'}, {cents: 2, kind:'coin'}, {cents: 5, kind:'coin'}, {cents: 10, kind:'coin'},
+  {cents: 20, kind:'coin'}, {cents: 50, kind:'coin'}, {cents: 100, kind:'coin'}, {cents: 200, kind:'coin'},
+  {cents: 500, kind:'bill'}, {cents: 1000, kind:'bill'}, {cents: 2000, kind:'bill'}, {cents: 5000, kind:'bill'}, {cents: 10000, kind:'bill'}
+];
+function cashDenomLabel(cents){
+  return cents < 100 ? `${cents}c` : `${cents/100}€`;
+}
+function cashDenominationsHtml(){
+  const group = (list, icon) => `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-bottom:8px">
+      ${list.map(d => `
+        <div style="text-align:center">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:2px"><i class="ti ${icon}"></i> ${cashDenomLabel(d.cents)}</label>
+          <input type="number" min="0" step="1" id="cash-count-${d.cents}" placeholder="0" oninput="updateCashCountTotal()" style="text-align:center;padding:4px">
+        </div>
+      `).join('')}
+    </div>
+  `;
+  return `
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.coins')}</div>
+    ${group(CASH_DENOMINATIONS.filter(d=>d.kind==='coin'), 'ti-circle')}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${t('label.bills')}</div>
+    ${group(CASH_DENOMINATIONS.filter(d=>d.kind==='bill'), 'ti-rectangle')}
+  `;
+}
+// Recalcula el total contado a partir de las unidades de cada denominación
+// y lo deja en el campo oculto que ya usan updateClosureDiffPreview() y
+// performCashClosure() — así no hace falta tocar esa lógica, solo cómo se
+// rellena el importe. Si no se ha tocado ninguna casilla todavía, el campo
+// se deja vacío (no en 0) para que el aviso siga diciendo "aún sin contar"
+// en vez de dar por hecho que la caja está vacía.
+function updateCashCountTotal(){
+  let totalCents = 0, anyTouched = false;
+  CASH_DENOMINATIONS.forEach(d => {
+    const el = document.getElementById(`cash-count-${d.cents}`);
+    if(el && el.value !== '') anyTouched = true;
+    totalCents += (el ? (parseInt(el.value) || 0) : 0) * d.cents;
+  });
+  const total = totalCents / 100;
+  document.getElementById('closure-contado').value = anyTouched ? total : '';
+  const totalEl = document.getElementById('cash-count-total');
+  if(totalEl) totalEl.textContent = fmtMoney(total);
   updateClosureDiffPreview();
 }
 
@@ -159,10 +213,10 @@ function updateClosureDiffPreview(){
   box.style.color = diff===0 ? 'var(--ok, #2e7d32)' : (diff>0 ? 'var(--warn, #b8860b)' : 'var(--danger, #c0392b)');
 }
 
-// Umbral a partir del cual una descuadre de caja se considera lo bastante
-// grande como para avisar (no bloquea el cierre, solo lo señala para que no
-// pase desapercibido entre turno y turno).
-const CASH_DIFF_WARNING_THRESHOLD = 10;
+// La caja debe cuadrar exacta: cualquier diferencia (por pequeña que sea)
+// avisa al cerrar — no bloquea el cierre, solo lo señala para que no pase
+// desapercibido entre turno y turno.
+const CASH_DIFF_WARNING_THRESHOLD = 0;
 
 // Detecta, sin acusar a nadie directamente, patrones que conviene revisar
 // en un cierre: un descuadre de caja grande, o un mismo responsable
