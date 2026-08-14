@@ -389,8 +389,6 @@ function paymentMethodTpvLabel(value){
   return PAYMENT_METHOD_LABEL_KEYS[value] ? t(PAYMENT_METHOD_LABEL_KEYS[value]) : (value||'');
 }
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
-let tpvMenuOrderId = null; // id de la comanda cuyo menú por carpetas está abierto
-let tpvMenuFolder = null; // {cartaId, secId} | null — carpeta de carta abierta actualmente
 let tpvSelectedCartaId = null; // id de la carta/menú seleccionada en las pestañas de la comanda
 let tpvSelectedSeccionId = null; // sección abierta dentro de la carta seleccionada (null = viendo las carpetas)
 
@@ -1315,28 +1313,26 @@ function confirmOpenTableOrder(tableId){
   renderTableOrderModal(order.id);
 }
 
+// Liberar una mesa abierta por error (0 platos), sin salir del TPV. Antes
+// la única forma de deshacer un "Abrir mesa" a la mesa equivocada era ir a
+// Mi Negocio > Operativa y borrar la mesa física entera del plano de sala
+// — un efecto colateral desproporcionado solo para deshacer un mis-clic.
+function releaseEmptyTable(orderId){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order || (order.items||[]).length) return;
+  if(!confirm(t('msg.confirmReleaseEmptyTable'))) return;
+  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
+  saveDB();
+  closeModal();
+  renderTPV();
+}
+
 // Una carta es de bebidas si se creó en el área de Sala (campo area==='sala').
 // Para cartas antiguas sin ese campo, se mantiene la detección por nombre
 // (p.ej. "Bebidas", "Carta de Bebidas"). El resto se consideran de comida.
 function isBebidaCarta(c){
   if(c && c.area) return c.area === 'sala';
   return /bebida/i.test(c.nombre||'');
-}
-
-function renderMenusComboHtml(order){
-  const activeMenus = getActiveMenus();
-  if(!activeMenus.length) return '';
-  return `
-    <p style="font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;margin:0 0 6px"><i class="ti ti-list-details"></i> Menús</p>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-      ${activeMenus.map(m => `<button class="btn btn-sm btn-primary" onclick="openMenuConfigModal(${order.id}, ${m.id})">${escapeHtml(tItem(m))} · ${fmtMoney(m.precio)}</button>`).join('')}
-    </div>
-  `;
-}
-
-// Cartas de comida activas (todas las activas que no son de bebidas).
-function getActiveComidaCartas(){
-  return getActiveCartas().filter(c => !isBebidaCarta(c));
 }
 
 // Guarda en la comanda qué carta de comida se usará, cuando hay varias activas
@@ -1347,28 +1343,6 @@ function setOrderCarta(orderId, cartaId){
   order.cartaElegidaId = cartaId;
   saveDB();
   renderTableOrderModal(orderId);
-}
-
-// Devuelve las "carpetas" del menú para una comanda: una por cada sección de
-// carta con platos disponibles, ordenadas con las cartas de bebida primero.
-// Si hay varias cartas de comida activas a la vez, solo se usa la elegida
-// para esta comanda (ver setOrderCarta).
-function getOrderMenuFolders(order){
-  const activeCartas = getActiveCartas();
-  const bebidaCartas = activeCartas.filter(isBebidaCarta);
-  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
-  if(comidaCartas.length > 1){
-    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
-    if(elegida) comidaCartas = [elegida];
-  }
-  const folders = [];
-  [...bebidaCartas, ...comidaCartas].forEach(c => {
-    (c.secciones||[]).forEach(sec => {
-      const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
-      if(platos.length) folders.push({cartaId: c.id, secId: sec.id, nombre: sec.nombre, i18n: sec.i18n, icono: sec.icono || guessSeccionEmoji(sec.nombre), platos});
-    });
-  });
-  return folders;
 }
 
 function findCartaSeccion(secId){
@@ -1383,54 +1357,6 @@ function isSeccionBebida(secId){
     if((c.secciones||[]).some(s=>s.id===secId)) return isBebidaCarta(c);
   }
   return false;
-}
-
-function openTpvMenuFolder(orderId, cartaId, secId){
-  tpvMenuOrderId = orderId;
-  tpvMenuFolder = {cartaId, secId};
-  renderTableOrderModal(orderId);
-}
-
-function closeTpvMenuFolder(orderId){
-  tpvMenuFolder = null;
-  renderTableOrderModal(orderId);
-}
-
-function renderOrderMenuHtml(order){
-  const menusHtml = renderMenusComboHtml(order);
-
-  const comidaCartas = getActiveComidaCartas();
-  if(comidaCartas.length > 1 && !comidaCartas.some(c => c.id === order.cartaElegidaId)){
-    return menusHtml + `
-      <p style="font-size:13px;color:var(--muted);margin-bottom:8px">${t('msg.multipleCartasHint')}</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${comidaCartas.map(c => `<button class="btn" onclick="setOrderCarta(${order.id}, ${c.id})"><i class="ti ti-book-2"></i> ${escapeHtml(tItem(c))}</button>`).join('')}
-      </div>
-    `;
-  }
-
-  const folders = getOrderMenuFolders(order);
-  if(!folders.length) return menusHtml + `<p style="font-size:13px;color:var(--muted)">${t('msg.noDishesAvailableForOrder')}</p>`;
-
-  if(tpvMenuOrderId !== order.id){ tpvMenuOrderId = order.id; tpvMenuFolder = null; }
-
-  const folder = tpvMenuFolder ? folders.find(f => f.cartaId===tpvMenuFolder.cartaId && f.secId===tpvMenuFolder.secId) : null;
-  if(folder){
-    return menusHtml + `
-      <div style="margin-bottom:8px">
-        <button class="btn btn-sm" onclick="closeTpvMenuFolder(${order.id})"><i class="ti ti-arrow-left"></i> ${folder.icono} ${escapeHtml(tItem(folder))}</button>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${folder.platos.map(p => `<button class="btn" onclick="addOrderItem(${order.id}, ${folder.secId}, ${p.id})">${escapeHtml(tItem(p))} · <strong style="color:var(--brand-orange)">${fmtMoney(p.precio)}</strong></button>`).join('')}
-      </div>
-    `;
-  }
-
-  return menusHtml + `
-    <div style="display:flex;flex-wrap:wrap;gap:8px">
-      ${folders.map(f => `<button class="btn" style="min-width:88px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px" onclick="openTpvMenuFolder(${order.id}, ${f.cartaId}, ${f.secId})"><span style="font-size:26px">${f.icono}</span><span style="font-size:12px;font-weight:700">${escapeHtml(f.nombre)}</span></button>`).join('')}
-    </div>
-  `;
 }
 
 function openMenuConfigModal(orderId, menuId){
@@ -1775,6 +1701,7 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}${kitchenAckBadge}</h3>
+      ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
       <button class="modal-close" onclick="closeModal();renderTPV()">&times;</button>
@@ -4199,9 +4126,9 @@ function buildTicketHeaderLines(){
   const tc = b.ticket || {};
   const lines = [b.name || 'GastroGoan'];
   if(tc.mostrarDireccion !== false && b.address) lines.push(b.address);
-  if(tc.mostrarTelefono !== false && b.phone) lines.push('Tel: ' + b.phone);
+  if(tc.mostrarTelefono !== false && b.phone) lines.push(t('ticket.phone').replace('${phone}', b.phone));
   if(tc.mostrarWeb && b.web) lines.push(b.web);
-  if(tc.mostrarNif !== false && b.cif) lines.push('NIF/CIF: ' + b.cif);
+  if(tc.mostrarNif !== false && b.cif) lines.push(t('ticket.taxIdLabel').replace('${cif}', b.cif));
   return lines;
 }
 

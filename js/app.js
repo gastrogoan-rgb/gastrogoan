@@ -4471,11 +4471,14 @@ function deleteTableFromConfig(id){
     showToast(t('msg.tableHasOpenOrderItems'));
     return;
   }
+  if(!confirm(t('msg.confirmDeleteTable'))) return;
   if(order){
     // Comanda vacía (mesa abierta por error, sin platos): se puede liberar sin más.
+    // Se borra DESPUÉS de confirmar — si se cancelaba antes de este cambio, la
+    // comanda vacía ya se había borrado igualmente, dejando la mesa "libre"
+    // sin que el usuario lo hubiera pedido.
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== order.id);
   }
-  if(!confirm(t('msg.confirmDeleteTable'))) return;
   clearDanglingTableRefs([id]);
   DB.tables = DB.tables.filter(t => t.id !== id);
   saveDB();
