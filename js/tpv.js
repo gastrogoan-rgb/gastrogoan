@@ -1032,6 +1032,7 @@ function acceptOnlineOrder(orderId, auto){
       }
       if(!l.estado){
         l.estado = 'cocina';
+        delete l.recogidoAt;
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
@@ -1604,6 +1605,7 @@ function marcharValeCompleto(orderId){
         const qtyFired = line.qty - (line.marchada||0);
         fired.push({qty: qtyFired, name: line.name, notas: line.notas, bebida: false});
         line.estado = 'cocina';
+        delete line.recogidoAt;
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
@@ -1629,6 +1631,7 @@ function marcharLine(orderId, idx){
   const qtyFired = line.qty - (line.marchada||0);
   const fired = [{qty: qtyFired, name: line.name, notas: line.notas, bebida: line.bebida}];
   line.estado = 'cocina';
+  delete line.recogidoAt;
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
@@ -1840,12 +1843,24 @@ function renderTandaGroupCard(order, g, isMenu){
   const pendingCount = orderPendingKitchenLines(order, g.tanda, isMenu).reduce((s,l)=>s+l.qty, 0);
   const allInGroup = g.items;
   const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
-  const allDelivered = allInGroup.every(({line}) => line.estado === 'entregado');
+  // "Listo para recoger" y "Recogido" son cosas distintas y las decide gente
+  // distinta: cocina termina el plato (estado 'entregado') y SALA confirma
+  // que se lo ha llevado (recogidoAt). Antes no existía esa confirmación y el
+  // badge daba por recogida la tanda en cuanto cocina acababa el último
+  // plato, que es justo al revés: cuanto más terminada estaba, antes decía
+  // "Recogido" sin que nadie la hubiera tocado.
+  const listos = allInGroup.filter(({line}) => line.estado === 'entregado');
+  const porRecoger = listos.filter(({line}) => !line.recogidoAt);
+  const allPicked = listos.length === allInGroup.length && !porRecoger.length;
   let statusBadge = '';
-  if(allDelivered) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-  else if(allInGroup.some(({line}) => line.estado === 'entregado')) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+  if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+  else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
   else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
   else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+  // El botón solo aparece cuando de verdad hay algo esperando en el pase.
+  const btnRecoger = porRecoger.length
+    ? `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-hand-grab"></i> ${t('btn.markPickedUp')}</button>`
+    : '';
 
   return `
   <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
@@ -1853,6 +1868,7 @@ function renderTandaGroupCard(order, g, isMenu){
       <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
+        ${btnRecoger}
         ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
@@ -1867,7 +1883,11 @@ function renderTandaGroupCard(order, g, isMenu){
         else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.preparing')}"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
         else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="font-size:9px;padding:2px 6px;min-height:auto;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})" title="${t('kitchen.waiting')}"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
       } else {
-        if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px"><i class="ti ti-check"></i></span>';
+        // Un plato terminado por cocina pero aún en el pase lleva el icono de
+        // la campana: de un vistazo se ve qué falta por recoger sin tener que
+        // leer el badge de la tanda entera.
+        if(line.estado==='entregado' && line.recogidoAt) lineStatus = ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml(t('tpv.pickedUp'))}"><i class="ti ti-check"></i></span>`;
+        else if(line.estado==='entregado') lineStatus = ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml(t('tpv.readyToPickup'))}"><i class="ti ti-bell-ringing"></i></span>`;
         else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-flame"></i></span>';
         else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px"><i class="ti ti-clock"></i></span>';
       }
@@ -2129,6 +2149,7 @@ function marcharComanda(orderId, tanda, isMenu){
       const qtyFired = l.qty - (l.marchada||0);
       fired.push({qty: qtyFired, name: l.name, notas: l.notas, bebida: l.bebida});
       l.estado = 'cocina';
+      delete l.recogidoAt;
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
@@ -2233,6 +2254,29 @@ function cycleLineEstado(orderId, idx){
   if(!line) return;
   if(line.estado === 'cocina') setLineEstado(orderId, idx, 'preparando');
   else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
+}
+
+/* Sala confirma que ha recogido del pase los platos de una tanda que cocina
+   ya ha terminado. Es un dato aparte del estado de cocina (recogidoAt en vez
+   de un cuarto valor de `estado`) a propósito: `estado === 'entregado'`
+   significa "cocina ha terminado" en casi cincuenta sitios de la app -cierre
+   de comanda, cobro, informes, KDS- y meter un valor nuevo obligaría a
+   revisarlos todos para que siguieran contando como terminados. */
+function marcarTandaRecogida(orderId, tanda, isMenu){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  if(!order) return;
+  const ahora = new Date().toISOString();
+  let cambiadas = 0;
+  (order.items||[]).forEach(line => {
+    if((line.tanda||'') !== tanda) return;
+    if(!!line.menuId !== !!isMenu) return; // carta y menú se recogen por separado
+    if(line.estado === 'entregado' && !line.recogidoAt){ line.recogidoAt = ahora; cambiadas++; }
+  });
+  if(!cambiadas) return;
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  renderTPV();
+  showToast(t('msg.tandaPickedUp').replace('${n}', cambiadas));
 }
 
 // Click sobre el nombre de un grupo (tanda) en cocina: avanza el estado de todos sus platos a la vez
@@ -2520,6 +2564,7 @@ function autoSendTakeawayLine(order, line){
   if(order.tipo !== 'takeaway' || !line) return;
   const qtyFired = line.qty - (line.marchada||0);
   line.estado = 'cocina';
+  delete line.recogidoAt;
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
@@ -2537,6 +2582,7 @@ function syncBebidaLineEstado(line){
   line.marchada = line.qty;
   if(!line.estado){
     line.estado = 'cocina';
+    delete line.recogidoAt;
     line.enviadoAt = line.enviadoAt || new Date().toISOString();
   }
 }
@@ -2549,6 +2595,7 @@ function autoSendFirstCourse(order, line, tanda){
   if(firstTanda === undefined || (tanda||'') !== (firstTanda||'')) return;
   const qtyFired = line.qty - (line.marchada||0);
   line.estado = 'cocina';
+  delete line.recogidoAt;
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
