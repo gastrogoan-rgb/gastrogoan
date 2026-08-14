@@ -3199,13 +3199,24 @@ function renderIncomingSwapRequestsHtml(employeeId){
     </div>`;
 }
 
+// Antelación mínima para pedir un cambio de turno: por debajo de esto ya
+// no da tiempo real a que el compañero lo acepte Y el propietario lo
+// confirme antes de que llegue el turno, así que ni se ofrece como opción
+// (mejor evitarlo aquí que dejar una petición que nadie llega a resolver
+// a tiempo). Se mide desde la medianoche del día del turno, el caso más
+// exigente (un turno de mañana temprano), no desde la hora exacta de
+// entrada — los turnos no siempre la tienen guardada.
+const SWAP_MIN_NOTICE_HOURS = 24;
+function turnoMeetsSwapNotice(fecha){
+  return new Date(fecha+'T00:00:00') - new Date() >= SWAP_MIN_NOTICE_HOURS * 3600000;
+}
 function openTurnoSwapRequestModal(employeeId){
   const e = DB.employees.find(x=>x.id===employeeId);
   if(!e) return;
   const today = todayStr();
-  const myTurnos = (DB.turnos||[]).filter(t2 => t2.employeeId===employeeId && t2.fecha >= today).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const myTurnos = (DB.turnos||[]).filter(t2 => t2.employeeId===employeeId && t2.fecha >= today && turnoMeetsSwapNotice(t2.fecha)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const colleagues = DB.employees.filter(x => x.id!==employeeId && (x.area||'cocina')===(e.area||'cocina') && x.active!==false);
-  if(!myTurnos.length){ showToast(t('swap.noUpcomingTurnos')); return; }
+  if(!myTurnos.length){ showToast(t('swap.noUpcomingTurnos').replace('${h}', SWAP_MIN_NOTICE_HOURS)); return; }
   if(!colleagues.length){ showToast(t('swap.noColleagues')); return; }
   openModal(`
     <div class="modal-header">
@@ -3229,6 +3240,8 @@ function openTurnoSwapRequestModal(employeeId){
 function submitTurnoSwapRequest(employeeId){
   const fromTurnoId = parseInt(document.getElementById('swap-turno-sel').value);
   const toEmployeeId = parseInt(document.getElementById('swap-colleague-sel').value);
+  const turno = (DB.turnos||[]).find(t2=>t2.id===fromTurnoId);
+  if(!turno || !turnoMeetsSwapNotice(turno.fecha)){ showToast(t('swap.noUpcomingTurnos').replace('${h}', SWAP_MIN_NOTICE_HOURS)); openEmployeeFicharModal(employeeId); return; }
   DB.turnoSwapRequests.push({id: genId(), fromEmployeeId: employeeId, fromTurnoId, toEmployeeId, status:'pending_peer', createdAt: new Date().toISOString()});
   saveDB();
   showToast(t('swap.requestSent'));
