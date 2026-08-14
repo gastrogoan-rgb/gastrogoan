@@ -282,6 +282,10 @@ function renderDashboard(){
   // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
   // aquí se avisa igual que con el stock bajo, para que no pase desapercibido.
   const overdueMaintenanceCount = ((DB.limpieza && DB.limpieza.mantenimiento) || []).filter(e => limpiezaMantenimientoDueStatus(e) === 'overdue').length;
+  // Misma idea que el mantenimiento, pero para la próxima revisión de
+  // control de plagas (pestaña Plagas) — antes no se avisaba de esta en el
+  // panel, solo entrando a mano a esa pestaña.
+  const overduePestControlCount = ((DB.limpieza && DB.limpieza.plagas) || []).filter(e => limpiezaMantenimientoDueStatus({proximo: e.proxima}) === 'overdue').length;
   // Facturas de proveedor (generadas automáticamente al recibir un pedido)
   // con fecha de pago ya vencida y todavía sin marcar como pagadas — para
   // no acumular sorpresas de tesorería por puro despiste.
@@ -299,6 +303,7 @@ function renderDashboard(){
   const attentionItems = [
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
+    {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
     {count: overdueInvoicesCount, icon:'ti-file-invoice', label: t('dash.att.overdueInvoices'), onclick: `navigate('economia'); GE.tab('variables'); openPendingInvoicesModal()`, warn:true},
     {count: openOrders, icon:'ti-tools-kitchen-2', label: t('dash.att.openOrders'), onclick: `navigate('tpv')`},
     {count: activeRepartosCount, icon:'ti-moped', label: t('dash.att.activeDeliveries'), onclick: `navigate('tpv'); openRepartosControlModal()`},

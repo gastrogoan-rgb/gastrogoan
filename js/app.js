@@ -264,7 +264,7 @@ function renderLimpiezaManos(){
 }
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function updateManosPaso(i, val){ limpiezaManosPasos()[i] = val; saveDB(); }
-function addManosPaso(){ limpiezaManosPasos().push('Nuevo paso'); saveDB(); renderLimpiezaManos(); }
+function addManosPaso(){ limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
 function removeManosPaso(i){
   const pasos = limpiezaManosPasos();
   if(pasos.length<=1) return;
@@ -364,7 +364,7 @@ function deleteProtocoloComplianceEntry(type, id){
     renderLimpiezaProtocolo();
   });
 }
-function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push('Nuevo paso'); saveDB(); renderLimpiezaProtocolo(); }
+function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push(t('label.newStep')); saveDB(); renderLimpiezaProtocolo(); }
 function removeProtocoloPaso(type,i){
   const pasos = limpiezaProtocoloPasos(type);
   if(pasos.length<=1) return;
@@ -754,7 +754,7 @@ function updateMantenimientoEquipo(id, field, val){
   saveDB();
 }
 function deleteMantenimientoEquipo(id){
-  if(!confirm(t('msg.confirmDeleteShift'))) return;
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
   DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
   saveDB();
   renderLimpiezaMantenimiento();
