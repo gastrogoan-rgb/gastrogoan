@@ -3430,7 +3430,7 @@ function openFichajeHistoryModal(employeeId){
                 <td>${f.salida ? fmtHora(f.salida) : `<span class="badge badge-green">${t('hr2.inProgress')}</span>`}</td>
                 <td style="${mismatch?'color:var(--red);font-weight:700':''}">${actual!=null ? fmtDuracion(actual) : '—'}${mismatch?` <i class="ti ti-alert-triangle" title="${t('hr2.shiftMismatch')}"></i>`:''}</td>
                 <td style="color:var(--muted)">${planned!=null ? fmtDuracion(planned) : '—'}</td>
-                <td class="actions-cell">${f.salida ? `<button class="btn btn-sm btn-icon" title="${t('hr2.fixClockInTitle')}" onclick="requestFichajeEditPin(${f.id})"><i class="ti ti-lock-edit"></i></button>` : ''}</td>
+                <td class="actions-cell"><button class="btn btn-sm btn-icon" title="${t('hr2.fixClockInTitle')}" onclick="requestFichajeEditPin(${f.id})"><i class="ti ti-lock-edit"></i></button></td>
               </tr>
             `;}).join('')}
           </tbody>
