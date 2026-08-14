@@ -3166,10 +3166,12 @@ function openEmployeeFicharModal(employeeId){
       </div>
       ${asOwner ? '' : renderIncomingSwapRequestsHtml(e.id)}
       ${asOwner ? '' : renderMyVacationRequestsHtml(e.id)}
+      ${asOwner ? '' : `
       <div class="field" style="margin-top:12px;text-align:left">
         <label>${t('handoff.label')}</label>
         <textarea id="handoff-note-input" rows="2" placeholder="${t('handoff.placeholder')}" onchange="saveShiftHandoffNote('${(e.area||'cocina')}', this.value)">${escapeHtml(getShiftHandoffNote(e.area||'cocina'))}</textarea>
       </div>
+      `}
     </div>
   `);
 }
