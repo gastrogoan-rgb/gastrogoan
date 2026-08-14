@@ -1493,7 +1493,6 @@ function updateOrderItemSearch(val){
 // Botones de acción del pedido (imprimir / enviar), compartidos por ambas vistas.
 function orderFormButtonsHtml(){
   return `
-    <button class="btn" onclick="saveNewPedidoAsDraft()"><i class="ti ti-device-floppy"></i> ${t('btn.saveDraft')}</button>
     <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
     <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
     <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
@@ -1551,13 +1550,46 @@ function renderOrderModal(){
 }
 
 // Resumen en vivo de los artículos con cantidad > 0 mientras se compone el pedido.
+/* Resumen del pedido con lo que va a costar cada línea y el total abajo.
+   Antes solo se veían nombres y cantidades, así que había que enviar el
+   pedido para enterarse del importe — y para un pedido grande eso es
+   justamente lo que hay que saber ANTES de mandarlo.
+   El cálculo es el mismo que usa pedidoTotalConIva() para los pedidos ya
+   guardados: el precio del ingrediente es la base sin IVA y cada línea suma
+   el suyo, que puede ser distinto por producto. */
 function orderSummaryHtml(){
   const items = orderModalLines.filter(l => l.cantidad > 0);
   if(!items.length) return `<div class="empty" style="padding:10px">${t('empty.noArticlesYet')}</div>`;
-  return items.map(l => {
+  let base = 0, iva = 0, sinPrecio = 0;
+  const filas = items.map(l => {
     const ing = getIngredient(l.ingredientId);
-    return `<div class="list-row"><div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div><strong>${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}</strong></div>`;
+    if(!ing) return '';
+    const precio = ing.price || 0;
+    const importe = (l.cantidad||0) * precio;
+    const ivaPct = ing.iva != null ? ing.iva : 0;
+    base += importe;
+    iva += importe * ivaPct / 100;
+    if(!precio) sinPrecio++;
+    return `
+      <div class="list-row" style="align-items:baseline">
+        <div class="list-row-name"><span>${escapeHtml(ing.name)}</span></div>
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">${fmtNum(l.cantidad)} ${escapeHtml(ing.unit)}${precio ? ` × ${fmtMoney(precio)}` : ''}</span>
+        <strong style="white-space:nowrap">${precio ? fmtMoney(importe) : '—'}</strong>
+      </div>`;
   }).join('');
+
+  // Un ingrediente sin precio en la Mega Lista no puede sumar, y callarlo
+  // daría un total que parece completo sin serlo.
+  const aviso = sinPrecio
+    ? `<div style="font-size:11.5px;color:var(--amber,#8A7440);padding:6px 10px"><i class="ti ti-alert-triangle"></i> ${t('msg.orderItemsWithoutPrice').replace('${n}', sinPrecio)}</div>`
+    : '';
+
+  return filas + aviso + `
+    <div style="border-top:1px solid var(--border);margin-top:6px;padding:8px 10px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.subtotal')}</span><span>${fmtMoney(base)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">${t('label.vat')}</span><span>${fmtMoney(iva)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:4px"><span>${t('common.total')}</span><span>${fmtMoney(base + iva)}</span></div>
+    </div>`;
 }
 function renderOrderSummary(){
   const box = document.getElementById('order-summary');
@@ -1663,19 +1695,6 @@ function buildNewPedido(estado){
 // Guarda el pedido en curso como Borrador, sin enviarlo todavía — para poder
 // revisarlo con calma antes de mandarlo (antes el único estado real al crear
 // un pedido era "Enviado", no había forma de dejarlo a medias).
-function saveNewPedidoAsDraft(){
-  const order = buildNewPedido('BORRADOR');
-  if(!order) return;
-  if(orderFormInline){
-    orderModalSupplier = ''; orderModalLines = []; orderModalSearch = '';
-    pedidosTab = 'historial';
-  }else{
-    closeModal();
-  }
-  renderPedidos();
-  showToast(t('msg.orderSavedAsDraft'));
-}
-
 function printPedidoBorrador(){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return; }
   const items = orderModalLines.filter(l => l.cantidad > 0);
