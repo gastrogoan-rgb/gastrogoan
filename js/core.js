@@ -2123,6 +2123,26 @@ function getReservasResumenForSync(){
   return resumen;
 }
 
+// Igual que getReservasResumenForSync pero por mesa concreta en vez de por
+// total de personas del turno: la web pública lo usa para saber qué mesas
+// ya están ocupadas en cada turno y así poder emparejar el grupo que quiere
+// reservar con una mesa real (con su capacidad) en vez de solo un contador
+// de aforo. Sin datos del cliente — solo qué mesa y qué turno, nunca quién.
+function getMesasOcupadasForSync(){
+  const ocupadas = {};
+  const today = todayStr();
+  DB.reservations.forEach(r => {
+    if(r.status !== 'pendiente' && r.status !== 'confirmada' && r.status !== 'completada') return;
+    if(!r.date || r.date < today || r.tableId == null) return;
+    const turnoIdx = getTurnoIndexForTime(r.date, r.time);
+    if(turnoIdx === null) return;
+    if(!ocupadas[r.date]) ocupadas[r.date] = {};
+    if(!ocupadas[r.date][turnoIdx]) ocupadas[r.date][turnoIdx] = {};
+    ocupadas[r.date][turnoIdx][r.tableId] = true;
+  });
+  return ocupadas;
+}
+
 // Igual que getReservasResumenForSync pero para pedidos para llevar/domicilio:
 // cuenta cuántos pedidos activos hay en cada franja de 30 min, para que la
 // web pública pueda avisar/bloquear si el negocio ha puesto un límite de
@@ -2290,21 +2310,31 @@ function initPublicRequestsListener(){
         // la mesa ni los puntos de fidelidad se disparaban para un cliente
         // recurrente que reservaba por la web en vez de llamar o venir en persona.
         const matchedClient = req.clientPhone ? findClientByPhone(req.clientPhone) : null;
-        // El aforo del turno ya se comprobó de forma atómica al enviar la
-        // solicitud (reserveAforoAtomic, en la web pública) — aquí solo
-        // queda intentar asignar mesa automáticamente, igual que haría el
-        // personal a mano. Si hay una mesa libre con plazas suficientes, la
-        // reserva se confirma sola, sin ningún clic; si no (grupo grande
-        // fragmentado entre varias mesas pequeñas, etc.), se deja
-        // 'pendiente' para que el personal solo tenga que elegir la mesa.
-        const autoTable = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
-          .filter(tb => (tb.plazas || 0) >= (req.people || 1))
-          .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
+        // La web pública ya emparejó y reservó una mesa concreta de forma
+        // atómica (reserveTableAtomic) antes de mandar la solicitud — aquí
+        // solo se revalida que siga libre (p.ej. por si alguien la ocupó
+        // desde el TPV mientras tanto), no se vuelve a elegir. Si por lo que
+        // sea no trae mesa (negocio sin ninguna mesa configurada todavía,
+        // caso en el que la web no puede comprobar nada), se cae al mismo
+        // reparto automático de siempre — que con cero mesas nunca encuentra
+        // ninguna, así que queda 'pendiente' para que el personal la revise.
+        const RESERVATION_TABLE_MARGIN = 1;
+        let confirmedTableId = null;
+        if(req.tableId != null){
+          const stillFree = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+            .some(tb => tb.id === req.tableId);
+          if(stillFree) confirmedTableId = req.tableId;
+        } else {
+          const autoTable = (getAvailableTablesForReservation(req.date, req.time, null, req.people || 1) || [])
+            .filter(tb => (tb.plazas || 0) + RESERVATION_TABLE_MARGIN >= (req.people || 1))
+            .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
+          confirmedTableId = autoTable ? autoTable.id : null;
+        }
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '', clientEmail: req.clientEmail || '',
           date: req.date, time: req.time, people: req.people || 1,
-          tableId: autoTable ? autoTable.id : null, notes: req.notes || '', status: autoTable ? 'confirmada' : 'pendiente',
+          tableId: confirmedTableId, notes: req.notes || '', status: confirmedTableId ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
           origen: 'publico', createdAt: new Date().toISOString(),
@@ -2315,8 +2345,9 @@ function initPublicRequestsListener(){
           phoneOdd: !!(req.clientPhone && req.clientPhone.replace(/[^\d]/g,'').length < 9)
         };
         DB.reservations.push(newReservation);
-        if(autoTable && typeof sendReservationConfirmationEmail === 'function'){
-          sendReservationConfirmationEmail({...newReservation, tableName: autoTable.name}).catch(()=>{});
+        if(confirmedTableId && typeof sendReservationConfirmationEmail === 'function'){
+          const confirmedTable = DB.tables.find(t => t.id === confirmedTableId);
+          sendReservationConfirmationEmail({...newReservation, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
         }
         notifyNewRequest = true;
       }else if(req.type === 'nps_response'){
@@ -2419,9 +2450,10 @@ function syncPublicMirror(){
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         reservasResumen: getReservasResumenForSync(),
+        mesasOcupadas: getMesasOcupadasForSync(),
         pedidosResumen: getPedidosResumenForSync(),
         cocinaCargaActiva: getActiveKitchenOrdersCount(),
-        tables: DB.tables.map(t => ({id: t.id, name: t.name}))
+        tables: DB.tables.map(t => ({id: t.id, name: t.name, plazas: t.plazas || null}))
       };
       if(sucursales) data.sucursales = sucursales;
       // Antes un fallo aquí se tragaba en silencio (".catch(()=>{})"): la
@@ -2448,6 +2480,9 @@ function syncPublicMirror(){
       DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
         app.database().ref('gastrogoan/public/' + publicId + '/aforoHold/' + fecha).remove().catch(() => {});
+        // mesaHold (candado por mesa concreta que usa la web pública para
+        // reservar de forma atómica) mismo motivo y mismo mecanismo.
+        app.database().ref('gastrogoan/public/' + publicId + '/mesaHold/' + fecha).remove().catch(() => {});
       });
       // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
       // (el contador atómico de pedidos por franja): se limpia en cada sync

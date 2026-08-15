@@ -231,9 +231,8 @@ const I18N = {
     'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
     'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
     'error.horario.reservas':'reservas','error.horario.pedidos':'pedidos',
-    'error.aforo.completo':'Lo sentimos, ese turno ya está completo. Por favor elige otro horario o llama al restaurante para consultar disponibilidad.',
+    'error.mesa.nodisponible':'Lo sentimos, no hay ninguna mesa disponible para ese número de personas a esa hora. Por favor elige otro horario, reduce el número de personas o llama al restaurante.',
     'error.pedidos.completo':'Lo sentimos, ya no admitimos más pedidos para esa franja horaria. Por favor elige otra hora o llama al restaurante.',
-    'error.aforo.parcial':'Lo sentimos, para ese turno solo quedan %d plaza(s) disponible(s). Por favor reduce el número de personas, elige otro horario o llama al restaurante.',
     'error.carrito.vacio':'Añade al menos un plato a tu pedido.','error.mesa.select':'Selecciona tu mesa.','error.mesa.manual':'Indica el número de tu mesa.',
     'error.pedido.min':'El pedido mínimo es de %s. Añade más platos para continuar.',
     'error.envio':'No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.',
@@ -290,9 +289,8 @@ const I18N = {
     'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
     'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
     'error.horario.reservas':'bookings','error.horario.pedidos':'orders',
-    'error.aforo.completo':'Sorry, that slot is fully booked. Please choose another time or call the restaurant.',
+    'error.mesa.nodisponible':'Sorry, there is no table available for that many people at that time. Please choose another time, reduce the party size, or call the restaurant.',
     'error.pedidos.completo':'Sorry, we are not accepting more orders for that time slot. Please choose another time or call the restaurant.',
-    'error.aforo.parcial':'Sorry, only %d seat(s) left for that slot. Please reduce the number of people, choose another time or call the restaurant.',
     'error.carrito.vacio':'Add at least one dish to your order.','error.mesa.select':'Select your table.','error.mesa.manual':'Enter your table number.',
     'error.pedido.min':'Minimum order is %s. Add more dishes to continue.',
     'error.envio':'Could not send. Check your connection and try again.',
@@ -349,9 +347,8 @@ const I18N = {
     'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
     'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
     'error.horario.reservas':'reserves','error.horario.pedidos':'comandes',
-    'error.aforo.completo':'Ho sentim, aquest torn ja és complet. Si us plau tria un altre horari o truca al restaurant.',
+    'error.mesa.nodisponible':'Ho sentim, no hi ha cap taula disponible per a aquest nombre de persones a aquesta hora. Si us plau tria un altre horari, redueix el nombre de persones o truca al restaurant.',
     'error.pedidos.completo':'Ho sentim, ja no admetem més comandes per a aquesta franja horària. Si us plau tria una altra hora o truca al restaurant.',
-    'error.aforo.parcial':'Ho sentim, per a aquest torn només queden %d plaça/es disponible/s. Si us plau redueix el nombre de persones, tria un altre horari o truca al restaurant.',
     'error.carrito.vacio':'Afegeix almenys un plat a la comanda.','error.mesa.select':'Selecciona la teva taula.','error.mesa.manual':'Indica el número de la teva taula.',
     'error.pedido.min':'Comanda mínima de %s. Afegeix més plats per continuar.',
     'error.envio':'No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar.',
@@ -783,46 +780,52 @@ function pedidosCutoffTimeForTurno(dateStr, time, p){
   return {limite, turno};
 }
 
-// Devuelve {aforo, turnoIdx, reservados, disponible} o null si no hay aforo
-// configurado o la hora no encaja en ningún turno. reservados es el último
-// recuento SINCRONIZADO desde el panel interno (puede llevar algo de retraso
-// respecto a reservas que otros clientes están completando ahora mismo).
-function getAforoInfo(dateStr, time){
-  const aforo = parseInt((DB.business||{}).aforo) || 0;
-  if(!aforo) return null;
+// Índice del turno al que pertenece `time` en `dateStr`, o null si no hay
+// horario configurado o la hora no encaja en ninguno. Cierre EXCLUSIVO salvo
+// en el último turno del día (inclusivo) — mismo criterio que
+// getTurnoIndexForTime() en el panel interno (js/menu.js): antes aquí todos
+// los cierres eran inclusivos, así que justo en el minuto de cambio de turno
+// (p.ej. las 16:00 entre un turno 13-16 y otro 16-19) esta página podía
+// calcular un turnoIdx distinto al que usa el panel interno.
+function getTurnoIndexForTime(dateStr, time){
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return null;
-  // Mismo criterio que getTurnoIndexForTime() en el panel interno (js/menu.js):
-  // cierre EXCLUSIVO salvo en el último turno del día (inclusivo) — antes aquí
-  // todos los cierres eran inclusivos, así que justo en el minuto de cambio de
-  // turno (p.ej. las 16:00 entre un turno 13-16 y otro 16-19) esta página
-  // podía calcular un turnoIdx distinto al que usa reservasResumen para
-  // contar el aforo real, dando una disponibilidad ligeramente equivocada.
-  const turnoIdx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
-  if(turnoIdx === -1) return null;
-  const resumen = (DB.reservasResumen||{})[dateStr] || {};
-  const reservados = resumen[turnoIdx] || 0;
-  return {aforo, turnoIdx, reservados, disponible: Math.max(0, aforo - reservados)};
+  const idx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
+  return idx === -1 ? null : idx;
 }
-// Devuelve las plazas disponibles para el turno al que pertenece `time` en `dateStr`,
-// o null si no hay aforo configurado o la hora no encaja en ningún turno.
-function getAforoDisponible(dateStr, time){
-  const info = getAforoInfo(dateStr, time);
-  return info ? info.disponible : null;
+// Margen de tolerancia: una mesa admite hasta 1 persona más de su capacidad
+// configurada (mesa de 2 acepta grupos de 3, de 4 acepta grupos de 5) — así
+// no se rechazan reservas que en la práctica caben perfectamente.
+const RESERVATION_TABLE_MARGIN = 1;
+// Mesas ya ocupadas ese turno según el espejo sincronizado (DB.mesasOcupadas,
+// sin ningún dato de cliente — solo qué mesa y qué turno).
+function getOccupiedTableIds(dateStr, turnoIdx){
+  const dia = (DB.mesasOcupadas||{})[dateStr] || {};
+  return Object.keys(dia[turnoIdx] || {}).map(Number);
 }
-// Reserva de forma ATÓMICA `people` plazas del turno, usando una transacción
-// de Firebase sobre un contador de "holds" independiente del resumen ya
-// sincronizado. Esto evita que dos clientes reservando casi a la vez (antes
-// de que el panel interno vuelva a sincronizar el resumen) puedan juntos
-// superar el aforo sin que ninguno de los dos lo viera en su momento. Si la
-// transacción no se puede completar sin pasarse del aforo, se aborta
-// (result.committed === false) y no se ha reservado nada.
-function reserveAforoAtomic(dateStr, turnoIdx, people, aforo, baseline){
-  const ref = db.ref('gastrogoan/public/' + publicId + '/aforoHold/' + dateStr + '/' + turnoIdx);
+// Mejor mesa libre para un grupo de `people` personas: la más pequeña que
+// cumple people <= plazas + margen. Solo se consideran mesas con capacidad
+// configurada — una sin plazas no se puede juzgar, así que se deja fuera
+// (la reserva quedará pendiente para que el negocio la revise a mano, igual
+// que si no hubiera ninguna mesa dada de alta).
+function getBestFitTable(dateStr, turnoIdx, people){
+  const occupied = new Set(getOccupiedTableIds(dateStr, turnoIdx));
+  const candidates = (DB.tables||[])
+    .filter(tb => tb.plazas && !occupied.has(tb.id) && tb.plazas + RESERVATION_TABLE_MARGIN >= people)
+    .sort((a, b) => a.plazas - b.plazas);
+  return candidates[0] || null;
+}
+// Reserva de forma ATÓMICA una mesa concreta para un turno, usando una
+// transacción de Firebase sobre un "candado" independiente del resumen ya
+// sincronizado. Esto evita que dos clientes casi a la vez (antes de que el
+// panel interno vuelva a sincronizar mesasOcupadas) se lleven la misma
+// mesa sin que ninguno de los dos lo viera en su momento. Si la mesa ya
+// estaba cogida, se aborta (result.committed === false) y no se reserva nada.
+function reserveTableAtomic(dateStr, turnoIdx, tableId){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/mesaHold/' + dateStr + '/' + turnoIdx + '/' + tableId);
   return ref.transaction(current => {
-    const held = current || 0;
-    if(baseline + held + people > aforo) return; // abort: se pasaría del aforo
-    return held + people;
+    if(current) return; // abort: ya está cogida
+    return true;
   });
 }
 
@@ -1121,15 +1124,20 @@ function submitReserva(){
     }
   }
 
-  const aforoInfo = getAforoInfo(date, time);
-  if(aforoInfo && people > aforoInfo.disponible){
-    if(aforoInfo.disponible <= 0){
-      alert(t('error.aforo.completo'));
-    }else{
-      alert(t('error.aforo.parcial').replace('%d', aforoInfo.disponible));
+  // Disponibilidad real por mesa (con margen de 1 persona), no por aforo
+  // total del turno: si hay una mesa libre que le quepa al grupo, se
+  // reserva; si no, se dice directamente que no hay hueco, en vez de dejar
+  // la solicitud pendiente de que alguien la revise a mano.
+  const turnoIdx = getTurnoIndexForTime(date, time);
+  const hasConfiguredTables = (DB.tables||[]).some(tb => tb.plazas);
+  let matchedTable = null;
+  if(turnoIdx !== null && hasConfiguredTables){
+    matchedTable = getBestFitTable(date, turnoIdx, people);
+    if(!matchedTable){
+      alert(t('error.mesa.nodisponible'));
+      submittingRequest = false;
+      return;
     }
-    submittingRequest = false;
-    return;
   }
 
   const depositRequired = !!(DB.business||{}).requireDeposit;
@@ -1138,23 +1146,28 @@ function submitReserva(){
     depositRequired, depositAmount: depositRequired ? reservaDepositAmount() : '',
     createdAt: new Date().toISOString()
   };
+  if(matchedTable) req.tableId = matchedTable.id;
 
   const btn = document.getElementById('r-submit');
   if(btn) btn.disabled = true;
 
-  if(!aforoInfo){
+  if(!matchedTable){
+    // Sin mesas configuradas todavía (o sin horario para saber el turno):
+    // no hay nada que comprobar automáticamente, se manda tal cual y el
+    // negocio la revisa a mano.
     sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
     return;
   }
 
   // Comprobación final ATÓMICA justo antes de enviar: cierra la ventana de
-  // carrera en la que dos clientes reservan casi a la vez y el resumen
-  // sincronizado todavía no refleja la reserva del otro.
-  reserveAforoAtomic(date, aforoInfo.turnoIdx, people, aforoInfo.aforo, aforoInfo.reservados).then(result => {
+  // carrera en la que dos clientes reservan casi a la vez y se llevarían
+  // entre los dos la misma mesa antes de que el resumen sincronizado
+  // reflejase la del otro.
+  reserveTableAtomic(date, turnoIdx, matchedTable.id).then(result => {
     if(!result.committed){
       if(btn) btn.disabled = false;
       submittingRequest = false;
-      alert(t('error.aforo.completo'));
+      alert(t('error.mesa.nodisponible'));
       return;
     }
     sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
