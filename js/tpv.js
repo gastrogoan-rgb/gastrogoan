@@ -2837,13 +2837,17 @@ function confirmVoidLine(){
   const loggedEmployeeId = loggedInEmployeeId();
   const responsableId = loggedEmployeeId !== null ? loggedEmployeeId : (respSel && respSel.value ? parseInt(respSel.value) : null);
   const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
+  // Si nadie fichado como empleado ni elegido a mano, es el propio dueño
+  // quien lo ha hecho — antes se quedaba en blanco, dando a entender que no
+  // había quedado registrado nadie.
+  const responsableNombre = responsable ? responsable.name : (loggedEmployeeId === null ? t('label.owner') : '');
 
   if(!DB.voidLog) DB.voidLog = [];
   DB.voidLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
     plato: line.name, cantidad: type==='remove' ? line.qty : Math.abs(delta),
     estado: line.estado||'', motivo, mesa: mesa||'',
-    responsableId, responsableNombre: responsable ? responsable.name : ''
+    responsableId, responsableNombre
   });
 
   // Solo se descontó stock por las raciones que de verdad se "marcharon"
@@ -2919,7 +2923,9 @@ function reallyCancelSale(saleId){
   sale.anuladaAt = new Date().toISOString();
   const loggedEmployeeId = loggedInEmployeeId();
   const responsable = loggedEmployeeId != null ? DB.employees.find(e => e.id === loggedEmployeeId) : null;
-  sale.anuladaResponsableNombre = responsable ? responsable.name : '';
+  // Sin empleado fichado, es el propio dueño quien anula — antes se quedaba
+  // en blanco, dando a entender que no había quedado registrado nadie.
+  sale.anuladaResponsableNombre = responsable ? responsable.name : (loggedEmployeeId === null ? t('label.owner') : '');
   if(!DB.voidLog) DB.voidLog = [];
   DB.voidLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
@@ -3301,19 +3307,22 @@ function confirmApplyDiscount(){
   const loggedEmployeeId = loggedInEmployeeId();
   const responsableId = loggedEmployeeId !== null ? loggedEmployeeId : (respSel && respSel.value ? parseInt(respSel.value) : null);
   const responsable = responsableId ? DB.employees.find(e => e.id === responsableId) : null;
+  // Igual que en anular un plato: sin empleado fichado ni elegido a mano,
+  // es el propio dueño quien lo ha hecho — antes se quedaba en blanco.
+  const responsableNombre = responsable ? responsable.name : (loggedEmployeeId === null ? t('label.owner') : '');
 
   const subtotal = orderTotal(order);
   const importe = roundMoney(subtotal * pct / 100);
   order.descuentoPct = pct;
   order.descuentoMotivo = reason;
   order.descuentoResponsableId = responsableId;
-  order.descuentoResponsableNombre = responsable ? responsable.name : '';
+  order.descuentoResponsableNombre = responsableNombre;
 
   if(!DB.discountLog) DB.discountLog = [];
   DB.discountLog.push({
     id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), createdAt: new Date().toISOString(),
     mesa: order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order),
-    porcentaje: pct, importe, motivo: reason, responsableId, responsableNombre: responsable ? responsable.name : ''
+    porcentaje: pct, importe, motivo: reason, responsableId, responsableNombre
   });
   saveDB();
   discountPending = null;
