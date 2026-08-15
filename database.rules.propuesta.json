@@ -43,9 +43,9 @@
           "mesaHold": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$dateStr": {
-              "$turnoIdx": {
-                "$tableId": {
-                  ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              "$tableId": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                "$slot": {
                   ".validate": "newData.isBoolean() && newData.val() === true"
                 }
               }

@@ -2357,24 +2357,26 @@ function reservaTimeToMinutes(t){
   return h*60 + m;
 }
 
-// Ventana mínima entre dos reservas de la misma mesa: 90 min (hora y media)
-// de base, +15 min más por cada comensal por encima de 4 (un grupo grande
-// tarda más en comer que una mesa de 2, así que necesita más margen).
-// Fijo en 90 minutos para todos los casos (antes se ampliaba para grupos
-// grandes) — a petición del usuario, mismo margen entre mesa y mesa
-// siempre, sin excepciones por tamaño del grupo.
+// Ventana mínima entre dos reservas de la misma mesa — cuánto tiempo ocupa
+// una reserva la mesa antes de poder volver a reservarse. 90 minutos de
+// base, configurable en Mi Negocio (mn-reserva-duracion) porque cada
+// negocio rota sus mesas a un ritmo distinto. Fijo (sin excepciones por
+// tamaño del grupo) — a petición del usuario, mismo margen entre mesa y
+// mesa siempre. Se usa tanto aquí (reservas hechas por el personal) como
+// en la web pública (reservagastrogoan.html, que tiene su propia copia de
+// este mismo valor vía DB.business.reservaDuracionMin, ya que es un
+// archivo aparte sin acceso a este código).
 const RESERVA_VENTANA_MIN = 90;
 function reservaVentanaMin(){
-  return RESERVA_VENTANA_MIN;
+  return parseInt((DB.business||{}).reservaDuracionMin) || RESERVA_VENTANA_MIN;
 }
 
 // La reserva confirmada de hoy más próxima para una mesa concreta, si hay
-// alguna dentro del mismo margen de 90 min que separa una reserva de otra
-// (o ya debería haber llegado hace poco). Así una mesa que se ve "libre" en
+// alguna dentro del mismo margen que separa una reserva de otra (o ya
+// debería haber llegado hace poco). Así una mesa que se ve "libre" en
 // el TPV puede avisar de que en realidad está a punto de ocuparse, en vez
 // de que un camarero siente ahí a alguien que no tiene reserva justo antes
 // de que llegue quien sí la tiene — mismo margen en los dos sitios.
-const MESA_RESERVA_AVISO_MIN = RESERVA_VENTANA_MIN;
 function getUpcomingReservationForTable(tableId){
   if(!tableId) return null;
   const today = todayStr();
@@ -2386,7 +2388,7 @@ function getUpcomingReservationForTable(tableId){
     const mins = reservaTimeToMinutes(r.time);
     if(mins == null) return;
     const until = mins - nowMin;
-    if(until < -15 || until > MESA_RESERVA_AVISO_MIN) return;
+    if(until < -15 || until > reservaVentanaMin()) return;
     if(soonestMin === null || mins < soonestMin){ soonest = r; soonestMin = mins; }
   });
   return soonest;
@@ -4197,6 +4199,11 @@ function renderMiNegocio(){
         <small style="color:var(--muted)">${t('mn.ops.capacityDesc')}</small>
       </div>
       <div class="field">
+        <label>${t('mn.ops.tableDuration')}</label>
+        <input type="number" id="mn-reserva-duracion" min="15" step="15" value="${escapeHtml(b.reservaDuracionMin||'')}" placeholder="90" onchange="saveBusiness(true)">
+        <small style="color:var(--muted)">${t('mn.ops.tableDurationDesc')}</small>
+      </div>
+      <div class="field">
         <label>${t('mn.ops.leadTime')}</label>
         <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">${t('mn.ops.leadTimeDesc')}</small>
@@ -4784,6 +4791,7 @@ function saveBusiness(silent){
   if(el('mn-prop')) DB.business.prop = el('mn-prop').value.trim();
   if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
+  if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
   if(el('mn-leadtime-min')){
     DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);
     // Mantener el valor antiguo de pedidos en sincronía para compatibilidad.

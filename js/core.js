@@ -2128,17 +2128,30 @@ function getReservasResumenForSync(){
 // ya están ocupadas en cada turno y así poder emparejar el grupo que quiere
 // reservar con una mesa real (con su capacidad) en vez de solo un contador
 // de aforo. Sin datos del cliente — solo qué mesa y qué turno, nunca quién.
+// Por mesa concreta y por franja de 30 min (no por turno completo): la web
+// pública lo usa para saber en qué momento exacto está libre cada mesa, y
+// así poder volver a ofrecerla en cuanto pase la duración de ocupación
+// configurada (reservaDuracionMin), sin esperar a que acabe todo el turno.
+// Mismo cálculo de franjas que slotsForReservation() en reservagastrogoan.html
+// (archivo aparte, sin acceso a este código, así que lleva su propia copia).
 function getMesasOcupadasForSync(){
   const ocupadas = {};
   const today = todayStr();
+  const duracionMin = parseInt((DB.business||{}).reservaDuracionMin) || 90;
   DB.reservations.forEach(r => {
     if(r.status !== 'pendiente' && r.status !== 'confirmada' && r.status !== 'completada') return;
-    if(!r.date || r.date < today || r.tableId == null) return;
-    const turnoIdx = getTurnoIndexForTime(r.date, r.time);
-    if(turnoIdx === null) return;
+    if(!r.date || r.date < today || r.tableId == null || !r.time) return;
+    const [h, m] = r.time.split(':').map(Number);
+    if(isNaN(h) || isNaN(m)) return;
     if(!ocupadas[r.date]) ocupadas[r.date] = {};
-    if(!ocupadas[r.date][turnoIdx]) ocupadas[r.date][turnoIdx] = {};
-    ocupadas[r.date][turnoIdx][r.tableId] = true;
+    if(!ocupadas[r.date][r.tableId]) ocupadas[r.date][r.tableId] = {};
+    let cur = h * 60 + m;
+    const end = cur + duracionMin;
+    while(cur < end){
+      const slot = String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0');
+      ocupadas[r.date][r.tableId][slot] = true;
+      cur += 30;
+    }
   });
   return ocupadas;
 }
@@ -2329,6 +2342,18 @@ function initPublicRequestsListener(){
             .filter(tb => (tb.plazas || 0) + RESERVATION_TABLE_MARGIN >= (req.people || 1))
             .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
           confirmedTableId = autoTable ? autoTable.id : null;
+        }
+        // El aforo del turno ya se comprobó de forma atómica al enviar la
+        // solicitud (reserveAforoAtomic, en la web pública) — aquí se
+        // revalida por si acaso, igual que con la mesa (p.ej. otra reserva
+        // aceptada a mano por el personal mientras tanto).
+        if(confirmedTableId != null){
+          const turnoIdx = getTurnoIndexForTime(req.date, req.time);
+          const aforo = parseInt(DB.business.aforo) || 0;
+          if(turnoIdx !== null && aforo){
+            const yaReservado = getReservedPeopleForTurno(req.date, turnoIdx, null);
+            if(yaReservado + (req.people || 0) > aforo) confirmedTableId = null;
+          }
         }
         const newReservation = {
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
