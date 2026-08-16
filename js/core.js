@@ -2388,15 +2388,17 @@ function initPublicRequestsListener(){
         if(order){
           items.forEach(it => order.items.push(it));
         }else{
+          const matchedClientMesa = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
           DB.tpvOrders.push({
             id: genId(), tableId: req.tableId || null, tipo:'mesa', pax: req.pax || 1,
             clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
-            clientRef: req.clientRef || null
+            clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null
           });
         }
       }else if(req.type === 'pedido'){
         const onlineItems = (req.items || []).map(l => ({platoId: l.platoId||null, recipeId: l.recipeId||null, name: l.name||l.nombre||'', price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||''}));
         const newOrderId = genId();
+        const matchedClientPedido = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
         DB.tpvOrders.push({
           id: newOrderId, tableId: null, tipo: req.tipo === 'delivery' ? 'delivery' : 'takeaway',
           clienteNombre: req.clienteNombre || '', clienteTelefono: req.clienteTelefono || '', clienteEmail: req.clienteEmail || '',
@@ -2405,7 +2407,7 @@ function initPublicRequestsListener(){
           date: req.date || '', time: req.time || '',
           costeEnvio: req.costeEnvio || 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
-          clientRef: req.clientRef || null,
+          clientRef: req.clientRef || null, clientId: matchedClientPedido ? matchedClientPedido.id : null,
           pendienteVerificarZona: !!req.pendienteVerificarZona,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
           // El cliente ya indicó en la web pública con qué billete va a pagar

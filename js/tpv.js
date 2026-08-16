@@ -2034,7 +2034,8 @@ function confirmSeatWaitlistAtTable(waitlistId, tableId){
   // mirando la misma lista es el caso normal, no la excepción).
   if(getOpenOrderForTable(tableId)){ showToast(t('waitlist.tableNoLongerFree')); openSeatWaitlistTableModal(waitlistId); return; }
   const loggedEmployeeId = loggedInEmployeeId();
-  const order = {id: genId(), tableId, tipo:'mesa', pax: w.people, clienteNombre: w.name, clientId: null, reservationId: null, camareroId: loggedEmployeeId, openedByOwner: loggedEmployeeId === null, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const matchedClient = w.phone ? findClientByPhone(w.phone) : null;
+  const order = {id: genId(), tableId, tipo:'mesa', pax: w.people, clienteNombre: w.name, clientId: matchedClient ? matchedClient.id : null, reservationId: null, camareroId: loggedEmployeeId, openedByOwner: loggedEmployeeId === null, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
   DB.tpvOrders.push(order);
   w.status = 'sentado';
   w.seatedAt = new Date().toISOString();
