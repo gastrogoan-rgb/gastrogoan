@@ -852,14 +852,21 @@ function togglePromoDone(promoId, checked, ds){
   if(document.getElementById('promo-tab-content')) renderPromocion();
 }
 
-// Promo con descuento real activa HOY para un plato/bebida concreto (por
-// nombre, insensible a mayúsculas/tildes), si la hay — se usa desde el TPV
-// al añadir el artículo a una comanda para aplicar el precio rebajado solo.
-function getActivePromoForDish(name){
+// Promo con descuento real activa HOY para un plato/bebida concreto, si la
+// hay — se usa desde el TPV al añadir el artículo a una comanda para aplicar
+// el precio rebajado solo. Se prioriza el enlace por platoId (el mismo id
+// real del plato de Carta, que sobrevive a un cambio de nombre); si la promo
+// es antigua y no tiene platoId guardado, se cae al match por nombre de
+// siempre (insensible a mayúsculas/tildes).
+function getActivePromoForDish(name, platoId){
+  const today = todayStr();
+  if(platoId != null){
+    const byId = DB.promos.find(p => p.discountPct && p.menuItemPlatoId === platoId && promoOccursOn(p, today));
+    if(byId) return byId;
+  }
   if(!name) return null;
   const norm = stripAccents(name.trim().toLowerCase());
-  const today = todayStr();
-  return DB.promos.find(p => p.discountPct && p.menuItemName && promoOccursOn(p, today) && stripAccents(p.menuItemName.trim().toLowerCase()) === norm) || null;
+  return DB.promos.find(p => p.discountPct && p.menuItemName && !p.menuItemPlatoId && promoOccursOn(p, today) && stripAccents(p.menuItemName.trim().toLowerCase()) === norm) || null;
 }
 
 // Purga las promos NO recurrentes cuya fecha ya pasó hace más de 3 meses:
@@ -912,6 +919,25 @@ function getAllDishNames(){
     });
   });
   return [...names].sort((a,b)=>a.localeCompare(b));
+}
+
+// Id del plato de Carta que corresponde a un nombre (el mismo que verá el
+// TPV en line.platoId al añadirlo a una comanda) — permite que una promo se
+// enlace al plato de verdad en vez de a su nombre en texto, para que
+// renombrarlo en Carta no la deje huérfana en silencio. Si el nombre no
+// corresponde a ningún plato de Carta (p.ej. viene solo de una Ficha
+// Técnica que aún no está en ninguna carta), no hay id que enlazar y la
+// promo se queda con el nombre como único criterio (ver getActivePromoForDish).
+function getDishPlatoIdForName(name){
+  if(!name) return null;
+  for(const c of DB.cartas){
+    if(isBebidaCarta(c) !== (currentArea()==='sala')) continue;
+    for(const sec of (c.secciones||[])){
+      const p = (sec.platos||[]).find(x => x.nombre === name);
+      if(p) return p.id;
+    }
+  }
+  return null;
 }
 
 // Solo los nombres con una Ficha Técnica de verdad ya creada — a diferencia
@@ -3842,6 +3868,7 @@ function openPromoModal(id, fecha, prefill){
             <option value="">${t('label.selectDish')}</option>
             ${dishNames.map(n => `<option value="${escapeHtml(n)}" ${p.menuItemName===n?'selected':''}>${escapeHtml(n)}</option>`).join('')}
           </select>
+          ${p.menuItemName && !p.menuItemPlatoId ? `<small style="color:var(--amber,#B8860B)">${t('promo.modal.dishLinkedByNameHint')}</small>` : ''}
         </div>
         <div class="field">
           <label>${t('promo.modal.discountPct')}</label>
@@ -3877,6 +3904,7 @@ function savePromo(id){
   const recurrence = document.getElementById('promo-recurrence').checked ? 'weekly' : null;
   const hasDiscount = document.getElementById('promo-has-discount').checked;
   const menuItemName = hasDiscount ? (document.getElementById('promo-dish').value || null) : null;
+  const menuItemPlatoId = hasDiscount ? getDishPlatoIdForName(menuItemName) : null;
   const discountPct = hasDiscount ? Math.max(1, Math.min(100, parseInt(document.getElementById('promo-discount-pct').value)||10)) : null;
 
   if(!titulo){ showToast(t('msg.indicateTitle')); return; }
@@ -3890,12 +3918,29 @@ function savePromo(id){
     return;
   }
 
+  // Aviso de descuento en conflicto: dos promos con descuento sobre el MISMO
+  // plato el mismo día competían en silencio (ganaba la que el .find()
+  // encontrase primero, por orden interno, sin ningún criterio) — se avisa
+  // igual que con el duplicado por título, comprobando el solape real de
+  // fechas (incluye recurrencia semanal) en vez de solo la fecha exacta.
+  if(hasDiscount){
+    const sameDish = p2 => menuItemPlatoId != null ? p2.menuItemPlatoId === menuItemPlatoId : p2.menuItemName === menuItemName;
+    const overlaps = p2 => (recurrence==='weekly' && p2.recurrence==='weekly')
+      ? new Date(fecha+'T00:00:00').getDay() === promoWeekday(p2)
+      : (promoOccursOn(p2, fecha) || promoOccursOn({fecha, recurrence}, p2.fecha));
+    const conflict = DB.promos.find(p2 => p2.id!==id && p2.discountPct && sameDish(p2) && overlaps(p2));
+    if(conflict && !confirm(t('promo.confirmDishDiscountConflict').replace('${dish}', menuItemName).replace('${title}', conflict.titulo))){
+      openPromoModal(conflict.id);
+      return;
+    }
+  }
+
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
-    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct});
+    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, discountPct, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
   pendingPromoIdeaRef = null;
   saveDB();

@@ -3109,7 +3109,7 @@ function roundMoney(x){
 // momento de añadirlo a la comanda, guardando el precio original para poder
 // mostrar el badge de promo en el panel de comanda.
 function applyActivePromoToLine(line, dishName){
-  const promo = getActivePromoForDish(dishName || line.name);
+  const promo = getActivePromoForDish(dishName || line.name, line.platoId);
   if(!promo) return;
   line.originalPrice = line.price;
   line.price = roundMoney(line.price * (1 - promo.discountPct/100));
