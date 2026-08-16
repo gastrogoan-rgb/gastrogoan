@@ -58,8 +58,14 @@ const TOUR_PHASES = [
 ];
 const TOUR_STEPS = [
   {icon:'ti-confetti', titleKey:'tour.s1.title', descKey:'tour.s1.desc', phase:'intro'},
+
+  // ---- Cómo entra cada persona (pantallas de login, en modo demo) ----
+  {icon:'ti-fingerprint', titleKey:'tour.s34.title', descKey:'tour.s34.desc', screen:'access-choice', target:'.access-choice-list', phase:'intro'},
+  {icon:'ti-users', titleKey:'tour.s35.title', descKey:'tour.s35.desc', screen:'access-employee', target:'.access-card', phase:'intro'},
+  {icon:'ti-user-shield', titleKey:'tour.s36.title', descKey:'tour.s36.desc', screen:'access-owner', target:'.access-card', phase:'intro'},
+  {icon:'ti-building-store', titleKey:'tour.s37.title', descKey:'tour.s37.desc', screen:'business-select', target:'.bs-box', phase:'intro'},
+
   {icon:'ti-layout-grid', titleKey:'tour.s2.title', descKey:'tour.s2.desc', target:'.folder-grid', phase:'intro'},
-  {icon:'ti-fingerprint', titleKey:'tour.s32.title', descKey:'tour.s32.desc', phase:'intro'},
 
   // ---- Cocina ----
   {icon:'ti-tools-kitchen-2', titleKey:'tour.s13.title', descKey:'tour.s13.desc', folder:'cocina', view:'carta', phase:'cocina'},
@@ -67,12 +73,17 @@ const TOUR_STEPS = [
   {icon:'ti-list-details', titleKey:'tour.s15.title', descKey:'tour.s15.desc', folder:'cocina', view:'carta', phase:'cocina'},
   {icon:'ti-building-factory-2', titleKey:'tour.s19.title', descKey:'tour.s19.desc', folder:'cocina', view:'megalista', phase:'cocina'},
   {icon:'ti-calculator', titleKey:'tour.s20.title', descKey:'tour.s20.desc', folder:'cocina', view:'escandallo', phase:'cocina'},
+  {icon:'ti-clipboard-text', titleKey:'tour.s42.title', descKey:'tour.s42.desc', folder:'cocina', view:'fichas', phase:'cocina'},
   {icon:'ti-package', titleKey:'tour.s21.title', descKey:'tour.s21.desc', folder:'cocina', view:'stock', phase:'cocina'},
+  {icon:'ti-truck-delivery', titleKey:'tour.s43.title', descKey:'tour.s43.desc', folder:'cocina', view:'pedidos', phase:'cocina'},
   {icon:'ti-clipboard-list', titleKey:'tour.s22.title', descKey:'tour.s22.desc', folder:'cocina', view:'horarios', phase:'cocina'},
   {icon:'ti-users', titleKey:'tour.s28.title', descKey:'tour.s28.desc', folder:'cocina', view:'horarios', phase:'cocina'},
+  {icon:'ti-list-check', titleKey:'tour.s44.title', descKey:'tour.s44.desc', folder:'cocina', view:'distribucion', phase:'cocina'},
+  {icon:'ti-spray', titleKey:'tour.s45.title', descKey:'tour.s45.desc', folder:'cocina', view:'limpieza', phase:'cocina'},
   {icon:'ti-bell-ringing', titleKey:'tour.s8.title', descKey:'tour.s8.desc', folder:'cocina', view:'comandascocina', phase:'cocina'},
 
   // ---- Sala ----
+  {icon:'ti-device-desktop', titleKey:'tour.s46.title', descKey:'tour.s46.desc', folder:'sala', target:'#folder-modules', phase:'sala'},
   {icon:'ti-device-desktop', titleKey:'tour.s3.title', descKey:'tour.s3.desc', folder:'sala', view:'tpv', phase:'sala'},
   {icon:'ti-calendar-event', titleKey:'tour.s4.title', descKey:'tour.s4.desc', folder:'sala', view:'tpv', phase:'sala'},
   {icon:'ti-receipt-2', titleKey:'tour.s5.title', descKey:'tour.s5.desc', folder:'sala', view:'tpv', phase:'sala'},
@@ -93,7 +104,11 @@ const TOUR_STEPS = [
   {icon:'ti-building-store', titleKey:'tour.s26.title', descKey:'tour.s26.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
   {icon:'ti-cloud', titleKey:'tour.s27.title', descKey:'tour.s27.desc', folder:'gestion', view:'minegocio', gestion:true, phase:'gestion'},
 
-  // ---- Otras ayudas ----
+  // ---- Cabecera (siempre visible, en cualquier pantalla) ----
+  {icon:'ti-home', titleKey:'tour.s38.title', descKey:'tour.s38.desc', target:'#app-logo-icon', phase:'ayuda'},
+  {icon:'ti-language', titleKey:'tour.s39.title', descKey:'tour.s39.desc', target:'#lang-btn', phase:'ayuda'},
+  {icon:'ti-building-store', titleKey:'tour.s40.title', descKey:'tour.s40.desc', target:'#business-switch-btn', phase:'ayuda'},
+  {icon:'ti-logout', titleKey:'tour.s41.title', descKey:'tour.s41.desc', target:'#logout-btn', phase:'ayuda'},
   {icon:'ti-messages', titleKey:'tour.s29.title', descKey:'tour.s29.desc', target:'#chat-fab', phase:'ayuda'},
   {icon:'ti-help-hexagon', titleKey:'tour.s30.title', descKey:'tour.s30.desc', target:'#help-fab', phase:'ayuda'},
   {icon:'ti-book', titleKey:'tour.s31.title', descKey:'tour.s31.desc', folder:'gestion', view:'manual', gestion:true, target:'.manual-nav', phase:'ayuda'},
@@ -125,6 +140,7 @@ function dismissTour(){
 function startAppTour(){
   closeModal();
   tourStepIndex = 0;
+  tourLastStepSignature = null;
   tourBuildChrome();
   renderTourStep();
 }
@@ -136,6 +152,12 @@ function startAppTour(){
    del todo, sin nada que dirigiera la vista hacia lo que se estaba
    explicando de verdad. */
 function tourBuildChrome(){
+  if(!document.getElementById('tour-curtain')){
+    const curtain = document.createElement('div');
+    curtain.id = 'tour-curtain';
+    curtain.className = 'tour-curtain';
+    document.body.appendChild(curtain);
+  }
   if(!document.getElementById('tour-overlay')){
     const overlay = document.createElement('div');
     overlay.id = 'tour-overlay';
@@ -168,7 +190,12 @@ function tourBuildChrome(){
   }
 }
 function tourDestroyChrome(){
-  ['tour-overlay','tour-spotlight','tour-arrow','tour-bubble'].forEach(id => {
+  // Por si el tour termina justo en un paso de pantalla de login/selector de
+  // negocio: hay que devolver esas pantallas a su estado oculto normal, no
+  // dejarlas visibles tapando la app real.
+  hideAccessSelectScreen();
+  hideBusinessSelectScreen();
+  ['tour-curtain','tour-overlay','tour-spotlight','tour-arrow','tour-bubble'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.remove();
   });
@@ -183,8 +210,25 @@ function tourDestroyChrome(){
    haría el usuario — y recuerda cuál es el elemento a enfocar para que
    tourPositionUI() pueda recortar el foco sobre él en cuanto termine de
    moverse/renderizarse. */
-function tourGoToStep(step){
-  tourCurrentTargetEl = null;
+// Pantallas de login/selector de negocio (fuera del sistema de vistas de
+// navigate()) que el tour puede mostrar como "demo" sin tocar la sesión
+// real: solo cambian qué HTML se pinta dentro de su contenedor y si tiene
+// la clase .hide, igual que ya hacen showAccessSelectScreen()/
+// showBusinessSelectScreen() en el flujo normal de la app.
+function tourShowScreen(screenKey){
+  hideAccessSelectScreen();
+  hideBusinessSelectScreen();
+  if(screenKey === 'access-choice'){ accessScreenMode = 'choice'; renderAccessScreen(); }
+  else if(screenKey === 'access-employee'){ accessScreenMode = 'employee'; renderAccessScreen(); }
+  else if(screenKey === 'access-owner'){ accessScreenMode = 'owner'; renderAccessScreen(); }
+  else if(screenKey === 'business-select'){ showBusinessSelectScreen(); }
+}
+
+/* Segunda mitad de tourGoToStep: hace el cambio de pantalla de verdad
+   (screen/view/folder/home), resuelve el elemento a enfocar y arranca el
+   posicionamiento — separado en su propia función para poder retrasarlo
+   hasta que la cortina de transición ya esté cubriendo la pantalla. */
+function tourApplyStep(step){
   if(step.gestion){
     if(!ownerUnlocked) tourOwnerUnlockedByTour = true;
     ownerUnlocked = true;
@@ -200,10 +244,16 @@ function tourGoToStep(step){
     const lockBtn = document.getElementById('lock-btn');
     if(lockBtn) lockBtn.style.display = 'none';
   }
-  if(step.folder) currentFolder = step.folder;
-  if(step.view) navigate(step.view);
-  else if(step.folder) navigate('folder');
-  else navigate('home');
+  if(step.screen){
+    tourShowScreen(step.screen);
+  }else{
+    hideAccessSelectScreen();
+    hideBusinessSelectScreen();
+    if(step.folder) currentFolder = step.folder;
+    if(step.view) navigate(step.view);
+    else if(step.folder) navigate('folder');
+    else navigate('home');
+  }
 
   // Si el paso no trae un target explícito, se intenta primero la primera
   // ".card" real de la vista (más concreta y vistosa para el foco) y solo
@@ -213,22 +263,52 @@ function tourGoToStep(step){
   // y como el contenedor A aparece ANTES que sus propios hijos, siempre
   // "ganaba" la vista entera y el foco acababa siendo gigante (tapando la
   // pantalla casi entera, sin recorte real que se notara).
-  if(!step.target && !step.view && !step.folder){ tourPositionUI(); return; }
   let el = null;
   if(step.target){
     el = document.querySelector(step.target);
   }else if(step.view){
     el = document.querySelector('#view-' + step.view + ' .card') || document.querySelector('#view-' + step.view);
   }else if(step.folder){
-    el = document.querySelector('.folder-card.folder-' + step.folder);
+    el = document.querySelector('#folder-modules .module-card') || document.querySelector('.folder-card.folder-' + step.folder);
   }
   tourCurrentTargetEl = el || null;
   if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
-  // Se espera a que termine el scroll suave (y el render de la vista nueva)
-  // antes de medir la posición real del elemento — si no, el foco se
-  // recortaría sobre dónde ESTABA el elemento antes de moverse la página.
-  setTimeout(tourPositionUI, el ? 380 : 0);
+  return el;
 }
+
+function tourGoToStep(step){
+  tourCurrentTargetEl = null;
+  const curtain = document.getElementById('tour-curtain');
+  const changesScreen = tourLastStepSignature !== tourStepSignature(step);
+  tourLastStepSignature = tourStepSignature(step);
+  if(!changesScreen){
+    // Mismo destino que el paso anterior (p.ej. varios pasos seguidos
+    // dentro del TPV): no hace falta cortina ni reflow, solo reposicionar
+    // sobre el nuevo target dentro de la misma pantalla ya visible.
+    const el = tourApplyStep(step);
+    setTimeout(tourPositionUI, el ? 380 : 0);
+    return;
+  }
+  // Cambia de pantalla de verdad: cortina de transición — la mostramos
+  // primero, esperamos a que la animación de opacidad termine, hacemos el
+  // cambio real (navigate()/screen) con la pantalla ya tapada, y solo
+  // entonces la retiramos mientras se posiciona el foco sobre lo nuevo.
+  if(curtain) curtain.classList.add('active');
+  setTimeout(() => {
+    const el = tourApplyStep(step);
+    setTimeout(() => {
+      if(curtain) curtain.classList.remove('active');
+      tourPositionUI();
+    }, el ? 380 : 120);
+  }, curtain ? 180 : 0);
+}
+// Identifica "a qué pantalla lleva este paso" (no el paso exacto) para
+// saber si hace falta cortina de transición o el paso anterior ya estaba
+// en la misma pantalla y solo cambia el elemento resaltado.
+function tourStepSignature(step){
+  return step.screen ? ('screen:'+step.screen) : (step.view ? ('view:'+step.view) : (step.folder ? ('folder:'+step.folder) : 'home'));
+}
+let tourLastStepSignature = null;
 
 /* Coloca el foco (spotlight), la flecha y la burbuja según dónde esté AHORA
    MISMO tourCurrentTargetEl — se llama tanto al cambiar de paso como en

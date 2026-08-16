@@ -426,12 +426,27 @@ td.wrap{white-space:normal}
   50%{outline-color:var(--olive-l)}
 }
 .tour-overlay{
-  position:fixed;inset:0;z-index:8997;background:transparent;
+  position:fixed;inset:0;z-index:10001;background:transparent;
   opacity:0;pointer-events:none;transition:opacity .3s ease;
 }
 .tour-overlay.active{opacity:1;pointer-events:auto}
+/* Cortina de transición entre pasos que cambian de pantalla: sin esto, el
+   salto de una vista a otra era un corte seco (navigate() oculta/muestra
+   secciones al instante, sin ninguna animación propia) — con la cortina de
+   por medio, se percibe como una transición intencionada (oscurece,
+   cambia la pantalla detrás, aclara) en vez de un parpadeo brusco.
+   Z-index por encima de 9999: el tour puede mostrar en modo "demo" las
+   pantallas de login/selector de negocio (#access-select-screen,
+   #business-select-screen), que ya usan 9998-9999 para tapar TODO lo
+   demás — sin subir aquí también, el foco/burbuja del tour quedaba oculto
+   detrás de esas pantallas y el tour "desaparecía" en esos pasos. */
+.tour-curtain{
+  position:fixed;inset:0;z-index:10000;background:var(--dark,#1C1A17);
+  opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+.tour-curtain.active{opacity:.96}
 .tour-spotlight{
-  position:fixed;z-index:8998;border-radius:14px;pointer-events:none;
+  position:fixed;z-index:10002;border-radius:14px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(28,26,23,.72);
   outline:3px solid var(--olive);outline-offset:2px;
   opacity:0;
@@ -443,7 +458,7 @@ td.wrap{white-space:normal}
 .tour-spotlight.active{opacity:1}
 .tour-spotlight.no-target{outline:none;border-radius:0}
 .tour-arrow{
-  position:fixed;z-index:8999;width:0;height:0;pointer-events:none;
+  position:fixed;z-index:10003;width:0;height:0;pointer-events:none;
   border-left:9px solid transparent;border-right:9px solid transparent;
   transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1);
   filter:drop-shadow(0 -2px 2px rgba(0,0,0,.12));
@@ -452,7 +467,7 @@ td.wrap{white-space:normal}
 .tour-arrow-top{border-top:10px solid #fff}
 
 .tour-bubble{
-  position:fixed;z-index:9000;
+  position:fixed;z-index:10004;
   width:min(400px, calc(100% - 32px));
   background:#fff;border-radius:18px;
   box-shadow:0 18px 50px rgba(28,26,23,.32);padding:18px 20px 16px;
