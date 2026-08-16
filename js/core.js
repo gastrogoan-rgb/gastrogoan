@@ -2081,7 +2081,19 @@ function refreshAfterRemoteChange(){
   renderHeader();
   renderModuleBadges();
   const overlay = document.getElementById('modal-overlay');
-  if(overlay && overlay.classList.contains('active')) return; // no interrumpir al usuario mientras edita
+  if(overlay && overlay.classList.contains('active')){
+    // Caso especial: el modal de una comanda de mesa es sobre todo una
+    // pantalla de ESTADO (qué está listo para recoger), no un formulario
+    // que se esté rellenando — si cocina marca un plato listo desde otro
+    // dispositivo mientras sala tiene la mesa abierta, antes no se enteraba
+    // hasta cerrar y reabrir. Para el resto de modales (formularios en los
+    // que sí se puede estar escribiendo) se sigue sin interrumpir.
+    const marker = document.getElementById('table-order-modal-marker');
+    if(marker && typeof renderTableOrderModal === 'function'){
+      renderTableOrderModal(parseInt(marker.dataset.orderId));
+    }
+    return;
+  }
   const active = document.querySelector('.view.active');
   if(active) renderView(active.id.replace('view-',''));
 }

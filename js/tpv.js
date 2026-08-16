@@ -1620,6 +1620,10 @@ function orderAllergyWarningHtml(order){
 
 function renderTableOrderModal(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
+  // La comanda puede haber desaparecido entre que se abrió el modal y que se
+  // vuelve a pintar (p.ej. otro dispositivo la cobró o la canceló mientras
+  // este camarero la tenía abierta) — cerrar en vez de romper con un error.
+  if(!order){ closeModal(); renderTPV(); return; }
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
   const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
@@ -1699,6 +1703,7 @@ function renderTableOrderModal(orderId){
     : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" style="white-space:nowrap" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button></div>`;
 
   openModal(`
+    <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
       <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}${kitchenAckBadge}</h3>
       ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
