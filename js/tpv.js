@@ -3115,6 +3115,7 @@ function applyActivePromoToLine(line, dishName){
   line.price = roundMoney(line.price * (1 - promo.discountPct/100));
   line.promoId = promo.id;
   line.promoPct = promo.discountPct;
+  registerPromoUse(promo.id);
 }
 
 // Desglose claro del cálculo (subtotal → descuento → propina → total),

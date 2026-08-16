@@ -817,6 +817,60 @@ function promoOccursOn(p, ds){
 function getPromosForDate(ds){
   return DB.promos.filter(p => promoOccursOn(p, ds));
 }
+
+// Cuánto se ha descontado de verdad ese día por promociones con efecto real
+// en el TPV — a partir de las ventas ya cobradas (líneas con promoId), no de
+// las promos "programadas": una promo puede estar activa y no venderse nada
+// ese día, esto solo cuenta lo que de verdad se descontó en caja.
+function promoDiscountTotalForDate(ds){
+  let total = 0, count = 0;
+  (DB.sales||[]).filter(s => s.date === ds).forEach(s => {
+    (s.items||[]).forEach(l => {
+      if(l.promoId && l.originalPrice != null){
+        total += (l.originalPrice - l.price) * l.qty;
+        count += l.qty;
+      }
+    });
+  });
+  return {total: roundMoney(total), count};
+}
+
+// Franja horaria opcional del descuento (p.ej. happy hour 18:00-20:00). Sin
+// horaInicio/horaFin, se entiende que dura todo el día, como siempre. Admite
+// que cruce medianoche (p.ej. 22:00-02:00): si la hora de fin es menor o
+// igual que la de inicio, se interpreta que termina al día siguiente.
+function promoTimeToMin(hhmm){
+  const [h,m] = (hhmm||'').split(':').map(Number);
+  return (h||0)*60 + (m||0);
+}
+function promoTimeActiveNow(p){
+  if(!p.horaInicio || !p.horaFin) return true;
+  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  const start = promoTimeToMin(p.horaInicio);
+  const end = promoTimeToMin(p.horaFin);
+  if(end > start) return nowMin >= start && nowMin < end;
+  // Cruza medianoche (p.ej. 22:00-02:00): activa desde el inicio hasta las
+  // 23:59 y también desde las 00:00 hasta la hora de fin.
+  return nowMin >= start || nowMin < end;
+}
+// Dos franjas horarias "chocan" si se solapan; si alguna de las dos aplica
+// todo el día (sin horaInicio/horaFin), se considera que choca con
+// cualquier franja de la otra — se usa solo para avisar de promos con
+// descuento en conflicto sobre el mismo plato/día (ver savePromo).
+function promoTimeRangesOverlap(a, b){
+  if(!a.horaInicio || !a.horaFin || !b.horaInicio || !b.horaFin) return true;
+  let aS = promoTimeToMin(a.horaInicio), aE = promoTimeToMin(a.horaFin);
+  if(aE <= aS) aE += 24*60;
+  let bS = promoTimeToMin(b.horaInicio), bE = promoTimeToMin(b.horaFin);
+  if(bE <= bS) bE += 24*60;
+  return aS < bE && bS < aE;
+}
+// ¿Cuántas veces se ha aplicado ya hoy una promo con límite de usos? Se
+// cuenta por fecha concreta (no en total), igual que doneDates: una promo
+// recurrente semanal empieza de cero su tope cada vez que vuelve a tocarle.
+function promoUsesToday(p){
+  return (p.usedDates && p.usedDates[todayStr()]) || 0;
+}
 // Como cada aparición de una promo recurrente es la misma ficha en varias
 // fechas, "hecha" se guarda por fecha concreta (igual que ya hacen las
 // tareas de producción de Distribución), no como un booleano único que se
@@ -860,13 +914,25 @@ function togglePromoDone(promoId, checked, ds){
 // siempre (insensible a mayúsculas/tildes).
 function getActivePromoForDish(name, platoId){
   const today = todayStr();
+  const usableNow = p => promoOccursOn(p, today) && promoTimeActiveNow(p) && !(p.maxUses && promoUsesToday(p) >= p.maxUses);
   if(platoId != null){
-    const byId = DB.promos.find(p => p.discountPct && p.menuItemPlatoId === platoId && promoOccursOn(p, today));
+    const byId = DB.promos.find(p => p.discountPct && p.menuItemPlatoId === platoId && usableNow(p));
     if(byId) return byId;
   }
   if(!name) return null;
   const norm = stripAccents(name.trim().toLowerCase());
-  return DB.promos.find(p => p.discountPct && p.menuItemName && !p.menuItemPlatoId && promoOccursOn(p, today) && stripAccents(p.menuItemName.trim().toLowerCase()) === norm) || null;
+  return DB.promos.find(p => p.discountPct && p.menuItemName && !p.menuItemPlatoId && usableNow(p) && stripAccents(p.menuItemName.trim().toLowerCase()) === norm) || null;
+}
+// Se llama justo después de que una promo se haya aplicado de verdad a una
+// línea (ver applyActivePromoToLine, js/tpv.js) para descontar del cupo
+// diario si tiene límite de usos — separado de getActivePromoForDish porque
+// esa solo CONSULTA si hay promo, no debe tener efectos secundarios.
+function registerPromoUse(promoId){
+  const p = DB.promos.find(x => x.id === promoId);
+  if(!p || !p.maxUses) return;
+  if(!p.usedDates) p.usedDates = {};
+  const today = todayStr();
+  p.usedDates[today] = (p.usedDates[today] || 0) + 1;
 }
 
 // Purga las promos NO recurrentes cuya fecha ya pasó hace más de 3 meses:
@@ -2994,7 +3060,11 @@ function renderPromoDia(){
               ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
-            ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px"><span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span></div>` : ''}
+            ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span>
+              ${p.horaInicio && p.horaFin ? `<span class="badge" style="font-size:10px"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
+              ${p.maxUses ? `<span class="badge" style="font-size:10px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
+            </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
             <div class="actions-cell owner-strict" style="margin-top:10px">
@@ -3005,7 +3075,12 @@ function renderPromoDia(){
         `;}).join('')}
       </div>`;
 
+  const discountStats = promoDiscountTotalForDate(date);
   box.innerHTML = `
+    ${discountStats.count ? `<div class="card" style="margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:8px">
+      <i class="ti ti-discount-2" style="color:var(--brand-orange)"></i>
+      <span style="font-size:13px">${t('promo.day.discountGranted').replace('${amount}', fmtMoney(discountStats.total)).replace('${count}', discountStats.count)}</span>
+    </div>` : ''}
     <div class="toolbar">
       <div class="left">
         <input type="date" id="promo-filter-date" value="${date}" onchange="promoDate=this.value;renderPromocion()">
@@ -3827,7 +3902,7 @@ function registerClientOutreachAsPromo(clientId, templateKey){
 // al crear la promo y así poder marcar esa idea como ya usada.
 let pendingPromoIdeaRef = null;
 function openPromoModal(id, fecha, prefill){
-  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null, recurrence:null, menuItemName:null, discountPct:null};
+  const p = id ? DB.promos.find(x=>x.id===id) : {fecha: fecha || promoDate || todayStr(), titulo:(prefill&&prefill.titulo)||'', descripcion:(prefill&&prefill.descripcion)||'', responsableId:null, recurrence:null, menuItemName:null, discountPct:null, horaInicio:null, horaFin:null, maxUses:null};
   pendingPromoIdeaRef = (!id && prefill && prefill.ideaRef) ? prefill.ideaRef : null;
   const ro = !editUnlocked;
   const dis = ro ? 'disabled' : '';
@@ -3876,6 +3951,23 @@ function openPromoModal(id, fecha, prefill){
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.discountHint')}</p>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('promo.modal.horaInicio')}</label>
+          <input type="time" id="promo-hora-inicio" value="${p.horaInicio||''}" ${dis}>
+        </div>
+        <div class="field">
+          <label>${t('promo.modal.horaFin')}</label>
+          <input type="time" id="promo-hora-fin" value="${p.horaFin||''}" ${dis}>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.horaHint')}</p>
+      <div class="field">
+        <label>${t('promo.modal.maxUses')}</label>
+        <input type="number" id="promo-max-uses" min="1" step="1" value="${p.maxUses||''}" placeholder="${t('promo.modal.maxUsesPlaceholder')}" ${dis}>
+        ${p.maxUses ? `<small style="color:var(--muted)">${t('promo.modal.usedTodayHint').replace('${used}', (p.usedDates&&p.usedDates[todayStr()])||0).replace('${max}', p.maxUses)}</small>` : ''}
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:-6px 0 6px">${t('promo.modal.maxUsesHint')}</p>
     </div>
     <div class="field">
       <label>${t('promo.modal.responsible')}</label>
@@ -3906,9 +3998,14 @@ function savePromo(id){
   const menuItemName = hasDiscount ? (document.getElementById('promo-dish').value || null) : null;
   const menuItemPlatoId = hasDiscount ? getDishPlatoIdForName(menuItemName) : null;
   const discountPct = hasDiscount ? Math.max(1, Math.min(100, parseInt(document.getElementById('promo-discount-pct').value)||10)) : null;
+  const horaInicio = hasDiscount ? (document.getElementById('promo-hora-inicio').value || null) : null;
+  const horaFin = hasDiscount ? (document.getElementById('promo-hora-fin').value || null) : null;
+  const maxUsesRaw = hasDiscount ? parseInt(document.getElementById('promo-max-uses').value) : NaN;
+  const maxUses = hasDiscount && maxUsesRaw > 0 ? maxUsesRaw : null;
 
   if(!titulo){ showToast(t('msg.indicateTitle')); return; }
   if(hasDiscount && !menuItemName){ showToast(t('msg.selectDish')); return; }
+  if(hasDiscount && (!!horaInicio !== !!horaFin)){ showToast(t('msg.promoHorarioIncompleto')); return; }
 
   // Aviso de posible duplicado: en vez de guardarla igual con solo un toast
   // distinto, se ofrece abrir la que ya existe en su lugar.
@@ -3925,10 +4022,11 @@ function savePromo(id){
   // fechas (incluye recurrencia semanal) en vez de solo la fecha exacta.
   if(hasDiscount){
     const sameDish = p2 => menuItemPlatoId != null ? p2.menuItemPlatoId === menuItemPlatoId : p2.menuItemName === menuItemName;
-    const overlaps = p2 => (recurrence==='weekly' && p2.recurrence==='weekly')
+    const dayOverlaps = p2 => (recurrence==='weekly' && p2.recurrence==='weekly')
       ? new Date(fecha+'T00:00:00').getDay() === promoWeekday(p2)
       : (promoOccursOn(p2, fecha) || promoOccursOn({fecha, recurrence}, p2.fecha));
-    const conflict = DB.promos.find(p2 => p2.id!==id && p2.discountPct && sameDish(p2) && overlaps(p2));
+    const conflict = DB.promos.find(p2 => p2.id!==id && p2.discountPct && sameDish(p2) && dayOverlaps(p2)
+      && promoTimeRangesOverlap({horaInicio, horaFin}, p2));
     if(conflict && !confirm(t('promo.confirmDishDiscountConflict').replace('${dish}', menuItemName).replace('${title}', conflict.titulo))){
       openPromoModal(conflict.id);
       return;
@@ -3938,9 +4036,9 @@ function savePromo(id){
   if(id){
     const promo = DB.promos.find(x=>x.id===id);
     if(!promo){ showToast(t('msg.promoNotFound')); return; }
-    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct});
+    Object.assign(promo, {fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses});
   }else{
-    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
+    DB.promos.push({id: genId(), fecha, titulo, descripcion, responsableId, recurrence, menuItemName, menuItemPlatoId, discountPct, horaInicio, horaFin, maxUses, usedDates:{}, done:false, doneAt:null, doneDates:{}, zona:'sala', ideaRef: pendingPromoIdeaRef});
   }
   pendingPromoIdeaRef = null;
   saveDB();

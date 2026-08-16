@@ -2475,6 +2475,18 @@ function buildSucursalesList(){
   return list.length > 1 ? list : null;
 }
 
+// Promos con descuento activas HOY (día/franja horaria), saneadas para la
+// web pública: solo lo que un cliente necesita para ver la oferta (plato,
+// %, franja) — nunca quién la creó ni la descripción interna de marketing.
+// Antes ninguna promo se publicaba, así que un cliente que miraba la carta
+// online veía el precio normal aunque hubiera descuento activo en sala.
+function getActivePromosForSync(){
+  const today = todayStr();
+  return (DB.promos||[])
+    .filter(p => p.discountPct && p.menuItemPlatoId && promoOccursOn(p, today) && !(p.maxUses && promoUsesToday(p) >= p.maxUses))
+    .map(p => ({menuItemPlatoId: p.menuItemPlatoId, discountPct: p.discountPct, horaInicio: p.horaInicio||null, horaFin: p.horaFin||null}));
+}
+
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -2492,7 +2504,8 @@ function syncPublicMirror(){
         mesasOcupadas: getMesasOcupadasForSync(),
         pedidosResumen: getPedidosResumenForSync(),
         cocinaCargaActiva: getActiveKitchenOrdersCount(),
-        tables: DB.tables.map(t => ({id: t.id, name: t.name, plazas: t.plazas || null}))
+        tables: DB.tables.map(t => ({id: t.id, name: t.name, plazas: t.plazas || null})),
+        promos: getActivePromosForSync()
       };
       if(sucursales) data.sucursales = sucursales;
       // Antes un fallo aquí se tragaba en silencio (".catch(()=>{})"): la

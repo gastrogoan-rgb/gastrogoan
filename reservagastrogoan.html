@@ -591,16 +591,17 @@ function loadBusinessInfo(){
       // el límite acumulado real de la franja.
       pedidosResumen: val.pedidosResumen || {},
       cocinaCargaActiva: val.cocinaCargaActiva || 0,
-      tables: val.tables || []
+      tables: val.tables || [],
+      promos: val.promos || []
     };
     renderHeader();
     if(!businessInfoLoadedOnce){
       businessInfoLoadedOnce = true;
-      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables});
+      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos});
       renderApp();
       checkRedsysConfigured();
     }else if(currentTab && document.getElementById('tab-content')){
-      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables});
+      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos});
       if(newSignature !== lastRenderSignature){
         lastRenderSignature = newSignature;
         renderTabContentPreservingForm();
@@ -672,6 +673,25 @@ function renderHeader(){
 function getActiveCartas(){
   const ids = DB.activeCartaIds || [];
   return (DB.cartas || []).filter(c => ids.includes(c.id));
+}
+
+// Promo con descuento activa AHORA MISMO (día + franja horaria) para un
+// plato, si la hay — espejo simplificado de getActivePromoForDish/
+// promoTimeActiveNow (js/app.js): aquí no hace falta comprobar el límite de
+// usos porque el mirror público (getActivePromosForSync, js/core.js) ya
+// deja de publicar la promo en cuanto se agota el cupo del día.
+function getActivePromoForPlatoPublic(platoId){
+  const promo = (DB.promos||[]).find(p => p.menuItemPlatoId === platoId);
+  if(!promo) return null;
+  if(!promo.horaInicio || !promo.horaFin) return promo;
+  const toMin = hhmm => { const [h,m] = (hhmm||'').split(':').map(Number); return (h||0)*60+(m||0); };
+  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  const start = toMin(promo.horaInicio), end = toMin(promo.horaFin);
+  const active = end > start ? (nowMin >= start && nowMin < end) : (nowMin >= start || nowMin < end);
+  return active ? promo : null;
+}
+function promoDiscountedPrice(precio, promo){
+  return Math.round(precio * (1 - promo.discountPct/100) * 100) / 100;
 }
 
 function renderApp(){
@@ -1297,19 +1317,22 @@ function buildMenuHtml(cartas){
     ${cartas.length > 1 ? `<h2>${escapeHtml(trItem(carta))}</h2>` : ''}
     ${(carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
       ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
-      ${sec.platos.filter(p=>p.disponible!==false).map(p => `
+      ${sec.platos.filter(p=>p.disponible!==false).map(p => {
+        const promo = getActivePromoForPlatoPublic(p.id);
+        const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
+        return `
         <div class="menu-item">
           <div>
-            <div class="name">${escapeHtml(trPlato(p))}</div>
-            <div class="price">${fmtMoney(p.precio)}</div>
+            <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive,#5c6b3c);border-radius:4px;padding:1px 6px;margin-left:4px">-${promo.discountPct}%</span>` : ''}</div>
+            <div class="price">${promo ? `<span style="text-decoration:line-through;color:#999;font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}</div>
           </div>
           <div class="qty-ctl">
             <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)">−</button>
             <span id="qty-${p.id}">${getCartQty(p.id)}</span>
-            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${p.precio})">+</button>
+            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${finalPrice})">+</button>
           </div>
         </div>
-      `).join('')}
+      `;}).join('')}
     `).join('')}
   `).join('');
 }
