@@ -1437,6 +1437,12 @@ const GE = (function(){
     const {start, end} = getPlatosRange();
     const sales = DB.sales.filter(s => s.date >= start && s.date <= end);
     const map = {};
+    // El coste se suma línea a línea con costoUnitarioDeLinea (el coste
+    // estampado en el momento de esa venta concreta, o recalculado en vivo
+    // solo si es una venta antigua sin ese dato) en vez de coger el coste
+    // ACTUAL de la receta y multiplicarlo por el total de unidades del
+    // periodo — así el margen de un mes pasado no cambia solo porque hoy
+    // haya subido el precio de un ingrediente.
     sales.forEach(sale => {
       (sale.items||[]).forEach(line => {
         const key = line.recipeId ? ('r'+line.recipeId) : ('m'+(line.name||''));
@@ -1446,19 +1452,21 @@ const GE = (function(){
             name: line.name || t('hr.platos.noName'),
             recipeId: line.recipeId || null,
             category: recipe ? (recipe.category||t('hr.platos.noCategory')) : t('hr.platos.noCosting'),
-            unitCost: recipe ? recipeCost(recipe) : null,
-            units: 0, revenue: 0
+            hasCost: !!recipe,
+            units: 0, revenue: 0, costTotal: 0
           };
         }
         map[key].units += (line.qty||0);
         map[key].revenue += (line.price||0) * (line.qty||0);
+        if(map[key].hasCost) map[key].costTotal += costoUnitarioDeLinea(line) * (line.qty||0);
       });
     });
     const items = Object.values(map).map(it => {
-      const cost = it.unitCost!=null ? it.unitCost * it.units : null;
+      const cost = it.hasCost ? it.costTotal : null;
       const margin = cost!=null ? it.revenue - cost : null;
       const marginPct = (cost!=null && it.revenue>0) ? (margin/it.revenue*100) : null;
-      return {...it, cost, margin, marginPct};
+      const unitCost = (cost!=null && it.units>0) ? cost/it.units : null;
+      return {...it, cost, margin, marginPct, unitCost};
     });
     return {start, end, items};
   }

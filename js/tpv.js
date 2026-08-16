@@ -1189,10 +1189,19 @@ function orderTotal(order){
 // vinculada; lo que no tiene receta (p.ej. un extra manual) no suma coste.
 function orderFoodCost(order){
   return (order.items||[]).reduce((sum, line) => {
-    const recetas = [];
-    if(line.recipeId) recetas.push(line.recipeId);
-    else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
-    const costePorUnidad = recetas.reduce((s,rid) => { const r = getRecipe(rid); return s + (r ? recipeCost(r) : 0); }, 0);
+    // Usa el coste estampado en la venta (costeUnitario/costeUnitario por
+    // selección de menú) si ya existe — pedido todavía abierto sin cobrar
+    // (nunca lo tiene) cae al cálculo en vivo de siempre.
+    let costePorUnidad = 0;
+    if(line.recipeId) costePorUnidad = costoUnitarioDeLinea(line);
+    else if(Array.isArray(line.menuSelections)){
+      costePorUnidad = line.menuSelections.reduce((s,sel) => {
+        if(!sel.recipeId) return s;
+        if(sel.costeUnitario != null) return s + sel.costeUnitario;
+        const r = getRecipe(sel.recipeId);
+        return s + (r ? recipeCost(r) : 0);
+      }, 0);
+    }
     return sum + costePorUnidad * line.qty;
   }, 0);
 }
@@ -2580,12 +2589,40 @@ function resolveLineIvaPct(line){
 // de la comida, por eso se le asigna su propio ivaPct explícito en vez de
 // dejar que resolveLineIvaPct lo intente resolver (fallaría, al no tener
 // platoId/recipeId, y caería en el tipo por defecto de las ventas).
+// El coste de un plato (recipeCost) se recalcula siempre con los precios
+// ACTUALES de ingredientes — necesario en Escandallo/Stock para saber cuánto
+// cuesta hoy. Pero si un informe de márgenes de hace 3 meses usa esa misma
+// función, el coste (y por tanto el margen) de esa venta pasada cambia solo
+// cada vez que sube el precio de un ingrediente, aunque el ingreso (line.price)
+// ya esté fijo desde el momento de la venta. Se "estampa" aquí el coste
+// unitario vigente en ese instante, igual que ya se hace con el IVA
+// (resolveLineIvaPct) — los informes históricos (ver costoUnitarioDeLinea en
+// hr.js/finance.js) usan este valor cuando existe y solo recalculan en vivo
+// para ventas antiguas guardadas antes de este cambio.
 function buildSaleItemsForOrder(order){
-  const items = order.items.map(l => ({...l, ivaPct: resolveLineIvaPct(l)}));
+  const items = order.items.map(l => {
+    const r = l.recipeId ? getRecipe(l.recipeId) : null;
+    const menuSelections = Array.isArray(l.menuSelections)
+      ? l.menuSelections.map(sel => {
+          const selRecipe = sel.recipeId ? getRecipe(sel.recipeId) : null;
+          return {...sel, costeUnitario: selRecipe ? recipeCost(selRecipe) : null};
+        })
+      : l.menuSelections;
+    return {...l, ivaPct: resolveLineIvaPct(l), costeUnitario: r ? recipeCost(r) : null, ...(menuSelections ? {menuSelections} : {})};
+  });
   if(order.costeEnvio > 0){
     items.push({name: t('label.shippingLineItem'), price: order.costeEnvio, qty: 1, ivaPct: 21, bebida: false, isShipping: true});
   }
   return items;
+}
+// Coste unitario de una línea de venta ya cobrada: el estampado en su
+// momento si existe (ventas nuevas), o si no (ventas antiguas, previas a
+// este cambio) recalculado en vivo como se hacía siempre — para no dejar
+// sin coste ni romper los informes con el histórico ya guardado.
+function costoUnitarioDeLinea(line){
+  if(line.costeUnitario != null) return line.costeUnitario;
+  const r = line.recipeId ? getRecipe(line.recipeId) : null;
+  return r ? recipeCost(r) : 0;
 }
 // Para los pedidos "para llevar" (tickets rápidos), los platos pasan a cocina automáticamente
 // al añadirlos o aumentar su cantidad, sin necesidad de pulsar "Marchar".
@@ -3686,15 +3723,22 @@ function discountStockForOrder(order){
       const r = getRecipe(recipeId);
       if(!r) return;
       (r.ingredients||[]).forEach(ri => {
+        // Igual que en el coste (recipeIngredientCost) y en el aviso de stock
+        // corto (recipeStockShortageWarning): la merma (%) es lo que de
+        // verdad se gasta al elaborar, no solo lo que queda en el plato —
+        // antes se descontaba sin merma, así que el inventario se quedaba
+        // sistemáticamente por encima del consumo real declarado en el
+        // escandallo, tanto más cuanta más merma tuviera la receta.
+        const bruto = ri.qty * (1 + (ri.merma||0)/100) * line.qty;
         if(ri.type === 'base'){
           // La línea usa una elaboración base (almíbar, caldo...) como ingrediente:
           // esa elaboración tiene su propio stock (DB.elaboraciones), no Mega Lista.
           const elab = (DB.elaboraciones||[]).find(e => e.recipeId === ri.baseRecipeId);
-          if(elab) elab.qty = Math.max(0, (elab.qty||0) - ri.qty * line.qty);
+          if(elab) elab.qty = Math.max(0, (elab.qty||0) - bruto);
           return;
         }
         const s = getStockEntry(ri.ingredientId);
-        s.qty = Math.max(0, s.qty - ri.qty * line.qty);
+        s.qty = Math.max(0, s.qty - bruto);
       });
     });
   });

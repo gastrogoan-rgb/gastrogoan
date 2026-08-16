@@ -489,17 +489,16 @@ function renderDashboard(){
   });
   const topProducts = Object.entries(productTotals).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-  // Margen bruto real por plato (últimos 30 días)
+  // Margen bruto real por plato (últimos 30 días) — coste estampado en el
+  // momento de cada venta (costoUnitarioDeLinea), no el coste actual de la
+  // receta: si no, un cambio de precio de un ingrediente HOY movería el
+  // margen "real" de ventas de hace semanas cada vez que se abre el panel.
   const marginTotals = {};
   salesLast30.forEach(s=>{
     (s.items||[]).forEach(it=>{
       const key = it.name || '—';
       const qty = it.qty || 1;
-      let unitCost = 0;
-      if(it.recipeId){
-        const recipe = DB.recipes.find(r=>r.id===it.recipeId);
-        if(recipe) unitCost = recipeCostBreakdown(recipe).total || 0;
-      }
+      const unitCost = it.recipeId ? costoUnitarioDeLinea(it) : 0;
       const margin = ((it.price||0) - unitCost) * qty;
       if(!marginTotals[key]) marginTotals[key] = {margin:0, hasCost: !!it.recipeId};
       marginTotals[key].margin += margin;

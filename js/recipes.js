@@ -13,36 +13,52 @@ function recipeFoodCostPct(r){
 // visitado alguna vez". Por eso se borra al volver (backtrack): si no se borrara, una
 // misma base reutilizada en dos ramas distintas del mismo árbol (que no es un ciclo real)
 // se contaría con coste 0 la segunda vez, infravalorando el coste del plato en silencio.
-function recipeBaseCostPerUnit(baseRecipe, visited){
+// `ctx` (opcional, {circular:false}) se rellena a true si en algún punto de
+// la recursión se detecta un ciclo real (visited.has) — se usa solo para
+// poder avisar en la UI (ver recipeHasCircularReference); el cálculo del
+// coste en sí sigue devolviendo 0 para ese tramo, igual que siempre.
+function recipeBaseCostPerUnit(baseRecipe, visited, ctx){
   if(!baseRecipe) return 0;
   visited = visited || new Set();
-  if(visited.has(baseRecipe.id)) return 0;
+  if(visited.has(baseRecipe.id)){
+    if(ctx) ctx.circular = true;
+    return 0;
+  }
   visited.add(baseRecipe.id);
-  const total = recipeCostBreakdown(baseRecipe, visited).total;
+  const total = recipeCostBreakdown(baseRecipe, visited, ctx).total;
   visited.delete(baseRecipe.id);
   const yieldQty = baseRecipe.baseYield || 1;
   return yieldQty > 0 ? total / yieldQty : 0;
 }
-function recipeIngredientCost(line, visited){
+function recipeIngredientCost(line, visited, ctx){
   if(line.type === 'base'){
     const baseRecipe = getRecipe(line.baseRecipeId);
     if(!baseRecipe) return 0;
     const bruto = line.qty * (1 + (line.merma||0)/100);
-    return recipeBaseCostPerUnit(baseRecipe, visited) * bruto;
+    return recipeBaseCostPerUnit(baseRecipe, visited, ctx) * bruto;
   }
   const ing = getIngredient(line.ingredientId);
   if(!ing) return 0;
   const bruto = line.qty * (1 + (line.merma||0)/100);
   return ing.price * bruto;
 }
-function recipeCostBreakdown(r, visited){
-  const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line, visited), 0);
+function recipeCostBreakdown(r, visited, ctx){
+  const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line, visited, ctx), 0);
   const consPct = r.consumiblesPct || 0;
   const costeCons = costeIng * consPct / 100;
   return {costeIng, costeCons, total: costeIng + costeCons};
 }
 function recipeCost(r){
   return recipeCostBreakdown(r).total;
+}
+// Para avisar en Escandallo si el coste de este plato/elaboración está
+// infravalorado por una referencia circular entre elaboraciones base
+// (A usa B, B usa A, directa o indirectamente) — sin esto, el food cost
+// simplemente salía sospechosamente bajo sin explicación.
+function recipeHasCircularReference(r){
+  const ctx = {circular:false};
+  recipeCostBreakdown(r, new Set(), ctx);
+  return ctx.circular;
 }
 // Categorías de recetas visibles para el área actual: strings antiguas (sin etiquetar)
 // se consideran compartidas; los objetos {name, area} solo se muestran en su área.
@@ -265,6 +281,9 @@ function renderEscandalloFull(r){
     const perUnit = r.isBase ? recipeBaseCostPerUnit(r) : 0;
     const pctClass = r.isBase ? 'gray' : !isFinite(pct) ? 'gray' : pct > 35 ? 'red' : pct > 28 ? 'amber' : 'green';
     const pctText = r.isBase ? `${fmtMoney(perUnit)} / ${escapeHtml(r.baseUnit||'L')}` : !isFinite(pct) ? t('label.noSalePrice') : `${pct.toFixed(1)}% FC`;
+    const circularWarning = recipeHasCircularReference(r)
+      ? `<div class="card" style="background:var(--red-light,#FBEAEA);border-left:3px solid var(--red);margin-bottom:12px;padding:10px 14px;font-size:13px"><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('escandallo.circularWarning')}</div>`
+      : '';
 
     const lines = (r.ingredients||[]).map(line => {
       const label = renderEscandalloLineLabel(line);
@@ -276,6 +295,7 @@ function renderEscandalloFull(r){
     }).join('');
 
     return `
+      ${circularWarning}
       <div class="card" style="max-width:100%">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <h3 style="margin:0;font-size:18px"><i class="ti ${r.isBase?((r.area||'cocina')==='sala'?'ti-flask':'ti-soup'):((r.area||'cocina')==='sala'?'ti-glass-cocktail':'ti-chef-hat')}"></i> ${escapeHtml(r.name)}${r.isBase?` <span style="font-size:12px;color:var(--muted);font-weight:400">(${t('label.baseElaborationTag')})</span>`:''}</h3>
@@ -1171,7 +1191,12 @@ function renderFichaModal(){
     </div>
   `).join('');
 
-  const liveRecipeAllergens = (getFichaLiveRecipe(f)||{}).allergens || [];
+  // En vivo a partir de los ingredientes/bases ACTUALES (recipeComputedAllergens),
+  // no la foto fija r.allergens guardada en el último "Guardar" del escandallo —
+  // si no, editar un ingrediente después dejaba este modal mostrando alérgenos
+  // desactualizados aunque la impresión (getFichaAllergens, mismo cálculo en
+  // vivo) ya mostrara los correctos.
+  const liveRecipeAllergens = recipeComputedAllergens(getFichaLiveRecipe(f));
   const allergenHtml = ALLERGEN_LIST.map(a => {
     const fromRecipe = liveRecipeAllergens.includes(a);
     const on = fromRecipe || (f.allergens||[]).includes(a);
