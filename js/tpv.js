@@ -2372,7 +2372,7 @@ function renderMarkDishOutModal(){
 
   openModal(`
     <div class="modal-header">
-      <h3><i class="ti ti-flame-off"></i> ${t('title.markDishOut')}</h3>
+      <h3><i class="ti ti-flame-off"></i> ${t(area==='sala' ? 'title.markDishOutSala' : 'title.markDishOut')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('label.markDishOutHelp')}</p>
