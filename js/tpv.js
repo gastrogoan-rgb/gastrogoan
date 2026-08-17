@@ -2178,7 +2178,7 @@ function printMarchadasIfEnabled(order, firedLines){
   const titulo = table ? table.name : togoOrderLabel(order);
   printers.forEach(p => {
     const lineas = firedLines.filter(l => l.qty > 0 && (p.contenido==='todo' || (p.contenido==='comida' ? !l.bebida : l.bebida)));
-    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, order.tableAllergens);
+    if(lineas.length) printComandaTicket(p.nombre, titulo, lineas, p.anchoTicket, order.tableAllergens, p.id);
   });
 }
 

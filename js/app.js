@@ -5508,7 +5508,9 @@ function renderComandaPrintCard(){
       </div>
       ${modo === 'impresion' ? `
       <div id="comanda-printers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
-        ${printers.length ? printers.map(p=>`
+        ${printers.length ? printers.map(p=>{
+          const pairedName = thermalPrintingSupported() ? getThermalPrinterName(p.id) : '';
+          return `
           <div class="ge-item" style="flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-right:8px">
               <input type="checkbox" ${p.activo?'checked':''} onchange="toggleComandaPrinter('${p.id}', this.checked)" style="width:18px;height:18px">
@@ -5525,13 +5527,31 @@ function renderComandaPrintCard(){
             </select>
             <button class="btn btn-sm" onclick="testComandaPrint('${p.id}')"><i class="ti ti-printer"></i> ${t('mn.comandas.testPrint')}</button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteComandaPrinter('${p.id}')"><i class="ti ti-trash"></i></button>
-          </div>`).join('')
+            ${thermalPrintingSupported() ? `
+            <div style="width:100%;display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:6px;border-top:1px dashed var(--border)">
+              <i class="ti ti-bluetooth" style="color:${pairedName?'var(--brand-orange)':'var(--muted)'}"></i>
+              ${pairedName
+                ? `<span style="font-size:12px;color:var(--muted);flex:1"><strong>${escapeHtml(pairedName)}</strong> ${t('thermal.pairedHint')}</span>
+                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')">${t('thermal.reconnectBtn')}</button>
+                   <button class="btn btn-sm btn-danger" onclick="forgetThermalPrinterUi('${p.id}')">${t('thermal.forgetBtn')}</button>`
+                : `<span style="font-size:12px;color:var(--muted);flex:1">${t('thermal.notPairedHint')}</span>
+                   <button class="btn btn-sm" onclick="connectThermalPrinter('${p.id}')"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>`}
+            </div>` : ''}
+          </div>`;
+        }).join('')
         : `<div class="empty" style="padding:12px 16px">${t('mn.comandas.empty')}</div>`}
       </div>
       <button class="btn btn-sm" onclick="addComandaPrinter()"><i class="ti ti-plus"></i> ${t('mn.comandas.addPrinter')}</button>
+      ${!thermalPrintingSupported() ? `<p style="font-size:12.5px;color:var(--muted);margin-top:10px"><i class="ti ti-device-usb-off"></i> ${t('thermal.notSupportedHint')}</p>` : ''}
       ` : ''}
     </div>
   `;
+}
+// Envoltorio del "Olvidar" de cada impresora de comandas: además de borrar
+// la conexión guardada, repinta para que el botón vuelva a "Conectar".
+function forgetThermalPrinterUi(printerId){
+  forgetThermalPrinter(printerId);
+  renderMiNegocio();
 }
 function setComandaModo(modo){
   if(!DB.business.comandas) DB.business.comandas = {modo:'pantalla', anchoTicket:80};
@@ -5570,12 +5590,40 @@ function addComandaPrinter(){
 function deleteComandaPrinter(id){
   if(!confirm(t('msg.confirmDeletePrinter'))) return;
   DB.business.comandas.printers = ensureComandaPrinters().filter(p=>p.id!=id);
+  if(typeof forgetThermalPrinter === 'function') forgetThermalPrinter(id);
   saveDB();
   renderMiNegocio();
 }
+// Versión en texto plano del vale de comanda, para la impresora térmica por
+// Bluetooth (textToEscPos espera texto, no HTML) — mismo contenido que la
+// versión HTML de abajo, con el mismo ancho en caracteres que ya usa el
+// ticket de cliente para 58/80mm (ver buildTicketText).
+function buildComandaText(destino, titulo, lineas, alergenos, anchoTicket){
+  const width = anchoTicket == 58 ? 32 : 42;
+  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const center = s => { const pad = Math.max(0, Math.floor((width - s.length) / 2)); return ' '.repeat(pad) + s; };
+  const lines = [];
+  lines.push(center(destino.toUpperCase()));
+  lines.push('-'.repeat(width));
+  lines.push(`${titulo} · ${hora}`);
+  if(alergenos){ lines.push('-'.repeat(width)); lines.push('! ' + alergenos.toUpperCase()); }
+  lines.push('-'.repeat(width));
+  lineas.forEach(l => {
+    lines.push(`${l.qty}x ${l.name}`);
+    if(l.notas) lines.push(`  > ${l.notas}`);
+  });
+  return lines.join('\n');
+}
 // Imprime un vale de comanda (cocina, sala, barra...) con las líneas marchadas.
-function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos){
+// Si esta impresora tiene una impresora térmica Bluetooth emparejada
+// (getThermalPrinterName), se envía directamente ahí sin pasar por el
+// diálogo de impresión del navegador; si no, se abre la ventana de siempre.
+function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, printerId){
   if(!lineas || !lineas.length) return;
+  if(printerId && thermalPrintingSupported() && getThermalPrinterName(printerId)){
+    printToThermalPrinter(buildComandaText(destino, titulo, lineas, alergenos, anchoTicket), printerId);
+    return;
+  }
   const ancho = anchoTicket || 80;
   const widthPx = ancho == 58 ? 200 : 280;
   const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
@@ -5602,7 +5650,7 @@ function testComandaPrint(printerId){
   if(!printer) printer = {nombre:'COCINA', anchoTicket:80, contenido:'todo'};
   const lineas = printer.contenido==='todo' ? sample : sample.filter(l => printer.contenido==='comida' ? !l.bebida : l.bebida);
   if(!lineas.length){ showToast(t('mn.comandas.testNoLines')); return; }
-  printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket);
+  printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket, null, printer.id);
 }
 
 function saveTicketConfig(){

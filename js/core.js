@@ -4535,11 +4535,32 @@ function notifyDesktop(title, body){
    ============================================================ */
 const THERMAL_PRINTER_SERVICE_CANDIDATES = ['000018f0-0000-1000-8000-00805f9b34fb', 0xff00];
 const THERMAL_PRINTER_CHAR_CANDIDATES = ['00002af1-0000-1000-8000-00805f9b34fb', 0xff02];
-let thermalPrinterCharacteristic = null;
+// Antes solo existía UNA impresora térmica posible (la del ticket de
+// cliente). Para poder emparejar una impresora Bluetooth distinta por cada
+// perfil de comanda (cocina, barra...) además de la del ticket, las
+// conexiones se guardan en un mapa por id en vez de en una única variable.
+// 'ticket' es el id fijo que usa la impresora de tickets de cliente; cada
+// impresora de comandas usa su propio id (el mismo con el que ya se guarda
+// en DB.business.comandas.printers).
+const thermalPrinterCharacteristics = new Map();
 function thermalPrintingSupported(){
   return typeof navigator !== 'undefined' && !!navigator.bluetooth;
 }
-async function connectThermalPrinter(){
+function thermalPrinterStorageKey(printerId){
+  return 'gg_thermal_printer_name_' + (printerId || 'ticket');
+}
+// Nombre del último dispositivo emparejado para este id, si lo hay (no
+// implica que siga conectado en esta sesión — Web Bluetooth no permite
+// reconectar solo tras recargar la página, hace falta un gesto del usuario).
+function getThermalPrinterName(printerId){
+  try{ return localStorage.getItem(thermalPrinterStorageKey(printerId)) || ''; }catch(e){ return ''; }
+}
+function forgetThermalPrinter(printerId){
+  thermalPrinterCharacteristics.delete(printerId || 'ticket');
+  try{ localStorage.removeItem(thermalPrinterStorageKey(printerId)); }catch(e){}
+}
+async function connectThermalPrinter(printerId){
+  const key = printerId || 'ticket';
   if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return false; }
   try{
     const device = await navigator.bluetooth.requestDevice({
@@ -4558,9 +4579,10 @@ async function connectThermalPrinter(){
       }catch(e){}
     }
     if(!characteristic){ showToast(t('thermal.noWritableService')); return false; }
-    thermalPrinterCharacteristic = characteristic;
-    localStorage.setItem('gg_thermal_printer_name', device.name || '');
+    thermalPrinterCharacteristics.set(key, characteristic);
+    localStorage.setItem(thermalPrinterStorageKey(key), device.name || '');
     showToast(t('thermal.connectedOk').replace('${name}', device.name || t('thermal.unnamedDevice')));
+    if(typeof renderMiNegocio === 'function' && document.getElementById('minegocio-content')) renderMiNegocio();
     return true;
   }catch(e){
     // El usuario cancelando el selector de dispositivos también cae aquí —
@@ -4593,18 +4615,19 @@ async function writeThermalChunks(characteristic, bytes){
     await characteristic.writeValueWithoutResponse(chunk);
   }
 }
-async function printToThermalPrinter(text){
+async function printToThermalPrinter(text, printerId){
+  const key = printerId || 'ticket';
   if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
-  if(!thermalPrinterCharacteristic){
-    const connected = await connectThermalPrinter();
+  if(!thermalPrinterCharacteristics.has(key)){
+    const connected = await connectThermalPrinter(key);
     if(!connected) return;
   }
   try{
-    await writeThermalChunks(thermalPrinterCharacteristic, textToEscPos(text));
+    await writeThermalChunks(thermalPrinterCharacteristics.get(key), textToEscPos(text));
     showToast(t('thermal.printedOk'));
   }catch(e){
     console.error('Error imprimiendo en la impresora térmica', e);
-    thermalPrinterCharacteristic = null; // puede que se haya desconectado; forzar reconectar la próxima vez
+    thermalPrinterCharacteristics.delete(key); // puede que se haya desconectado; forzar reconectar la próxima vez
     showToast(t('thermal.printFailed'));
   }
 }
