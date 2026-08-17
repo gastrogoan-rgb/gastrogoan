@@ -790,7 +790,7 @@ function renderTpvToGo(tiposServicio){
   return `
     <h3 style="margin-top:16px;display:flex;align-items:center;flex-wrap:nowrap;gap:8px;overflow-x:auto">
       <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
-      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" style="white-space:nowrap;margin-left:auto" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" id="tpv-online-toggle-btn" style="white-space:nowrap;margin-left:auto" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
         <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
       </button>
       ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
@@ -909,15 +909,15 @@ function renderTPV(){
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
-      <button class="btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
+      <button class="btn" id="tpv-close-cash-btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
     </div>
     ${renderTpvKpis()}
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
     ${renderLastCallBanner()}
     ${renderTpvPendingOnline()}
-    ${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}
-    ${renderTpvToGo(tiposServicio)}
+    <div id="tpv-mesas-section">${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}</div>
+    <div id="tpv-togo-section">${renderTpvToGo(tiposServicio)}</div>
   `;
 }
 
