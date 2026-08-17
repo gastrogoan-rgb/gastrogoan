@@ -293,6 +293,7 @@ const I18N = {
     'resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendiente de confirmar',
     'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
+    'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
     'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
     'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
@@ -364,6 +365,7 @@ const I18N = {
     'resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
     'resManage.status.confirmada':'Confirmed','resManage.status.pendiente':'Pending confirmation',
     'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
+    'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
     'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
     'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
@@ -435,6 +437,7 @@ const I18N = {
     'resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
     'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendent de confirmar',
     'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
+    'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
     'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
     'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
@@ -2370,6 +2373,7 @@ function renderReservationManageView(){
   });
 }
 function renderReservationStatus(data){
+  lastResStatusData = data;
   const app = document.getElementById('app');
   if(!data){
     app.innerHTML = `
@@ -2401,10 +2405,70 @@ function renderReservationStatus(data){
         <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.date')}</span><strong>${escapeHtml(data.date||'')} · ${escapeHtml(data.time||'')}</strong></div>
         <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.people')}</span><strong>${data.people||''}</strong></div>
       </div>
-      ${phoneLink ? `<p style="font-size:12.5px;color:var(--muted);margin-top:14px">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}
-      <button class="btn" style="margin-top:16px;color:var(--red);border-color:var(--red)" id="res-cancel-btn" onclick="cancelMyReservation()">${t('resManage.cancelBtn')}</button>
+      ${resEditing ? `
+        <div class="field-row" style="margin-top:16px">
+          <div class="field">
+            <label>${t('fecha')}</label>
+            <input type="date" id="res-edit-date" value="${escapeHtml(data.date||'')}" min="${todayStr()}" onchange="updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint'); applyLeadTime('res-edit-date','res-edit-time','res-edit-hint')">
+          </div>
+          <div class="field">
+            <label>${t('hora')}</label>
+            <input type="time" id="res-edit-time" value="${escapeHtml(data.time||'')}">
+          </div>
+        </div>
+        <div id="res-edit-hint"></div>
+        <div class="field">
+          <label>${t('personas')}</label>
+          <input type="number" id="res-edit-people" value="${data.people||1}" min="1" max="50">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)">${t('common.close')}</button>
+          <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1">${t('resManage.saveBtn')}</button>
+        </div>
+      ` : `
+        ${phoneLink ? `<p style="font-size:12.5px;color:var(--muted);margin-top:14px">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn" id="res-edit-btn" onclick="toggleResEdit(true)" style="flex:1">${t('resManage.editBtn')}</button>
+          <button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" id="res-cancel-btn" onclick="cancelMyReservation()">${t('resManage.cancelBtn')}</button>
+        </div>
+      `}
     </div>
   `;
+  if(resEditing){
+    updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');
+    applyLeadTime('res-edit-date','res-edit-time','res-edit-hint');
+  }
+}
+let resEditing = false;
+let lastResStatusData = null;
+function toggleResEdit(on){
+  resEditing = on;
+  renderReservationStatus(lastResStatusData);
+}
+let submittingReservationChange = false;
+function submitReservationChange(){
+  if(submittingReservationChange) return;
+  const date = document.getElementById('res-edit-date')?.value;
+  const time = document.getElementById('res-edit-time')?.value;
+  const people = parseInt(document.getElementById('res-edit-people')?.value) || 0;
+  if(!date || !time || !people){
+    showInlineError(t('error.campos'));
+    return;
+  }
+  submittingReservationChange = true;
+  const btn = document.getElementById('res-edit-save-btn');
+  if(btn){ btn.disabled = true; btn.textContent = t('resManage.savingChanges'); }
+  db.ref('gastrogoan/public/' + publicId + '/requests').push({
+    type: 'reserva_modificar', token: resToken, date, time, people, createdAt: new Date().toISOString()
+  }).then(() => {
+    submittingReservationChange = false;
+    resEditing = false;
+  }).catch(e => {
+    console.error(e);
+    submittingReservationChange = false;
+    if(btn){ btn.disabled = false; btn.textContent = t('resManage.saveBtn'); }
+    showInlineError(t('error.envio'));
+  });
 }
 function cancelMyReservation(){
   if(cancellingReservation) return;

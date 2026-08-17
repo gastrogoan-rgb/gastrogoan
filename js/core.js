@@ -2406,6 +2406,41 @@ function initPublicRequestsListener(){
           syncReservationStatusForPublic(target);
           logAudit('edit', t('audit.reservationCancelledByClient').replace('${name}', target.clientName||'?'));
         }
+      }else if(req.type === 'reserva_modificar'){
+        // Cambio de fecha/hora/personas pedido por el propio cliente desde
+        // "Gestionar mi reserva". Igual que con la cancelación, se busca por
+        // token, nunca por id. La comprobación de mesa y aforo se hace aquí
+        // (nunca en el navegador del cliente) reutilizando el mismo motor que
+        // usa el personal al editar una reserva a mano, con excludeId puesto
+        // a la propia reserva para no chocar contra sí misma. Si no encaja
+        // en ningún hueco, no se rechaza sin más: queda 'pendiente' para que
+        // el personal la revise a mano, igual que una reserva nueva sin mesa.
+        const target = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.token);
+        if(target && target.status !== 'cancelada'){
+          const RESERVATION_TABLE_MARGIN = 1;
+          const newDate = req.date || target.date, newTime = req.time || target.time, newPeople = req.people || target.people || 1;
+          const available = getAvailableTablesForReservation(newDate, newTime, target.id, newPeople) || [];
+          let matchedTableId = available.some(tb => tb.id === target.tableId) ? target.tableId : null;
+          if(matchedTableId == null){
+            const autoTable = available
+              .filter(tb => (tb.plazas || 0) + RESERVATION_TABLE_MARGIN >= newPeople)
+              .sort((a, b) => (a.plazas || 0) - (b.plazas || 0))[0] || null;
+            matchedTableId = autoTable ? autoTable.id : null;
+          }
+          if(matchedTableId != null){
+            const turnoIdx = getTurnoIndexForTime(newDate, newTime);
+            const aforo = parseInt(DB.business.aforo) || 0;
+            if(turnoIdx !== null && aforo){
+              const yaReservado = getReservedPeopleForTurno(newDate, turnoIdx, target.id);
+              if(yaReservado + newPeople > aforo) matchedTableId = null;
+            }
+          }
+          target.date = newDate; target.time = newTime; target.people = newPeople;
+          target.tableId = matchedTableId;
+          target.status = matchedTableId != null ? 'confirmada' : 'pendiente';
+          syncReservationStatusForPublic(target);
+          logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
+        }
       }else if(req.type === 'nps_response'){
         if(!DB.npsScores) DB.npsScores = [];
         DB.npsScores.push({id: genId(), score: req.score, comment: req.comment || '', createdAt: new Date().toISOString()});
