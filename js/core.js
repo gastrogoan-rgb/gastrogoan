@@ -2518,6 +2518,30 @@ function syncOrderStatusForPublic(order, forcedStatus){
   }).catch(()=>{});
 }
 
+// Alérgenos por plato para la carta pública: {platoId: ['Gluten', ...]},
+// derivados en vivo de la receta vinculada (recipeId) con
+// recipeComputedAllergens — igual que ya hace la Ficha Técnica interna.
+// Antes esto no se sincronizaba en absoluto: aunque el plato tuviera
+// recipeId, la web pública no tenía acceso a DB.recipes (y no conviene
+// subir DB.recipes entera solo por esto — llevaría escandallos y costes
+// internos). Solo se incluyen platos con al menos un alérgeno, para no
+// engordar el payload con entradas vacías.
+function getPublicAllergensForSync(){
+  const out = {};
+  (DB.cartas||[]).forEach(c => {
+    (c.secciones||[]).forEach(sec => {
+      (sec.platos||[]).forEach(p => {
+        if(!p.recipeId) return;
+        const recipe = getRecipe(p.recipeId);
+        if(!recipe) return;
+        const allergens = recipeComputedAllergens(recipe);
+        if(allergens.length) out[p.id] = allergens;
+      });
+    });
+  });
+  return out;
+}
+
 // Promos con descuento activas HOY (día/franja horaria), saneadas para la
 // web pública: solo lo que un cliente necesita para ver la oferta (plato,
 // %, franja) — nunca quién la creó ni la descripción interna de marketing.
@@ -2548,7 +2572,8 @@ function syncPublicMirror(){
         pedidosResumen: getPedidosResumenForSync(),
         cocinaCargaActiva: getActiveKitchenOrdersCount(),
         tables: DB.tables.map(t => ({id: t.id, name: t.name, plazas: t.plazas || null})),
-        promos: getActivePromosForSync()
+        promos: getActivePromosForSync(),
+        allergens: getPublicAllergensForSync()
       };
       if(sucursales) data.sucursales = sucursales;
       // Antes un fallo aquí se tragaba en silencio (".catch(()=>{})"): la

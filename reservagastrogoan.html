@@ -263,6 +263,7 @@ const I18N = {
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
+    'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
     'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
@@ -327,6 +328,7 @@ const I18N = {
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
+    'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
     'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
@@ -391,6 +393,7 @@ const I18N = {
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
+    'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
     'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
@@ -739,16 +742,17 @@ function loadBusinessInfo(){
       pedidosResumen: val.pedidosResumen || {},
       cocinaCargaActiva: val.cocinaCargaActiva || 0,
       tables: val.tables || [],
-      promos: val.promos || []
+      promos: val.promos || [],
+      allergens: val.allergens || {}
     };
     renderHeader();
     if(!businessInfoLoadedOnce){
       businessInfoLoadedOnce = true;
-      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos});
+      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       renderApp();
       checkRedsysConfigured();
     }else if(currentTab && document.getElementById('tab-content')){
-      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos});
+      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       if(newSignature !== lastRenderSignature){
         lastRenderSignature = newSignature;
         renderTabContentPreservingForm();
@@ -1491,6 +1495,17 @@ function getActiveCartasConPlatos(){
   return getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
 }
 
+// Igual que allergenLabel() en la app principal: el valor guardado es
+// siempre el nombre en español (clave estable), se traduce solo al mostrar.
+function allergenLabel(name){
+  const dict = t('allergens.map');
+  return (dict && dict[name]) || name;
+}
+function dishAllergensHtml(platoId){
+  const list = (DB.allergens||{})[platoId];
+  if(!list || !list.length) return '';
+  return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}">⚠️ ${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>`;
+}
 function buildMenuHtml(cartas){
   return cartas.map(carta => `
     ${cartas.length > 1 ? `<h2>${escapeHtml(trItem(carta))}</h2>` : ''}
@@ -1504,6 +1519,7 @@ function buildMenuHtml(cartas){
           <div>
             <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
             <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}</div>
+            ${dishAllergensHtml(p.id)}
           </div>
           <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
             <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
