@@ -3511,8 +3511,8 @@ function renderExternalConnectionsCard(){
   const fbConnected = !!(DB.business && DB.business.ownFirebase);
   const redsysConnected = !!redsysIsConfigured;
   const emailConnected = !!(DB.business && DB.business.emailConfirm && DB.business.emailConfirm.enabled);
-  const row = (icon, label, connected, onclick) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+  const row = (icon, label, connected, onclick, withBorder) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;${withBorder ? 'border-bottom:1px solid var(--border)' : ''}">
       <i class="ti ${icon}" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>
       <span style="flex:1;font-size:13.5px">${label}</span>
       <span class="badge ${connected?'badge-green':'badge-gray'}">${connected ? t('mn.externalConn.connected') : t('mn.externalConn.notConnected')}</span>
@@ -3523,10 +3523,10 @@ function renderExternalConnectionsCard(){
     <div class="card mn-grid-full">
       <h3><i class="ti ti-plug-connected"></i> ${t('mn.externalConn.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px">${t('mn.externalConn.desc')}</p>
-      ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()')}
-      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 8px 28px;line-height:1.5"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
-      ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')")}
-      ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')")}
+      ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()', !fbConnected)}
+      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 8px 28px;padding-bottom:8px;line-height:1.5;border-bottom:1px solid var(--border)"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
+      ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')", true)}
+      ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')", true)}
     </div>
   `;
 }
