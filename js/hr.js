@@ -345,7 +345,14 @@ const GE = (function(){
       const detalles = [];
       if(g.diaPago) detalles.push(t('hr.gf.payDay').replace('${d}', g.diaPago));
       const gIva = g.iva!=null ? parseFloat(g.iva) : 0;
-      if(gIva > 0){ const neto=mensual/(1+gIva/100); detalles.push(`${t('hr.lbl.base')} ${fmtMoney(neto)} + ${t('common.vat')} ${gIva}% (${fmtMoney(mensual-neto)})`); }
+      // "mensual" YA es la base sin IVA (gfMonthlyImporte) — el IVA se AÑADE
+      // encima para mostrar el total con IVA, nunca se extrae de "mensual"
+      // como si ya lo llevara incluido (antes dividía mensual/(1+iva%), lo
+      // que daba una base y un IVA por debajo de los reales — p.ej. con
+      // 1.200€ de base al 21%, mostraba "Base 991,74€ + IVA 208,26€" en vez
+      // de "Base 1.200€ + IVA 252€", aunque los KPI de arriba sí eran
+      // correctos porque usan gfMonthlyGross, no este cálculo).
+      if(gIva > 0){ const ivaImporte = mensual*gIva/100; detalles.push(`${t('hr.lbl.base')} ${fmtMoney(mensual)} + ${t('common.vat')} ${gIva}% (${fmtMoney(ivaImporte)})`); }
       if(periodoMeses>1){
         detalles.push(`${t('hr.gf.everyMonths').replace('${n}', periodoMeses)} · ${fmtMoney(parseFloat(g.importe||0))}${t('hr.gf.perPayment')}`);
         const today = new Date();
@@ -1243,7 +1250,12 @@ const GE = (function(){
     const facNeta = facturacionNetaMes(activeMonth, teYear);
     const ivaLiquidar = ivaLiquidarMes(activeMonth, teYear);
 
-    const ivaVentas = facBruta - facNeta;
+    // NO "facBruta - facNeta": facBruta suma sale.total (incluye propina y
+    // gastos de envío, que no son IVA), mientras que facNeta se calcula
+    // línea a línea sin ninguno de los dos — restarlos habría metido la
+    // propina de cada mesa dentro del "IVA a reservar", inflándolo. Mismo
+    // criterio ya usado en CDR/Resultado (ivaVentasMes, línea a línea).
+    const ivaVentas = ivaVentasMes(activeMonth, teYear);
 
     document.getElementById('te-kpis').innerHTML = `
       <div class="kpi-mini"><div class="l">${t('hr.te.grossRevenue')}</div><div class="v">${fmtMoney(facBruta)}</div><div style="font-size:11px;color:var(--muted)">${t('hr.te.salesWithVat')}</div></div>
