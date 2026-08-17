@@ -37,7 +37,13 @@ const GE = (function(){
   let distPctLoaded = false;
   let platosPeriod = 'mes', platosFrom = '', platosTo = '';
   let gvSearch = '';
-  const currentYear = new Date().getFullYear();
+  // Función, no una constante congelada al cargar la página: si se quedara
+  // fija en el año de carga, un negocio que mantiene la app abierta sin
+  // recargar al cruzar la medianoche del 31 de diciembre (nada raro en
+  // hostelería, precisamente esa noche) archivaría gastos/ventas del año
+  // nuevo bajo el año anterior en todas las funciones que la usan como
+  // valor por defecto.
+  function currentYear(){ return new Date().getFullYear(); }
 
   function ge(){ return DB.ge; }
   function fijos(){ return ge().fijos; }
@@ -111,8 +117,8 @@ const GE = (function(){
   function totalPersonal(){ return fijos().filter(g=>g.categoria==='PERSONAL').reduce((s,g)=>s+gfMonthlyGross(g),0); }
   function totalGFNeto(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyImporte(g),0); }
   function totalGF(){ return fijos().filter(g=>g.categoria==='FIJOS').reduce((s,g)=>s+gfMonthlyGross(g),0); }
-  function variablesMes(mes, año=currentYear){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
-  function facturacionMes(mes, año=currentYear){
+  function variablesMes(mes, año=currentYear()){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
+  function facturacionMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
@@ -130,7 +136,7 @@ const GE = (function(){
   // caen en el tipo general por defecto para no perder ese importe del
   // cálculo, pero se contabilizan aparte como "sinAsignar" para poder
   // avisar de que conviene revisarlas.
-  function ventasIvaGroups(mes, año=currentYear){
+  function ventasIvaGroups(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     const groups = {};
     let sinAsignar = 0;
@@ -152,10 +158,10 @@ const GE = (function(){
     return {groups, sinAsignar};
   }
   // Facturación sin IVA: el IVA cobrado no es ingreso del negocio, hay que reservarlo para Hacienda.
-  function facturacionNetaMes(mes, año=currentYear){
+  function facturacionNetaMes(mes, año=currentYear()){
     return Object.values(ventasIvaGroups(mes,año).groups).reduce((s,g)=>s+g.base, 0);
   }
-  function ivaVentasMes(mes, año=currentYear){
+  function ivaVentasMes(mes, año=currentYear()){
     return Object.values(ventasIvaGroups(mes,año).groups).reduce((s,g)=>s+g.iva, 0);
   }
   // % de IVA incluido en lo que pagas a tus proveedores (compras de Gastos Variables), configurable, por defecto 10%
@@ -164,27 +170,27 @@ const GE = (function(){
   }
   // v.importe es la base sin IVA (como Ingredientes/Escandallo/Carta/Fijos):
   // el IVA se añade encima, nunca se extrae de un total que ya lo llevara.
-  function totalVariablesNetoMes(mes, año=currentYear){
+  function totalVariablesNetoMes(mes, año=currentYear()){
     return variablesMes(mes,año).reduce((s,v) => s + (parseFloat(v.importe)||0), 0);
   }
-  function totalVariablesMes(mes, año=currentYear){
+  function totalVariablesMes(mes, año=currentYear()){
     return variablesMes(mes,año).reduce((s,v) => {
       const pct = v.iva != null ? parseFloat(v.iva) : ivaComprasPct();
       return s + (parseFloat(v.importe)||0) * (1 + pct/100);
     }, 0);
   }
-  function ivaSoportadoComprasMes(mes, año=currentYear){
+  function ivaSoportadoComprasMes(mes, año=currentYear()){
     return totalVariablesMes(mes,año) - totalVariablesNetoMes(mes,año);
   }
   // Usa el histórico (DB.ge.fijosLog) en vez de recalcular siempre con la
   // configuración ACTUAL de gastos fijos, para que un mes/trimestre pasado
   // no cambie de golpe si después se edita un gasto fijo — clave de cara a
   // la liquidación real de IVA con Hacienda.
-  function ivaSoportadoFijosMes(mes, año=currentYear){
+  function ivaSoportadoFijosMes(mes, año=currentYear()){
     return geIvaSoportadoFijosForMonth(año, mes);
   }
   // IVA soportado en inversiones CAPEX compradas ese mes (deducible en el periodo de la compra).
-  function ivaSoportadoCapexMes(mes, año=currentYear){
+  function ivaSoportadoCapexMes(mes, año=currentYear()){
     return capex().filter(c=>c.fecha).reduce((s,c)=>{
       const [fy,fm] = c.fecha.split('-').map(Number);
       if(fy===año && (fm-1)===mes) return s + parseFloat(c.importe||0)*(parseFloat(c.iva||0)/100);
@@ -205,24 +211,24 @@ const GE = (function(){
     const ivaPct = (sale.plataforma && sale.plataforma.ivaPct!=null) ? parseFloat(sale.plataforma.ivaPct) : 0;
     return bruto / (1 + ivaPct/100);
   }
-  function ivaSoportadoComisionesMes(mes, año=currentYear){
+  function ivaSoportadoComisionesMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+(parseFloat(v.comisionPlataforma||0) - comisionPlataformaNeta(v)),0);
   }
   // IVA neto a liquidar con Hacienda (modelo 303): repercutido en ventas menos soportado en compras e inversiones.
   // Si es negativo, Hacienda te lo debe a ti (a tu favor).
-  function ivaLiquidarMes(mes, año=currentYear){
+  function ivaLiquidarMes(mes, año=currentYear()){
     return ivaVentasMes(mes,año) - ivaSoportadoComprasMes(mes,año) - ivaSoportadoCapexMes(mes,año) - ivaSoportadoFijosMes(mes,año) - ivaSoportadoComisionesMes(mes,año);
   }
   // Comisiones de apps de delivery (Glovo, Uber Eats...) calculadas automáticamente
   // sobre las ventas del mes que llegaron por esas plataformas — en BASE,
   // como el resto de gastos de esta hoja.
-  function comisionesMes(mes, año=currentYear){
+  function comisionesMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
     return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+comisionPlataformaNeta(v),0);
   }
   // Cuota mensual de inversiones CAPEX financiadas a plazos, mientras dure el pago.
-  function capexCuotaMes(mes, año=currentYear){
+  function capexCuotaMes(mes, año=currentYear()){
     return capex().filter(c=>c.financiado && c.cuotaMensual && c.fecha).reduce((s,c)=>{
       const [fy,fm] = c.fecha.split('-').map(Number);
       const elapsed = (año*12+mes) - (fy*12+(fm-1));
@@ -231,16 +237,16 @@ const GE = (function(){
     }, 0);
   }
   // Resultado antes de impuestos: facturación neta de IVA menos todos los gastos (compras sin IVA, ya que ese IVA es deducible).
-  function resultadoAntesImpMes(mes, año=currentYear){
+  function resultadoAntesImpMes(mes, año=currentYear()){
     return facturacionNetaMes(mes,año) - totalVariablesNetoMes(mes,año) - geTotalFijosNetoForMonth(año,mes) - comisionesMes(mes,año) - capexCuotaMes(mes,año);
   }
   // Resultado Neto: lo que realmente te llevas, después de IVA e impuesto sobre beneficios.
-  function resultadoMes(mes, año=currentYear){
+  function resultadoMes(mes, año=currentYear()){
     const r = resultadoAntesImpMes(mes,año);
     const pctImp = (config().pctImpuestoBeneficio!=null ? config().pctImpuestoBeneficio : 25)/100;
     return r>0 ? r*(1-pctImp) : r;
   }
-  function ivaLiquidarQTD(mes, año=currentYear){
+  function ivaLiquidarQTD(mes, año=currentYear()){
     const qStart = Math.floor(mes/3)*3;
     let s = 0;
     for(let m=qStart; m<=mes; m++) s += ivaLiquidarMes(m,año);
@@ -597,7 +603,7 @@ const GE = (function(){
     box.innerHTML = `
       <div class="card" style="margin-bottom:14px;border:1px solid var(--amber);background:var(--amber-l)">
         <h4 style="margin-bottom:4px"><i class="ti ti-ant"></i> ${t('hr.hormiga.title')}</h4>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('hr.hormiga.desc').replace('${year}', currentYear)}</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">${t('hr.hormiga.desc').replace('${year}', currentYear())}</p>
         <div style="display:flex;flex-direction:column;gap:4px">
           ${candidates.map(c => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${escapeHtml(c.prov)} <span style="color:var(--muted)">(${c.n}${t('hr.hormiga.timesSuffix')}, ${fmtMoney(c.avg)}${t('hr.hormiga.avgSuffix')})</span></span><strong>${fmtMoney(c.total)}</strong></div>`).join('')}
         </div>
@@ -1355,7 +1361,7 @@ const GE = (function(){
     if(!el) return;
     const dueItems = fijos()
       .filter(g=>(parseInt(g.periodicidadMeses)||1)>1)
-      .map(g=>({g, date:gfDueInMonth(g, currentYear, activeMonth)}))
+      .map(g=>({g, date:gfDueInMonth(g, currentYear(), activeMonth)}))
       .filter(x=>x.date);
     if(!dueItems.length){ el.innerHTML=''; el.style.display='none'; return; }
     el.style.display='block';
@@ -1700,7 +1706,7 @@ const GE = (function(){
     // el resumen final usa el total histórico real en vez de este desglose,
     // para que la cifra que de verdad importa (el resultado/IVA a liquidar)
     // no dependa de la configuración de hoy.
-    const isHistoricalMonth = !(año===currentYear && mes===new Date().getMonth());
+    const isHistoricalMonth = !(año===currentYear() && mes===new Date().getMonth());
     rows.push([t('hr.csv.monthlyFixedExpenses') + (isHistoricalMonth ? ` (${t('hr.csv.currentConfigNote')})` : '')]);
     rows.push([t('hr.lbl.concept'), t('common.category'), t('hr.gf.payDayLabel'), t('hr.gf.payPeriodicity'), t('hr.csv.baseEur'), t('hr.csv.vatPct'), t('hr.csv.vatEur'), t('hr.csv.totalEur')]);
     let sumFijos = 0, sumFijosBase = 0, sumFijosIva = 0;
@@ -1837,7 +1843,7 @@ const GE = (function(){
 
   function exportMonth(){
     const mes = parseInt(document.getElementById('exp-mes').value);
-    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear();
     const report = buildMonthReport(mes, año);
     downloadCSV(report.rows, `contabilidad-${report.nombreNegocio}-${report.mesStr}.csv`);
     closeModal();
@@ -1846,7 +1852,7 @@ const GE = (function(){
 
   function emailMonth(){
     const mes = parseInt(document.getElementById('exp-mes').value);
-    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear();
     const email = document.getElementById('exp-email').value.trim();
     if(!email){ showToast(t('msg.enterAccountantEmail')); return; }
 
@@ -1902,7 +1908,7 @@ const GE = (function(){
   // compartido u otro canal distinto del correo.
   function copyMonthSummary(){
     const mes = parseInt(document.getElementById('exp-mes').value);
-    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear;
+    const año = parseInt(document.getElementById('exp-anyo').value) || currentYear();
     const report = buildMonthReport(mes, año);
     const b = DB.business || {};
     const fmt = n => (Math.round(n*100)/100).toFixed(2).replace('.', ',') + ' €';
