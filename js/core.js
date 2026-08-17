@@ -3524,7 +3524,7 @@ function renderExternalConnectionsCard(){
       <h3><i class="ti ti-plug-connected"></i> ${t('mn.externalConn.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px">${t('mn.externalConn.desc')}</p>
       ${row('ti-cloud', t('mn.externalConn.firebase'), fbConnected, 'openCloudWizard()')}
-      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:-4px 0 8px 28px"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
+      ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 8px 28px;line-height:1.5"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
       ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')")}
       ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')")}
     </div>
