@@ -3664,12 +3664,109 @@ function loadEmailjsSdk(){
   return emailjsSdkPromise;
 }
 
+/* Guía paso a paso para configurar EmailJS, pensada para alguien sin
+   ningún conocimiento técnico: se abre en un modal desde la tarjeta de
+   "Confirmación, cancelación y cambios de reserva por email" en Mi Negocio.
+   Mismo patrón visual que FIREBASE_GATE_STEPS (círculo numerado + texto). */
+const EMAILJS_GUIDE_STEPS = [
+  {title:{es:'Crea tu cuenta gratis en EmailJS', ca:'Crea el teu compte gratuït a EmailJS', en:'Create your free EmailJS account'},
+   body:{
+     es:`Entra en <code>emailjs.com</code> y pulsa <strong>"Sign Up"</strong> (arriba a la derecha). Regístrate con tu email y confírmalo si te lo pide.<br><br>
+        <span style="color:var(--muted)">Es gratis hasta 200 emails al mes, de sobra para un restaurante normal.</span>`,
+     ca:`Entra a <code>emailjs.com</code> i prem <strong>"Sign Up"</strong> (a dalt a la dreta). Registra't amb el teu email i confirma'l si t'ho demana.<br><br>
+        <span style="color:var(--muted)">És gratuït fins a 200 emails al mes, de sobres per a un restaurant normal.</span>`,
+     en:`Go to <code>emailjs.com</code> and click <strong>"Sign Up"</strong> (top right). Register with your email and confirm it if asked.<br><br>
+        <span style="color:var(--muted)">It's free up to 200 emails a month, plenty for a normal restaurant.</span>`}},
+  {title:{es:'Conecta tu email', ca:'Connecta el teu email', en:'Connect your email'},
+   body:{
+     es:`En el menú de la izquierda, entra en <strong>"Email Services"</strong> y pulsa <strong>"Add New Email Service"</strong>. Elige tu proveedor (Gmail, Outlook…) y sigue los pasos para darle permiso.<br><br>
+        Al terminar verás un código como <code>service_xxxxxxx</code>. <strong>Cópialo</strong>: es tu <strong>Service ID</strong>.`,
+     ca:`Al menú de l'esquerra, entra a <strong>"Email Services"</strong> i prem <strong>"Add New Email Service"</strong>. Tria el teu proveïdor (Gmail, Outlook…) i segueix els passos per donar-li permís.<br><br>
+        En acabar veuràs un codi com <code>service_xxxxxxx</code>. <strong>Copia'l</strong>: és el teu <strong>Service ID</strong>.`,
+     en:`In the left menu, open <strong>"Email Services"</strong> and click <strong>"Add New Email Service"</strong>. Choose your provider (Gmail, Outlook…) and follow the steps to grant access.<br><br>
+        When it's done you'll see a code like <code>service_xxxxxxx</code>. <strong>Copy it</strong>: it's your <strong>Service ID</strong>.`}},
+  {title:{es:'Crea la plantilla de "Reserva confirmada"', ca:'Crea la plantilla de "Reserva confirmada"', en:'Create the "Reservation confirmed" template'},
+   body:{
+     es:`Ve a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. En "To Email" escribe <code>{{to_email}}</code>. En el asunto y el cuerpo, pega esto (no borres las palabras entre llaves, la app las rellena sola):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu reserva en {{business_name}} está confirmada:
+Fecha: {{date}}  Hora: {{time}}  Personas: {{people}}  Mesa: {{table_name}}
+
+Si quieres cambiar la hora o cancelar, hazlo aquí: {{manage_link}}</div>
+        Guarda y copia el código <code>template_xxxxxxx</code> que aparece: es tu <strong>Template ID de confirmación</strong>.`,
+     ca:`Vés a <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. A "To Email" escriu <code>{{to_email}}</code>. A l'assumpte i al cos, enganxa això (no esborris les paraules entre claus, l'app les omple sola):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva reserva a {{business_name}} està confirmada:
+Data: {{date}}  Hora: {{time}}  Persones: {{people}}  Taula: {{table_name}}
+
+Si vols canviar l'hora o cancel·lar, fes-ho aquí: {{manage_link}}</div>
+        Desa i copia el codi <code>template_xxxxxxx</code> que apareix: és el teu <strong>Template ID de confirmació</strong>.`,
+     en:`Go to <strong>"Email Templates"</strong> → <strong>"Create New Template"</strong>. In "To Email" type <code>{{to_email}}</code>. In the subject and body, paste this (don't remove the words in curly braces, the app fills them in automatically):<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your reservation at {{business_name}} is confirmed:
+Date: {{date}}  Time: {{time}}  People: {{people}}  Table: {{table_name}}
+
+To change the time or cancel, do it here: {{manage_link}}</div>
+        Save it and copy the <code>template_xxxxxxx</code> code shown: it's your <strong>confirmation Template ID</strong>.`}},
+  {title:{es:'Crea la plantilla de "Reserva cancelada"', ca:'Crea la plantilla de "Reserva cancel·lada"', en:'Create the "Reservation cancelled" template'},
+   body:{
+     es:`Repite lo mismo: <strong>"Create New Template"</strong> otra vez, "To Email" = <code>{{to_email}}</code>, y en el cuerpo algo como:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+Tu reserva en {{business_name}} ha sido cancelada.</div>
+        Guarda y copia su código <code>template_xxxxxxx</code>: es tu <strong>Template ID de cancelación</strong> (distinto del de confirmación).`,
+     ca:`Repeteix el mateix: <strong>"Create New Template"</strong> una altra vegada, "To Email" = <code>{{to_email}}</code>, i al cos alguna cosa com:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hola {{client_name}},
+
+La teva reserva a {{business_name}} ha estat cancel·lada.</div>
+        Desa i copia el seu codi <code>template_xxxxxxx</code>: és el teu <strong>Template ID de cancel·lació</strong> (diferent del de confirmació).`,
+     en:`Repeat the same thing: <strong>"Create New Template"</strong> again, "To Email" = <code>{{to_email}}</code>, and in the body something like:<br><br>
+        <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11.5px;white-space:pre-wrap;margin-bottom:8px">Hi {{client_name}},
+
+Your reservation at {{business_name}} has been cancelled.</div>
+        Save it and copy its <code>template_xxxxxxx</code> code: it's your <strong>cancellation Template ID</strong> (different from the confirmation one).`}},
+  {title:{es:'Copia tu "Public Key"', ca:'Copia la teva "Public Key"', en:'Copy your "Public Key"'},
+   body:{
+     es:`Pulsa tu icono (arriba a la derecha) → <strong>"Account"</strong>. Ahí verás un código como <code>AbCdEfGhIjK123</code>. Cópialo: es tu <strong>Public Key</strong>.`,
+     ca:`Prem la teva icona (a dalt a la dreta) → <strong>"Account"</strong>. Allà veuràs un codi com <code>AbCdEfGhIjK123</code>. Copia'l: és la teva <strong>Public Key</strong>.`,
+     en:`Click your icon (top right) → <strong>"Account"</strong>. You'll see a code like <code>AbCdEfGhIjK123</code>. Copy it: it's your <strong>Public Key</strong>.`}},
+  {title:{es:'Pégalo todo aquí y prueba', ca:'Enganxa-ho tot aquí i prova-ho', en:'Paste it all here and test it'},
+   body:{
+     es:`Cierra esta guía, marca <strong>"Activar"</strong> más abajo y pega los 4 códigos, cada uno en su campo. Guarda y pulsa <strong>"Enviar prueba"</strong> (hay uno para confirmación y otro para cancelación) con tu propio email, para comprobar que llega bien.<br><br>
+        <span style="color:var(--muted)">Si te llega el email de prueba con los datos rellenados, ya está todo funcionando: cada cliente que reserve recibirá el suyo automáticamente.</span>`,
+     ca:`Tanca aquesta guia, marca <strong>"Activar"</strong> més avall i enganxa els 4 codis, cadascun al seu camp. Desa i prem <strong>"Enviar prova"</strong> (n'hi ha un per a confirmació i un altre per a cancel·lació) amb el teu propi email, per comprovar que arriba bé.<br><br>
+        <span style="color:var(--muted)">Si et arriba l'email de prova amb les dades emplenades, ja tot funciona: cada client que reservi rebrà el seu automàticament.</span>`,
+     en:`Close this guide, check <strong>"Enable"</strong> below and paste the 4 codes, each in its field. Save and click <strong>"Send test"</strong> (there's one for confirmation and one for cancellation) with your own email, to check it arrives fine.<br><br>
+        <span style="color:var(--muted)">If the test email arrives with the details filled in, everything is working: every customer who books will get theirs automatically.</span>`}},
+];
+function showEmailJsGuideModal(){
+  const step = (n, title, body) => `
+    <div style="display:flex;gap:12px;margin-bottom:18px">
+      <div style="flex:none;width:28px;height:28px;border-radius:50%;background:var(--brand-orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
+      <div style="flex:1;min-width:0">
+        <p style="font-weight:700;font-size:13.5px;margin-bottom:4px">${title}</p>
+        <div style="font-size:13px;color:#444;line-height:1.6">${body}</div>
+      </div>
+    </div>`;
+  const stepsHtml = EMAILJS_GUIDE_STEPS.map((s,i) => step(i+1, gl(s.title), gl(s.body))).join('\n');
+  openModal(`
+    <div class="modal-header"><h3><i class="ti ti-mail-check"></i> ${t('mn.emailConfirm.guideTitle')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">${t('mn.emailConfirm.guideIntro')}</p>
+    ${stepsHtml}
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">${t('mn.emailConfirm.guideDone')}</button></div>
+  `);
+}
+
 function renderEmailConfirmCard(){
   const cfg = (DB.business && DB.business.emailConfirm) || {};
   return `
     <div class="card" id="mn-card-email">
       <h3><i class="ti ti-mail-check"></i> ${t('mn.emailConfirm.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.emailConfirm.desc')}</p>
+      <button class="btn btn-sm" style="margin-bottom:14px" onclick="showEmailJsGuideModal()"><i class="ti ti-help-circle"></i> ${t('mn.emailConfirm.guideBtn')}</button>
       <div class="field">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
           <input type="checkbox" id="ec-enabled" style="width:18px;height:18px" ${cfg.enabled?'checked':''}> ${t('mn.emailConfirm.enable')}
