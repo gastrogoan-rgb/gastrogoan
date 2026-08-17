@@ -4208,7 +4208,42 @@ function renderMiNegocio(){
   };
   document.getElementById('minegocio-content').innerHTML = `
     <div class="mn-grid">
+    <div class="card" style="border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
+      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
+      <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
+    </div>
+
+    <!-- Ojo: esto NO es el PIN de abajo. El PIN del negocio confirma acciones
+         sueltas dentro de la app; esta es la contraseña con la que se ENTRA, y
+         se guarda por dispositivo (gastrogoan_owner_login), no por negocio —
+         por eso el texto lo avisa: cambiarla aquí la cambia para todos los
+         negocios de este dispositivo. Antes solo se podía cambiar desde la
+         pantalla de elegir negocio, un sitio poco evidente para buscarla. -->
+    <div class="card">
+      <h3><i class="ti ti-lock-password"></i> ${t('mn.ownerPass.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerPass.desc')}</p>
+      <button class="btn btn-sm" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('mn.ownerPass.btn')}</button>
+    </div>
+
+    <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
+      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.ownerAccess.newPin')}</label>
+          <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+        <div class="field">
+          <label>${t('mn.ownerAccess.repeatPin')}</label>
+          <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
+    </div>
+
     ${renderExternalConnectionsCard()}
+
     <div class="card mn-grid-full">
       <h3><i class="ti ti-building-store"></i> ${t('mn.business.title')}</h3>
 
@@ -4310,10 +4345,9 @@ function renderMiNegocio(){
       <p style="font-size:12px;color:var(--muted);margin:-6px 0 14px">${t('mn.business.gmapsHint')}</p>
 
       <button class="btn btn-primary" onclick="saveBusiness()"><i class="ti ti-device-floppy"></i> ${t('mn.business.saveAll')}</button>
-    </div>
 
-    <div class="card">
-      <h3><i class="ti ti-toggle-right"></i> ${t('mn.serviceTypes.title')}</h3>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px">
+      <h4 style="margin-top:0"><i class="ti ti-toggle-right"></i> ${t('mn.serviceTypes.title')}</h4>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.serviceTypes.desc')}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
@@ -4326,10 +4360,9 @@ function renderMiNegocio(){
           <input type="checkbox" id="mn-serv-delivery" ${tiposServicio.delivery?'checked':''} onchange="toggleTipoServicio('delivery', this.checked)" style="width:18px;height:18px"> <i class="ti ti-moped"></i> ${t('mn.serviceTypes.delivery')}
         </label>
       </div>
-    </div>
 
-    <div class="card mn-grid-full">
-      <h3><i class="ti ti-calendar-time"></i> ${t('mn.schedule.title')}</h3>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0 16px">
+      <h4 style="margin-top:0"><i class="ti ti-calendar-time"></i> ${t('mn.schedule.title')}</h4>
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc1')}</p>
       <p style="font-size:13px;color:var(--muted,#888)">${t('mn.schedule.desc2')}</p>
       <div id="mn-horario-list">${renderHorarioRows(b.horario)}</div>
@@ -4403,59 +4436,25 @@ function renderMiNegocio(){
       <div id="mn-aforo-warning"></div>
     </div>
 
-    ${renderRedsysCard()}
+    ${renderTicketConfigCard()}
 
-    ${renderEmailConfirmCard()}
+    ${renderTableQrCard()}
+
+    ${renderComandaPrintCard()}
+
+    ${renderOnlineCard()}
 
     ${renderPedidosConfigCard()}
 
     ${renderDeliveryPlatformsCard()}
 
-    ${renderOnlineCard()}
+    ${renderRedsysCard()}
 
-    ${renderTableQrCard()}
-
-    ${renderTicketConfigCard()}
-
-    ${renderComandaPrintCard()}
+    ${renderEmailConfirmCard()}
 
     ${renderVerifactuConfigCard()}
 
     ${renderDataMaintenanceCard()}
-
-    <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
-      <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
-      <div class="field-row">
-        <div class="field">
-          <label>${t('mn.ownerAccess.newPin')}</label>
-          <input type="password" id="mn-pin-new" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        </div>
-        <div class="field">
-          <label>${t('mn.ownerAccess.repeatPin')}</label>
-          <input type="password" id="mn-pin-new2" maxlength="4" inputmode="numeric" placeholder="••••" style="letter-spacing:8px;font-size:20px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        </div>
-      </div>
-      <button class="btn btn-sm" onclick="changeOwnerPin()"><i class="ti ti-key"></i> ${t('mn.ownerAccess.changePin')}</button>
-    </div>
-
-    <!-- Ojo: esto NO es el PIN de arriba. El PIN del negocio confirma acciones
-         sueltas dentro de la app; esta es la contraseña con la que se ENTRA, y
-         se guarda por dispositivo (gastrogoan_owner_login), no por negocio —
-         por eso el texto lo avisa: cambiarla aquí la cambia para todos los
-         negocios de este dispositivo. Antes solo se podía cambiar desde la
-         pantalla de elegir negocio, un sitio poco evidente para buscarla. -->
-    <div class="card">
-      <h3><i class="ti ti-lock-password"></i> ${t('mn.ownerPass.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerPass.desc')}</p>
-      <button class="btn btn-sm" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('mn.ownerPass.btn')}</button>
-    </div>
-
-    <div class="card" style="border:2px solid var(--teal);background:var(--teal-l, #eef7f6)">
-      <h3 style="color:var(--teal)"><i class="ti ti-key"></i> ${t('mn.businessCode.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.businessCode.desc')}</p>
-      <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
-    </div>
     </div>
   `;
   loadRedsysCardStatus();
@@ -5288,10 +5287,13 @@ function renderVerifactuConfigCard(){
     `<option value="${k}" ${vf.provider===k?'selected':''}>${escapeHtml(VERIFACTU_PROVIDERS[k].label)}</option>`
   ).join('');
   return `
-    <div class="card">
-      <h3><i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}</h3>
-      <div style="background:var(--amber-l,#FBF0DD);border:1px solid var(--brand-orange);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
-        <p style="margin:0"><span class="badge badge-amber" style="margin-right:6px"><i class="ti ti-clock"></i> ${t('mn.verifactu.draftBadge')}</span>${t('mn.verifactu.draftNotice')}</p>
+    <div class="card" style="position:relative;opacity:0.85">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <i class="ti ti-file-invoice"></i> ${t('mn.verifactu.title')}
+        <span class="badge" style="background:var(--muted,#888);color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:10.5px"><i class="ti ti-hourglass-low"></i> ${t('mn.verifactu.draftBadge')}</span>
+      </h3>
+      <div style="background:var(--bg-soft,#f4f4f4);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px;color:var(--muted)">
+        <p style="margin:0">${t('mn.verifactu.draftNotice')}</p>
       </div>
       <p style="font-size:13px;color:var(--muted)">${t('mn.verifactu.desc')}</p>
       <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
