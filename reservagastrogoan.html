@@ -207,10 +207,14 @@ const FIREBASE_CONFIG = {
 
 let publicId = null;
 let tableIdFromUrl = null;
+let trackToken = null;
+let trackListenerAttached = false;
 let db = null;
 let DB = null; // { business, cartas, activeCartaId }
 let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
 let cart = []; // [{recipeId, sectionId, name, price, qty}]
+let cartTipPct = 0; // 0 | 5 | 10 | 15 | 'custom'
+let cartTipCustom = 0; // importe fijo cuando cartTipPct === 'custom'
 let submittingRequest = false; // evita duplicados por doble clic en pedidos/reservas
 let redsysConfigured = false;
 
@@ -258,6 +262,7 @@ const I18N = {
     'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
+    'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
     'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
@@ -280,6 +285,11 @@ const I18N = {
     'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.', 'hint.cierrePedidos':'Para esta franja, el último pedido posible es a las %s.', 'error.cierrePedidos':'Ya no se aceptan pedidos para esta franja (el último posible era a las %s). Por favor elige otra hora.',
     'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
     'success.otra':'Hacer otra solicitud', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
+    'success.trackOrder':'Seguir mi pedido',
+    'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
+    'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
+    'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
+    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo':'Listo','track.step.entregado':'Entregado / recogido',
     'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
@@ -316,6 +326,7 @@ const I18N = {
     'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
+    'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
     'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
@@ -338,6 +349,11 @@ const I18N = {
     'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.', 'hint.cierrePedidos':'For this time slot, the last possible order is at %s.', 'error.cierrePedidos':'Orders are no longer accepted for this time slot (the last possible was at %s). Please choose another time.',
     'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
     'success.otra':'Make another request', 'success.callToChange':'Need to change or cancel? Call %s.',
+    'success.trackOrder':'Track my order',
+    'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
+    'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
+    'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
+    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo':'Ready','track.step.entregado':'Delivered / picked up',
     'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
@@ -374,6 +390,7 @@ const I18N = {
     'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
+    'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
     'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
@@ -396,6 +413,11 @@ const I18N = {
     'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.', 'hint.cierrePedidos':'Per a aquesta franja, l\'última comanda possible és a les %s.', 'error.cierrePedidos':'Ja no s\'accepten comandes per a aquesta franja (l\'última possible era a les %s). Si us plau tria una altra hora.',
     'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
     'success.otra':'Fer una altra sol·licitud', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
+    'success.trackOrder':'Seguir la meva comanda',
+    'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
+    'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
+    'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
+    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo':'Llesta','track.step.entregado':'Lliurada / recollida',
     'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
@@ -484,6 +506,13 @@ function isValidEmail(v){
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+// Identificador único para poder seguir el estado del pedido después de
+// enviarlo (ver trackOrderStatus) — antes solo se generaba dentro de
+// payWithCard, así que un pedido pagado en efectivo nunca tenía uno.
+function genClientRef(){
+  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 // Resalta un campo inválido tras un intento de envío fallido y hace scroll
 // hasta él — antes el único indicio de qué campo fallaba era un alert()
 // genérico ("completa los campos obligatorios") sin decir cuál.
@@ -550,6 +579,19 @@ function getTableIdFromUrl(){
   return null;
 }
 
+// Token de seguimiento de un pedido concreto (?track=xxx), generado por el
+// propio cliente al enviarlo (ver genClientRef) — con esto puede volver más
+// tarde a esta misma URL y ver en qué punto va su pedido, sin necesidad de
+// llamar al restaurante para preguntar.
+function getTrackTokenFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('track');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
 // Aviso no bloqueante (sustituye a alert() nativo) para errores que ocurren
 // tras una acción del cliente (p.ej. fallo de pago) sin perder lo que había
 // escrito en el formulario.
@@ -581,6 +623,7 @@ function init(){
   publicId = getPublicIdFromUrl();
   const slug = getSlugFromUrl();
   tableIdFromUrl = getTableIdFromUrl();
+  trackToken = getTrackTokenFromUrl();
   if(!publicId && !slug){ showError('error.enlace'); return; }
 
   // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
@@ -807,6 +850,12 @@ function renderApp(){
     renderNpsSurvey();
     return;
   }
+  // Seguimiento de un pedido ya enviado (?track=token): pantalla aparte,
+  // con su propio listener en vivo — no pasa por las pestañas normales.
+  if(trackToken){
+    renderOrderTrackingView();
+    return;
+  }
   const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
   const tabs = [];
   if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? t('tab.mesa.qr') : t('tab.mesa')});
@@ -823,6 +872,7 @@ function renderApp(){
     currentTab = (tableIdFromUrl && tabs.some(t=>t.id==='mesa')) ? 'mesa' : tabs[0].id;
   }
   cart = [];
+  cartTipPct = 0; cartTipCustom = 0;
 
   document.getElementById('app').innerHTML = `
     <div class="tabs" role="tablist">
@@ -842,6 +892,7 @@ function setTab(tab){
   if(cart.length && !confirm(t('confirm.loseCart'))) return;
   currentTab = tab;
   cart = [];
+  cartTipPct = 0; cartTipCustom = 0;
   renderApp();
 }
 
@@ -1632,6 +1683,36 @@ function changeCartQty(recipeId, sectionId, delta, name, price){
   renderCartSummary();
 }
 
+// Importe de propina a partir del % elegido (o el importe fijo si se
+// escribió uno "otro importe") sobre el subtotal de platos — nunca sobre
+// el gasto de envío, igual que se calcularía a mano.
+function computeTipAmount(subtotal){
+  if(cartTipPct === 'custom') return Math.max(0, cartTipCustom || 0);
+  return Math.round(subtotal * (cartTipPct||0) / 100 * 100) / 100;
+}
+function setTip(pct){
+  cartTipPct = pct;
+  cartTipCustom = 0;
+  renderCartSummary();
+}
+function setTipCustom(val){
+  cartTipPct = 'custom';
+  cartTipCustom = Math.max(0, parseFloat(val) || 0);
+  renderCartSummary();
+}
+function tipSelectorHtml(){
+  const opts = [0, 5, 10, 15];
+  return `
+    <div class="field" style="margin-top:14px;margin-bottom:0">
+      <label>${t('cart.tip.label')}</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${opts.map(pct => `<button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct===pct?'background:var(--ink);color:#fff':''}" onclick="setTip(${pct})">${pct===0?t('cart.tip.none'):pct+'%'}</button>`).join('')}
+        <button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct==='custom'?'background:var(--ink);color:#fff':''}" onclick="document.getElementById('tip-custom-input').focus()">${t('cart.tip.other')}</button>
+      </div>
+      ${cartTipPct==='custom' ? `<input type="number" id="tip-custom-input" min="0" step="0.5" value="${cartTipCustom||''}" placeholder="${t('cart.tip.otherPlaceholder')}" style="margin-top:8px" oninput="setTipCustom(this.value)">` : ''}
+    </div>
+  `;
+}
 function renderCartSummary(){
   const box = document.getElementById('cart-summary');
   if(!box) return;
@@ -1644,7 +1725,8 @@ function renderCartSummary(){
   const p = (DB.business||{}).pedidos || {};
   const deliveryFee = currentTab === 'delivery' ? (p.deliveryFee || 0) : 0;
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
-  const total = subtotal + deliveryFee;
+  const tip = computeTipAmount(subtotal);
+  const total = subtotal + deliveryFee + tip;
   const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
   const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
   if(submitBtn) submitBtn.disabled = bajoMinimo;
@@ -1652,9 +1734,11 @@ function renderCartSummary(){
     <h2>${t('cart.title')}</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
     ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
+    ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
+    ${tipSelectorHtml()}
   `;
 }
 
@@ -1791,7 +1875,8 @@ async function submitOrder(){
   }
 
   const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
-  const total = subtotal + deliveryFee;
+  const tip = computeTipAmount(subtotal);
+  const total = subtotal + deliveryFee + tip;
 
   // Método de pago elegido entre las opciones que el negocio acepta
   // (efectivo / tarjeta al recibir / TPV virtual). Si es DOMICILIO y elige
@@ -1818,9 +1903,14 @@ async function submitOrder(){
   const req = {
     type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
     clienteNombre, clienteTelefono, clienteEmail, clienteDireccion, codigoPostal, notas, date, time,
-    costeEnvio: deliveryFee,
-    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
-    createdAt: new Date().toISOString()
+    costeEnvio: deliveryFee, propina: tip,
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
+    createdAt: new Date().toISOString(),
+    // Token para poder seguir el estado del pedido después de enviarlo (ver
+    // trackOrderStatus más abajo) — antes solo se generaba si se pagaba con
+    // tarjeta (dentro de payWithCard), así que un pedido pagado en efectivo
+    // no tenía ninguna forma de que el cliente comprobara su estado.
+    clientRef: genClientRef()
   };
   if(pendienteVerificarZona) req.pendienteVerificarZona = true;
   if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
@@ -1852,7 +1942,7 @@ async function submitOrder(){
    3) Cuando el banco confirme el pago, el Worker avisará automáticamente
       al restaurante (evento pago_confirmado). */
 function payWithCard(req, amount, description){
-  const clientRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const clientRef = req.clientRef || genClientRef();
   req.clientRef = clientRef;
 
   const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
@@ -1971,12 +2061,14 @@ function submitMesaOrder(){
 
   const clienteNombre = document.getElementById('m-name').value.trim();
   const notas = document.getElementById('m-notes').value.trim();
+  const subtotalMesa = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const tipMesa = computeTipAmount(subtotalMesa);
 
   const req = {
     type:'pedido', tipo:'mesa', tableId,
-    clienteNombre, notas,
+    clienteNombre, notas, propina: tipMesa,
     items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
-    total: cart.reduce((s,l)=>s+l.price*l.qty,0),
+    total: subtotalMesa + tipMesa,
     createdAt: new Date().toISOString()
   };
   const submitBtn = document.getElementById('o-submit');
@@ -1988,12 +2080,18 @@ function submitMesaOrder(){
 function sendRequest(req, successMsg){
   db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
     const phone = (DB.business||{}).phone;
+    // Solo los pedidos (para llevar/delivery/mesa) llevan seguimiento — una
+    // reserva no tiene un "estado de preparación" que seguir del mismo modo.
+    const trackUrl = (req.type === 'pedido' && req.clientRef)
+      ? location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&track=' + encodeURIComponent(req.clientRef)
+      : null;
     document.getElementById('app').innerHTML = `
       <div class="success">
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
         ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
-        <button class="btn" style="margin-top:16px" onclick="location.reload()">${t('success.otra')}</button>
+        ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t('success.trackOrder')}</a>` : ''}
+        <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t('success.otra')}</button>
       </div>
     `;
   }).catch(e => {
@@ -2002,6 +2100,69 @@ function sendRequest(req, successMsg){
     submittingRequest = false;
     setBtnLoading(req.type === 'reserva' ? 'r-submit' : 'o-submit', false);
   });
+}
+
+/* ============ SEGUIMIENTO DE PEDIDO (?track=token) ============
+   Pantalla aparte con su propio listener en vivo sobre
+   orderStatus/{token} (ver syncOrderStatusForPublic en la app principal):
+   el cliente puede volver a este enlace en cualquier momento y ver en qué
+   punto va su pedido sin tener que llamar a preguntar. */
+const TRACK_STEPS = ['pendiente','aceptado','preparando','listo','entregado'];
+function renderOrderTrackingView(){
+  const app = document.getElementById('app');
+  if(trackListenerAttached) return;
+  trackListenerAttached = true;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('track.loading')}</div>`;
+  db.ref('gastrogoan/public/' + publicId + '/orderStatus/' + trackToken).on('value', snap => {
+    renderTrackStatus(snap.val());
+  }, () => {
+    renderTrackStatus(null);
+  });
+}
+function renderTrackStatus(data){
+  const app = document.getElementById('app');
+  if(!data){
+    app.innerHTML = `
+      <div class="error-box">
+        <div class="icon">🔎</div>
+        <h2>${t('track.notFound.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('track.notFound.msg')}</p>
+      </div>`;
+    return;
+  }
+  const status = data.status || 'pendiente';
+  if(status === 'rechazado'){
+    const phone = (DB.business||{}).phone;
+    app.innerHTML = `
+      <div class="error-box">
+        <div class="icon">⚠️</div>
+        <h2>${t('track.rejected.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('track.rejected.msg')}${phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : ''}</p>
+      </div>`;
+    return;
+  }
+  const idx = Math.max(0, TRACK_STEPS.indexOf(status));
+  const steps = [
+    {key:'pendiente', icon:'📥', label:t('track.step.pendiente')},
+    {key:'aceptado', icon:'✅', label:t('track.step.aceptado')},
+    {key:'preparando', icon:'👨‍🍳', label:t('track.step.preparando')},
+    {key:'listo', icon:'🍽️', label:t('track.step.listo')},
+    {key:'entregado', icon:'🎉', label:t('track.step.entregado')},
+  ];
+  app.innerHTML = `
+    <div class="card fade-in-play">
+      <h2>${t('track.title')}</h2>
+      <div style="margin-top:14px">
+        ${steps.map((s,i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);${i<=idx?'':'opacity:.35'}">
+            <div style="font-size:22px;line-height:1">${s.icon}</div>
+            <div style="font-weight:${i===idx?'700':'500'};font-size:14px;flex:1">${s.label}</div>
+            ${i===idx ? `<div class="mono" style="font-size:10.5px;color:var(--olive);text-transform:uppercase;letter-spacing:.06em">${t('track.current')}</div>` : (i<idx ? `<div style="color:var(--olive)">✓</div>` : '')}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 init();

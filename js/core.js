@@ -2399,12 +2399,18 @@ function initPublicRequestsListener(){
         let order = table ? DB.tpvOrders.find(o => o.tableId === table.id && o.status === 'abierta') : null;
         if(order){
           items.forEach(it => order.items.push(it));
+          // Varios autopedidos seguidos desde la misma mesa: la propina de
+          // cada uno se suma, igual que ya se hace al unir dos comandas
+          // (js/tpv.js, unión de mesas) — no se sustituye, para no perder
+          // la propina de un pedido anterior si llega otro después.
+          if(typeof req.propina === 'number' && req.propina > 0) order.propina = (order.propina||0) + req.propina;
         }else{
           const matchedClientMesa = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
           DB.tpvOrders.push({
             id: genId(), tableId: req.tableId || null, tipo:'mesa', pax: req.pax || 1,
             clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
-            clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null
+            clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null,
+            propina: typeof req.propina === 'number' ? req.propina : 0
           });
         }
       }else if(req.type === 'pedido'){
@@ -2417,7 +2423,7 @@ function initPublicRequestsListener(){
           clienteDireccion: req.clienteDireccion || '', clienteCodigoPostal: req.codigoPostal || '',
           notas: req.notas || '',
           date: req.date || '', time: req.time || '',
-          costeEnvio: req.costeEnvio || 0,
+          costeEnvio: req.costeEnvio || 0, propina: typeof req.propina === 'number' ? req.propina : 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
           clientRef: req.clientRef || null, clientId: matchedClientPedido ? matchedClientPedido.id : null,
           pendienteVerificarZona: !!req.pendienteVerificarZona,
@@ -2473,6 +2479,43 @@ function buildSucursalesList(){
     }catch(e){}
   }
   return list.length > 1 ? list : null;
+}
+
+// Resume el estado de un pedido para enseñárselo al cliente en la web
+// pública (pantalla de seguimiento) — un resumen sencillo de 5 estados a
+// partir de campos que ya existen (order.status, estado por línea,
+// order.cerrada, entregaEstado), sin añadir ningún estado nuevo a
+// DB.tpvOrders: "pendiente" (aún sin aceptar) → "aceptado" (aceptado pero
+// nada marchado todavía, caso raro pero posible) → "preparando" (algo en
+// cocina/preparando) → "listo" (todo entregado por cocina, falta
+// recoger/repartir) → "entregado" (cobrado o marcado como entregado en
+// reparto). "rechazado" se pasa aparte, explícitamente, porque en ese
+// momento el pedido ya se ha borrado de DB.tpvOrders.
+function computePublicOrderStatus(order){
+  if(order.status === 'pendiente-online') return 'pendiente';
+  if(order.status === 'pagada' || order.entregaEstado === 'entregado') return 'entregado';
+  const food = (order.items||[]).filter(l => !l.bebida && !l.isShipping);
+  if(food.length && food.every(l => l.estado === 'entregado')) return 'listo';
+  if(food.some(l => l.estado === 'preparando' || l.estado === 'cocina')) return 'preparando';
+  return 'aceptado';
+}
+// Publica el estado de UN pedido concreto (identificado por su clientRef,
+// el token que la web pública generó al enviarlo) bajo su propia ruta,
+// separada del resto del espejo público — así el cliente puede consultarlo
+// sin tener que descargarse todo el negocio, y sin que el token identifique
+// nada más que ese pedido (no lleva teléfono/dirección/nombre).
+function syncOrderStatusForPublic(order, forcedStatus){
+  if(!order || !order.clientRef) return;
+  if(typeof firebase === 'undefined') return;
+  const publicId = getPublicId();
+  if(!publicId) return;
+  const status = forcedStatus || computePublicOrderStatus(order);
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set({
+      status, updatedAt: new Date().toISOString()
+    }).catch(()=>{});
+  }).catch(()=>{});
 }
 
 // Promos con descuento activas HOY (día/franja horaria), saneadas para la
@@ -2544,6 +2587,20 @@ function syncPublicMirror(){
       fechasPedidosATocar.forEach(fecha => {
         app.database().ref('gastrogoan/public/' + publicId + '/pedidosHold/' + fecha).remove().catch(() => {});
       });
+      // orderStatus (seguimiento público de pedidos, ver syncOrderStatusForPublic)
+      // se limpia de entradas de hace más de 24h en cada sync — best-effort, no
+      // bloquea nada si falla. Sin esto, la lista crecería para siempre con
+      // pedidos ya entregados/rechazados de hace semanas.
+      app.database().ref('gastrogoan/public/' + publicId + '/orderStatus').once('value').then(snap => {
+        const val = snap.val() || {};
+        const cutoff = Date.now() - 24*60*60*1000;
+        Object.keys(val).forEach(token => {
+          const updatedAt = Date.parse(val[token] && val[token].updatedAt);
+          if(!updatedAt || updatedAt < cutoff){
+            app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + token).remove().catch(()=>{});
+          }
+        });
+      }).catch(()=>{});
     }).catch(e => console.error('Error publicando el espejo público', e));
   }catch(e){
     console.error('Error publicando el espejo público', e);

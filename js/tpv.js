@@ -47,6 +47,7 @@ function markRepartoEntregado(orderId){
   order.entregadoAt = new Date().toISOString();
   logAudit('edit', t('audit.orderDelivered').replace('${name}', order.clienteNombre||'?'));
   saveDB();
+  if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   refreshRepartoUI(orderId);
   showToast(t('msg.deliveryMarkedDelivered'));
 }
@@ -1039,11 +1040,13 @@ function acceptOnlineOrder(orderId, auto){
     order.cerrada = false;
     if(esRepartoPropio(order)) autoAssignRepartidor(order);
     saveDB();
+    if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
     if(!auto){ renderTPV(); showToast(anyMismatch ? t('msg.orderAcceptedWithMismatch') : t('msg.orderAccepted')); }
     return true;
   }
   order.status = 'abierta';
   saveDB();
+  if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   if(!auto){ renderTPV(); showToast(t('msg.orderAccepted')); }
   return true;
 }
@@ -1053,6 +1056,9 @@ function rejectOnlineOrder(orderId){
   if(!order) return;
   requestBusinessPinAction(t('title.rejectOrder'), t('msg.confirmRejectOrder'), () => {
     if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
+    // Se avisa ANTES de mover a la papelera/borrar: una vez borrado ya no
+    // queda order.clientRef al que asociar el aviso.
+    if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'));
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
@@ -1076,6 +1082,7 @@ function cancelAcceptedOnlineOrder(orderId){
     // "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
     // contador de raciones/ingredientes queda corto para siempre.
     restockForVoidedItems(order.items);
+    if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'));
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
@@ -2201,6 +2208,7 @@ function setLineEstado(orderId, idx, estado){
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
+  if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   const active = document.querySelector('.view.active');
   if(active && active.id === 'view-comandascocina') renderComandasCocina();
   else if(active && active.id === 'view-tpv') renderTPV();
@@ -3411,6 +3419,7 @@ function finalizeCharge(orderId){
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
   saveDB();
+  if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   renderTPV();
   openTicketDeliveryModal(sale.id);
 }
