@@ -19,7 +19,7 @@
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response')"
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar')"
             }
           },
           "aforoHold": {
@@ -52,6 +52,13 @@
             }
           },
           "orderStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "reservationStatus": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$token": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",

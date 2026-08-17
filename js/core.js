@@ -2379,14 +2379,33 @@ function initPublicRequestsListener(){
           // sin pasar por la misma validación que saveClient (que sí bloquea con
           // confirmación un teléfono con menos de 9 dígitos): se marca aquí para
           // que el personal lo vea al gestionar la solicitud, no se descubre a ciegas.
-          phoneOdd: !!(req.clientPhone && req.clientPhone.replace(/[^\d]/g,'').length < 9)
+          phoneOdd: !!(req.clientPhone && req.clientPhone.replace(/[^\d]/g,'').length < 9),
+          // Token que la propia web pública generó al enviar la reserva —
+          // permite que el cliente vuelva más tarde a consultarla/cancelarla
+          // sin tener que llamar por teléfono (ver syncReservationStatusForPublic
+          // y el tipo 'reserva_cancelar' más abajo en esta misma función).
+          publicToken: req.resToken || null
         };
         DB.reservations.push(newReservation);
+        if(newReservation.publicToken) syncReservationStatusForPublic(newReservation);
         if(confirmedTableId && typeof sendReservationConfirmationEmail === 'function'){
           const confirmedTable = DB.tables.find(t => t.id === confirmedTableId);
           sendReservationConfirmationEmail({...newReservation, tableName: confirmedTable ? confirmedTable.name : ''}).catch(()=>{});
         }
         notifyNewRequest = true;
+      }else if(req.type === 'reserva_cancelar'){
+        // Cancelación pedida por el propio cliente desde "Gestionar mi
+        // reserva" en la web pública — se busca por el token, NUNCA por id
+        // directo (el cliente no conoce ni debería poder usar el id interno),
+        // y solo se cancela si de verdad sigue activa (evita reabrir/duplicar
+        // efectos si el mismo request llegara dos veces).
+        const target = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.token);
+        if(target && target.status !== 'cancelada'){
+          target.status = 'cancelada';
+          if(typeof sendReservationCancellationEmail === 'function') sendReservationCancellationEmail(target).catch(()=>{});
+          syncReservationStatusForPublic(target);
+          logAudit('edit', t('audit.reservationCancelledByClient').replace('${name}', target.clientName||'?'));
+        }
       }else if(req.type === 'nps_response'){
         if(!DB.npsScores) DB.npsScores = [];
         DB.npsScores.push({id: genId(), score: req.score, comment: req.comment || '', createdAt: new Date().toISOString()});
@@ -2529,6 +2548,27 @@ function syncOrderStatusForPublic(order, forcedStatus){
     if(!app) return;
     app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set({
       status, updatedAt: new Date().toISOString()
+    }).catch(()=>{});
+  }).catch(()=>{});
+}
+
+// Publica el estado de UNA reserva concreta (identificada por su
+// publicToken) para que el cliente pueda consultarla/cancelarla desde
+// "Gestionar mi reserva" en la web pública — mismo patrón exacto que
+// syncOrderStatusForPublic, en su propia ruta separada (reservationStatus,
+// no orderStatus) para no mezclar los dos seguimientos. Se publican solo
+// los datos que hacen falta para esa pantalla, no la reserva entera (nunca
+// el teléfono/email/notas de otra reserva, ni el id interno).
+function syncReservationStatusForPublic(reservation){
+  if(!reservation || !reservation.publicToken) return;
+  if(typeof firebase === 'undefined') return;
+  const publicId = getPublicId();
+  if(!publicId) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/public/' + publicId + '/reservationStatus/' + reservation.publicToken).set({
+      status: reservation.status, date: reservation.date, time: reservation.time, people: reservation.people,
+      updatedAt: new Date().toISOString()
     }).catch(()=>{});
   }).catch(()=>{});
 }

@@ -2240,6 +2240,7 @@ function setReservationStatus(id, status){
   const wasCancelled = r.status === 'cancelada';
   r.status = status;
   saveDB();
+  if(r.publicToken && typeof syncReservationStatusForPublic === 'function') syncReservationStatusForPublic(r);
   renderReservas();
   showToast(status==='confirmada' ? t('msg.reservationConfirmed') : status==='cancelada' ? t('msg.reservationCancelled') : t('msg.reservationRejected'));
   // El aviso al cliente solo tiene sentido la primera vez que pasa a
