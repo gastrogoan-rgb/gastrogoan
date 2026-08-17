@@ -80,8 +80,44 @@
     background:var(--red-l);color:var(--red);border:1px solid var(--red);
     padding:14px 16px;font-size:14px;font-weight:600;display:flex;align-items:flex-start;gap:10px;
     box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:480px;margin:0 auto;
+    animation:fade-up .25s ease;
   }
-  #inline-alert button{background:none;border:none;color:var(--red);font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0;margin-left:auto;}
+  #inline-alert button{background:none;border:none;color:var(--red);font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:6px;margin:-6px -6px -6px auto;min-width:32px;min-height:32px;}
+  /* Modal genérico (aviso de privacidad y cualquier otro texto largo): antes
+     solo existía un alert() nativo del navegador para esto, sin scroll
+     cómodo ni formato ni forma de estilizarlo con la marca del negocio. */
+  #modal-overlay{
+    position:fixed;inset:0;z-index:1000;background:rgba(28,26,23,.55);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #modal-overlay.active{opacity:1;pointer-events:auto}
+  #modal-box{
+    background:var(--surface);border:1px solid var(--border);max-width:480px;width:100%;
+    max-height:calc(100vh - 32px);overflow-y:auto;padding:22px;position:relative;
+  }
+  #modal-box h2{padding-right:28px}
+  #modal-box .modal-close{
+    position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;
+    font-weight:700;cursor:pointer;color:var(--muted);line-height:1;padding:6px;min-width:32px;min-height:32px;
+  }
+  #modal-box p{font-size:13.5px;line-height:1.65;color:var(--body)}
+  /* Campo marcado como inválido tras un intento de envío fallido — antes el
+     único indicio de qué campo fallaba era un alert() genérico sin decir
+     cuál; ahora el campo en sí se resalta y se hace scroll hasta él. */
+  .field.invalid input, .field.invalid select, .field.invalid textarea{
+    border-color:var(--red);background:var(--red-l);
+  }
+  .field.invalid label{color:var(--red)}
+  .btn .btn-spinner{
+    width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+    border-radius:50%;animation:spin .7s linear infinite;
+  }
+  .btn:not(.btn-primary) .btn-spinner{border-color:var(--border);border-top-color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){
+    #inline-alert{animation:none}
+    .btn-spinner{animation:none}
+  }
   h2{font-size:17px;margin:0 0 10px;font-weight:700;letter-spacing:-.01em;}
   h3{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;margin:16px 0 8px;}
   .menu-item{
@@ -200,7 +236,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
     'privacy.consentLabel':'Acepto que mis datos se usen para gestionar mi reserva/pedido.',
-    'privacy.linkText':'Ver más',
+    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
@@ -258,7 +294,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
     'privacy.consentLabel':'I agree that my data will be used to manage my reservation/order.',
-    'privacy.linkText':'Read more',
+    'privacy.linkText':'Read more', 'common.close':'Close', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
@@ -316,7 +352,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
     'privacy.consentLabel':'Accepto que les meves dades s\'usin per gestionar la meva reserva/comanda.',
-    'privacy.linkText':'Veure més',
+    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
@@ -413,7 +449,74 @@ function todayStr(){
 // dato de salud) sin informar de nada.
 function showPrivacyNotice(){
   const bizName = (DB && DB.business && DB.business.name) || t('reserva.title');
-  alert(t('privacy.noticeText').replace('${business}', bizName));
+  const fullText = t('privacy.noticeText').replace('${business}', bizName);
+  const [title, ...rest] = fullText.split('\n\n');
+  openInfoModal(title, rest.join('\n\n'));
+}
+
+// Modal genérico para textos largos (antes solo había alert() nativo, sin
+// scroll cómodo ni estilo propio) — se crea una sola vez y se reutiliza.
+function ensureModalChrome(){
+  if(document.getElementById('modal-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-overlay';
+  overlay.innerHTML = `<div id="modal-box" role="dialog" aria-modal="true"></div>`;
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeInfoModal(); });
+  document.body.appendChild(overlay);
+}
+function openInfoModal(title, bodyText){
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(title)}</h2>
+    <p style="white-space:pre-line">${escapeHtml(bodyText)}</p>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeInfoModal(){
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay) overlay.classList.remove('active');
+}
+
+// Un único regex de email compartido por los dos formularios (reserva y
+// pedido) — antes estaba duplicado literalmente en los dos sitios.
+function isValidEmail(v){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+// Resalta un campo inválido tras un intento de envío fallido y hace scroll
+// hasta él — antes el único indicio de qué campo fallaba era un alert()
+// genérico ("completa los campos obligatorios") sin decir cuál.
+function markFieldInvalid(fieldId){
+  const input = document.getElementById(fieldId);
+  if(!input) return;
+  const field = input.closest('.field') || input;
+  field.classList.add('invalid');
+  if(!markFieldInvalid._scrolled){
+    field.scrollIntoView({behavior:'smooth', block:'center'});
+    input.focus({preventScroll:true});
+    markFieldInvalid._scrolled = true;
+  }
+}
+function setBtnLoading(btnId, loading){
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  if(loading){
+    if(!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+    btn.innerHTML = `<span class="btn-spinner"></span> ${escapeHtml(t('common.sending')||'')}`;
+    btn.disabled = true;
+  } else if(btn.dataset.origHtml){
+    btn.innerHTML = btn.dataset.origHtml;
+    btn.disabled = false;
+  }
+}
+function clearFieldInvalid(fieldIds){
+  markFieldInvalid._scrolled = false;
+  fieldIds.forEach(id => {
+    const input = document.getElementById(id);
+    if(!input) return;
+    (input.closest('.field') || input).classList.remove('invalid');
+  });
 }
 
 function getPublicIdFromUrl(){
@@ -455,7 +558,8 @@ function showInlineError(msg){
   if(box) box.remove();
   box = document.createElement('div');
   box.id = 'inline-alert';
-  box.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()">&times;</button>`;
+  box.setAttribute('role', 'alert');
+  box.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>`;
   document.body.appendChild(box);
   clearTimeout(showInlineError._t);
   showInlineError._t = setTimeout(()=>{ box.remove(); }, 8000);
@@ -468,7 +572,7 @@ function showError(key){
     <div class="error-box">
       <div class="icon">⚠️</div>
       <h2>${escapeHtml(t(key))}</h2>
-      <p style="font-size:13px;color:#888">${t('error.enlace.sub')}</p>
+      <p style="font-size:13px;color:var(--muted)">${t('error.enlace.sub')}</p>
     </div>
   `;
 }
@@ -493,7 +597,7 @@ function init(){
       <div class="success">
         <div class="icon">✅</div>
         <h2>${t('pago.ok.title')}</h2>
-        <p style="font-size:13px;color:#888">${t('pago.ok.msg')}</p>
+        <p style="font-size:13px;color:var(--muted)">${t('pago.ok.msg')}</p>
         <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
       </div>
     `;
@@ -504,7 +608,7 @@ function init(){
       <div class="error-box">
         <div class="icon">⚠️</div>
         <h2>${t('pago.ko.title')}</h2>
-        <p style="font-size:13px;color:#888">${t('pago.ko.msg')}</p>
+        <p style="font-size:13px;color:var(--muted)">${t('pago.ko.msg')}</p>
         <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
       </div>
     `;
@@ -721,15 +825,21 @@ function renderApp(){
   cart = [];
 
   document.getElementById('app').innerHTML = `
-    <div class="tabs">
-      ${tabs.map(t => `<button class="tab-btn ${currentTab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</button>`).join('')}
+    <div class="tabs" role="tablist">
+      ${tabs.map(t => `<button class="tab-btn ${currentTab===t.id?'active':''}" role="tab" aria-selected="${currentTab===t.id}" onclick="setTab('${t.id}')">${t.label}</button>`).join('')}
     </div>
-    <div id="tab-content"></div>
+    <div id="tab-content" role="tabpanel"></div>
   `;
   renderTabContent();
 }
 
 function setTab(tab){
+  if(tab === currentTab) return;
+  // Cambiar de pestaña vacía el carrito (son pedidos distintos: para llevar,
+  // delivery, en mesa...) — antes se perdía sin más ni un aviso, así que un
+  // toque sin querer en otra pestaña tiraba todo lo que el cliente llevaba
+  // añadido sin poder deshacerlo.
+  if(cart.length && !confirm(t('confirm.loseCart'))) return;
   currentTab = tab;
   cart = [];
   renderApp();
@@ -955,8 +1065,8 @@ function nombreDia(dateStr){
 function horarioHintHtml(dateStr){
   const turnos = getTurnosForDate(dateStr);
   if(turnos === null) return '';
-  if(!turnos.length) return `<p style="font-size:13px;color:#c0392b;margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}</p>`;
-  return `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.horario').replace('%s', nombreDia(dateStr).toLowerCase()).replace('%s', formatTurnos(turnos))}</p>`;
+  if(!turnos.length) return `<p style="font-size:13px;color:var(--red);margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}</p>`;
+  return `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.horario').replace('%s', nombreDia(dateStr).toLowerCase()).replace('%s', formatTurnos(turnos))}</p>`;
 }
 
 function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
@@ -997,7 +1107,7 @@ function applyLeadTime(dateInputId, timeInputId, hintBoxId){
   if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
   if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
 
-  const hint = `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.antelacion').replace('%s', minTime).replace('%d', leadTimeMin)}</p>`;
+  const hint = `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.antelacion').replace('%s', minTime).replace('%d', leadTimeMin)}</p>`;
   hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
 }
 
@@ -1052,11 +1162,11 @@ function renderNpsSurvey(){
   document.getElementById('app').innerHTML = `
     <div class="card">
       <h2>${t('nps.title').replace('${business}', escapeHtml(bizName))}</h2>
-      <p style="font-size:13px;color:#888">${t('nps.subtitle')}</p>
+      <p style="font-size:13px;color:var(--muted)">${t('nps.subtitle')}</p>
       <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:16px 0" id="nps-scale">
         ${Array.from({length:11},(_, n) => `<button type="button" class="btn" style="min-width:38px;padding:8px 0" data-score="${n}" onclick="selectNpsScore(${n})">${n}</button>`).join('')}
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:-10px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-10px;margin-bottom:14px">
         <span>${t('nps.low')}</span><span>${t('nps.high')}</span>
       </div>
       <div class="field">
@@ -1075,7 +1185,7 @@ function selectNpsScore(n){
   });
 }
 function submitNps(){
-  if(npsSelectedScore === null){ alert(t('nps.needScore')); return; }
+  if(npsSelectedScore === null){ showInlineError(t('nps.needScore')); return; }
   const comment = document.getElementById('nps-comment').value.trim();
   const req = {
     type: 'nps_response', score: npsSelectedScore, comment,
@@ -1102,7 +1212,7 @@ function renderReservaForm(){
       <div class="field">
         <label>${t('email.reserva.label')}</label>
         <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" required>
-        <small style="color:#888">${t('email.reserva.hint')}</small>
+        <small style="color:var(--muted)">${t('email.reserva.hint')}</small>
       </div>
       <div class="field-row">
         <div class="field">
@@ -1168,6 +1278,7 @@ function reservaDepositAmount(){
 function submitReserva(){
   if(submittingRequest) return;
   submittingRequest = true;
+  setBtnLoading('r-submit', true);
   const clientName = document.getElementById('r-name').value.trim();
   const clientPhone = document.getElementById('r-phone').value.trim();
   const clientEmail = document.getElementById('r-email').value.trim();
@@ -1177,34 +1288,46 @@ function submitReserva(){
   const notes = document.getElementById('r-notes').value.trim();
   const referral = document.getElementById('r-referral')?.value || '';
 
+  clearFieldInvalid(['r-name','r-phone','r-email','r-date','r-time']);
   if(!clientName || !clientPhone || !clientEmail || !date || !time){
-    alert(t('error.campos.reserva'));
+    if(!clientName) markFieldInvalid('r-name');
+    if(!clientPhone) markFieldInvalid('r-phone');
+    if(!clientEmail) markFieldInvalid('r-email');
+    if(!date) markFieldInvalid('r-date');
+    if(!time) markFieldInvalid('r-time');
+    showInlineError(t('error.campos.reserva'));
     submittingRequest = false;
+    setBtnLoading('r-submit', false);
     return;
   }
   // Validación básica de formato: sin esto, un email mal escrito por prisa
   // ("laura@gmial.con") pasaría como válido y la reserva se auto-confirmaría
   // sin que el cliente llegase a enterarse nunca por ningún sitio.
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)){
-    alert(t('error.email.invalido'));
+  if(!isValidEmail(clientEmail)){
+    markFieldInvalid('r-email');
+    showInlineError(t('error.email.invalido'));
     submittingRequest = false;
+    setBtnLoading('r-submit', false);
     return;
   }
   if(!document.getElementById('r-privacy-consent').checked){
-    alert(t('privacy.mustAccept'));
+    showInlineError(t('privacy.mustAccept'));
     submittingRequest = false;
+    setBtnLoading('r-submit', false);
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
-    alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    showInlineError(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
     submittingRequest = false;
+    setBtnLoading('r-submit', false);
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
-    alert(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    showInlineError(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     submittingRequest = false;
+    setBtnLoading('r-submit', false);
     return;
   }
 
@@ -1213,8 +1336,9 @@ function submitReserva(){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
-      alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      showInlineError(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
       submittingRequest = false;
+      setBtnLoading('r-submit', false);
       return;
     }
   }
@@ -1240,13 +1364,15 @@ function submitReserva(){
     if(!matchedTable){
       // Sí existe una mesa de ese tamaño, pero está ocupada a esa hora —
       // esto sí es "no hay disponibilidad" de verdad, se dice en el momento.
-      alert(t('error.mesa.nodisponible'));
+      showInlineError(t('error.mesa.nodisponible'));
       submittingRequest = false;
+      setBtnLoading('r-submit', false);
       return;
     }
     if(aforoInfo && people > aforoInfo.disponible){
-      alert(t('error.mesa.nodisponible'));
+      showInlineError(t('error.mesa.nodisponible'));
       submittingRequest = false;
+      setBtnLoading('r-submit', false);
       return;
     }
   }
@@ -1283,7 +1409,8 @@ function submitReserva(){
         if(!aforoResult.committed){
           if(btn) btn.disabled = false;
           submittingRequest = false;
-          alert(t('error.mesa.nodisponible'));
+          setBtnLoading('r-submit', false);
+          showInlineError(t('error.mesa.nodisponible'));
           return;
         }
       }
@@ -1292,7 +1419,8 @@ function submitReserva(){
         if(aforoInfo) releaseAforoHold(date, aforoInfo.turnoIdx, people).catch(()=>{});
         if(btn) btn.disabled = false;
         submittingRequest = false;
-        alert(t('error.mesa.nodisponible'));
+        setBtnLoading('r-submit', false);
+        showInlineError(t('error.mesa.nodisponible'));
         return;
       }
       sendRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
@@ -1323,13 +1451,13 @@ function buildMenuHtml(cartas){
         return `
         <div class="menu-item">
           <div>
-            <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive,#5c6b3c);border-radius:4px;padding:1px 6px;margin-left:4px">-${promo.discountPct}%</span>` : ''}</div>
-            <div class="price">${promo ? `<span style="text-decoration:line-through;color:#999;font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}</div>
+            <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
+            <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}</div>
           </div>
-          <div class="qty-ctl">
-            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)">−</button>
-            <span id="qty-${p.id}">${getCartQty(p.id)}</span>
-            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${finalPrice})">+</button>
+          <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
+            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
+            <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
+            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
           </div>
         </div>
       `;}).join('')}
@@ -1354,7 +1482,7 @@ function renderOrderForm(){
   if((DB.business||{}).pedidosOnlineActivos === false){
     box.innerHTML = `<div class="card" style="text-align:center">
       <h2>${t('error.pedidosPausados.title')}</h2>
-      <p style="font-size:13.5px;color:#888;margin-top:8px">${t('error.pedidosPausados.body')}</p>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:8px">${t('error.pedidosPausados.body')}</p>
     </div>`;
     return;
   }
@@ -1383,7 +1511,7 @@ function renderOrderForm(){
       <div class="field">
         <label>${t('email.pedido.label')}</label>
         <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}">
-        <small style="color:#888">${t('email.pedido.hint')}</small>
+        <small style="color:var(--muted)">${t('email.pedido.hint')}</small>
       </div>
       <div class="field-row">
         <div class="field">
@@ -1416,7 +1544,7 @@ function renderOrderForm(){
         <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
           <label>${t('pago.pagaConLabel')}</label>
           <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
-          <small style="color:#888">${t('pago.pagaConHint')}</small>
+          <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
         </div>
       </div>
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
@@ -1441,7 +1569,7 @@ function updateCierreHint(){
   if(!dateEl || !timeEl){ box.innerHTML = ''; return; }
   const p = (DB.business||{}).pedidos || {};
   const info = pedidosCutoffTimeForTurno(dateEl.value, timeEl.value, p);
-  box.innerHTML = info ? `<p style="font-size:13px;color:#888;margin-top:-8px">${t('hint.cierrePedidos').replace('%s', info.limite)}</p>` : '';
+  box.innerHTML = info ? `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.cierrePedidos').replace('%s', info.limite)}</p>` : '';
 }
 
 // Un único grupo de opciones con las 3 formas de pago posibles (en vez del
@@ -1465,7 +1593,7 @@ function renderPaymentMethodRadiosHtml(p){
   if(!legacyForceOnline && p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
   if(!opts.length) opts.push({value:'efectivo', label: t('pago.efectivo')}); // salvaguarda: nunca dejar el formulario sin ninguna opción
   if(opts.length === 1){
-    return `<input type="radio" name="o-pago-metodo" value="${opts[0].value}" checked style="display:none"><p style="font-size:13px;color:#888">${t('pago.metodoFijado').replace('%s', opts[0].label)}</p>`;
+    return `<input type="radio" name="o-pago-metodo" value="${opts[0].value}" checked style="display:none"><p style="font-size:13px;color:var(--muted)">${t('pago.metodoFijado').replace('%s', opts[0].label)}</p>`;
   }
   return `
     <label>${t('pago')}</label>
@@ -1524,7 +1652,7 @@ function renderCartSummary(){
     <h2>${t('cart.title')}</h2>
     ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
     ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
-    <div class="cart-total bump"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
+    <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
   `;
@@ -1548,10 +1676,11 @@ function etaHintHtml(){
 }
 
 async function submitOrder(){
-  if(!cart.length){ alert(t('error.carrito.vacio')); return; }
-  if((DB.business||{}).pedidosOnlineActivos === false){ alert(t('error.pedidosPausados.body')); return; }
+  if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
+  if((DB.business||{}).pedidosOnlineActivos === false){ showInlineError(t('error.pedidosPausados.body')); return; }
   if(submittingRequest) return;
   submittingRequest = true;
+  setBtnLoading('o-submit', true);
   const clienteNombre = document.getElementById('o-name').value.trim();
   const clienteTelefono = document.getElementById('o-phone').value.trim();
   const clienteEmail = document.getElementById('o-email').value.trim();
@@ -1564,34 +1693,47 @@ async function submitOrder(){
   const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
   const codigoPostal = zoneRestricted ? document.getElementById('o-cp').value.trim() : '';
 
+  clearFieldInvalid(['o-name','o-phone','o-date','o-time','o-address','o-cp','o-email']);
   if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
-    alert(t('error.campos'));
+    if(!clienteNombre) markFieldInvalid('o-name');
+    if(!clienteTelefono) markFieldInvalid('o-phone');
+    if(!date) markFieldInvalid('o-date');
+    if(!time) markFieldInvalid('o-time');
+    if(isDelivery && !clienteDireccion) markFieldInvalid('o-address');
+    if(zoneRestricted && !codigoPostal) markFieldInvalid('o-cp');
+    showInlineError(t('error.campos'));
     submittingRequest = false;
+    setBtnLoading('o-submit', false);
     return;
   }
-  if(clienteEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteEmail)){
-    alert(t('error.email.invalido'));
+  if(clienteEmail && !isValidEmail(clienteEmail)){
+    markFieldInvalid('o-email');
+    showInlineError(t('error.email.invalido'));
     submittingRequest = false;
+    setBtnLoading('o-submit', false);
     return;
   }
 
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const pedidoMinimo = p.pedidoMinimo || 0;
   if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
-    alert(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
+    showInlineError(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
     submittingRequest = false;
+    setBtnLoading('o-submit', false);
     return;
   }
 
   const turnos = getTurnosForDate(date);
   if(turnos !== null && !turnos.length){
-    alert(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    showInlineError(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
     submittingRequest = false;
+    setBtnLoading('o-submit', false);
     return;
   }
   if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
-    alert(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    showInlineError(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
     submittingRequest = false;
+    setBtnLoading('o-submit', false);
     return;
   }
   // Además de estar dentro del horario de apertura, la cocina puede
@@ -1601,8 +1743,9 @@ async function submitOrder(){
   if(turnos !== null && turnos.length){
     const cutoffTime = pedidosCutoffTimeForTurno(date, time, p);
     if(cutoffTime && time > cutoffTime.limite){
-      alert(t('error.cierrePedidos').replace('%s', cutoffTime.limite));
+      showInlineError(t('error.cierrePedidos').replace('%s', cutoffTime.limite));
       submittingRequest = false;
+      setBtnLoading('o-submit', false);
       return;
     }
   }
@@ -1612,8 +1755,9 @@ async function submitOrder(){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     if(time < minTime){
-      alert(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      showInlineError(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
       submittingRequest = false;
+      setBtnLoading('o-submit', false);
       return;
     }
   }
@@ -1627,8 +1771,9 @@ async function submitOrder(){
     // casi simultáneos para la misma franja.
     const result = await reservePedidoSlotAtomic(date, slot, maxPorFranja, baseline);
     if(!result.committed){
-      alert(t('error.pedidos.completo'));
+      showInlineError(t('error.pedidos.completo'));
       submittingRequest = false;
+      setBtnLoading('o-submit', false);
       return;
     }
   }
@@ -1637,8 +1782,9 @@ async function submitOrder(){
   if(zoneRestricted){
     const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
     if(!zoneCheck.ok){
-      alert(t('error.zona'));
+      showInlineError(t('error.zona'));
       submittingRequest = false;
+      setBtnLoading('o-submit', false);
       return;
     }
     pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
@@ -1661,8 +1807,9 @@ async function submitOrder(){
       const pagaConEl = document.getElementById('o-paga-con');
       pagaCon = pagaConEl ? parseFloat(pagaConEl.value) : NaN;
       if(isNaN(pagaCon) || pagaCon < total){
-        alert(t('error.pagaCon').replace('%s', fmtMoney(total)));
+        showInlineError(t('error.pagaCon').replace('%s', fmtMoney(total)));
         submittingRequest = false;
+        setBtnLoading('o-submit', false);
         return;
       }
     }
@@ -1742,9 +1889,13 @@ function payWithCard(req, amount, description){
   });
 }
 function setPaySubmitEnabled(enabled){
-  const btn = document.getElementById('o-submit');
-  if(btn) btn.disabled = !enabled;
-  if(enabled) submittingRequest = false;
+  if(enabled){
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+  }else{
+    const btn = document.getElementById('o-submit');
+    if(btn) btn.disabled = true;
+  }
 }
 
 /* ============ PEDIDO EN MESA (auto-pedido) ============ */
@@ -1766,7 +1917,7 @@ function renderMesaOrderForm(){
     <div class="card">
       <h2>${t('order.mesa.title')}</h2>
       ${currentTable
-        ? `<p style="font-size:13px;color:#888;margin-top:-6px">${t('order.mesa.info').replace('%s', escapeHtml(currentTable.name))}</p>`
+        ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">${t('order.mesa.info').replace('%s', escapeHtml(currentTable.name))}</p>`
         : tableIdFromUrl
           ? `<p style="font-size:13px;color:var(--red);margin-top:-6px">${t('order.mesa.unknown')}</p>
              <div class="field"><label>${t('order.mesa.select')}</label><input type="text" id="m-table-manual"></div>`
@@ -1796,9 +1947,10 @@ function renderMesaOrderForm(){
 }
 
 function submitMesaOrder(){
-  if(!cart.length){ alert(t('error.carrito.vacio')); return; }
+  if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
   if(submittingRequest) return;
   submittingRequest = true;
+  setBtnLoading('o-submit', true);
 
   const tables = DB.tables || [];
   let tableId = null;
@@ -1808,12 +1960,12 @@ function submitMesaOrder(){
       tableId = currentTable.id;
     }else{
       const manual = document.getElementById('m-table-manual');
-      if(!manual || !manual.value.trim()){ alert(t('error.mesa.manual')); submittingRequest = false; return; }
+      if(!manual || !manual.value.trim()){ showInlineError(t('error.mesa.manual')); submittingRequest = false; setBtnLoading('o-submit', false); return; }
       tableId = manual.value.trim();
     }
   }else{
     const sel = document.getElementById('m-table');
-    if(!sel || !sel.value){ alert(t('error.mesa.select')); submittingRequest = false; return; }
+    if(!sel || !sel.value){ showInlineError(t('error.mesa.select')); submittingRequest = false; setBtnLoading('o-submit', false); return; }
     tableId = tables.find(tb => String(tb.id) === sel.value).id;
   }
 
@@ -1840,14 +1992,15 @@ function sendRequest(req, successMsg){
       <div class="success">
         <div class="icon">✅</div>
         <h2>${escapeHtml(successMsg)}</h2>
-        ${phone ? `<p style="font-size:13px;color:#888;margin-top:8px">${t('success.callToChange').replace('%s', escapeHtml(phone))}</p>` : ''}
+        ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
         <button class="btn" style="margin-top:16px" onclick="location.reload()">${t('success.otra')}</button>
       </div>
     `;
   }).catch(e => {
     console.error(e);
-    alert(t('error.envio'));
+    showInlineError(t('error.envio'));
     submittingRequest = false;
+    setBtnLoading(req.type === 'reserva' ? 'r-submit' : 'o-submit', false);
   });
 }
 
