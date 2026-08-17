@@ -3077,6 +3077,18 @@ function getPublicClientLink(){
   return slug ? base + '?n=' + encodeURIComponent(slug) : base + '?neg=' + publicId;
 }
 
+// Enlace a "Gestionar mi reserva" (ver reservagastrogoan.html) para meter
+// en el email de confirmación — vacío si la reserva no tiene publicToken
+// (p.ej. una creada a mano desde el panel, que nunca pasó por la web
+// pública y no tiene nada que gestionar ahí). Mismo dominio/base que
+// getPublicClientLink(), con el token añadido aparte.
+function getReservationManageLink(reservation){
+  if(!reservation || !reservation.publicToken) return '';
+  const base = getPublicClientLink();
+  if(!base) return '';
+  return base + '&res=' + encodeURIComponent(reservation.publicToken);
+}
+
 // Convierte lo que escriba el dueño en un slug válido para URL: minúsculas,
 // sin acentos ni símbolos, palabras separadas por guiones.
 function slugify(str){
@@ -3680,7 +3692,11 @@ async function testEmailConfirmConfig(){
   try{
     await sendReservationConfirmationEmail({
       clientName: t('mn.emailConfirm.testClientName'), clientEmail: testTo,
-      date: todayStr(), time: '20:00', people: 2, tableName: t('mn.emailConfirm.testTableName')
+      date: todayStr(), time: '20:00', people: 2, tableName: t('mn.emailConfirm.testTableName'),
+      // Token de mentira solo para que la prueba muestre cómo queda el
+      // enlace {{manage_link}} en la plantilla real — no apunta a ninguna
+      // reserva de verdad.
+      publicToken: 'prueba'
     }, cfg);
     statusEl.innerHTML = `<span style="color:var(--brand-orange)"><i class="ti ti-check"></i> ${t('mn.emailConfirm.testSent')}</span>`;
   }catch(e){
@@ -3724,7 +3740,12 @@ function sendReservationConfirmationEmail(reservation, overrideCfg){
       date: reservation.date || '',
       time: reservation.time || '',
       people: reservation.people || '',
-      table_name: reservation.tableName || ''
+      table_name: reservation.tableName || '',
+      // Enlace a "Gestionar mi reserva" (cancelarla sin llamar) — el
+      // negocio decide si lo muestra en su plantilla de EmailJS con
+      // {{manage_link}}; viene vacío si la reserva no tiene token público
+      // (p.ej. una creada a mano desde el panel).
+      manage_link: getReservationManageLink(reservation)
     };
     return emailjs.send(cfg.serviceId, cfg.templateId, params, {publicKey: cfg.publicKey});
   });
