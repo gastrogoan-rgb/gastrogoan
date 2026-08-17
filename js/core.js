@@ -4427,7 +4427,7 @@ function requestDesktopNotifications(){
       localStorage.setItem(DESKTOP_NOTIF_LS, '0');
       showToast(t('notif.denied'));
     }
-    if(typeof renderMiNegocio === 'function' && document.querySelector('.view.active')?.id === 'view-minegocio') renderMiNegocio();
+    if(typeof renderMiNegocio === 'function' && document.getElementById('minegocio-content')) renderMiNegocio();
   });
 }
 function disableDesktopNotifications(){
