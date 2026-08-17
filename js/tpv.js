@@ -1190,6 +1190,19 @@ function orderTotal(order){
   return (order.items||[]).reduce((sum, line) => sum + line.price * line.qty, 0) + (order.costeEnvio || 0);
 }
 
+// Cuánto de esta comanda ya se cobró aparte, por móvil, antes de llegar a
+// caja (autopedido de mesa con "Pagar ahora", QR por comensal — ver la rama
+// 'pedido' tipo 'mesa' en initPublicRequestsListener, js/core.js). Solo
+// cuenta lo YA CONFIRMADO por el banco (line.pagadoOnline), nunca lo
+// pendiente de confirmar (line.pagoOnlinePendiente) — así un pago que
+// fallara o nunca llegase a confirmarse no le regala comida a nadie.
+// orderTotal() sigue representando el valor total de lo servido (para
+// contabilidad); esto es aparte, para saber cuánto queda por cobrar en caja.
+function orderAmountPaidOnline(order){
+  const itemsPaid = (order.items||[]).filter(l => l.pagadoOnline).reduce((sum, l) => sum + l.price * l.qty, 0);
+  return itemsPaid + (order.propinaPagadaOnline || 0);
+}
+
 // Coste real de ingredientes de todo lo vendido en un pedido/venta, a
 // partir del escandallo de cada receta — para saber el margen real de esa
 // mesa concreta, no solo lo cobrado. Solo cuenta líneas con receta
@@ -1864,7 +1877,7 @@ function renderTandaGroupCard(order, g, isMenu){
       const menuBadge = menu ? ` <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-list-details"></i> ${escapeHtml(tItem(menu))}</span>` : '';
       return `
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
-        <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
+        <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
         <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
@@ -2813,9 +2826,11 @@ function removeOrderItem(orderId, idx){
   if(!order || !order.items[idx]) return;
   const line = order.items[idx];
   // Si el plato ya se ha marchado a cocina (incluido si ya se ha entregado),
-  // anularlo exige PIN y motivo, para no borrar en silencio comida que se
-  // está preparando o que el cliente ya se ha comido.
-  if((line.marchada||0) > 0){
+  // o si ya lo pagó el cliente por su cuenta desde el móvil (confirmado o
+  // aún pendiente de confirmar), anularlo exige PIN y motivo — en el caso
+  // del pago, para no borrar en silencio algo que ya se ha cobrado de
+  // verdad, quede o no constancia en cocina.
+  if((line.marchada||0) > 0 || line.pagadoOnline || line.pagoOnlinePendiente){
     requestVoidLine(orderId, idx, 'remove', null);
     return;
   }
@@ -3178,15 +3193,35 @@ function computeFinalTotal(order){
   const total = orderTotal(order);
   const tipEl = document.getElementById('payment-tip');
   const descuentoPct = order.descuentoPct || 0;
+  // "propina" es solo la que se cobra ahora en caja (la del campo editable,
+  // que parte de order.propina) — la propina ya pagada por móvil
+  // (order.propinaPagadaOnline) NO se mete aquí para no liar el desglose que
+  // ve el camarero (el campo de propina no la refleja), pero SÍ tiene que
+  // sumarse a finalTotal más abajo, porque forma parte del valor real de la
+  // cuenta igual que la comida ya pagada.
   const propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : (order.propina||0);
+  const propinaOnline = order.propinaPagadaOnline || 0;
   const descuentoImporte = roundMoney(total * descuentoPct / 100);
-  return {total, descuentoPct, descuentoImporte, propina, finalTotal: roundMoney(total - descuentoImporte + propina)};
+  const finalTotal = roundMoney(total - descuentoImporte + propina + propinaOnline);
+  // amountPaidOnline: lo que ya pagaron por su cuenta desde el móvil, comida
+  // + propina (ver orderAmountPaidOnline). amountDue: lo que de verdad queda
+  // por cobrar en caja — finalTotal sigue siendo el valor total real de la
+  // cuenta (para contabilidad), amountDue es lo nuevo.
+  const amountPaidOnline = orderAmountPaidOnline(order);
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
+  return {total, descuentoPct, descuentoImporte, propina, finalTotal, amountPaidOnline, amountDue};
 }
 
 function renderFullPaymentTab(order, total){
   const descuentoPct = order.descuentoPct || 0;
   const propina = order.propina || 0;
-  const finalTotal = total - (total*descuentoPct/100) + propina;
+  const propinaOnline = order.propinaPagadaOnline || 0;
+  const finalTotal = total - (total*descuentoPct/100) + propina + propinaOnline;
+  const amountPaidOnline = orderAmountPaidOnline(order);
+  const amountDue = Math.max(0, roundMoney(finalTotal - amountPaidOnline));
+  // Nombres de quienes ya pagaron su parte por móvil (QR de mesa), para que
+  // el camarero sepa de un vistazo quién falta por cobrar, no solo cuánto.
+  const payerNames = [...new Set((order.items||[]).filter(l => l.pagadoOnline && l.pagadorNombre).map(l => l.pagadorNombre))];
   return `
     <div class="field-row">
       <div class="field">
@@ -3205,9 +3240,13 @@ function renderFullPaymentTab(order, total){
     <div id="payment-breakdown" style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
       ${renderPaymentBreakdownHtml(total, descuentoPct, propina)}
     </div>
+    ${amountPaidOnline > 0 ? `
+    <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-bottom:10px">
+      <i class="ti ti-credit-card" style="color:var(--brand-orange)"></i> ${t('label.paidOnlinePartial').replace('${amount}', fmtMoney(amountPaidOnline))}${payerNames.length ? ` (${payerNames.map(escapeHtml).join(', ')})` : ''}
+    </div>` : ''}
     <div class="kpi" style="margin-bottom:12px">
-      <div class="label">${t('label.totalToCharge')}</div>
-      <div class="value" id="payment-final-total">${fmtMoney(finalTotal)}</div>
+      <div class="label">${amountPaidOnline > 0 ? t('label.remainingToCharge') : t('label.totalToCharge')}</div>
+      <div class="value" id="payment-final-total">${fmtMoney(amountDue)}</div>
     </div>
     <div class="field">
       <label>${t('label.paymentMethod')}</label>
@@ -3218,7 +3257,7 @@ function renderFullPaymentTab(order, total){
     </div>
     <div class="field" id="payment-cash-field">
       <label>${t('label.amountGiven')}</label>
-      <input type="number" id="payment-cash" step="0.01" min="0" value="${finalTotal.toFixed(2)}" oninput="updatePaymentChange(${order.id})" onfocus="this.select()">
+      <input type="number" id="payment-cash" step="0.01" min="0" value="${amountDue.toFixed(2)}" oninput="updatePaymentChange(${order.id})" onfocus="this.select()">
     </div>
     <div class="kpi" id="payment-change-kpi" style="margin-bottom:12px">
       <div class="label">${t('label.change')}</div>
@@ -3228,11 +3267,11 @@ function renderFullPaymentTab(order, total){
       <div class="field-row">
         <div class="field">
           <label>${t('pay.cash')} (€)</label>
-          <input type="number" id="payment-mixed-cash" step="0.01" min="0" value="${(finalTotal/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'cash')">
+          <input type="number" id="payment-mixed-cash" step="0.01" min="0" value="${(amountDue/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'cash')">
         </div>
         <div class="field">
           <label>${t('pay.card')} (€)</label>
-          <input type="number" id="payment-mixed-card" step="0.01" min="0" value="${(finalTotal - finalTotal/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'card')">
+          <input type="number" id="payment-mixed-card" step="0.01" min="0" value="${(amountDue - amountDue/2).toFixed(2)}" oninput="updatePaymentMixed(${order.id}, 'card')">
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted)" id="payment-mixed-hint"></p>
@@ -3255,15 +3294,15 @@ function togglePaymentCash(){
 function updatePaymentMixed(orderId, changed){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const {finalTotal} = computeFinalTotal(order);
+  const {amountDue} = computeFinalTotal(order);
   const cashEl = document.getElementById('payment-mixed-cash');
   const cardEl = document.getElementById('payment-mixed-card');
   if(changed === 'cash'){
-    const cash = Math.max(0, Math.min(finalTotal, parseFloat(cashEl.value) || 0));
-    cardEl.value = roundMoney(finalTotal - cash).toFixed(2);
+    const cash = Math.max(0, Math.min(amountDue, parseFloat(cashEl.value) || 0));
+    cardEl.value = roundMoney(amountDue - cash).toFixed(2);
   } else {
-    const card = Math.max(0, Math.min(finalTotal, parseFloat(cardEl.value) || 0));
-    cashEl.value = roundMoney(finalTotal - card).toFixed(2);
+    const card = Math.max(0, Math.min(amountDue, parseFloat(cardEl.value) || 0));
+    cashEl.value = roundMoney(amountDue - card).toFixed(2);
   }
   updatePaymentMixedHint();
 }
@@ -3281,13 +3320,13 @@ function updatePaymentTip(orderId){
   const tipEl = document.getElementById('payment-tip');
   order.propina = tipEl ? Math.max(0, parseFloat(tipEl.value)||0) : 0;
   saveDB();
-  const {total, descuentoPct, propina, finalTotal} = computeFinalTotal(order);
+  const {total, descuentoPct, propina, amountDue} = computeFinalTotal(order);
   const kpiEl = document.getElementById('payment-final-total');
-  if(kpiEl) kpiEl.textContent = fmtMoney(finalTotal);
+  if(kpiEl) kpiEl.textContent = fmtMoney(amountDue);
   const breakdownEl = document.getElementById('payment-breakdown');
   if(breakdownEl) breakdownEl.innerHTML = renderPaymentBreakdownHtml(total, descuentoPct, propina);
   const cashEl = document.getElementById('payment-cash');
-  if(cashEl) cashEl.value = finalTotal.toFixed(2);
+  if(cashEl) cashEl.value = amountDue.toFixed(2);
   updatePaymentChange(orderId);
 }
 
@@ -3385,9 +3424,9 @@ function confirmApplyDiscount(){
 function updatePaymentChange(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const {finalTotal} = computeFinalTotal(order);
+  const {amountDue} = computeFinalTotal(order);
   const cash = parseFloat(document.getElementById('payment-cash').value) || 0;
-  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, roundMoney(cash - finalTotal)));
+  document.getElementById('payment-change').textContent = fmtMoney(Math.max(0, roundMoney(cash - amountDue)));
 }
 
 function finalizeCharge(orderId){
@@ -3399,16 +3438,30 @@ function finalizeCharge(orderId){
   // es barato de comprobar y evita un doble cobro/doble descuento de stock
   // si en el futuro se añade algo asíncrono antes de marcar 'pagada'.
   if(order.status === 'pagada') return;
-  const {total: subtotal, descuentoPct, descuentoImporte, propina, finalTotal: total} = computeFinalTotal(order);
+  const {total: subtotal, descuentoPct, descuentoImporte, propina: propinaCaja, finalTotal: total, amountPaidOnline, amountDue} = computeFinalTotal(order);
+  // La propina que se registra en la venta es la de caja + la ya pagada
+  // online (order.propinaPagadaOnline): las dos son propina real cobrada,
+  // total (que sí incluye ambas, ver computeFinalTotal) tiene que cuadrar
+  // con subtotal - descuento + propina.
+  const propina = roundMoney(propinaCaja + (order.propinaPagadaOnline || 0));
   const metodoPago = document.getElementById('payment-method').value;
   let pagos = null;
   if(metodoPago === 'Mixto'){
     const cash = Math.max(0, parseFloat(document.getElementById('payment-mixed-cash').value) || 0);
     const card = Math.max(0, parseFloat(document.getElementById('payment-mixed-card').value) || 0);
-    if(Math.abs((cash+card) - total) > 0.01){ showToast(t('msg.mixedPaymentMismatch')); return; }
+    if(Math.abs((cash+card) - amountDue) > 0.01){ showToast(t('msg.mixedPaymentMismatch')); return; }
     pagos = [];
     if(cash > 0) pagos.push({label: t('pay.cash'), amount: cash, metodoPago: 'Efectivo'});
     if(card > 0) pagos.push({label: t('pay.card'), amount: card, metodoPago: 'Tarjeta'});
+  }
+  // Lo ya pagado por móvil (QR de mesa, "Pagar ahora") se documenta como una
+  // pata más del pago, igual que ya se hace con el reparto Efectivo/Tarjeta
+  // del "Mixto" — así sale.total sigue siendo el valor real de toda la
+  // cuenta (para contabilidad/VeriFactu), pero queda constancia exacta de
+  // que una parte ya se cobró antes, no ahora mismo en caja.
+  if(amountPaidOnline > 0){
+    if(!pagos) pagos = [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}];
+    pagos.push({label: t('label.paidOnlinePartialShort'), amount: amountPaidOnline, metodoPago: 'Online'});
   }
   const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);

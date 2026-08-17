@@ -262,6 +262,7 @@ const I18N = {
     'order.mesa.select':'¿En qué mesa estás? *','order.mesa.select.placeholder':'Selecciona tu mesa…',
     'order.nombre':'Nombre (opcional)','order.notas':'Notas (alergias, observaciones...)','order.notas.placeholder':'Opcional',
     'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
+    'order.mesa.payWhen':'¿Cuándo pagas?','order.mesa.payLater':'Añadir a la cuenta de la mesa','order.mesa.payLaterDesc':'Se paga al final, junto con el resto de la mesa','order.mesa.payNow':'Pagar ahora con tarjeta','order.mesa.payNowDesc':'Pagas solo lo tuyo ahora mismo, sin esperar al resto de la mesa',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
     'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Añade %s más y el envío te sale gratis',
@@ -335,6 +336,7 @@ const I18N = {
     'order.mesa.select':'Which table are you at? *','order.mesa.select.placeholder':'Select your table…',
     'order.nombre':'Name (optional)','order.notas':'Notes (allergies, comments...)','order.notas.placeholder':'Optional',
     'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
+    'order.mesa.payWhen':'When do you pay?','order.mesa.payLater':'Add to the table bill','order.mesa.payLaterDesc':'Pay at the end, together with the rest of the table','order.mesa.payNow':'Pay now by card','order.mesa.payNowDesc':'Pay just your part right now, without waiting for the rest of the table',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
     'cart.shipping.free':'Free','cart.shipping.freeHint':'Add %s more and delivery is free',
@@ -408,6 +410,7 @@ const I18N = {
     'order.mesa.select':'A quina taula ets? *','order.mesa.select.placeholder':'Selecciona la teva taula…',
     'order.nombre':'Nom (opcional)','order.notas':'Notes (al·lèrgies, observacions...)','order.notas.placeholder':'Opcional',
     'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
+    'order.mesa.payWhen':'Quan pagues?','order.mesa.payLater':'Afegir al compte de la taula','order.mesa.payLaterDesc':'Es paga al final, junt amb la resta de la taula','order.mesa.payNow':'Pagar ara amb targeta','order.mesa.payNowDesc':'Pagues només el teu ara mateix, sense esperar la resta de la taula',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
     'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Afegeix %s més i l\'enviament et surt gratis',
@@ -839,7 +842,7 @@ function checkRedsysConfigured(){
       // antes de que esta comprobación terminase (llega por red, puede
       // tardar), un renderTabContent normal lo habría borrado todo de golpe
       // justo cuando aparece la opción de pagar con tarjeta.
-      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery')) renderTabContentPreservingForm();
+      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery' || currentTab === 'mesa')) renderTabContentPreservingForm();
     })
     .catch(() => {});
 }
@@ -2261,6 +2264,19 @@ function renderMesaOrderForm(){
         <label>${t('order.notas')}</label>
         <textarea id="m-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
       </div>
+      ${redsysConfigured ? `
+      <div class="field">
+        <label>${t('order.mesa.payWhen')}</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:6px;cursor:pointer">
+          <input type="radio" name="m-pago-cuando" value="despues" checked style="width:auto;margin-top:3px">
+          <span><strong>${t('order.mesa.payLater')}</strong><br><small style="color:var(--muted)">${t('order.mesa.payLaterDesc')}</small></span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;cursor:pointer">
+          <input type="radio" name="m-pago-cuando" value="ahora" style="width:auto;margin-top:3px">
+          <span><strong>${t('order.mesa.payNow')}</strong><br><small style="color:var(--muted)">${t('order.mesa.payNowDesc')}</small></span>
+        </label>
+      </div>
+      ` : ''}
       <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">${t('order.submit.mesa')}</button>
     </div>
   `;
@@ -2294,6 +2310,10 @@ function submitMesaOrder(){
   const notas = document.getElementById('m-notes').value.trim();
   const subtotalMesa = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const tipMesa = computeTipAmount(subtotalMesa);
+  // Solo se pregunta si se ofrece pagar ahora (redsysConfigured); si no
+  // existe el radio, es que la opción no está disponible y se añade a la
+  // cuenta de la mesa como siempre.
+  const pagarAhora = redsysConfigured && document.querySelector('input[name="m-pago-cuando"]:checked')?.value === 'ahora';
 
   const req = {
     type:'pedido', tipo:'mesa', tableId,
@@ -2302,8 +2322,17 @@ function submitMesaOrder(){
     total: subtotalMesa + tipMesa,
     createdAt: new Date().toISOString()
   };
+  if(pagarAhora) req.pagarAhora = true;
   const submitBtn = document.getElementById('o-submit');
   if(submitBtn) submitBtn.disabled = true;
+  if(pagarAhora){
+    // A diferencia del pedido normal, este SÍ se fusiona con la comanda
+    // abierta de la mesa (ver initPublicRequestsListener, js/core.js) — solo
+    // que sus líneas quedan marcadas como ya pagadas por este cliente, para
+    // que al cobrar la mesa se descuenten del importe pendiente.
+    payWithCard(req, req.total, t('order.mesa.title'), 'clientRef', 'o-submit');
+    return;
+  }
   sendRequest(req, t('order.ok.mesa'));
 }
 

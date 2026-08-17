@@ -2449,10 +2449,29 @@ function initPublicRequestsListener(){
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
         // la bandeja de "pedidos pendientes".
+        // Si se pagó ya con tarjeta desde el móvil (req.pagarAhora, ver
+        // payWithCard en reservagastrogoan.html), las líneas se marcan como
+        // pagadas por ese cliente concreto — siguen yendo a la MISMA comanda
+        // de la mesa (cocina las ve igual, el camarero las marcha igual),
+        // pero al cobrar la mesa (finalizeCharge, js/tpv.js) se descuentan
+        // del importe pendiente, para que cada comensal solo pague lo suyo
+        // sin que el negocio tenga que llevar la cuenta a mano de quién ya
+        // pagó qué. La confirmación real del banco llega después por
+        // separado (evento pago_confirmado, más abajo en esta función).
+        // pagoOnlinePendiente (no pagadoOnline todavía): la firma del pago con
+        // el Worker ya tuvo éxito antes de llegar aquí (si no, payWithCard ni
+        // habría mandado esta solicitud), pero el banco confirma el cargo de
+        // forma asíncrona y aparte (evento pago_confirmado, más abajo). Hasta
+        // que llegue esa confirmación, la línea NO cuenta como pagada de cara
+        // al cobro de la mesa — así, si el pago fallara o nunca se
+        // confirmara, no se le regala la comida a nadie por accidente.
         const items = (req.items || []).map(l => {
           const mods = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre).map(m => ({nombre: m.nombre, precio: m.precio||0})) : [];
           const name = mods.length ? `${l.name} (${mods.map(m=>m.nombre).join(', ')})` : l.name;
-          return {platoId: null, recipeId: null, name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true, modificadores: mods};
+          return {
+            platoId: null, recipeId: null, name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true, modificadores: mods,
+            pagoOnlinePendiente: !!req.pagarAhora, pagadorNombre: req.pagarAhora ? (req.clienteNombre||'') : undefined, pagoRef: req.pagarAhora ? req.clientRef : undefined
+          };
         });
         const table = DB.tables.find(t => t.id === req.tableId);
         let order = table ? DB.tpvOrders.find(o => o.tableId === table.id && o.status === 'abierta') : null;
@@ -2461,15 +2480,22 @@ function initPublicRequestsListener(){
           // Varios autopedidos seguidos desde la misma mesa: la propina de
           // cada uno se suma, igual que ya se hace al unir dos comandas
           // (js/tpv.js, unión de mesas) — no se sustituye, para no perder
-          // la propina de un pedido anterior si llega otro después.
-          if(typeof req.propina === 'number' && req.propina > 0) order.propina = (order.propina||0) + req.propina;
+          // la propina de un pedido anterior si llega otro después. La
+          // propina de un pedido YA pagado va aparte (propinaPagadaOnline):
+          // si se sumara a order.propina, se le volvería a cobrar al resto
+          // de la mesa al cerrar cuenta.
+          if(typeof req.propina === 'number' && req.propina > 0){
+            if(req.pagarAhora) order.propinaPagadaOnline = (order.propinaPagadaOnline||0) + req.propina;
+            else order.propina = (order.propina||0) + req.propina;
+          }
         }else{
           const matchedClientMesa = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
           DB.tpvOrders.push({
             id: genId(), tableId: req.tableId || null, tipo:'mesa', pax: req.pax || 1,
             clienteNombre: req.clienteNombre || '', status:'abierta', items, tandas:[], createdAt: new Date().toISOString(),
             clientRef: req.clientRef || null, clientId: matchedClientMesa ? matchedClientMesa.id : null,
-            propina: typeof req.propina === 'number' ? req.propina : 0
+            propina: (!req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0,
+            propinaPagadaOnline: (req.pagarAhora && typeof req.propina === 'number') ? req.propina : 0
           });
         }
       }else if(req.type === 'pedido'){
@@ -2515,10 +2541,10 @@ function initPublicRequestsListener(){
       }else if(req.type === 'pago_confirmado'){
         // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
         // automáticamente a través del Worker. `orderRef` puede ser el
-        // clientRef de un pedido O el resToken de la señal de una reserva
-        // (payWithCard usa uno u otro según lo que se esté pagando) — se
-        // comprueban los dos, nunca los dos a la vez porque los tokens no
-        // coinciden entre sí.
+        // clientRef de un pedido, el resToken de la señal de una reserva, o
+        // el pagoRef de una o varias líneas de un autopedido de mesa pagado
+        // aparte (payWithCard usa uno distinto según lo que se esté
+        // pagando) — se comprueban los tres, nunca coinciden entre sí.
         const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
         if(order){
           order.pagado = true;
@@ -2533,6 +2559,18 @@ function initPublicRequestsListener(){
           syncReservationStatusForPublic(reservationPaid);
           logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
         }
+        // Líneas de mesa pagadas por móvil (ver más arriba, rama 'pedido'
+        // tipo 'mesa'): pueden estar mezcladas con líneas normales dentro de
+        // la misma comanda, así que hay que recorrer TODAS las comandas
+        // abiertas buscando líneas con este pagoRef concreto, no solo una.
+        (DB.tpvOrders||[]).forEach(o => {
+          (o.items||[]).forEach(l => {
+            if(l.pagoRef && l.pagoRef === req.orderRef && l.pagoOnlinePendiente){
+              l.pagoOnlinePendiente = false;
+              l.pagadoOnline = true;
+            }
+          });
+        });
       }
       saveDB();
       refreshAfterRemoteChange();
