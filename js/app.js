@@ -4186,6 +4186,19 @@ function validateHorario(horario){
   return warnings;
 }
 
+// Antelación mínima: hasta ahora era un único ajuste compartido entre
+// reservas y pedidos online (DB.business.leadTimeMin, con una copia
+// redundante en DB.business.pedidos.leadTimeMin). Un negocio puede querer
+// pedir más antelación para reservar mesa que para un pedido para llevar
+// (o al revés), así que se separan en dos campos nuevos. Los negocios que
+// ya tenían el ajuste antiguo migran su mismo valor a ambos campos nuevos
+// la primera vez que se abre Mi Negocio (ver saveBusiness), sin perder nada.
+function leadTimeMinFor(b, kind){
+  const specific = kind === 'reservas' ? b.leadTimeMinReservas : b.leadTimeMinPedidos;
+  if(specific != null) return specific;
+  return b.leadTimeMin != null ? b.leadTimeMin : (b.pedidos?.leadTimeMin || '');
+}
+
 // Última barrera antes de pintar Mi Negocio, por si se llega aquí
 // saltándose navigate()/renderView() (p.ej. renderMiNegocio() a mano desde
 // la consola de un dispositivo de empleado).
@@ -4374,10 +4387,17 @@ function renderMiNegocio(){
         <input type="number" id="mn-reserva-duracion" min="15" step="15" value="${escapeHtml(b.reservaDuracionMin||'')}" placeholder="90" onchange="saveBusiness(true)">
         <small style="color:var(--muted)">${t('mn.ops.tableDurationDesc')}</small>
       </div>
-      <div class="field">
-        <label>${t('mn.ops.leadTime')}</label>
-        <input type="number" id="mn-leadtime-min" min="0" step="5" value="${escapeHtml(b.leadTimeMin!=null ? b.leadTimeMin : (b.pedidos?.leadTimeMin||''))}" placeholder="30" onchange="saveBusiness(true)">
-        <small style="color:var(--muted)">${t('mn.ops.leadTimeDesc')}</small>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.ops.leadTimeReservas')}</label>
+          <input type="number" id="mn-leadtime-reservas" min="0" step="5" value="${escapeHtml(leadTimeMinFor(b,'reservas'))}" placeholder="30" onchange="saveBusiness(true)">
+          <small style="color:var(--muted)">${t('mn.ops.leadTimeReservasDesc')}</small>
+        </div>
+        <div class="field">
+          <label>${t('mn.ops.leadTimePedidos')}</label>
+          <input type="number" id="mn-leadtime-pedidos" min="0" step="5" value="${escapeHtml(leadTimeMinFor(b,'pedidos'))}" placeholder="30" onchange="saveBusiness(true)">
+          <small style="color:var(--muted)">${t('mn.ops.leadTimePedidosDesc')}</small>
+        </div>
       </div>
       <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
         <label style="display:flex;align-items:center;gap:8px;font-weight:600">
@@ -4929,11 +4949,16 @@ function saveBusiness(silent){
   if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
-  if(el('mn-leadtime-min')){
-    DB.business.leadTimeMin = Math.max(0, parseInt(el('mn-leadtime-min').value) || 0);
-    // Mantener el valor antiguo de pedidos en sincronía para compatibilidad.
+  if(el('mn-leadtime-reservas')) DB.business.leadTimeMinReservas = Math.max(0, parseInt(el('mn-leadtime-reservas').value) || 0);
+  if(el('mn-leadtime-pedidos')){
+    DB.business.leadTimeMinPedidos = Math.max(0, parseInt(el('mn-leadtime-pedidos').value) || 0);
+    // Se mantienen los campos antiguos en sincronía con el de pedidos (no el
+    // de reservas) por compatibilidad: eran el mismo valor compartido antes
+    // de separarlos, y reservagastrogoan.html todavía puede caer en ellos
+    // como último recurso si una versión en caché no trae los nuevos.
+    DB.business.leadTimeMin = DB.business.leadTimeMinPedidos;
     if(!DB.business.pedidos) DB.business.pedidos = {};
-    DB.business.pedidos.leadTimeMin = DB.business.leadTimeMin;
+    DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
   if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
@@ -4971,7 +4996,9 @@ function saveBusiness(silent){
     }
   }
   DB.business.horario = horarioRechazado ? (DB.business.horario||newHorario) : newHorario;
-  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, DB.business.leadTimeMin);
+  // Se avisa con el mayor de los dos (reservas/pedidos): si ese ya encaja en
+  // el horario, el otro (siempre menor o igual) también encaja.
+  const leadTimeWarning = leadTimeVsHorarioWarning(DB.business.horario, Math.max(DB.business.leadTimeMinReservas||0, DB.business.leadTimeMinPedidos||0));
   saveDB();
   // El selector de negocios mostraba siempre "Mi negocio", el nombre de
   // relleno con el que nace el hueco: nadie sincronizaba el nombre real con

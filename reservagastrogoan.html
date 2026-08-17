@@ -1182,17 +1182,20 @@ function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
 }
 
 /* ============ TIEMPO DE ANTELACIÓN / ZONA DE REPARTO ============ */
-// Si el pedido es para hoy, no se puede elegir una hora anterior a
-// "ahora + tiempo de antelación configurado por el restaurante".
-// Antelación mínima (minutos) que vale tanto para reservas como para pedidos.
-// Se configura en Mi Negocio → Operativa. Mantiene compatibilidad con el ajuste antiguo.
-function getLeadTimeMin(){
+// Si el pedido/reserva es para hoy, no se puede elegir una hora anterior a
+// "ahora + tiempo de antelación configurado por el restaurante". Reservas y
+// pedidos tienen cada uno su propio ajuste (Mi Negocio → Operativa); si un
+// negocio antiguo aún no tiene los campos nuevos, ambos caen al ajuste
+// único que había antes de separarlos.
+function getLeadTimeMin(kind){
   const b = DB.business || {};
+  const specific = kind === 'reserva' ? b.leadTimeMinReservas : b.leadTimeMinPedidos;
+  if(specific != null) return parseInt(specific) || 0;
   if(b.leadTimeMin != null) return parseInt(b.leadTimeMin) || 0;
   return parseInt((b.pedidos||{}).leadTimeMin) || 0;
 }
-function applyLeadTime(dateInputId, timeInputId, hintBoxId){
-  const leadTimeMin = getLeadTimeMin();
+function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
+  const leadTimeMin = getLeadTimeMin(kind);
   const date = document.getElementById(dateInputId).value;
   const timeInput = document.getElementById(timeInputId);
   const hintBox = document.getElementById(hintBoxId);
@@ -1314,7 +1317,7 @@ function renderReservaForm(){
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
-          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint'); applyLeadTime('r-date','r-time','r-hour-hint')">
+          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint'); applyLeadTime('r-date','r-time','r-hour-hint','reserva')">
         </div>
         <div class="field">
           <label>${t('hora')}</label>
@@ -1356,7 +1359,7 @@ function renderReservaForm(){
     </div>
   `;
   updateTimeInputRange('r-date','r-time','r-hour-hint');
-  applyLeadTime('r-date','r-time','r-hour-hint');
+  applyLeadTime('r-date','r-time','r-hour-hint','reserva');
 }
 
 // Calcula el importe de la señal para la reserva actual (según el tipo
@@ -1428,7 +1431,7 @@ function submitReserva(){
     return;
   }
 
-  const leadTimeMin = getLeadTimeMin();
+  const leadTimeMin = getLeadTimeMin('reserva');
   if(leadTimeMin && date === todayStr()){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -1640,7 +1643,7 @@ function renderOrderForm(){
       <div class="field-row">
         <div class="field">
           <label>${t('fecha')}</label>
-          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint'); updateCierreHint(); renderCartSummary()">
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint','pedido'); updateCierreHint(); renderCartSummary()">
         </div>
         <div class="field">
           <label>${t('hora')}</label>
@@ -1676,7 +1679,7 @@ function renderOrderForm(){
   `;
   renderCartSummary();
   updateTimeInputRange('o-date','o-time','o-hour-hint');
-  applyLeadTime('o-date','o-time','o-hour-hint');
+  applyLeadTime('o-date','o-time','o-hour-hint','pedido');
   updateCierreHint();
   updateCashAmountVisibility();
 }
@@ -2017,7 +2020,7 @@ async function submitOrder(){
     }
   }
 
-  const leadTimeMin = getLeadTimeMin();
+  const leadTimeMin = getLeadTimeMin('pedido');
   if(leadTimeMin && date === todayStr()){
     const now = new Date(Date.now() + leadTimeMin * 60000);
     const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
@@ -2409,7 +2412,7 @@ function renderReservationStatus(data){
         <div class="field-row" style="margin-top:16px">
           <div class="field">
             <label>${t('fecha')}</label>
-            <input type="date" id="res-edit-date" value="${escapeHtml(data.date||'')}" min="${todayStr()}" onchange="updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint'); applyLeadTime('res-edit-date','res-edit-time','res-edit-hint')">
+            <input type="date" id="res-edit-date" value="${escapeHtml(data.date||'')}" min="${todayStr()}" onchange="updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint'); applyLeadTime('res-edit-date','res-edit-time','res-edit-hint','reserva')">
           </div>
           <div class="field">
             <label>${t('hora')}</label>
@@ -2436,7 +2439,7 @@ function renderReservationStatus(data){
   `;
   if(resEditing){
     updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');
-    applyLeadTime('res-edit-date','res-edit-time','res-edit-hint');
+    applyLeadTime('res-edit-date','res-edit-time','res-edit-hint','reserva');
   }
 }
 let resEditing = false;
