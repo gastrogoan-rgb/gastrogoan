@@ -264,6 +264,7 @@ const I18N = {
     'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
     'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
+    'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Añade %s más y el envío te sale gratis',
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
     'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
     'modifiers.hint':'Elige los extras que quieras (opcional).','modifiers.add':'Añadir al pedido','modifiers.addBtn':'Añadir','modifiers.fromPrice':'desde',
@@ -336,6 +337,7 @@ const I18N = {
     'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
     'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
+    'cart.shipping.free':'Free','cart.shipping.freeHint':'Add %s more and delivery is free',
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
     'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
     'modifiers.hint':'Pick any extras you\'d like (optional).','modifiers.add':'Add to order','modifiers.addBtn':'Add','modifiers.fromPrice':'from',
@@ -408,6 +410,7 @@ const I18N = {
     'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
     'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
+    'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Afegeix %s més i l\'enviament et surt gratis',
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
     'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
     'modifiers.hint':'Tria els extres que vulguis (opcional).','modifiers.add':'Afegir a la comanda','modifiers.addBtn':'Afegir','modifiers.fromPrice':'des de',
@@ -1868,6 +1871,17 @@ function confirmAddWithModifiers(){
   renderCartSummary();
 }
 
+// Coste de envío a domicilio, con posibilidad de que el negocio lo haga
+// gratis a partir de un importe mínimo de pedido (p.freeDeliveryFrom, 0 o
+// sin definir = no hay umbral, siempre se cobra el envío fijo).
+function getDeliveryFee(p, subtotal, isDelivery){
+  if(!isDelivery) return 0;
+  const fee = p.deliveryFee || 0;
+  const freeFrom = p.freeDeliveryFrom || 0;
+  if(freeFrom > 0 && subtotal >= freeFrom) return 0;
+  return fee;
+}
+
 // Importe de propina a partir del % elegido (o el importe fijo si se
 // escribió uno "otro importe") sobre el subtotal de platos — nunca sobre
 // el gasto de envío, igual que se calcularía a mano.
@@ -1908,8 +1922,10 @@ function renderCartSummary(){
     return;
   }
   const p = (DB.business||{}).pedidos || {};
-  const deliveryFee = currentTab === 'delivery' ? (p.deliveryFee || 0) : 0;
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const deliveryFee = getDeliveryFee(p, subtotal, currentTab === 'delivery');
+  const freeFrom = p.freeDeliveryFrom || 0;
+  const missingForFreeDelivery = currentTab === 'delivery' && freeFrom > 0 && subtotal < freeFrom ? freeFrom - subtotal : 0;
   const tip = computeTipAmount(subtotal);
   const total = subtotal + deliveryFee + tip;
   const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
@@ -1940,8 +1956,9 @@ function renderCartSummary(){
         <span style="white-space:nowrap;margin-left:8px">${fmtMoney(l.price*l.qty)}</span>
       </div>`;
     }).join('')}
-    ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
+    ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
     ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
+    ${missingForFreeDelivery > 0 ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0"><i class="ti ti-truck"></i> ${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
@@ -2081,7 +2098,7 @@ async function submitOrder(){
     pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
   }
 
-  const deliveryFee = isDelivery ? (p.deliveryFee || 0) : 0;
+  const deliveryFee = getDeliveryFee(p, subtotal, isDelivery);
   const tip = computeTipAmount(subtotal);
   const total = subtotal + deliveryFee + tip;
 

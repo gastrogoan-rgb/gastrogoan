@@ -3400,9 +3400,16 @@ function renderPedidosConfigCard(){
         <small id="mn-acepta-tpv-virtual-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--brand-orange)'}">${redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint')}</small>
       </div>
       ${deliveryEnabled ? `
-      <div class="field">
-        <label>${t('mn.pedidos.deliveryFee')}</label>
-        <input type="number" id="mn-deliveryfee" min="0" step="0.5" value="${escapeHtml(p.deliveryFee||0)}" placeholder="3.00">
+      <div class="field-row">
+        <div class="field">
+          <label>${t('mn.pedidos.deliveryFee')}</label>
+          <input type="number" id="mn-deliveryfee" min="0" step="0.5" value="${escapeHtml(p.deliveryFee||0)}" placeholder="3.00">
+        </div>
+        <div class="field">
+          <label>${t('mn.pedidos.freeDeliveryFrom')}</label>
+          <input type="number" id="mn-freedeliveryfrom" min="0" step="1" value="${escapeHtml(p.freeDeliveryFrom||'')}" placeholder="${t('mn.pedidos.freeDeliveryFromPh')}">
+          <small style="color:var(--muted)">${t('mn.pedidos.freeDeliveryFromDesc')}</small>
+        </div>
       </div>
       <div class="field">
         <label>${t('mn.pedidos.cpList')}</label>
@@ -3457,6 +3464,9 @@ async function savePedidosConfig(){
   const deliveryFeeEl = document.getElementById('mn-deliveryfee');
   if(deliveryFeeEl){
     p.deliveryFee = Math.max(0, parseFloat(document.getElementById('mn-deliveryfee').value) || 0);
+    // 0 o vacío = sin umbral de envío gratis, se cobra siempre el envío fijo.
+    const freeDeliveryFromEl = document.getElementById('mn-freedeliveryfrom');
+    p.freeDeliveryFrom = freeDeliveryFromEl ? (Math.max(0, parseFloat(freeDeliveryFromEl.value) || 0) || null) : null;
     p.cpList = document.getElementById('mn-cplist').value.split(',').map(s=>s.trim()).filter(Boolean);
     const radiusKm = Math.max(0, parseFloat(document.getElementById('mn-radiuskm').value) || 0);
     p.radiusKm = radiusKm;
