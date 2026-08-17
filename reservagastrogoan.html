@@ -212,7 +212,7 @@ let trackListenerAttached = false;
 let db = null;
 let DB = null; // { business, cartas, activeCartaId }
 let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
-let cart = []; // [{recipeId, sectionId, name, price, qty}]
+let cart = []; // [{key, recipeId(=platoId), sectionId, name, price, qty, modificadores:[{id,nombre,precio}]}]
 let cartTipPct = 0; // 0 | 5 | 10 | 15 | 'custom'
 let cartTipCustom = 0; // importe fijo cuando cartTipPct === 'custom'
 let submittingRequest = false; // evita duplicados por doble clic en pedidos/reservas
@@ -264,6 +264,7 @@ const I18N = {
     'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
     'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
+    'modifiers.hint':'Elige los extras que quieras (opcional).','modifiers.add':'Añadir al pedido','modifiers.addBtn':'Añadir','modifiers.fromPrice':'desde',
     'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
@@ -285,7 +286,7 @@ const I18N = {
     'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
     'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.', 'hint.cierrePedidos':'Para esta franja, el último pedido posible es a las %s.', 'error.cierrePedidos':'Ya no se aceptan pedidos para esta franja (el último posible era a las %s). Por favor elige otra hora.',
     'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
-    'success.otra':'Hacer otra solicitud', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
+    'success.otra':'Hacer otra solicitud', 'success.otraPedido':'Hacer otro pedido', 'success.otraReserva':'Hacer otra reserva', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
     'success.trackOrder':'Seguir mi pedido',
     'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
@@ -329,6 +330,7 @@ const I18N = {
     'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
     'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
+    'modifiers.hint':'Pick any extras you\'d like (optional).','modifiers.add':'Add to order','modifiers.addBtn':'Add','modifiers.fromPrice':'from',
     'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
@@ -350,7 +352,7 @@ const I18N = {
     'error.enlace.sub':'Ask the restaurant for a valid link.',
     'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.', 'hint.cierrePedidos':'For this time slot, the last possible order is at %s.', 'error.cierrePedidos':'Orders are no longer accepted for this time slot (the last possible was at %s). Please choose another time.',
     'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
-    'success.otra':'Make another request', 'success.callToChange':'Need to change or cancel? Call %s.',
+    'success.otra':'Make another request', 'success.otraPedido':'Place another order', 'success.otraReserva':'Make another reservation', 'success.callToChange':'Need to change or cancel? Call %s.',
     'success.trackOrder':'Track my order',
     'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
@@ -394,6 +396,7 @@ const I18N = {
     'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
     'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
+    'modifiers.hint':'Tria els extres que vulguis (opcional).','modifiers.add':'Afegir a la comanda','modifiers.addBtn':'Afegir','modifiers.fromPrice':'des de',
     'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
@@ -415,7 +418,7 @@ const I18N = {
     'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
     'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.', 'hint.cierrePedidos':'Per a aquesta franja, l\'última comanda possible és a les %s.', 'error.cierrePedidos':'Ja no s\'accepten comandes per a aquesta franja (l\'última possible era a les %s). Si us plau tria una altra hora.',
     'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
-    'success.otra':'Fer una altra sol·licitud', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
+    'success.otra':'Fer una altra sol·licitud', 'success.otraPedido':'Fer una altra comanda', 'success.otraReserva':'Fer una altra reserva', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
     'success.trackOrder':'Seguir la meva comanda',
     'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
@@ -644,7 +647,7 @@ function init(){
         <div class="icon">✅</div>
         <h2>${t('pago.ok.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('pago.ok.msg')}</p>
-        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
       </div>
     `;
     return;
@@ -655,7 +658,7 @@ function init(){
         <div class="icon">⚠️</div>
         <h2>${t('pago.ko.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('pago.ko.msg')}</p>
-        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otra')}</button>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
       </div>
     `;
     return;
@@ -1514,18 +1517,30 @@ function buildMenuHtml(cartas){
       ${sec.platos.filter(p=>p.disponible!==false).map(p => {
         const promo = getActivePromoForPlatoPublic(p.id);
         const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
+        const hasMods = (p.modificadores||[]).length > 0;
+        // Cuántas unidades de este plato hay YA en el carrito, sumando
+        // TODAS sus variantes de extras (la línea sin extras + cada
+        // combinación elegida) — para que el cliente vea de un vistazo que
+        // ya tiene algo añadido aunque esté repartido en varias líneas.
+        const totalInCart = cart.filter(l => l.recipeId === p.id).reduce((s,l)=>s+l.qty, 0);
         return `
         <div class="menu-item">
           <div>
             <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
-            <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}</div>
+            <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
             ${dishAllergensHtml(p.id)}
           </div>
+          ${hasMods ? `
+          <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openModifierModal(${p.id})">
+            ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
+          </button>
+          ` : `
           <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
             <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
             <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
             <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
           </div>
+          `}
         </div>
       `;}).join('')}
     `).join('')}
@@ -1676,16 +1691,40 @@ function updateCashAmountVisibility(){
   if(wrap) wrap.style.display = (currentTab === 'delivery' && sel && sel.value === 'efectivo') ? '' : 'none';
 }
 
+// Identificador único de una línea del carrito: por plato solo para los
+// platos SIN extras (se pueden agrupar en un único contador +/-), y por
+// plato+combinación exacta de extras elegidos para los que sí tienen —
+// así "1 pizza con extra queso" y "1 pizza sin nada" son líneas distintas
+// del carrito, cada una con su propia cantidad, en vez de mezclarse en un
+// solo contador que no podría representar la diferencia.
+function cartLineKey(platoId, modIds){
+  return (modIds && modIds.length) ? (platoId + ':' + [...modIds].sort((a,b)=>a-b).join(',')) : String(platoId);
+}
+// Busca el plato (con su lista de extras) dentro de las cartas activas —
+// hace falta al confirmar el modal de extras, donde solo tenemos el id.
+function findPlatoById(platoId){
+  for(const c of (DB.cartas||[])){
+    for(const sec of (c.secciones||[])){
+      const p = (sec.platos||[]).find(x => x.id === platoId);
+      if(p) return {plato: p, sectionId: sec.id};
+    }
+  }
+  return null;
+}
+
 function getCartQty(recipeId){
-  const line = cart.find(l => l.recipeId === recipeId);
+  // Solo cuenta la línea SIN extras (la del contador +/- de la lista) —
+  // las líneas con extras elegidos tienen su propio contador en el
+  // resumen del carrito, ver renderCartSummary/tipSelectorHtml.
+  const line = cart.find(l => l.recipeId === recipeId && (!l.modificadores || !l.modificadores.length));
   return line ? line.qty : 0;
 }
 
 function changeCartQty(recipeId, sectionId, delta, name, price){
-  let line = cart.find(l => l.recipeId === recipeId);
+  let line = cart.find(l => l.recipeId === recipeId && (!l.modificadores || !l.modificadores.length));
   if(!line){
     if(delta <= 0) return;
-    line = {recipeId, sectionId, name, price, qty:0};
+    line = {key: cartLineKey(recipeId, []), recipeId, sectionId, name, price, qty:0, modificadores:[]};
     cart.push(line);
   }
   line.qty += delta;
@@ -1696,6 +1735,70 @@ function changeCartQty(recipeId, sectionId, delta, name, price){
     span.textContent = getCartQty(recipeId);
     span.classList.remove('bump'); void span.offsetWidth; span.classList.add('bump');
   }
+  renderCartSummary();
+}
+
+// Ajusta la cantidad de una línea YA en el carrito por su clave exacta —
+// se usa desde el resumen del carrito para las líneas con extras (que no
+// tienen un contador +/- propio en el listado de la carta, porque ahí solo
+// cabe "Añadir", ver openModifierModal).
+function changeCartLineQty(key, delta){
+  const line = cart.find(l => l.key === key);
+  if(!line) return;
+  line.qty += delta;
+  if(line.qty <= 0) cart = cart.filter(l => l !== line);
+  renderCartSummary();
+}
+
+/* ============ EXTRAS / MODIFICADORES por plato ============
+   Un plato con extras configurados (p.modificadores, cada uno {id,nombre,
+   precio}) no usa el contador +/- directo: se abre un modal para elegir
+   cuáles quiere (checkboxes, sin restricción de cardinalidad — así está
+   modelado en la app principal, ver js/menu.js) y SOLO entonces se añade
+   al carrito, con el precio final ya calculado. */
+let modModalContext = null;
+function openModifierModal(platoId){
+  const found = findPlatoById(platoId);
+  if(!found) return;
+  const { plato } = found;
+  const promo = getActivePromoForPlatoPublic(platoId);
+  const basePrice = promo ? promoDiscountedPrice(plato.precio, promo) : plato.precio;
+  modModalContext = { platoId, basePrice };
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(trPlato(plato))}</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:-4px">${t('modifiers.hint')}</p>
+    <div style="margin:14px 0">
+      ${(plato.modificadores||[]).map(m => `
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+          <input type="checkbox" class="mod-check" value="${m.id}" style="width:20px;height:20px;flex:none">
+          <span style="flex:1;font-size:14px">${escapeHtml(trItem(m))}</span>
+          ${m.precio ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(m.precio)}</span>` : ''}
+        </label>
+      `).join('')}
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="confirmAddWithModifiers()">${t('modifiers.add')}</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function confirmAddWithModifiers(){
+  if(!modModalContext) return;
+  const found = findPlatoById(modModalContext.platoId);
+  if(!found){ closeInfoModal(); return; }
+  const { plato, sectionId } = found;
+  const checkedIds = [...document.querySelectorAll('.mod-check:checked')].map(el => parseInt(el.value));
+  const selected = (plato.modificadores||[]).filter(m => checkedIds.includes(m.id));
+  const finalPrice = modModalContext.basePrice + selected.reduce((s,m)=>s+(m.precio||0),0);
+  const key = cartLineKey(plato.id, selected.map(m=>m.id));
+  let line = cart.find(l => l.key === key);
+  if(!line){
+    line = {key, recipeId: plato.id, sectionId, name: plato.nombre, price: finalPrice, qty:0, modificadores: selected};
+    cart.push(line);
+  }
+  line.qty += 1;
+  modModalContext = null;
+  closeInfoModal();
   renderCartSummary();
 }
 
@@ -1748,7 +1851,29 @@ function renderCartSummary(){
   if(submitBtn) submitBtn.disabled = bajoMinimo;
   box.innerHTML = `
     <h2>${t('cart.title')}</h2>
-    ${cart.map(l => `<div class="cart-line"><span>${l.qty}× ${escapeHtml(l.name)}</span><span>${fmtMoney(l.price*l.qty)}</span></div>`).join('')}
+    ${cart.map(l => {
+      const modsText = (l.modificadores||[]).length ? `<div style="font-size:11.5px;color:var(--muted);margin-top:1px">${l.modificadores.map(m=>escapeHtml(trItem(m))).join(', ')}</div>` : '';
+      // Las líneas con extras llevan su propio +/- aquí (en el listado de la
+      // carta solo tienen el botón "Añadir", ver buildMenuHtml) — así se
+      // puede ajustar la cantidad de "pizza con extra queso" sin afectar a
+      // "pizza sin nada", que es una línea distinta del carrito.
+      const hasMods = (l.modificadores||[]).length > 0;
+      return `
+      <div class="cart-line" style="align-items:flex-start;padding:8px 0">
+        <div style="flex:1">
+          <div>${hasMods ? '' : (l.qty+'× ')}${escapeHtml(l.name)}</div>
+          ${modsText}
+        </div>
+        ${hasMods
+          ? `<div class="qty-ctl" style="gap:6px">
+               <button onclick="changeCartLineQty('${escapeHtml(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">−</button>
+               <span class="mono" style="min-width:14px;text-align:center">${l.qty}</span>
+               <button onclick="changeCartLineQty('${escapeHtml(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">+</button>
+             </div>`
+          : ''}
+        <span style="white-space:nowrap;margin-left:8px">${fmtMoney(l.price*l.qty)}</span>
+      </div>`;
+    }).join('')}
     ${deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : ''}
     ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
@@ -2083,7 +2208,7 @@ function submitMesaOrder(){
   const req = {
     type:'pedido', tipo:'mesa', tableId,
     clienteNombre, notas, propina: tipMesa,
-    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty})),
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
     total: subtotalMesa + tipMesa,
     createdAt: new Date().toISOString()
   };
@@ -2107,7 +2232,7 @@ function sendRequest(req, successMsg){
         <h2>${escapeHtml(successMsg)}</h2>
         ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
         ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t('success.trackOrder')}</a>` : ''}
-        <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t('success.otra')}</button>
+        <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>
       </div>
     `;
   }).catch(e => {

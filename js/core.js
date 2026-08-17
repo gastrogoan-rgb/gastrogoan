@@ -2394,7 +2394,11 @@ function initPublicRequestsListener(){
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
         // la bandeja de "pedidos pendientes".
-        const items = (req.items || []).map(l => ({platoId: null, recipeId: null, name: l.name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true}));
+        const items = (req.items || []).map(l => {
+          const mods = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre).map(m => ({nombre: m.nombre, precio: m.precio||0})) : [];
+          const name = mods.length ? `${l.name} (${mods.map(m=>m.nombre).join(', ')})` : l.name;
+          return {platoId: null, recipeId: null, name, price: l.price, qty: l.qty, tanda: '', notas: '', nuevo: true, modificadores: mods};
+        });
         const table = DB.tables.find(t => t.id === req.tableId);
         let order = table ? DB.tpvOrders.find(o => o.tableId === table.id && o.status === 'abierta') : null;
         if(order){
@@ -2414,7 +2418,18 @@ function initPublicRequestsListener(){
           });
         }
       }else if(req.type === 'pedido'){
-        const onlineItems = (req.items || []).map(l => ({platoId: l.platoId||null, recipeId: l.recipeId||null, name: l.name||l.nombre||'', price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||''}));
+        // Los extras elegidos en la web (req.items[].modificadores, {nombre,
+        // precio} igual que ya guarda confirmAddOrderItem en el TPV) se
+        // incorporan al nombre de la línea entre paréntesis — mismo patrón
+        // que ya usa el TPV para que cocina los vea sin tener que abrir nada
+        // más, y se guardan también aparte por si algún día hace falta la
+        // lista estructurada.
+        const onlineItems = (req.items || []).map(l => {
+          const mods = Array.isArray(l.modificadores) ? l.modificadores.filter(m => m && m.nombre).map(m => ({nombre: m.nombre, precio: m.precio||0})) : [];
+          const baseName = l.name||l.nombre||'';
+          const name = mods.length ? `${baseName} (${mods.map(m=>m.nombre).join(', ')})` : baseName;
+          return {platoId: l.platoId||null, recipeId: l.recipeId||null, name, price: l.price||l.precio||0, qty: l.qty||1, tanda: l.tanda||'', notas: l.notas||'', modificadores: mods};
+        });
         const newOrderId = genId();
         const matchedClientPedido = req.clienteTelefono ? findClientByPhone(req.clienteTelefono) : null;
         DB.tpvOrders.push({
