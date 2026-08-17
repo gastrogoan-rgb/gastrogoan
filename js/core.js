@@ -2514,12 +2514,24 @@ function initPublicRequestsListener(){
         notifyNewRequest = true;
       }else if(req.type === 'pago_confirmado'){
         // Confirmación de pago con tarjeta (TPV virtual / Redsys), recibida
-        // automáticamente a través del Worker. Marca el pedido como pagado.
+        // automáticamente a través del Worker. `orderRef` puede ser el
+        // clientRef de un pedido O el resToken de la señal de una reserva
+        // (payWithCard usa uno u otro según lo que se esté pagando) — se
+        // comprueban los dos, nunca los dos a la vez porque los tokens no
+        // coinciden entre sí.
         const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
         if(order){
           order.pagado = true;
           order.pagoImporte = req.amount;
           order.pagoFecha = req.createdAt;
+        }
+        const reservationPaid = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.orderRef);
+        if(reservationPaid){
+          reservationPaid.depositConfirmed = true;
+          reservationPaid.depositPagoImporte = req.amount;
+          reservationPaid.depositPagoFecha = req.createdAt;
+          syncReservationStatusForPublic(reservationPaid);
+          logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
         }
       }
       saveDB();
@@ -3499,6 +3511,20 @@ function updateTpvVirtualCheckboxAvailability(){
     hint.textContent = redsysIsConfigured ? '' : t('mn.pedidos.aceptaTpvVirtualHint');
   }
 }
+// Igual que arriba, pero para la casilla "Pedir señal para confirmar
+// reservas" (Mi Negocio → Operativa): la señal se cobra a través del TPV
+// virtual, así que no tiene sentido poder activarla sin él conectado.
+function updateDepositCheckboxAvailability(){
+  const cb = document.getElementById('mn-require-deposit');
+  const hint = document.getElementById('mn-require-deposit-hint');
+  if(!cb) return;
+  cb.disabled = !redsysIsConfigured;
+  cb.checked = redsysIsConfigured && !!(DB.business && DB.business.requireDeposit);
+  if(hint){
+    hint.style.color = redsysIsConfigured ? 'var(--muted)' : 'var(--brand-orange)';
+    hint.textContent = redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys');
+  }
+}
 // Resumen a la vista de las 3 conexiones externas que la app puede usar
 // (cada una un servicio de fuera, con su propia cuenta que conecta el
 // negocio): nube propia (Firebase, obligatoria para trabajar en equipo),
@@ -3588,6 +3614,7 @@ async function loadRedsysCardStatus(){
     el.innerHTML = t('msg.cardPaymentCheckFailed');
   }
   updateTpvVirtualCheckboxAvailability();
+  updateDepositCheckboxAvailability();
 }
 
 async function saveRedsysConfig(){
@@ -3640,7 +3667,15 @@ async function disableRedsysConfig(){
     DB.business.pedidos.aceptaTpvVirtual = false;
     saveDB();
   }
+  // Misma razón que arriba: sin TPV virtual no hay forma de cobrar la señal,
+  // así que se desactiva para no dejar una reserva pidiendo un pago que ya
+  // no se puede completar.
+  if(DB.business && DB.business.requireDeposit){
+    DB.business.requireDeposit = false;
+    saveDB();
+  }
   updateTpvVirtualCheckboxAvailability();
+  updateDepositCheckboxAvailability();
   showToast(t('mn.redsys.disabled'));
 }
 

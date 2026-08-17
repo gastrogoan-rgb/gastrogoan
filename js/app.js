@@ -4199,6 +4199,34 @@ function leadTimeMinFor(b, kind){
   return b.leadTimeMin != null ? b.leadTimeMin : (b.pedidos?.leadTimeMin || '');
 }
 
+// La antelación se guarda internamente en minutos totales (leadTimeMinReservas/
+// leadTimeMinPedidos), pero escribir "2160" para decir "1 día y 12 horas" es
+// poco amigable — se muestra y edita como tres campos días/horas/minutos que
+// se recombinan a minutos totales al guardar (ver readLeadTimeDHM en saveBusiness).
+function minutesToDHM(totalMin){
+  totalMin = Math.max(0, parseInt(totalMin) || 0);
+  return { d: Math.floor(totalMin / 1440), h: Math.floor((totalMin % 1440) / 60), m: totalMin % 60 };
+}
+function leadTimeFieldHtml(idPrefix, totalMinutes){
+  const {d,h,m} = minutesToDHM(totalMinutes);
+  return `
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input type="number" id="${idPrefix}-d" min="0" max="30" value="${d}" style="width:56px" onchange="saveBusiness(true)">
+      <span style="font-size:12.5px;color:var(--muted)">${t('common.days')}</span>
+      <input type="number" id="${idPrefix}-h" min="0" max="23" value="${h}" style="width:56px" onchange="saveBusiness(true)">
+      <span style="font-size:12.5px;color:var(--muted)">${t('common.hours')}</span>
+      <input type="number" id="${idPrefix}-m" min="0" max="59" step="5" value="${m}" style="width:56px" onchange="saveBusiness(true)">
+      <span style="font-size:12.5px;color:var(--muted)">${t('common.minutes')}</span>
+    </div>
+  `;
+}
+function readLeadTimeDHM(idPrefix){
+  const el = id => document.getElementById(id);
+  const d = el(idPrefix + '-d'), h = el(idPrefix + '-h'), m = el(idPrefix + '-m');
+  if(!d || !h || !m) return null;
+  return Math.max(0, (parseInt(d.value)||0)*1440 + (parseInt(h.value)||0)*60 + (parseInt(m.value)||0));
+}
+
 // Última barrera antes de pintar Mi Negocio, por si se llega aquí
 // saltándose navigate()/renderView() (p.ej. renderMiNegocio() a mano desde
 // la consola de un dispositivo de empleado).
@@ -4390,23 +4418,24 @@ function renderMiNegocio(){
       <div class="field-row">
         <div class="field">
           <label>${t('mn.ops.leadTimeReservas')}</label>
-          <input type="number" id="mn-leadtime-reservas" min="0" step="5" value="${escapeHtml(leadTimeMinFor(b,'reservas'))}" placeholder="30" onchange="saveBusiness(true)">
+          ${leadTimeFieldHtml('mn-leadtime-reservas', leadTimeMinFor(b,'reservas'))}
           <small style="color:var(--muted)">${t('mn.ops.leadTimeReservasDesc')}</small>
         </div>
         <div class="field">
           <label>${t('mn.ops.leadTimePedidos')}</label>
-          <input type="number" id="mn-leadtime-pedidos" min="0" step="5" value="${escapeHtml(leadTimeMinFor(b,'pedidos'))}" placeholder="30" onchange="saveBusiness(true)">
+          ${leadTimeFieldHtml('mn-leadtime-pedidos', leadTimeMinFor(b,'pedidos'))}
           <small style="color:var(--muted)">${t('mn.ops.leadTimePedidosDesc')}</small>
         </div>
       </div>
       <div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:6px">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:600">
-          <input type="checkbox" id="mn-require-deposit" style="width:auto" ${b.requireDeposit?'checked':''} onchange="saveBusiness(true);renderMiNegocio()">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:${redsysIsConfigured?'pointer':'default'}">
+          <input type="checkbox" id="mn-require-deposit" style="width:auto" ${(b.requireDeposit && redsysIsConfigured)?'checked':''} ${redsysIsConfigured?'':'disabled'} onchange="saveBusiness(true);renderMiNegocio()">
           ${t('mn.ops.requireDeposit')}
         </label>
-        <small style="color:var(--muted)">${t('mn.ops.requireDepositDesc')}</small>
+        <small id="mn-require-deposit-hint" style="display:block;color:${redsysIsConfigured?'var(--muted)':'var(--brand-orange)'}">${redsysIsConfigured ? t('mn.ops.requireDepositDesc') : t('mn.ops.requireDepositNeedsRedsys')}</small>
+        ${!redsysIsConfigured ? `<button class="btn btn-sm" style="margin-top:6px" onclick="scrollToMnCard('mn-card-redsys')" type="button"><i class="ti ti-credit-card"></i> ${t('mn.ops.goToRedsys')}</button>` : ''}
       </div>
-      ${b.requireDeposit ? `
+      ${(b.requireDeposit && redsysIsConfigured) ? `
       <div class="field-row">
         <div class="field">
           <label>${t('mn.ops.depositAmount')}</label>
@@ -4949,9 +4978,11 @@ function saveBusiness(silent){
   if(el('mn-brand-color')) DB.business.brandColor = el('mn-brand-color').value;
   if(el('mn-aforo')) DB.business.aforo = Math.max(0, parseInt(el('mn-aforo').value) || 0) || '';
   if(el('mn-reserva-duracion')) DB.business.reservaDuracionMin = Math.max(0, parseInt(el('mn-reserva-duracion').value) || 0) || '';
-  if(el('mn-leadtime-reservas')) DB.business.leadTimeMinReservas = Math.max(0, parseInt(el('mn-leadtime-reservas').value) || 0);
-  if(el('mn-leadtime-pedidos')){
-    DB.business.leadTimeMinPedidos = Math.max(0, parseInt(el('mn-leadtime-pedidos').value) || 0);
+  const leadTimeReservas = readLeadTimeDHM('mn-leadtime-reservas');
+  if(leadTimeReservas != null) DB.business.leadTimeMinReservas = leadTimeReservas;
+  const leadTimePedidos = readLeadTimeDHM('mn-leadtime-pedidos');
+  if(leadTimePedidos != null){
+    DB.business.leadTimeMinPedidos = leadTimePedidos;
     // Se mantienen los campos antiguos en sincronía con el de pedidos (no el
     // de reservas) por compatibilidad: eran el mismo valor compartido antes
     // de separarlos, y reservagastrogoan.html todavía puede caer en ellos
@@ -4960,7 +4991,7 @@ function saveBusiness(silent){
     if(!DB.business.pedidos) DB.business.pedidos = {};
     DB.business.pedidos.leadTimeMin = DB.business.leadTimeMinPedidos;
   }
-  if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked;
+  if(el('mn-require-deposit')) DB.business.requireDeposit = el('mn-require-deposit').checked && redsysIsConfigured;
   if(el('mn-deposit-amount')) DB.business.depositAmount = Math.max(0, parseFloat(el('mn-deposit-amount').value) || 0) || '';
   if(el('mn-deposit-type')) DB.business.depositType = el('mn-deposit-type').value;
   if(el('mn-deposit-instructions')) DB.business.depositInstructions = el('mn-deposit-instructions').value.trim();
