@@ -4214,18 +4214,12 @@ function renderMiNegocio(){
       <div style="font-size:26px;font-weight:800;letter-spacing:4px;text-align:center;padding:10px;background:#fff;border-radius:8px;border:1px solid var(--border)">${escapeHtml((getBusinessSlots().find(s=>s.id===ACTIVE_SLOT)||{}).code || '—')}</div>
     </div>
 
-    <!-- Ojo: esto NO es el PIN de abajo. El PIN del negocio confirma acciones
-         sueltas dentro de la app; esta es la contraseña con la que se ENTRA, y
-         se guarda por dispositivo (gastrogoan_owner_login), no por negocio —
-         por eso el texto lo avisa: cambiarla aquí la cambia para todos los
-         negocios de este dispositivo. Antes solo se podía cambiar desde la
-         pantalla de elegir negocio, un sitio poco evidente para buscarla. -->
-    <div class="card">
-      <h3><i class="ti ti-lock-password"></i> ${t('mn.ownerPass.title')}</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerPass.desc')}</p>
-      <button class="btn btn-sm" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('mn.ownerPass.btn')}</button>
-    </div>
-
+    <!-- El PIN de aquí abajo NO es la contraseña de acceso del propietario:
+         esa es por dispositivo (gastrogoan_owner_login), no por negocio, y su
+         cambio vive en la pantalla de elegir negocio (renderBusinessSelectScreenHtml,
+         js/core.js) — un único sitio, en vez de repetirlo en cada Mi Negocio
+         cuando el dueño tiene varios locales. Este PIN, en cambio, sí es
+         propio de este negocio: confirma acciones delicadas del día a día. -->
     <div class="card" style="border:2px solid var(--brand-orange);background:var(--brand-cream)">
       <h3 style="color:var(--brand-orange)"><i class="ti ti-lock"></i> ${t('mn.ownerAccess.title')}</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('mn.ownerAccess.desc')}</p>
