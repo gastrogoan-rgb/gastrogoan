@@ -4465,16 +4465,16 @@ function renderMiNegocio(){
           <label>${t('mn.ops.tableCount')}</label>
           <input type="number" id="mn-zona-cantidad" min="1" max="50" value="4">
         </div>
-        <div class="field">
-          <label>${t('mn.ops.seatsPerTable')}</label>
-          <input type="number" id="mn-zona-plazas" min="1" max="50" value="4">
-        </div>
       </div>
       <button class="btn btn-sm btn-primary" onclick="addZonaConMesas()"><i class="ti ti-plus"></i> ${t('mn.ops.createZone')}</button>
 
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <h4 style="margin:0 0 8px"><i class="ti ti-list-details"></i> ${t('mn.ops.configuredTables')}</h4>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('mn.ops.configuredTablesDesc')}</p>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;padding:0 78px 0 0">
+        <span style="flex:1"></span>
+        <span style="width:64px;font-size:11px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase">${t('mn.ops.seatsPerTable')}</span>
+      </div>
       <div id="mn-mesas-list"></div>
       <div id="mn-aforo-warning"></div>
     </div>
@@ -4605,8 +4605,6 @@ function clearDanglingTableRefs(tableIds){
 function addZonaConMesas(){
   const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
-  const plazasEl = document.getElementById('mn-zona-plazas');
-  const plazas = plazasEl ? Math.max(1, Math.min(50, parseInt(plazasEl.value)||0)) || null : null;
   if(!nombre){ showToast(t('msg.enterZoneName')); return; }
   if(!Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = getZonaOrder();
   if(!DB.business.zonaOrder.includes(nombre)) DB.business.zonaOrder.push(nombre);
@@ -4614,8 +4612,11 @@ function addZonaConMesas(){
   // Si la zona ya tiene mesas, confirma antes de añadir más: evita duplicar
   // el rango entero por pulsar el botón dos veces sin darse cuenta.
   if(existingInZone > 0 && !confirm(t('msg.confirmAddMoreTablesToZone').replace('${zone}', nombre).replace('${count}', existingInZone))) return;
+  // Las plazas de cada mesa se rellenan después, en "Mesas configuradas"
+  // (más abajo en esta misma pantalla) — no se piden aquí para no obligar a
+  // que todas las mesas de una zona tengan la misma capacidad de entrada.
   for(let i = 1; i <= cantidad; i++){
-    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas});
+    DB.tables.push({id: genId(), name: `Mesa ${existingInZone+i}`, zona: nombre, plazas: null});
   }
   saveDB();
   document.getElementById('mn-zona-nombre').value = '';
