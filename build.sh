@@ -45,8 +45,12 @@ done
   echo "</html>"
 } > dist/index.html
 
-# Copy reservas page as-is (it's already a single file)
+# Copy reservas page (referencia fuentes externas en fonts/, ver más abajo —
+# ya no va todo en un solo archivo: al servirse por HTTP, esto cachea mejor
+# que llevar las fuentes embebidas en base64 dentro del propio HTML)
 cp reservagastrogoan.html dist/reservagastrogoan.html
+mkdir -p dist/fonts
+cp fonts/*.woff2 dist/fonts/
 
 # Copy the offline app-shell service worker (must sit at the site root next to index.html)
 cp sw.js dist/sw.js
