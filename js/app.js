@@ -1747,11 +1747,13 @@ function issueGiftVoucher(){
     code: giftVoucherCode(), createdAt: new Date().toISOString(), redeemed: false, redeemedAt: null
   });
   saveDB();
+  const newId = DB.giftVouchers[DB.giftVouchers.length-1].id;
   document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
   document.getElementById('voucher-cliente').value = '';
   if(tipo==='experiencia') document.getElementById('voucher-descripcion').value = '';
   else document.getElementById('voucher-importe').value = '';
   showToast(t('msg.voucherIssued'));
+  printGiftVoucher(newId);
 }
 
 function renderGiftVouchersHistory(){
@@ -1768,12 +1770,95 @@ function renderGiftVouchersHistory(){
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span class="badge ${v.redeemed?'badge-green':'badge-amber'}">${v.redeemed?t('label.voucherStatusRedeemed'):t('label.voucherStatusPending')}</span>
+        <button class="btn btn-sm btn-icon" onclick="printGiftVoucher(${v.id})" title="${t('btn.printVoucher')}"><i class="ti ti-printer"></i></button>
         <button class="btn btn-sm" onclick="toggleGiftVoucherRedeemed(${v.id})">${v.redeemed?t('btn.markPending'):t('btn.markRedeemed')}</button>
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteGiftVoucher(${v.id})"><i class="ti ti-trash"></i></button>
       </div>
     </div>
   `;
   }).join('');
+}
+
+// Vale regalo imprimible: pensado para entregarse en mano o enviarse en PDF,
+// así que cuida el diseño (tipografía, marco, color de marca) en vez de ser
+// un simple volcado de datos como el resto de informes de la app.
+function printGiftVoucher(id){
+  const v = (DB.giftVouchers||[]).find(x=>x.id===id);
+  if(!v) return;
+  const win = window.open('', '_blank', 'width=760,height=560');
+  if(!win){ showToast(t('msg.allowPopupsPrint')); return; }
+  const bizName = (DB.business && DB.business.name) || 'GastroGoan';
+  const accent = (DB.business && DB.business.brandColor) || '#B8804B';
+  const logo = DB.business && DB.business.logo;
+  const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
+  const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Montserrat:wght@400;500;600&display=swap');
+      *{box-sizing:border-box}
+      body{margin:0;padding:26px;background:#f2ede4;font-family:'Montserrat',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+      .voucher{
+        position:relative;width:680px;max-width:100%;background:#fffaf2;
+        border:2px solid ${accent};border-radius:18px;padding:40px 46px;
+        box-shadow:0 10px 30px rgba(0,0,0,.12);overflow:hidden;
+      }
+      .voucher::before, .voucher::after{
+        content:'';position:absolute;inset:10px;border:1px solid ${accent};border-radius:12px;opacity:.55;pointer-events:none;
+      }
+      .v-corner{position:absolute;width:34px;height:34px;border:2px solid ${accent}}
+      .v-corner.tl{top:14px;left:14px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+      .v-corner.tr{top:14px;right:14px;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
+      .v-corner.bl{bottom:14px;left:14px;border-right:none;border-top:none;border-radius:0 0 0 8px}
+      .v-corner.br{bottom:14px;right:14px;border-left:none;border-top:none;border-radius:0 0 8px 0}
+      .v-header{text-align:center;position:relative;z-index:1}
+      .v-logo{max-height:52px;max-width:200px;margin-bottom:10px}
+      .v-biz{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:${accent};font-weight:600;margin-bottom:2px}
+      .v-title{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;color:#2b241d;margin:6px 0 2px;letter-spacing:.5px}
+      .v-rule{width:80px;height:2px;background:${accent};margin:14px auto;opacity:.7}
+      .v-main{text-align:center;position:relative;z-index:1;margin:26px 0}
+      .v-main-amount{font-family:'Playfair Display',serif;font-size:52px;font-weight:700;color:${accent}}
+      .v-main-exp{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:28px;color:#2b241d;line-height:1.3;padding:0 20px}
+      .v-for{text-align:center;font-size:15px;color:#6b6157;margin-top:6px}
+      .v-for strong{color:#2b241d;font-weight:600}
+      .v-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:34px;position:relative;z-index:1;gap:16px}
+      .v-code-box{border:1.5px dashed ${accent};border-radius:10px;padding:8px 16px;text-align:center}
+      .v-code-label{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#9a8f80}
+      .v-code{font-family:'Montserrat',monospace;font-size:19px;font-weight:600;letter-spacing:2px;color:#2b241d}
+      .v-date{font-size:11.5px;color:#9a8f80;text-align:right}
+      .v-note{text-align:center;font-size:10.5px;color:#9a8f80;margin-top:22px;position:relative;z-index:1;font-style:italic}
+      @media print{
+        body{background:#fff;padding:0;min-height:auto}
+        .voucher{box-shadow:none}
+        @page{size:auto;margin:14mm}
+      }
+    </style>
+    </head><body>
+      <div class="voucher">
+        <div class="v-corner tl"></div><div class="v-corner tr"></div><div class="v-corner bl"></div><div class="v-corner br"></div>
+        <div class="v-header">
+          ${logo ? `<img class="v-logo" src="${logo}">` : ''}
+          <div class="v-biz">${escapeHtml(bizName)}</div>
+          <div class="v-title">${t('title.giftVouchers')}</div>
+          <div class="v-rule"></div>
+        </div>
+        <div class="v-main">
+          ${v.tipo === 'experiencia'
+            ? `<div class="v-main-exp">&ldquo;${mainLabel}&rdquo;</div>`
+            : `<div class="v-main-amount">${mainLabel}</div>`}
+          ${v.clienteNombre ? `<div class="v-for">${t('label.voucherFor')} <strong>${escapeHtml(v.clienteNombre)}</strong></div>` : ''}
+        </div>
+        <div class="v-footer">
+          <div class="v-code-box">
+            <div class="v-code-label">${t('label.voucherCode')}</div>
+            <div class="v-code">${escapeHtml(v.code)}</div>
+          </div>
+          <div class="v-date">${t('label.voucherIssuedOn')}<br>${escapeHtml(dateStr)}</div>
+        </div>
+        <div class="v-note">${t('msg.voucherPrintNote')}</div>
+      </div>
+      <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
 }
 
 function toggleGiftVoucherRedeemed(id){
