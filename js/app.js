@@ -1701,8 +1701,12 @@ function openGiftVouchersModal(){
     </div>
     <div id="voucher-form-fields"></div>
     <div class="field">
-      <label>${t('label.voucherClient')}</label>
-      <input type="text" id="voucher-cliente" placeholder="${t('ph.voucherClientOptional')}">
+      <label>${t('label.voucherClient')} *</label>
+      <select id="voucher-cliente">
+        <option value="">${t('ph.voucherSelectClient')}</option>
+        ${[...DB.clients].sort((a,b)=>a.name.localeCompare(b.name,'es')).map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
+      </select>
+      ${!DB.clients.length ? `<p style="font-size:12px;color:var(--muted);margin-top:4px">${t('msg.noClientsForVoucher')}</p>` : ''}
     </div>
     <div class="modal-footer" style="justify-content:flex-start">
       <button class="btn btn-primary" onclick="issueGiftVoucher()"><i class="ti ti-plus"></i> ${t('btn.issueVoucher')}</button>
@@ -1726,7 +1730,10 @@ function renderGiftVoucherFormFields(){
 
 function issueGiftVoucher(){
   const tipo = document.getElementById('voucher-tipo').value;
-  const clienteNombre = document.getElementById('voucher-cliente').value.trim();
+  const clienteId = parseInt(document.getElementById('voucher-cliente').value, 10);
+  if(!clienteId){ showToast(t('msg.voucherClientRequired')); return; }
+  const cliente = DB.clients.find(c => c.id === clienteId);
+  if(!cliente){ showToast(t('msg.voucherClientRequired')); return; }
   let descripcion = '', importe = 0;
   if(tipo === 'experiencia'){
     descripcion = document.getElementById('voucher-descripcion').value.trim();
@@ -1736,7 +1743,7 @@ function issueGiftVoucher(){
     if(!importe || importe <= 0){ showToast(t('msg.voucherAmountRequired')); return; }
   }
   DB.giftVouchers.push({
-    id: genId(), tipo, descripcion, importe, clienteNombre,
+    id: genId(), tipo, descripcion, importe, clienteId, clienteNombre: cliente.name,
     code: giftVoucherCode(), createdAt: new Date().toISOString(), redeemed: false, redeemedAt: null
   });
   saveDB();
