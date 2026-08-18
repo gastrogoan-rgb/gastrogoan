@@ -4285,7 +4285,23 @@ async function loadDB(){
         localStorage.removeItem(DB_KEY);
       }
     }
-    if(!data) return defaultData();
+    // Negocio genuinamente nuevo (nada guardado, ni siquiera del formato
+    // antiguo en localStorage): arranca ya con el catálogo básico de materia
+    // prima cargado en Mega Lista (ver buildBaseIngredientsSeed, js/finance.js),
+    // para no obligar a dar de alta uno a uno decenas de ingredientes
+    // habituales. Esta función solo existe una vez cargado finance.js, pero
+    // para cuando esto se ejecuta (tras el await de arriba) ya lo está —
+    // nunca se llama de forma síncrona al arrancar el script.
+    if(!data){
+      const fresh = defaultData();
+      if(typeof buildBaseIngredientsSeed === 'function'){
+        const seed = buildBaseIngredientsSeed('cocina', Date.now() * 1000);
+        fresh.ingredients = seed.ingredients;
+        fresh.stock = seed.stock;
+        fresh.categoryIcons.ingredient = seed.categoryIcons;
+      }
+      return fresh;
+    }
     const merged = Object.assign(defaultData(), data);
     merged.business = {...defaultData().business, ...(data.business||{})};
     if(merged.business.pinSet === undefined){

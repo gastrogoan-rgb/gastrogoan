@@ -907,13 +907,42 @@ const BASE_INGREDIENTS_CATALOG = {
   ]},
 };
 
+// Construye la lista de ingredientes + stock + iconos de carpeta del
+// catálogo base, sin tocar DB — la usa tanto el negocio recién creado
+// (defaultData(), antes de que DB exista) como el botón manual de Mega
+// Lista (que sí escribe en DB, ver loadBaseIngredientsCatalog). idStart
+// evita colisiones de id cuando se llama antes de que genId() esté
+// disponible (arranque en frío, todavía sin DB.nextId).
+function buildBaseIngredientsSeed(area, idStart){
+  const ingredients = [];
+  const stock = {};
+  const categoryIcons = {};
+  let nextId = idStart;
+  Object.keys(BASE_INGREDIENTS_CATALOG).forEach(cat => {
+    const {icon, items} = BASE_INGREDIENTS_CATALOG[cat];
+    categoryIcons[cat] = icon;
+    items.forEach(([name, unit, allergens]) => {
+      const id = nextId++;
+      ingredients.push({
+        id, name, category: cat, unit, supplier: '', price: 0, packQty: 1, packPrice: 0,
+        allergens: [...allergens], area, activo: true,
+      });
+      stock[id] = {qty:0, min:0};
+    });
+  });
+  return {ingredients, stock, categoryIcons};
+}
+
 // Carga en Mega Lista todo el catálogo de arriba, en la unidad y con los
 // alérgenos ya marcados, dejando precio/IVA/proveedor/cantidad de compra a
 // 0 (o sin elegir, en el caso del IVA) para que el negocio solo tenga que
 // rellenar esos cuatro datos de los productos que de verdad usa, en vez de
 // dar de alta uno a uno decenas de ingredientes básicos desde cero. No
 // duplica: un ingrediente ya existente con el mismo nombre en esta área se
-// deja tal cual, no se toca ni se repite.
+// deja tal cual, no se toca ni se repite. (Los negocios nuevos ya arrancan
+// con el catálogo cargado solo, ver defaultData() en core.js — este botón
+// es sobre todo para volver a traer alguno que se haya borrado, o para
+// negocios que ya existían antes de este cambio.)
 function loadBaseIngredientsCatalog(){
   const area = currentArea();
   const existingNames = new Set(DB.ingredients.filter(i => (i.area||'cocina')===area).map(i => i.name.trim().toLowerCase()));
