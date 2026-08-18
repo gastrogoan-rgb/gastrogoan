@@ -162,23 +162,6 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .grid-4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .grid-compact{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
-
-/* Plano de sala visual: lienzo con proporción fija donde mesas y elementos
-   de decoración se colocan en % (no en px) para que la disposición se lea
-   igual en cualquier tamaño de pantalla, incluido el móvil. */
-.plano-canvas{position:relative;width:100%;aspect-ratio:16/10;min-height:320px;
-  background-color:var(--card-bg,#fff);
-  background-image:linear-gradient(rgba(0,0,0,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.06) 1px,transparent 1px);
-  background-size:20px 20px;border:1px solid var(--border,#e2e2e2);border-radius:12px;overflow:hidden;touch-action:none}
-.plano-canvas.plano-editing{border:2px dashed var(--brand-orange,#e07a1f);background-color:rgba(224,122,31,.05)}
-.mesa-plano-chip{padding:4px 6px;font-size:11px;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;user-select:none;touch-action:none}
-.mesa-plano-chip .mesa-name{font-size:11px;margin:0}
-.mesa-plano-chip .mesa-total{font-size:11px}
-.mesa-plano-chip .mesa-icons-row,.mesa-plano-chip .mesa-elapsed-row,.mesa-plano-chip .mesa-meta-row{gap:2px}
-.mesa-plano-round{border-radius:50%}
-.plano-elemento{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);user-select:none;touch-action:none}
-.plano-elemento i{font-size:20px}
-.plano-elemento-del{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;border:none;background:var(--red,#c0392b);color:#fff;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .grid-personal{grid-template-columns:repeat(auto-fill,minmax(260px,320px))}
 /* Módulos de una carpeta (Cocina/Sala/Gestión): columnas fijas y centradas,
    para que con un número de módulos no divisible entre columnas la última
