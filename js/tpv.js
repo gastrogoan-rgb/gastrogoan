@@ -673,7 +673,12 @@ function mesaPhase(order){
   return null;
 }
 
-function renderMesaCard(table){
+// Todo lo que hace falta para pintar el estado de una mesa (badges, fase,
+// total, aviso de "mesa fría"...), separado de CÓMO se coloca en pantalla —
+// así la vista de lista (grid de tarjetas) y el plano visual interactivo
+// (ver renderTpvMesasPlano) muestran exactamente la misma información real,
+// sin mantener dos copias de esta lógica que puedan desincronizarse.
+function computeMesaCardState(table){
   const order = getOpenOrderForTable(table.id);
   const total = order ? orderTotal(order) : 0;
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
@@ -707,8 +712,8 @@ function renderMesaCard(table){
   }
   const chaosBlink = (typeof chaosMode !== 'undefined' && chaosMode && order && order.createdAt && minutesSince(order.createdAt) >= 90) ? ' mesa-blink-urgent' : '';
 
-  return `
-    <div class="card mesa-card ${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}${mesaFria?' mesa-fria':''}${chaosBlink}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+  const classes = `${order?'mesa-occupied':'mesa-free'} ${phaseClass}${upcomingRes?' mesa-reserved-soon':''}${mesaFria?' mesa-fria':''}${chaosBlink}`;
+  const bodyHtml = `
       <div class="mesa-icons-row">
         ${mesaFria ? `<span class="mesa-mini-badge" style="background:var(--blue,#4E5A63);color:#fff" title="${t('tpv.mesaFria.hint')}"><i class="ti ti-snowflake"></i></span>` : ''}
         ${hayNuevos ? `<span class="mesa-mini-badge" title="${t('label.newItemsFromClient')}"><i class="ti ti-bell-ringing"></i></span>` : ''}
@@ -728,6 +733,43 @@ function renderMesaCard(table){
         : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>
            ${table.plazas ? `<div class="mesa-pax mesa-pax-free"><i class="ti ti-users"></i> ${table.plazas} ${t('common.persAbbr')}</div>` : ''}
            ${upcomingRes ? `<div class="mesa-reservation-hint" title="${escapeHtml(upcomingRes.clientName||'')}"><i class="ti ti-calendar-event"></i> ${t('label.reservedAt').replace('${time}', escapeHtml(upcomingRes.time))} · ${upcomingRes.people} <i class="ti ti-users"></i></div>` : ''}`}
+  `;
+  return {classes, bodyHtml};
+}
+
+function renderMesaCard(table){
+  const {classes, bodyHtml} = computeMesaCardState(table);
+  return `
+    <div class="card mesa-card ${classes}" style="text-align:center;cursor:pointer;position:relative" onclick="openTableOrder(${table.id})" title="${escapeHtml(table.name)}">
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+// Vista de mesas activa por dispositivo (no por negocio): distinto personal
+// en distintos terminales puede preferir vistas distintas, y no tiene nada
+// que ver con los datos del negocio en sí.
+function getMesasViewMode(){
+  return localStorage.getItem('gg_mesas_view') === 'plano' ? 'plano' : 'lista';
+}
+function setMesasViewMode(mode){
+  localStorage.setItem('gg_mesas_view', mode === 'plano' ? 'plano' : 'lista');
+}
+function toggleMesasViewMode(){
+  setMesasViewMode(getMesasViewMode()==='plano' ? 'lista' : 'plano');
+  renderTPV();
+}
+
+function renderTpvMesasToolbar(){
+  const mode = getMesasViewMode();
+  return `
+    <div class="plano-toolbar" style="display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
+      <h3 style="margin:0"><i class="ti ti-tools-kitchen-2"></i> ${t("label.tables")}</h3>
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <button class="btn btn-sm ${mode==='lista'?'btn-primary':''}" onclick="setMesasViewMode('lista');renderTPV()"><i class="ti ti-list"></i> ${t('plano.viewList')}</button>
+        <button class="btn btn-sm ${mode==='plano'?'btn-primary':''}" onclick="setMesasViewMode('plano');renderTPV()"><i class="ti ti-layout-2"></i> ${t('plano.viewPlan')}</button>
+        ${mode==='plano' && editUnlocked ? `<button class="btn btn-sm ${planoEditMode?'btn-danger':''}" onclick="togglePlanoEditMode()"><i class="ti ${planoEditMode?'ti-check':'ti-edit'}"></i> ${planoEditMode?t('plano.doneEditing'):t('plano.edit')}</button>` : ''}
+      </div>
     </div>
   `;
 }
@@ -742,18 +784,22 @@ function renderTpvMesas(tiposServicio){
     `;
   }
 
+  if(getMesasViewMode()==='plano'){
+    return renderTpvMesasPlano(sortedTables);
+  }
+
   // Si hay mesas con zona asignada (interior/terraza/barra), las agrupamos en
   // secciones; las mesas sin zona (creadas manualmente) van en un grupo aparte.
   const hasZonas = sortedTables.some(t => t.zona);
   if(!hasZonas){
     return `
-      <h3 style="margin-top:16px"><i class="ti ti-tools-kitchen-2"></i> ${t("label.tables")}</h3>
+      ${renderTpvMesasToolbar()}
       <div class="grid grid-mesas">${sortedTables.map(renderMesaCard).join('')}</div>
     `;
   }
 
   const zonas = getZonaOrder();
-  let html = '';
+  let html = renderTpvMesasToolbar();
   zonas.forEach(z => {
     const tables = sortedTables.filter(t => t.zona === z);
     if(!tables.length) return;
@@ -770,6 +816,172 @@ function renderTpvMesas(tiposServicio){
     `;
   }
   return html;
+}
+
+// --- Plano de sala visual ---------------------------------------------
+
+// Catálogo de elementos de decoración colocables en el plano, para que se
+// pueda montar una sala "de verdad" (con baño, puerta, barra...) y no solo
+// mesas sueltas flotando en un lienzo vacío.
+const PLANO_ELEMENTO_TIPOS = {
+  bano:    {icon:'ti-toilet-paper', labelKey:'plano.el.bano'},
+  puerta:  {icon:'ti-door',         labelKey:'plano.el.puerta'},
+  barra:   {icon:'ti-glass-cocktail', labelKey:'plano.el.barra'},
+  ventana: {icon:'ti-window',       labelKey:'plano.el.ventana'},
+  cocina:  {icon:'ti-toque',        labelKey:'plano.el.cocina'},
+};
+
+let planoEditMode = false;
+function togglePlanoEditMode(){
+  planoEditMode = !planoEditMode;
+  renderTPV();
+}
+
+// El tamaño/forma de la mesa en el plano depende solo de las plazas: así el
+// plano se lee de un vistazo (una mesa de 8 no puede confundirse con una de
+// 2) sin que el usuario tenga que configurar nada a mano.
+function mesaPlanoSize(table){
+  const p = table.plazas || 2;
+  if(p <= 2) return {w:52, h:52, round:true};
+  if(p <= 4) return {w:64, h:64, round:false};
+  if(p <= 6) return {w:88, h:64, round:false};
+  return {w:110, h:70, round:false};
+}
+
+// Si una mesa (o el plano entero) no tiene posición todavía, le asignamos una
+// en rejilla para que el plano nunca se vea vacío al entrar por primera vez.
+// Se guarda en cuanto se calcula, así solo ocurre una vez.
+function ensurePlanoAutoLayout(tables){
+  const faltan = tables.filter(t => t.planoX == null || t.planoY == null);
+  if(!faltan.length) return;
+  const cols = Math.min(5, Math.ceil(Math.sqrt(tables.length)) || 1);
+  faltan.forEach((t, i) => {
+    const idx = tables.indexOf(t);
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    t.planoX = 12 + col * (76 / Math.max(1, cols-1||1));
+    t.planoY = 18 + row * 18;
+    if(t.planoX > 92) t.planoX = 92;
+    if(t.planoY > 88) t.planoY = 88;
+  });
+  saveDB();
+}
+
+function renderPlanoMesaChip(table){
+  const {classes, bodyHtml} = computeMesaCardState(table);
+  const size = mesaPlanoSize(table);
+  const x = table.planoX ?? 50, y = table.planoY ?? 50;
+  return `
+    <div class="card mesa-card mesa-plano-chip ${size.round?'mesa-plano-round':''} ${classes}"
+         style="position:absolute;left:${x}%;top:${y}%;width:${size.w}px;height:${size.h}px;transform:translate(-50%,-50%);cursor:${planoEditMode?'grab':'pointer'}"
+         data-plano-mesa-id="${table.id}"
+         onclick="${planoEditMode?'':`openTableOrder(${table.id})`}"
+         title="${escapeHtml(table.name)}">
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function renderPlanoElementoHtml(el){
+  const tipo = PLANO_ELEMENTO_TIPOS[el.tipo] || PLANO_ELEMENTO_TIPOS.bano;
+  return `
+    <div class="plano-elemento" style="position:absolute;left:${el.x}%;top:${el.y}%;transform:translate(-50%,-50%);cursor:${planoEditMode?'grab':'default'}" data-plano-elemento-id="${el.id}">
+      <i class="ti ${tipo.icon}"></i>
+      <span>${t(tipo.labelKey)}</span>
+      ${planoEditMode ? `<button type="button" class="plano-elemento-del" onclick="event.stopPropagation();deletePlanoElemento(${el.id})" title="${t('common.delete')}"><i class="ti ti-x"></i></button>` : ''}
+    </div>
+  `;
+}
+
+function renderTpvMesasPlano(sortedTables){
+  ensurePlanoAutoLayout(sortedTables);
+  DB.business.salaPlano = DB.business.salaPlano || {elementos:[]};
+  const elementos = DB.business.salaPlano.elementos || [];
+  return `
+    ${renderTpvMesasToolbar()}
+    ${planoEditMode ? `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">
+        ${Object.keys(PLANO_ELEMENTO_TIPOS).map(tipo => `
+          <button class="btn btn-sm" onclick="addPlanoElemento('${tipo}')"><i class="ti ${PLANO_ELEMENTO_TIPOS[tipo].icon}"></i> ${t(PLANO_ELEMENTO_TIPOS[tipo].labelKey)}</button>
+        `).join('')}
+      </div>
+    ` : ''}
+    <div id="plano-canvas" class="plano-canvas ${planoEditMode?'plano-editing':''}">
+      ${elementos.map(renderPlanoElementoHtml).join('')}
+      ${sortedTables.map(renderPlanoMesaChip).join('')}
+    </div>
+  `;
+}
+
+function addPlanoElemento(tipo){
+  DB.business.salaPlano = DB.business.salaPlano || {elementos:[]};
+  DB.business.salaPlano.elementos.push({id:genId(), tipo, x:50, y:50});
+  saveDB();
+  renderTPV();
+}
+
+function deletePlanoElemento(id){
+  if(!DB.business.salaPlano) return;
+  DB.business.salaPlano.elementos = (DB.business.salaPlano.elementos||[]).filter(e => e.id !== id);
+  saveDB();
+  renderTPV();
+}
+
+// Arrastrar con Pointer Events (no HTML5 Drag&Drop): funciona igual con
+// ratón y con dedo, que es justo lo que hace falta en un TPV táctil.
+function initPlanoCanvasDrag(){
+  const canvas = document.getElementById('plano-canvas');
+  if(!canvas || !planoEditMode) return;
+  let dragging = null; // {kind:'mesa'|'elemento', id, el}
+
+  const onPointerDown = (ev) => {
+    const mesaEl = ev.target.closest('[data-plano-mesa-id]');
+    const elEl = ev.target.closest('[data-plano-elemento-id]');
+    if(!mesaEl && !elEl) return;
+    const el = mesaEl || elEl;
+    dragging = {
+      kind: mesaEl ? 'mesa' : 'elemento',
+      id: Number(el.getAttribute(mesaEl ? 'data-plano-mesa-id' : 'data-plano-elemento-id')),
+      el
+    };
+    el.setPointerCapture(ev.pointerId);
+    el.style.cursor = 'grabbing';
+    ev.preventDefault();
+  };
+
+  const onPointerMove = (ev) => {
+    if(!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    let x = ((ev.clientX - rect.left) / rect.width) * 100;
+    let y = ((ev.clientY - rect.top) / rect.height) * 100;
+    x = Math.max(2, Math.min(98, x));
+    y = Math.max(4, Math.min(96, y));
+    dragging.el.style.left = x + '%';
+    dragging.el.style.top = y + '%';
+    dragging.lastX = x;
+    dragging.lastY = y;
+  };
+
+  const onPointerUp = (ev) => {
+    if(!dragging) return;
+    dragging.el.style.cursor = 'grab';
+    if(dragging.lastX != null){
+      if(dragging.kind === 'mesa'){
+        const table = DB.tables.find(t => t.id === dragging.id);
+        if(table){ table.planoX = dragging.lastX; table.planoY = dragging.lastY; }
+      } else {
+        const el = (DB.business.salaPlano && DB.business.salaPlano.elementos || []).find(e => e.id === dragging.id);
+        if(el){ el.x = dragging.lastX; el.y = dragging.lastY; }
+      }
+      saveDB();
+    }
+    dragging = null;
+  };
+
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerUp);
 }
 
 function renderTpvToGo(tiposServicio){
@@ -920,6 +1132,7 @@ function renderTPV(){
     <div id="tpv-mesas-section">${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}</div>
     <div id="tpv-togo-section">${renderTpvToGo(tiposServicio)}</div>
   `;
+  initPlanoCanvasDrag();
 }
 
 // "Modo caos": en vez de las mesas agrupadas por zona, una única lista con
