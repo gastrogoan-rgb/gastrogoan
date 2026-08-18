@@ -1147,7 +1147,6 @@ const GE = (function(){
     html += '</tbody>';
     document.getElementById('res-table').innerHTML = html;
     renderMonthComparison();
-    renderSimulator();
   }
 
   // Compara el mes en curso (año actual) con el mes anterior y con el mismo
@@ -1179,39 +1178,6 @@ const GE = (function(){
       <div class="grid grid-2" style="margin-bottom:14px">
         <div class="ge-kpi"><div class="lbl">${t('hr.compare.revenueLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(revCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(revCur, revPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(revCur, revYoy))}</div></div>
         <div class="ge-kpi"><div class="lbl">${t('hr.compare.resultLabel').replace('${month}', getMeses()[curM])}</div><div class="val">${fmtMoney(resCur)}</div><div class="sub">${t('hr.compare.vsPrevMonth')} ${badge(pctDelta(resCur, resPrev))} · ${t('hr.compare.vsLastYear')} ${badge(pctDelta(resCur, resYoy))}</div></div>
-      </div>`;
-  }
-
-  // Simulador "¿y si...?": mueve dos supuestos (variación de precios de
-  // venta, coste extra de personal al mes) y ve el impacto estimado en el
-  // resultado del mes en curso, sin tener que cambiar nada de verdad en
-  // la carta ni en gastos fijos para verlo.
-  let simPctPrecio = 0, simCosteExtra = 0;
-  function setSimPctPrecio(v){ simPctPrecio = parseFloat(v)||0; renderSimulator(); }
-  function setSimCosteExtra(v){ simCosteExtra = parseFloat(v)||0; renderSimulator(); }
-  function renderSimulator(){
-    const box = document.getElementById('res-simulator');
-    if(!box) return;
-    const now = new Date();
-    const curM = now.getMonth(), curY = now.getFullYear();
-    const resActual = resultadoAntesImpMes(curM, curY);
-    const revActual = facturacionNetaMes(curM, curY);
-    const revSim = revActual * (1 + simPctPrecio/100);
-    const resSim = resActual + (revSim - revActual) - simCosteExtra;
-    const delta = resSim - resActual;
-    box.innerHTML = `
-      <div class="card">
-        <h4 style="margin-bottom:4px"><i class="ti ti-adjustments-alt"></i> ${t('hr.sim.title')}</h4>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('hr.sim.desc')}</p>
-        <div class="field-row">
-          <div class="field"><label>${t('hr.sim.priceChangeLabel')}</label><input type="number" step="0.5" value="${simPctPrecio}" oninput="GE.setSimPctPrecio(this.value)">%</div>
-          <div class="field"><label>${t('hr.sim.extraStaffCostLabel')}</label><input type="number" step="10" value="${simCosteExtra}" oninput="GE.setSimCosteExtra(this.value)">€/${t('common.month')}</div>
-        </div>
-        <div class="ge-kpi" style="margin-top:6px">
-          <div class="lbl">${t('hr.sim.projectedResultLabel')}</div>
-          <div class="val" style="color:${resSim>=resActual?'var(--green)':'var(--red)'}">${fmtMoney(resSim)}</div>
-          <div class="sub">${t('hr.sim.vsActualLabel')} ${fmtMoney(resActual)} (${delta>=0?'+':''}${fmtMoney(delta)})</div>
-        </div>
       </div>`;
   }
 
@@ -1946,7 +1912,7 @@ const GE = (function(){
     );
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary, setSimPctPrecio, setSimCosteExtra};
+  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
 })();
 
 /* ============================================================
