@@ -232,9 +232,9 @@ function renderLimpiezaManos(){
       <div class="card">
         <h3 style="justify-content:space-between"><span><i class="ti ti-droplet"></i> ${t('title.handWashingProtocol')}</span><button class="btn btn-sm" onclick="printManosProtocolo()"><i class="ti ti-printer"></i></button></h3>
         ${pasos.map((p,i) => `
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
             <div class="step-num">${i+1}</div>
-            <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
+            <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
             <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
         `).join('')}
@@ -285,13 +285,13 @@ function renderLimpiezaProtocolo(){
     <div class="card">
       <h3 style="justify-content:space-between"><span><i class="ti ti-${icon}"></i> ${title}</span><button class="btn btn-sm" onclick="printProtocolo('${type}')"><i class="ti ti-printer"></i></button></h3>
       ${pasos.map((p,i) => `
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+        <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
           <div class="step-num">${i+1}</div>
-          <input type="text" value="${escapeHtml(p)}" style="flex:1" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
-          <div class="owner-strict" style="display:flex;gap:2px">
+          <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateProtocoloPaso('${type}',${i},this.value)" ${editUnlocked?'':'disabled'}>
+          <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
             ${reorderButtons(`moveProtocoloPaso('${type}',${i},-1)`, `moveProtocoloPaso('${type}',${i},1)`, i===0, i===pasos.length-1)}
+            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
           </div>
-          <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeProtocoloPaso('${type}',${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
         </div>
       `).join('')}
       <button class="owner-strict btn btn-sm" onclick="addProtocoloPaso('${type}')"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>

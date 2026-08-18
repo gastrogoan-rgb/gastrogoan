@@ -699,8 +699,13 @@ td.wrap{white-space:normal}
 .bar-fill{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
 .bar-lbl{font-size:9px;color:var(--muted);white-space:nowrap}
 
-.te-row{display:grid;grid-template-columns:1fr 70px 100px 100px 100px 70px;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.te-row{display:grid;grid-template-columns:minmax(0,1fr) 70px 100px 100px 100px 70px;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border)}
 .te-row span{white-space:nowrap}
+/* La etiqueta (1ª columna) sí puede partirse en dos líneas: con minmax(0,1fr)
+   ya no empuja el resto de la fila fuera de pantalla, pero sin permitir que
+   el texto la etiqueta más larga (la de la reserva de IVA, con el trimestre
+   añadido) se corte o siga desbordando en móvil. */
+.te-row span:first-child{white-space:normal;line-height:1.25}
 .te-row:last-child{border-bottom:none}
 .te-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:0 16px 10px}
 .te-bar-fill{height:100%;border-radius:3px;transition:width .4s}
@@ -911,6 +916,14 @@ td.wrap{white-space:normal}
 }
 
 @media (max-width: 600px){
+  /* Pasos de protocolo (APPCC apertura/cierre, higiene de manos): el texto
+     del paso es casi siempre más largo que el hueco que le queda al lado de
+     3 botones — en vez de un input estrujado y siempre cortado, el texto va
+     en su propia línea a ancho completo y los botones debajo. */
+  .protocolo-step-row{flex-direction:column;align-items:stretch !important}
+  .protocolo-step-row input{min-width:0 !important}
+  .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
+
   /* Header — compact single row, icon-only buttons */
   :root{--header-h:44px}
   .app-header{padding:0 6px;gap:3px;height:var(--header-h)}
@@ -1061,6 +1074,13 @@ td.wrap{white-space:normal}
   .modal{max-width:100% !important}
   .bs-box{max-width:100% !important}
   input[style*="min-width"]{min-width:0 !important}
+  /* La regla de arriba anula el min-width en línea de CUALQUIER input para
+     que nada empuje la página — pero en la fila de las declaraciones
+     responsables de VeriFactu (URL + etiqueta apretadas en la misma línea)
+     dejaba el campo reducido a un par de caracteres en vez de bajar a su
+     propia línea. Forzarlo a ocupar toda la fila es más fiable que depender
+     de un min-width que ya no cuenta aquí. */
+  input[id^="vf-"]{flex-basis:100% !important}
   .search-input{max-width:100% !important;width:100% !important}
   .toolbar{width:100%}
   /* El buscador (.toolbar .left) compartía fila flex con los botones de la
