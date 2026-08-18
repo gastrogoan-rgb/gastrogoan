@@ -217,7 +217,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card .mesa-status-free .ti{font-size:15px}
 .mesa-card.mesa-reserved-soon{border-color:var(--brand-orange);border-style:dashed}
 .mesa-card .mesa-pax-free{margin-top:4px;justify-content:center;width:100%}
-.mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--brand-orange);display:flex;align-items:center;justify-content:center;gap:3px}
+.mesa-card .mesa-reservation-hint{margin-top:6px;font-size:10.5px;font-weight:700;color:var(--brand-orange);display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;text-align:center}
 .mesa-card .mesa-phase-row{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10.5px;color:var(--muted);margin-top:6px}
 .mesa-card .mesa-total{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);width:100%;font-weight:800;font-size:20px;color:var(--brand-orange)}
 .mesa-card .mesa-meta-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;flex-wrap:wrap;width:100%}

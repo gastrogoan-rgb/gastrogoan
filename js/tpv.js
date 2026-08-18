@@ -692,6 +692,7 @@ function renderMesaCard(table){
   const phaseClass = order ? `mesa-phase-${phase ? phase.key : 'served'}` : '';
   const waiterChip = order ? mesaWaiterChipHtml(order.camareroId, order.openedByOwner) : '';
   const upcomingRes = !order ? getUpcomingReservationForTable(table.id) : null;
+  const upcomingResClient = upcomingRes ? (DB.clients.find(c=>c.id===upcomingRes.clientId)?.name || upcomingRes.clientName || '') : '';
 
   // "Mesa fría": todo servido pero lleva ya un rato sin que nadie la cobre
   // ni la revise — suele significar que se olvidó, y esa mesa retiene sitio
@@ -727,7 +728,7 @@ function renderMesaCard(table){
         `
         : `<div class="mesa-status-free"><i class="ti ti-door-enter"></i> ${t('status.free')}</div>
            ${table.plazas ? `<div class="mesa-pax mesa-pax-free"><i class="ti ti-users"></i> ${table.plazas} ${t('common.persAbbr')}</div>` : ''}
-           ${upcomingRes ? `<div class="mesa-reservation-hint" title="${escapeHtml(upcomingRes.clientName||'')}"><i class="ti ti-calendar-event"></i> ${t('label.reservedAt').replace('${time}', escapeHtml(upcomingRes.time))} · ${upcomingRes.people} <i class="ti ti-users"></i></div>` : ''}`}
+           ${upcomingRes ? `<div class="mesa-reservation-hint" title="${escapeHtml(upcomingResClient)}"><i class="ti ti-calendar-event"></i> ${upcomingResClient ? t('label.reservedAtFor').replace('${time}', escapeHtml(upcomingRes.time)).replace('${name}', escapeHtml(upcomingResClient)) : t('label.reservedAt').replace('${time}', escapeHtml(upcomingRes.time))} · ${upcomingRes.people} <i class="ti ti-users"></i></div>` : ''}`}
     </div>
   `;
 }
