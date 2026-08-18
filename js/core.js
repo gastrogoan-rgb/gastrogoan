@@ -3020,6 +3020,11 @@ function applyRemoteBlock(key, remoteValue){
     localStorage.setItem(LICENSE_LS, JSON.stringify(DB.license));
     hideActivationGate();
   }
+  // Un dispositivo NUEVO que canjea un negocio ya existente recibe su
+  // nombre real por la nube (aquí), no editando Mi Negocio — sin esto, el
+  // selector de negocios se quedaba con "Mi negocio" de relleno hasta que
+  // alguien entrara a Mi Negocio y guardara desde ESE dispositivo en concreto.
+  if(key === 'business' && merged && merged.name) updateActiveSlotName(merged.name);
   refreshAfterRemoteChange();
 }
 
