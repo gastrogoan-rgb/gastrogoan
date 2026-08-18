@@ -806,6 +806,153 @@ function renderMegalista(){
   box.innerHTML = backBtn + renderMegalistaTable(megalistaSortItems(folderItems));
 }
 
+// Catálogo de materia prima básica de cocina, para no obligar a un negocio
+// nuevo a dar de alta uno a uno los ingredientes más habituales de un
+// restaurante español. Cada entrada es [nombre, unidad, alérgenos]; la
+// categoría la pone el bloque que la contiene. El cliente solo tiene que
+// rellenar precio, IVA, proveedor y cantidad de compra de los que de verdad
+// usa — el resto los puede borrar o dejar descatalogados.
+const BASE_INGREDIENTS_CATALOG = {
+  'Verduras': {icon:'🥬', items:[
+    ['Tomate','kg',[]], ['Cebolla','kg',[]], ['Ajo','kg',[]], ['Pimiento rojo','kg',[]], ['Pimiento verde','kg',[]],
+    ['Calabacín','kg',[]], ['Berenjena','kg',[]], ['Patata','kg',[]], ['Zanahoria','kg',[]], ['Lechuga','ud',[]],
+    ['Espinaca','kg',[]], ['Champiñón','kg',[]], ['Puerro','kg',[]], ['Pepino','kg',[]], ['Col','ud',[]],
+    ['Brócoli','kg',[]], ['Calabaza','kg',[]], ['Apio','kg',['Apio']], ['Espárrago verde','kg',[]], ['Alcachofa','kg',[]],
+  ]},
+  'Frutas': {icon:'🍎', items:[
+    ['Limón','kg',[]], ['Naranja','kg',[]], ['Manzana','kg',[]], ['Plátano','kg',[]], ['Fresa','kg',[]],
+    ['Aguacate','kg',[]], ['Uva','kg',['Sulfitos']], ['Pera','kg',[]], ['Melón','ud',[]], ['Sandía','ud',[]],
+    ['Piña','ud',[]], ['Kiwi','kg',[]], ['Mango','kg',[]], ['Melocotón','kg',[]], ['Frutos rojos (mix)','kg',[]],
+  ]},
+  'Carnes': {icon:'🥩', items:[
+    ['Solomillo de ternera','kg',[]], ['Entrecot de ternera','kg',[]], ['Carne picada de ternera','kg',[]],
+    ['Pechuga de pollo','kg',[]], ['Muslo de pollo','kg',[]], ['Pollo entero','kg',[]], ['Secreto ibérico','kg',[]],
+    ['Solomillo de cerdo','kg',[]], ['Costilla de cerdo','kg',[]], ['Panceta','kg',[]], ['Cordero (paletilla)','kg',[]],
+    ['Chuletas de cordero','kg',[]], ['Carne picada mixta','kg',[]], ['Conejo','kg',[]], ['Pato (magret)','kg',[]],
+  ]},
+  'Pescados y Marisco': {icon:'🐟', items:[
+    ['Merluza','kg',['Pescado']], ['Salmón','kg',['Pescado']], ['Atún fresco','kg',['Pescado']], ['Bacalao','kg',['Pescado']],
+    ['Lubina','kg',['Pescado']], ['Dorada','kg',['Pescado']], ['Boquerón','kg',['Pescado']], ['Sardina','kg',['Pescado']],
+    ['Rape','kg',['Pescado']], ['Pulpo','kg',['Moluscos']], ['Calamar','kg',['Moluscos']], ['Sepia','kg',['Moluscos']],
+    ['Gamba','kg',['Crustáceos']], ['Langostino','kg',['Crustáceos']], ['Mejillón','kg',['Moluscos']], ['Almeja','kg',['Moluscos']],
+    ['Cigala','kg',['Crustáceos']], ['Marisco mixto (cocido)','kg',['Crustáceos','Moluscos']],
+  ]},
+  'Huevos': {icon:'🥚', items:[
+    ['Huevo de gallina (docena)','ud',['Huevos']], ['Huevo de codorniz (docena)','ud',['Huevos']], ['Clara de huevo pasteurizada','L',['Huevos']],
+  ]},
+  'Lácteos': {icon:'🧀', items:[
+    ['Leche entera','L',['Lácteos']], ['Nata para cocinar','L',['Lácteos']], ['Nata para montar','L',['Lácteos']],
+    ['Mantequilla','kg',['Lácteos']], ['Queso mozzarella','kg',['Lácteos']], ['Queso parmesano','kg',['Lácteos']],
+    ['Queso manchego','kg',['Lácteos']], ['Queso de cabra','kg',['Lácteos']], ['Queso crema','kg',['Lácteos']],
+    ['Yogur natural','ud',['Lácteos']], ['Leche condensada','kg',['Lácteos']], ['Requesón','kg',['Lácteos']],
+  ]},
+  'Panes y Bollería': {icon:'🍞', items:[
+    ['Pan de barra','kg',['Gluten']], ['Pan de hamburguesa','ud',['Gluten']], ['Pan de perrito','ud',['Gluten']],
+    ['Pan rallado','kg',['Gluten']], ['Pan de molde','ud',['Gluten']], ['Baguette','ud',['Gluten']],
+    ['Masa de pizza','kg',['Gluten']], ['Croissant','ud',['Gluten','Lácteos']], ['Bollería mixta','ud',['Gluten','Lácteos','Huevos']],
+    ['Picos / colines','kg',['Gluten']],
+  ]},
+  'Pastas': {icon:'🍝', items:[
+    ['Espagueti','kg',['Gluten']], ['Macarrón','kg',['Gluten']], ['Tallarín','kg',['Gluten']], ['Lasaña (placas)','kg',['Gluten']],
+    ['Canelón (placas)','kg',['Gluten']], ['Ravioli fresco','kg',['Gluten','Huevos']], ['Ñoquis','kg',['Gluten']],
+    ['Pasta fresca al huevo','kg',['Gluten','Huevos']], ['Fideos','kg',['Gluten']],
+  ]},
+  'Arroces': {icon:'🍚', items:[
+    ['Arroz bomba','kg',[]], ['Arroz redondo','kg',[]], ['Arroz basmati','kg',[]], ['Arroz largo','kg',[]],
+    ['Arroz integral','kg',[]], ['Arroz para sushi','kg',[]],
+  ]},
+  'Legumbres': {icon:'🫘', items:[
+    ['Garbanzo seco','kg',[]], ['Lenteja','kg',[]], ['Alubia blanca','kg',[]], ['Alubia roja','kg',[]],
+    ['Garbanzo cocido (bote)','kg',[]], ['Lenteja cocida (bote)','kg',[]], ['Guisante congelado','kg',[]],
+    ['Haba','kg',[]], ['Soja (grano)','kg',['Soja']],
+  ]},
+  'Aceites y Vinagres': {icon:'🫒', items:[
+    ['Aceite de oliva virgen extra','L',[]], ['Aceite de oliva suave','L',[]], ['Aceite de girasol','L',[]],
+    ['Vinagre de vino','L',['Sulfitos']], ['Vinagre de Módena','L',['Sulfitos']], ['Vinagre de manzana','L',[]],
+    ['Aceite de sésamo','L',['Sésamo']],
+  ]},
+  'Condimentos y Especias': {icon:'🧂', items:[
+    ['Sal fina','kg',[]], ['Sal gruesa','kg',[]], ['Pimienta negra molida','kg',[]], ['Pimentón dulce','kg',[]],
+    ['Pimentón picante','kg',[]], ['Orégano','kg',[]], ['Perejil seco','kg',[]], ['Tomillo','kg',[]], ['Romero','kg',[]],
+    ['Laurel','kg',[]], ['Comino','kg',[]], ['Curry','kg',[]], ['Azafrán','g',[]], ['Ajo en polvo','kg',[]],
+    ['Canela molida','kg',[]], ['Mostaza','kg',['Mostaza']], ['Salsa de soja','L',['Soja','Gluten']],
+    ['Caldo concentrado (bote)','kg',['Apio']], ['Levadura fresca','kg',[]], ['Levadura química','kg',[]],
+  ]},
+  'Despensa': {icon:'📦', items:[
+    ['Harina de trigo','kg',['Gluten']], ['Harina de maíz','kg',[]], ['Harina de repostería','kg',['Gluten']],
+    ['Azúcar blanco','kg',[]], ['Azúcar moreno','kg',[]], ['Miel','kg',[]], ['Tomate triturado (bote)','kg',[]],
+    ['Tomate frito (bote)','kg',[]], ['Puré de patata (copos)','kg',[]], ['Maicena','kg',[]], ['Chocolate de cobertura','kg',['Lácteos']],
+    ['Frutos secos variados','kg',['Frutos de cáscara']], ['Almendra','kg',['Frutos de cáscara']], ['Piñón','kg',['Frutos de cáscara']],
+    ['Aceituna (bote)','kg',[]], ['Alcaparra (bote)','kg',[]], ['Pepinillo (bote)','kg',[]],
+  ]},
+  'Conservas': {icon:'🥫', items:[
+    ['Atún en aceite (lata)','kg',['Pescado']], ['Anchoa en aceite (lata)','kg',['Pescado']], ['Mejillón en escabeche (lata)','kg',['Moluscos']],
+    ['Berberecho (lata)','kg',['Moluscos']], ['Pimiento del piquillo (bote)','kg',[]], ['Espárrago blanco (bote)','kg',[]],
+    ['Maíz dulce (lata)','kg',[]], ['Champiñón en conserva (bote)','kg',[]],
+  ]},
+  'Embutidos y Fiambres': {icon:'🌭', items:[
+    ['Jamón ibérico','kg',[]], ['Jamón serrano','kg',[]], ['Jamón cocido','kg',[]], ['Chorizo','kg',[]],
+    ['Salchichón','kg',[]], ['Lomo embuchado','kg',[]], ['Bacon / panceta curada','kg',[]], ['Mortadela','kg',['Frutos de cáscara']],
+    ['Salchicha fresca','kg',[]], ['Morcilla','kg',[]],
+  ]},
+  'Congelados': {icon:'🧊', items:[
+    ['Patata prefrita congelada','kg',[]], ['Verdura congelada (mix)','kg',[]], ['Pescado congelado (surtido)','kg',['Pescado']],
+    ['Marisco congelado (surtido)','kg',['Crustáceos','Moluscos']], ['Masa de hojaldre congelada','kg',['Gluten','Lácteos']],
+    ['Helado (tarrina)','kg',['Lácteos']],
+  ]},
+  'Bebidas': {icon:'🥤', items:[
+    ['Agua mineral','L',[]], ['Refresco de cola','L',[]], ['Refresco de naranja','L',[]], ['Zumo de naranja','L',[]],
+    ['Café en grano','kg',[]], ['Té / infusiones','kg',[]], ['Cerveza','L',['Gluten']], ['Vino tinto','L',['Sulfitos']],
+    ['Vino blanco','L',['Sulfitos']],
+  ]},
+};
+
+// Carga en Mega Lista todo el catálogo de arriba, en la unidad y con los
+// alérgenos ya marcados, dejando precio/IVA/proveedor/cantidad de compra a
+// 0 (o sin elegir, en el caso del IVA) para que el negocio solo tenga que
+// rellenar esos cuatro datos de los productos que de verdad usa, en vez de
+// dar de alta uno a uno decenas de ingredientes básicos desde cero. No
+// duplica: un ingrediente ya existente con el mismo nombre en esta área se
+// deja tal cual, no se toca ni se repite.
+function loadBaseIngredientsCatalog(){
+  const area = currentArea();
+  const existingNames = new Set(DB.ingredients.filter(i => (i.area||'cocina')===area).map(i => i.name.trim().toLowerCase()));
+  DB.categoryIcons = DB.categoryIcons || {};
+  DB.categoryIcons.ingredient = DB.categoryIcons.ingredient || {};
+  let added = 0;
+  Object.keys(BASE_INGREDIENTS_CATALOG).forEach(cat => {
+    const {icon, items} = BASE_INGREDIENTS_CATALOG[cat];
+    if(DB.categoryIcons.ingredient[cat] == null) DB.categoryIcons.ingredient[cat] = icon;
+    items.forEach(([name, unit, allergens]) => {
+      if(existingNames.has(name.trim().toLowerCase())) return;
+      const newId = genId();
+      DB.ingredients.push({
+        id: newId, name, category: cat, unit, supplier: '', price: 0, packQty: 1, packPrice: 0,
+        allergens: [...allergens], area, activo: true,
+      });
+      getStockEntry(newId);
+      added++;
+    });
+  });
+  saveDB();
+  renderMegalista();
+  showToast(t('msg.baseCatalogLoaded').replace('${n}', added));
+}
+function confirmLoadBaseIngredientsCatalog(){
+  if(currentArea() !== 'cocina'){ showToast(t('msg.baseCatalogCocinaOnly')); return; }
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-database-import"></i> ${t('title.loadBaseCatalog')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px;line-height:1.6">${t('msg.loadBaseCatalogDesc')}</p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="closeModal();loadBaseIngredientsCatalog()"><i class="ti ti-database-import"></i> ${t('btn.loadCatalog')}</button>
+    </div>
+  `);
+}
+
 function openIngredientModal(id, overrideState){
   const areaProviders = DB.providers.filter(p => (p.area||'cocina') === currentArea());
   if(!areaProviders.length){
