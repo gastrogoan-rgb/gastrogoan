@@ -907,19 +907,82 @@ const BASE_INGREDIENTS_CATALOG = {
   ]},
 };
 
+// Igual que BASE_INGREDIENTS_CATALOG pero para el área de Sala (barra):
+// aquí lo que se escandalla no es un plato sino una copa/cóctel, así que
+// interesa tener el vino, el licor o el refresco desglosado por tipo, no
+// agrupado en un "Bebidas" genérico como en cocina.
+const BASE_INGREDIENTS_CATALOG_SALA = {
+  'Vinos Blancos': {icon:'🥂', items:[
+    ['Vino blanco verdejo','L',['Sulfitos']], ['Vino blanco albariño','L',['Sulfitos']], ['Vino blanco viura','L',['Sulfitos']],
+    ['Vino blanco copa (genérico)','L',['Sulfitos']],
+  ]},
+  'Vinos Tintos': {icon:'🍷', items:[
+    ['Vino tinto joven','L',['Sulfitos']], ['Vino tinto crianza','L',['Sulfitos']], ['Vino tinto reserva','L',['Sulfitos']],
+    ['Vino tinto copa (genérico)','L',['Sulfitos']],
+  ]},
+  'Vinos Rosados': {icon:'🌸', items:[
+    ['Vino rosado','L',['Sulfitos']], ['Vino rosado copa (genérico)','L',['Sulfitos']],
+  ]},
+  'Cavas y Espumosos': {icon:'🍾', items:[
+    ['Cava brut','L',['Sulfitos']], ['Cava brut nature','L',['Sulfitos']], ['Champagne','L',['Sulfitos']], ['Vino espumoso dulce','L',['Sulfitos']],
+  ]},
+  'Vermús y Aperitivos': {icon:'🍹', items:[
+    ['Vermut rojo','L',['Sulfitos']], ['Vermut blanco','L',['Sulfitos']], ['Jerez fino','L',['Sulfitos']], ['Jerez oloroso','L',['Sulfitos']],
+  ]},
+  'Cervezas': {icon:'🍺', items:[
+    ['Cerveza lager (barril)','L',['Gluten']], ['Cerveza lager (botellín)','ud',['Gluten']], ['Cerveza sin alcohol','ud',['Gluten']],
+    ['Cerveza tostada/rubia especial','ud',['Gluten']], ['Sidra','L',['Sulfitos']],
+  ]},
+  'Licores y Destilados': {icon:'🥃', items:[
+    ['Ginebra','L',[]], ['Vodka','L',[]], ['Ron blanco','L',[]], ['Ron añejo','L',[]], ['Whisky','L',[]],
+    ['Brandy / Coñac','L',['Sulfitos']], ['Tequila','L',[]], ['Orujo','L',[]], ['Licor de hierbas','L',[]],
+    ['Amaretto','L',['Frutos de cáscara']], ['Baileys / licor de crema','L',['Lácteos']], ['Triple seco / Cointreau','L',[]],
+    ['Pacharán','L',[]],
+  ]},
+  'Refrescos': {icon:'🥤', items:[
+    ['Cola','L',[]], ['Cola sin cafeína/zero','L',[]], ['Naranja gaseosa','L',[]], ['Limón gaseosa','L',[]], ['Tónica','L',[]],
+    ['Ginger ale / Ginger beer','L',[]], ['Bitter (sin alcohol)','L',[]], ['Soda','L',[]], ['Bebida energética','ud',[]],
+  ]},
+  'Zumos': {icon:'🧃', items:[
+    ['Zumo de naranja','L',[]], ['Zumo de piña','L',[]], ['Zumo de tomate','L',[]], ['Zumo de melocotón','L',[]],
+    ['Zumo de manzana','L',[]], ['Mosto','L',[]], ['Granadina','L',[]],
+  ]},
+  'Aguas': {icon:'💧', items:[
+    ['Agua mineral con gas','L',[]], ['Agua mineral sin gas','L',[]],
+  ]},
+  'Café e Infusiones': {icon:'☕', items:[
+    ['Café en grano','kg',[]], ['Café molido','kg',[]], ['Café descafeinado','kg',[]], ['Té negro','kg',[]], ['Té verde','kg',[]],
+    ['Manzanilla','kg',[]], ['Poleo menta','kg',[]], ['Cacao en polvo','kg',['Lácteos']],
+  ]},
+  'Leches y Batidos': {icon:'🥛', items:[
+    ['Leche entera','L',['Lácteos']], ['Leche desnatada','L',['Lácteos']], ['Leche de avena','L',[]], ['Leche de soja','L',['Soja']],
+    ['Leche de almendra','L',['Frutos de cáscara']], ['Nata para café','L',['Lácteos']], ['Horchata','L',['Frutos de cáscara']],
+  ]},
+  'Hielo y Guarniciones': {icon:'🧊', items:[
+    ['Hielo','kg',[]], ['Aceituna para cóctel','kg',[]], ['Guinda para cóctel','kg',[]], ['Sal para rimmer','kg',[]],
+    ['Azúcar para rimmer','kg',[]],
+  ]},
+  'Despensa Sala': {icon:'📦', items:[
+    ['Azúcar (sobres)','kg',[]], ['Sacarina/edulcorante (sobres)','kg',[]], ['Sirope de vainilla','L',[]], ['Sirope de caramelo','L',['Lácteos']],
+    ['Angostura / bitter de cóctel','L',[]], ['Frutos secos para aperitivo','kg',['Frutos de cáscara']], ['Patatas fritas (bolsa)','kg',[]],
+    ['Servilletas de barra','ud',[]], ['Palillos de cóctel','ud',[]], ['Pajitas','ud',[]],
+  ]},
+};
+
 // Construye la lista de ingredientes + stock + iconos de carpeta del
-// catálogo base de materia prima, sin tocar DB — la llama loadDB() (ver
-// js/core.js) para que cualquier negocio recién creado arranque ya con
-// Mega Lista poblada, sin que nadie tenga que pulsar nada. idStart evita
-// colisiones de id: se llama antes de que DB (y por tanto genId()) exista
-// todavía, en el arranque en frío de un negocio nuevo.
+// catálogo base de materia prima (cocina o sala), sin tocar DB — la llama
+// loadDB() (ver js/core.js) para que cualquier negocio recién creado
+// arranque ya con Mega Lista poblada, sin que nadie tenga que pulsar nada.
+// idStart evita colisiones de id: se llama antes de que DB (y por tanto
+// genId()) exista todavía, en el arranque en frío de un negocio nuevo.
 function buildBaseIngredientsSeed(area, idStart){
+  const catalog = area === 'sala' ? BASE_INGREDIENTS_CATALOG_SALA : BASE_INGREDIENTS_CATALOG;
   const ingredients = [];
   const stock = {};
   const categoryIcons = {};
   let nextId = idStart;
-  Object.keys(BASE_INGREDIENTS_CATALOG).forEach(cat => {
-    const {icon, items} = BASE_INGREDIENTS_CATALOG[cat];
+  Object.keys(catalog).forEach(cat => {
+    const {icon, items} = catalog[cat];
     categoryIcons[cat] = icon;
     items.forEach(([name, unit, allergens]) => {
       const id = nextId++;

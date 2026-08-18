@@ -4295,10 +4295,14 @@ async function loadDB(){
     if(!data){
       const fresh = defaultData();
       if(typeof buildBaseIngredientsSeed === 'function'){
-        const seed = buildBaseIngredientsSeed('cocina', Date.now() * 1000);
-        fresh.ingredients = seed.ingredients;
-        fresh.stock = seed.stock;
-        fresh.categoryIcons.ingredient = seed.categoryIcons;
+        // Un negocio puede tener las dos áreas (cocina Y sala) a la vez, así
+        // que se siembran ambos catálogos — cada uno con su propio rango de
+        // ids para que no puedan chocar entre sí.
+        const seedCocina = buildBaseIngredientsSeed('cocina', Date.now() * 1000);
+        const seedSala = buildBaseIngredientsSeed('sala', Date.now() * 1000 + 100000);
+        fresh.ingredients = [...seedCocina.ingredients, ...seedSala.ingredients];
+        fresh.stock = {...seedCocina.stock, ...seedSala.stock};
+        fresh.categoryIcons.ingredient = {...seedCocina.categoryIcons, ...seedSala.categoryIcons};
       }
       return fresh;
     }
