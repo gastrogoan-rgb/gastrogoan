@@ -921,6 +921,13 @@ td.wrap{white-space:normal}
 }
 
 @media (max-width: 600px){
+  /* .te-kpis (Tesorería) se fuerza a 4 columnas iguales para tablet en el
+     breakpoint de 800px, pero solo hay 3 KPIs — en un móvil (320-430px) esas
+     4 columnas quedaban tan estrechas que el texto de cada tarjeta
+     desbordaba. En vez de una cuadrícula fija, que se ajuste sola al ancho
+     disponible como ya hace .ge-kpi-grid. */
+  .te-kpis{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+
   /* Pasos de protocolo (APPCC apertura/cierre, higiene de manos): el texto
      del paso es casi siempre más largo que el hueco que le queda al lado de
      3 botones — en vez de un input estrujado y siempre cortado, el texto va
