@@ -908,11 +908,11 @@ const BASE_INGREDIENTS_CATALOG = {
 };
 
 // Construye la lista de ingredientes + stock + iconos de carpeta del
-// catálogo base, sin tocar DB — la usa tanto el negocio recién creado
-// (defaultData(), antes de que DB exista) como el botón manual de Mega
-// Lista (que sí escribe en DB, ver loadBaseIngredientsCatalog). idStart
-// evita colisiones de id cuando se llama antes de que genId() esté
-// disponible (arranque en frío, todavía sin DB.nextId).
+// catálogo base de materia prima, sin tocar DB — la llama loadDB() (ver
+// js/core.js) para que cualquier negocio recién creado arranque ya con
+// Mega Lista poblada, sin que nadie tenga que pulsar nada. idStart evita
+// colisiones de id: se llama antes de que DB (y por tanto genId()) exista
+// todavía, en el arranque en frío de un negocio nuevo.
 function buildBaseIngredientsSeed(area, idStart){
   const ingredients = [];
   const stock = {};
@@ -931,55 +931,6 @@ function buildBaseIngredientsSeed(area, idStart){
     });
   });
   return {ingredients, stock, categoryIcons};
-}
-
-// Carga en Mega Lista todo el catálogo de arriba, en la unidad y con los
-// alérgenos ya marcados, dejando precio/IVA/proveedor/cantidad de compra a
-// 0 (o sin elegir, en el caso del IVA) para que el negocio solo tenga que
-// rellenar esos cuatro datos de los productos que de verdad usa, en vez de
-// dar de alta uno a uno decenas de ingredientes básicos desde cero. No
-// duplica: un ingrediente ya existente con el mismo nombre en esta área se
-// deja tal cual, no se toca ni se repite. (Los negocios nuevos ya arrancan
-// con el catálogo cargado solo, ver defaultData() en core.js — este botón
-// es sobre todo para volver a traer alguno que se haya borrado, o para
-// negocios que ya existían antes de este cambio.)
-function loadBaseIngredientsCatalog(){
-  const area = currentArea();
-  const existingNames = new Set(DB.ingredients.filter(i => (i.area||'cocina')===area).map(i => i.name.trim().toLowerCase()));
-  DB.categoryIcons = DB.categoryIcons || {};
-  DB.categoryIcons.ingredient = DB.categoryIcons.ingredient || {};
-  let added = 0;
-  Object.keys(BASE_INGREDIENTS_CATALOG).forEach(cat => {
-    const {icon, items} = BASE_INGREDIENTS_CATALOG[cat];
-    if(DB.categoryIcons.ingredient[cat] == null) DB.categoryIcons.ingredient[cat] = icon;
-    items.forEach(([name, unit, allergens]) => {
-      if(existingNames.has(name.trim().toLowerCase())) return;
-      const newId = genId();
-      DB.ingredients.push({
-        id: newId, name, category: cat, unit, supplier: '', price: 0, packQty: 1, packPrice: 0,
-        allergens: [...allergens], area, activo: true,
-      });
-      getStockEntry(newId);
-      added++;
-    });
-  });
-  saveDB();
-  renderMegalista();
-  showToast(t('msg.baseCatalogLoaded').replace('${n}', added));
-}
-function confirmLoadBaseIngredientsCatalog(){
-  if(currentArea() !== 'cocina'){ showToast(t('msg.baseCatalogCocinaOnly')); return; }
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-database-import"></i> ${t('title.loadBaseCatalog')}</h3>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
-    </div>
-    <p style="font-size:13.5px;line-height:1.6">${t('msg.loadBaseCatalogDesc')}</p>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
-      <button class="btn btn-primary" onclick="closeModal();loadBaseIngredientsCatalog()"><i class="ti ti-database-import"></i> ${t('btn.loadCatalog')}</button>
-    </div>
-  `);
 }
 
 function openIngredientModal(id, overrideState){
