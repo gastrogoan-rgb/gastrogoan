@@ -1675,6 +1675,116 @@ function removeLoyaltyReward(i){
   document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
 }
 
+// --- Vale regalo ---------------------------------------------------------
+// Código corto y legible (para poder escribirlo a mano en un vale físico o
+// leerlo por teléfono), no un id numérico interno.
+function giftVoucherCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin 0/O/1/I, para no confundir al leerlo
+  let code = '';
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return 'VR-' + code;
+}
+
+function openGiftVouchersModal(){
+  if(!Array.isArray(DB.giftVouchers)) DB.giftVouchers = [];
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-gift-card"></i> ${t('title.giftVouchers')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="field">
+      <label>${t('label.voucherType')}</label>
+      <select id="voucher-tipo" onchange="renderGiftVoucherFormFields()">
+        <option value="importe">${t('voucherType.amount')}</option>
+        <option value="experiencia">${t('voucherType.experience')}</option>
+      </select>
+    </div>
+    <div id="voucher-form-fields"></div>
+    <div class="field">
+      <label>${t('label.voucherClient')}</label>
+      <input type="text" id="voucher-cliente" placeholder="${t('ph.voucherClientOptional')}">
+    </div>
+    <div class="modal-footer" style="justify-content:flex-start">
+      <button class="btn btn-primary" onclick="issueGiftVoucher()"><i class="ti ti-plus"></i> ${t('btn.issueVoucher')}</button>
+    </div>
+    <div class="field" style="margin-top:10px">
+      <label>${t('label.voucherHistory')}</label>
+      <div id="gift-vouchers-history">${renderGiftVouchersHistory()}</div>
+    </div>
+  `);
+  renderGiftVoucherFormFields();
+}
+
+function renderGiftVoucherFormFields(){
+  const box = document.getElementById('voucher-form-fields');
+  if(!box) return;
+  const tipo = document.getElementById('voucher-tipo').value;
+  box.innerHTML = tipo === 'experiencia'
+    ? `<div class="field"><label>${t('label.voucherDescription')}</label><input type="text" id="voucher-descripcion" placeholder="${t('ph.voucherExperienceExample')}"></div>`
+    : `<div class="field"><label>${t('label.voucherAmount')}</label><input type="number" id="voucher-importe" min="0" step="0.01" placeholder="50"></div>`;
+}
+
+function issueGiftVoucher(){
+  const tipo = document.getElementById('voucher-tipo').value;
+  const clienteNombre = document.getElementById('voucher-cliente').value.trim();
+  let descripcion = '', importe = 0;
+  if(tipo === 'experiencia'){
+    descripcion = document.getElementById('voucher-descripcion').value.trim();
+    if(!descripcion){ showToast(t('msg.voucherDescRequired')); return; }
+  } else {
+    importe = parseFloat(document.getElementById('voucher-importe').value);
+    if(!importe || importe <= 0){ showToast(t('msg.voucherAmountRequired')); return; }
+  }
+  DB.giftVouchers.push({
+    id: genId(), tipo, descripcion, importe, clienteNombre,
+    code: giftVoucherCode(), createdAt: new Date().toISOString(), redeemed: false, redeemedAt: null
+  });
+  saveDB();
+  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
+  document.getElementById('voucher-cliente').value = '';
+  if(tipo==='experiencia') document.getElementById('voucher-descripcion').value = '';
+  else document.getElementById('voucher-importe').value = '';
+  showToast(t('msg.voucherIssued'));
+}
+
+function renderGiftVouchersHistory(){
+  const vouchers = [...(DB.giftVouchers||[])].reverse();
+  if(!vouchers.length) return `<p style="font-size:12px;color:var(--muted)">${t('empty.noVouchers')}</p>`;
+  return vouchers.map(v => {
+    const label = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="font-size:12.5px">
+        <strong>${escapeHtml(v.code)}</strong> — ${label}
+        ${v.clienteNombre ? ` · ${escapeHtml(v.clienteNombre)}` : ''}
+        <div style="color:var(--muted);font-size:11px">${escapeHtml((v.createdAt||'').slice(0,10))}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="badge ${v.redeemed?'badge-green':'badge-amber'}">${v.redeemed?t('label.voucherStatusRedeemed'):t('label.voucherStatusPending')}</span>
+        <button class="btn btn-sm" onclick="toggleGiftVoucherRedeemed(${v.id})">${v.redeemed?t('btn.markPending'):t('btn.markRedeemed')}</button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteGiftVoucher(${v.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+function toggleGiftVoucherRedeemed(id){
+  const v = (DB.giftVouchers||[]).find(x=>x.id===id);
+  if(!v) return;
+  v.redeemed = !v.redeemed;
+  v.redeemedAt = v.redeemed ? new Date().toISOString() : null;
+  saveDB();
+  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
+}
+
+function deleteGiftVoucher(id){
+  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  DB.giftVouchers = (DB.giftVouchers||[]).filter(x=>x.id!==id);
+  saveDB();
+  document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
+}
+
 function openClientModal(id){
   const c = id ? DB.clients.find(x=>x.id===id) : {name:'',phone:'',email:'',notes:'',allergies:'',points:0,cp:'',cumpleanos:'',ultimoContacto:''};
   openModal(`

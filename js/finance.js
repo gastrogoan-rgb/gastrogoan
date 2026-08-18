@@ -1109,6 +1109,47 @@ function backToStockFolders(){ stockFolder = null; renderStock(); }
 function openElabFolder(cat){ elabFolder = cat; renderStock(); }
 function backToElabFolders(){ elabFolder = null; renderStock(); }
 
+// Valor económico total del stock actual (a precio de coste), separado por
+// ingredientes y elaboraciones, para las dos áreas si el negocio las tiene.
+// Las elaboraciones manuales (sin escandallo detrás) no tienen coste
+// conocido y se excluyen del total en vez de contarlas como 0 en silencio.
+function stockTotalValueBreakdown(){
+  let ingTotal = 0, elabTotal = 0, elabSinCoste = 0;
+  DB.ingredients.forEach(ing => {
+    if(ing.activo === false) return;
+    const entry = getStockEntry(ing.id);
+    ingTotal += (entry.qty||0) * (ing.price||0);
+  });
+  (DB.elaboraciones||[]).forEach(e => {
+    if(!e.recipeId){ if(e.qty) elabSinCoste++; return; }
+    const recipe = getRecipe(e.recipeId);
+    if(!recipe){ if(e.qty) elabSinCoste++; return; }
+    const costPerUnit = recipeBaseCostPerUnit(recipe);
+    elabTotal += (e.qty||0) * costPerUnit;
+  });
+  return {ingTotal, elabTotal, total: ingTotal + elabTotal, elabSinCoste};
+}
+
+function openStockValueModal(){
+  const b = stockTotalValueBreakdown();
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-report-money"></i> ${t('title.stockValue')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:-4px">${t('msg.stockValueHint')}</p>
+    <div class="kpi" style="margin-bottom:14px">
+      <div class="label">${t('label.stockValueTotal')}</div>
+      <div class="value">${fmtMoney(b.total)}</div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>${t('label.ingredients')}</label><div style="font-size:16px;font-weight:700">${fmtMoney(b.ingTotal)}</div></div>
+      <div class="field"><label>${t('label.elaborations')}</label><div style="font-size:16px;font-weight:700">${fmtMoney(b.elabTotal)}</div></div>
+    </div>
+    ${b.elabSinCoste ? `<p style="font-size:12px;color:var(--muted)">${t('msg.stockValueElabSinCoste').replace('${n}', b.elabSinCoste)}</p>` : ''}
+  `);
+}
+
 function renderStock(){
   maybeShowCategoryIconHint();
   const search = document.getElementById('stock-search').value.toLowerCase();
