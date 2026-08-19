@@ -278,6 +278,21 @@ body:not(.owner-session) .owner-strict{display:none !important}
    pantalla, no solo en el breakpoint móvil más estrecho — antes se
    quedaban en 32px en tablets y móviles en horizontal. */
 .comanda-qty-btn{width:40px;height:40px;min-width:40px;min-height:40px;padding:0;font-size:14px}
+/* Checkboxes y radios: no tenían NINGUNA regla de tamaño en toda la app, así
+   que se quedaban en el ~13px diminuto por defecto del navegador — muy por
+   debajo de cualquier objetivo táctil, en cada alérgeno, cada "solo
+   alertas", cada casilla de aceptar condiciones. Un poco más grandes en
+   cualquier pantalla, y bastante más en móvil (regla en el breakpoint de
+   abajo), con margen para que el dedo no toque el texto de al lado sin
+   querer. accent-color solo cambia el color de relleno, no el tamaño real
+   del control — por eso hace falta width/height explícitos. */
+input[type="checkbox"],input[type="radio"]{
+  /* !important porque hay ~20 sitios con style="width:auto" en línea (para
+     escapar de la regla general de los inputs de texto, que sí deben ir a
+     width:100%) — sin esto, esa marca ganaría por especificidad y dejaría
+     el checkbox otra vez en el tamaño diminuto de fábrica. */
+  width:18px !important;height:18px !important;min-width:18px;min-height:18px;margin:2px;accent-color:var(--brand-orange,#1C1A17);cursor:pointer;flex-shrink:0;
+}
 .btn i{flex-shrink:0}
 .ti{display:inline-flex;align-items:center;justify-content:center;min-width:1em;min-height:1em}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
@@ -921,6 +936,10 @@ td.wrap{white-space:normal}
 }
 
 @media (max-width: 600px){
+  /* Checkboxes/radios un poco más grandes todavía en móvil: el dedo es
+     menos preciso que un ratón, y aquí no hay motivo para ahorrar espacio. */
+  input[type="checkbox"],input[type="radio"]{width:22px !important;height:22px !important;min-width:22px;min-height:22px}
+
   /* .te-kpis (Tesorería) se fuerza a 4 columnas iguales para tablet en el
      breakpoint de 800px, pero solo hay 3 KPIs — en un móvil (320-430px) esas
      4 columnas quedaban tan estrechas que el texto de cada tarjeta
