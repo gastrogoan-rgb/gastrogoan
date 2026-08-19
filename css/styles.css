@@ -873,15 +873,14 @@ td.wrap{white-space:normal}
      El degradado solo (fondo->transparente) apenas se notaba porque el
      fondo detrás ya es prácticamente blanco — el texto de la última
      pestaña se leía como cortado en seco, no como "hay más, desliza".
-     Se añade un icono de flecha encima para que quede claro. */
+     El degradado de fondo se quitó (se veía como una mancha borrosa);
+     se deja solo la flecha, más clara y sin ese efecto. */
   .ge-tab-row{-webkit-overflow-scrolling:touch;position:relative}
   .ge-tab{padding:8px 14px;font-size:12px}
-  .ge-tab-row::after{content:'';position:absolute;top:0;right:0;bottom:2px;width:22px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
   .ge-tab-row::before{content:'\203a';position:absolute;top:0;bottom:2px;right:2px;display:flex;align-items:center;font-size:18px;font-weight:700;color:var(--muted);pointer-events:none;z-index:1}
 
-  /* Tablas anchas (CDR y similares) — aviso visual de scroll horizontal */
+  /* Tablas anchas (CDR y similares) — scroll horizontal, sin degradado */
   .ge-grid{position:relative}
-  .ge-grid::after{content:'';position:absolute;top:1px;right:1px;bottom:1px;width:22px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
 
   /* Cards */
   .card{padding:12px}
@@ -962,15 +961,20 @@ td.wrap{white-space:normal}
   .protocolo-step-row input{min-width:0 !important}
   .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
 
-  /* Header — compact, icon-only buttons. Antes, si no cabían todos los
-     botones en una fila, la cabecera hacía scroll lateral (overflow-x:auto
-     heredado de la regla base) — quedaba raro y algunos botones (Chat,
-     Ayuda) solo se veían arrastrando el dedo por encima del logo. Ahora, si
-     no caben, pasan a una segunda línea: la cabecera nunca se mueve. */
+  /* Header — dos filas fijas y centradas, siempre (no solo "si no caben").
+     Fila 1: logo + nombre del negocio. Fila 2: el resto de botones. Antes
+     hacía scroll lateral (overflow-x:auto de la regla base) y algunos
+     botones solo se veían arrastrando el dedo — ahora nunca se mueve.
+     .hdr-break (un div vacío justo después de #sync-badge en el HTML) es lo
+     que fuerza el salto a la fila 2: con flex-wrap, cada fila del header
+     centra su propio contenido con justify-content, así que basta con ese
+     "corte" en el sitio justo, sin tener que reestructurar el HTML. */
   :root{--header-h:44px}
-  .app-header{padding:6px;gap:3px;height:auto;min-height:var(--header-h);flex-wrap:wrap;overflow-x:visible;row-gap:4px}
+  .app-header{padding:6px;gap:3px;height:auto;min-height:var(--header-h);flex-wrap:wrap;overflow-x:visible;row-gap:6px;justify-content:center}
+  .hdr-break{flex-basis:100%;height:0}
+  .app-logo{justify-content:center;width:100%}
   .app-logo-sub{display:none}
-  .app-logo-text{font-size:12px}
+  .app-logo-text{font-size:13px}
   .app-logo-icon{width:26px;height:26px;font-size:13px;border-radius:6px}
   .app-header .hdr-text{display:none}
   .app-header .btn{padding:4px 6px;font-size:10px;min-height:32px;min-width:32px;margin-right:0 !important;justify-content:center}
@@ -1037,9 +1041,11 @@ td.wrap{white-space:normal}
   .field input,.field select,.field textarea{font-size:16px;padding:10px;border-radius:8px}
   .field label{font-size:12px}
 
-  /* Tables — allow horizontal scroll, tighten spacing, hint that there is more to scroll */
+  /* Tables — allow horizontal scroll, tighten spacing. Antes había un
+     degradado (::after) para insinuar "hay más columnas a la derecha" —
+     se veía como una mancha borrosa encima de la tabla, así que se quita:
+     el scroll lateral en sí no molesta, basta con que se pueda arrastrar. */
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px;position:relative}
-  .table-wrap::after{content:'';position:absolute;top:0;right:10px;bottom:0;width:16px;background:linear-gradient(to right,transparent,var(--surface));pointer-events:none}
   table{font-size:11px}
   th,td{padding:6px 6px}
   .ge-grid th,.ge-grid td{padding:5px 6px;font-size:11px}

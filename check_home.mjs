@@ -1,0 +1,24 @@
+import puppeteer from 'puppeteer-core';
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args:['--no-sandbox'], headless:true});
+const page = await browser.newPage();
+await page.setViewport({width:390, height:844, isMobile:true, hasTouch:true});
+await page.goto('http://localhost:8950/index.html', {waitUntil:'domcontentloaded'});
+await page.evaluate(async () => {
+  await dbReadyPromise;
+  Object.assign(DB.business, {netlifySetupDone:true, extConnPromptSeen:true, tourSeen:true, categoryIconHintSeen:true});
+  DB.business.ownFirebase = {apiKey:'fake', databaseURL:'https://fake-default-rtdb.firebaseio.com'};
+  await idbSet(DB_KEY, DB);
+  localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code:'ABCDEFGH', tenantId: ggBizTenantId('ABCDEFGH')}));
+  localStorage.setItem('gastrogoan_business_slots', JSON.stringify([{id:'default', name:'Restaurante de Prueba', code:'ABCDEFGH'}]));
+  localStorage.setItem('gastrogoan_owner_login','1');
+  localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
+  localStorage.setItem('gastrogoan_owner_pass_prompted','1');
+});
+await page.reload({waitUntil:'domcontentloaded'});
+await new Promise(r=>setTimeout(r,2200));
+await page.evaluate(() => { if(typeof confirmNetlifyDone==='function') confirmNetlifyDone(); if(typeof closeModal==='function') closeModal(); });
+await new Promise(r=>setTimeout(r,300));
+await page.evaluate(() => { navigate('home'); });
+await new Promise(r=>setTimeout(r,300));
+await page.screenshot({path:'/tmp/home_after.png'});
+await browser.close();

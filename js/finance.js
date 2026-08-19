@@ -726,29 +726,25 @@ function renderMegalistaTable(items){
     ? `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
     : items.map(ing => `
       <tr style="${ing.activo===false?'opacity:.55':''}">
-        <td data-label="${MEGALISTA_COLUMNS[0].label}"><strong>${escapeHtml(ing.name)}</strong>${ing.activo===false?` <span class="badge badge-gray" style="font-size:9px">${t('label.discontinued')}</span>`:''}</td>
-        <td data-label="${MEGALISTA_COLUMNS[1].label}"><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
-        <td data-label="${MEGALISTA_COLUMNS[2].label}">${escapeHtml(ing.supplier||'—')}</td>
-        <td data-label="${MEGALISTA_COLUMNS[3].label}">${escapeHtml(ing.unit)}</td>
-        <td data-label="${MEGALISTA_COLUMNS[4].label}">${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
-        <td data-label="${MEGALISTA_COLUMNS[5].label}">
+        <td><strong>${escapeHtml(ing.name)}</strong>${ing.activo===false?` <span class="badge badge-gray" style="font-size:9px">${t('label.discontinued')}</span>`:''}</td>
+        <td><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
+        <td>${escapeHtml(ing.supplier||'—')}</td>
+        <td>${escapeHtml(ing.unit)}</td>
+        <td>${fmtNum(ing.packQty||1)} ${escapeHtml(ing.unit)} × ${fmtMoney(ing.packPrice!=null?ing.packPrice:ing.price)}</td>
+        <td>
           <select onchange="updateIngredientIva(${ing.id}, this.value)" style="font-size:12px;padding:3px 4px;${ing.iva==null?'border-color:var(--red);color:var(--red)':''}" title="${t('label.ivaSoportado')}">
             <option value="" ${ing.iva==null?'selected':''} disabled>${t('label.chooseIva')}</option>
             ${[21,10,4,0].map(pct => `<option value="${pct}" ${ing.iva===pct?'selected':''}>${pct}%</option>`).join('')}
           </select>
         </td>
-        <td class="wrap" data-label="${t('label.allergens')}">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
-        <td class="actions-cell" data-label="">
+        <td class="wrap">${(ing.allergens||[]).map(a=>`<span class="badge badge-amber">${escapeHtml(allergenLabel(a))}</span>`).join(' ') || '—'}</td>
+        <td class="actions-cell">
           <button class="owner-only btn btn-sm btn-icon" onclick="openIngredientModal(${ing.id})"><i class="ti ti-edit"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteIngredient(${ing.id})"><i class="ti ti-trash"></i></button>
         </td>
       </tr>
     `).join('');
-  // .table-cards: en móvil cada fila pasa a ser una tarjeta apilada (mismo
-  // patrón que ya usan Clientes/Reservas) en vez de forzar scroll lateral —
-  // esta tabla tiene 8 columnas, demasiadas para caber en una pantalla
-  // estrecha de cualquier forma razonable.
-  return `<div class="table-wrap"><table class="table-cards"><thead><tr>${theadHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+  return `<div class="table-wrap"><table><thead><tr>${theadHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
 }
 
 // Carpeta de categoría actualmente abierta en Mega Lista (null = vista de carpetas)
