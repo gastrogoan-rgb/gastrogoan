@@ -79,6 +79,13 @@ body:not(.owner-session) .owner-strict{display:none !important}
 
 .view{display:none}
 .view.active{display:block}
+/* Solo la home: .folder-grid trae flex:1;align-content:center pensado para
+   centrar verticalmente las 3 tarjetas de área en el hueco libre bajo la
+   cabecera — pero como .view es display:block, ese flex:1 nunca tenía
+   ningún efecto (una propiedad de flex-item no hace nada si el padre no es
+   flex), así que en pantallas donde sobra alto (la mayoría de móviles) las
+   tarjetas se quedaban pegadas arriba con medio pantalla en blanco debajo. */
+#view-home.active{display:flex;flex-direction:column;min-height:100%}
 
 .view-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .view-subtitle{color:var(--muted);font-size:14px;margin-bottom:18px}
@@ -955,9 +962,13 @@ td.wrap{white-space:normal}
   .protocolo-step-row input{min-width:0 !important}
   .protocolo-step-row>div:last-child{margin-left:0 !important;justify-content:flex-end}
 
-  /* Header — compact single row, icon-only buttons */
+  /* Header — compact, icon-only buttons. Antes, si no cabían todos los
+     botones en una fila, la cabecera hacía scroll lateral (overflow-x:auto
+     heredado de la regla base) — quedaba raro y algunos botones (Chat,
+     Ayuda) solo se veían arrastrando el dedo por encima del logo. Ahora, si
+     no caben, pasan a una segunda línea: la cabecera nunca se mueve. */
   :root{--header-h:44px}
-  .app-header{padding:0 6px;gap:3px;height:var(--header-h)}
+  .app-header{padding:6px;gap:3px;height:auto;min-height:var(--header-h);flex-wrap:wrap;overflow-x:visible;row-gap:4px}
   .app-logo-sub{display:none}
   .app-logo-text{font-size:12px}
   .app-logo-icon{width:26px;height:26px;font-size:13px;border-radius:6px}
@@ -979,12 +990,15 @@ td.wrap{white-space:normal}
   .view-title{font-size:17px}
   .view-subtitle{font-size:12px;margin-bottom:10px}
 
-  /* Carpetas principales (Cocina/Sala/Gestión) — vertical en móvil */
-  .folder-grid{grid-template-columns:1fr !important;gap:10px;padding:12px 0 4px;max-width:100%}
-  .folder-card{padding:18px 16px;min-height:auto;flex-direction:row;gap:14px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
-  .folder-icon{font-size:36px}
-  .folder-card h2{font-size:18px}
-  .folder-btn{padding:8px 16px;font-size:12px}
+  /* Carpetas principales (Cocina/Sala/Gestión) — vertical en móvil.
+     Solo hay 3 tarjetas y de normal sobra alto de sitio (ver #view-home
+     centrado más abajo), así que más grandes se leen mejor y son más
+     fáciles de tocar sin perder nada de sitio real. */
+  .folder-grid{grid-template-columns:1fr !important;gap:14px;padding:12px 0 4px;max-width:100%}
+  .folder-card{padding:24px 20px;min-height:auto;flex-direction:row;gap:16px;justify-content:flex-start;align-items:center;text-align:left;border-radius:14px}
+  .folder-icon{font-size:44px}
+  .folder-card h2{font-size:21px}
+  .folder-btn{padding:12px 22px;font-size:14px}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
