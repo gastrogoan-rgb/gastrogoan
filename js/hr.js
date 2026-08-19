@@ -94,6 +94,7 @@ const GE = (function(){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+name).classList.add('active');
+    scrollActiveTabIntoView(document.getElementById('ge-tabs-row'));
     if(name==='fijos') renderFijos();
     if(name==='variables') renderVariables();
     if(name==='cdr') renderCDR();
@@ -845,7 +846,7 @@ const GE = (function(){
       <div style="position:relative;height:28px;background:var(--border);border-radius:6px;overflow:visible">
         <div style="position:absolute;left:0;top:0;height:100%;width:${pctAct}%;background:${ok?'var(--teal)':'var(--red)'};border-radius:6px;transition:width .4s"></div>
         <div style="position:absolute;left:${pctNec}%;top:-4px;height:36px;width:3px;background:var(--amber-dark);border-radius:2px"></div>
-        <div style="position:absolute;left:${pctNec}%;top:34px;transform:translateX(-50%);font-size:10px;color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
+        <div style="position:absolute;left:clamp(28px,${pctNec}%,calc(100% - 28px));top:34px;transform:translateX(-50%);font-size:10px;color:var(--amber-dark);font-weight:700;white-space:nowrap">${t('hr.pe.equilibriumArrow')}</div>
       </div>
       <div style="margin-top:24px;font-size:13px;font-weight:600;color:${ok?'var(--green)':'var(--red)'}">
         ${ok?t('hr.pe.aboveBreakevenLong'):t('hr.pe.belowBreakevenLong')} · ${t('hr.pe.currentCovers').replace('${n}', cub)}
@@ -1264,7 +1265,7 @@ const GE = (function(){
           <span></span>
           <span></span>
           <span style="text-align:right;font-family:monospace;font-weight:700;color:var(--amber-dark)">${fmtMoney(r.real)}</span>
-          <span style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
+          <span class="te-hint" style="text-align:right;font-size:11px;color:var(--muted)">${t('hr.te.setAsideQuarterly')}</span>
           <span style="text-align:center;font-size:16px"><i class="ti ti-pig-money"></i></span>
         </div>`;
       }

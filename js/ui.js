@@ -1705,6 +1705,17 @@ function scrollContentToTop(){
   if(c) c.scrollTop = 0;
 }
 
+// Las filas de pestañas (.ge-tab-row) hacen scroll horizontal cuando no
+// caben todas en la pantalla del móvil. Sin esto, al tocar una pestaña que
+// queda fuera de la vista (p.ej. "CAPEX" al final de Gestión Económica) la
+// fila no se movía sola: parecía que el toque no había hecho nada porque
+// la pestaña que se marcaba como activa quedaba fuera de pantalla.
+function scrollActiveTabIntoView(rowEl){
+  if(!rowEl) return;
+  const active = rowEl.querySelector('.ge-tab.active');
+  if(active) active.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+}
+
 function navigate(view){
   if(view === 'home'){
     const session = getAccessSession();

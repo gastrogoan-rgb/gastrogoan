@@ -204,12 +204,13 @@ function renderLimpieza(){
   if(subtitleEl) subtitleEl.textContent = isSala ? t('view.limpieza.subtitle.sala') : t('view.limpieza.subtitle');
   const box = document.getElementById('limpieza-content');
   box.innerHTML = `
-    <nav class="ge-tab-row">
+    <nav class="ge-tab-row" id="limpieza-tabs-row">
       ${LIMPIEZA_TABS.map(tb => `<button class="ge-tab ${limpiezaTab===tb?'active':''}" onclick="setLimpiezaTab('${tb}')">${limpiezaTabLabel(tb)}</button>`).join('')}
     </nav>
     <div id="limpieza-tab-content"></div>
   `;
   renderLimpiezaTab();
+  scrollActiveTabIntoView(document.getElementById('limpieza-tabs-row'));
 }
 function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); scrollContentToTop(); }
 function renderLimpiezaTab(){
@@ -2262,6 +2263,7 @@ function renderReservas(){
   document.querySelectorAll('#view-reservas .ge-tab').forEach(b => b.classList.remove('active'));
   const tabBtn = document.getElementById('reservas-tab-'+reservasTab);
   if(tabBtn) tabBtn.classList.add('active');
+  scrollActiveTabIntoView(document.getElementById('reservas-tabs-row'));
 
   renderReservasPendingOnline();
   renderReservasRemindersDue();
@@ -3218,6 +3220,7 @@ function renderPromocion(){
   document.querySelectorAll('#view-promocion .ge-tab').forEach(b => b.classList.remove('active'));
   const tabBtn = document.getElementById('promo-tab-'+promoTab);
   if(tabBtn) tabBtn.classList.add('active');
+  scrollActiveTabIntoView(document.getElementById('promo-tabs-row'));
 
   if(promoTab === 'semana') renderPromoSemana();
   else if(promoTab === 'mes') renderPromoMes();
