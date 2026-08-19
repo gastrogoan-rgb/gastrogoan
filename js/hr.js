@@ -2111,9 +2111,9 @@ function renderHorariosMes(){
     const count = counts[ds] || 0;
     const isToday = ds === todayStr();
     cells += `
-      <div class="card" style="cursor:pointer;padding:8px;text-align:center;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToHorariosDia('${ds}')">
+      <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToHorariosDia('${ds}')">
         <div style="font-weight:700">${day}</div>
-        ${count ? `<span class="badge badge-blue">${count===1?t('hr2.oneShift'):t('hr2.nShifts').replace('${n}', count)}</span>` : ''}
+        ${count ? `<span class="badge badge-blue cal-day-badge">${count===1?t('hr2.oneShift'):t('hr2.nShifts').replace('${n}', count)}</span>` : ''}
       </div>
     `;
   }
@@ -2128,7 +2128,7 @@ function renderHorariosMes(){
       </div>
       <button class="owner-only btn btn-primary" onclick="openTurnoModal()"><i class="ti ti-plus"></i> ${t("btn.newShift")}</button>
     </div>
-    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
+    <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
       ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
       ${cells}
     </div>

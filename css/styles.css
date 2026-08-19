@@ -355,6 +355,12 @@ td.wrap{white-space:normal}
 
 /* ===== Badges ===== */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700}
+/* Casilla de día del calendario mensual (Turnos): con 7 columnas, cada
+   casilla mide ~45px en un móvil normal — "1 turno" no cabe en una línea
+   y antes se salía de la casilla entera (grid-template-columns:1fr sin
+   minmax(0,...) no deja encoger por debajo del contenido). Aquí se permite
+   partir en dos líneas y encoger la letra en vez de desbordar. */
+.cal-day-badge{white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;max-width:100%}
 .badge-green{background:var(--green-l);color:var(--green)}
 .badge-red{background:var(--red-l);color:var(--red)}
 .badge-amber{background:var(--amber-l);color:var(--amber-dark)}

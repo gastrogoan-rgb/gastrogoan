@@ -1271,8 +1271,8 @@ function renderDistDetail(){
         ${tareasHtml}
         ${tareasUnicasHtml}
         ${!tareasHtml && !tareasUnicasHtml && !limpiezaHtml && !promosHtml ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${t('empty.noTasksThisDay')}</div>` : ''}
-        <div style="display:flex;gap:6px;margin-top:4px">
-          <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+          <input type="text" id="dist-tarea-${idx}" placeholder="${t('ph.newTask')}" style="flex:1;min-width:120px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" onkeydown="if(event.key==='Enter')addDistTarea(${idx})">
           <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap;cursor:pointer"><input type="checkbox" id="dist-once-${idx}" style="width:auto">${t('dist.onlyThisWeek')}</label>
           <button class="btn btn-sm btn-default" onclick="addDistTarea(${idx})"><i class="ti ti-plus"></i></button>
         </div>
