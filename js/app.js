@@ -1177,7 +1177,7 @@ function renderDistDetail(){
         const broken = !allDishes.includes(pl);
         return `
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid ${broken?'var(--red)':'var(--border)'};border-radius:12px;cursor:pointer;text-align:center;background:${broken?'var(--red-l)':'var(--surface)'}" onclick="goToFichaForDish('${escapeJsAttr(pl)}')" title="${broken?t('dist.dishNoLongerExists'):t('title.viewTechSpec')}">
-          <button class="owner-strict btn btn-sm btn-icon btn-danger" style="position:absolute;top:4px;right:4px" onclick="event.stopPropagation();removeDistPlato(${i})"><i class="ti ti-x"></i></button>
+          <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="event.stopPropagation();removeDistPlato(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
           <i class="ti ${broken?'ti-link-off':'ti-tools-kitchen-2'}" style="font-size:20px;color:${broken?'var(--red)':'var(--brand-orange)'}"></i>
           <span style="font-size:12.5px;font-weight:600;line-height:1.2;${broken?'color:var(--red)':''}">${escapeHtml(pl)}</span>
         </div>

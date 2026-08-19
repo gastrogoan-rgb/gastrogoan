@@ -1386,15 +1386,21 @@ function renderStock(){
     // se pone en rojo, así se ve de un vistazo qué hay que reponer sin
     // tener que leer cada fila una a una.
     return `
-      <div class="list-row" style="padding:8px 10px;flex-wrap:wrap;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
+      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
         <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
-        <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
-        <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
-          onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
-        <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
-        <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
-          onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
-        <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
+        <div class="stock-row-values">
+          <span class="stock-row-field">
+            <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>
+            <input type="number" value="${row.min}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+              onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
+          </span>
+          <span class="stock-row-field">
+            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
+            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+              onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
+            <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
+          </span>
+        </div>
         <div class="actions-cell" style="gap:4px">
           ${isElab && !fromEscandallo ? `<button class="owner-only btn btn-sm btn-icon" onclick="openElaboracionModal(${row.id})"><i class="ti ti-pencil"></i></button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteElaboracion(${row.id})"><i class="ti ti-trash"></i></button>` : ''}

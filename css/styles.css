@@ -257,6 +257,13 @@ body:not(.owner-session) .owner-strict{display:none !important}
    botones que comparten la misma fila. */
 .list-row .list-row-name{flex:1;flex-basis:160px;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px;min-width:0}
 .list-row .list-row-name span{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.3}
+/* Fila de Stock: "Mín." y "Actual" iban sueltos entre el resto de elementos
+   de .list-row, así que un flex-wrap normal los partía en cualquier punto
+   (el input de Mín. en una línea, "Actual:" solo en la siguiente) — ahora
+   van agrupados en su propio bloque, que se mueve entero de línea si hace
+   falta, en vez de partirse por la mitad. */
+.stock-row-values{display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1 1 auto}
+.stock-row-field{display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
 
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
@@ -911,6 +918,9 @@ td.wrap{white-space:normal}
 
   /* List rows */
   .list-row{flex-wrap:wrap;gap:6px;padding:8px 0}
+  /* Stock: el nombre a su propia línea entera, y debajo Mín./Actual juntos
+     en la suya — así nunca queda un input huérfano separado de su etiqueta. */
+  .stock-row .list-row-name{flex-basis:100%}
 
   /* Badges */
   .badge{font-size:10px;padding:2px 6px}
