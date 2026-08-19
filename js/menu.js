@@ -167,6 +167,7 @@ function renderOferta(){
 function setOfertaTab(tab){
   ofertaTab = tab;
   renderOferta();
+  scrollContentToTop();
 }
 
 function renderCarta(){

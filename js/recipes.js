@@ -113,6 +113,7 @@ function setEscandalloTab(tab){
   escandalloFolder = null;
   escandalloRecipe = null;
   renderEscandallo();
+  scrollContentToTop();
 }
 
 // Carpeta de categoría actualmente abierta en Escandallo (null = vista de carpetas)
@@ -935,6 +936,7 @@ function setFichasTab(tab){
   fichasTab = tab;
   fichasFolder = null;
   renderFichas();
+  scrollContentToTop();
 }
 
 // Carpeta de categoría actualmente abierta en Fichas Técnicas (null = vista de carpetas)

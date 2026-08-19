@@ -1692,6 +1692,19 @@ function confirmAreaGatePin(){
   navigate(view);
 }
 
+// Al cambiar de sub-pestaña dentro de una vista (Gestión Económica, Stock,
+// Reservas, Promoción, APPCC...) la pestaña nueva casi nunca mide lo mismo
+// que la anterior — si era más corta, el navegador recorta el scroll solo
+// porque ya no hay tanto que desplazar, y eso se sentía como "cada vez que
+// toco una pestaña vuelve al inicio" de forma impredecible según cuál
+// tocaras. Forzar el scroll arriba SIEMPRE, a propósito, hace que cambiar
+// de pestaña se comporte igual de previsible en todas partes: siempre
+// empiezas a ver la pestaña nueva desde su principio.
+function scrollContentToTop(){
+  const c = document.querySelector('.content');
+  if(c) c.scrollTop = 0;
+}
+
 function navigate(view){
   if(view === 'home'){
     const session = getAccessSession();

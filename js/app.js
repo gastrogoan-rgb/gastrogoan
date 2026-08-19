@@ -211,7 +211,7 @@ function renderLimpieza(){
   `;
   renderLimpiezaTab();
 }
-function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); }
+function setLimpiezaTab(tab){ limpiezaTab = tab; renderLimpieza(); scrollContentToTop(); }
 function renderLimpiezaTab(){
   switch(limpiezaTab){
     case 'manos': renderLimpiezaManos(); break;
@@ -2251,6 +2251,7 @@ function markReservationNoShow(id){
 function setReservasTab(t){
   reservasTab = t;
   renderReservas();
+  scrollContentToTop();
 }
 
 function renderReservas(){
@@ -3170,6 +3171,7 @@ let promoMonthOffset = 0;
 function setPromoTab(t){
   promoTab = t;
   renderPromocion();
+  scrollContentToTop();
 }
 
 // Enlaces directos a Instagram/Facebook/Google (los mismos datos que en Mi

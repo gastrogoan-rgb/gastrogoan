@@ -1290,6 +1290,7 @@ function stockTab(tab){
   document.getElementById('stock-tab-btn-elab').classList.toggle('active', tab === 'elab');
   document.getElementById('stock-tab-ing').classList.toggle('active', tab === 'ing');
   document.getElementById('stock-tab-elab').classList.toggle('active', tab === 'elab');
+  scrollContentToTop();
 }
 
 let stockFolder = null;   // categoría abierta en la pestaña de ingredientes
