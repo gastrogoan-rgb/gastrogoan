@@ -718,6 +718,7 @@ td.wrap{white-space:normal}
 .ge-grid th{padding:8px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap}
 .ge-grid th:first-child{text-align:left;min-width:160px}
 .ge-grid td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:monospace;font-size:13px;white-space:nowrap}
+.ge-grid td:has(.empty),.ge-grid .empty{white-space:normal;text-align:left;font-family:inherit}
 .ge-grid td:first-child{text-align:left;font-family:inherit;font-weight:600;background:var(--brand-cream);border-left:3px solid var(--teal)}
 .ge-grid tr:last-child td{border-bottom:none}
 .ge-grid tr.highlight td{background:var(--teal-l);font-weight:700}
