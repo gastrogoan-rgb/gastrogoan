@@ -2500,16 +2500,15 @@ function renderReservasDia(){
                   ${r.status==='confirmada' ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
                       <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
-                      ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})" title="${t('btn.noShow')}"><i class="ti ti-user-x"></i></button>` : ''}
+                      ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
                     </div>
                   ` : '—'}
                 </td>
                 <td class="actions-cell" data-label="">
                   ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
                   ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
-                  ${r.status==='confirmada' ? `<button class="btn btn-sm btn-icon" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
+                  ${(r.status==='confirmada' || r.status==='pendiente' || r.status==='lista_espera') ? `<button class="btn btn-sm btn-icon btn-danger" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
-                  <button class="btn btn-sm btn-icon btn-danger" onclick="deleteReservation(${r.id})"><i class="ti ti-trash"></i></button>
                 </td>
               </tr>
             `;
