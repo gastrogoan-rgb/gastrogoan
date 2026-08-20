@@ -33,6 +33,27 @@ body{font-family:'Schibsted Grotesk',system-ui,-apple-system,BlinkMacSystemFont,
 a{color:var(--text)}a:hover{color:var(--olive)}
 ::selection{background:#1C1A17;color:#FAF8F4}
 
+/* Scrollbar fina y discreta (Chrome/Edge/Safari — la mayoría de móviles no
+   la pintan visible salvo mientras se hace scroll, pero en tablet/PC con
+   ratón la barra por defecto del sistema desentonaba con el resto del
+   diseño, gruesa y gris genérica). Sin esto en Firefox: no pasa nada, se
+   queda con la del sistema, no rompe nada. */
+.content::-webkit-scrollbar,.modal::-webkit-scrollbar,.tpv-order-col::-webkit-scrollbar,
+.ge-grid::-webkit-scrollbar,.table-wrap::-webkit-scrollbar,.manual-nav::-webkit-scrollbar{
+  width:8px;height:8px;
+}
+.content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,.tpv-order-col::-webkit-scrollbar-track,
+.ge-grid::-webkit-scrollbar-track,.table-wrap::-webkit-scrollbar-track{
+  background:transparent;
+}
+.content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,.tpv-order-col::-webkit-scrollbar-thumb,
+.ge-grid::-webkit-scrollbar-thumb,.table-wrap::-webkit-scrollbar-thumb{
+  background:var(--border);border-radius:4px;
+}
+.content::-webkit-scrollbar-thumb:hover,.modal::-webkit-scrollbar-thumb:hover{
+  background:var(--muted);
+}
+
 /* ===== Header ===== */
 .app-header{
   height:var(--header-h);
@@ -277,11 +298,17 @@ body:not(.owner-session) .owner-strict{display:none !important}
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:12px 20px;min-height:46px;border-radius:10px;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-size:15px;font-weight:700;
-  cursor:pointer;text-decoration:none;
+  cursor:pointer;text-decoration:none;user-select:none;
+  transition:filter .12s ease,background-color .12s ease,border-color .12s ease,transform .08s ease;
 }
 .btn:hover{filter:brightness(.97)}
+/* Feedback táctil al pulsar — sin esto todo botón reaccionaba de golpe o
+   nada, que en móvil (donde no hay :hover real) se sentía como que el
+   toque no había registrado. */
+.btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 .btn:disabled:hover{filter:grayscale(.3)}
+.btn:disabled:active{transform:none}
 .btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
 .btn-danger{background:var(--red);border-color:var(--red);color:#fff}
 .btn-sm{padding:7px 12px;min-height:36px;font-size:13px;border-radius:8px}
@@ -318,6 +345,7 @@ input[type="checkbox"],input[type="radio"]{
 .field input,.field select,.field textarea{
   width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;
   font-size:16px;font-family:inherit;background:#fff;color:var(--text);min-height:46px;
+  transition:border-color .12s ease;
 }
 .field textarea{resize:vertical;min-height:70px}
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
@@ -413,7 +441,13 @@ td.wrap{white-space:normal}
   z-index:10010;padding:16px;
   overflow-y:auto;
 }
-.modal-overlay.active{display:flex}
+.modal-overlay.active{display:flex;animation:modalFadeIn .18s ease}
+.modal-overlay.active .modal{animation:modalPopIn .22s cubic-bezier(.22,1,.36,1)}
+@keyframes modalFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalPopIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@media (prefers-reduced-motion:reduce){
+  .modal-overlay.active,.modal-overlay.active .modal{animation:none}
+}
 /* El propio .modal ya NO hace scroll: es un contenedor flex en columna de
    altura fija (header + .modal-body + footer). Solo .modal-body (ver más
    abajo, envuelto automáticamente por wrapModalBody() en openModal())
@@ -681,7 +715,7 @@ td.wrap{white-space:normal}
 /* ===== Gestión Económica ===== */
 .ge-auto{background:var(--teal-l);color:var(--teal-d);font-size:11px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
 .ge-tab-row{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;overflow-x:auto;gap:0}
-.ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit}
+.ge-tab{padding:9px 18px;font-size:13px;font-weight:500;color:var(--muted);border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;background:none;white-space:nowrap;font-family:inherit;user-select:none;transition:color .12s ease,border-color .12s ease}
 .ge-tab.active{color:var(--teal);border-bottom-color:var(--teal);font-weight:700}
 .ge-tab:hover:not(.active){color:var(--text)}
 .ge-tab-panel{display:none}
