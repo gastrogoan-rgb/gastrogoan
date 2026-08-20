@@ -1817,24 +1817,43 @@ function renderTandaGroupCard(order, g, isMenu){
   const pendingCount = orderPendingKitchenLines(order, g.tanda, isMenu).reduce((s,l)=>s+l.qty, 0);
   const allInGroup = g.items;
   const allFired = allInGroup.every(({line}) => line.estado && line.qty <= (line.marchada||0));
+  // Las bebidas no pasan por cocina: antes cada línea llevaba su propio
+  // botón de ciclo Y la cabecera de la tanda mostraba TAMBIÉN un resumen de
+  // estado — dos controles para lo mismo. Ahora, si la tanda es solo de
+  // bebidas, el único control vive en la cabecera (un botón que avanza
+  // todas a la vez) y cada línea se queda con un badge de solo lectura,
+  // igual que ya hacen los platos de cocina.
+  const foodInGroup = allInGroup.filter(({line}) => !line.bebida);
+  const bebidaInGroup = allInGroup.filter(({line}) => line.bebida);
+  const isPureBebidaGroup = bebidaInGroup.length > 0 && foodInGroup.length === 0;
   // "Listo para recoger" y "Recogido" son cosas distintas y las decide gente
   // distinta: cocina termina el plato (estado 'entregado') y SALA confirma
   // que se lo ha llevado (recogidoAt). Antes no existía esa confirmación y el
   // badge daba por recogida la tanda en cuanto cocina acababa el último
   // plato, que es justo al revés: cuanto más terminada estaba, antes decía
   // "Recogido" sin que nadie la hubiera tocado.
-  const listos = allInGroup.filter(({line}) => line.estado === 'entregado');
+  const listos = foodInGroup.filter(({line}) => line.estado === 'entregado');
   const porRecoger = listos.filter(({line}) => !line.recogidoAt);
-  const allPicked = listos.length === allInGroup.length && !porRecoger.length;
+  const allPicked = foodInGroup.length > 0 && listos.length === foodInGroup.length && !porRecoger.length;
   let statusBadge = '';
-  if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-  else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
-  else if(allInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
-  else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
-  // El botón solo aparece cuando de verdad hay algo esperando en el pase.
-  const btnRecoger = porRecoger.length
-    ? `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-hand-grab"></i> ${t('btn.markPickedUp')}</button>`
-    : '';
+  let btnRecoger = '';
+  if(isPureBebidaGroup){
+    const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
+    const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
+    const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
+    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
+    else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
+    else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
+  }else{
+    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+    // El botón solo aparece cuando de verdad hay algo esperando en el pase.
+    btnRecoger = porRecoger.length
+      ? `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-hand-grab"></i> ${t('btn.markPickedUp')}</button>`
+      : '';
+  }
 
   return `
   <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;background:var(--surface)">
@@ -1847,20 +1866,14 @@ function renderTandaGroupCard(order, g, isMenu){
       </div>
     </div>
     ${allInGroup.map(({line, idx}) => {
-      // Las bebidas no pasan por la pantalla de Cocina (no hay nada que
-      // cocinar), así que aquí en Sala es donde se marca su propio estado
-      // (pedida → preparando → servida) con un botón, no solo un badge de
-      // solo lectura como el resto de platos (que se controlan desde Cocina).
       let lineStatus = '';
       if(line.bebida && line.estado){
-        // Mismo botón (tamaño y color) que usa Cocina para avanzar el estado
-        // de un plato — antes este era diminuto (9px) junto al nombre y
-        // competía visualmente con el badge de la cabecera de la tanda (ese
-        // sí de solo lectura), así que parecía "el botón que no hace nada"
-        // mientras el que de verdad actualizaba el estado pasaba desapercibido.
+        // El control ya vive en la cabecera de la tanda (arriba) cuando es
+        // un grupo solo de bebidas — aquí, por línea, solo un badge de
+        // lectura, igual que los platos de cocina.
         if(line.estado==='entregado') lineStatus = ' <span class="badge badge-green" style="font-size:9px"><i class="ti ti-check"></i></span>';
-        else if(line.estado==='preparando') lineStatus = ` <button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
-        else if(line.estado==='cocina') lineStatus = ` <button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
+        else if(line.estado==='preparando') lineStatus = ' <span class="badge badge-blue" style="font-size:9px"><i class="ti ti-flame"></i></span>';
+        else if(line.estado==='cocina') lineStatus = ' <span class="badge badge-amber" style="font-size:9px"><i class="ti ti-clock"></i></span>';
       } else {
         // Un plato terminado por cocina pero aún en el pase lleva el icono de
         // la campana: de un vistazo se ve qué falta por recoger sin tener que
