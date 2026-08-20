@@ -121,11 +121,19 @@ let tourCurrentTargetEl = null;
 let tourReflowHandler = null;
 
 function promptAppTour(){
+  // El recorrido señala elementos concretos de la pantalla con una burbuja
+  // encima — en un móvil, por pequeña que se haga, sigue tapando bastante
+  // de lo que se está explicando. Se avisa antes de empezar, no se bloquea
+  // (quien quiera verlo en el móvil igualmente puede).
+  const mobileHint = window.innerWidth < 640
+    ? `<p style="font-size:12.5px;color:var(--muted);margin-top:8px"><i class="ti ti-device-tablet"></i> ${escapeHtml(t('tour.prompt.mobileHint'))}</p>`
+    : '';
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-map-2"></i> ${escapeHtml(t('tour.prompt.title'))}</h3>
     </div>
     <p>${escapeHtml(t('tour.prompt.desc'))}</p>
+    ${mobileHint}
     <div class="modal-footer">
       <button class="btn" onclick="dismissTour()">${escapeHtml(t('tour.prompt.no'))}</button>
       <button class="btn btn-primary" onclick="startAppTour()"><i class="ti ti-player-play"></i> ${escapeHtml(t('tour.prompt.yes'))}</button>

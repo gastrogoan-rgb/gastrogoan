@@ -1268,11 +1268,16 @@ td.wrap{white-space:normal}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important}
 
   /* Tour bubble — mobile (top/left ya los pone JS en cada paso, en modo
-     "hoja inferior" fija por debajo de cierto ancho — ver tourPositionUI) */
-  .tour-bubble{max-height:48vh;padding:12px 14px;border-radius:14px}
-  .tour-bubble h3{font-size:14px}
-  .tour-bubble-desc{font-size:12.5px;margin:8px 0 4px}
+     "hoja inferior" fija por debajo de cierto ancho — ver tourPositionUI).
+     Antes ocupaba hasta el 48% alto de la pantalla — en un móvil eso tapa
+     buena parte de lo que se está señalando detrás. Más compacta a
+     propósito: mejor un poco de scroll dentro de la burbuja en un paso con
+     texto largo que taparlo todo. */
+  .tour-bubble{max-height:34vh;max-height:34dvh;padding:10px 12px;border-radius:14px}
+  .tour-bubble h3{font-size:13.5px}
+  .tour-bubble-desc{font-size:12px;margin:6px 0 4px;line-height:1.45}
   .tour-bubble-footer .btn{font-size:11px}
+  .tour-phase-nav{margin-bottom:8px}
   .tour-arrow{display:none!important}
 
   /* Toast — mobile */
