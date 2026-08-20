@@ -1462,6 +1462,7 @@ function changePedidoEstado(estado){
     }
     renderStock();
     registerPedidoComoGastoVariable(o);
+    logAudit('stock_received', t('audit.orderReceived').replace('${supplier}', o.supplier||'?'));
   }
   saveDB();
   renderPedidoDetail();

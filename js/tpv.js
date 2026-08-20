@@ -2366,6 +2366,7 @@ function quickToggleDishAvailability(cartaId, secId, platoId){
   const p = sec && (sec.platos||[]).find(x => x.id === platoId);
   if(!p) return;
   p.disponible = p.disponible === false ? true : false;
+  logAudit('availability', t(p.disponible===false ? 'audit.dishMarkedOut' : 'audit.dishMarkedAvailable').replace('${name}', tItem(p)));
   saveDB();
   renderMarkDishOutModal();
   const active = document.querySelector('.view.active');
@@ -3413,6 +3414,7 @@ function requestApplyDiscount(orderId){
         motivo: t('msg.discountReverted') + (order.descuentoMotivo ? ` (${order.descuentoMotivo})` : ''),
         responsableId: order.descuentoResponsableId, responsableNombre: order.descuentoResponsableNombre || ''
       });
+      logAudit('discount', t('audit.discountReverted').replace('${pct}', order.descuentoPct), 'normal');
     }
     order.descuentoPct = 0;
     order.descuentoMotivo = '';
@@ -3477,6 +3479,10 @@ function confirmApplyDiscount(){
     mesa: order.tableId ? (DB.tables.find(t=>t.id===order.tableId)||{}).name : togoOrderLabel(order),
     porcentaje: pct, importe, motivo: reason, responsableId, responsableNombre
   });
+  // Un descuento pequeño (redondeo, cortesía puntual) es normal del día a
+  // día; uno grande de verdad afecta al margen — se marca en rojo a partir
+  // del 20%, igual de criterio que un descuadre de caja "de verdad".
+  logAudit('discount', t('audit.discountApplied').replace('${pct}', pct).replace('${amount}', fmtMoney(importe)), pct >= 20 ? 'critical' : 'normal');
   saveDB();
   discountPending = null;
   renderPaymentModal(orderId);
