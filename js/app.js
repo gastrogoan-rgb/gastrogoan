@@ -5574,6 +5574,10 @@ function renderTicketConfigCard(){
         <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer">
           <input type="checkbox" id="tk-nif" ${tc.mostrarNif!==false?'checked':''} style="width:18px;height:18px"> ${t('mn.ticket.showTaxId')}
         </label>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:${(DB.business&&DB.business.gmaps)?'pointer':'default'};${(DB.business&&DB.business.gmaps)?'':'opacity:.5'}">
+          <input type="checkbox" id="tk-review-qr" ${tc.mostrarResenaQr!==false?'checked':''} ${(DB.business&&DB.business.gmaps)?'':'disabled'} style="width:18px;height:18px"> ${t('mn.ticket.showReviewQr')}
+        </label>
+        ${(DB.business&&DB.business.gmaps) ? '' : `<p style="font-size:12px;color:var(--muted);margin:-4px 0 0 28px">${t('mn.ticket.showReviewQrHint')}</p>`}
       </div>
       <div class="field">
         <label>${t('mn.ticket.footerMessage')}</label>
@@ -5964,6 +5968,7 @@ function saveTicketConfig(){
     mostrarTelefono: document.getElementById('tk-telefono').checked,
     mostrarWeb: document.getElementById('tk-web').checked,
     mostrarNif: document.getElementById('tk-nif').checked,
+    mostrarResenaQr: document.getElementById('tk-review-qr').checked,
     ivaPct: parseFloat(document.getElementById('tk-iva').value) || 0
   };
   saveDB();

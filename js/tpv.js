@@ -4402,6 +4402,13 @@ function buildTicketText(sale, opts={}){
     lines.push(t('ticket.verifactuPending'));
   }
   lines.push(tc.pie || t('ticket.thanksVisit'));
+  // Sin imagen posible en texto plano (impresora térmica, email, WhatsApp):
+  // el enlace igualmente sirve, se puede tocar o copiar a mano.
+  if(DB.business && DB.business.gmaps && tc.mostrarResenaQr !== false){
+    lines.push('');
+    lines.push(t('ticket.reviewTitle'));
+    lines.push(DB.business.gmaps);
+  }
   return lines.join('\n');
 }
 
@@ -4457,6 +4464,18 @@ function buildTicketHtml(sale, opts={}){
   const qrHtml = (sale.verifactu && sale.verifactu.status === 'sent' && sale.verifactu.qrData)
     ? `<div style="text-align:center;margin-top:10px"><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(sale.verifactu.qrData)}" style="width:120px;height:120px"></div>`
     : '';
+  // Pedir la reseña justo al final, cuando el cliente ya tiene el ticket en
+  // la mano y acaba de vivir la experiencia — reutiliza el mismo enlace de
+  // Google que ya se configura en Mi Negocio → Redes sociales para nada
+  // más (no hace falta pedir ni guardar una URL aparte). Se puede ocultar
+  // desde Mi Negocio → Ticket sin borrar el enlace guardado.
+  const reviewQrHtml = (b.gmaps && tc.mostrarResenaQr !== false)
+    ? `<div style="text-align:center;margin-top:16px;padding-top:14px;border-top:1px dashed #bbb">
+        <div style="font-size:13px;font-weight:700">${t('ticket.reviewTitle')}</div>
+        <div style="font-size:11.5px;color:#555;margin:2px 0 8px">${t('ticket.reviewDesc')}</div>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(b.gmaps)}" style="width:110px;height:110px">
+      </div>`
+    : '';
 
   return `
     <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
@@ -4489,6 +4508,7 @@ function buildTicketHtml(sale, opts={}){
       ${verifactuHtml}
       ${qrHtml}
       <div style="text-align:center;font-size:11.5px;color:#666;margin-top:14px;line-height:1.5">${escapeHtml(tc.pie || t('ticket.thanksVisit'))}</div>
+      ${reviewQrHtml}
     </div>
   `;
 }
