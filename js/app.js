@@ -2207,6 +2207,15 @@ let reservasTab = 'dia';
 let reservasDate = todayStr();
 let reservasWeekOffset = 0;
 let reservasMonthOffset = 0;
+// Qué reservas del día están desplegadas (mostrando mesa/notas/acciones).
+// Colapsadas por defecto: con muchas reservas en un mismo día, verlas todas
+// desplegadas a la vez obligaba a un scroll larguísimo para encontrar una.
+let reservaExpandedIds = new Set();
+function toggleReservaExpand(id){
+  if(reservaExpandedIds.has(id)) reservaExpandedIds.delete(id);
+  else reservaExpandedIds.add(id);
+  renderReservasDia();
+}
 
 function reservationStatusBadge(status){
   return status==='pendiente' ? `<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> ${t('status.pending')}</span>`
@@ -2480,41 +2489,48 @@ function renderReservasDia(){
   // Las reservas ya llegadas (marcadas desde el TPV) se ocultan para no molestar.
   const items = DB.reservations.filter(r => r.date === date && !r.llegada).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
 
+  // Cada reserva se pinta colapsada (hora, cliente, personas, estado) y se
+  // expande al tocarla — con muchas reservas en el día, una tabla con todos
+  // los detalles siempre visibles obligaba a un scroll horizontal largo y
+  // costaba encontrar la que se buscaba de un vistazo.
   const tableHtml = !items.length
     ? `<div class="empty"><i class="ti ti-calendar-event"></i>${t('empty.noReservationsDay')}</div>`
-    : `<div class="table-wrap"><table class="table-cards">
-        <thead><tr><th>${t('th.time')}</th><th>${t('th.client')}</th><th>${t('th.people')}</th><th>${t('th.table')}</th><th>${t('th.notes')}</th><th>${t('th.status')}</th><th>${t('th.arrival')}</th><th></th></tr></thead>
-        <tbody>
-          ${items.map(r => {
-            const client = DB.clients.find(c=>c.id===r.clientId);
-            const table = DB.tables.find(t=>t.id===r.tableId);
-            return `
-              <tr>
-                <td data-label="${t('th.time')}"><strong>${escapeHtml(r.time)}</strong></td>
-                <td data-label="${t('th.client')}">${escapeHtml(client ? client.name : (r.clientName||'—'))}</td>
-                <td data-label="${t('th.people')}">${r.people}</td>
-                <td data-label="${t('th.table')}">${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</td>
-                <td class="wrap" data-label="${t('th.notes')}">${escapeHtml(r.notes||'—')}</td>
-                <td data-label="${t('th.status')}">${reservationStatusBadge(r.status)}</td>
-                <td data-label="${t('th.arrival')}">
+    : `<div class="reserva-list">
+        ${items.map(r => {
+          const client = DB.clients.find(c=>c.id===r.clientId);
+          const table = DB.tables.find(t=>t.id===r.tableId);
+          const expanded = reservaExpandedIds.has(r.id);
+          return `
+            <div class="card reserva-card ${expanded?'expanded':''}">
+              <div class="reserva-card-summary" onclick="toggleReservaExpand(${r.id})">
+                <strong class="reserva-card-time">${escapeHtml(r.time)}</strong>
+                <span class="reserva-card-name">${escapeHtml(client ? client.name : (r.clientName||'—'))}</span>
+                <span class="badge badge-gray"><i class="ti ti-users"></i> ${r.people}</span>
+                ${reservationStatusBadge(r.status)}
+                <i class="ti ti-chevron-down reserva-card-chevron"></i>
+              </div>
+              <div class="reserva-card-detail">
+                <div class="reserva-card-detail-row"><span>${t('th.table')}</span><strong>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</strong></div>
+                <div class="reserva-card-detail-row"><span>${t('th.notes')}</span><strong>${escapeHtml(r.notes||'—')}</strong></div>
+                <div class="reserva-card-detail-row"><span>${t('th.arrival')}</span>
                   ${r.status==='confirmada' ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
                       <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
                       ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
                     </div>
-                  ` : '—'}
-                </td>
-                <td class="actions-cell" data-label="">
+                  ` : '<strong>—</strong>'}
+                </div>
+                <div class="reserva-card-actions">
                   ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}
                   ${r.status==='confirmada' && (client?.phone || client?.email || r.clientPhone) ? `<button class="btn btn-sm btn-icon" onclick="openReservationReminderModal(${r.id})" title="${t('btn.sendReminder')}"><i class="ti ti-bell"></i></button>` : ''}
                   ${(r.status==='confirmada' || r.status==='pendiente' || r.status==='lista_espera') ? `<button class="btn btn-sm btn-icon btn-danger" onclick="cancelReservation(${r.id})" title="${t('btn.cancelReservation')}"><i class="ti ti-calendar-x"></i></button>` : ''}
                   <button class="btn btn-sm btn-icon" onclick="openReservationModal(${r.id})"><i class="ti ti-edit"></i></button>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table></div>`;
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>`;
 
   const aforoInfo = getAforoInfoForDate(date);
   const aforoHtml = (aforoInfo && aforoInfo.length) ? `

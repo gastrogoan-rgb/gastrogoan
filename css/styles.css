@@ -335,6 +335,21 @@ tr:last-child td{border-bottom:none}
 td.wrap{white-space:normal}
 .actions-cell{display:flex;gap:6px;flex-wrap:wrap}
 
+/* ===== Reservas (Día): lista de tarjetas plegables ===== */
+.reserva-list{display:flex;flex-direction:column;gap:8px}
+.reserva-card{padding:0;overflow:hidden}
+.reserva-card-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;cursor:pointer}
+.reserva-card-time{font-size:15px;min-width:44px}
+.reserva-card-name{flex:1;min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reserva-card-chevron{margin-left:auto;color:var(--muted);transition:transform .2s ease;flex:none}
+.reserva-card.expanded .reserva-card-chevron{transform:rotate(180deg)}
+.reserva-card-detail{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.reserva-card.expanded .reserva-card-detail{display:block;padding-top:12px}
+.reserva-card-detail-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.reserva-card-detail-row>span:first-child{color:var(--muted);flex:none}
+.reserva-card-detail-row>strong{text-align:right}
+.reserva-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+
 /* Tablas anchas (muchas columnas) en móvil: en vez de forzar scroll
    horizontal para llegar a las columnas de la derecha, cada fila se
    convierte en una tarjeta y cada celda en una línea con su etiqueta
@@ -666,10 +681,10 @@ td.wrap{white-space:normal}
    verdad (horario semanal, plano de mesas, web pública con QR) ocupan las
    columnas enteras con .mn-grid-full. align-items:start evita que una
    tarjeta alta estire a su vecina de la misma fila. */
-.mn-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
-@media (min-width:900px){.mn-grid{grid-template-columns:repeat(2,1fr)}}
-@media (min-width:1440px){.mn-grid{grid-template-columns:repeat(3,1fr)}}
-.mn-grid .card{max-width:none;margin:0}
+.mn-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:900px){.mn-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1440px){.mn-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.mn-grid .card{max-width:none;margin:0;min-width:0}
 .mn-grid .mn-grid-full{grid-column:1/-1}
 
 .manual-wrap{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
@@ -1104,7 +1119,17 @@ td.wrap{white-space:normal}
 
   /* Misc */
   .badge{font-size:10px;padding:2px 6px}
-  .te-row{grid-template-columns:minmax(0,1fr) 46px 60px 60px 60px 46px;font-size:11px;gap:4px;padding:9px 10px}
+  /* A este ancho, 6 columnas en una sola fila dejaban la etiqueta en menos
+     de 40px — el "%" quedaba prácticamente montado sobre el texto envuelto
+     de la etiqueta ("Gastos Variables35%"). La etiqueta pasa a ocupar su
+     propia línea completa y las 5 columnas de datos van debajo, en fila. */
+  .te-row{grid-template-columns:repeat(5,1fr);grid-template-areas:"label label label label label" "pct obj real dif status";font-size:11px;gap:4px;padding:9px 10px}
+  .te-row span:nth-child(1){grid-area:label;margin-bottom:2px}
+  .te-row span:nth-child(2){grid-area:pct}
+  .te-row span:nth-child(3){grid-area:obj}
+  .te-row span:nth-child(4){grid-area:real}
+  .te-row span:nth-child(5){grid-area:dif}
+  .te-row span:nth-child(6){grid-area:status}
 
   /* Tabs on mobile — horizontal scroll sin desbordar */
   .ge-tab-row{gap:0;-webkit-overflow-scrolling:touch}
