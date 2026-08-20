@@ -1792,10 +1792,10 @@ function renderCartaSelectorInline(order, carta){
         const platos = (sec.platos||[]).filter(p=>p.disponible!==false);
         const icono = sec.icono || guessSeccionEmoji(sec.nombre);
         return `
-        <button class="btn" style="flex:1;min-width:130px;flex-direction:column;gap:4px;padding:14px 10px;height:auto" onclick="tpvSelectedSeccionId=${sec.id};renderTableOrderModal(${order.id})">
-          <span style="font-size:22px">${icono}</span>
-          <span style="font-size:13px;font-weight:700">${escapeHtml(tItem(sec))}</span>
-          <span style="font-size:11px;color:var(--muted)">${platos.length} ${platos.length===1?t('noun.product'):t('noun.products')}</span>
+        <button class="btn tpv-sec-card" style="flex:1;min-width:130px;flex-direction:column;gap:4px;padding:14px 10px;height:auto" onclick="tpvSelectedSeccionId=${sec.id};renderTableOrderModal(${order.id})">
+          <span class="tpv-sec-icon" style="font-size:22px">${icono}</span>
+          <span class="tpv-sec-name" style="font-size:13px;font-weight:700">${escapeHtml(tItem(sec))}</span>
+          <span class="tpv-sec-count" style="font-size:11px;color:var(--muted)">${platos.length} ${platos.length===1?t('noun.product'):t('noun.products')}</span>
         </button>
       `;}).join('')}
     </div>

@@ -1084,6 +1084,11 @@ td.wrap{white-space:normal}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
   .mesa-card{min-height:84px;padding:16px 10px;font-size:12px}
+  /* Con la tarjeta tan baja en móvil, el nombre de la mesa (centrado
+     verticalmente) quedaba pegado al badge del tiempo abierta, que va
+     posicionado aparte en la esquina superior — se le da un margen para
+     que no se toquen. */
+  .mesa-card .mesa-name{margin-top:12px}
 
   /* Buttons & toolbars */
   .btn{padding:7px 10px;font-size:12px;border-radius:8px}
@@ -1160,16 +1165,26 @@ td.wrap{white-space:normal}
   .btn-icon{min-width:34px;min-height:34px;padding:5px}
   .btn-icon i{font-size:15px}
 
-  /* Comanda item rows (TPV) — bigger touch targets: qty +/-, notes, delete */
-  .comanda-item-row{gap:8px !important;padding:8px 0 !important;flex-wrap:wrap}
+  /* Comanda item rows (TPV): en móvil todo pantalla es más pequeña, así que
+     hay menos sitio de sobra para cada línea de la comanda. Cuanto más
+     grande sea cada fila, antes hace falta scroll para ver el resumen del
+     pedido completo mientras se está tomando nota — más denso a propósito. */
+  .comanda-item-row{gap:6px !important;padding:5px 0 !important;flex-wrap:wrap;font-size:12px !important}
   /* El nombre del plato competía por espacio con 4-5 botones de icono de
      ancho fijo en la misma línea y se partía en 2-3 líneas verticales
      (p.ej. "Tortilla" / "de" / "patatas") en vez de que la fila entera
      bajara de línea — se le da su propia fila completa, precio y botones
      debajo. */
   .comanda-item-row > span:first-child{flex-basis:100%}
-  .comanda-qty-btn{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;padding:0 !important}
-  .comanda-qty-btn i{font-size:17px !important}
+  .comanda-qty-btn{width:30px !important;height:30px !important;min-width:30px !important;min-height:30px !important;padding:0 !important}
+  .comanda-qty-btn i{font-size:13px !important}
+
+  /* Tarjetas de sección de la carta (ENTRANTES/PRINCIPALES...): más
+     compactas y más por fila, para ver varias secciones sin bajar tanto. */
+  .tpv-sec-card{padding:8px 6px !important;gap:2px !important;min-width:88px !important}
+  .tpv-sec-card .tpv-sec-icon{font-size:17px !important}
+  .tpv-sec-card .tpv-sec-name{font-size:11.5px !important}
+  .tpv-sec-card .tpv-sec-count{font-size:9.5px !important}
 
   /* Carta — evitar que el precio se aplaste entre nombre y botones */
   .ge-item{flex-wrap:wrap !important;row-gap:6px}

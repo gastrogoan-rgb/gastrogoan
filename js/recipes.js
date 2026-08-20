@@ -1074,9 +1074,9 @@ function renderFichaCard(r){
   const ficha = DB.fichas.find(f => f.recipeId === r.id);
   return `
     <div class="card card-compact" style="cursor:pointer" onclick="${ficha ? `openFichaModal(${ficha.id})` : `openFichaModal(null, ${r.id})`}">
-      <h3 style="justify-content:space-between">
-        <span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
-        ${ficha ? `<span class="badge badge-green">${t('label.linked')}</span>` : `<span class="badge badge-amber">${t('label.noTechSheet')}</span>`}
+      <h3 style="justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <span style="overflow:visible;text-overflow:clip;white-space:normal;flex:1;min-width:0"><i class="ti ti-file-description"></i> ${escapeHtml(r.name)}</span>
+        ${ficha ? `<span class="badge badge-green" style="flex:none">${t('label.linked')}</span>` : `<span class="badge badge-amber" style="flex:none">${t('label.noTechSheet')}</span>`}
       </h3>
       ${ficha ? `
         <div class="actions-cell">
