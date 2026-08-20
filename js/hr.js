@@ -2627,8 +2627,9 @@ function renderHorariosPersonal(){
       <div class="left">
         <input type="text" class="search-input" value="${escapeHtml(personalSearch)}" placeholder="${t('ph.searchEmployee')}" oninput="setPersonalSearch(this.value)">
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="owner-strict btn" onclick="openPersonalLogModal()"><i class="ti ti-history"></i> ${t('title.personalLog')}</button>
+        ${allEmps.length ? `<button class="owner-strict btn" onclick="openBulkTurnoModal()"><i class="ti ti-calendar-plus"></i> ${t('title.assignShiftsByPeriod')}</button>` : ''}
         <button class="owner-strict btn btn-primary" onclick="openEmployeeModal()"><i class="ti ti-plus"></i> ${t('btn.addEmployee')}</button>
       </div>
     </div>

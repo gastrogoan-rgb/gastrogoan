@@ -1685,9 +1685,27 @@ function renderTableOrderModal(orderId){
   const activeCartas = getActiveCartas();
   const bebidaCartas = activeCartas.filter(isBebidaCarta);
   let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
+  // Si hay más de una carta de comida activa a la vez (p.ej. carta normal +
+  // una de evento especial, ambas dentro de su horario), sin elegir cuál usa
+  // ESTE pedido se verían mezcladas las pestañas de las dos y sería fácil
+  // marchar un plato de la carta que no toca. Antes existía el dato
+  // (cartaElegidaId) pero ningún sitio de la pantalla dejaba elegirlo.
+  const comidaCartasAllActive = comidaCartas;
+  let cartaPickerHtml = '';
   if(comidaCartas.length > 1){
     const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
-    if(elegida) comidaCartas = [elegida];
+    if(elegida){
+      comidaCartas = [elegida];
+    }else{
+      cartaPickerHtml = `
+        <div class="field" style="margin-bottom:10px">
+          <label>${t('tpv.chooseCartaForOrder')}</label>
+          <select onchange="setOrderCarta(${order.id}, this.value?parseInt(this.value):null)">
+            <option value="">${t('tpv.chooseCartaPlaceholder')}</option>
+            ${comidaCartasAllActive.map(c => `<option value="${c.id}">${escapeHtml(tItem(c))}</option>`).join('')}
+          </select>
+        </div>`;
+    }
   }
   const allCartas = [...bebidaCartas, ...comidaCartas];
   // Un menú de varios platos ya empezado en ESTE pedido (tiene líneas con su
@@ -1744,9 +1762,11 @@ function renderTableOrderModal(orderId){
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
+    ${cartaPickerHtml}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
+      ${order.cartaElegidaId ? `<button class="btn btn-sm btn-icon" onclick="setOrderCarta(${order.id}, null)" title="${t('tpv.changeChosenCarta')}"><i class="ti ti-adjustments"></i></button>` : ''}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
          .tpv-mobile-pane-toggle en styles.css); en tablet/PC no existe,
@@ -4060,14 +4080,21 @@ function openTodaySalesModal(){
    "facturadirecta" y "contasimple" quedan como alternativas de pago sin
    confirmar contra documentación real.
 
-   NÚMERO DE FACTURA (NumSerieFactura): lo genera GastroGoan, no el
-   proveedor. Si el negocio usa la app desde más de un dispositivo/TPV a
-   la vez, cada dispositivo necesita su PROPIA serie (p.ej. "T1-", "T2-")
-   para que dos dispositivos nunca puedan generar el mismo número — es la
-   práctica estándar en varios puntos de venta, no un parche. Por eso la
-   serie se guarda en localStorage (por dispositivo), no en DB.business
-   (que se sincroniza entre dispositivos). Configurar la serie de este
-   dispositivo en Mi Negocio → VeriFactu antes de activarlo.
+   NÚMERO DE FACTURA (NumSerieFactura) — NOTA DE DISEÑO SUPERADA: esto se
+   escribió pensando que GastroGoan tendría que generar el número de
+   factura (de ahí verifactuSerie/nextVerifactuNumSerieFactura, y el
+   campo "Serie" en Mi Negocio → VeriFactu). Al confirmar el esquema real
+   de los 3 proveedores implementados (verifactuapi, facturahub, y el
+   genérico de facturadirecta/contasimple — ver submitSaleToVerifactuApi/
+   FacturaHub/GenericProvider más abajo), NINGUNO acepta un número de
+   factura puesto por el cliente: el ID/número de factura lo asigna el
+   proveedor en su respuesta (created._id, data.numeroFactura...), como
+   corresponde a quien lleva la numeración fiscal oficial de verdad.
+   nextVerifactuNumSerieFactura() se deja sin llamar a propósito (no
+   "olvidado por conectar" — conectarlo mandaría un dato que la API
+   ignoraría, o peor, que podría chocar con la numeración real del
+   proveedor). El campo "Serie" en Mi Negocio queda como referencia
+   interna del dispositivo, sin afectar a la factura enviada.
 */
 const VERIFACTU_PROVIDERS = {
   verifactuapi: {label: 'VeriFactuAPI (recomendado)', apiBase: 'https://app.verifactuapi.es'},
