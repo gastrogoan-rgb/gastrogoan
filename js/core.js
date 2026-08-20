@@ -1826,18 +1826,6 @@ function confirmNetlifyDone(){
   else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
     else if(!DB.business.tourSeen) promptAppTour();
 }
-function postponeNetlify(){
-  hideNetlifySetupGate();
-  // Sin ningún negocio canjeado todavía, el siguiente paso es el selector
-  // vacío (de donde sale el canje), no el asistente de un negocio que aún
-  // no existe.
-  if(!ownerHasAnyBusiness()) showBusinessSelectScreen();
-  else if(!getLicense()) showActivationGate();
-  else if(!getCloudConfig()) showFirebaseSetupGate();
-  else if(!DB.business.extConnPromptSeen) showExternalConnectionsPrompt();
-    else if(!DB.business.tourSeen) promptAppTour();
-}
-
 async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
   const btn = document.getElementById('license-activate-btn');

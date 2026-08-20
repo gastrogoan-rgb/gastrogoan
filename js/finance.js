@@ -96,10 +96,6 @@ function gfMonthlyImporte(g){
 function geTotalVariablesNetoMes(year, month){
   return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>s+parseFloat(v.importe||0),0);
 }
-function geTotalVariablesMes(year, month){
-  const ivaDefault = (DB.ge?.config?.ivaComprasPct!=null) ? parseFloat(DB.ge.config.ivaComprasPct) : 10;
-  return (DB.ge.variables||[]).filter(v=>parseInt(v.mes)===month && parseInt(v.año)===year).reduce((s,v)=>{const p=v.iva!=null?parseFloat(v.iva):ivaDefault;return s+parseFloat(v.importe||0)*(1+p/100);},0);
-}
 // Ventas anuladas (ver requestCancelSale/tpv.js) se excluyen de todas las
 // cifras de facturación: siguen en DB.sales por trazabilidad, pero no son
 // ingreso real.

@@ -12,17 +12,6 @@ function purgePaidOrders(){
   _lastPurgeDate = today;
 }
 
-const KITCHEN_STATES = {
-  cocina:     {labelKey:'kitchen.waiting',    icon:'ti-clock',        cls:'badge-amber'},
-  preparando: {labelKey:'kitchen.preparing',  icon:'ti-flame',        cls:'badge-blue'},
-  entregado:  {labelKey:'kitchen.delivered',  icon:'ti-circle-check', cls:'badge-green'}
-};
-function kitchenStatusBadge(line){
-  const st = KITCHEN_STATES[line.estado];
-  if(!st || line.estado === 'entregado') return '';
-  return ` <span class="badge ${st.cls}"><i class="ti ${st.icon}"></i> ${t(st.labelKey)}</span>`;
-}
-
 // Control de repartos propios (reparto hecho por el propio negocio, no por
 // una plataforma externa tipo Glovo/Uber Eats — esos ya llevan su propio
 // repartidor y su propio seguimiento, fuera de esta app). El reparto se

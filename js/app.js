@@ -158,10 +158,6 @@ function ensureLimpiezaData(){
 // se borra algo para que el dueño sepa que debe exportar/archivar antes.
 const LIMPIEZA_COMPLIANCE_KEEP_DAYS = 3;
 const LIMPIEZA_APPCC_KEEP_QUARTERS = 4;
-function quarterKey(fecha){
-  const d = new Date(fecha);
-  return `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
-}
 function quarterIndex(fecha){
   const d = new Date(fecha);
   return d.getFullYear()*4 + Math.floor(d.getMonth()/3);
