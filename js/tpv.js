@@ -392,6 +392,18 @@ function paymentMethodTpvLabel(value){
 let paymentTab = 'full'; // 'full' | 'equal' | 'items' — pestaña activa del modal de cobro
 let tpvSelectedCartaId = null; // id de la carta/menú seleccionada en las pestañas de la comanda
 let tpvSelectedSeccionId = null; // sección abierta dentro de la carta seleccionada (null = viendo las carpetas)
+// En móvil, carta y comanda ya no van una al lado de la otra (no cabían
+// bien) ni apiladas en dos cajas pequeñas con scroll propio cada una (poco
+// sitio para ver de verdad lo que se está tomando): se muestra solo una de
+// las dos a la vez, a casi toda la altura, con un interruptor para
+// cambiar. Empieza en 'carta' (lo primero que hace falta al abrir una
+// mesa) y se mantiene mientras se van añadiendo platos, para no tener que
+// volver a tocar el interruptor entre plato y plato.
+let tpvOrderMobilePane = 'carta';
+function setTpvOrderMobilePane(pane, orderId){
+  tpvOrderMobilePane = pane;
+  renderTableOrderModal(orderId);
+}
 
 // Emoji por defecto para una sección de carta sin icono propio asignado
 function guessSeccionEmoji(nombre){
@@ -1747,12 +1759,19 @@ function renderTableOrderModal(orderId){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
     </div>
+    <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
+         .tpv-mobile-pane-toggle en styles.css); en tablet/PC no existe,
+         ahí carta y comanda siguen una al lado de la otra. -->
+    <div class="tpv-mobile-pane-toggle">
+      <button class="btn btn-sm ${tpvOrderMobilePane==='carta'?'btn-primary':''}" onclick="setTpvOrderMobilePane('carta', ${order.id})"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.section.carta')}</button>
+      <button class="btn btn-sm ${tpvOrderMobilePane==='comanda'?'btn-primary':''}" onclick="setTpvOrderMobilePane('comanda', ${order.id})"><i class="ti ti-clipboard-list"></i> ${t('label.order')}${order.items.length ? ` · ${order.items.length}` : ''}</button>
+    </div>
     <!-- Layout a dos columnas: selector + comanda (ver .tpv-order-cols en styles.css) -->
     <div class="tpv-order-cols">
-      <div class="tpv-order-col tpv-order-col-selector">
+      <div class="tpv-order-col tpv-order-col-selector ${tpvOrderMobilePane==='carta'?'tpv-pane-active':''}">
         ${selectorHtml}
       </div>
-      <div class="tpv-order-col tpv-order-col-comanda">
+      <div class="tpv-order-col tpv-order-col-comanda ${tpvOrderMobilePane==='comanda'?'tpv-pane-active':''}">
         ${comandaHtml}
       </div>
     </div>
