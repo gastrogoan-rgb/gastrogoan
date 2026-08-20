@@ -1366,16 +1366,6 @@ function isBebidaCarta(c){
   return /bebida/i.test(c.nombre||'');
 }
 
-// Guarda en la comanda qué carta de comida se usará, cuando hay varias activas
-// a la vez y hace falta elegir una.
-function setOrderCarta(orderId, cartaId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  order.cartaElegidaId = cartaId;
-  saveDB();
-  renderTableOrderModal(orderId);
-}
-
 function findCartaSeccion(secId){
   for(const c of getActiveCartas()){
     const sec = (c.secciones||[]).find(s=>s.id===secId);
@@ -1681,32 +1671,13 @@ function renderTableOrderModal(orderId){
     saveDB();
   }
 
-  // Todas las cartas+menús activos, sala primero, luego comida
+  // Todas las cartas+menús activos, sala primero, luego comida — navegar
+  // libremente entre todas las que estén activas (aunque haya más de una de
+  // comida a la vez, p.ej. carta normal + una de evento especial) es el
+  // comportamiento querido, no un problema a resolver con un selector.
   const activeCartas = getActiveCartas();
   const bebidaCartas = activeCartas.filter(isBebidaCarta);
-  let comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
-  // Si hay más de una carta de comida activa a la vez (p.ej. carta normal +
-  // una de evento especial, ambas dentro de su horario), sin elegir cuál usa
-  // ESTE pedido se verían mezcladas las pestañas de las dos y sería fácil
-  // marchar un plato de la carta que no toca. Antes existía el dato
-  // (cartaElegidaId) pero ningún sitio de la pantalla dejaba elegirlo.
-  const comidaCartasAllActive = comidaCartas;
-  let cartaPickerHtml = '';
-  if(comidaCartas.length > 1){
-    const elegida = comidaCartas.find(c => c.id === order.cartaElegidaId);
-    if(elegida){
-      comidaCartas = [elegida];
-    }else{
-      cartaPickerHtml = `
-        <div class="field" style="margin-bottom:10px">
-          <label>${t('tpv.chooseCartaForOrder')}</label>
-          <select onchange="setOrderCarta(${order.id}, this.value?parseInt(this.value):null)">
-            <option value="">${t('tpv.chooseCartaPlaceholder')}</option>
-            ${comidaCartasAllActive.map(c => `<option value="${c.id}">${escapeHtml(tItem(c))}</option>`).join('')}
-          </select>
-        </div>`;
-    }
-  }
+  const comidaCartas = activeCartas.filter(c => !isBebidaCarta(c));
   const allCartas = [...bebidaCartas, ...comidaCartas];
   // Un menú de varios platos ya empezado en ESTE pedido (tiene líneas con su
   // menuId) debe seguir pudiéndose completar aunque su horario haya
@@ -1762,11 +1733,9 @@ function renderTableOrderModal(orderId){
     </div>
     ${renderOrderClientNotesHtml(order)}
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
-    ${cartaPickerHtml}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
       ${cartaTabs}${menuTabs}
-      ${order.cartaElegidaId ? `<button class="btn btn-sm btn-icon" onclick="setOrderCarta(${order.id}, null)" title="${t('tpv.changeChosenCarta')}"><i class="ti ti-adjustments"></i></button>` : ''}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
          .tpv-mobile-pane-toggle en styles.css); en tablet/PC no existe,
