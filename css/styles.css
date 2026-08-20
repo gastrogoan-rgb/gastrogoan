@@ -539,6 +539,19 @@ td.wrap{white-space:normal}
   transform:translate(-50%,-50%);
   width:min(440px, calc(100% - 32px));
 }
+/* Red de seguridad: en pantallas estrechas, la burbuja del tour puede
+   quedarse anclada a un elemento que aún no ha terminado de posicionarse
+   (scrollIntoView asíncrono) y salirse de la pantalla por la derecha. En
+   vez de depender de que el cálculo en JS (tourPositionUI, js/ui.js) acierte
+   siempre, fijar left/right aquí con !important garantiza que la burbuja
+   nunca pueda desbordar, pase lo que pase con ese cálculo — !important en
+   la hoja de estilos gana al estilo puesto por JS salvo que este también
+   use !important, que nunca es el caso aquí. */
+@media (max-width:640px){
+  .tour-bubble:not(.tour-bubble-centered){
+    left:16px!important; width:calc(100vw - 32px)!important; max-width:none!important;
+  }
+}
 @keyframes tourBubbleIn{
   from{opacity:0;transform:scale(.96) translateY(6px)}
   to{opacity:1;transform:scale(1) translateY(0)}
