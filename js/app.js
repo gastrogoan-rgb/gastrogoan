@@ -1474,6 +1474,14 @@ function computeClientStatsFromSales(matches){
   const visitas = matches.length;
   const total = matches.reduce((sum,s)=>sum+s.total,0);
   const ticketMedio = visitas ? total/visitas : 0;
+  // Además del total histórico, dos ventanas más útiles para ver de un
+  // vistazo si un cliente sigue activo AHORA: cuánto ha gastado en los
+  // últimos 30 días y en lo que va de año natural.
+  const todayD = new Date(todayStr());
+  const cutoff30 = new Date(todayD.getTime() - 30*86400000);
+  const total30d = matches.filter(s => s.date && new Date(s.date) >= cutoff30).reduce((sum,s)=>sum+s.total,0);
+  const currentYear = todayStr().slice(0,4);
+  const totalYear = matches.filter(s => (s.date||'').slice(0,4) === currentYear).reduce((sum,s)=>sum+s.total,0);
   const dates = matches.map(s=>s.date).sort();
   const lastDate = dates.length ? dates[dates.length-1] : null;
   const firstDate = dates.length ? dates[0] : null;
@@ -1491,7 +1499,7 @@ function computeClientStatsFromSales(matches){
   }
   const isNew = firstDate!=null && recency!=null ? (Math.floor((new Date(todayStr()) - new Date(firstDate))/86400000) <= 30) : false;
   const atRisk = avgIntervalDays!=null && recency!=null && recency > avgIntervalDays * 2;
-  return {visitas, ticketMedio, total, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
+  return {visitas, ticketMedio, total, total30d, totalYear, lastDate, firstDate, recency, avgIntervalDays, isNew, atRisk};
 }
 function clientSalesStats(c){
   return computeClientStatsFromSales(clientSales(c));
@@ -1569,7 +1577,8 @@ function renderClientes(){
         let va, vb;
         if(clientesSortField === 'visitas'){ va = a.stats.visitas; vb = b.stats.visitas; }
         else if(clientesSortField === 'ticket'){ va = a.stats.ticketMedio; vb = b.stats.ticketMedio; }
-        else if(clientesSortField === 'total'){ va = a.stats.total; vb = b.stats.total; }
+        else if(clientesSortField === 'total30d'){ va = a.stats.total30d; vb = b.stats.total30d; }
+        else if(clientesSortField === 'totalYear'){ va = a.stats.totalYear; vb = b.stats.totalYear; }
         else if(clientesSortField === 'lastDate'){ va = a.stats.lastDate || ''; vb = b.stats.lastDate || ''; }
         return va < vb ? -1*dir : va > vb ? 1*dir : 0;
       })
@@ -1585,7 +1594,7 @@ function renderClientes(){
   const cardsBox = document.getElementById('clientes-cards');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
     if(cardsBox) cardsBox.innerHTML = `<div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div>`;
     return;
   }
@@ -1616,7 +1625,8 @@ function renderClientes(){
       </td>
       <td data-label="${t('label.visits')}"><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="openClientHistoryModal(${c.id})" title="${t('btn.viewOrderHistory')}"><span class="badge badge-blue">${stats.visitas}</span></button></td>
       <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
-      <td data-label="${t('common.total')}">${fmtMoney(stats.total)}</td>
+      <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>
+      <td data-label="${t('label.totalYear')}">${fmtMoney(stats.totalYear)}</td>
       <td data-label="${t('label.lastVisit')}">${stats.lastDate ? `${stats.lastDate} <span style="color:var(--muted);font-size:11px">(${t('label.daysAgo').replace('${n}', stats.recency)})</span>` : '—'}</td>
       <td data-label="${t('label.loyaltyPoints')}"><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap" data-label="${t('common.notes')}">${escapeHtml(c.notes||'—')}</td>
@@ -1651,7 +1661,8 @@ function renderClientes(){
           </div>
           <div class="client-card-detail-row"><span>${t('label.visits')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas}</span></button></div>
           <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
-          <div class="client-card-detail-row"><span>${t('common.total')}</span><strong>${fmtMoney(stats.total)}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.total30d')}</span><strong>${fmtMoney(stats.total30d)}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.totalYear')}</span><strong>${fmtMoney(stats.totalYear)}</strong></div>
           <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong></div>
           ${c.noShows ? `<div class="client-card-detail-row"><span>${t('label.noShowCount')}</span><strong><i class="ti ti-user-x"></i> ${c.noShows}</strong></div>` : ''}
           ${c.cumpleanos ? `<div class="client-card-detail-row"><span><i class="ti ti-cake"></i> ${t('label.birthday')}</span><strong>${escapeHtml(c.cumpleanos)}</strong></div>` : ''}
