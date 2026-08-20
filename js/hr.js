@@ -2391,6 +2391,12 @@ function logPersonalEvent(type, params){
     createdAt: new Date().toISOString(), type, params: params||{}, area: currentArea()
   });
   if(DB.personalLog.length > 500) DB.personalLog = DB.personalLog.slice(-500);
+  // Sigue viviendo en su propio Historial de Personal — esto es solo para
+  // que también salga en el registro general. "Resetear PIN" es la única
+  // de estas cuatro que de verdad duele si la hace quien no debe.
+  const p = params || {};
+  const typeLabel = {shiftCreated:t('audit.personal.shiftCreated'), shiftEdited:t('audit.personal.shiftEdited'), shiftDeleted:t('audit.personal.shiftDeleted'), pinReset:t('audit.personal.pinReset'), clockedByOther:t('audit.personal.clockedByOther')}[type] || type;
+  logAudit('personal', `${typeLabel}: ${p.name||'?'}`, type==='pinReset' ? 'critical' : 'normal');
 }
 
 // Formatea una entrada del historial en el idioma activo. `desc` (texto ya

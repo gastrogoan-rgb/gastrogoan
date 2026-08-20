@@ -2973,6 +2973,10 @@ function confirmVoidLine(){
     estado: line.estado||'', motivo, mesa: mesa||'',
     responsableId, responsableNombre
   });
+  // Sigue viviendo en su propio Historial de Anulaciones (con más detalle:
+  // motivo, mesa...) — esto es solo para que también salga en el registro
+  // general, sin duplicar cuál es la fuente de verdad de ese historial.
+  logAudit('void', t('audit.voidedDish').replace('${dish}', line.name).replace('${table}', mesa||'?'), 'critical');
 
   // Solo se descontó stock por las raciones que de verdad se "marcharon"
   // a cocina (line.marchada) — si la línea nunca llegó a marchar, no hay

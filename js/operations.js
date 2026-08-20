@@ -344,6 +344,12 @@ function performCashClosure(){
     createdAt: new Date().toISOString()
   };
   DB.cashClosures.push(closure);
+  // Sigue viviendo en su propio Historial de Arqueos (con el detalle
+  // completo) — esto es solo para que también salga en el registro
+  // general. En rojo si hay descuadre de verdad (no solo unos céntimos de
+  // redondeo), que es justo lo que un responsable querría ver de un vistazo.
+  const descuadreSerio = diferencia !== null && Math.abs(diferencia) >= 5;
+  logAudit('cash_close', t('audit.cashClosed').replace('${total}', fmtMoney(total)).replace('${diff}', diferencia===null ? '—' : fmtMoney(diferencia)), descuadreSerio ? 'critical' : 'normal');
   saveDB();
   closeModal();
   renderTPV();

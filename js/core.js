@@ -128,8 +128,23 @@ function setAccessSession(session){
   localStorage.setItem(ACCESS_SESSION_LS, JSON.stringify(session));
   localStorage.setItem(ACCESS_LAST_ACTIVITY_LS, String(Date.now()));
   if(typeof updateLogoutBtn === 'function') updateLogoutBtn();
+  // Dónde y cuándo ha entrado cada persona — único punto por el que pasan
+  // TODOS los accesos (propietario y empleado, en cualquier dispositivo),
+  // así que basta con dejarlo aquí una vez en vez de repetirlo en cada
+  // sitio que llama a setAccessSession.
+  if(typeof logAudit === 'function' && typeof DB !== 'undefined' && DB){
+    if(session.type === 'owner') logAudit('login', t('audit.ownerLoggedIn'));
+    else if(session.type === 'employee'){
+      const emp = (DB.employees||[]).find(e => e.id === session.employeeId);
+      logAudit('login', t('audit.employeeLoggedIn').replace('${name}', emp ? emp.name : '?').replace('${area}', session.area||'?'));
+    }
+  }
 }
 function clearAccessSession(){
+  if(typeof logAudit === 'function' && typeof DB !== 'undefined' && DB){
+    const prev = getAccessSession();
+    if(prev) logAudit('logout', t('audit.loggedOut').replace('${name}', currentActorName()));
+  }
   localStorage.removeItem(ACCESS_SESSION_LS);
   localStorage.removeItem(ACCESS_LAST_ACTIVITY_LS);
 }
