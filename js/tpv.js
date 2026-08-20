@@ -2208,7 +2208,13 @@ function setComandasCocinaTab(tab){
 // Comprueba si todos los platos marchados de una comanda están entregados y, si es así, la cierra
 function checkComandaCierre(order){
   const food = (order.items||[]).filter(l => !l.bebida);
-  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado');
+  // Cocina lleva el ciclo completo de cada plato: esperando -> preparación
+  // -> listo para recoger -> recogido. Si la comanda se cerrara nada más
+  // terminar de cocinar (como antes), desaparecería de "Activas" justo
+  // cuando cocina todavía tiene que confirmar que alguien se lo ha llevado
+  // del pase, y esa confirmación se quedaría sin ningún sitio desde el que
+  // dar el último toque.
+  order.cerrada = food.length > 0 && food.every(l => l.estado === 'entregado' && l.recogidoAt);
 }
 
 function setLineEstado(orderId, idx, estado){
@@ -2261,13 +2267,34 @@ function urgencyBadge(mins){
   return `<span class="badge badge-gray"><i class="ti ti-clock"></i> ${mins} min</span>`;
 }
 
-// Click sobre un plato en cocina: avanza su estado en espera -> en preparación -> entregado
+// Click sobre un plato en cocina: avanza su estado en espera -> en
+// preparación -> listo para recoger -> recogido. Los tres primeros pasos
+// los da cocina sola; el último (recogido) también lo puede dar cocina
+// tocando otra vez el mismo botón cuando alguien se lo lleva del pase —
+// antes ese último paso solo lo podía dar Sala desde su propia pantalla,
+// y en cocinas donde el mismo puesto controla el pase no tenía sentido
+// obligar a cambiar de pantalla para una confirmación tan simple.
 function cycleLineEstado(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line) return;
   if(line.estado === 'cocina') setLineEstado(orderId, idx, 'preparando');
   else if(line.estado === 'preparando') setLineEstado(orderId, idx, 'entregado');
+  else if(line.estado === 'entregado' && !line.recogidoAt) markLineRecogida(orderId, idx);
+}
+
+function markLineRecogida(orderId, idx){
+  const order = DB.tpvOrders.find(o => o.id === orderId);
+  const line = order && order.items[idx];
+  if(!line || line.recogidoAt) return;
+  line.recogidoAt = new Date().toISOString();
+  saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
+  const active = document.querySelector('.view.active');
+  if(active && active.id === 'view-comandascocina') renderComandasCocina();
+  else if(active && active.id === 'view-tpv') renderTPV();
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
 }
 
 /* Sala confirma que ha recogido del pase los platos de una tanda que cocina
@@ -2302,6 +2329,7 @@ function cycleGroupEstado(orderId, tanda){
     if((line.tanda||'') === tanda){
       if(line.estado === 'cocina'){ line.estado = 'preparando'; line.preparandoAt = new Date().toISOString(); changed = true; }
       else if(line.estado === 'preparando'){ line.estado = 'entregado'; line.entregadoAt = new Date().toISOString(); changed = true; }
+      else if(line.estado === 'entregado' && !line.recogidoAt){ line.recogidoAt = new Date().toISOString(); changed = true; }
     }
   });
   if(!changed) return;
@@ -2537,7 +2565,7 @@ function renderComandasCocina(){
         const allPicked = allReady && g.lines.every(({line}) => line.recogidoAt);
         let groupBtn = '';
         if(allPicked) groupBtn = `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.allDelivered')}</span>`;
-        else if(allReady) groupBtn = `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</span>`;
+        else if(allReady) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.allReady')}</button>`;
         else if(hasCocina) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.prepareAll')}</button>`;
         else if(hasPreparando) groupBtn = `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-bell-ringing"></i> ${t('kitchen.markReady')}</button>`;
         return `
@@ -2556,7 +2584,7 @@ function renderComandasCocina(){
               : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
               : line.estado==='preparando' ? `<button class="btn btn-sm" style="flex:none;background:var(--teal);color:#fff;border-color:var(--teal)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`
               : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
-              : `<span class="badge badge-green" style="flex:none"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</span>`}
+              : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
             </div>
           `).join('')}
         </div>
