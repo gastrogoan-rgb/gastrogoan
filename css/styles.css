@@ -378,6 +378,26 @@ td.wrap{white-space:normal}
 .reserva-card-detail-row>strong{text-align:right}
 .reserva-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 
+/* ===== Clientes: mismo patrón de tarjetas plegables, solo en móvil —
+   en tablet/PC hay ancho de sobra y la tabla (con ordenar por columna)
+   sigue siendo más rápida de escanear con muchos clientes. */
+.clientes-mobile-cards{display:none}
+@media (max-width:720px){
+  .clientes-desktop-table{display:none}
+  .clientes-mobile-cards{display:flex;flex-direction:column;gap:8px}
+}
+.client-card{padding:0;overflow:hidden}
+.client-card-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;cursor:pointer}
+.client-card-name{flex:1;min-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.client-card-chevron{margin-left:auto;color:var(--muted);transition:transform .2s ease;flex:none}
+.client-card.expanded .client-card-chevron{transform:rotate(180deg)}
+.client-card-detail{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.client-card.expanded .client-card-detail{display:block;padding-top:12px}
+.client-card-detail-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;font-size:13px}
+.client-card-detail-row>span:first-child{color:var(--muted);flex:none}
+.client-card-detail-row>strong,.client-card-detail-row>div{text-align:right}
+.client-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+
 /* Tablas anchas (muchas columnas) en móvil: en vez de forzar scroll
    horizontal para llegar a las columnas de la derecha, cada fila se
    convierte en una tarjeta y cada celda en una línea con su etiqueta

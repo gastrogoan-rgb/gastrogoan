@@ -1540,6 +1540,15 @@ function setClientesSort(field){
   renderClientes();
 }
 
+// Qué clientes están desplegados en la vista móvil (tarjetas plegables,
+// mismo patrón que Reservas — en tablet/PC se sigue usando la tabla).
+let clientExpandedIds = new Set();
+function toggleClientExpand(id){
+  if(clientExpandedIds.has(id)) clientExpandedIds.delete(id);
+  else clientExpandedIds.add(id);
+  renderClientes();
+}
+
 function renderClientes(){
   const getStats = computeClientStatsIndexed();
   const search = document.getElementById('clientes-search').value.toLowerCase();
@@ -1573,13 +1582,15 @@ function renderClientes(){
   }
 
   const tbody = document.getElementById('clientes-tbody');
+  const cardsBox = document.getElementById('clientes-cards');
 
   if(!items.length){
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
+    if(cardsBox) cardsBox.innerHTML = `<div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div>`;
     return;
   }
 
-  tbody.innerHTML = items.map(c => {
+  const rows = items.map(c => {
     const stats = getStats(c);
     const segmentBadge = stats.isNew ? `<span class="badge badge-blue" style="font-size:9px" title="${t('label.newClientHint')}">${t('badge.new')}</span>`
       : stats.atRisk ? `<span class="badge badge-amber" style="font-size:9px" title="${t('label.atRiskClientHint')}">${t('badge.atRisk')}</span>` : '';
@@ -1592,7 +1603,10 @@ function renderClientes(){
       loyaltyCls = points >= 7 ? 'badge-amber' : 'badge-gray';
       loyaltyBtn = '';
     }
-    return `
+    return {c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn};
+  });
+
+  tbody.innerHTML = rows.map(({c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn}) => `
     <tr>
       <td data-label="${t('common.name')}"><strong>${escapeHtml(c.name)}</strong> ${segmentBadge}${c.noShows ? ` <span class="badge badge-red" style="font-size:9px" title="${t('label.noShowCount')}"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : ''}${c.marketingConsent===false ? ` <span class="badge badge-gray" style="font-size:9px" title="${t('label.noMarketingConsent')}"><i class="ti ti-mail-off"></i></span>` : ''}${c.cumpleanos ? `<div style="font-size:11px;color:var(--muted)"><i class="ti ti-cake"></i> ${escapeHtml(c.cumpleanos)}</div>` : ''}</td>
       <td data-label="${t('label.contact')}">
@@ -1611,8 +1625,47 @@ function renderClientes(){
         <button class="btn btn-sm btn-icon btn-danger" onclick="deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
       </td>
     </tr>
-  `;
-  }).join('');
+  `).join('');
+
+  // Vista móvil: mismo patrón de tarjeta plegable que Reservas — colapsada
+  // por defecto (nombre + puntos), se despliega al tocarla para ver
+  // contacto, visitas, ticket medio, última visita y notas.
+  if(cardsBox){
+    cardsBox.innerHTML = rows.map(({c, stats, segmentBadge, points, loyaltyCls, loyaltyBtn}) => {
+      const expanded = clientExpandedIds.has(c.id);
+      return `
+      <div class="card client-card ${expanded?'expanded':''}">
+        <div class="client-card-summary" onclick="toggleClientExpand(${c.id})">
+          <span class="client-card-name">${escapeHtml(c.name)}</span>
+          ${segmentBadge}
+          <span class="badge ${loyaltyCls}">${points}/10</span>
+          <i class="ti ti-chevron-down client-card-chevron"></i>
+        </div>
+        <div class="client-card-detail">
+          <div class="client-card-detail-row"><span>${t('label.contact')}</span>
+            <div>
+              ${c.phone ? `<div><a href="https://wa.me/${escapeHtml(c.phone.replace(/\D/g,''))}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="ti ti-brand-whatsapp"></i> ${escapeHtml(c.phone)}</a></div>` : ''}
+              ${c.email ? `<div><a href="mailto:${escapeHtml(c.email)}" onclick="event.stopPropagation()"><i class="ti ti-mail"></i> ${escapeHtml(c.email)}</a></div>` : ''}
+              ${!c.phone && !c.email ? '—' : ''}
+            </div>
+          </div>
+          <div class="client-card-detail-row"><span>${t('label.visits')}</span><button class="btn btn-sm" style="background:none;border:none;padding:0" onclick="event.stopPropagation();openClientHistoryModal(${c.id})"><span class="badge badge-blue">${stats.visitas}</span></button></div>
+          <div class="client-card-detail-row"><span>${t('label.avgTicket')}</span><strong>${fmtMoney(stats.ticketMedio)}</strong></div>
+          <div class="client-card-detail-row"><span>${t('common.total')}</span><strong>${fmtMoney(stats.total)}</strong></div>
+          <div class="client-card-detail-row"><span>${t('label.lastVisit')}</span><strong>${stats.lastDate ? `${stats.lastDate} (${t('label.daysAgo').replace('${n}', stats.recency)})` : '—'}</strong></div>
+          ${c.noShows ? `<div class="client-card-detail-row"><span>${t('label.noShowCount')}</span><strong><i class="ti ti-user-x"></i> ${c.noShows}</strong></div>` : ''}
+          ${c.cumpleanos ? `<div class="client-card-detail-row"><span><i class="ti ti-cake"></i> ${t('label.birthday')}</span><strong>${escapeHtml(c.cumpleanos)}</strong></div>` : ''}
+          <div class="client-card-detail-row"><span>${t('common.notes')}</span><strong>${escapeHtml(c.notes||'—')}</strong></div>
+          <div class="client-card-actions">
+            ${loyaltyBtn}
+            <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();openClientModal(${c.id})"><i class="ti ti-edit"></i></button>
+            <button class="btn btn-sm btn-icon btn-danger" onclick="event.stopPropagation();deleteClient(${c.id})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
 }
 
 function showLoyaltyInfo(){
