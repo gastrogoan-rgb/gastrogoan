@@ -2733,7 +2733,11 @@ function reservationTimeFieldHtml(r){
     return `<input type="time" id="reservation-time" value="${escapeHtml(r.time)}" onchange="updateReservationTableOptions()">`;
   }
   const options = [...slots];
-  if(r.time && !options.includes(r.time)) options.push(r.time);
+  // Solo se conserva una hora fuera de los turnos configurados al EDITAR una
+  // reserva que ya la tenía puesta (r.id) — si no, un día realmente cerrado
+  // (o sin horario configurado todavía en ese día) mostraría igualmente un
+  // desplegable con la hora por defecto (20:00) como si fuera válida.
+  if(r.id && r.time && !options.includes(r.time)) options.push(r.time);
   options.sort();
   if(!options.length) return `<select id="reservation-time" disabled><option>${t('label.closedThisDay')}</option></select>`;
   // Pista visual (no bloqueante) de ocupación del turno junto a cada hora, para
@@ -2785,7 +2789,7 @@ function updateReservationTimeOptions(){
   const timeEl = document.getElementById('reservation-time');
   const currentTime = timeEl.value || '20:00';
   const wrap = timeEl.parentElement;
-  wrap.innerHTML = reservationTimeFieldHtml({date, time: currentTime});
+  wrap.innerHTML = reservationTimeFieldHtml({date, time: currentTime, id: currentReservationId});
   updateReservationTableOptions();
 }
 

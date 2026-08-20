@@ -106,6 +106,14 @@ function getTurnosForDate(dateStr){
       if(t && t.ini && t.fin && t.fin > t.ini) turnos.push({abre:t.ini, cierra:t.fin});
     });
   }
+  // Un día marcado como abierto pero sin ninguna franja horaria rellenada
+  // (el estado de fábrica: defaultHorario() deja ini/fin en blanco) no
+  // significa "cerrado" — significa que el negocio aún no ha configurado
+  // Horario de apertura en Mi Negocio. Tratarlo como cerrado bloqueaba el
+  // selector de hora de Reservas a un único valor fijo (el que quedara por
+  // defecto) en cualquier negocio recién dado de alta. Se trata igual que
+  // "sin horario configurado" (null): hora libre, sin restricción.
+  if(!turnos.length && d.abierto !== false) return null;
   return turnos;
 }
 
