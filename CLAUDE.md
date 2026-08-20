@@ -119,6 +119,7 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
 node -c js/<fichero>.js       # sintaxis
 node test/smoke.test.mjs      # cálculos de dinero/IVA, stock, recetas
 node test/audit-active.mjs    # regresiones de sincronización
+python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 24 vistas
 bash build.sh                 # regenerar dist/
 ```
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
