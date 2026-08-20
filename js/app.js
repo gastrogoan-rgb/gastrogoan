@@ -5642,6 +5642,12 @@ function renderVerifactuConfigCard(){
       <div style="background:var(--bg-soft,#f4f4f4);border:1px dashed var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px;color:var(--muted)">
         <p style="margin:0">${t('mn.verifactu.draftNotice')}</p>
       </div>
+      <!-- Todo lo de abajo son campos reales de configuración (proveedor,
+           clave de API...) que todavía no hacen nada mientras VeriFactu no
+           sea obligatorio — se bloquean del todo (ni se puede escribir ni
+           hacer clic) y en gris, para que quede claro de un vistazo que no
+           es "puedes rellenarlo si quieres" sino "no toca todavía". -->
+      <div style="pointer-events:none;filter:grayscale(1);opacity:.5" aria-disabled="true">
       <p style="font-size:13px;color:var(--muted)">${t('mn.verifactu.desc')}</p>
       <div style="background:var(--brand-cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;margin-bottom:12px">
         <p style="margin:0 0 6px"><strong>${t('mn.verifactu.howItWorksTitle')}</strong> ${t('mn.verifactu.howItWorks1')}</p>
@@ -5682,6 +5688,7 @@ function renderVerifactuConfigCard(){
         <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('mn.verifactu.declarationsDesc')}</p>
         ${renderVerifactuDeclarationRow('ownDeclarationUrl', t('mn.verifactu.ownDeclaration'), t('mn.verifactu.ownDeclarationPending'))}
         ${renderVerifactuDeclarationRow('providerDeclarationUrl', t('mn.verifactu.providerDeclaration'), t('mn.verifactu.providerDeclarationPending'))}
+      </div>
       </div>
     </div>
   `;
