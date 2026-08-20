@@ -4778,35 +4778,62 @@ function openTrashModal(){
    descuentos, anulaciones, cierres de caja), los complementa con los
    cambios que antes no quedaban registrados en ningún sitio.
    ============================================================ */
-function logAudit(action, summary){
+// severity: 'critical' para decisiones que de verdad duelen si salen mal
+// (borrar algo, un precio que cambia, vaciar los datos de un cliente...) —
+// se pintan en rojo en el listado, para que salten a la vista entre el
+// resto de movimientos normales del día a día (editar, fusionar mesas,
+// reasignar camarero...). 'normal' si no se indica, a propósito: así una
+// llamada antigua a logAudit() sin este argumento sigue funcionando igual
+// que siempre, sin marcarse en rojo por defecto.
+function logAudit(action, summary, severity){
   if(!DB.auditLog) DB.auditLog = [];
-  DB.auditLog.unshift({id: genId(), ts: new Date().toISOString(), actor: currentActorName(), action, summary});
+  DB.auditLog.unshift({id: genId(), ts: new Date().toISOString(), actor: currentActorName(), action, summary, severity: severity||'normal'});
   if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
 }
+let auditLogEmployeeFilter = '';
+function setAuditLogEmployeeFilter(val){
+  auditLogEmployeeFilter = val;
+  renderAuditLogModal();
+}
 function openAuditLogModal(){
-  const items = (DB.auditLog||[]).slice(0, 200);
+  auditLogEmployeeFilter = '';
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-list-details"></i> ${t('audit.title')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('audit.desc')}</p>
-    ${items.length ? `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>${t('common.date')}</th><th>${t('trash.deletedBy')}</th><th>${t('audit.action')}</th></tr></thead>
-        <tbody>${items.map(x => `
-          <tr>
-            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString('es-ES'))}</td>
-            <td>${escapeHtml(x.actor)}</td>
-            <td>${escapeHtml(x.summary)}</td>
-          </tr>`).join('')}</tbody>
-      </table>
-    </div>` : `<div class="empty"><i class="ti ti-list-details"></i>${t('audit.empty')}</div>`}
+    <div class="field" style="margin-bottom:10px">
+      <select id="audit-employee-filter" onchange="setAuditLogEmployeeFilter(this.value)">
+        <option value="">${t('audit.allActors')}</option>
+        ${[...new Set((DB.auditLog||[]).map(x=>x.actor))].sort().map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="audit-log-body"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.close')}</button>
     </div>
   `);
+  renderAuditLogModal();
+}
+function renderAuditLogModal(){
+  const box = document.getElementById('audit-log-body');
+  if(!box) return;
+  let items = (DB.auditLog||[]);
+  if(auditLogEmployeeFilter) items = items.filter(x => x.actor === auditLogEmployeeFilter);
+  items = items.slice(0, 200);
+  box.innerHTML = items.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('trash.deletedBy')}</th><th>${t('audit.action')}</th></tr></thead>
+        <tbody>${items.map(x => `
+          <tr ${x.severity==='critical'?'style="background:var(--red-l)"':''}>
+            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString('es-ES'))}</td>
+            <td>${escapeHtml(x.actor)}</td>
+            <td style="${x.severity==='critical'?'color:var(--red);font-weight:700':''}">${x.severity==='critical'?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(x.summary)}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty"><i class="ti ti-list-details"></i>${t('audit.empty')}</div>`;
 }
 
 // Registra el Service Worker del app-shell offline (ver sw.js). Los datos de

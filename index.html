@@ -453,8 +453,9 @@
       <div class="view-title" data-i18n="view.economia.title">Gestión Económica</div>
       <div class="view-subtitle" data-i18n="view.economia.subtitle">Gastos · P&amp;L · Punto de equilibrio · Resultado</div>
 
-      <div style="margin-bottom:12px">
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-primary" onclick="GE.openExportModal()"><i class="ti ti-file-export"></i> <span data-i18n="hr.export.title">Exportar contabilidad mensual</span></button>
+        <button class="owner-strict btn btn-sm" onclick="openAuditLogModal()"><i class="ti ti-list-details"></i> <span data-i18n="audit.title">Registro de actividad</span></button>
       </div>
 
       <nav class="ge-tab-row" id="ge-tabs-row">

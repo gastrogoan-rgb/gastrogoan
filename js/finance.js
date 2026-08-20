@@ -1266,7 +1266,7 @@ function confirmDeleteIngredient(id){
 }
 function reallyDeleteIngredient(id){
   const ing0 = DB.ingredients.find(i => i.id === id);
-  if(ing0){ moveToTrash('ingredient', ing0); logAudit('delete', t('audit.deletedIngredient').replace('${name}', ing0.name)); }
+  if(ing0){ moveToTrash('ingredient', ing0); logAudit('delete', t('audit.deletedIngredient').replace('${name}', ing0.name), 'critical'); }
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
   delete DB.stock[id];
   DB.recipes.forEach(r => {
@@ -1692,7 +1692,7 @@ function reallyDeleteElaboracion(id){
   const e = getElaboracion(id);
   if(!e) return;
   moveToTrash('elaboracion', e);
-  logAudit('delete', t('audit.deletedElaboration').replace('${name}', e.name));
+  logAudit('delete', t('audit.deletedElaboration').replace('${name}', e.name), 'critical');
   DB.elaboraciones = (DB.elaboraciones||[]).filter(x => x.id !== id);
   saveDB();
   closeModal();

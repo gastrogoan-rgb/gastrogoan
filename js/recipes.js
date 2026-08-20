@@ -840,7 +840,7 @@ function deleteRecipe(id){
 }
 function confirmDeleteRecipe(id){
   const r0 = DB.recipes.find(r => r.id === id);
-  if(r0){ moveToTrash('recipe', r0); logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name)); }
+  if(r0){ moveToTrash('recipe', r0); logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name), 'critical'); }
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   // Si se borra "de todas formas" pese al aviso, no dejar líneas de otras
   // recetas apuntando a un baseRecipeId que ya no existe: recipeIngredientCost

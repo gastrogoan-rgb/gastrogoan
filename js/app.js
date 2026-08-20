@@ -2234,7 +2234,7 @@ function deleteClient(id){
   if(!c) return;
   requestBusinessPinAction(t('title.deleteClient'), t('msg.confirmDeleteClient'), () => {
     moveToTrash('client', c);
-    logAudit('delete', t('audit.deletedClient').replace('${name}', c.name));
+    logAudit('delete', t('audit.deletedClient').replace('${name}', c.name), 'critical');
     DB.clients = DB.clients.filter(x=>x.id!==id);
     DB.reservations.forEach(r => { if(r.clientId===id) r.clientId = null; });
     DB.sales.forEach(s => { if(s.clientId===id) s.clientId = null; });
@@ -2255,7 +2255,7 @@ function eraseClientDataRGPD(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
   requestBusinessPinAction(t('title.eraseClientRGPD'), t('msg.confirmEraseClientRGPD').replace('${name}', c.name), () => {
-    logAudit('rgpd_erase', t('audit.erasedClientRGPD').replace('${name}', c.name));
+    logAudit('rgpd_erase', t('audit.erasedClientRGPD').replace('${name}', c.name), 'critical');
     c.name = t('label.erasedClientName');
     c.phone = ''; c.email = ''; c.allergies = ''; c.notes = ''; c.cp = ''; c.cumpleanos = '';
     c.marketingConsent = false;
@@ -3152,7 +3152,7 @@ function deleteReservation(id){
   if(!r) return;
   requestBusinessPinAction(t('title.deleteReservation'), t('msg.confirmDeleteReservation'), () => {
     moveToTrash('reservation', r);
-    logAudit('delete', t('audit.deletedReservation').replace('${name}', r.clientName||'?').replace('${date}', r.date));
+    logAudit('delete', t('audit.deletedReservation').replace('${name}', r.clientName||'?').replace('${date}', r.date), 'critical');
     DB.reservations = DB.reservations.filter(x=>x.id!==id);
     saveDB();
     closeModal();
@@ -5974,13 +5974,12 @@ function saveTicketConfig(){
 // Cambiar el PIN de Gestión es tan sensible como cualquier otra acción
 // protegida esta sesión (borrar cliente, ingrediente...): exige el PIN
 // actual antes de aceptar uno nuevo, no basta con tener Gestión ya abierta.
-// Registro ligero de cambios en ajustes sensibles del negocio (PIN,
-// comisiones de delivery...), para poder consultar más adelante qué cambió
-// y cuándo — mismo espíritu que el historial de Stock/Personal.
+// Antes esto se guardaba aparte (DB.settingsLog) sin ninguna pantalla que
+// lo mostrara — quedaba registrado pero invisible. Ahora pasa por el
+// mismo Registro de auditoría que todo lo demás (Mi Negocio → Registro de
+// auditoría), marcado en rojo por tratarse de un ajuste sensible.
 function logBusinessSettingChange(desc){
-  if(!DB.settingsLog) DB.settingsLog = [];
-  DB.settingsLog.push({id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), desc});
-  if(DB.settingsLog.length > 300) DB.settingsLog = DB.settingsLog.slice(-300);
+  logAudit('setting_change', desc, 'critical');
 }
 
 function changeOwnerPin(){

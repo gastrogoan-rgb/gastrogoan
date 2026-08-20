@@ -2936,7 +2936,7 @@ function deleteEmployee(id){
 }
 function reallyDeleteEmployee(id){
   const e0 = DB.employees.find(e => e.id === id);
-  if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name)); }
+  if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name), 'critical'); }
   DB.employees = DB.employees.filter(e => e.id!==id);
   DB.turnos = (DB.turnos||[]).filter(t => t.employeeId!==id);
   DB.fichajes = (DB.fichajes||[]).filter(f => f.employeeId!==id);

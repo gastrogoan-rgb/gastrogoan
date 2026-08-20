@@ -1062,7 +1062,7 @@ function rejectOnlineOrder(orderId){
     // queda order.clientRef al que asociar el aviso.
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
-    logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'));
+    logAudit('delete', t('audit.rejectedOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
     saveDB();
     renderTPV();
@@ -1086,7 +1086,7 @@ function cancelAcceptedOnlineOrder(orderId){
     restockForVoidedItems(order.items);
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
-    logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'));
+    logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
     DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
     saveDB();
     closeModal();
