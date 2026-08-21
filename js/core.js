@@ -2046,6 +2046,24 @@ function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
   return merged;
 }
 
+// Mismo problema que mergeStockField pero para objetos que llevan arrays
+// CON id dentro (DB.ge.variables/capex/fijos/fijosLog/cierres, DB.limpieza.
+// tareas/temperaturas/alergenos/plagas/mantenimiento): al no ser arrays de
+// nivel superior, MERGEABLE_ARRAYS no los toca y el objeto entero se
+// sustituye sin más — dos encargados dando de alta un gasto o una lectura
+// de temperatura distintos, offline a la vez, podían perder uno de los dos.
+function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
+  if(!localObj || typeof localObj !== 'object') return remoteObj;
+  if(!remoteObj || typeof remoteObj !== 'object') return localObj;
+  const merged = {...remoteObj};
+  arrayKeys.forEach(k => {
+    if(Array.isArray(localObj[k]) && Array.isArray(remoteObj[k])){
+      merged[k] = mergeArraysById(localObj[k], remoteObj[k]);
+    }
+  });
+  return merged;
+}
+
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
@@ -3045,6 +3063,12 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'stock' && DB[key] && typeof merged === 'object'){
     merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   }
+  if(key === 'ge' && DB[key] && typeof merged === 'object'){
+    merged = mergeNestedArraysByKey(DB[key], merged, ['fijos','variables','capex','fijosLog','cierres']);
+  }
+  if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
+    merged = mergeNestedArraysByKey(DB[key], merged, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
+  }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
@@ -3136,6 +3160,12 @@ function mergeRemoteIntoLocal(val){
     }
     if(key === 'stock' && DB[key] && typeof value === 'object'){
       value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
+    if(key === 'ge' && DB[key] && typeof value === 'object'){
+      value = mergeNestedArraysByKey(DB[key], value, ['fijos','variables','capex','fijosLog','cierres']);
+    }
+    if(key === 'limpieza' && DB[key] && typeof value === 'object'){
+      value = mergeNestedArraysByKey(DB[key], value, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
     }
     const remoteJson = JSON.stringify(value);
     newSnapshot[key] = remoteJson;
