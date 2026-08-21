@@ -2022,6 +2022,30 @@ function mergeArraysById(local, remote){
   return merged;
 }
 
+// DB.stock no es un array (es un mapa {ingredientId: {qty, min}}), así que
+// no lo cubre mergeArraysById/MERGEABLE_ARRAYS: sin esto, dos dispositivos
+// offline ajustando stock de DOS ingredientes distintos a la vez (uno
+// descuenta por una venta, el otro repone por un pedido recibido) acababan
+// con el que sincronizaba último pisando el mapa entero, perdiendo el
+// ajuste del otro. Se fusiona campo a campo: se conserva el valor local
+// para cada ingrediente que cambió aquí desde el último sync, y se toma el
+// remoto para el resto — así ajustes en ingredientes distintos no se pisan.
+function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
+  if(!localStock || typeof localStock !== 'object') return remoteStock;
+  if(!remoteStock || typeof remoteStock !== 'object') return localStock;
+  let lastSynced = {};
+  if(lastSyncedStockJson){ try{ lastSynced = JSON.parse(lastSyncedStockJson) || {}; }catch(e){ lastSynced = {}; } }
+  const merged = {};
+  const allIds = new Set([...Object.keys(localStock), ...Object.keys(remoteStock)]);
+  allIds.forEach(id => {
+    const localJson = JSON.stringify(localStock[id]);
+    const lastJson = JSON.stringify(lastSynced[id]);
+    const localChanged = localStock[id] !== undefined && localJson !== lastJson;
+    merged[id] = localChanged ? localStock[id] : remoteStock[id];
+  });
+  return merged;
+}
+
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
@@ -3018,6 +3042,9 @@ function applyRemoteBlock(key, remoteValue){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
   }
+  if(key === 'stock' && DB[key] && typeof merged === 'object'){
+    merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+  }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
@@ -3106,6 +3133,9 @@ function mergeRemoteIntoLocal(val){
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
+    }
+    if(key === 'stock' && DB[key] && typeof value === 'object'){
+      value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
     const remoteJson = JSON.stringify(value);
     newSnapshot[key] = remoteJson;
