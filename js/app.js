@@ -4940,17 +4940,17 @@ function renderMesasConfigList(){
     const tables = DB.tables.filter(t => (t.zona||null) === z);
     if(!tables.length) return;
     html += `<div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px">
-      ${z ? `<input type="text" value="${escapeHtml(zonaLabel(z))}" onchange="renameZona('${escapeJsAttr(z)}', this.value)" title="${t('mn.ops.renameZone')}" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1;min-width:80px;max-width:220px" onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'">`
+      ${z ? `<input type="text" value="${escapeHtml(zonaLabel(z))}" onchange="renameZona('${escapeJsAttr(z)}', this.value)" title="${t('mn.ops.renameZone')}" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;border:1px solid transparent;background:transparent;padding:2px 4px;border-radius:4px;flex:1;min-width:0" onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'">`
         : `<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;flex:1">${t('mn.ops.noZone')}</span>`}
-      ${z ? `<button class="btn btn-sm btn-icon" onclick="addTableToZona('${escapeJsAttr(z)}')" title="${t('mn.ops.addTableToZone')}"><i class="ti ti-plus"></i></button>` : ''}
-      ${z ? `<button class="btn btn-sm btn-icon btn-danger" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="${t('mn.ops.deleteWholeZone')}"><i class="ti ti-trash"></i></button>` : ''}
+      ${z ? `<button class="btn btn-sm btn-icon" style="flex-shrink:0" onclick="addTableToZona('${escapeJsAttr(z)}')" title="${t('mn.ops.addTableToZone')}"><i class="ti ti-plus"></i></button>` : ''}
+      ${z ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteZonaCompleta('${escapeJsAttr(z)}')" title="${t('mn.ops.deleteWholeZone')}"><i class="ti ti-trash"></i></button>` : ''}
     </div>`;
     html += tables.map(t2 => {
       return `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-        <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
-        <input type="number" min="1" max="50" value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}">
-        <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
+        <input type="text" value="${escapeHtml(t2.name||'')}" onchange="updateTableName(${t2.id}, this.value)" style="flex:1;min-width:0;padding:6px 8px;font-size:13px" placeholder="${t('mn.ops.tableNamePh')}">
+        <input type="number" min="1" max="50" value="${t2.plazas||''}" onchange="updateTablePlazas(${t2.id}, this.value)" style="width:52px;flex-shrink:0;padding:6px 4px;font-size:13px;text-align:center" placeholder="${t('mn.ops.seats')}" title="${t('mn.ops.seatsOptional')}">
+        <button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="deleteTableFromConfig(${t2.id})" title="${t('mn.ops.deleteTable')}"><i class="ti ti-trash"></i></button>
       </div>`;
     }).join('');
   });

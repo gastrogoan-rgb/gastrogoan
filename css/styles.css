@@ -647,7 +647,7 @@ td.wrap{white-space:normal}
   from{opacity:0;transform:scale(.96) translateY(6px)}
   to{opacity:1;transform:scale(1) translateY(0)}
 }
-.tour-bubble-centered.tour-bubble-anim{animation:tourBubbleIn .3s cubic-bezier(.22,1,.36,1) both, tourBubbleInCentered .01s}
+.tour-bubble-centered.tour-bubble-anim{animation:tourBubbleIn .3s cubic-bezier(.22,1,.36,1) both, tourBubbleInCentered .01s both}
 @keyframes tourBubbleInCentered{ from{transform:translate(-50%,-50%) scale(.96)} to{transform:translate(-50%,-50%) scale(1)} }
 .tour-bubble:not(.tour-bubble-centered).tour-bubble-anim{animation:tourBubbleIn .3s cubic-bezier(.22,1,.36,1) both}
 
@@ -1173,13 +1173,23 @@ td.wrap{white-space:normal}
   .grid{gap:8px}
   .grid-2{grid-template-columns:1fr}
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}
-  .mesa-card{min-height:84px;padding:16px 10px;font-size:12px}
-  /* Con la tarjeta tan baja en móvil, el nombre de la mesa (centrado
-     verticalmente) quedaba pegado al badge del tiempo abierta, que va
-     posicionado aparte en la esquina superior — se le da un margen para
-     que no se toquen. */
-  .mesa-card .mesa-name{margin-top:12px}
+  .grid-mesas{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px}
+  /* Tarjeta de mesa más rectangular (baja) en móvil: antes cada mesa
+     ocupaba casi media pantalla de alto y había que hacer mucho scroll
+     para ver el resto del salón — se aprietan márgenes y tamaños de letra
+     para que quepan más filas sin scroll, sin perder ningún dato. */
+  .mesa-card{min-height:64px;padding:9px 7px 7px;font-size:10.5px}
+  .mesa-card .mesa-name{margin-top:9px;font-size:13.5px}
+  .mesa-card .mesa-icons-row{top:4px;left:4px}
+  .mesa-card .mesa-elapsed-row{top:4px;right:4px}
+  .mesa-card .mesa-elapsed{font-size:9px}
+  .mesa-card .mesa-total{margin-top:3px;padding-top:3px;font-size:15px}
+  .mesa-card .mesa-meta-row{margin-top:3px;gap:6px}
+  .mesa-card .mesa-phase-row{margin-top:3px;font-size:9.5px}
+  .mesa-card .mesa-status-free{margin-top:5px;font-size:11px}
+  .mesa-card .mesa-pax-free{margin-top:2px}
+  .mesa-card .mesa-reservation-hint{margin-top:3px;font-size:9.5px}
+  .mesa-card .badge{font-size:8.5px;padding:1px 5px}
 
   /* Buttons & toolbars */
   .btn{padding:7px 10px;font-size:12px;border-radius:8px}
