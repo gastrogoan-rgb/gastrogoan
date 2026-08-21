@@ -310,7 +310,13 @@ function renderDashboard(){
   // rojo — son literalmente lo más "atención" de toda la fila), luego lo
   // que está pasando ahora mismo en el negocio (mesas, repartos, personal),
   // y al final lo que mira hacia adelante (reservas de hoy y mañana).
+  // Pagos con tarjeta confirmados por el banco que no se pudieron aplicar a
+  // ningún pedido/reserva (normalmente porque el pedido ya se había
+  // rechazado/cancelado antes de que llegara la confirmación) — sin este
+  // aviso, ese dinero cobrado no dejaría ningún rastro visible en la app.
+  const unmatchedPaymentsCount = (DB.unmatchedOnlinePayments||[]).length;
   const attentionItems = [
+    {count: unmatchedPaymentsCount, icon:'ti-credit-card-off', label: t('dash.att.unmatchedPayments'), onclick: `openUnmatchedPaymentsModal()`, warn:true},
     {count: lowStockCount, icon:'ti-alert-triangle', label: t('dash.att.lowStock'), onclick: `dashboardGoToStockAlerts()`, warn:true},
     {count: overdueMaintenanceCount, icon:'ti-tool', label: t('dash.att.overdueMaintenance'), onclick: `navigate('limpieza'); setLimpiezaTab('mantenimiento')`, warn:true},
     {count: overduePestControlCount, icon:'ti-bug', label: t('dash.att.overduePestControl'), onclick: `navigate('limpieza'); setLimpiezaTab('plagas')`, warn:true},
@@ -1535,6 +1541,47 @@ function updateStockMin(ingredientId, value){
 // Facturas de proveedor pendientes de pago (generadas automáticamente al
 // recibir un pedido) — vencidas primero, luego las que vencen en los
 // próximos 7 días, con un botón para marcarlas pagadas sin salir de aquí.
+// Pagos con tarjeta confirmados por el banco que no se pudieron aplicar a
+// ningún pedido/reserva (ver initPublicRequestsListener, js/core.js, rama
+// pago_confirmado) — normalmente porque el pedido se rechazó/canceló justo
+// antes de que llegara esta confirmación asíncrona. No hay forma de que la
+// app haga el reembolso sola (eso se hace desde el panel de Redsys/del
+// proveedor de pago); esto es solo para que el dinero cobrado no desaparezca
+// sin dejar rastro y el negocio sepa que tiene que gestionarlo a mano.
+function openUnmatchedPaymentsModal(){
+  const list = [...(DB.unmatchedOnlinePayments||[])].sort((a,b)=>(b.detectedAt||'').localeCompare(a.detectedAt||''));
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-credit-card-off"></i> ${t('dash.att.unmatchedPayments')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('unmatchedPay.desc')}</p>
+    ${list.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>${t('common.date')}</th><th>${t('label.amount')}</th><th>${t('label.reference')}</th><th></th></tr></thead>
+        <tbody>${list.map(p => `
+          <tr>
+            <td>${escapeHtml((p.createdAt||p.detectedAt||'').slice(0,16).replace('T',' '))}</td>
+            <td style="font-weight:700">${fmtMoney(p.amount||0)}</td>
+            <td style="font-family:monospace;font-size:11px">${escapeHtml(p.orderRef||'—')}</td>
+            <td><button class="btn btn-sm" onclick="dismissUnmatchedPayment(${p.id})"><i class="ti ti-check"></i> ${t('unmatchedPay.markResolved')}</button></td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+    </div>` : `<div class="empty">${t('unmatchedPay.none')}</div>`}
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function dismissUnmatchedPayment(id){
+  DB.unmatchedOnlinePayments = (DB.unmatchedOnlinePayments||[]).filter(p => p.id !== id);
+  saveDB();
+  openUnmatchedPaymentsModal();
+  if(typeof renderDashboard === 'function') renderDashboard();
+}
+
 function openPendingInvoicesModal(){
   const today = todayStr();
   const in7 = dateStr(new Date(Date.now() + 7*86400000));

@@ -2649,11 +2649,26 @@ function initPublicRequestsListener(){
           metodoPagoLocal: req.metodoPagoLocal || null,
           pagaCon: typeof req.pagaCon === 'number' ? req.pagaCon : null
         });
-        // Con el interruptor de "Pedidos online" en ON (por defecto), el
-        // pedido se acepta solo, sin pasar por la bandeja de pendientes —
-        // salvo que necesite verificación manual de zona de reparto, en
-        // cuyo caso siempre se deja pendiente pase lo que pase el interruptor.
-        if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+        // Un pedido pagado con tarjeta (TPV virtual/Redsys) llega sin
+        // metodoPagoLocal (ese campo solo se rellena para efectivo/tarjeta
+        // EN PERSONA — ver submitOrder en reservagastrogoan.html). La firma
+        // del Worker ya tuvo éxito antes de llegar aquí, pero el banco
+        // confirma el cargo de forma asíncrona y aparte (evento
+        // pago_confirmado, más abajo en esta función) — hasta que llegue,
+        // NO se acepta solo aunque el interruptor esté en ON: si no, un
+        // cliente que abandona el pago a mitad de camino se comería stock
+        // real, entraría en cocina y hasta se le asignaría repartidor sin
+        // que el negocio supiera que no ha cobrado nada (mismo riesgo que
+        // ya se corrigió para la señal de reservas y el autopedido de mesa).
+        const pagoTarjetaPendiente = !req.metodoPagoLocal;
+        if(pagoTarjetaPendiente){
+          const newOrder = DB.tpvOrders.find(o => o.id === newOrderId);
+          if(newOrder) newOrder.pagado = false;
+        } else if(DB.business.pedidosOnlineActivos !== false && !req.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+          // Con el interruptor de "Pedidos online" en ON (por defecto), el
+          // pedido se acepta solo, sin pasar por la bandeja de pendientes —
+          // salvo que necesite verificación manual de zona de reparto, en
+          // cuyo caso siempre se deja pendiente pase lo que pase el interruptor.
           acceptOnlineOrder(newOrderId, true);
         }
         notifyNewRequest = true;
@@ -2664,14 +2679,24 @@ function initPublicRequestsListener(){
         // el pagoRef de una o varias líneas de un autopedido de mesa pagado
         // aparte (payWithCard usa uno distinto según lo que se esté
         // pagando) — se comprueban los tres, nunca coinciden entre sí.
+        let pagoConfirmadoMatched = false;
         const order = DB.tpvOrders.find(o => o.clientRef && o.clientRef === req.orderRef);
         if(order){
+          pagoConfirmadoMatched = true;
           order.pagado = true;
           order.pagoImporte = req.amount;
           order.pagoFecha = req.createdAt;
+          // Si es un pedido de delivery/takeaway que se dejó pendiente
+          // precisamente por esperar esta confirmación (ver rama 'pedido'
+          // más arriba), ahora sí se acepta solo si el interruptor de
+          // pedidos online sigue en ON y no hace falta verificar zona.
+          if(order.status === 'pendiente-online' && DB.business.pedidosOnlineActivos !== false && !order.pendienteVerificarZona && typeof acceptOnlineOrder === 'function'){
+            acceptOnlineOrder(order.id, true);
+          }
         }
         const reservationPaid = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.orderRef);
         if(reservationPaid){
+          pagoConfirmadoMatched = true;
           reservationPaid.depositConfirmed = true;
           reservationPaid.depositPagoImporte = req.amount;
           reservationPaid.depositPagoFecha = req.createdAt;
@@ -2688,11 +2713,24 @@ function initPublicRequestsListener(){
         (DB.tpvOrders||[]).forEach(o => {
           (o.items||[]).forEach(l => {
             if(l.pagoRef && l.pagoRef === req.orderRef && l.pagoOnlinePendiente){
+              pagoConfirmadoMatched = true;
               l.pagoOnlinePendiente = false;
               l.pagadoOnline = true;
             }
           });
         });
+        // Ninguno de los tres casos de arriba encontró a qué aplicar este
+        // pago: lo más probable es que el pedido se rechazara/cancelara (y
+        // se moviera a la papelera) ANTES de que llegara esta confirmación
+        // del banco, que es asíncrona y va por su cuenta. Sin este registro,
+        // el dinero que el cliente sí pagó no dejaría ningún rastro: ni
+        // venta, ni aviso, nada — se queda aquí, visible, para que el
+        // negocio pueda localizar y gestionar el reembolso a mano.
+        if(!pagoConfirmadoMatched){
+          if(!DB.unmatchedOnlinePayments) DB.unmatchedOnlinePayments = [];
+          DB.unmatchedOnlinePayments.push({id: genId(), orderRef: req.orderRef, amount: req.amount||0, createdAt: req.createdAt||new Date().toISOString(), detectedAt: new Date().toISOString()});
+          if(typeof notifyDesktop === 'function') notifyDesktop(t('notif.unmatchedPaymentTitle'), t('notif.unmatchedPaymentBody').replace('${amount}', fmtMoney(req.amount||0)));
+        }
       }
       saveDB();
       refreshAfterRemoteChange();
