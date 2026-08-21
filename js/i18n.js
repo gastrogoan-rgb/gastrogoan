@@ -8,6 +8,15 @@ function fmtNum(v, dec=2){
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+// Recorta un texto a N caracteres para una etiqueta de gráfico, iterando por
+// "code point" (Array.from) en vez de str.slice() — un emoji ocupa 2
+// unidades UTF-16 (par subrogado), así que slice() puede partirlo justo por
+// la mitad si cae en el límite, mostrando un carácter roto.
+function truncateSafeText(str, n){
+  const s = String(str||'');
+  const chars = Array.from(s);
+  return chars.length > n ? chars.slice(0, n-1).join('') + '…' : s;
+}
 // Quita tildes/diacríticos de un texto para comparar nombres de forma más
 // tolerante ("Núñez" y "Nunez", o "María" y "Maria", deben considerarse el
 // mismo nombre en comprobaciones de duplicados/no-shows).
@@ -723,6 +732,7 @@ const I18N = {
     'title.editMode': 'Modo edición',
     'title.editModeDesc': 'Introduce el PIN de acceso para activar la edición en esta sección.',
     'msg.gestionOwnerOnly': 'Gestión es solo para el propietario del negocio.',
+    'msg.needsEditPermission': 'Necesitas permiso de edición para entrar aquí. Pídeselo al propietario.',
     'title.bossAccess': 'Acceso como Jefe/a',
     'title.uploadApp': 'Sube tu app a internet',
     'title.configCloud': 'Configura tu nube',
@@ -1112,6 +1122,9 @@ const I18N = {
     'msg.platformNameDuplicate': 'Ya existe una plataforma con ese nombre',
     'msg.ticketConfigSaved': 'Configuración del ticket guardada',
     'msg.copyFailed': 'No se pudo copiar automáticamente. Selecciona el texto manualmente y cópialo (Ctrl+C / Cmd+C).',
+    'msg.idbBlocked': 'Cierra las otras pestañas o ventanas de GastroGoan abiertas en este dispositivo e inténtalo de nuevo.',
+    'msg.localSaveFailed': 'No se ha podido guardar en este dispositivo. Comprueba el espacio disponible; sigue intentándolo automáticamente.',
+    'msg.dbLoadFailed': 'No se han podido cargar los datos guardados en este dispositivo (puede que el navegador los haya bloqueado o que se hayan corrompido). No sigas introduciendo datos nuevos: recarga la página, y si el problema continúa, contacta con soporte antes de perder trabajo.',
     'msg.fillBothFields': 'Rellena los dos campos (clave de API y URL de la base de datos), o déjalos ambos vacíos para quitar la nube (los datos solo se guardarán en este dispositivo).',
     'msg.invalidDbUrl': 'La URL de la base de datos no parece válida. Debe empezar por https:// y terminar en .firebaseio.com o .firebasedatabase.app (la encuentras en Realtime Database de tu proyecto Firebase).',
     'msg.firebaseSaved': 'Configuración guardada. La app se recargará para conectar con tu propio Firebase.',
@@ -1880,6 +1893,7 @@ const I18N = {
     'thermal.notSupported': 'Tu navegador no soporta impresión Bluetooth (prueba con Chrome/Edge)',
     'thermal.noWritableService': 'No se encontró un servicio de impresión compatible en ese dispositivo',
     'thermal.connectedOk': 'Impresora "${name}" conectada', 'thermal.unnamedDevice': 'sin nombre',
+    'thermal.connecting': 'Conectando con la impresora…', 'thermal.connectTimeout': 'No responde la impresora. Comprueba que esté encendida y cerca, e inténtalo de nuevo.',
     'thermal.pairedHint': 'emparejada', 'thermal.reconnectBtn': 'Reconectar', 'thermal.forgetBtn': 'Olvidar', 'thermal.notPairedHint': 'Sin impresora Bluetooth emparejada — sin ella, se usará el diálogo de impresión normal.',
     'thermal.printedOk': 'Enviado a la impresora térmica', 'thermal.printFailed': 'No se pudo imprimir — revisa que la impresora esté encendida y cerca',
     'thermal.printBtn': 'Térmica', 'thermal.hint': 'Imprimir en la impresora térmica Bluetooth',
@@ -2599,6 +2613,7 @@ const I18N = {
     'title.editMode': 'Mode edició',
     'title.editModeDesc': 'Introdueix el PIN d\'accés per activar l\'edició en aquesta secció.',
     'msg.gestionOwnerOnly': 'Gestió és només per al propietari del negoci.',
+    'msg.needsEditPermission': 'Necessites permís d\'edició per entrar aquí. Demana-l\'hi al propietari.',
     'title.bossAccess': 'Accés com a Cap',
     'title.uploadApp': 'Puja la teva app a internet',
     'title.configCloud': 'Configura el teu núvol',
@@ -2988,6 +3003,9 @@ const I18N = {
     'msg.platformNameDuplicate': 'Ja existeix una plataforma amb aquest nom',
     'msg.ticketConfigSaved': 'Configuració del tiquet desada',
     'msg.copyFailed': 'No s\'ha pogut copiar automàticament. Selecciona el text manualment i copia\'l (Ctrl+C / Cmd+C).',
+    'msg.idbBlocked': 'Tanca les altres pestanyes o finestres de GastroGoan obertes en aquest dispositiu i torna-ho a provar.',
+    'msg.localSaveFailed': 'No s\'ha pogut desar en aquest dispositiu. Comprova l\'espai disponible; s\'hi seguirà intentant automàticament.',
+    'msg.dbLoadFailed': 'No s\'han pogut carregar les dades desades en aquest dispositiu (potser el navegador les ha bloquejat o s\'han corromput). No segueixis introduint dades noves: recarrega la pàgina, i si el problema continua, contacta amb suport abans de perdre feina.',
     'msg.fillBothFields': 'Omple els dos camps (clau d\'API i URL de la base de dades), o deixa\'ls buits per treure el núvol (les dades només es guardaran en aquest dispositiu).',
     'msg.invalidDbUrl': 'La URL de la base de dades no sembla vàlida. Ha de començar per https:// i acabar en .firebaseio.com o .firebasedatabase.app.',
     'msg.firebaseSaved': 'Configuració desada. L\'app es recarregarà per connectar amb el teu Firebase.',
@@ -3758,6 +3776,7 @@ const I18N = {
     'thermal.notSupported': 'El teu navegador no admet impressió Bluetooth (prova amb Chrome/Edge)',
     'thermal.noWritableService': 'No s\'ha trobat un servei d\'impressió compatible en aquest dispositiu',
     'thermal.connectedOk': 'Impressora "${name}" connectada', 'thermal.unnamedDevice': 'sense nom',
+    'thermal.connecting': 'Connectant amb la impressora…', 'thermal.connectTimeout': 'No respon la impressora. Comprova que estigui encesa i a prop, i torna-ho a provar.',
     'thermal.pairedHint': 'emparellada', 'thermal.reconnectBtn': 'Reconnectar', 'thermal.forgetBtn': 'Oblidar', 'thermal.notPairedHint': 'Sense impressora Bluetooth emparellada — sense ella, s\'usarà el diàleg d\'impressió normal.',
     'thermal.printedOk': 'Enviat a la impressora tèrmica', 'thermal.printFailed': 'No s\'ha pogut imprimir — comprova que la impressora estigui encesa i a prop',
     'thermal.printBtn': 'Tèrmica', 'thermal.hint': 'Imprimir a la impressora tèrmica Bluetooth',
@@ -4478,6 +4497,7 @@ const I18N = {
     'title.editMode': 'Edit mode',
     'title.editModeDesc': 'Enter the access PIN to enable editing in this section.',
     'msg.gestionOwnerOnly': 'Management is for the business owner only.',
+    'msg.needsEditPermission': 'You need edit permission to enter here. Ask the owner for it.',
     'title.bossAccess': 'Manager access',
     'title.uploadApp': 'Upload your app to the internet',
     'title.configCloud': 'Set up your cloud',
@@ -4868,6 +4888,9 @@ const I18N = {
     'msg.platformNameDuplicate': 'A platform with that name already exists',
     'msg.ticketConfigSaved': 'Ticket settings saved',
     'msg.copyFailed': 'Could not copy automatically. Select the text manually and copy it (Ctrl+C / Cmd+C).',
+    'msg.idbBlocked': 'Close any other GastroGoan tabs or windows open on this device and try again.',
+    'msg.localSaveFailed': 'Could not save on this device. Check available storage space; it will keep retrying automatically.',
+    'msg.dbLoadFailed': 'Could not load the data saved on this device (the browser may have blocked it or it may be corrupted). Do not keep entering new data: reload the page, and if the problem continues, contact support before losing work.',
     'msg.fillBothFields': 'Fill in both fields (API key and database URL), or leave both empty to remove the cloud (data will only be saved on this device).',
     'msg.invalidDbUrl': 'The database URL does not look valid. It must start with https:// and end in .firebaseio.com or .firebasedatabase.app.',
     'msg.firebaseSaved': 'Settings saved. The app will reload to connect with your Firebase.',
@@ -5638,6 +5661,7 @@ const I18N = {
     'thermal.notSupported': 'Your browser doesn\'t support Bluetooth printing (try Chrome/Edge)',
     'thermal.noWritableService': 'No compatible printing service found on that device',
     'thermal.connectedOk': 'Printer "${name}" connected', 'thermal.unnamedDevice': 'unnamed',
+    'thermal.connecting': 'Connecting to the printer…', 'thermal.connectTimeout': 'The printer isn\'t responding. Check it\'s on and nearby, then try again.',
     'thermal.pairedHint': 'paired', 'thermal.reconnectBtn': 'Reconnect', 'thermal.forgetBtn': 'Forget', 'thermal.notPairedHint': 'No Bluetooth printer paired — without one, the normal print dialog will be used.',
     'thermal.printedOk': 'Sent to the thermal printer', 'thermal.printFailed': 'Could not print — check the printer is on and nearby',
     'thermal.printBtn': 'Thermal', 'thermal.hint': 'Print on the Bluetooth thermal printer',

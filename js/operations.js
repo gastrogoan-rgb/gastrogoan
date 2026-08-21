@@ -748,6 +748,7 @@ function toggleProviderEnvioFields(){
 }
 
 async function saveProvider(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const nombre = document.getElementById('prov-nombre').value.trim();
   if(!nombre){ showToast(t('msg.nameRequired')); return; }
   // El vínculo con los ingredientes de Mega Lista y con los pedidos es por
@@ -798,6 +799,7 @@ async function saveProvider(id){
 }
 
 async function deleteProvider(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const p = DB.providers.find(x => x.id === id);
   if(!p) return;
   // Los ingredientes guardan el proveedor por NOMBRE (i.supplier), igual que
@@ -1254,6 +1256,16 @@ function updatePedidoItem(idx, field, value){
   const line = o.items[idx];
   const newVal = parseFloat(value) || 0;
   line[field] = newVal;
+  // Corregir la cantidad PEDIDA de una línea ya marcada como recibida (en
+  // un pedido RECIBIDO) dejaba el stock y el gasto variable ya generados
+  // basados en la cantidad antigua, sin ningún aviso de que se habían
+  // quedado desincronizados. toggleRecepcionCheck ya sabe recalcular todo
+  // desde cero con la cantidad actual — se reutiliza en vez de duplicar
+  // esa lógica aquí.
+  if(field === 'cantidad' && o.estado === 'RECIBIDO' && line.recibidoCheck === true){
+    toggleRecepcionCheck(idx, true);
+    return;
+  }
   saveDB();
 }
 
@@ -1918,16 +1930,21 @@ async function deleteOrder(id){
   if(o.estado === 'RECIBIDO'){
     // Ya sumó stock y registró un gasto real: borrar sin más dejaría stock
     // fantasma y un gasto huérfano, así que pide el PIN y revierte ambos.
-    requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), () => reallyDeleteOrder(id));
+    requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), (pin) => reallyDeleteOrder(id, pin));
     return;
   }
   if(!(await confirmModal(t('msg.confirmDeleteOrder')))) return;
   reallyDeleteOrder(id);
 }
-function reallyDeleteOrder(id){
+function reallyDeleteOrder(id, pin){
   const o = getPurchaseOrder(id);
   if(!o) return;
   if(o.estado === 'RECIBIDO'){
+    // Solo un pedido ya RECIBIDO (que ya sumó stock y generó un gasto real)
+    // exige el PIN — igual que en requestBusinessPinAction más arriba. Se
+    // vuelve a comprobar aquí para que no baste con llamar esta función
+    // directamente desde la consola sin conocer el PIN del negocio.
+    if(!pinMatchesHash(pin, DB.business.pin)) return;
     (o.items||[]).forEach(line => {
       const ing = getIngredient(line.ingredientId);
       if(!ing) return;
@@ -1969,9 +1986,10 @@ function duplicateOrder(id){
 function revertPedidoRecepcion(id){
   const o = getPurchaseOrder(id);
   if(!o || o.estado !== 'RECIBIDO') return;
-  requestBusinessPinAction(t('title.revertReception'), t('msg.confirmRevertReception'), () => reallyRevertPedidoRecepcion(id));
+  requestBusinessPinAction(t('title.revertReception'), t('msg.confirmRevertReception'), (pin) => reallyRevertPedidoRecepcion(id, pin));
 }
-function reallyRevertPedidoRecepcion(id){
+function reallyRevertPedidoRecepcion(id, pin){
+  if(!pinMatchesHash(pin, DB.business.pin)) return;
   const o = getPurchaseOrder(id);
   if(!o) return;
   (o.items||[]).forEach(line => {

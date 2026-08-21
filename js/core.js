@@ -558,10 +558,16 @@ function runTypeahead(inputId){
   const results = cfg && document.getElementById(cfg.resultsId);
   if(!cfg || !input || !results) return;
   const q = input.value.trim().toLowerCase();
+  // Cualquier tecleo posterior a elegir una sugerencia invalida el id
+  // enlazado (hiddenId), no solo cuando el campo queda totalmente vacío:
+  // sin esto, elegir un cliente y luego corregir/cambiar el texto sin
+  // volver a pinchar una sugerencia dejaba el campo oculto apuntando al
+  // cliente ELEGIDO ANTES, aunque el texto visible ya dijera otra cosa —
+  // la reserva podía terminar vinculada a la persona equivocada.
+  if(cfg.hiddenId){ const h = document.getElementById(cfg.hiddenId); if(h) h.value = ''; }
   if(!q){
     results.style.display = 'none';
     results.innerHTML = '';
-    if(cfg.hiddenId){ const h = document.getElementById(cfg.hiddenId); if(h) h.value = ''; }
     if(cfg.onClear) cfg.onClear();
     return;
   }
@@ -638,6 +644,12 @@ function confirmTextPrompt(){
 let pendingConfirmModalResolve = null;
 function confirmModal(message, opts){
   opts = opts || {};
+  // Si ya había un confirmModal() pendiente de una llamada anterior (dos
+  // acciones "borrar"/"confirmar" distintas disparadas casi a la vez, antes
+  // de que apareciera el primer diálogo), se resuelve como cancelado en vez
+  // de dejarlo colgado para siempre sin que nadie se entere de que esa
+  // primera acción nunca llegó a ejecutarse.
+  if(pendingConfirmModalResolve){ const prev = pendingConfirmModalResolve; pendingConfirmModalResolve = null; prev(false); }
   return new Promise(resolve => {
     pendingConfirmModalResolve = resolve;
     openModal(`
@@ -1282,7 +1294,16 @@ function idbOpen(){
     req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
-  });
+    // Si otra pestaña de la app tiene la base de datos abierta con una
+    // versión distinta, la apertura se queda colgada sin onsuccess ni
+    // onerror — sin esto, la app entera se congelaba en el splash para
+    // siempre esperando dbReadyPromise.
+    req.onblocked = () => { if(typeof showToast === 'function') showToast(t('msg.idbBlocked')); };
+  // Si la apertura falla, no se deja la Promise rechazada en caché para
+  // siempre: la próxima llamada a idbOpen() vuelve a intentarlo, en vez
+  // de que TODO guardado/lectura de esta sesión falle en silencio a partir
+  // de aquí (ver loadDB()/saveDB()).
+  }).catch(err => { _idbPromise = null; throw err; });
   return _idbPromise;
 }
 
@@ -2658,7 +2679,9 @@ function initPublicRequestsListener(){
         // y solo se cancela si de verdad sigue activa (evita reabrir/duplicar
         // efectos si el mismo request llegara dos veces).
         const target = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.token);
-        if(target && target.status !== 'cancelada'){
+        // 'completada' (el cliente ya llegó y está sentado) tampoco se debe
+        // poder cancelar desde aquí — antes solo se excluía 'cancelada'.
+        if(target && target.status !== 'cancelada' && target.status !== 'completada'){
           target.status = 'cancelada';
           if(typeof sendReservationCancellationEmail === 'function') sendReservationCancellationEmail(target).catch(()=>{});
           syncReservationStatusForPublic(target);
@@ -2674,7 +2697,7 @@ function initPublicRequestsListener(){
         // en ningún hueco, no se rechaza sin más: queda 'pendiente' para que
         // el personal la revise a mano, igual que una reserva nueva sin mesa.
         const target = (DB.reservations||[]).find(r => r.publicToken && r.publicToken === req.token);
-        if(target && target.status !== 'cancelada'){
+        if(target && target.status !== 'cancelada' && target.status !== 'completada'){
           const RESERVATION_TABLE_MARGIN = 1;
           const newDate = req.date || target.date, newTime = req.time || target.time, newPeople = req.people || target.people || 1;
           const available = getAvailableTablesForReservation(newDate, newTime, target.id, newPeople) || [];
@@ -3368,6 +3391,24 @@ function applyRemoteBlock(key, remoteValue){
   // selector de negocios se quedaba con "Mi negocio" de relleno hasta que
   // alguien entrara a Mi Negocio y guardara desde ESE dispositivo en concreto.
   if(key === 'business' && merged && merged.name) updateActiveSlotName(merged.name);
+  // Si el propietario da de baja al empleado o le revoca canUnlockEdit
+  // desde OTRO dispositivo, antes no tenía ningún efecto hasta que este
+  // dispositivo se cerrara y volviera a abrir: editUnlocked es una variable
+  // en memoria que solo se fijaba al reanudar sesión. Con esto, el cambio
+  // llega en cuanto se sincroniza, no en la próxima vez que alguien abra
+  // la app desde cero.
+  if(key === 'employees' && Array.isArray(merged)){
+    const myId = (typeof loggedInEmployeeId === 'function') ? loggedInEmployeeId() : null;
+    if(myId != null){
+      const meAfter = merged.find(e => e.id === myId);
+      if(!meAfter || meAfter.active === false){
+        if(typeof clearAccessSession === 'function') clearAccessSession();
+        location.reload();
+        return;
+      }
+      if(typeof applyEmployeeSessionEditRights === 'function') applyEmployeeSessionEditRights(myId);
+    }
+  }
   if(mergedFromLocal && typeof scheduleCloudSync === 'function') scheduleCloudSync();
   refreshAfterRemoteChange();
 }
@@ -4648,7 +4689,18 @@ function defaultData(){
 }
 
 let DB = defaultData();
-const dbReadyPromise = loadDB().then(d => { DB = d; });
+let dbLoadFailedFlag = false;
+const dbReadyPromise = loadDB().then(d => {
+  DB = d;
+  if(dbLoadFailedFlag){
+    // El aviso se dispara aparte (no bloquea la carga de DB) y esperando a
+    // que exista el DOM/las traducciones, porque loadDB() puede terminar
+    // antes de que app.js haya montado la pantalla.
+    const warn = () => { if(typeof alertModal === 'function' && typeof t === 'function') alertModal(t('msg.dbLoadFailed')); };
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', warn);
+    else warn();
+  }
+});
 
 async function loadDB(){
   try{
@@ -4738,12 +4790,26 @@ async function loadDB(){
     return merged;
   }catch(e){
     console.error('Error cargando datos', e);
+    // Si IndexedDB falla al leer (cuota agotada, corrupción, modo privado
+    // que la bloquea a medias...), antes se arrancaba en silencio con un
+    // negocio vacío: parecía una instalación nueva y el dueño podía llegar
+    // a rellenar todo de cero sin saber que sus datos reales seguían ahí.
+    // Con esta bandera, en cuanto el DOM esté listo se avisa de verdad —
+    // ver el aviso al final de este archivo, después de dbReadyPromise.
+    dbLoadFailedFlag = true;
     return defaultData();
   }
 }
 
 function saveDB(){
-  idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
+  idbSet(DB_KEY, DB).catch(e => {
+    console.error('Error guardando datos', e);
+    if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
+    // Reintento único: si el primer guardado falló por algo pasajero (p.ej.
+    // el navegador bloqueó IndexedDB un instante), insistir es mejor que
+    // dejar ese cambio solo en memoria sin ningún otro aviso.
+    setTimeout(() => idbSet(DB_KEY, DB).catch(e2 => console.error('Reintento de guardado local también falló', e2)), 3000);
+  });
   scheduleCloudSync();
 }
 
@@ -5016,7 +5082,15 @@ async function connectThermalPrinter(printerId){
       filters: THERMAL_PRINTER_SERVICE_CANDIDATES.map(s => ({services:[s]})),
       optionalServices: THERMAL_PRINTER_SERVICE_CANDIDATES
     });
-    const server = await device.gatt.connect();
+    showToast(t('thermal.connecting'));
+    // Sin límite de tiempo, si el dispositivo elegido está apagado
+    // gatt.connect() podía quedarse pendiente mucho rato sin resolver ni
+    // rechazar según el stack Bluetooth del sistema — el botón se quedaba
+    // "colgado" sin ningún aviso de que algo iba mal.
+    const server = await Promise.race([
+      device.gatt.connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('gatt-timeout')), 8000))
+    ]);
     let characteristic = null;
     for(const svcId of THERMAL_PRINTER_SERVICE_CANDIDATES){
       try{
@@ -5036,6 +5110,7 @@ async function connectThermalPrinter(printerId){
   }catch(e){
     // El usuario cancelando el selector de dispositivos también cae aquí —
     // no es un error real, solo cambió de idea.
+    if(e && e.message === 'gatt-timeout'){ showToast(t('thermal.connectTimeout')); return false; }
     if(e && e.name !== 'NotFoundError') console.error('Error conectando la impresora térmica', e);
     return false;
   }

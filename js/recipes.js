@@ -333,6 +333,7 @@ function renderEscandalloFull(r){
 let recipeModalLines = [];
 
 function openRecipeModal(id, forceBase){
+  if(!isOwnerSession() && !editUnlocked) return;
   const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:!!forceBase, baseYield:1, baseUnit:'L'};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
   if(id && typeof logAudit === 'function') logAudit('recipe_view', t('audit.recipeViewed').replace('${name}', r.name||'?'));
@@ -638,6 +639,7 @@ function currentRecipeFormState(id){
 }
 
 async function saveRecipe(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const name = document.getElementById('recipe-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   // Aviso (no bloqueante) de posible plato duplicado, mismo criterio ya

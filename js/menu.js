@@ -91,6 +91,16 @@ function scheduleSummaryText(horario){
    ============================================================ */
 // Devuelve los turnos (franjas horarias) configurados para el día de la semana
 // de dateStr, o null si no hay horario configurado (sin restricción de turnos).
+// "HH:MM" → minutos desde medianoche, para poder comparar horas que cruzan
+// la medianoche (un turno de madrugada, ej. 20:00-02:00) sin depender de
+// una comparación de texto que solo funciona si la hora de cierre es
+// "mayor" como string que la de apertura.
+function timeStrToMinutes(str){
+  if(!str || typeof str !== 'string' || !str.includes(':')) return null;
+  const [h,m] = str.split(':').map(Number);
+  if(isNaN(h) || isNaN(m)) return null;
+  return h*60+m;
+}
 function getTurnosForDate(dateStr){
   const horario = (DB.business || {}).horario;
   if(!horario || horario.length !== 7) return null;
@@ -98,12 +108,17 @@ function getTurnosForDate(dateStr){
   const d = migrateHorarioDia(horario[(jsDay + 6) % 7]); // 0=lunes..6=domingo
   if(!d || d.abierto === false) return [];
   const turnos = [];
+  // Antes se exigía s.fin &gt; s.ini (comparación de texto): un turno de
+  // madrugada como 20:00-02:00 nunca pasaba el filtro ("02:00" &lt; "20:00"
+  // como string), así que ese día se trataba como "sin horario configurado"
+  // — el aforo dejaba de controlarse por completo, justo en el turno donde
+  // más hace falta. Basta con que abra y cierre sean horas distintas.
   if(d.modo === 'seguido'){
     const s = d.seguido;
-    if(s && s.ini && s.fin && s.fin > s.ini) turnos.push({abre:s.ini, cierra:s.fin});
+    if(s && s.ini && s.fin && s.ini !== s.fin) turnos.push({abre:s.ini, cierra:s.fin});
   }else{
     (d.turnos||[]).forEach(t => {
-      if(t && t.ini && t.fin && t.fin > t.ini) turnos.push({abre:t.ini, cierra:t.fin});
+      if(t && t.ini && t.fin && t.ini !== t.fin) turnos.push({abre:t.ini, cierra:t.fin});
     });
   }
   // Un día marcado como abierto pero sin ninguna franja horaria rellenada
@@ -122,10 +137,24 @@ function getTurnosForDate(dateStr){
 function getTurnoIndexForTime(dateStr, time){
   const turnos = getTurnosForDate(dateStr);
   if(!turnos || !turnos.length) return null;
+  const timeMin = timeStrToMinutes(time);
+  if(timeMin == null) return null;
   // Límite de cierre exclusivo (para no solapar con el turno siguiente),
   // salvo en el último turno del día, donde se mantiene inclusivo: una
   // reserva justo a la hora de cierre debe seguir contando en ese turno.
-  const idx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
+  // Comparado en minutos (no como texto) para que un turno que cruza la
+  // medianoche (ej. 20:00-02:00) también encaje bien.
+  const idx = turnos.findIndex((t, i) => {
+    const abreMin = timeStrToMinutes(t.abre), cierraMin = timeStrToMinutes(t.cierra);
+    if(abreMin == null || cierraMin == null) return false;
+    const isLast = i === turnos.length - 1;
+    if(cierraMin > abreMin){
+      return timeMin >= abreMin && (isLast ? timeMin <= cierraMin : timeMin < cierraMin);
+    }
+    // Cruza medianoche: la hora encaja si está a partir de la apertura
+    // (hasta las 23:59) O antes/hasta el cierre (ya en el día siguiente).
+    return timeMin >= abreMin || (isLast ? timeMin <= cierraMin : timeMin < cierraMin);
+  });
   return idx === -1 ? null : idx;
 }
 
@@ -385,6 +414,7 @@ async function deleteCarta(id){
   showToast(t('msg.cartaDeleted'));
 }
 function saveCarta(){
+  if(!isOwnerSession() && !editUnlocked) return;
   const nombre = document.getElementById('carta-f-nombre').value.trim();
   if(!nombre){ showToast(t('msg.cartaNameRequired')); return; }
   cartaEdit.nombre = nombre.toUpperCase();
@@ -662,6 +692,7 @@ function addPlatoMod(secId, platoId){
   if(!nombre){ showToast(t('msg.extraNameRequired')); return; }
   const precioStr = document.getElementById('new-mod-precio').value;
   const precio = parseFloat((precioStr||'0').replace(',','.')) || 0;
+  if(precio < 0){ showToast(t('msg.invalidPrice')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   if(!p.modificadores) p.modificadores = [];

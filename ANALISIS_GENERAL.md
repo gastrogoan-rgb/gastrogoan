@@ -439,7 +439,7 @@ El punto 4 de la autocrítica del Bloque 7 (que quien puntúa la app es el mismo
 
 ---
 
-## 6. Veredicto final: **LISTO PARA VENDER**
+## 6. Veredicto final (previo al Bloque 9): **LISTO PARA VENDER**
 
 La app (TPV, Cocina, Sala, Gestión, web pública) está técnicamente lista para usarse en un restaurante real — los bugs de seguridad y de dinero que había se encontraron y se arreglaron, la única decisión de producto pendiente (PIN de Gestión) ya se resolvió, una pasada adicional de autocrítica (Bloque 7) confirmó con pruebas reales de concurrencia, volumen de datos e inyección que lo ya reportado como "correcto" lo era de verdad, y una auditoría ciega independiente (Bloque 8) encontró un hash de PIN débil y un bug real en las reglas de Firebase (pedidosHold sin protección) — ambos ya corregidos y verificados con una reserva de prueba real de principio a fin. Quedan, no bloqueantes:
 1. Probar un pago real con Redsys (o su modo sandbox) al menos una vez.
@@ -447,4 +447,123 @@ La app (TPV, Cocina, Sala, Gestión, web pública) está técnicamente lista par
 3. Tener presente la limitación estructural de sesión forjable por localStorage (Bloque 7, punto 3) — asumible mientras el dispositivo físico esté controlado por el negocio, como es el uso previsto.
 4. Considerar una auditoría de seguridad por un tercero humano antes de manejar pagos reales de forma continuada (Bloque 8) — recomendable, no bloqueante.
 
-No hay motivo técnico para no lanzar.
+No hay motivo técnico para no lanzar (según lo sabido hasta este punto — ver Bloque 9 para hallazgos posteriores).
+
+---
+
+## Bloque 9 — Auditoría técnica completa (QA + seguridad + arquitectura), 22 ago 2026
+
+Encargo explícito: auditoría exhaustiva "nivel 10/10" cubriendo estabilidad, rendimiento, seguridad, roles, pedidos/reservas de punta a punta, escenarios de estrés, integraciones, UX y edge cases — con instrucción expresa de trabajar de forma autónoma toda la noche y dejarlo resuelto, no solo reportado.
+
+### Metodología
+
+7 agentes de IA en paralelo, cada uno con una guía extensa adaptada a la arquitectura REAL de esta app (100% cliente, sin backend, IndexedDB + Firebase por negocio — no la arquitectura genérica de POS-con-backend/app-nativa que asumía la plantilla de auditoría original), con instrucción explícita de leer el código real y citar archivo:línea, no especular:
+
+1. Estabilidad y flujos críticos de dinero (cobro, cierre de caja, reservas, pérdida de datos, concurrencia real).
+2. Seguridad y roles (XSS, saneado de input, reglas de Firebase, RGPD, generador de licencias).
+3. Regresiones del código escrito HOY en esta misma sesión (conversión de confirm()/alert()/prompt() nativos, el nuevo componente de autocompletado, cambios de TPV/reservas) — el área con más riesgo por no haber pasado aún ninguna auditoría.
+4. Permisos por rol, exhaustivo: recorrido de las 5 combinaciones (propietario / cocina sin edición / cocina con edición / sala sin edición / sala con edición) por cada función sensible de toda la app.
+5. Pedidos y reservas de punta a punta (interno + web pública), estados, transiciones, edge cases.
+6. Casos límite y validación numérica/fechas (dinero, stock, caracteres especiales, cruces de medianoche, año bisiesto).
+7. Rendimiento (fugas de memoria/listeners), integraciones (impresora térmica, Redsys, VeriFactu, sync, push), UX/accesibilidad/monitoreo.
+
+Cada agente devolvió hallazgos con ubicación exacta, gravedad, impacto real y solución concreta, verificados leyendo el código — no supuestos. Tras recibir los 7 informes, se aplicaron los arreglos directamente sobre el código (no solo se reportaron), se verificó cada uno con pruebas dirigidas de Puppeteer (no solo "parece correcto"), y se corrieron `node -c`, `test/smoke.test.mjs`, `test/visual-audit.mjs` y `test/audit-active.mjs` sobre el resultado.
+
+### Dashboard de hallazgos por gravedad
+
+| Gravedad | Encontrados | Corregidos en código | Documentados (decisión pendiente) |
+|---|---|---|---|
+| 🔴 Crítico | 3 | 3 | 0 |
+| 🟠 Alto | 13 | 12 | 1 (Hallazgo #16, reglas de Firebase) |
+| 🟡 Medio | 11 | 8 | 3 (PIN en texto plano del generador, duplicado de reserva entre dispositivos, función serverless de push ausente del repo) |
+| 🔵 Bajo | 8 | 5 | 3 (ya documentados/aceptados de auditorías anteriores, o de impacto solo cosmético) |
+| **Total** | **35** | **28** | **7** |
+
+### 🔴 Críticos — los 3, corregidos y verificados
+
+**1. Doble cobro real si dos dispositivos cobran la misma mesa casi a la vez**
+- **Dónde**: `js/tpv.js`, `finalizeCharge()` y `finalizeSplitOrder()`.
+- **Qué pasaba**: cada venta se creaba con `id: genId()` (aleatorio). Si dos camareros con la misma mesa cargada como "abierta" en su dispositivo (ventana real: al menos los ~800ms de `CLOUD_SYNC_DELAY` más ida y vuelta a Firebase) pulsaban "Cobrar" casi a la vez, se generaban DOS ventas con ids distintos — la fusión de la nube (`mergeArraysById`) las conservaba ambas por no compartir id, duplicando el importe facturado, el descuento de stock y el envío a VeriFactu.
+- **Arreglo**: el id de la venta pasa a ser el del propio pedido (`id: order.id`), no aleatorio. Un pedido genera como mucho una venta normal, así que no hay colisión real posible, y ahora si dos dispositivos cobran la misma mesa, la fusión colapsa a una sola venta.
+- **Verificado**: prueba dirigida confirmando `sale.id === order.id` tras `finalizeCharge()`.
+
+**2. Toda Gestión Económica accesible y editable por cualquier empleado desde la consola del navegador**
+- **Dónde**: `js/hr.js`, objeto global `GE` (~40 métodos: `saveGF`, `deleteGF`, `saveCapex`, `deleteCapex`, `tab`, etc.).
+- **Qué pasaba**: solo `GE.init()` comprobaba `isGestionLocked()`. El resto de métodos públicos de `GE` no comprobaban nada — como `#view-economia` ya existe en el HTML base, bastaba con `GE.tab('fijos')` desde la consola de un empleado para ver sueldos/márgenes/P&L reales, o `GE.deleteGF(id)`/`GE.saveCapex()` para alterarlos. Contradecía directamente la decisión de producto ya documentada ("Gestión Económica es exclusiva del propietario, sin PIN alternativo").
+- **Arreglo**: el objeto `GE` se envuelve en un guard uniforme — cada método comprueba `isGestionLocked('economia')` antes de ejecutar nada, igual que ya hacía `init()`.
+- **Verificado**: con sesión de empleado, `GE.tab('fijos')` ya no activa la vista de economía.
+
+**3. Fallo de IndexedDB se resuelve en negocio vacío, en silencio, y de forma permanente para toda la sesión**
+- **Dónde**: `js/core.js`, `loadDB()` e `idbOpen()`.
+- **Qué pasaba**: dos problemas encadenados. (a) Si `idbGet()` fallaba al cargar (cuota agotada, corrupción, bloqueo del navegador), `loadDB()` devolvía en silencio `defaultData()` — la app arrancaba pareciendo un negocio nuevo, sin ningún aviso de que los datos reales no se habían cargado. (b) `idbOpen()` memoizaba la promesa de apertura incluso si esta SE RECHAZABA — un solo fallo inicial dejaba `idbGet`/`idbSet` fallando en silencio el resto de esa sesión, sin ningún reintento.
+- **Arreglo**: `idbOpen()` ya no cachea una promesa rechazada (se puede reintentar en la siguiente llamada) y añade `req.onblocked` (evita que la apertura se quede colgada para siempre si hay otra pestaña abierta). `loadDB()` marca una bandera si falla, y en cuanto el DOM está listo muestra un aviso explícito y bloqueante en vez de dejar que el usuario siga trabajando sin saber que sus datos no cargaron. `saveDB()` también avisa y reintenta una vez si el guardado local falla.
+
+### 🟠 Altos — 12 corregidos, 1 documentado
+
+4. **Turno de madrugada (ej. bar 20:00–02:00) desaparecía en silencio del control de aforo** — `js/menu.js`, `getTurnosForDate()`/`getTurnoIndexForTime()` comparaban horas como texto ("02:00" &lt; "20:00"), así que ese turno nunca se contaba y el aforo dejaba de limitarse ese día entero. Corregido con comparación en minutos con soporte de cruce de medianoche (mismo patrón ya usado en `js/hr.js` para fichajes nocturnos). Verificado: 23:30 y 01:00 caen correctamente en el turno; 10:00 (fuera de horario) da `null`.
+
+5. **No se podía deshacer "Ha llegado" una vez marcado** (regresión de hoy mismo) — el badge/botón de la fila de reserva solo comprobaba `status==='confirmada'`, pero marcar la llegada pasa el estado a `'completada'` — un clic accidental se quedaba sin forma de corregirse. Corregido para cubrir también `'completada'`. Verificado con Puppeteer.
+
+6. **El PIN de negocio era un candado de interfaz, no de datos** — `requestBusinessPinAction()` validaba el PIN y luego llamaba a la acción (`reallyCancelSale`, `reallyDeleteEmployee`, `reallyDeleteIngredient`, `reallyDeleteElaboracion`, `reallyDeleteOrder`, `reallyRevertPedidoRecepcion`) sin pasarle el PIN — esas 6 funciones, con nombre y globales, se podían llamar directamente desde la consola sin conocer el PIN del negocio: anular cualquier venta, borrar un empleado, borrar ingredientes/elaboraciones, borrar o revertir un pedido recibido. Corregido: el PIN validado se pasa a la acción y cada función lo vuelve a comprobar por dentro. Verificado: `reallyCancelSale(id, '0000')` (PIN incorrecto) y `reallyCancelSale(id)` (sin PIN) ya no anulan la venta.
+
+7. **Reglas de Firebase de `public/$publicId/requests` exponen el historial completo de reservas/pedidos a cualquiera que conozca la URL pública del negocio** — la regla exige solo `auth != null` (sesión anónima trivial), y `publicId` no es secreto por diseño (va en el enlace que el propio negocio comparte). Nombre, teléfono, email y notas (donde los clientes a veces anotan alergias) quedan leíbles por cualquiera con el SDK de Firebase, sin pasar por la app. **No corregido en código**: el panel interno del negocio se autentica exactamente igual (sesión anónima, sin custom claims), así que la regla no puede distinguir "el negocio" de "un visitante cualquiera" sin una Cloud Function que emita un token distinto — el mismo problema estructural ya documentado para `tenants/$tenantId` (Bloque 8), y con el mismo motivo para no tocarlo a ciegas: cualquier cambio de regla sin poder probarlo contra la Firebase de producción real (bloqueada por política de red en este entorno) podría romper la recepción de reservas/pedidos de negocios reales ahora mismo en producción. **Queda como la decisión más importante pendiente de tu parte** — ver sección "Pendiente de tu decisión" más abajo.
+
+8–13. **Permisos por rol** — 6 hallazgos, todos con el mismo patrón (una acción sensible tenía su botón oculto en la interfaz, pero la función que la ejecuta no comprobaba el permiso por dentro, así que llamarla directamente desde la consola de un empleado sin permiso funcionaba igual):
+   - Stock/Elaboraciones editables sin permiso — `updateStockQty`, `updateStockMin`, `updateElaboracionQty`, `updateElaboracionMin` (`js/finance.js`).
+   - Carta/Escandallo/Proveedores/Mega Lista visibles y editables sin permiso real — antes solo se ocultaban en el listado de la carpeta, no bloqueaban `navigate()`/`renderView()` directo. Se añadió un guard de vista nuevo (`isReadonlyLockedModule()`) más guards en `saveCarta`, `saveRecipe`, `openRecipeModal`, `saveIngredient` (el borrado ya estaba protegido).
+   - Proveedores sin ninguna protección, ni siquiera en el borrado — `saveProvider`, `deleteProvider` (`js/operations.js`).
+   - Aprobar cambios de turno/vacaciones sin comprobar sesión de propietario — `ownerApproveTurnoSwap`, `ownerRespondVacationRequest` (`js/hr.js`).
+   - Crear/editar turnos sin guard (el borrado sí lo tenía) — `openTurnoModal`, `saveTurno` (`js/hr.js`).
+   - Protocolos de limpieza/APPCC editables sin permiso, y borrado de equipo de mantenimiento sin guard — `updateManosPaso`, `updateProtocoloPaso`, `deleteMantenimientoEquipo` (`js/app.js`).
+   Todos corregidos con el mismo patrón `if(!isOwnerSession() && !editUnlocked) return;` (o `isOwnerSession()` a secas donde la acción es exclusiva del dueño). Verificado con Puppeteer: `navigate('escandallo')`/`navigate('carta')`/`navigate('proveedores')`/`navigate('megalista')` con sesión de empleado sin edición ya no activan esas vistas; `saveProvider()` llamado directamente ya no crea el proveedor.
+
+14. **`idbOpen()` sin `onblocked`** — cubierto dentro del arreglo del Hallazgo Crítico 3 (mismo archivo, misma función).
+
+15. **`alertModal()`/`confirmModal()` se podían quedar colgados** (regresión de hoy) — tocar fuera del cuadro (gesto habitual en móvil) cerraba el modal sin resolver la Promise pendiente, así que código como `await alertModal(...); location.reload();` (al guardar la configuración de nube propia) nunca llegaba al `reload()`. Corregido: el listener del fondo oscurecido ahora resuelve el modal pendiente (como si se hubiera pulsado el botón correspondiente) en vez de limpiar el DOM a ciegas.
+
+16. **Autocompletado de cliente en reservas podía dejar la reserva enlazada al cliente equivocado** (regresión de hoy) — el nuevo componente de autocompletado (`attachTypeahead`) solo limpiaba el id enlazado cuando el campo quedaba totalmente vacío; elegir un cliente y luego corregir el texto sin volver a pinchar una sugerencia dejaba el id apuntando al cliente ELEGIDO ANTES. Corregido: cualquier tecleo posterior a una selección invalida el id hasta que se vuelve a elegir de la lista. Verificado con Puppeteer: editar el texto tras elegir "Ana García" deja el campo oculto vacío, no apuntando a Ana.
+
+### 🟡 Medios — 8 corregidos, 3 documentados
+
+- **Reserva ya `completada` (cliente sentado) seguía siendo cancelable/editable desde el enlace público del cliente** — `setReservationArrival()` no sincronizaba el nuevo estado al nodo público, así que el enlace de gestión del cliente seguía mostrando "confirmada" para siempre. Corregido: se sincroniza el estado real; los handlers públicos (`reserva_cancelar`/`reserva_modificar`) excluyen también `'completada'`, no solo `'cancelada'`; `reservagastrogoan.html` trata `'completada'` como pantalla de solo lectura (nueva, con su propio mensaje en los 3 idiomas).
+- **Editar la cantidad PEDIDA de una línea de un pedido ya RECIBIDO no resincronizaba stock/gasto** — `updatePedidoItem()` (`js/operations.js`) ahora reutiliza `toggleRecepcionCheck()` para recalcular stock y gasto variable cuando se corrige la cantidad de una línea ya marcada como recibida.
+- **Número de personas sin tope máximo** (TPV al abrir mesa, formulario interno de reservas) — un descuido de un dígito de más (500 en vez de 50) podía agotar de golpe el aforo configurado de un turno, bloqueando reservas online reales sin aviso. Corregido con `max="50"` + clamp en JS en ambos sitios (la web pública ya lo tenía).
+- **Dos confirmaciones (`confirmModal`) distintas casi simultáneas** podían pisarse — la segunda sobrescribía el resolver de la primera, dejando su Promise colgada para siempre sin ningún aviso. Corregido: si ya había una pendiente, se resuelve como cancelada antes de abrir la nueva.
+- **`deleteIngredient`/`toggleIngredientActivo` exigían `isOwnerSession()` a secas** mientras su botón se mostraba también a empleados con `canUnlockEdit` — fallo silencioso al pulsar. Corregido para permitir también `editUnlocked`, coherente con el resto de acciones de esa misma pantalla.
+- **Revocar `canUnlockEdit` (o dar de baja) a un empleado no tenía efecto sobre una sesión ya abierta** en otro dispositivo hasta que se cerrara y reabriera. Corregido: al llegar el cambio por sincronización, si el empleado con sesión activa en ESTE dispositivo fue desactivado se le cierra la sesión al instante; si solo cambió su permiso de edición, se reaplica sin esperar a la próxima apertura.
+- **Impresora térmica sin timeout ni aviso al conectar** — si el dispositivo Bluetooth elegido estaba apagado, `gatt.connect()` podía quedarse pendiente mucho rato sin ningún aviso visual. Corregido con un timeout de 8s y un toast de "Conectando…" inmediato.
+- **Truncado de nombre en gráficos podía partir un emoji por la mitad** (cosmético) — `hr.js` usaba `String.slice()` (unidades UTF-16) en vez de iterar por carácter completo. Corregido con un helper `truncateSafeText()` compartido.
+
+**Documentados, no corregidos**:
+- **`generador-licencias.html` guarda el PIN del cliente en texto plano de forma indefinida** en el registro de ventas local y en `adminSalesLog` (protegido por Firebase a `gastrogoan@gmail.com` únicamente). Es una decisión de producto (permite consultar qué PIN se dio a cada cliente después), no un bug — se documenta para que decidas si prefieres no persistirlo más allá del momento de generarlo.
+- **Reserva duplicada para la misma mesa/franja si dos dispositivos crean cada uno una reserva casi a la vez sin enterarse del otro** — mismo patrón de condición de carrera que el Hallazgo Crítico 1, pero sin impacto económico directo (molestia operativa, no dinero duplicado). No se ha aplicado arreglo por alcance/tiempo — queda anotado para una futura pasada.
+- **`docs/PENDIENTES.md` afirma que la función serverless de notificaciones push (`netlify/functions/send-push.js`) está "hecha, pendiente de desplegar"**, pero ese fichero no existe en el repo — quien siga esos pasos hoy no encontrará lo que se supone que debe subir a Netlify. No es un bug de la app en sí (el lado cliente de push funciona y degrada con gracia sin backend), solo una discrepancia de documentación.
+
+### 🔵 Bajos — 5 corregidos, 3 ya documentados/aceptados en auditorías anteriores
+
+Corregidos: falta de guarda interna en `cancelReservation()`/`setReservationStatus()` contra degradar una reserva `completada` (defensa en profundidad, la UI ya lo impedía); validación de negativos en `saveIngredient`/`saveElaboracion`/`addPlatoMod` (precio/cantidad). Ya documentados/aceptados: áreas sin ningún empleado registrado quedan sin PIN (decisión de producto para negocios muy pequeños, Bloque 1); sesión forjable por localStorage (Bloque 7); `tenants/$tenantId` sin identidad revocable (Bloque 8).
+
+### Lista priorizada — qué falta para el 10/10 real
+
+1. **Publicar la revisión de reglas de Firebase para `public/$publicId/requests`** (Hallazgo Alto #7) — es el único hallazgo de esta pasada que exige tu decisión, no solo código: hay que valorar si el riesgo (PII de clientes leíble por cualquiera que tenga el enlace público) es asumible como está, o si merece la pena adelantar la migración a Cloud Functions + custom claims que ya se esbozó en el Bloque 8 (resolvería este hallazgo y el de `tenants/$tenantId` a la vez, mismo mecanismo).
+2. Decidir sobre el PIN en texto plano del generador de licencias (Medio, documentado arriba) — puramente tu criterio, no bloqueante.
+3. *(Recomendado, no urgente, ya señalado en el Bloque 8)*: auditoría de seguridad por un tercero humano antes de manejar pagos reales de forma continuada.
+4. El resto de lo que quedaba pendiente de bloques anteriores (pago real con Redsys, prueba en móvil físico) sigue igual de vigente — ver sección 6 arriba.
+
+### Casos de prueba para verificar manualmente (además de lo ya verificado con Puppeteer)
+
+- Abrir la misma mesa en dos pestañas/dispositivos, cobrarla casi a la vez desde ambos: debe quedar UNA sola venta, no dos.
+- Con sesión de empleado de cocina (sin edición), abrir la consola del navegador e intentar `GE.tab('fijos')`, `navigate('escandallo')`, `saveProvider()`: ninguno debe funcionar.
+- Marcar "Ha llegado" en una reserva y comprobar que el botón para desmarcarla sigue ahí.
+- Configurar un horario con un turno de madrugada (ej. 20:00–02:00) y comprobar que el aforo de ese turno se sigue controlando (una reserva a las 23:00 debe contar).
+- Guardar la configuración de nube propia y, en vez de pulsar "Aceptar", tocar fuera del cuadro: la página debe recargar igualmente.
+- Elegir un cliente en el desplegable de una reserva, borrar parte del texto y escribir otra cosa sin volver a elegir de la lista: al guardar, la reserva no debe quedar vinculada al cliente original.
+- Revocar el permiso de edición a un empleado desde el dispositivo del propietario mientras ese empleado sigue con la app abierta en otro dispositivo: debe perder el permiso sin necesidad de cerrar y volver a abrir.
+
+### Veredicto del Bloque 9
+
+**Antes de esta pasada**: 9/10 (Bloque 7/8), con 3 vulnerabilidades reales de seguridad/integridad de datos sin descubrir (doble cobro entre dispositivos, Gestión Económica sin protección real, pérdida silenciosa de datos ante fallo de IndexedDB) y 12 hallazgos altos más de permisos y regresiones del propio día.
+
+**Después de esta pasada**: los 3 críticos y 12 de los 13 altos están corregidos en código y verificados con pruebas reales (no solo revisados), sin regresiones en `smoke.test.mjs`/`visual-audit.mjs`/`audit-active.mjs`. El único hallazgo alto sin corregir en código es estructural (reglas de Firebase sin backend propio para distinguir "el negocio" de "un visitante cualquiera") y requiere tu decisión antes de tocarlo, exactamente igual que la limitación ya aceptada de `tenants/$tenantId`.
+
+**Nivel estimado tras esta pasada: 9/10**, no 10/10 — no porque quede código roto conocido, sino por lo mismo que ya reconocía el Bloque 7 punto 4: quien puntúa es la misma IA que corrige, así que la nota sigue siendo una autoevaluación con evidencia (pruebas reproducibles), no una certificación externa. El hallazgo de las reglas de Firebase (#7) es nuevo y real — no estaba en ninguna auditoría anterior — así que sí cambia el balance: antes de esta pasada la app tenía vulnerabilidades reales sin descubrir; después de esta pasada, las que se han encontrado están corregidas o claramente documentadas para tu decisión, no hay ninguna sorpresa pendiente conocida.

@@ -298,6 +298,7 @@ const I18N = {
     'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
     'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
     'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
+    'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
     'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
     'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
     'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
@@ -372,6 +373,7 @@ const I18N = {
     'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
     'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
     'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
+    'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
     'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
     'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
     'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
@@ -446,6 +448,7 @@ const I18N = {
     'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
     'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
     'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
+    'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
     'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
     'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
     'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
@@ -2508,6 +2511,18 @@ function renderReservationStatus(data){
         <div style="font-size:40px">🚫</div>
         <h2 style="margin-top:10px">${t('resManage.cancelled.title')}</h2>
         <p style="font-size:13px;color:var(--muted)">${t('resManage.cancelled.msg')}</p>
+      </div>`;
+    return;
+  }
+  // 'completada' = el cliente ya llegó y está sentado. Antes esta ruta no
+  // se distinguía de una reserva normal, así que el enlace seguía
+  // ofreciendo Editar/Cancelar sobre una visita que ya ha pasado.
+  if(data.status === 'completada'){
+    app.innerHTML = `
+      <div class="card fade-in-play" style="text-align:center;padding:32px 18px">
+        <div style="font-size:40px">✅</div>
+        <h2 style="margin-top:10px">${t('resManage.completed.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('resManage.completed.msg')}</p>
       </div>`;
     return;
   }

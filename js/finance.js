@@ -1189,6 +1189,7 @@ function confirmNewIngredientCategory(id){
 }
 
 async function saveIngredient(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const name = document.getElementById('ing-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const category = document.getElementById('ing-category').value;
@@ -1196,6 +1197,7 @@ async function saveIngredient(id){
   const supplier = document.getElementById('ing-supplier').value.trim();
   const packQty = parseFloat(document.getElementById('ing-pack-qty').value) || 0;
   const packPrice = parseFloat(document.getElementById('ing-pack-price').value) || 0;
+  if(packQty < 0 || packPrice < 0){ showToast(t('msg.invalidPrice')); return; }
   const price = packQty > 0 ? packPrice / packQty : 0;
   const allergens = Array.from(document.querySelectorAll('#modal-box input[type="checkbox"]:checked')).map(c=>c.value);
 
@@ -1241,7 +1243,7 @@ function updateIngredientIva(id, val){
 // servir el proveedor, sin perder ni el histórico ni el vínculo con las
 // recetas que lo llevan.
 function toggleIngredientActivo(id){
-  if(!isOwnerSession()) return;
+  if(!isOwnerSession() && !editUnlocked) return;
   const ing = DB.ingredients.find(i=>i.id===id);
   if(!ing) return;
   ing.activo = ing.activo===false ? true : false;
@@ -1256,7 +1258,7 @@ function recipesUsingIngredient(id){
   return DB.recipes.filter(r => (r.ingredients||[]).some(line => line.type!=='base' && line.ingredientId===id));
 }
 function deleteIngredient(id){
-  if(!isOwnerSession()) return;
+  if(!isOwnerSession() && !editUnlocked) return;
   const ing = DB.ingredients.find(i=>i.id===id);
   const usedIn = recipesUsingIngredient(id);
   if(usedIn.length){
@@ -1281,9 +1283,13 @@ function deleteIngredient(id){
 // Borrar un ingrediente pierde para siempre su historial de stock, igual de
 // irreversible que borrar un cliente o una mesa con pedido: se pide el PIN.
 function confirmDeleteIngredient(id){
-  requestBusinessPinAction(t('title.deleteIngredient'), t('msg.confirmDeleteIngredient'), () => reallyDeleteIngredient(id));
+  requestBusinessPinAction(t('title.deleteIngredient'), t('msg.confirmDeleteIngredient'), (pin) => reallyDeleteIngredient(id, pin));
 }
-function reallyDeleteIngredient(id){
+function reallyDeleteIngredient(id, pin){
+  // Comprobación real del PIN dentro de la función — igual que en
+  // reallyCancelSale/reallyDeleteEmployee, para que no se pueda saltar
+  // llamándola directamente desde la consola.
+  if(!pinMatchesHash(pin, DB.business.pin)) return;
   const ing0 = DB.ingredients.find(i => i.id === id);
   if(ing0){ moveToTrash('ingredient', ing0); logAudit('delete', t('audit.deletedIngredient').replace('${name}', ing0.name), 'critical'); }
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
@@ -1530,6 +1536,9 @@ function renderStock(){
 
 
 function updateStockMin(ingredientId, value){
+  // El campo ya sale disabled sin permiso, pero eso es solo un atributo
+  // HTML quitable desde devtools — la función en sí no comprobaba nada.
+  if(!isOwnerSession() && !editUnlocked) return;
   const s = getStockEntry(ingredientId);
   s.min = parseFloat(value) || 0;
   saveDB();
@@ -1670,6 +1679,7 @@ function openStockLogModal(){
 // un modal — antes hacía falta abrir un modal aparte solo para escribir un
 // número. Sigue quedando registrado en el Historial igual que antes.
 function updateStockQty(ingredientId, value){
+  if(!isOwnerSession() && !editUnlocked) return;
   const s = getStockEntry(ingredientId);
   const num = parseFloat(value);
   if(isNaN(num) || num < 0) return;
@@ -1726,12 +1736,14 @@ function openElaboracionModal(id){
 }
 
 async function saveElaboracion(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const name = document.getElementById('elab-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const category = document.getElementById('elab-category').value;
   const unit = document.getElementById('elab-unit').value;
   const qty = parseFloat(document.getElementById('elab-qty').value) || 0;
   const min = parseFloat(document.getElementById('elab-min').value) || 0;
+  if(qty < 0 || min < 0){ showToast(t('msg.invalidPrice')); return; }
   // Igual que con ingredientes/recetas/proveedores: avisa de un posible
   // duplicado (mismo nombre, misma área) en vez de dejarlo pasar en
   // silencio — antes no había ningún aviso al crear una elaboración.
@@ -1754,9 +1766,10 @@ async function saveElaboracion(id){
 // se puede recuperar. Una elaboración también tiene su stock y su mínimo
 // configurados: perderla de un clic de más era demasiado fácil.
 function deleteElaboracion(id){
-  requestBusinessPinAction(t('title.deleteElaboration'), t('msg.confirmDeleteElaboration'), () => reallyDeleteElaboracion(id));
+  requestBusinessPinAction(t('title.deleteElaboration'), t('msg.confirmDeleteElaboration'), (pin) => reallyDeleteElaboracion(id, pin));
 }
-function reallyDeleteElaboracion(id){
+function reallyDeleteElaboracion(id, pin){
+  if(!pinMatchesHash(pin, DB.business.pin)) return;
   const e = getElaboracion(id);
   if(!e) return;
   moveToTrash('elaboracion', e);
@@ -1769,6 +1782,7 @@ function reallyDeleteElaboracion(id){
 }
 
 function updateElaboracionMin(id, value){
+  if(!isOwnerSession() && !editUnlocked) return;
   const e = getElaboracion(id); if(!e) return;
   e.min = parseFloat(value) || 0;
   saveDB();
@@ -1776,6 +1790,7 @@ function updateElaboracionMin(id, value){
 }
 
 function updateElaboracionQty(id, value){
+  if(!isOwnerSession() && !editUnlocked) return;
   const e = getElaboracion(id); if(!e) return;
   const num = parseFloat(value);
   if(isNaN(num) || num < 0) return;

@@ -1609,6 +1609,18 @@ function applyEmployeeSessionEditRights(employeeId){
   }
 }
 
+// Los 4 módulos de HIDDEN_MODULES_WHEN_LOCKED (más arriba) solo se ocultaban
+// en el listado de la carpeta — un empleado sin canUnlockEdit podía seguir
+// entrando a navigate('carta')/renderView('escandallo') directamente (URL a
+// mano, o simplemente llamando la función desde la consola), viendo costes y
+// márgenes que por diseño no le corresponden, y en varias de sus funciones
+// de creación/edición podía además guardar cambios reales (el borrado ya
+// comprobaba permiso, pero crear/editar no). Este guard es la protección de
+// verdad, no solo la de ocultarlos en el listado.
+function isReadonlyLockedModule(view){
+  if(isOwnerSession() || editUnlocked) return false;
+  return ['carta', 'proveedores', 'megalista', 'escandallo'].includes(view);
+}
 function isGestionLocked(view){
   if(ownerUnlocked) return false;
   // Quien ya entró por "Acceso Propietarios" no tiene que volver a meter el
@@ -1733,6 +1745,11 @@ function navigate(view){
     denyGestionAccess();
     return;
   }
+  if(isReadonlyLockedModule(view)){
+    showToast(t('msg.needsEditPermission'));
+    goHome();
+    return;
+  }
   if(isOperationalAreaLocked(view)){
     requestFichaGate(view);
     return;
@@ -1776,6 +1793,10 @@ function denyGestionAccess(){
 // paso real antes de pintar cualquier vista.
 function renderView(view){
   if(isGestionLocked(view)){ denyGestionAccess(); return; }
+  // Última barrera antes de pintar, por si se llega aquí saltándose
+  // navigate() (p.ej. renderView('escandallo') a mano desde la consola de
+  // un empleado sin permiso de edición).
+  if(isReadonlyLockedModule(view)){ showToast(t('msg.needsEditPermission')); goHome(); return; }
   switch(view){
     case 'home': renderHome(); break;
     case 'folder': renderFolder(); break;
@@ -1881,6 +1902,16 @@ function closeModal(){
   document.getElementById('modal-box').classList.remove('modal-order');
 }
 document.getElementById('modal-overlay').addEventListener('click', (e)=>{
-  if(e.target.id === 'modal-overlay') closeModal();
+  if(e.target.id !== 'modal-overlay') return;
+  // Tocar fuera del cuadro (gesto habitual, sobre todo en móvil) antes
+  // cerraba el modal sin más — si había un confirmModal()/alertModal()/
+  // promptText() pendiente, su Promise se quedaba colgada para siempre y
+  // el código que la esperaba (p.ej. un location.reload() tras guardar)
+  // no llegaba a ejecutarse nunca, sin ningún aviso. Ahora se resuelve
+  // igual que si se hubiera pulsado el botón correspondiente.
+  if(typeof pendingConfirmModalResolve !== 'undefined' && pendingConfirmModalResolve) return cancelConfirmModal();
+  if(typeof pendingAlertModalResolve !== 'undefined' && pendingAlertModalResolve) return acceptAlertModal();
+  if(typeof pendingTextPromptResolve !== 'undefined' && pendingTextPromptResolve) return cancelTextPrompt();
+  closeModal();
 });
 

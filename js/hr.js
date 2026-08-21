@@ -540,7 +540,7 @@ const GE = (function(){
     if(chartEl){
       const catTotals = {};
       allItems.forEach(v=>{ catTotals[v.categoria] = (catTotals[v.categoria]||0) + parseFloat(v.importe||0); });
-      const chartData = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>({lbl:variableCategoryLabel(cat).length>18?variableCategoryLabel(cat).slice(0,17)+'…':variableCategoryLabel(cat), v}));
+      const chartData = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,v])=>({lbl:truncateSafeText(variableCategoryLabel(cat),18), v}));
       chartEl.innerHTML = chartData.length ? barChartHTML(chartData) : `<div class="empty">${t('hr.gf.emptyList')}</div>`;
     }
     const searchLower = gvSearch.trim().toLowerCase();
@@ -1589,7 +1589,7 @@ const GE = (function(){
 
     const top5 = [...items].sort((a,b)=>b.revenue-a.revenue).slice(0,5);
     document.getElementById('platos-chart').innerHTML = top5.length
-      ? barChartHTML(top5.map(i=>({lbl: i.name.length>10 ? i.name.slice(0,9)+'…' : i.name, v:i.revenue})))
+      ? barChartHTML(top5.map(i=>({lbl: truncateSafeText(i.name,10), v:i.revenue})))
       : `<div class="empty">${t('hr.platos.noSalesPeriod')}</div>`;
 
     renderPlatosRankingTable('platos-mas-vendidos', [...items].sort((a,b)=>b.units-a.units).slice(0,10), totalIngresos);
@@ -1925,7 +1925,24 @@ const GE = (function(){
     );
   }
 
-  return {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
+  // del HTML funcionen — pero eso también significa que cualquiera con la
+  // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
+  // directamente, saltándose por completo la comprobación de init(). Solo
+  // init() (y renderView() antes de pintar #view-economia) comprobaban
+  // isGestionLocked() — el resto de métodos confiaban en que nadie llegara
+  // a ellos sin pasar por ahí. Se envuelve cada método público con el mismo
+  // guard, para que Gestión Económica sea de verdad exclusiva del
+  // propietario y no solo en la interfaz visible.
+  const guarded = {};
+  Object.keys(api).forEach(name => {
+    guarded[name] = function(...args){
+      if(isGestionLocked('economia')){ denyGestionAccess(); return; }
+      return api[name].apply(null, args);
+    };
+  });
+  return guarded;
 })();
 
 /* ============================================================
@@ -2244,6 +2261,7 @@ function printWeeklySchedule(){
 }
 
 function openTurnoModal(id, employeeId, fecha){
+  if(!isOwnerSession() && !editUnlocked) return;
   let turno = id ? (DB.turnos||[]).find(x => x.id===id) : null;
   // Un empleado desactivado (baja temporal) no debería poder recibir turnos
   // NUEVOS — solo se conserva en la lista si el turno que se está editando
@@ -2324,6 +2342,7 @@ function turnoTipoChanged(){
 }
 
 async function saveTurno(id){
+  if(!isOwnerSession() && !editUnlocked) return;
   const tipo = document.getElementById('turno-tipo').value;
   const noHorario = ['D','V','B'].includes(tipo);
   const isPartido = tipo === 'P';
@@ -2952,9 +2971,13 @@ function saveEmployee(id){
 function deleteEmployee(id){
   const e = DB.employees.find(x=>x.id===id);
   if(!e) return;
-  requestBusinessPinAction(t('title.deleteEmployee'), t('msg.confirmDeleteEmployee'), () => reallyDeleteEmployee(id));
+  requestBusinessPinAction(t('title.deleteEmployee'), t('msg.confirmDeleteEmployee'), (pin) => reallyDeleteEmployee(id, pin));
 }
-function reallyDeleteEmployee(id){
+function reallyDeleteEmployee(id, pin){
+  // Comprobación real del PIN dentro de la función (no solo en el modal
+  // que la llama), para que no se pueda borrar un empleado llamando esta
+  // función directamente desde la consola sin conocer el PIN del negocio.
+  if(!pinMatchesHash(pin, DB.business.pin)) return;
   const e0 = DB.employees.find(e => e.id === id);
   if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name), 'critical'); }
   DB.employees = DB.employees.filter(e => e.id!==id);
@@ -3295,6 +3318,7 @@ function respondTurnoSwapRequest(requestId, accept){
 // Aprobación final del propietario: reasigna de verdad el turno al
 // compañero que aceptó cubrirlo.
 function ownerApproveTurnoSwap(requestId, approve){
+  if(!isOwnerSession()) return;
   const r = (DB.turnoSwapRequests||[]).find(x=>x.id===requestId);
   if(!r) return;
   if(approve){
@@ -3369,6 +3393,7 @@ function submitVacationRequest(employeeId){
   openEmployeeFicharModal(employeeId);
 }
 function ownerRespondVacationRequest(requestId, approve){
+  if(!isOwnerSession()) return;
   const r = (DB.vacationRequests||[]).find(x=>x.id===requestId);
   if(!r) return;
   if(approve){

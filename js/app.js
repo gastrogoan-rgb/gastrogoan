@@ -260,7 +260,7 @@ function renderLimpiezaManos(){
   `;
 }
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
-function updateManosPaso(i, val){ limpiezaManosPasos()[i] = val; saveDB(); }
+function updateManosPaso(i, val){ if(!editUnlocked) return; limpiezaManosPasos()[i] = val; saveDB(); }
 function addManosPaso(){ limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
 async function removeManosPaso(i){
   const pasos = limpiezaManosPasos();
@@ -317,7 +317,7 @@ function renderLimpiezaProtocolo(){
   box.innerHTML = `<div class="grid grid-2">${renderBlock(t('title.openingProtocol'),'sunrise',ap,'apertura')}${renderBlock(t('title.closingProtocol'),'sunset',ci,'cierre')}</div>`;
 }
 function _protocoloKey(type){ return type==='apertura' ? 'aperturaPasos' : 'cierrePasos'; }
-function updateProtocoloPaso(type,i,val){ limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
+function updateProtocoloPaso(type,i,val){ if(!editUnlocked) return; limpiezaProtocoloPasos(type)[i] = val; saveDB(); }
 function moveProtocoloPaso(type,i,dir){
   moveArrayItem(limpiezaProtocoloPasos(type), i, dir);
   saveDB();
@@ -753,6 +753,7 @@ function updateMantenimientoEquipo(id, field, val){
   saveDB();
 }
 async function deleteMantenimientoEquipo(id){
+  if(!editUnlocked) return;
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
   saveDB();
@@ -2598,6 +2599,8 @@ function rejectOnlineReservation(id){
 // que sí distinguen 'cancelada' de "nunca existió"). Borrar sigue existiendo
 // para corregir un duplicado o un error real al crearla.
 async function cancelReservation(id){
+  const r0 = DB.reservations.find(x=>x.id===id);
+  if(!r0 || r0.status === 'completada') return;
   if(!(await confirmModal(t('msg.confirmCancelReservation')))) return;
   setReservationStatus(id, 'cancelada');
 }
@@ -2605,6 +2608,10 @@ async function cancelReservation(id){
 async function setReservationStatus(id, status){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
+  // Defensa en profundidad: una reserva ya completada (el cliente llegó y
+  // se sentó) no debe poder degradarse a cancelada/pendiente por ningún
+  // camino, aunque la UI ya no ofrezca el botón para intentarlo.
+  if(r.status === 'completada' && status !== 'completada') return;
 
   if(status === 'confirmada'){
     // Las reservas que llegan de la web pública nunca traen mesa asignada
@@ -2692,7 +2699,7 @@ function renderReservasDia(){
                 <div class="reserva-card-detail-row"><span>${t('th.table')}</span><strong>${table ? escapeHtml(table.name) : `<span class="badge badge-gray">${t('label.notAssigned')}</span>`}</strong></div>
                 <div class="reserva-card-detail-row"><span>${t('th.notes')}</span><strong>${escapeHtml(r.notes||'—')}</strong></div>
                 <div class="reserva-card-detail-row"><span>${t('th.arrival')}</span>
-                  ${r.status==='confirmada' ? `
+                  ${(r.status==='confirmada' || r.status==='completada') ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
                       <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
                       ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
@@ -3036,7 +3043,7 @@ function openReservationModal(id){
     <div class="field-row">
       <div class="field">
         <label>${t('label.numberOfPeople')}</label>
-        <input type="number" id="reservation-people" value="${r.people}" min="1" onchange="updateReservationTableOptions()">
+        <input type="number" id="reservation-people" value="${r.people}" min="1" max="50" onchange="updateReservationTableOptions()">
       </div>
       <div class="field">
         <label>${t('label.tablePos')}${DB.tables.length ? ' *' : ''}</label>
@@ -3084,7 +3091,7 @@ async function saveReservation(id){
   const clientName = document.getElementById('reservation-client-name').value.trim();
   const date = document.getElementById('reservation-date').value || todayStr();
   const time = document.getElementById('reservation-time').value || '20:00';
-  const people = parseInt(document.getElementById('reservation-people').value) || 1;
+  const people = Math.min(parseInt(document.getElementById('reservation-people').value) || 1, 50);
   const tableIdVal = document.getElementById('reservation-table').value;
   const tableId = tableIdVal ? parseInt(tableIdVal) : null;
   const notes = document.getElementById('reservation-notes').value.trim();
@@ -3216,6 +3223,11 @@ function setReservationArrival(id, arrived, tableId){
   r.status = arrived ? 'completada' : 'confirmada';
   if(arrived && tableId) r.tableId = tableId;
   saveDB();
+  // Sin esto, el enlace público de gestión de la reserva se quedaba
+  // mostrando "confirmada" para siempre (nunca se enteraba de la llegada),
+  // así que el cliente seguía viendo los botones de Editar/Cancelar sobre
+  // una reserva que ya está sentada.
+  if(r.publicToken && typeof syncReservationStatusForPublic === 'function') syncReservationStatusForPublic(r);
 }
 
 function toggleReservaLlegada(id){

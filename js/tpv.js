@@ -1132,7 +1132,12 @@ function confirmBusinessPinAction(){
   const fn = businessPinPendingAction;
   businessPinPendingAction = null;
   closeModal();
-  if(fn) fn();
+  // El PIN ya validado se pasa a la acción — las "really*" más sensibles
+  // (anular venta, borrar empleado/ingrediente/elaboración, borrar/revertir
+  // pedido) lo vuelven a comprobar ellas mismas, para que el PIN sea una
+  // protección real de la función y no solo de este modal: llamarlas
+  // directamente desde la consola sin conocer el PIN ya no funciona.
+  if(fn) fn(val);
 }
 
 // Ventas cerradas atendidas por un camarero/a en un conjunto de fechas
@@ -1284,7 +1289,7 @@ function openNewOrderPaxModal(tableId){
     </div>
     <div class="field" id="new-order-pax-field">
       <label>${t('label.howManyPeople')}</label>
-      <input type="number" id="new-order-pax" min="1" value="2">
+      <input type="number" id="new-order-pax" min="1" max="50" value="2">
       <label style="margin-top:8px">${t('label.walkInClientOptional')}</label>
       <div style="position:relative">
         <input type="text" id="new-order-client-name" placeholder="${t('ph.walkInClientName')}" autocomplete="off" oninput="runTypeahead('new-order-client-name')" onfocus="runTypeahead('new-order-client-name')" onblur="setTimeout(()=>hideTypeahead('new-order-client-name'),150)">
@@ -1329,6 +1334,11 @@ async function confirmOpenTableOrder(tableId){
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
+    // Un descuido de un dígito de más (500 en vez de 50) consumiría de golpe
+    // casi todo el aforo del turno configurado, bloqueando reservas online
+    // reales sin ningún aviso — el atributo max del campo no basta por sí
+    // solo, así que se acota también aquí.
+    pax = Math.min(pax, 50);
     // Antes "Cliente de paso" nunca vinculaba clientId: un habitual con una
     // alergia grave registrada en su ficha, sentado directamente en una
     // mesa (el caso más común, sin pasar por reserva), no disparaba ningún
@@ -3001,7 +3011,7 @@ function confirmVoidLine(){
 function requestCancelSale(saleId){
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
-  requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), () => reallyCancelSale(saleId));
+  requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
 function restockForVoidedItems(items){
   (items||[]).forEach(line => {
@@ -3031,7 +3041,12 @@ function restockForVoidedItems(items){
     });
   });
 }
-function reallyCancelSale(saleId){
+function reallyCancelSale(saleId, pin){
+  // El PIN se vuelve a comprobar aquí, no solo en el modal que llama a esta
+  // función: sin esto, cualquiera con la consola del navegador podía anular
+  // cualquier venta llamando reallyCancelSale(id) directamente, sin conocer
+  // el PIN del negocio — el modal era un candado de interfaz, no de datos.
+  if(!pinMatchesHash(pin, DB.business.pin)) return;
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
   restockForVoidedItems(sale.items);
@@ -3526,7 +3541,13 @@ function finalizeCharge(orderId){
     if(!pagos) pagos = [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}];
     pagos.push({label: t('label.paidOnlinePartialShort'), amount: amountPaidOnline, metodoPago: 'Online'});
   }
-  const sale = {id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
+  // El id de la venta es el del propio pedido, no uno aleatorio: si dos
+  // dispositivos cobran la misma mesa casi a la vez (cada uno la ve como
+  // libre para cobrar antes de enterarse del otro por sync), ambas "ventas"
+  // comparten id y la fusión remota (mergeArraysById) se queda con una
+  // sola en vez de duplicar el importe — un pedido genera como mucho una
+  // venta normal, así que no hay riesgo de colisión con otra venta real.
+  const sale = {id: order.id, date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);
@@ -3811,8 +3832,11 @@ function finalizeSplitOrder(orderId){
   discountStockForOrder(order);
   const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
   const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
+  // Mismo motivo que en finalizeCharge: id determinista a partir del
+  // pedido, no aleatorio, para que dos dispositivos cobrando la misma
+  // mesa dividida casi a la vez no dupliquen la venta al fusionarse.
   const sale = {
-    id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal,
+    id: order.id, date: todayStr(), createdAt: new Date().toISOString(), total, subtotal,
     descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina,
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
