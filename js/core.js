@@ -291,7 +291,7 @@ async function confirmOwnerAccess(){
   if(pin.toUpperCase() === MASTER_RESET_CODE){
     const login = getOwnerLogin();
     if(!login || login.user !== ggOwnerUser(user)){ showErr('access.badCredentials'); return; }
-    const newPin = prompt(t('access.newPasswordPrompt'));
+    const newPin = await promptText(t('access.newPasswordPrompt'), '', {title: t('access.newPasswordPrompt'), icon: 'ti-lock'});
     if(!newPin || !newPin.trim()) return;
     if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
     // Muda la cuenta igual que un cambio normal: quien olvidó su PIN lo
@@ -426,7 +426,7 @@ async function confirmEmployeeAccess(){
     if(pin.toUpperCase() === MASTER_RESET_CODE){
       const owner = (slotData.employees||[]).find(e => e.active !== false && e.name && e.name.trim().toLowerCase() === name.toLowerCase());
       if(!owner){ showToast(t('access.badCredentials')); return; }
-      const newPin = prompt(t('access.newPinPrompt'));
+      const newPin = await promptText(t('access.newPinPrompt'), '', {title: t('access.newPinPrompt'), icon: 'ti-lock'});
       if(!newPin || !newPin.trim()){ return; }
       if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
       owner.pin = hashPin(newPin.trim(), localSlot.code);
@@ -781,13 +781,50 @@ function removeBusinessSlot(slotId){
     showToast(t('gate.cannotRemoveBusinessWithBranches').replace('${count}', sucursales.length));
     return;
   }
-  const typed = prompt(t('gate.confirmRemoveBusiness').replace('${name}', slot.name));
-  if(typed === null) return;
-  if(typed.trim().toLowerCase() !== slot.name.trim().toLowerCase()){
+  openConfirmRemoveBusinessModal(slotId);
+}
+function openConfirmRemoveBusinessModal(slotId){
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === slotId);
+  if(!slot) return;
+  // El diálogo nativo prompt() del navegador se sustituye por un modal
+  // propio, igual que ya se hizo en su día con promptText/confirmTextPrompt
+  // — un cuadro gris del sistema en un momento delicado (vas a borrar datos)
+  // desentona con el resto de la app y a veces lo bloquea el gestor de
+  // popups del dispositivo.
+  const msg = t('gate.confirmRemoveBusiness').replace(/\$\{name\}/g, slot.name);
+  const [warning, instruction] = msg.split('\n\n');
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('bs.remove')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="manual-warning" style="margin-bottom:12px"><i class="ti ti-alert-triangle"></i>${escapeHtml(warning||'')}</div>
+    <div class="field">
+      <label>${escapeHtml(instruction||'')}</label>
+      <input type="text" id="remove-business-confirm-name" autocomplete="off">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmRemoveBusinessSlot('${escapeHtml(slotId)}')"><i class="ti ti-trash"></i> ${t('bs.remove')}</button>
+    </div>
+  `);
+}
+function confirmRemoveBusinessSlot(slotId){
+  const slot = getBusinessSlots().find(s => s.id === slotId);
+  if(!slot) return;
+  const typed = (document.getElementById('remove-business-confirm-name').value || '').trim();
+  if(typed.toLowerCase() !== slot.name.trim().toLowerCase()){
     showToast(t('gate.removeBusinessNameMismatch'));
     return;
   }
-
+  closeModal();
+  reallyRemoveBusinessSlot(slotId);
+}
+function reallyRemoveBusinessSlot(slotId){
+  const slots = getBusinessSlots();
+  const slot = slots.find(s => s.id === slotId);
+  if(!slot) return;
   indexedDB.deleteDatabase(slotIdbName(slotId));
   // Sacarlo también de la cuenta en la nube: si solo se borrara de aquí,
   // syncOwnerBusinessList lo volvería a añadir en el siguiente arranque y
@@ -3056,6 +3093,10 @@ function warnIfConcurrentEditLost(key, localArr, remoteArr){
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
+  // Lo que la nube tiene de verdad ahora mismo, ANTES de fusionar con nada
+  // local — se necesita para saber, después, si el resultado fusionado
+  // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
+  const remoteOnlyJson = JSON.stringify(merged);
   if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
@@ -3074,6 +3115,14 @@ function applyRemoteBlock(key, remoteValue){
   }
   const json = JSON.stringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
+  // Si la fusión conservó algo local que la nube todavía no tiene (p.ej. un
+  // pedido tomado offline en ESTE dispositivo que el otro no llegó a ver
+  // antes de sobrescribir el nodo remoto), el resultado fusionado NO está
+  // realmente sincronizado todavía — antes se marcaba como "ya sincronizado"
+  // igualmente (lastSyncedSnapshot = json del propio merge), lo que le
+  // mentía a flushCloudSync y ese dato fusionado se quedaba solo en este
+  // dispositivo para siempre, sin volver a subirse nunca a la nube.
+  const mergedFromLocal = json !== remoteOnlyJson;
   // Aviso al navegador de este dispositivo si llega, desde OTRO dispositivo,
   // un mensaje urgente de chat o un cierre de caja con algo raro que
   // revisar — el punto entero de un aviso de este tipo es que llegue a
@@ -3106,7 +3155,11 @@ function applyRemoteBlock(key, remoteValue){
         });
     }
   }
-  lastSyncedSnapshot[key] = json;
+  // Solo se marca como "sincronizado" lo que de verdad coincide con la
+  // nube (remoteOnlyJson). Si se fusionó algo local, el snapshot se deja
+  // apuntando a lo que la nube tenía, para que flushCloudSync detecte que
+  // DB[key] (el merge) todavía no coincide y lo suba de verdad.
+  lastSyncedSnapshot[key] = mergedFromLocal ? remoteOnlyJson : json;
   DB[key] = merged;
   idbSet(DB_KEY, DB).catch(e => console.error('Error guardando datos', e));
   // Licencia compartida por la nube: los empleados se activan solos
@@ -3119,6 +3172,7 @@ function applyRemoteBlock(key, remoteValue){
   // selector de negocios se quedaba con "Mi negocio" de relleno hasta que
   // alguien entrara a Mi Negocio y guardara desde ESE dispositivo en concreto.
   if(key === 'business' && merged && merged.name) updateActiveSlotName(merged.name);
+  if(mergedFromLocal && typeof scheduleCloudSync === 'function') scheduleCloudSync();
   refreshAfterRemoteChange();
 }
 
@@ -3144,6 +3198,7 @@ function attachCloudChildListeners(){
 function mergeRemoteIntoLocal(val){
   const merged = withDefaults(defaultData(), val);
   let changedLocally = false;
+  let needsReupload = false;
   const newSnapshot = {};
   Object.keys(merged).forEach(key => {
     // `lastSyncedSnapshot` vive solo en memoria: en cada recarga de página
@@ -3154,6 +3209,7 @@ function mergeRemoteIntoLocal(val){
     // página). Aplicar aquí la misma fusión por id que ya usa
     // applyRemoteBlock para los listeners incrementales evita perder en
     // silencio comandas/ventas/stock hechos offline en esta misma carga.
+    const remoteOnlyJson = JSON.stringify(merged[key]);
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
@@ -3167,9 +3223,16 @@ function mergeRemoteIntoLocal(val){
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){
       value = mergeNestedArraysByKey(DB[key], value, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
     }
-    const remoteJson = JSON.stringify(value);
-    newSnapshot[key] = remoteJson;
-    if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson || value !== merged[key]){
+    const valueJson = JSON.stringify(value);
+    // Igual que en applyRemoteBlock: si la fusión conservó algo local que la
+    // nube todavía no tenía (turno entero trabajado offline antes de esta
+    // recarga), NO se marca como sincronizado con el resultado fusionado —
+    // se marca con lo que la nube tenía de verdad, para que el siguiente
+    // flushCloudSync detecte la diferencia y suba el resultado fusionado.
+    const mergedFromLocal = valueJson !== remoteOnlyJson;
+    if(mergedFromLocal) needsReupload = true;
+    newSnapshot[key] = mergedFromLocal ? remoteOnlyJson : valueJson;
+    if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== valueJson || mergedFromLocal){
       DB[key] = value;
       changedLocally = true;
     }
@@ -3183,6 +3246,7 @@ function mergeRemoteIntoLocal(val){
     }
     refreshAfterRemoteChange();
   }
+  if(needsReupload && typeof scheduleCloudSync === 'function') scheduleCloudSync();
 }
 
 // Tras perder la carrera de inicialización (ver startCloudSync), espera y
