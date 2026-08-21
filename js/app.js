@@ -2006,6 +2006,7 @@ function openClientModal(id){
     </label>
     ${id ? `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="openClientHistoryModal(${id})"><i class="ti ti-receipt"></i> ${t('btn.viewOrderHistory')}</button>
+      <button class="btn btn-sm" onclick="openMergeClientModal(${id})"><i class="ti ti-git-merge"></i> ${t('btn.mergeClient')}</button>
       <button class="btn btn-sm btn-danger" onclick="eraseClientDataRGPD(${id})" title="${t('rgpd.eraseHint')}"><i class="ti ti-shield-off"></i> ${t('title.eraseClientRGPD')}</button>
     </div>` : ''}
     ${(c.rewardsHistory&&c.rewardsHistory.length) ? `
@@ -2020,6 +2021,74 @@ function openClientModal(id){
       <button class="btn btn-primary" onclick="saveClient(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
+}
+
+// Fusionar dos fichas de cliente duplicadas: saveClient() ya avisa si el
+// teléfono/email coincide con otro cliente, pero deja seguir y crea una
+// ficha nueva de todas formas — sin esto no había ninguna forma de arreglar
+// después esos duplicados, cada uno se quedaba con sus puntos/historial por
+// separado para siempre.
+function openMergeClientModal(id){
+  const c = DB.clients.find(x=>x.id===id);
+  if(!c) return;
+  const others = DB.clients.filter(x=>x.id!==id);
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-git-merge"></i> ${t('btn.mergeClient')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('merge.desc').replace('${name}', escapeHtml(c.name))}</p>
+    <div class="field">
+      <label>${t('merge.pickDuplicate')}</label>
+      <input type="text" id="merge-client-search" list="merge-client-list" placeholder="${t('ph.clientName')}" autocomplete="off">
+      <datalist id="merge-client-list">
+        ${others.map(o => `<option value="${escapeHtml(o.name)}">`).join('')}
+      </datalist>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openClientModal(${id})">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmMergeClient(${id})"><i class="ti ti-git-merge"></i> ${t('btn.mergeClient')}</button>
+    </div>
+  `);
+}
+function confirmMergeClient(targetId){
+  const target = DB.clients.find(x=>x.id===targetId);
+  const typed = (document.getElementById('merge-client-search').value||'').trim().toLowerCase();
+  const source = DB.clients.find(x=>x.id!==targetId && x.name.trim().toLowerCase()===typed);
+  if(!target || !source){ showToast(t('merge.notFound')); return; }
+  if(!confirm(t('merge.confirm').replace('${source}', source.name).replace('${target}', target.name))) return;
+  mergeClients(source.id, target.id);
+  closeModal();
+  showToast(t('merge.ok').replace('${target}', target.name));
+  renderClientes();
+}
+function mergeClients(sourceId, targetId){
+  const source = DB.clients.find(x=>x.id===sourceId);
+  const target = DB.clients.find(x=>x.id===targetId);
+  if(!source || !target) return;
+  // Puntos: se suman y se limitan igual que registerClientVisit (0-10) —
+  // si la suma ya daba para premio, el propietario lo verá y podrá canjearlo
+  // desde la ficha fusionada con normalidad.
+  target.points = Math.min(10, (target.points||0) + (source.points||0));
+  target.rewardsHistory = [...(target.rewardsHistory||[]), ...(source.rewardsHistory||[])]
+    .sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
+  // No se pisa ningún dato del destino: solo se rellena lo que le faltara,
+  // para no perder por accidente una alergia o nota ya anotada en el que se
+  // conserva.
+  if(!target.allergies && source.allergies) target.allergies = source.allergies;
+  if(!target.email && source.email) target.email = source.email;
+  if(!target.cp && source.cp) target.cp = source.cp;
+  if(!target.cumpleanos && source.cumpleanos) target.cumpleanos = source.cumpleanos;
+  if(source.notes){
+    target.notes = target.notes ? `${target.notes}\n${source.notes}` : source.notes;
+  }
+  (DB.sales||[]).forEach(s => { if(s.clientId===sourceId) s.clientId = targetId; });
+  (DB.reservations||[]).forEach(r => { if(r.clientId===sourceId) r.clientId = targetId; });
+  (DB.tpvOrders||[]).forEach(o => { if(o.clientId===sourceId) o.clientId = targetId; });
+  DB.clients = DB.clients.filter(x=>x.id!==sourceId);
+  moveToTrash('client', source);
+  logAudit('merge', t('audit.mergedClients').replace('${source}', source.name).replace('${target}', target.name), 'critical');
+  saveDB();
 }
 
 function saveClient(id){

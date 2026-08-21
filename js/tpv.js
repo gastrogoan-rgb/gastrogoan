@@ -4093,7 +4093,7 @@ function openTodaySalesModal(){
             <td>${fmtMoney(s.total)}</td>
             <td class="owner-strict" style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmtMoney(margin)}</td>
             <td>${escapeHtml(paymentMethodTpvLabel(s.metodoPago))}</td>
-            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}))"><i class="ti ti-printer"></i></button>${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id})))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
+            <td><button class="btn btn-sm btn-icon" title="${t('btn.reprintTicket')}" onclick="printTicket(DB.sales.find(x=>x.id===${s.id}),{duplicado:true})"><i class="ti ti-printer"></i></button>${thermalPrintingSupported() ? `<button class="btn btn-sm btn-icon" title="${t('thermal.hint')}" onclick="printToThermalPrinter(buildTicketText(DB.sales.find(x=>x.id===${s.id}),{duplicado:true}))"><i class="ti ti-device-usb"></i></button>` : ''}</td>
           </tr>`;
         }).join('') : `<tr><td colspan="6"><div class="empty" style="padding:14px">${t('empty.noSalesToday')}</div></td></tr>`}</tbody>
       </table>
@@ -4484,6 +4484,7 @@ function buildTicketHeaderLines(){
 function buildTicketText(sale, opts={}){
   const tc = (DB.business && DB.business.ticket) || {};
   const lines = [...buildTicketHeaderLines()];
+  if(opts.duplicado) lines.push(t('ticket.duplicateLabel'));
   if(opts.factura) lines.push(t('ticket.invoiceNumber') + ' ' + sale.facturaNum);
   lines.push(sale.date);
   lines.push(`${sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway')}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
@@ -4595,6 +4596,7 @@ function buildTicketHtml(sale, opts={}){
     <div style="width:300px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#111">
       ${logoHtml}
       <div style="text-align:center;font-weight:700;font-size:16px">${escapeHtml(b.name || 'GastroGoan')}</div>
+      ${opts.duplicado ? `<div style="text-align:center;font-size:12px;font-weight:700;color:#B8860B;letter-spacing:1px;margin-top:2px">${t('ticket.duplicateLabel')}</div>` : ''}
       ${metaLines.length ? `<div style="text-align:center;font-size:11px;color:#666;line-height:1.5;margin-top:2px">${metaLines.join('<br>')}</div>` : ''}
       ${opts.factura ? `<div style="text-align:center;font-size:12px;font-weight:700;margin-top:8px">${t('ticket.invoiceNumber')} ${escapeHtml(sale.facturaNum||'')}</div>` : ''}
       <div style="border-top:1px dashed #bbb;margin:10px 0"></div>
@@ -4643,13 +4645,18 @@ function printTicket(sale, opts={}){
 function printInvoice(saleId){
   const sale = DB.sales.find(s => s.id === saleId);
   if(!sale) return;
+  // Si ya tenía número de factura ANTES de entrar aquí, esto es una
+  // reimpresión de una factura ya emitida — se marca como tal para que no
+  // se pueda confundir con el original (mismo número, misma pinta, entregado
+  // dos veces sin ninguna marca visible de que la segunda es una copia).
+  const yaEmitida = !!sale.facturaNum;
   if(!sale.facturaNum){
     DB.business.facturaCounter = (DB.business.facturaCounter||0) + 1;
     const year = (sale.date || todayStr()).slice(0,4);
     sale.facturaNum = `${year}-${String(DB.business.facturaCounter).padStart(5,'0')}`;
     saveDB();
   }
-  printTicket(sale, {factura:true});
+  printTicket(sale, {factura:true, duplicado: yaEmitida});
 }
 
 // Abre el cliente de correo del usuario con el ticket en el cuerpo del mensaje.
@@ -4662,7 +4669,14 @@ function sendTicketByEmail(saleId){
   const subject = t('ticket.emailSubject').replace('${biz}', DB.business.name || 'GastroGoan');
   const body = buildTicketText(sale);
   window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  showToast(t('msg.openingEmail'));
+  // mailto: no tiene un límite oficial, pero muchos gestores de correo/SO
+  // truncan el cuerpo en algún punto entre 1500-2000 caracteres — con un
+  // ticket largo (mesa con muchas líneas + desglose de IVA + pie + reseña)
+  // el cliente podía recibir un email cortado a medias sin que nadie se
+  // enterara. showToast solo muestra un aviso a la vez (el segundo pisa al
+  // primero), así que se combina en un único mensaje en vez de avisar y
+  // acto seguido taparlo con "Abriendo cliente de correo...".
+  showToast(body.length > 1500 ? t('msg.emailTicketMightTruncate') : t('msg.openingEmail'));
 }
 
 // Tras registrar un cobro, deja elegir qué hacer con el ticket.
