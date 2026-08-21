@@ -678,7 +678,15 @@ function renderMesaCard(table){
   const order = getOpenOrderForTable(table.id);
   const total = order ? orderTotal(order) : 0;
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
-  const displayName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
+  const baseName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
+  // Si esta mesa absorbió otra al fusionarse (ver confirmMergeMesa/
+  // confirmMergeTable), se muestra "Mesa 3 + Mesa 4" en el propio plano de
+  // sala, no solo dentro de la comanda — antes la mesa fusionada
+  // desaparecía del plano sin dejar ningún indicio de dónde estaba sentada
+  // esa gente.
+  const displayName = order && order.mergedTableNames && order.mergedTableNames.length
+    ? `${baseName} + ${order.mergedTableNames.join(' + ')}`
+    : baseName;
 
   // Tiempo que lleva abierta la mesa, para detectar mesas "atascadas" de un
   // vistazo (normal en gris, aviso a partir de 60 min, urgente a partir de 120).
@@ -1666,7 +1674,7 @@ function renderTableOrderModal(orderId){
   // este camarero la tenía abierta) — cerrar en vez de romper con un error.
   if(!order){ closeModal(); renderTPV(); return; }
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  const titleText = table ? `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
+  const titleText = table ? `${orderTableDisplayName(order, table)}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`
     : `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
   const reservaBadge = order.reservationId ? ` <span class="badge badge-blue"><i class="ti ti-calendar-event"></i> ${t('label.reservationShort')}</span>` : '';
   const pagadoBadge = order.pagado ? ` <span class="badge badge-green"><i class="ti ti-credit-card"></i> ${t('label.paidOnline')}${order.pagoImporte!=null ? ' ('+fmtMoney(order.pagoImporte)+')' : ''}</span>` : '';
@@ -1853,7 +1861,6 @@ function renderTandaGroupCard(order, g, isMenu){
   const porRecoger = listos.filter(({line}) => !line.recogidoAt);
   const allPicked = foodInGroup.length > 0 && listos.length === foodInGroup.length && !porRecoger.length;
   let statusBadge = '';
-  let btnRecoger = '';
   if(isPureBebidaGroup){
     const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
     const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
@@ -1866,10 +1873,6 @@ function renderTandaGroupCard(order, g, isMenu){
     else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
     else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
     else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
-    // El botón solo aparece cuando de verdad hay algo esperando en el pase.
-    btnRecoger = porRecoger.length
-      ? `<button class="btn btn-sm" style="background:var(--olive);color:#fff;border-color:var(--olive);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcarTandaRecogida(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-hand-grab"></i> ${t('btn.markPickedUp')}</button>`
-      : '';
   }
 
   return `
@@ -1878,7 +1881,6 @@ function renderTandaGroupCard(order, g, isMenu){
       <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
-        ${btnRecoger}
         ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11px;padding:4px 8px;min-height:auto" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
@@ -2004,6 +2006,11 @@ function confirmMergeMesa(fromOrderId, toTableId){
     return;
   }
   const fromTable = DB.tables.find(t2 => t2.id === fromOrder.tableId);
+  // Antes, tras unir, la mesa origen desaparecía sin dejar rastro de que
+  // sus pedidos vinieran de ahí — parecía que todo era "de" la mesa
+  // destino. Se guarda el nombre de la mesa que se suma, para poder
+  // mostrar "Mesa 3 + Mesa 4" en vez de perder esa identidad.
+  toOrder.mergedTableNames = [...(toOrder.mergedTableNames||[]), ...(fromTable?[fromTable.name]:[]), ...(fromOrder.mergedTableNames||[])];
   toOrder.items = [...(toOrder.items||[]), ...(fromOrder.items||[])];
   toOrder.tandas = [...new Set([...(toOrder.tandas||[]), ...(fromOrder.tandas||[])])];
   toOrder.pax = (toOrder.pax||0) + (fromOrder.pax||0);
@@ -2312,9 +2319,17 @@ function setLineEstado(orderId, idx, estado){
   });
 }
 
+// Nombre a mostrar de la mesa de una comanda, con las mesas fusionadas a
+// continuación ("Mesa 3 + Mesa 4") en vez de mostrar solo la mesa destino
+// como si el pedido de la mesa origen nunca hubiera existido.
+function orderTableDisplayName(order, table){
+  if(!table) return '';
+  const extra = order.mergedTableNames||[];
+  return extra.length ? `${table.name} + ${extra.join(' + ')}` : table.name;
+}
 function comandaOrderTitle(order){
   const table = order.tableId ? DB.tables.find(t => t.id === order.tableId) : null;
-  if(table) return `${table.name}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}`;
+  if(table) return `${orderTableDisplayName(order, table)}${order.pax ? ` · ${order.pax} ${t('common.persAbbr')}` : ''}`;
   return `${togoOrderLabel(order)}${order.clienteNombre ? ' — '+order.clienteNombre : ''}`;
 }
 // Quién atiende la mesa, visible también en Comandas Cocina — así en cocina
@@ -2374,29 +2389,6 @@ function markLineRecogida(orderId, idx){
     const overlay = document.getElementById('modal-overlay');
     if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
   });
-}
-
-/* Sala confirma que ha recogido del pase los platos de una tanda que cocina
-   ya ha terminado. Es un dato aparte del estado de cocina (recogidoAt en vez
-   de un cuarto valor de `estado`) a propósito: `estado === 'entregado'`
-   significa "cocina ha terminado" en casi cincuenta sitios de la app -cierre
-   de comanda, cobro, informes, KDS- y meter un valor nuevo obligaría a
-   revisarlos todos para que siguieran contando como terminados. */
-function marcarTandaRecogida(orderId, tanda, isMenu){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order) return;
-  const ahora = new Date().toISOString();
-  let cambiadas = 0;
-  (order.items||[]).forEach(line => {
-    if((line.tanda||'') !== tanda) return;
-    if(!!line.menuId !== !!isMenu) return; // carta y menú se recogen por separado
-    if(line.estado === 'entregado' && !line.recogidoAt){ line.recogidoAt = ahora; cambiadas++; }
-  });
-  if(!cambiadas) return;
-  saveDB();
-  if(typeof flushCloudSync === 'function') flushCloudSync();
-  withScrollPreserved(() => renderTPV());
-  showToast(t('msg.tandaPickedUp').replace('${n}', cambiadas));
 }
 
 // Click sobre el nombre de un grupo (tanda) en cocina: avanza el estado de todos sus platos a la vez
@@ -4067,6 +4059,11 @@ function confirmMergeTable(orderId){
     return;
   }
   if(!confirm(t('msg.confirmMergeTables'))) return;
+  // Igual que en confirmMergeMesa: se guarda el nombre de la mesa que se
+  // suma, para poder mostrar "Mesa 3 + Mesa 4" en vez de perder esa
+  // identidad tras la fusión.
+  const fromTableForMerge = DB.tables.find(t2 => t2.id === order.tableId);
+  targetOrder.mergedTableNames = [...(targetOrder.mergedTableNames||[]), ...(fromTableForMerge?[fromTableForMerge.name]:[]), ...(order.mergedTableNames||[])];
   targetOrder.items.push(...order.items);
   targetOrder.tandas = [...new Set([...(targetOrder.tandas||[]), ...(order.tandas||[])])];
   targetOrder.pax = (targetOrder.pax||0) + (order.pax||0);
