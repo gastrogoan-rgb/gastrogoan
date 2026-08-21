@@ -122,7 +122,7 @@ const GE = (function(){
   function variablesMes(mes, año=currentYear()){ return variables().filter(v=>parseInt(v.mes)===mes && parseInt(v.año)===año); }
   function facturacionMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
+    return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+parseFloat(v.total||0),0);
   }
   // % de IVA de reserva por defecto (Ajustes > Facturación, 10% si no se ha
   // tocado) — solo se usa como último recurso para líneas de venta que no
@@ -143,7 +143,7 @@ const GE = (function(){
     const groups = {};
     let sinAsignar = 0;
     const fallbackRate = ivaVentasPct();
-    DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
+    activeSales().filter(v=>(v.date||'').startsWith(mesStr)).forEach(sale => {
       const descPct = parseFloat(sale.descuentoPct)||0;
       (sale.items||[]).forEach(line => {
         const grossLine = (parseFloat(line.price)||0) * (parseFloat(line.qty)||0) * (1 - descPct/100);
@@ -215,7 +215,7 @@ const GE = (function(){
   }
   function ivaSoportadoComisionesMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+(parseFloat(v.comisionPlataforma||0) - comisionPlataformaNeta(v)),0);
+    return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+(parseFloat(v.comisionPlataforma||0) - comisionPlataformaNeta(v)),0);
   }
   // IVA neto a liquidar con Hacienda (modelo 303): repercutido en ventas menos soportado en compras e inversiones.
   // Si es negativo, Hacienda te lo debe a ti (a tu favor).
@@ -227,7 +227,7 @@ const GE = (function(){
   // como el resto de gastos de esta hoja.
   function comisionesMes(mes, año=currentYear()){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    return DB.sales.filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+comisionPlataformaNeta(v),0);
+    return activeSales().filter(v=>(v.date||'').startsWith(mesStr)).reduce((s,v)=>s+comisionPlataformaNeta(v),0);
   }
   // Cuota mensual de inversiones CAPEX financiadas a plazos, mientras dure el pago.
   function capexCuotaMes(mes, año=currentYear()){
@@ -859,7 +859,7 @@ const GE = (function(){
     const today = new Date();
     const start = dateStr(new Date(today.getTime() - 29*86400000));
     const end = todayStr();
-    const sales = DB.sales.filter(s=>s.date>=start && s.date<=end);
+    const sales = activeSales().filter(s=>s.date>=start && s.date<=end);
     if(!sales.length){ showToast(t('hr.pe.noRecentSalesData')); return; }
     const total = sales.reduce((s,x)=>s+parseFloat(x.total||0),0);
     const avgTicket = total/sales.length;
@@ -1421,7 +1421,7 @@ const GE = (function(){
 
   function platosStats(){
     const {start, end} = getPlatosRange();
-    const sales = DB.sales.filter(s => s.date >= start && s.date <= end);
+    const sales = activeSales().filter(s => s.date >= start && s.date <= end);
     const map = {};
     // El coste se suma línea a línea con costoUnitarioDeLinea (el coste
     // estampado en el momento de esa venta concreta, o recalculado en vivo
@@ -1653,7 +1653,7 @@ const GE = (function(){
     const b = DB.business || {};
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
 
-    const ventas = DB.sales.filter(v => (v.date||'').startsWith(mesStr)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const ventas = activeSales().filter(v => (v.date||'').startsWith(mesStr)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
     const rows = [];
     rows.push([t('hr.csv.reportTitle')]);
@@ -2558,7 +2558,7 @@ function renderHorariosPersonal(){
   if(isSala){
     const now = new Date();
     const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const salesThisMonth = DB.sales.filter(s => s.date >= monthStart && s.camareroId);
+    const salesThisMonth = activeSales().filter(s => s.date >= monthStart && s.camareroId);
     const byWaiter = {};
     salesThisMonth.forEach(s => {
       const id = String(s.camareroId);
@@ -3520,8 +3520,13 @@ function saveEditedFichaje(fichajeId){
   const salidaVal = document.getElementById('edit-fichaje-salida').value;
   if(!entradaVal || !salidaVal){ showToast(t('msg.indicateBothTimes')); return; }
   const entradaDate = new Date(`${f.fecha}T${entradaVal}:00`);
-  const salidaDate = new Date(`${f.fecha}T${salidaVal}:00`);
-  if(salidaDate <= entradaDate){ showToast(t('msg.exitAfterEntry')); return; }
+  let salidaDate = new Date(`${f.fecha}T${salidaVal}:00`);
+  // Turno de noche (entrada 23:00, salida 06:00): si la hora de salida es
+  // menor o igual que la de entrada, se asume que fue al día siguiente, igual
+  // que ya hace hoursBetween() al fichar en tiempo real — si no, un fichaje
+  // real de este tipo nunca se podría corregir desde aquí (siempre "la
+  // salida debe ser posterior a la entrada").
+  if(salidaDate <= entradaDate) salidaDate = new Date(salidaDate.getTime() + 24*60*60*1000);
   f.entrada = entradaDate.toISOString();
   f.salida = salidaDate.toISOString();
   saveDB();

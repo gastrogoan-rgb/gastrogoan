@@ -1973,16 +1973,44 @@ function confirmMergeMesa(fromOrderId, toTableId){
   const fromOrder = DB.tpvOrders.find(o => o.id === fromOrderId);
   const toOrder = getOpenOrderForTable(toTableId);
   if(!fromOrder || !toOrder){ closeModal(); return; }
+  // Si cualquiera de las dos mesas tiene una división de cuenta con partes ya
+  // cobradas, no se fusiona: esos platos ya pagados por algún comensal
+  // volverían a aparecer en la mesa destino y se le cobrarían dos veces
+  // (mismo bloqueo que ya usa confirmMergeTable, la otra vía de unir mesas).
+  const hasPaidSplit = o => o.splitPayments && o.splitPayments.some(p => p.paid);
+  if(hasPaidSplit(fromOrder) || hasPaidSplit(toOrder)){
+    showToast(t('msg.cannotMergeSplitPaid'));
+    closeModal();
+    return;
+  }
   const fromTable = DB.tables.find(t2 => t2.id === fromOrder.tableId);
   toOrder.items = [...(toOrder.items||[]), ...(fromOrder.items||[])];
+  toOrder.tandas = [...new Set([...(toOrder.tandas||[]), ...(fromOrder.tandas||[])])];
   toOrder.pax = (toOrder.pax||0) + (fromOrder.pax||0);
+  if(!toOrder.camareroId && fromOrder.camareroId) toOrder.camareroId = fromOrder.camareroId;
+  toOrder.propina = (toOrder.propina||0) + (fromOrder.propina||0);
   if(fromOrder.tableAllergens){
     toOrder.tableAllergens = [toOrder.tableAllergens, fromOrder.tableAllergens].filter(Boolean).join(' · ');
   }
-  fromOrder.status = 'pagada'; // libera la mesa origen sin generar una venta (0 items, no queda ticket fantasma)
-  fromOrder.mergedInto = toOrder.id;
+  // Un descuento ya autorizado en la mesa que desaparece no debe perderse en
+  // silencio: si la mesa destino no tiene uno propio, se traspasa entero.
+  if(fromOrder.descuentoPct){
+    if(!toOrder.descuentoPct){
+      toOrder.descuentoPct = fromOrder.descuentoPct;
+      toOrder.descuentoMotivo = fromOrder.descuentoMotivo;
+      toOrder.descuentoResponsableId = fromOrder.descuentoResponsableId;
+      toOrder.descuentoResponsableNombre = fromOrder.descuentoResponsableNombre;
+    } else {
+      showToast(t('msg.mergeDiscountConflict'));
+    }
+  }
+  // Se elimina del todo (no se deja con items vaciados a mano ni marcada
+  // 'pagada' con items dentro): así ningún informe/exportación que itere
+  // DB.tpvOrders sin filtrar por status puede contarla de más.
+  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== fromOrder.id);
   logAudit('merge', t('audit.mergedTables').replace('${from}', fromTable?fromTable.name:'?').replace('${to}', DB.tables.find(t2=>t2.id===toTableId)?.name||'?'));
   saveDB();
+  if(typeof flushCloudSync === 'function') flushCloudSync();
   closeModal();
   renderTPV();
   showToast(t('tpv.merge.ok'));

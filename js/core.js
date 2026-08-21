@@ -619,12 +619,17 @@ async function confirmBusinessLicensePrompt(){
 async function addNewBusiness(){
   const lic = await promptBusinessLicense();
   if(!lic) return;
+  // Antes se guardaba siempre con el nombre literal "Nuevo negocio": si el
+  // propietario daba de alta varios locales seguidos sin entrar a renombrarlos,
+  // el selector mostraba varias filas idénticas e indistinguibles entre sí.
+  const nombre = await promptText(t('gate.newBusinessNamePrompt'), t('gate.newBusinessDefaultName'), {title: t('btn.newIndependent'), icon: 'ti-building-store'});
+  const name = (nombre || '').trim() || t('gate.newBusinessDefaultName');
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
-  slots.push({ id, name: 'Nuevo negocio', code: lic.code });
+  slots.push({ id, name, code: lic.code });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(id), JSON.stringify(lic));
-  linkBusinessToOwnerAccount(lic.tenantId, lic.code, 'Nuevo negocio');
+  linkBusinessToOwnerAccount(lic.tenantId, lic.code, name);
   switchToBusiness(id);
 }
 
@@ -3069,10 +3074,22 @@ function mergeRemoteIntoLocal(val){
   let changedLocally = false;
   const newSnapshot = {};
   Object.keys(merged).forEach(key => {
-    const remoteJson = JSON.stringify(merged[key]);
+    // `lastSyncedSnapshot` vive solo en memoria: en cada recarga de página
+    // empieza en null, así que sin esto TODA clave se trataba como "sin
+    // sincronizar" y se sustituía entera por lo que hubiera en la nube —
+    // incluso si lo local era más nuevo (p.ej. un turno entero trabajado
+    // offline que aún no había llegado a subirse cuando se recargó la
+    // página). Aplicar aquí la misma fusión por id que ya usa
+    // applyRemoteBlock para los listeners incrementales evita perder en
+    // silencio comandas/ventas/stock hechos offline en esta misma carga.
+    let value = merged[key];
+    if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
+      value = mergeArraysById(DB[key], value);
+    }
+    const remoteJson = JSON.stringify(value);
     newSnapshot[key] = remoteJson;
-    if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson){
-      DB[key] = merged[key];
+    if(!lastSyncedSnapshot || lastSyncedSnapshot[key] !== remoteJson || value !== merged[key]){
+      DB[key] = value;
       changedLocally = true;
     }
   });
