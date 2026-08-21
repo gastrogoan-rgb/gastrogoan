@@ -122,6 +122,11 @@
           ".write": "auth != null && $code.length == 8 && (!data.exists() || auth.token.email === 'gastrogoan@gmail.com')",
           ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 40"
         }
+      },
+
+      "adminSalesLog": {
+        ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+        ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
       }
     }
   }

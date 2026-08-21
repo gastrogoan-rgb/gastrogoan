@@ -112,7 +112,7 @@ td.key{font-family:monospace;font-size:11px}
 
   <div class="card">
     <h2>4 · Registro de ventas <span class="muted" id="count"></span></h2>
-    <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente (se guarda en este navegador).</p>
+    <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente. Con la sesión de administrador iniciada (botón de arriba), se sincroniza también con tus otros dispositivos.</p>
     <table id="log-table" style="display:none">
       <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>PIN</th><th></th></tr></thead>
       <tbody id="log"></tbody>
@@ -124,7 +124,7 @@ td.key{font-family:monospace;font-size:11px}
   </div>
 
   <div class="warn">
-    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar códigos válidos. El registro de ventas vive en este navegador: si cambias de ordenador, descarga el CSV antes.
+    ⚠️ <strong>Guarda este archivo a buen recaudo</strong> (y una copia de seguridad). Quien lo tenga puede generar códigos válidos. El registro de ventas se guarda en este navegador y, con la sesión de administrador iniciada, también en la nube de la plataforma — así que si pierdes o rompes el dispositivo, no lo pierdes: solo tienes que abrir este archivo en otro sitio e iniciar sesión de administrador para recuperarlo entero.
   </div>
 </div>
 
@@ -158,6 +158,13 @@ function ggRandomChars(n){
   return out;
 }
 function generateBizCode(){ return ggRandomChars(8); }
+// Id estable por entrada del registro de ventas, para poder fusionarlo
+// entre dispositivos (ver syncSalesWithCloud) sin duplicar ni depender del
+// índice del array, que cambia según el orden en que llegue cada uno.
+function genUuid(){
+  if(crypto.randomUUID) return crypto.randomUUID();
+  return ggRandomChars(10) + Date.now().toString(36);
+}
 
 /* ============================================================
    CUENTAS DE PROPIETARIO — usuario + PIN
@@ -307,6 +314,7 @@ async function ensureAdminLogin(){
     if(app.auth().currentUser && app.auth().currentUser.email){
       platformAuthPromise = Promise.resolve(app);
       if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada (' + app.auth().currentUser.email + ').';
+      await syncSalesWithCloud();
       return;
     }
     if(app.auth().currentUser && !app.auth().currentUser.email){
@@ -319,6 +327,7 @@ async function ensureAdminLogin(){
     await app.auth().signInWithEmailAndPassword(email, password);
     platformAuthPromise = Promise.resolve(app);
     if(statusEl) statusEl.textContent = '✅ Sesión de administrador iniciada.';
+    await syncSalesWithCloud();
   }catch(e){
     console.error('Error iniciando sesión de administrador', e);
     if(statusEl) statusEl.textContent = '⚠️ No se pudo iniciar sesión de administrador (' + (e.message||e.code||'error') + '). Los códigos se generarán sin registrar en la plataforma.';
@@ -499,9 +508,7 @@ async function resetOwnerPin(){
       (codigos.length ? '\n\nTus códigos: ' + codigos.join(', ') : '');
     document.getElementById('reset-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
     document.getElementById('reset-email').href = 'mailto:?subject=' + encodeURIComponent('Tu nuevo PIN de GastroGoan') + '&body=' + encodeURIComponent(msg);
-    sales.unshift({ date: new Date().toISOString().slice(0,10), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
-    saveSales();
-    renderLog();
+    await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: '(PIN restablecido)', kind: 'cuenta', value: user, pin, owner: user });
   }catch(e){
     console.error('Error restableciendo el PIN', e);
     el.textContent = '⚠️ No se pudo restablecer (' + (e.message || e.code || 'error') + ').';
@@ -525,6 +532,71 @@ if(!sales.length){
     }
   }catch(e){}
 }
+// Entradas de antes de que existiera la sincronización (o creadas sin
+// conexión) no tienen id: se les asigna uno aquí para que la próxima
+// sincronización las pueda subir a la nube igual que las nuevas.
+if(sales.some(s => !s.id)){ sales.forEach(s => { if(!s.id) s.id = genUuid(); }); saveSales(); }
+
+/* ============================================================
+   SINCRONIZAR EL REGISTRO DE VENTAS ENTRE TUS DISPOSITIVOS
+   Antes vivía solo en el localStorage de cada navegador: si perdías o
+   rompías el dispositivo, se perdía también el registro (el propio aviso
+   de abajo lo decía). Ahora, con la sesión de administrador iniciada
+   (la misma que ya hace falta para emitir códigos "de verdad"), cada
+   entrada se guarda TAMBIÉN en gastrogoan/adminSalesLog — un nodo privado
+   de la plataforma, protegido en las reglas de Firebase para que solo tu
+   email de admin (gastrogoan@gmail.com) pueda leerlo o escribirlo. El
+   localStorage de cada dispositivo sigue siendo la copia de trabajo (y el
+   respaldo si abres el generador sin conexión); la nube es la copia que
+   sobrevive aunque pierdas el dispositivo.
+   ============================================================ */
+async function pushSaleEntry(entry){
+  entry.id = entry.id || genUuid();
+  sales.unshift(entry);
+  saveSales();
+  renderLog();
+  const app = await getPlatformFirebaseApp();
+  if(app && app.auth().currentUser && app.auth().currentUser.email){
+    try{
+      await app.database().ref('gastrogoan/adminSalesLog/' + entry.id).set({
+        date: entry.date, name: entry.name, kind: entry.kind, value: entry.value,
+        pin: entry.pin || '', owner: entry.owner || ''
+      });
+    }catch(e){ console.error('Error guardando la venta en la nube', e); }
+  }
+}
+// Trae lo que haya en la nube y no tengas en este dispositivo, y sube lo
+// que tengas aquí y todavía no esté en la nube (por ejemplo, ventas hechas
+// offline, o de antes de tener esta función). Se llama al iniciar sesión
+// de administrador — nunca sin ella, porque las reglas de Firebase no
+// dejan leer/escribir ese nodo sin el email de admin.
+async function syncSalesWithCloud(){
+  const app = await getPlatformFirebaseApp();
+  if(!app || !app.auth().currentUser || !app.auth().currentUser.email) return;
+  const statusEl = document.getElementById('admin-login-status');
+  try{
+    const snap = await app.database().ref('gastrogoan/adminSalesLog').once('value');
+    const remote = snap.val() || {};
+    const localIds = new Set(sales.map(s => s.id));
+    let addedFromCloud = 0;
+    Object.keys(remote).forEach(id => {
+      if(!localIds.has(id)){ sales.push({...remote[id], id}); addedFromCloud++; }
+    });
+    const remoteIds = new Set(Object.keys(remote));
+    const updates = {};
+    sales.forEach(s => {
+      if(!remoteIds.has(s.id)) updates[s.id] = { date:s.date, name:s.name, kind:s.kind, value:s.value, pin:s.pin||'', owner:s.owner||'' };
+    });
+    if(Object.keys(updates).length) await app.database().ref('gastrogoan/adminSalesLog').update(updates);
+    sales.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    saveSales();
+    renderLog();
+    if(statusEl) statusEl.textContent += ` · Registro de ventas sincronizado (${addedFromCloud} traídas de la nube, ${Object.keys(updates).length} subidas).`;
+  }catch(e){
+    console.error('Error sincronizando el registro de ventas', e);
+    if(statusEl) statusEl.textContent += ' · ⚠️ No se pudo sincronizar el registro de ventas con la nube.';
+  }
+}
 
 async function genOwner(){
   const btn = document.getElementById('owner-btn');
@@ -546,9 +618,7 @@ async function genOwner(){
   const msg = 'Tu cuenta de GastroGoan 🍽\n\nUsuario: ' + res.user + '\nPIN: ' + res.pin + '\n\nAbre la app, pulsa "Acceso Propietarios" y entra con estos dos datos. Dentro verás la pantalla de negocios: pulsa "Canjear negocio" e introduce el código que te he enviado aparte.\n\nEl PIN lo puedes cambiar en cualquier momento desde la app.';
   document.getElementById('owner-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
   document.getElementById('owner-email').href = 'mailto:?subject=' + encodeURIComponent('Tu cuenta de GastroGoan') + '&body=' + encodeURIComponent(msg);
-  sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user });
-  saveSales();
-  renderLog();
+  await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'cuenta', value: res.user, pin: res.pin, owner: res.user });
   btn.disabled = false;
 }
 
@@ -565,10 +635,8 @@ async function gen(){
   document.getElementById('email').href = 'mailto:?subject=' + encodeURIComponent('Tu código de negocio de GastroGoan') + '&body=' + encodeURIComponent(msg);
   if(!sales.some(s => s.value === code)){
     const paraUsuario = ggOwnerUser(document.getElementById('code-owner').value);
-    sales.unshift({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '', owner: paraUsuario });
-    saveSales();
+    await pushSaleEntry({ date: new Date().toISOString().slice(0,10), name: raw || '(sin nombre)', kind: 'negocio', value: code, pin: '', owner: paraUsuario });
   }
-  renderLog();
   genBtn.disabled = false;
 }
 
@@ -576,11 +644,19 @@ function copyBox(id){
   navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => alert('Copiado'));
 }
 
-function delSale(i){
+async function delSale(i){
   if(!confirm('¿Borrar esta entrada del registro?')) return;
+  const entry = sales[i];
   sales.splice(i, 1);
   saveSales();
   renderLog();
+  if(entry && entry.id){
+    const app = await getPlatformFirebaseApp();
+    if(app && app.auth().currentUser && app.auth().currentUser.email){
+      try{ await app.database().ref('gastrogoan/adminSalesLog/' + entry.id).remove(); }
+      catch(e){ console.error('Error borrando la venta de la nube', e); }
+    }
+  }
 }
 
 function renderLog(){
