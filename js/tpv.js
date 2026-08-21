@@ -4489,7 +4489,23 @@ function buildTicketText(sale, opts={}){
   lines.push(sale.date);
   lines.push(`${sale.tipo==='mesa'?t('label.table'):sale.express?t('label.expressOrder'):sale.tipo==='delivery'?t('label.delivery'):t('label.takeAway')}${sale.clienteNombre?' - '+sale.clienteNombre:''}`);
   lines.push('------------------------------');
-  sale.items.forEach(l => lines.push(`${fmtNum(l.qty)} x ${l.name}`.padEnd(28) + fmtMoney(l.price*l.qty)));
+  // El ticket de texto plano asume un ancho de ~30 columnas (ver los
+  // separadores de guiones de abajo, pensados para 58mm). Con un nombre de
+  // plato largo, "cantidad x nombre" ya ocupaba solas las 28 columnas
+  // reservadas y el precio quedaba pegado justo detrás, sin espacio,
+  // ilegible. Si no cabe en una sola línea, el precio pasa a su propia
+  // línea alineado a la derecha en vez de aplastarse contra el nombre.
+  const TICKET_LINE_WIDTH = 30;
+  sale.items.forEach(l => {
+    const desc = `${fmtNum(l.qty)} x ${l.name}`;
+    const price = fmtMoney(l.price*l.qty);
+    if(desc.length <= 28){
+      lines.push(desc.padEnd(28) + price);
+    }else{
+      lines.push(desc);
+      lines.push(price.padStart(TICKET_LINE_WIDTH));
+    }
+  });
   lines.push('------------------------------');
   if(sale.descuentoImporte) lines.push(`${t('label.discount')} (${sale.descuentoPct}%): -${fmtMoney(sale.descuentoImporte)}`);
   if(sale.propina) lines.push(`${t('label.tip')}: ${fmtMoney(sale.propina)}`);
