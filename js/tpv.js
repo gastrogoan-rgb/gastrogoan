@@ -679,11 +679,10 @@ function renderMesaCard(table){
   const total = order ? orderTotal(order) : 0;
   const hayNuevos = order && (order.items||[]).some(l => l.nuevo);
   const baseName = table.zona ? (table.name||'').replace(/\s*\([^)]*\)\s*$/, '') : table.name;
-  // Si esta mesa absorbió otra al fusionarse (ver confirmMergeMesa/
-  // confirmMergeTable), se muestra "Mesa 3 + Mesa 4" en el propio plano de
-  // sala, no solo dentro de la comanda — antes la mesa fusionada
-  // desaparecía del plano sin dejar ningún indicio de dónde estaba sentada
-  // esa gente.
+  // Si esta mesa absorbió otra al fusionarse (ver confirmMergeTable), se
+  // muestra "Mesa 3 + Mesa 4" en el propio plano de sala, no solo dentro
+  // de la comanda — antes la mesa fusionada desaparecía del plano sin
+  // dejar ningún indicio de dónde estaba sentada esa gente.
   const displayName = order && order.mergedTableNames && order.mergedTableNames.length
     ? `${baseName} + ${order.mergedTableNames.join(' + ')}`
     : baseName;
@@ -1682,7 +1681,6 @@ function renderTableOrderModal(orderId){
   const camareroLabel = camarero ? escapeHtml(camarero.name) : (order.openedByOwner ? escapeHtml(t('label.owner')) : t('label.assignWaiter'));
   const camareroBadge = DB.employees.length ? ` <span class="badge" style="cursor:pointer" onclick="openSetCamareroModal(${order.id})" title="${t('title.changeWaiter')}"><i class="ti ti-user"></i> ${camareroLabel}</span>` : '';
   const allergensBadge = ` <span class="badge ${order.tableAllergens?'badge-red':''}" style="cursor:pointer" onclick="promptTableAllergens(${order.id})" title="${t('tpv.tableAllergens.hint')}"><i class="ti ti-alert-triangle"></i> ${order.tableAllergens ? escapeHtml(order.tableAllergens) : t('tpv.tableAllergens.add')}</span>`;
-  const mergeBadge = table ? ` <span class="badge" style="cursor:pointer" onclick="openMergeMesaModal(${order.id})" title="${t('tpv.merge.hint')}"><i class="ti ti-arrows-join"></i> ${t('tpv.merge.btn')}</span>` : '';
   // Confirmación visible de que la comanda llegó de verdad a la pantalla
   // de Cocina (recibidoEnCocinaAt, ver renderComandasCocina) — antes sala
   // no tenía forma de saberlo, solo el estado de sincronización general.
@@ -1753,7 +1751,7 @@ function renderTableOrderModal(orderId){
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
     <div class="modal-header" style="flex-wrap:wrap;gap:6px">
-      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${mergeBadge}${kitchenAckBadge}</h3>
+      <h3 style="flex:1;min-width:200px"><i class="ti ti-tools-kitchen-2"></i> ${escapeHtml(titleText)}${reservaBadge}${pagadoBadge}${camareroBadge}${allergensBadge}${kitchenAckBadge}</h3>
       ${order.tableId && !order.items.length ? `<button class="btn btn-sm btn-danger" onclick="releaseEmptyTable(${order.id})" title="${t('btn.releaseTable')}"><i class="ti ti-door-exit"></i> ${t('btn.releaseTable')}</button>` : ''}
       ${order.tableId ? `<button class="btn btn-sm" onclick="openTableTransferModal(${order.id})" title="${t('title.transferTable')}"><i class="ti ti-transfer"></i></button>` : ''}
       ${(!order.tableId && (order.tipo==='delivery'||order.tipo==='takeaway') && order.status!=='pagada') ? `<button class="btn btn-sm btn-danger" onclick="cancelAcceptedOnlineOrder(${order.id})" title="${t('title.cancelOrder')}"><i class="ti ti-x"></i> ${t('btn.cancelOrder')}</button>` : ''}
@@ -1965,84 +1963,6 @@ function renderOrderComandaPanel(order){
 // Alérgenos anotados para la mesa entera (no ligados a ningún cliente
 // dado de alta): se anotan al abrirla o en cualquier momento, se ven en
 // pantalla en la comanda y se imprimen destacados en el vale de cocina.
-// Juntar mesas: para un grupo grande que ocupa dos mesas, pasa todos los
-// platos/bebidas de una mesa a la otra y libera la primera — así se cobra
-// todo junto en un único ticket, en vez de dos comandas sueltas que no
-// tienen nada que ver entre sí.
-function openMergeMesaModal(orderId){
-  const order = DB.tpvOrders.find(o => o.id === orderId);
-  if(!order || !order.tableId) return;
-  const otherTables = DB.tables
-    .filter(t2 => t2.id !== order.tableId)
-    .map(t2 => ({table: t2, otherOrder: getOpenOrderForTable(t2.id)}))
-    .filter(x => x.otherOrder);
-  if(!otherTables.length){ showToast(t('tpv.merge.noOtherOpen')); return; }
-  openModal(`
-    <div class="modal-header">
-      <h3><i class="ti ti-arrows-join"></i> ${t('tpv.merge.title')}</h3>
-      <button class="modal-close" onclick="renderTableOrderModal(${orderId})">&times;</button>
-    </div>
-    <p style="font-size:13px;color:var(--muted)">${t('tpv.merge.desc')}</p>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${otherTables.map(({table:t2}) => `<button class="btn" onclick="confirmMergeMesa(${orderId}, ${t2.id})">${escapeHtml(t2.name)}</button>`).join('')}
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="renderTableOrderModal(${orderId})">${t('common.cancel')}</button>
-    </div>
-  `);
-}
-function confirmMergeMesa(fromOrderId, toTableId){
-  const fromOrder = DB.tpvOrders.find(o => o.id === fromOrderId);
-  const toOrder = getOpenOrderForTable(toTableId);
-  if(!fromOrder || !toOrder){ closeModal(); return; }
-  // Si cualquiera de las dos mesas tiene una división de cuenta con partes ya
-  // cobradas, no se fusiona: esos platos ya pagados por algún comensal
-  // volverían a aparecer en la mesa destino y se le cobrarían dos veces
-  // (mismo bloqueo que ya usa confirmMergeTable, la otra vía de unir mesas).
-  const hasPaidSplit = o => o.splitPayments && o.splitPayments.some(p => p.paid);
-  if(hasPaidSplit(fromOrder) || hasPaidSplit(toOrder)){
-    showToast(t('msg.cannotMergeSplitPaid'));
-    closeModal();
-    return;
-  }
-  const fromTable = DB.tables.find(t2 => t2.id === fromOrder.tableId);
-  // Antes, tras unir, la mesa origen desaparecía sin dejar rastro de que
-  // sus pedidos vinieran de ahí — parecía que todo era "de" la mesa
-  // destino. Se guarda el nombre de la mesa que se suma, para poder
-  // mostrar "Mesa 3 + Mesa 4" en vez de perder esa identidad.
-  toOrder.mergedTableNames = [...(toOrder.mergedTableNames||[]), ...(fromTable?[fromTable.name]:[]), ...(fromOrder.mergedTableNames||[])];
-  toOrder.items = [...(toOrder.items||[]), ...(fromOrder.items||[])];
-  toOrder.tandas = [...new Set([...(toOrder.tandas||[]), ...(fromOrder.tandas||[])])];
-  toOrder.pax = (toOrder.pax||0) + (fromOrder.pax||0);
-  if(!toOrder.camareroId && fromOrder.camareroId) toOrder.camareroId = fromOrder.camareroId;
-  toOrder.propina = (toOrder.propina||0) + (fromOrder.propina||0);
-  if(fromOrder.tableAllergens){
-    toOrder.tableAllergens = [toOrder.tableAllergens, fromOrder.tableAllergens].filter(Boolean).join(' · ');
-  }
-  // Un descuento ya autorizado en la mesa que desaparece no debe perderse en
-  // silencio: si la mesa destino no tiene uno propio, se traspasa entero.
-  if(fromOrder.descuentoPct){
-    if(!toOrder.descuentoPct){
-      toOrder.descuentoPct = fromOrder.descuentoPct;
-      toOrder.descuentoMotivo = fromOrder.descuentoMotivo;
-      toOrder.descuentoResponsableId = fromOrder.descuentoResponsableId;
-      toOrder.descuentoResponsableNombre = fromOrder.descuentoResponsableNombre;
-    } else {
-      showToast(t('msg.mergeDiscountConflict'));
-    }
-  }
-  // Se elimina del todo (no se deja con items vaciados a mano ni marcada
-  // 'pagada' con items dentro): así ningún informe/exportación que itere
-  // DB.tpvOrders sin filtrar por status puede contarla de más.
-  DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== fromOrder.id);
-  logAudit('merge', t('audit.mergedTables').replace('${from}', fromTable?fromTable.name:'?').replace('${to}', DB.tables.find(t2=>t2.id===toTableId)?.name||'?'));
-  saveDB();
-  if(typeof flushCloudSync === 'function') flushCloudSync();
-  closeModal();
-  renderTPV();
-  showToast(t('tpv.merge.ok'));
-  renderTableOrderModal(toOrder.id);
-}
 
 // Lista de espera: clientes que llegan sin reserva y no hay mesa libre. No
 // asigna mesa ni bloquea nada — es solo una cola visible para todo el
@@ -4059,9 +3979,8 @@ function confirmMergeTable(orderId){
     return;
   }
   if(!confirm(t('msg.confirmMergeTables'))) return;
-  // Igual que en confirmMergeMesa: se guarda el nombre de la mesa que se
-  // suma, para poder mostrar "Mesa 3 + Mesa 4" en vez de perder esa
-  // identidad tras la fusión.
+  // Se guarda el nombre de la mesa que se suma, para poder mostrar
+  // "Mesa 3 + Mesa 4" en vez de perder esa identidad tras la fusión.
   const fromTableForMerge = DB.tables.find(t2 => t2.id === order.tableId);
   targetOrder.mergedTableNames = [...(targetOrder.mergedTableNames||[]), ...(fromTableForMerge?[fromTableForMerge.name]:[]), ...(order.mergedTableNames||[])];
   targetOrder.items.push(...order.items);
