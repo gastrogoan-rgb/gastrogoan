@@ -3810,6 +3810,10 @@ function confirmSplitPartPayment(orderId, partId){
 function finalizeSplitOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length || !order.splitPayments || !order.splitPayments.every(p=>p.paid)) return;
+  // Misma guarda de re-entrada que finalizeCharge: un doble tap en "Finalizar
+  // cobro" antes de que el modal de ticket sustituya el botón repetiría
+  // discountStockForOrder() y añadiría una venta duplicada en DB.sales.
+  if(order.status === 'pagada') return;
   const subtotal = orderTotal(order);
   const descuentoPct = order.descuentoPct || 0;
   const descuentoImporte = roundMoney(subtotal * descuentoPct / 100);
