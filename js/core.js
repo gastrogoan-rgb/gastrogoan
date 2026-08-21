@@ -168,8 +168,8 @@ function renderAccessScreen(){
   const screen = document.getElementById('access-select-screen');
   if(!screen) return;
   screen.innerHTML = `
-    ${renderAccessLangSwitcherHtml()}
     <div class="access-wrap">
+      ${renderAccessLangSwitcherHtml()}
       <div class="access-brand">
         <div class="access-icon"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain"></div>
         <span class="access-kicker">${t('access.kicker')}</span>
