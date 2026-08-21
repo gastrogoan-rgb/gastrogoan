@@ -242,7 +242,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
     'privacy.consentLabel':'Acepto que mis datos se usen para gestionar mi reserva/pedido.',
-    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
+    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.cancel':'Cancelar', 'common.confirm':'Confirmar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
     'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
     'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
     'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
@@ -316,7 +316,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
     'privacy.consentLabel':'I agree that my data will be used to manage my reservation/order.',
-    'privacy.linkText':'Read more', 'common.close':'Close', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
+    'privacy.linkText':'Read more', 'common.close':'Close', 'common.cancel':'Cancel', 'common.confirm':'Confirm', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
     'privacy.mustAccept':'You need to accept the privacy notice to continue.',
     'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
     'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
@@ -390,7 +390,7 @@ const I18N = {
     'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
     'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
     'privacy.consentLabel':'Accepto que les meves dades s\'usin per gestionar la meva reserva/comanda.',
-    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
+    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.cancel':'Cancel·lar', 'common.confirm':'Confirmar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
     'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
     'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
     'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
@@ -530,6 +530,31 @@ function openInfoModal(title, bodyText){
 function closeInfoModal(){
   const overlay = document.getElementById('modal-overlay');
   if(overlay) overlay.classList.remove('active');
+}
+
+// Sustituto de confirm() con el mismo diseño que el resto de la app (antes
+// era el cuadro nativo del navegador, sin estilo propio). Misma forma de
+// uso: se espera la Promise y se sigue solo si resuelve a true.
+let pendingConfirmModalResolve = null;
+function confirmModal(message, opts){
+  opts = opts || {};
+  ensureModalChrome();
+  return new Promise(resolve => {
+    pendingConfirmModalResolve = resolve;
+    document.getElementById('modal-box').innerHTML = `
+      <button class="modal-close" onclick="resolveConfirmModal(false)" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+      <p style="font-size:14px;line-height:1.6;color:var(--body);margin:4px 0 18px">${escapeHtml(message)}</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="resolveConfirmModal(false)">${escapeHtml(t('common.cancel')||'Cancelar')}</button>
+        <button class="btn btn-primary" style="${opts.danger?'background:var(--red);border-color:var(--red)':''}" onclick="resolveConfirmModal(true)">${escapeHtml(opts.confirmLabel||t('common.confirm')||'Confirmar')}</button>
+      </div>
+    `;
+    document.getElementById('modal-overlay').classList.add('active');
+  });
+}
+function resolveConfirmModal(value){
+  closeInfoModal();
+  if(pendingConfirmModalResolve){ pendingConfirmModalResolve(value); pendingConfirmModalResolve = null; }
 }
 
 // Un único regex de email compartido por los dos formularios (reserva y
@@ -935,13 +960,13 @@ function renderApp(){
   renderTabContent();
 }
 
-function setTab(tab){
+async function setTab(tab){
   if(tab === currentTab) return;
   // Cambiar de pestaña vacía el carrito (son pedidos distintos: para llevar,
   // delivery, en mesa...) — antes se perdía sin más ni un aviso, así que un
   // toque sin querer en otra pestaña tiraba todo lo que el cliente llevaba
   // añadido sin poder deshacerlo.
-  if(cart.length && !confirm(t('confirm.loseCart'))) return;
+  if(cart.length && !(await confirmModal(t('confirm.loseCart')))) return;
   currentTab = tab;
   cart = [];
   cartTipPct = 0; cartTipCustom = 0;
@@ -2561,9 +2586,9 @@ function submitReservationChange(){
     showInlineError(t('error.envio'));
   });
 }
-function cancelMyReservation(){
+async function cancelMyReservation(){
   if(cancellingReservation) return;
-  if(!confirm(t('resManage.confirmCancel'))) return;
+  if(!(await confirmModal(t('resManage.confirmCancel'), {danger:true}))) return;
   cancellingReservation = true;
   const btn = document.getElementById('res-cancel-btn');
   // No hace falta un mensaje de éxito aparte: el propio listener en vivo de
