@@ -72,7 +72,7 @@ const ACCESS_LAST_ACTIVITY_LS = 'gastrogoan_access_last_activity';
 // roban, quien lo encuentre no puede simplemente reabrirlo horas después
 // y seguir dentro — pero mientras se está usando con normalidad, nunca
 // interrumpe pidiendo login de nuevo.
-const ACCESS_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+const ACCESS_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutos
 
 // La cuenta de propietario guardada en ESTE dispositivo:
 //   user    — nombre de usuario ya normalizado (ggOwnerUser)
