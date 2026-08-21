@@ -262,10 +262,10 @@ function renderLimpiezaManos(){
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
 function updateManosPaso(i, val){ limpiezaManosPasos()[i] = val; saveDB(); }
 function addManosPaso(){ limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
-function removeManosPaso(i){
+async function removeManosPaso(i){
   const pasos = limpiezaManosPasos();
   if(pasos.length<=1) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   pasos.splice(i,1);
   saveDB();
   renderLimpiezaManos();
@@ -362,10 +362,10 @@ function deleteProtocoloComplianceEntry(type, id){
   });
 }
 function addProtocoloPaso(type){ limpiezaProtocoloPasos(type).push(t('label.newStep')); saveDB(); renderLimpiezaProtocolo(); }
-function removeProtocoloPaso(type,i){
+async function removeProtocoloPaso(type,i){
   const pasos = limpiezaProtocoloPasos(type);
   if(pasos.length<=1) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   pasos.splice(i,1);
   saveDB();
   renderLimpiezaProtocolo();
@@ -395,8 +395,8 @@ function printManosProtocolo(){
   printReportWindow(title, body);
 }
 
-function deleteLimpiezaTarea(id){
-  if(!confirm(t('msg.confirmDeleteTask'))) return;
+async function deleteLimpiezaTarea(id){
+  if(!(await confirmModal(t('msg.confirmDeleteTask')))) return;
   DB.limpieza.tareas = DB.limpieza.tareas.filter(t => t.id!==id);
   saveDB();
   renderLimpiezaTab();
@@ -631,7 +631,7 @@ function renderLimpiezaLog(key){
     </div>
   `;
 }
-function addLimpiezaLogEntry(key){
+async function addLimpiezaLogEntry(key){
   if(!editUnlocked && key !== 'temperaturas') return;
   const cfg = limpiezaLogConfig(key);
   // La fecha no puede ser futura (el campo ya lo limita con max, esto es
@@ -643,7 +643,7 @@ function addLimpiezaLogEntry(key){
     const tempVal = parseFloat(document.getElementById(`lp-${key}-temp`).value);
     // No bloquea (podría ser un dato real raro), pero avisa de que igual es
     // un error de tecleo antes de guardar algo como "950°C" sin darse cuenta.
-    if(!isNaN(tempVal) && (tempVal < -60 || tempVal > 300) && !confirm(t('msg.confirmExtremeTemp').replace('${temp}', tempVal))) return;
+    if(!isNaN(tempVal) && (tempVal < -60 || tempVal > 300) && !(await confirmModal(t('msg.confirmExtremeTemp').replace('${temp}', tempVal)))) return;
   }
   const entry = {id: genId()};
   cfg.fields.forEach(f => {
@@ -752,8 +752,8 @@ function updateMantenimientoEquipo(id, field, val){
   if(e) e[field] = val;
   saveDB();
 }
-function deleteMantenimientoEquipo(id){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function deleteMantenimientoEquipo(id){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.limpieza.mantenimiento = DB.limpieza.mantenimiento.filter(x => x.id!==id);
   saveDB();
   renderLimpiezaMantenimiento();
@@ -1350,9 +1350,9 @@ function addDistPlato(){
   renderDistDetail();
 }
 
-function removeDistPlato(idx){
+async function removeDistPlato(idx){
   if(!isOwnerSession()) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   d.platos.splice(idx,1);
   saveDB();
@@ -1402,11 +1402,11 @@ function updateDistTarea(dayIdx, taskId, val){
   saveDB();
 }
 
-function removeDistTarea(dayIdx, taskId){
+async function removeDistTarea(dayIdx, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.produccion[dayIdx]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(isOwnerSession() || task.bySelf)) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   if(d.produccion[dayIdx]){
     d.produccion[dayIdx] = d.produccion[dayIdx].filter(t=>String(t.id)!==String(taskId));
     saveDB();
@@ -1424,11 +1424,11 @@ function updateDistTareaUnica(ds, taskId, val){
   saveDB();
 }
 
-function removeDistTareaUnica(ds, taskId){
+async function removeDistTareaUnica(ds, taskId){
   const d = getDistEmpData(distCurrentEmployeeId);
   const task = (d.tareasUnicas[ds]||[]).find(t=>String(t.id)===String(taskId));
   if(task && !(isOwnerSession() || task.bySelf)) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   if(d.tareasUnicas[ds]){
     d.tareasUnicas[ds] = d.tareasUnicas[ds].filter(t=>String(t.id)!==String(taskId));
     saveDB();
@@ -1746,8 +1746,8 @@ function addLoyaltyReward(){
   input.value = '';
   document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
 }
-function removeLoyaltyReward(i){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removeLoyaltyReward(i){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.loyaltyRewards.splice(i,1);
   saveDB();
   document.getElementById('loyalty-rewards-list').innerHTML = renderLoyaltyRewardsList();
@@ -1952,8 +1952,8 @@ function toggleGiftVoucherRedeemed(id){
   document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
 }
 
-function deleteGiftVoucher(id){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function deleteGiftVoucher(id){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.giftVouchers = (DB.giftVouchers||[]).filter(x=>x.id!==id);
   saveDB();
   document.getElementById('gift-vouchers-history').innerHTML = renderGiftVouchersHistory();
@@ -2059,12 +2059,12 @@ function openMergeClientModal(id){
     </div>
   `);
 }
-function confirmMergeClient(targetId){
+async function confirmMergeClient(targetId){
   const target = DB.clients.find(x=>x.id===targetId);
   const typed = (document.getElementById('merge-client-search').value||'').trim().toLowerCase();
   const source = DB.clients.find(x=>x.id!==targetId && x.name.trim().toLowerCase()===typed);
   if(!target || !source){ showToast(t('merge.notFound')); return; }
-  if(!confirm(t('merge.confirm').replace('${source}', source.name).replace('${target}', target.name))) return;
+  if(!(await confirmModal(t('merge.confirm').replace('${source}', source.name).replace('${target}', target.name)))) return;
   mergeClients(source.id, target.id);
   closeModal();
   showToast(t('merge.ok').replace('${target}', target.name));
@@ -2099,7 +2099,7 @@ function mergeClients(sourceId, targetId){
   saveDB();
 }
 
-function saveClient(id){
+async function saveClient(id){
   const name = document.getElementById('client-name').value.trim().replace(/\s+/g, ' ');
   if(!name){ showToast(t('msg.nameRequired')); return; }
   // Nombre y apellidos: exige al menos dos palabras, para no acabar con
@@ -2113,8 +2113,8 @@ function saveClient(id){
   // antes no se comprobaba nada aquí, y el error solo se descubría mucho
   // más tarde y lejos de esta ficha, al fallar en silencio el envío de un
   // WhatsApp o email (recordatorio de reserva, premio de fidelidad...).
-  if(phone && phone.replace(/[^\d]/g,'').length < 9 && !confirm(t('msg.confirmOddPhone'))) return;
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !confirm(t('msg.confirmOddEmail'))) return;
+  if(phone && phone.replace(/[^\d]/g,'').length < 9 && !(await confirmModal(t('msg.confirmOddPhone')))) return;
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !(await confirmModal(t('msg.confirmOddEmail')))) return;
   const cp = document.getElementById('client-cp').value.trim();
   const cumpleanos = document.getElementById('client-cumpleanos').value;
   const ultimoContacto = document.getElementById('client-ultimo-contacto').value;
@@ -2135,7 +2135,7 @@ function saveClient(id){
       (email && x.email && x.email.trim().toLowerCase() === email.trim().toLowerCase())
     )
   );
-  if(dupeContact && !confirm(t('msg.confirmDuplicateClient').replace('${name}', dupeContact.name))) return;
+  if(dupeContact && !(await confirmModal(t('msg.confirmDuplicateClient').replace('${name}', dupeContact.name)))) return;
 
   if(id){
     const client = DB.clients.find(x=>x.id===id);
@@ -2195,7 +2195,7 @@ function openClientHistoryModal(id){
             return `<tr><td>${escapeHtml(s.date)} <span class="badge badge-blue" style="font-size:9px">${t('label.orderTag')}</span></td><td class="wrap">${(s.items||[]).map(it=>`${it.qty}× ${escapeHtml(it.name)}`).join(', ')}</td><td>${fmtMoney(s.total)}</td></tr>`;
           }
           const r = entry.data;
-          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray" style="font-size:9px">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status)}</td><td>—</td></tr>`;
+          return `<tr style="cursor:pointer" onclick="closeModal();navigate('reservas');goToReservasDia('${r.date}')"><td>${escapeHtml(r.date)} <span class="badge badge-gray" style="font-size:9px">${t('label.reservationTag')}</span></td><td class="wrap">${escapeHtml(r.time||'')} · ${r.people} ${t('common.persAbbr')} · ${reservationStatusBadge(r.status, r.llegada)}</td><td>—</td></tr>`;
         }).join('')}</tbody>
       </table>
     </div>` : `<div class="empty"><i class="ti ti-receipt"></i>${t('empty.noOrderHistory')}</div>`}
@@ -2371,7 +2371,13 @@ function toggleReservaExpand(id){
   renderReservasDia();
 }
 
-function reservationStatusBadge(status){
+// "Ha llegado" es un dato aparte de `status` (la reserva sigue
+// 'confirmada' tras marcar la llegada, ver toggleReservaLlegada) — antes
+// no se distinguía aquí, así que una reserva ya llegada seguía mostrando
+// el mismo badge verde de "Confirmada" que una que aún no se ha
+// presentado, sin ninguna forma de diferenciarlas de un vistazo.
+function reservationStatusBadge(status, llegada){
+  if(status==='completada' && llegada) return `<span class="badge badge-blue"><i class="ti ti-door-enter"></i> ${t('status.arrived')}</span>`;
   return status==='pendiente' ? `<span class="badge badge-amber"><i class="ti ti-bell-ringing"></i> ${t('status.pending')}</span>`
     : status==='confirmada' ? `<span class="badge badge-green">${t('status.confirmed')}</span>`
     : status==='lista_espera' ? `<span class="badge badge-amber"><i class="ti ti-clock-hour-4"></i> ${t('status.waitlisted')}</span>`
@@ -2393,10 +2399,10 @@ function findClientByPhone(phone){
 
 // Marca una reserva confirmada como "no presentado" (el cliente no vino) y
 // suma un aviso al historial del cliente, para detectar quién falla a menudo.
-function markReservationNoShow(id){
+async function markReservationNoShow(id){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
-  if(!confirm(t('msg.confirmNoShow'))) return;
+  if(!(await confirmModal(t('msg.confirmNoShow')))) return;
   r.status = 'no_show';
   let cid = r.clientId;
   if(!cid && r.clientPhone){
@@ -2500,7 +2506,7 @@ function renderReservasSearch(){
             const client = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
             const name = client ? client.name : (r.clientName || '—');
             return `<tr style="cursor:pointer" onclick="openReservationModal(${r.id})">
-              <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.time||'')}</td><td>${escapeHtml(name)}</td><td>${r.people}</td><td>${reservationStatusBadge(r.status)}</td>
+              <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.time||'')}</td><td>${escapeHtml(name)}</td><td>${r.people}</td><td>${reservationStatusBadge(r.status, r.llegada)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -2589,12 +2595,12 @@ function rejectOnlineReservation(id){
 // mesa/turno se libere correctamente en las comprobaciones de disponibilidad
 // que sí distinguen 'cancelada' de "nunca existió"). Borrar sigue existiendo
 // para corregir un duplicado o un error real al crearla.
-function cancelReservation(id){
-  if(!confirm(t('msg.confirmCancelReservation'))) return;
+async function cancelReservation(id){
+  if(!(await confirmModal(t('msg.confirmCancelReservation')))) return;
   setReservationStatus(id, 'cancelada');
 }
 
-function setReservationStatus(id, status){
+async function setReservationStatus(id, status){
   const r = DB.reservations.find(x=>x.id===id);
   if(!r) return;
 
@@ -2615,7 +2621,7 @@ function setReservationStatus(id, status){
       const turnos = getTurnosForDate(r.date);
       const turno = turnos[turnoIdx];
       if(yaReservado + r.people > aforo){
-        const ok = confirm(t('msg.confirmOverbookedShift').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + r.people).replace('${cap}', aforo));
+        const ok = (await confirmModal(t('msg.confirmOverbookedShift').replace('${range}', `${turno.abre}-${turno.cierra}`).replace('${already}', yaReservado).replace('${wouldBe}', yaReservado + r.people).replace('${cap}', aforo)));
         if(!ok) return;
       }
     }
@@ -2658,8 +2664,7 @@ function goToReservasDia(date){
 function renderReservasDia(){
   const box = document.getElementById('reservas-tab-content');
   const date = reservasDate;
-  // Las reservas ya llegadas (marcadas desde el TPV) se ocultan para no molestar.
-  const items = DB.reservations.filter(r => r.date === date && !r.llegada).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+  const items = DB.reservations.filter(r => r.date === date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
 
   // Cada reserva se pinta colapsada (hora, cliente, personas, estado) y se
   // expande al tocarla — con muchas reservas en el día, una tabla con todos
@@ -2678,7 +2683,7 @@ function renderReservasDia(){
                 <strong class="reserva-card-time">${escapeHtml(r.time)}</strong>
                 <span class="reserva-card-name">${escapeHtml(client ? client.name : (r.clientName||'—'))}</span>
                 <span class="badge badge-gray"><i class="ti ti-users"></i> ${r.people}</span>
-                ${reservationStatusBadge(r.status)}
+                ${reservationStatusBadge(r.status, r.llegada)}
                 <i class="ti ti-chevron-down reserva-card-chevron"></i>
               </div>
               <div class="reserva-card-detail">
@@ -3060,7 +3065,7 @@ function updateReservationClientNoShowHint(){
     : '';
 }
 
-function saveReservation(id){
+async function saveReservation(id){
   const clientIdVal = document.getElementById('reservation-client').value;
   const clientId = clientIdVal ? parseInt(clientIdVal) : null;
   const clientName = document.getElementById('reservation-client-name').value.trim();
@@ -3092,7 +3097,7 @@ function saveReservation(id){
     // Aviso (no bloqueante) si la mesa elegida tiene menos plazas que el grupo.
     const table = DB.tables.find(t=>t.id===tableId);
     if(table && table.plazas && people > table.plazas){
-      if(!confirm(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', people))) return;
+      if(!(await confirmModal(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', people)))) return;
     }
   }
 
@@ -3110,7 +3115,7 @@ function saveReservation(id){
     return Math.abs(rMin - reqMin) < reservaVentanaMin();
   });
   if(dupe){
-    if(!confirm(t('msg.confirmDuplicateReservation'))) return;
+    if(!(await confirmModal(t('msg.confirmDuplicateReservation')))) return;
   }
 
   const existing = id ? DB.reservations.find(x=>x.id===id) : null;
@@ -4390,7 +4395,7 @@ function togglePromoDiscountFields(){
   document.getElementById('promo-discount-fields').style.display = checked ? '' : 'none';
 }
 
-function savePromo(id){
+async function savePromo(id){
   const fecha = document.getElementById('promo-date').value || todayStr();
   const titulo = document.getElementById('promo-titulo').value.trim();
   const descripcion = document.getElementById('promo-descripcion').value.trim();
@@ -4413,7 +4418,7 @@ function savePromo(id){
   // Aviso de posible duplicado: en vez de guardarla igual con solo un toast
   // distinto, se ofrece abrir la que ya existe en su lugar.
   const dupe = DB.promos.find(p => p.id!==id && p.fecha===fecha && p.titulo.toLowerCase()===titulo.toLowerCase() && p.responsableId===responsableId);
-  if(dupe && !confirm(t('promo.confirmDuplicate'))){
+  if(dupe && !(await confirmModal(t('promo.confirmDuplicate')))){
     openPromoModal(dupe.id);
     return;
   }
@@ -4430,7 +4435,7 @@ function savePromo(id){
       : (promoOccursOn(p2, fecha) || promoOccursOn({fecha, recurrence}, p2.fecha));
     const conflict = DB.promos.find(p2 => p2.id!==id && p2.discountPct && sameDish(p2) && dayOverlaps(p2)
       && promoTimeRangesOverlap({horaInicio, horaFin}, p2));
-    if(conflict && !confirm(t('promo.confirmDishDiscountConflict').replace('${dish}', menuItemName).replace('${title}', conflict.titulo))){
+    if(conflict && !(await confirmModal(t('promo.confirmDishDiscountConflict').replace('${dish}', menuItemName).replace('${title}', conflict.titulo)))){
       openPromoModal(conflict.id);
       return;
     }
@@ -4450,8 +4455,8 @@ function savePromo(id){
   showToast(t('msg.actionSaved'));
 }
 
-function deletePromo(id){
-  if(!confirm(t('msg.confirmDeletePromotion'))) return;
+async function deletePromo(id){
+  if(!(await confirmModal(t('msg.confirmDeletePromotion')))) return;
   const p = DB.promos.find(x=>x.id===id);
   DB.promos = DB.promos.filter(p=>p.id!==id);
   if(p) logAudit('delete', t('audit.deletedPromo').replace('${title}', p.titulo));
@@ -4978,13 +4983,13 @@ function renameZona(oldName, newNameRaw){
 
 // Elimina una zona entera junto con todas sus mesas. Si alguna tiene una
 // comanda abierta, se bloquea (igual que al borrar una mesa suelta).
-function deleteZonaCompleta(zona){
+async function deleteZonaCompleta(zona){
   const tables = DB.tables.filter(tb => tb.zona === zona);
   if(tables.some(tb => getOpenOrderForTable(tb.id))){
     showToast(t('msg.cannotDeleteZoneOpenOrders'));
     return;
   }
-  if(!confirm(t('msg.confirmDeleteZone').replace('${name}', zonaLabel(zona)).replace('${count}', tables.length))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteZone').replace('${name}', zonaLabel(zona)).replace('${count}', tables.length)))) return;
   clearDanglingTableRefs(tables.map(tb => tb.id));
   DB.tables = DB.tables.filter(tb => tb.zona !== zona);
   if(Array.isArray(DB.business.zonaOrder)) DB.business.zonaOrder = DB.business.zonaOrder.filter(z => z !== zona);
@@ -5004,7 +5009,7 @@ function clearDanglingTableRefs(tableIds){
 // Crea de golpe N mesas nuevas en una zona/rango con el nombre que indique el
 // negocio (por ejemplo "Rango 1" con 4 mesas), tal como se pidió: que el plano
 // de sala se organice como cada restaurante quiera, no en 3 zonas fijas.
-function addZonaConMesas(){
+async function addZonaConMesas(){
   const nombre = (document.getElementById('mn-zona-nombre').value||'').trim();
   const cantidad = Math.max(1, Math.min(50, parseInt(document.getElementById('mn-zona-cantidad').value)||0));
   if(!nombre){ showToast(t('msg.enterZoneName')); return; }
@@ -5013,7 +5018,7 @@ function addZonaConMesas(){
   const existingInZone = DB.tables.filter(t => t.zona === nombre).length;
   // Si la zona ya tiene mesas, confirma antes de añadir más: evita duplicar
   // el rango entero por pulsar el botón dos veces sin darse cuenta.
-  if(existingInZone > 0 && !confirm(t('msg.confirmAddMoreTablesToZone').replace('${zone}', nombre).replace('${count}', existingInZone))) return;
+  if(existingInZone > 0 && !(await confirmModal(t('msg.confirmAddMoreTablesToZone').replace('${zone}', nombre).replace('${count}', existingInZone)))) return;
   // Las plazas de cada mesa se rellenan después, en "Mesas configuradas"
   // (más abajo en esta misma pantalla) — no se piden aquí para no obligar a
   // que todas las mesas de una zona tengan la misma capacidad de entrada.
@@ -5057,7 +5062,7 @@ function updateTablePlazas(id, val){
   tbl.plazas = (n && n > 0) ? n : null;
   saveDB();
 }
-function deleteTableFromConfig(id){
+async function deleteTableFromConfig(id){
   const order = getOpenOrderForTable(id);
   // Si la comanda tiene platos sin cobrar, no se puede borrar la mesa desde
   // aquí: antes se marcaba como "pagada" sin generar venta, sin descontar
@@ -5067,7 +5072,7 @@ function deleteTableFromConfig(id){
     showToast(t('msg.tableHasOpenOrderItems'));
     return;
   }
-  if(!confirm(t('msg.confirmDeleteTable'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteTable')))) return;
   if(order){
     // Comanda vacía (mesa abierta por error, sin platos): se puede liberar sin más.
     // Se borra DESPUÉS de confirmar — si se cancelaba antes de este cambio, la
@@ -5316,7 +5321,7 @@ function openBackupReminderModal(){
   `);
 }
 
-function archiveOldData(){
+async function archiveOldData(){
   const before = document.getElementById('mn-archive-before').value;
   if(!before){ showToast(t('msg.chooseDate')); return; }
   const sales = DB.sales.filter(s => s.date && s.date < before);
@@ -5324,7 +5329,7 @@ function archiveOldData(){
   const cashClosures = DB.cashClosures.filter(c => c.fecha && c.fecha < before);
   const total = sales.length + reservations.length + cashClosures.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
-  if(!confirm(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before))) return;
+  if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before)))) return;
   try{
     downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
@@ -5356,8 +5361,8 @@ function handleLogoUpload(input){
   reader.readAsDataURL(file);
 }
 
-function removeLogo(){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removeLogo(){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   DB.business.logo = '';
   saveDB();
   renderMiNegocio();
@@ -5392,8 +5397,8 @@ function updateLogoutBtn(){
   if(logoutBtn) logoutBtn.style.display = session ? '' : 'none';
   if(bizBtn) bizBtn.style.display = (session && session.type === 'employee') ? 'none' : '';
 }
-function logoutAccessSession(){
-  if(!confirm(t('msg.confirmLogout'))) return;
+async function logoutAccessSession(){
+  if(!(await confirmModal(t('msg.confirmLogout')))) return;
   clearAccessSession();
   areaUnlocked = {cocina:false, sala:false};
   ownerUnlocked = false;
@@ -5444,7 +5449,7 @@ function businessTypeServiceMismatchWarning(tipo, tiposServicio){
   return null;
 }
 
-function saveBusiness(silent){
+async function saveBusiness(silent){
   const el = id => document.getElementById(id);
   if(!DB.business) DB.business = {};
   if(el('business-name')) DB.business.name = el('business-name').value.trim();
@@ -5504,7 +5509,7 @@ function saveBusiness(silent){
   // (ya asignados arriba) se guardan igual: solo se descarta el horario.
   let horarioRechazado = false;
   if(horarioWarnings.length && !silent){
-    if(!confirm(horarioWarnings[0] + '\n\n' + t('msg.confirmSaveAnyway'))){
+    if(!(await confirmModal(horarioWarnings[0] + '\n\n' + t('msg.confirmSaveAnyway')))){
       horarioRechazado = true;
     }
   }
@@ -5647,8 +5652,8 @@ function saveOwnCourier(){
   renderMiNegocio();
   showToast(t('msg.courierSaved'));
 }
-function deleteOwnCourier(id){
-  if(!confirm(t('msg.confirmDeleteCourier'))) return;
+async function deleteOwnCourier(id){
+  if(!(await confirmModal(t('msg.confirmDeleteCourier')))) return;
   DB.business.ownCouriers = (DB.business.ownCouriers||[]).filter(c=>c.id!==id);
   saveDB();
   renderMiNegocio();
@@ -5729,8 +5734,8 @@ function saveDeliveryPlatform(){
   renderMiNegocio();
   showToast(t('msg.platformSaved'));
 }
-function deleteDeliveryPlatform(id){
-  if(!confirm(t('msg.confirmDeletePlatform'))) return;
+async function deleteDeliveryPlatform(id){
+  if(!(await confirmModal(t('msg.confirmDeletePlatform')))) return;
   DB.business.deliveryPlatforms = (DB.business.deliveryPlatforms||[]).filter(p=>p.id!==id);
   saveDB();
   renderMiNegocio();
@@ -6079,8 +6084,8 @@ function addComandaPrinter(){
   saveDB();
   renderMiNegocio();
 }
-function deleteComandaPrinter(id){
-  if(!confirm(t('msg.confirmDeletePrinter'))) return;
+async function deleteComandaPrinter(id){
+  if(!(await confirmModal(t('msg.confirmDeletePrinter')))) return;
   DB.business.comandas.printers = ensureComandaPrinters().filter(p=>p.id!=id);
   if(typeof forgetThermalPrinter === 'function') forgetThermalPrinter(id);
   saveDB();
@@ -7352,7 +7357,7 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">4</div><div class="st">Añade notas si hace falta (alergias, celebración, silla para bebé, mesa junto a la ventana...).</div></div>
     <div class="manual-step"><div class="sn">5</div><div class="st">Guarda. La reserva aparecerá en la vista Día correspondiente.</div></div>
     <p>Las mesas que puedes asignar son las que tengas configuradas en <strong>Mi Negocio → Operativa</strong> (con el nombre/número que les hayas puesto). Una misma mesa <strong>no se puede reservar dos veces con menos de 1 hora y media de diferencia</strong>: por ejemplo, si está reservada a las 13:30, vuelve a aparecer como disponible a partir de las 15:00. El desplegable solo muestra las mesas libres para esa hora.</p>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Cuando un cliente con reserva se sienta y abres su mesa en el TPV, su reserva se marca automáticamente como "llegada" y desaparece de la lista de reservas del día para no estorbar la vista.</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Cuando un cliente con reserva se sienta y abres su mesa en el TPV, su reserva se marca automáticamente como "llegada": sigue visible en la lista de reservas del día, con el aviso "Ha llegado".</div>
 
     <h4>Aforo por turno</h4>
     <p>Si en Mi Negocio configuraste el <strong>Aforo (plazas por turno)</strong>, la vista del día muestra para cada turno cuántas personas hay reservadas frente al máximo:</p>

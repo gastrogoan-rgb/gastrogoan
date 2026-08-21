@@ -58,14 +58,14 @@ const GE = (function(){
     const [y,m] = fechaStr.split('-').map(Number);
     return isMonthClosed(y, m-1);
   }
-  function toggleCierreTe(){
+  async function toggleCierreTe(){
     const key = mesKey(teYear, activeMonth);
     const idx = cierres().indexOf(key);
     if(idx>=0){
-      if(!confirm(t('hr.te.confirmReopenMonth'))) return;
+      if(!(await confirmModal(t('hr.te.confirmReopenMonth')))) return;
       cierres().splice(idx,1);
     } else {
-      if(!confirm(t('hr.te.confirmCloseMonth'))) return;
+      if(!(await confirmModal(t('hr.te.confirmCloseMonth')))) return;
       cierres().push(key);
     }
     saveDB();
@@ -511,8 +511,8 @@ const GE = (function(){
     renderFijos();
     showToast(t('msg.expenseSaved'));
   }
-  function deleteGF(id){
-    if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  async function deleteGF(id){
+    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().fijos = fijos().filter(g=>g.id!==id);
     snapshotGeFijosNeto();
     saveDB();
@@ -695,18 +695,18 @@ const GE = (function(){
     renderVariables();
     showToast(t('msg.purchaseSaved'));
   }
-  function deleteGV(id){
+  async function deleteGV(id){
     const v = variables().find(x=>x.id===id);
     if(v && isDateClosed(v.fecha)){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().variables = variables().filter(v=>v.id!==id);
     saveDB();
     renderVariables();
   }
-  function deleteGVGroup(idsStr){
+  async function deleteGVGroup(idsStr){
     const ids = idsStr.split(',').map(s=>parseInt(s));
     if(variables().some(v=>ids.includes(v.id) && isDateClosed(v.fecha))){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!confirm(t('msg.confirmDeletePurchases'))) return;
+    if(!(await confirmModal(t('msg.confirmDeletePurchases')))) return;
     ge().variables = variables().filter(v=>!ids.includes(v.id));
     saveDB();
     renderVariables();
@@ -868,8 +868,8 @@ const GE = (function(){
     calcPE();
     showToast(t('hr.pe.realDataApplied'));
   }
-  function peSaveScenario(){
-    const name = (prompt(t('hr.pe.scenarioNamePrompt'))||'').trim();
+  async function peSaveScenario(){
+    const name = (await promptText(t('hr.pe.scenarioNamePrompt'), '')||'').trim();
     if(!name) return;
     const data = {
       name,
@@ -897,11 +897,11 @@ const GE = (function(){
     document.getElementById('pe-fc').value = sc.foodCostObj;
     calcPE();
   }
-  function peDeleteScenario(){
+  async function peDeleteScenario(){
     const sel = document.getElementById('pe-scenario-sel');
     const name = sel ? sel.value : '';
     if(!name) return;
-    if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+    if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
     ge().config.scenarios = peScenarios().filter(s=>s.name!==name);
     saveDB();
     renderPE();
@@ -1099,10 +1099,10 @@ const GE = (function(){
     renderCapex();
     showToast(t('msg.investmentSaved'));
   }
-  function deleteCapex(id){
+  async function deleteCapex(id){
     const c = capex().find(x=>x.id===id);
     if(c && capexTouchesClosedMonth(c)){ showToast(t('hr.te.monthClosedError')); return; }
-    if(!confirm(t('msg.confirmDeleteInvestment'))) return;
+    if(!(await confirmModal(t('msg.confirmDeleteInvestment')))) return;
     ge().capex = capex().filter(c=>c.id!==id);
     saveDB();
     renderCapex();
@@ -2319,7 +2319,7 @@ function turnoTipoChanged(){
   document.getElementById('turno-descanso-msg').style.display = noHorario ? 'block' : 'none';
 }
 
-function saveTurno(id){
+async function saveTurno(id){
   const tipo = document.getElementById('turno-tipo').value;
   const noHorario = ['D','V','B'].includes(tipo);
   const isPartido = tipo === 'P';
@@ -2349,7 +2349,7 @@ function saveTurno(id){
     // ese día para este empleado, se pisaba sin ningún aviso específico
     // (solo un texto genérico fijo en el modal, fácil de no leer). Ahora se
     // avisa con los datos concretos del turno que se va a sustituir.
-    if(!confirm(t('msg.confirmOverwriteShift').replace('${name}', emp?emp.name:'?').replace('${date}', data.fecha).replace('${tipo}', collision.tipo))) return;
+    if(!(await confirmModal(t('msg.confirmOverwriteShift').replace('${name}', emp?emp.name:'?').replace('${date}', data.fecha).replace('${tipo}', collision.tipo)))) return;
     if(turno) DB.turnos = DB.turnos.filter(x => x.id !== turno.id);
     turno = collision;
   }
@@ -2371,9 +2371,9 @@ function saveTurno(id){
   showToast(t('msg.shiftSaved'));
 }
 
-function deleteTurno(id){
+async function deleteTurno(id){
   if(!isOwnerSession() && !editUnlocked) return;
-  if(!confirm(t('msg.confirmDeleteShift'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteShift')))) return;
   const turno = (DB.turnos||[]).find(t => t.id===id);
   if(turno){
     const emp = DB.employees.find(x=>x.id===turno.employeeId);
@@ -2885,7 +2885,7 @@ function openEmployeeModal(id){
   `);
 }
 
-function resetEmployeePin(id){
+async function resetEmployeePin(id){
   // El botón ya está oculto a quien no sea propietario (.owner-strict), pero
   // eso solo esconde el botón — esta comprobación es la que de verdad impide
   // que se llame desde la consola sin ser el propietario.
@@ -2895,7 +2895,7 @@ function resetEmployeePin(id){
   // Ya sabemos que es el propietario, así que no hace falta pedir otro PIN
   // — pero sí una confirmación explícita, porque deja el PIN de esa persona
   // en el valor por defecto (1234) hasta que vuelva a cambiarlo.
-  if(!confirm(t('msg.confirmResetEmployeePin').replace('${name}', e.name))) return;
+  if(!(await confirmModal(t('msg.confirmResetEmployeePin').replace('${name}', e.name)))) return;
   e.pin = hashPin('1234');
   e.pinChanged = false;
   logPersonalEvent('pinReset', {name: e.name});

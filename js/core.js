@@ -550,6 +550,7 @@ function promptText(label, defaultValue, opts){
   opts = opts || {};
   return new Promise(resolve => {
     pendingTextPromptResolve = resolve;
+    pendingTextPromptAllowEmpty = !!opts.allowEmpty;
     openModal(`
       <div class="modal-header">
         <h3><i class="ti ${escapeHtml(opts.icon || 'ti-pencil')}"></i> ${escapeHtml(opts.title || label)}</h3>
@@ -573,13 +574,82 @@ function cancelTextPrompt(){
   closeModal();
   if(resolve) resolve(null);
 }
+let pendingTextPromptAllowEmpty = false;
 function confirmTextPrompt(){
   const val = (document.getElementById('generic-text-prompt')?.value || '').trim();
-  if(!val) return; // vacío: no cierra, se queda esperando un nombre
+  // Por defecto, enviar vacío no cierra el modal: se queda esperando un
+  // nombre (la mayoría de usos son "nombra esto", donde vacío no tiene
+  // sentido). opts.allowEmpty lo permite para los pocos casos donde un
+  // valor vacío es una respuesta válida en sí misma (p.ej. quitar un
+  // límite de raciones escribiendo nada).
+  if(!val && !pendingTextPromptAllowEmpty) return;
   const resolve = pendingTextPromptResolve;
   pendingTextPromptResolve = null;
   closeModal();
   if(resolve) resolve(val);
+}
+// Sustituto de confirm() nativo del navegador — mismo cuadro gris feo del
+// sistema en todos los sitios que usaban confirm('¿Seguro?'), fuera de
+// lugar en una app con su propio diseño. Devuelve una Promise<boolean>,
+// así que cada sitio que lo usa pasa a ser `if(!(await confirmModal(...)))
+// return;` en vez de `if(!confirm(...)) return;` — la función que lo llama
+// tiene que ser `async`.
+let pendingConfirmModalResolve = null;
+function confirmModal(message, opts){
+  opts = opts || {};
+  return new Promise(resolve => {
+    pendingConfirmModalResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ${escapeHtml(opts.icon || 'ti-help-circle')}" style="${opts.danger?'color:var(--red)':''}"></i> ${escapeHtml(opts.title || t('common.confirm'))}</h3>
+        <button class="modal-close" onclick="cancelConfirmModal()">&times;</button>
+      </div>
+      <p style="font-size:13.5px;line-height:1.5;white-space:pre-line">${escapeHtml(message)}</p>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelConfirmModal()">${t('common.cancel')}</button>
+        <button class="btn ${opts.danger?'btn-danger':'btn-primary'}" onclick="acceptConfirmModal()">${escapeHtml(opts.confirmLabel || t('common.confirm'))}</button>
+      </div>
+    `);
+  });
+}
+function cancelConfirmModal(){
+  const resolve = pendingConfirmModalResolve;
+  pendingConfirmModalResolve = null;
+  closeModal();
+  if(resolve) resolve(false);
+}
+function acceptConfirmModal(){
+  const resolve = pendingConfirmModalResolve;
+  pendingConfirmModalResolve = null;
+  closeModal();
+  if(resolve) resolve(true);
+}
+// Sustituto de alert() nativo — un solo botón "Aceptar", con el mismo
+// diseño que confirmModal. Devuelve una Promise que se resuelve al
+// cerrarlo, para poder esperar (await alertModal(...)) antes de un
+// location.reload() y que el usuario llegue a leer el mensaje.
+let pendingAlertModalResolve = null;
+function alertModal(message, opts){
+  opts = opts || {};
+  return new Promise(resolve => {
+    pendingAlertModalResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ${escapeHtml(opts.icon || 'ti-info-circle')}"></i> ${escapeHtml(opts.title || t('common.notice'))}</h3>
+        <button class="modal-close" onclick="acceptAlertModal()">&times;</button>
+      </div>
+      <p style="font-size:13.5px;line-height:1.5;white-space:pre-line">${escapeHtml(message)}</p>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="acceptAlertModal()">${t('common.accept')}</button>
+      </div>
+    `);
+  });
+}
+function acceptAlertModal(){
+  const resolve = pendingAlertModalResolve;
+  pendingAlertModalResolve = null;
+  closeModal();
+  if(resolve) resolve();
 }
 let pendingLicensePromptResolve = null;
 function cancelBusinessLicensePrompt(){
@@ -696,7 +766,7 @@ async function addSucursal(parentSlotId){
   // hermana ya existente — el selector las mostraría idénticas salvo por
   // cuál está activa, fácil de entrar a la equivocada por error.
   const nombreDuplicado = slots.some(s => s.parentId === parentSlotId && s.name.trim().toLowerCase() === nombre.trim().toLowerCase());
-  if(nombreDuplicado && !confirm(t('gate.confirmDuplicateBranchName').replace('${name}', nombre))) return;
+  if(nombreDuplicado && !(await confirmModal(t('gate.confirmDuplicateBranchName').replace('${name}', nombre)))) return;
 
   // Leer datos del padre (puede ser el activo u otro slot)
   let src;
@@ -1626,7 +1696,7 @@ const FIREBASE_RULES_JSON = `{
 
 function copyFirebaseRules(){
   navigator.clipboard.writeText(FIREBASE_RULES_JSON).then(() => showToast(t('msg.rulesCopied'))).catch(() => {
-    alert(t('msg.copyFailed'));
+    alertModal(t('msg.copyFailed'));
   });
 }
 
@@ -2012,28 +2082,28 @@ function getCloudConfig(){
 /* Guarda (o quita) la configuración de Firebase propio del negocio,
    introducida en el asistente de la nube, y recarga la app para
    reconectar con la configuración correcta. */
-function saveOwnFirebaseConfig(){
+async function saveOwnFirebaseConfig(){
   const apiKey = document.getElementById('own-fb-apikey').value.trim();
   const databaseURL = document.getElementById('own-fb-dburl').value.trim();
   if(!apiKey && !databaseURL){
     if(!DB.business.ownFirebase) return;
-    if(!confirm(t('msg.confirmRemoveFirebase'))) return;
+    if(!(await confirmModal(t('msg.confirmRemoveFirebase')))) return;
     delete DB.business.ownFirebase;
     saveDB();
     location.reload();
     return;
   }
   if(!apiKey || !databaseURL){
-    alert(t('msg.fillBothFields'));
+    await alertModal(t('msg.fillBothFields'));
     return;
   }
   if(!/^https:\/\/[^\s]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/.test(databaseURL)){
-    alert(t('msg.invalidDbUrl'));
+    await alertModal(t('msg.invalidDbUrl'));
     return;
   }
   DB.business.ownFirebase = { apiKey, databaseURL };
   saveDB();
-  alert(t('msg.firebaseSaved'));
+  await alertModal(t('msg.firebaseSaved'));
   location.reload();
 }
 
@@ -3962,7 +4032,7 @@ async function saveRedsysConfig(){
 // endpoint /config) y, pase lo que pase con la llamada, limpiamos los campos
 // y el estado en pantalla para que quede claro que ya no está configurado.
 async function disableRedsysConfig(){
-  if(!confirm(t('mn.redsys.confirmDisable'))) return;
+  if(!(await confirmModal(t('mn.redsys.confirmDisable')))) return;
   try{
     await fetch(`${REDSYS_WORKER_URL}/config`, {
       method: 'POST',
@@ -4171,7 +4241,7 @@ async function testEmailConfirmConfig(){
   const statusEl = document.getElementById('ec-test-status');
   const cfg = readEmailConfirmFormConfig();
   if(!cfg.serviceId || !cfg.templateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFields')); return; }
-  const testTo = prompt(t('mn.emailConfirm.testPrompt'));
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
   if(!testTo) return;
   statusEl.textContent = t('mn.emailConfirm.sending');
   try{
@@ -4192,7 +4262,7 @@ async function testEmailCancelConfig(){
   const statusEl = document.getElementById('ec-test-status');
   const cfg = readEmailConfirmFormConfig();
   if(!cfg.serviceId || !cfg.cancelTemplateId || !cfg.publicKey){ showToast(t('mn.emailConfirm.fillAllFieldsCancel')); return; }
-  const testTo = prompt(t('mn.emailConfirm.testPrompt'));
+  const testTo = await promptText(t('mn.emailConfirm.testPrompt'), '');
   if(!testTo) return;
   statusEl.textContent = t('mn.emailConfirm.sending');
   try{

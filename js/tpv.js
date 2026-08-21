@@ -1005,7 +1005,7 @@ function toggleOnlineOrdersSwitch(){
 // desajuste de precio/disponibilidad en un pedido YA PAGADO (tarjeta virtual)
 // se deja tal cual en pendiente-online para que el personal lo revise a
 // mano — es el único caso en el que el auto-aceptar no acepta.
-function acceptOnlineOrder(orderId, auto){
+async function acceptOnlineOrder(orderId, auto){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return false;
   if(order.tipo === 'takeaway' || order.tipo === 'delivery'){
@@ -1023,7 +1023,7 @@ function acceptOnlineOrder(orderId, auto){
     });
     if(anyMismatch && order.pagado){
       if(auto) return false;
-      if(!confirm(t('msg.confirmAcceptPaidMismatch'))) return false;
+      if(!(await confirmModal(t('msg.confirmAcceptPaidMismatch'), {danger:true, confirmLabel:t('common.accept')}))) return false;
     }
 
     order.status = 'abierta';
@@ -1305,7 +1305,7 @@ function toggleNewOrderReservaField(){
   document.getElementById('new-order-pax-field').style.display = isReserva ? 'none' : '';
 }
 
-function confirmOpenTableOrder(tableId){
+async function confirmOpenTableOrder(tableId){
   const tipo = document.querySelector('input[name="new-order-tipo-cliente"]:checked')?.value || 'paso';
   let pax, clienteNombre = '', clientId = null, reservationId = null;
   if(tipo === 'reserva'){
@@ -1347,7 +1347,7 @@ function confirmOpenTableOrder(tableId){
     if(upcoming){
       const client = DB.clients.find(c=>c.id===upcoming.clientId);
       const name = client ? client.name : (upcoming.clientName||'');
-      if(!confirm(t('msg.confirmSeatDespiteReservation').replace('${time}', upcoming.time).replace('${name}', name).replace('${people}', upcoming.people))) return;
+      if(!(await confirmModal(t('msg.confirmSeatDespiteReservation').replace('${time}', upcoming.time).replace('${name}', name).replace('${people}', upcoming.people), {icon:'ti-alert-triangle'}))) return;
       // Antes este aviso no dejaba rastro: si luego llegaba el cliente de
       // la reserva y la mesa estaba ocupada, no había forma de revisar que
       // ya se había avisado y quién decidió sentar al walk-in de todas
@@ -1375,10 +1375,10 @@ function confirmOpenTableOrder(tableId){
 // la única forma de deshacer un "Abrir mesa" a la mesa equivocada era ir a
 // Mi Negocio > Operativa y borrar la mesa física entera del plano de sala
 // — un efecto colateral desproporcionado solo para deshacer un mis-clic.
-function releaseEmptyTable(orderId){
+async function releaseEmptyTable(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || (order.items||[]).length) return;
-  if(!confirm(t('msg.confirmReleaseEmptyTable'))) return;
+  if(!(await confirmModal(t('msg.confirmReleaseEmptyTable')))) return;
   DB.tpvOrders = DB.tpvOrders.filter(o => o.id !== orderId);
   saveDB();
   closeModal();
@@ -2011,7 +2011,7 @@ function openWaitlistModal(){
 function waitlistMinutesWaiting(w){
   return Math.max(0, Math.round((Date.now() - new Date(w.createdAt).getTime()) / 60000));
 }
-function addWaitlistEntry(){
+async function addWaitlistEntry(){
   const name = document.getElementById('wl-name').value.trim();
   const people = parseInt(document.getElementById('wl-people').value) || 1;
   const phone = document.getElementById('wl-phone').value.trim();
@@ -2026,7 +2026,7 @@ function addWaitlistEntry(){
     (phone && w.phone && w.phone.replace(/\D/g,'') === phone.replace(/\D/g,'')) ||
     w.name.trim().toLowerCase() === name.toLowerCase()
   ));
-  if(dupe && !confirm(t('waitlist.confirmDuplicate').replace('${name}', dupe.name))) return;
+  if(dupe && !(await confirmModal(t('waitlist.confirmDuplicate').replace('${name}', dupe.name)))) return;
   DB.waitlist.push({id: genId(), name, phone, people, notes, status: 'esperando', createdAt: new Date().toISOString()});
   saveDB();
   openWaitlistModal();
@@ -2055,7 +2055,7 @@ function openSeatWaitlistTableModal(id){
     </div>
   `);
 }
-function confirmSeatWaitlistAtTable(waitlistId, tableId){
+async function confirmSeatWaitlistAtTable(waitlistId, tableId){
   const w = (DB.waitlist||[]).find(x => x.id === waitlistId);
   if(!w) return;
   // Otro camarero pudo haber ocupado esa mesa entre elegirla y confirmar
@@ -2067,7 +2067,7 @@ function confirmSeatWaitlistAtTable(waitlistId, tableId){
   // mesa más pequeña que el grupo — aquí faltaba del todo: un grupo de 6 se
   // podía sentar en una mesa de 2 sin ningún aviso de aforo.
   if(table && table.plazas && w.people > table.plazas){
-    if(!confirm(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', w.people))) return;
+    if(!(await confirmModal(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', w.people), {icon:'ti-alert-triangle'}))) return;
   }
   const loggedEmployeeId = loggedInEmployeeId();
   const matchedClient = w.phone ? findClientByPhone(w.phone) : null;
@@ -2088,10 +2088,10 @@ function cancelWaitlistEntry(id){
   openWaitlistModal();
 }
 
-function promptTableAllergens(orderId){
+async function promptTableAllergens(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
-  const val = prompt(t('tpv.tableAllergens.prompt'), order.tableAllergens || '');
+  const val = await promptText(t('tpv.tableAllergens.prompt'), order.tableAllergens || '', {allowEmpty:true});
   if(val === null) return;
   order.tableAllergens = val.trim();
   saveDB();
@@ -3963,7 +3963,7 @@ function confirmTransferTable(orderId){
   renderTableOrderModal(orderId);
   showToast(t('msg.tableTransferred'));
 }
-function confirmMergeTable(orderId){
+async function confirmMergeTable(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const sel = document.getElementById('merge-table-sel');
   const targetTableId = parseInt(sel.value);
@@ -3978,7 +3978,7 @@ function confirmMergeTable(orderId){
     showToast(t('msg.cannotMergeSplitPaid'));
     return;
   }
-  if(!confirm(t('msg.confirmMergeTables'))) return;
+  if(!(await confirmModal(t('msg.confirmMergeTables')))) return;
   // Se guarda el nombre de la mesa que se suma, para poder mostrar
   // "Mesa 3 + Mesa 4" en vez de perder esa identidad tras la fusión.
   const fromTableForMerge = DB.tables.find(t2 => t2.id === order.tableId);
@@ -4614,10 +4614,10 @@ function printInvoice(saleId){
 }
 
 // Abre el cliente de correo del usuario con el ticket en el cuerpo del mensaje.
-function sendTicketByEmail(saleId){
+async function sendTicketByEmail(saleId){
   const sale = DB.sales.find(s => s.id === saleId);
   if(!sale) return;
-  const email = (prompt(t('ticket.promptClientEmail'), '')||'').trim();
+  const email = (await promptText(t('ticket.promptClientEmail'), '')||'').trim();
   if(!email) return;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast(t('msg.invalidEmail')); return; }
   const subject = t('ticket.emailSubject').replace('${biz}', DB.business.name || 'GastroGoan');

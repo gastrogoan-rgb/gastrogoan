@@ -375,9 +375,9 @@ function backToCartaList(){
   cartaEdit = null;
   renderCarta();
 }
-function deleteCarta(id){
+async function deleteCarta(id){
   if(!isOwnerSession() && !editUnlocked) return;
-  if(!confirm(t('msg.confirmDeleteCarta'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteCarta')))) return;
   DB.cartas = DB.cartas.filter(c=>c.id!==id);
   DB.activeCartaIds = (DB.activeCartaIds||[]).filter(cid=>cid!==id);
   saveDB();
@@ -521,9 +521,9 @@ function confirmNewCartaSection(){
   closeModal();
   renderCartaSecciones();
 }
-function removeCartaSection(secId){
+async function removeCartaSection(secId){
   if(!isOwnerSession() && !editUnlocked) return;
-  if(!confirm(t('msg.confirmDeleteSection'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteSection')))) return;
   cartaEdit.secciones = cartaEdit.secciones.filter(s=>s.id!==secId);
   renderCartaSecciones();
 }
@@ -540,12 +540,12 @@ function toggleCartaPlato(secId, platoId){
 // llegar a 0 el plato pasa a "No disponible" sin que nadie tenga que
 // acordarse — no se resetea solo: cuando se agote un día, hay que volver a
 // aquí y ponerle de nuevo la cantidad para el día siguiente.
-function setCartaPlatoStock(secId, platoId){
+async function setCartaPlatoStock(secId, platoId){
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec && sec.platos.find(x=>x.id===platoId);
   if(!p) return;
   const current = p.stock!=null ? String(p.stock) : '';
-  const val = prompt(t('msg.setStockPrompt'), current);
+  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
   if(val === null) return;
   const trimmed = val.trim();
   if(trimmed === ''){ delete p.stock; renderCartaSecciones(); return; }
@@ -555,9 +555,9 @@ function setCartaPlatoStock(secId, platoId){
   p.disponible = n > 0;
   renderCartaSecciones();
 }
-function removeCartaPlato(secId, platoId){
+async function removeCartaPlato(secId, platoId){
   if(!isOwnerSession() && !editUnlocked) return;
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   sec.platos = sec.platos.filter(p=>p.id!==platoId);
   renderCartaSecciones();
@@ -669,8 +669,8 @@ function addPlatoMod(secId, platoId){
   openModal(renderPlatoModsModalHtml(secId, platoId));
   setTimeout(()=>document.getElementById('new-mod-nombre')?.focus(), 50);
 }
-function removePlatoMod(secId, platoId, modId){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removePlatoMod(secId, platoId, modId){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   const p = sec.platos.find(x=>x.id===platoId);
   p.modificadores = (p.modificadores||[]).filter(m=>m.id!==modId);
@@ -833,8 +833,8 @@ function backToMenuList(){
   menuEdit = null;
   renderMenu();
 }
-function deleteMenu(id){
-  if(!confirm(t('msg.confirmDeleteMenu'))) return;
+async function deleteMenu(id){
+  if(!(await confirmModal(t('msg.confirmDeleteMenu')))) return;
   DB.menus = DB.menus.filter(m=>m.id!==id);
   DB.activeMenuIds = (DB.activeMenuIds||[]).filter(mid=>mid!==id);
   saveDB();
@@ -984,8 +984,8 @@ function confirmNewMenuGrupo(){
   closeModal();
   renderMenuGrupos();
 }
-function removeMenuGrupo(grupoId){
-  if(!confirm(t('msg.confirmDeleteGroup'))) return;
+async function removeMenuGrupo(grupoId){
+  if(!(await confirmModal(t('msg.confirmDeleteGroup')))) return;
   menuEdit.grupos = menuEdit.grupos.filter(g=>g.id!==grupoId);
   renderMenuGrupos();
 }
@@ -1113,8 +1113,8 @@ function confirmAddMenuOpcion(grupoId){
   closeModal();
   renderMenuGrupos();
 }
-function removeMenuOpcion(grupoId, opcionId){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removeMenuOpcion(grupoId, opcionId){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   g.opciones = g.opciones.filter(o=>o.id!==opcionId);
   renderMenuGrupos();
@@ -1165,8 +1165,8 @@ function addMenuOpcionMod(grupoId, opcionId){
   openMenuOpcionModsModal(grupoId, opcionId);
 }
 
-function removeMenuOpcionMod(grupoId, opcionId, modId){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removeMenuOpcionMod(grupoId, opcionId, modId){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const g = menuEdit.grupos.find(x=>x.id===grupoId);
   const o = g.opciones.find(x=>x.id===opcionId);
   o.modificadores = (o.modificadores||[]).filter(m=>m.id!==modId);

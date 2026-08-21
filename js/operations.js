@@ -747,7 +747,7 @@ function toggleProviderEnvioFields(){
   document.getElementById('prov-envio-minimo-field').style.display = tipo==='minimo' ? 'block' : 'none';
 }
 
-function saveProvider(id){
+async function saveProvider(id){
   const nombre = document.getElementById('prov-nombre').value.trim();
   if(!nombre){ showToast(t('msg.nameRequired')); return; }
   // El vínculo con los ingredientes de Mega Lista y con los pedidos es por
@@ -755,7 +755,7 @@ function saveProvider(id){
   // espacios distintos rompería ese vínculo en silencio, así que se avisa
   // (no bloqueante) si ya existe otro con el mismo nombre.
   const dupe = DB.providers.find(p => p.id !== id && (p.area||'cocina')===currentArea() && p.nombre.trim().toLowerCase() === nombre.toLowerCase());
-  if(dupe && !confirm(t('msg.confirmDuplicateSupplier').replace('${name}', dupe.nombre))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateSupplier').replace('${name}', dupe.nombre)))) return;
   const data = {
     nombre,
     contacto: document.getElementById('prov-contacto').value.trim(),
@@ -797,7 +797,7 @@ function saveProvider(id){
   showToast(t('msg.supplierSaved'));
 }
 
-function deleteProvider(id){
+async function deleteProvider(id){
   const p = DB.providers.find(x => x.id === id);
   if(!p) return;
   // Los ingredientes guardan el proveedor por NOMBRE (i.supplier), igual que
@@ -813,7 +813,7 @@ function deleteProvider(id){
     showToast(t('msg.cannotDeleteSupplierLinked').replace('${count}', linkedCount));
     return;
   }
-  if(!confirm(t('msg.confirmDeleteSupplier'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteSupplier')))) return;
   DB.providers = DB.providers.filter(x=>x.id!==id);
   saveDB();
   renderProveedores();
@@ -1316,8 +1316,8 @@ function handleAlbaranUpload(input){
   reader.onerror = () => showToast(t('albaran.uploadFailed'));
   reader.readAsDataURL(file);
 }
-function removeAlbaranFile(){
-  if(!confirm(t('msg.confirmDeleteGeneric'))) return;
+async function removeAlbaranFile(){
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   const o = getPurchaseOrder(pedidoDetailId);
   if(!o) return;
   delete o.albaranFile;
@@ -1820,9 +1820,9 @@ function selectOrderSupplier(supplier){
   refreshOrderForm();
 }
 
-function sugerirPorDeficit(){
+async function sugerirPorDeficit(){
   const hasManualQty = orderModalLines.some(l => l.cantidad > 0);
-  if(hasManualQty && !confirm(t('msg.confirmOverwriteQtyWithSuggestion'))) return;
+  if(hasManualQty && !(await confirmModal(t('msg.confirmOverwriteQtyWithSuggestion')))) return;
   orderModalLines.forEach(line => {
     const s = getStockEntry(line.ingredientId);
     line.cantidad = Math.max(0, (s.min||0) - (s.qty||0));
@@ -1846,7 +1846,7 @@ function pendingOrderForSupplier(supplier){
 
 // Crea (o reutiliza) el pedido a partir del formulario del modal "Nuevo Pedido".
 // Devuelve el pedido creado, o null si los datos no son válidos.
-function buildNewPedido(estado){
+async function buildNewPedido(estado){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return null; }
   const date = document.getElementById('order-date').value || todayStr();
   // Un pedido para hoy mismo no da tiempo a que el proveedor lo prepare y
@@ -1871,7 +1871,7 @@ function buildNewPedido(estado){
   const items = orderModalLines.filter(l => l.cantidad > 0).map(l => ({...l}));
   if(!items.length){ showToast(t('msg.addAtLeastOneItem')); return null; }
   const pending = pendingOrderForSupplier(orderModalSupplier);
-  if(pending && !confirm(t('msg.confirmPendingOrderExists').replace('${date}', pending.date).replace('${status}', pedidoEstadoLabel(pending.estado)))) return null;
+  if(pending && !(await confirmModal(t('msg.confirmPendingOrderExists').replace('${date}', pending.date).replace('${status}', pedidoEstadoLabel(pending.estado))))) return null;
   const finalEstado = estado || 'ENVIADO';
   const order = {id: genId(), supplier: orderModalSupplier, date, estado: finalEstado, items, notas:'', recepcion:null, comprobacion:'', area: currentArea()};
   if(finalEstado === 'ENVIADO') order.enviadoEn = todayStr();
@@ -1892,12 +1892,12 @@ function printPedidoBorrador(){
   printReportWindow(t('label.purchaseOrder'), buildPedidoPrintHtml(o));
 }
 
-function sendNewPedido(method){
+async function sendNewPedido(method){
   if(!orderModalSupplier){ showToast(t('msg.selectSupplier')); return; }
   const prov = getProviderByName(orderModalSupplier);
   if(method === 'whatsapp' && !(prov && prov.tel)){ showToast(t('msg.supplierMissingPhone')); return; }
   if(method === 'email' && !(prov && prov.email)){ showToast(t('msg.supplierMissingEmail')); return; }
-  const order = buildNewPedido();
+  const order = await buildNewPedido();
   if(!order) return;
   if(orderFormInline){
     // Vacía el formulario inline y pasa al historial para ver el pedido creado.
@@ -1912,7 +1912,7 @@ function sendNewPedido(method){
   showToast(t('msg.orderSent'));
 }
 
-function deleteOrder(id){
+async function deleteOrder(id){
   const o = getPurchaseOrder(id);
   if(!o) return;
   if(o.estado === 'RECIBIDO'){
@@ -1921,7 +1921,7 @@ function deleteOrder(id){
     requestBusinessPinAction(t('title.deleteOrder'), t('msg.confirmDeleteReceivedOrder'), () => reallyDeleteOrder(id));
     return;
   }
-  if(!confirm(t('msg.confirmDeleteOrder'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteOrder')))) return;
   reallyDeleteOrder(id);
 }
 function reallyDeleteOrder(id){

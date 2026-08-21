@@ -1145,8 +1145,8 @@ function onIngredientCategoryChange(id){
 // usan: antes, una vez creada, un nombre mal escrito se quedaba así para
 // siempre — no había forma de arreglarlo, solo de crear una categoría
 // nueva y reasignar ingredientes a mano.
-function renameIngredientCategory(oldName){
-  const nuevo = prompt(t('msg.renameCategoryPrompt'), oldName);
+async function renameIngredientCategory(oldName){
+  const nuevo = await promptText(t('msg.renameCategoryPrompt'), oldName);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
   if(!trimmed || trimmed === oldName) return;
@@ -1188,7 +1188,7 @@ function confirmNewIngredientCategory(id){
   openIngredientModal(id, state);
 }
 
-function saveIngredient(id){
+async function saveIngredient(id){
   const name = document.getElementById('ing-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const category = document.getElementById('ing-category').value;
@@ -1204,7 +1204,7 @@ function saveIngredient(id){
   // de que ya existía — para no acabar con el coste/IVA de un mismo
   // ingrediente repartido entre dos fichas distintas.
   const dupe = DB.ingredients.find(i => i.id !== id && (i.area||'cocina')===currentArea() && i.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !confirm(t('msg.confirmDuplicateIngredient').replace('${name}', dupe.name))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateIngredient').replace('${name}', dupe.name)))) return;
 
   if(id){
     const ing = getIngredient(id);
@@ -1725,7 +1725,7 @@ function openElaboracionModal(id){
   `);
 }
 
-function saveElaboracion(id){
+async function saveElaboracion(id){
   const name = document.getElementById('elab-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const category = document.getElementById('elab-category').value;
@@ -1736,7 +1736,7 @@ function saveElaboracion(id){
   // duplicado (mismo nombre, misma área) en vez de dejarlo pasar en
   // silencio — antes no había ningún aviso al crear una elaboración.
   const dupe = (DB.elaboraciones||[]).find(x => x.id !== id && (x.area||'cocina')===currentArea() && x.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !confirm(t('msg.confirmDuplicateElaboration').replace('${name}', dupe.name))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateElaboration').replace('${name}', dupe.name)))) return;
   if(id){
     Object.assign(getElaboracion(id), {name, category, unit, qty, min});
   } else {

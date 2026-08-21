@@ -637,7 +637,7 @@ function currentRecipeFormState(id){
   };
 }
 
-function saveRecipe(id){
+async function saveRecipe(id){
   const name = document.getElementById('recipe-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   // Aviso (no bloqueante) de posible plato duplicado, mismo criterio ya
@@ -647,7 +647,7 @@ function saveRecipe(id){
   const isBaseEl = document.getElementById('recipe-is-base');
   const isBase = isBaseEl ? isBaseEl.checked : false;
   const dupe = DB.recipes.find(r => r.id !== id && (r.area||'cocina')===currentArea() && !!r.isBase===isBase && r.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !confirm(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateRecipe').replace('${name}', dupe.name)))) return;
   // Una elaboración base no se vende directamente (no tiene precio de venta
   // ni IVA repercutido propios) — lo que interesa de ella es su coste total
   // y el coste por unidad de rendimiento, no un precio de venta.
@@ -806,7 +806,7 @@ function recipesUsingBaseRecipe(id, seen){
   const byId = new Map(all.map(r => [r.id, r]));
   return [...byId.values()];
 }
-function deleteRecipe(id){
+async function deleteRecipe(id){
   if(!isOwnerSession() && !editUnlocked) return;
   const r = DB.recipes.find(x=>x.id===id);
   const cartaHits = cartaPlatosUsingRecipe(id);
@@ -836,7 +836,7 @@ function deleteRecipe(id){
     `);
     return;
   }
-  if(!confirm(t('msg.confirmDeleteDish'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteDish')))) return;
   confirmDeleteRecipe(id);
 }
 function confirmDeleteRecipe(id){
@@ -1365,7 +1365,7 @@ function toggleFichaAllergen(a){
   renderFichaModal();
 }
 
-function saveFicha(){
+async function saveFicha(){
   syncFichaModalFields();
   const f = fichaModalState;
   const name = (f.name||'').trim();
@@ -1380,7 +1380,7 @@ function saveFicha(){
   // y acabar con varias fichas huérfanas con el mismo nombre, imposibles
   // de distinguir en la lista de "sin vincular".
   const dupe = DB.fichas.find(other => other.id !== f.id && (other.area||'cocina')===currentArea() && other.name.trim().toLowerCase() === name.toLowerCase());
-  if(dupe && !confirm(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name))) return;
+  if(dupe && !(await confirmModal(t('msg.confirmDuplicateTechSheet').replace('${name}', dupe.name)))) return;
   const data = {
     name,
     recipeId: f.recipeId || '',
@@ -1408,9 +1408,9 @@ function saveFicha(){
   showToast(t('msg.techSheetSaved'));
 }
 
-function deleteFicha(id){
+async function deleteFicha(id){
   if(!isOwnerSession() && !editUnlocked) return;
-  if(!confirm(t('msg.confirmDeleteTechSheet'))) return;
+  if(!(await confirmModal(t('msg.confirmDeleteTechSheet')))) return;
   DB.fichas = DB.fichas.filter(f => f.id !== id);
   saveDB();
   renderFichas();
