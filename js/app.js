@@ -4996,6 +4996,8 @@ function renderDataMaintenanceCard(){
       <div style="font-size:12px;color:${daysSinceLastBackup()>=BACKUP_REMINDER_DAYS?'var(--red)':'var(--muted)'};margin-top:6px">
         ${daysSinceLastBackup()===Infinity ? t('mn.data.neverBackedUp') : t('mn.data.lastBackup').replace('${n}', daysSinceLastBackup())}
       </div>
+      <input type="file" id="restore-backup-input" accept="application/json" style="display:none" onchange="handleRestoreBackupFile(this.files[0])">
+      <button class="btn btn-sm" onclick="document.getElementById('restore-backup-input').click()"><i class="ti ti-upload"></i> ${t('mn.data.restoreBackup')}</button>
       <button class="btn btn-sm" onclick="openTrashModal()"><i class="ti ti-trash"></i> ${t('trash.title')}${(DB.trash||[]).length ? ` (${DB.trash.length})` : ''}</button>
       <button class="btn btn-sm" onclick="openAuditLogModal()"><i class="ti ti-list-details"></i> ${t('audit.title')}</button>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -5091,6 +5093,83 @@ function downloadFullBackup(){
   saveDB();
   checkBackupReminder();
   showToast(t('msg.backupDownloaded'));
+}
+
+// Antes se podía DESCARGAR una copia pero no había ninguna forma de volver
+// a cargarla: una copia de seguridad que no se puede restaurar no protege
+// de nada de verdad. Se valida la forma mínima del archivo antes de
+// aceptarlo (para no aceptar cualquier JSON al azar como si fuera un
+// backup válido) y se pide confirmación escribiendo el nombre del negocio
+// actual, porque esto SUSTITUYE TODOS los datos de este dispositivo — no
+// hay deshacer una vez confirmado.
+function handleRestoreBackupFile(file){
+  if(!file) return;
+  const input = document.getElementById('restore-backup-input');
+  const reader = new FileReader();
+  reader.onload = () => {
+    if(input) input.value = '';
+    let parsed;
+    try{ parsed = JSON.parse(reader.result); }catch(e){
+      showToast(t('msg.restoreInvalidFile'));
+      return;
+    }
+    // Comprobación mínima de forma: no valida CADA campo (sería frágil ante
+    // cambios futuros del esquema), pero sí que tenga la pinta de un backup
+    // real de esta app y no un JSON cualquiera o el de otro negocio con un
+    // tenantId de licencia distinto (eso se resuelve al canjear, no aquí,
+    // pero al menos se avisa de que no coincide).
+    const looksValid = parsed && typeof parsed === 'object'
+      && Array.isArray(parsed.sales) && Array.isArray(parsed.employees)
+      && Array.isArray(parsed.ingredients) && parsed.business && typeof parsed.business === 'object';
+    if(!looksValid){
+      showToast(t('msg.restoreInvalidFile'));
+      return;
+    }
+    openConfirmRestoreBackupModal(parsed);
+  };
+  reader.onerror = () => showToast(t('msg.restoreInvalidFile'));
+  reader.readAsText(file);
+}
+function openConfirmRestoreBackupModal(parsed){
+  const currentName = (DB.business && DB.business.name) || t('bs.defaultBusinessName');
+  const backupName = (parsed.business && parsed.business.name) || '—';
+  const backupSales = (parsed.sales||[]).length;
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-alert-triangle" style="color:var(--red)"></i> ${t('mn.data.restoreBackup')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="manual-warning" style="margin-bottom:12px"><i class="ti ti-alert-triangle"></i>${t('msg.restoreWarning')}</div>
+    <p style="font-size:13px;margin-bottom:4px">${t('mn.data.restoreBackupOf')}: <strong>${escapeHtml(backupName)}</strong></p>
+    <p style="font-size:13px;margin-bottom:14px">${t('mn.data.restoreBackupSalesCount').replace('${n}', backupSales)}</p>
+    <div class="field">
+      <label>${t('msg.restoreTypeToConfirm').replace('${name}', currentName)}</label>
+      <input type="text" id="restore-confirm-name" autocomplete="off">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-danger" onclick="confirmRestoreBackup()"><i class="ti ti-database-import"></i> ${t('mn.data.restoreBackup')}</button>
+    </div>
+  `);
+  window._pendingRestoreBackup = parsed;
+  window._pendingRestoreBackupExpectedName = currentName;
+}
+function confirmRestoreBackup(){
+  const parsed = window._pendingRestoreBackup;
+  const expected = window._pendingRestoreBackupExpectedName || '';
+  const typed = (document.getElementById('restore-confirm-name').value || '').trim();
+  if(!parsed || typed.toLowerCase() !== expected.trim().toLowerCase()){
+    showToast(t('gate.removeBusinessNameMismatch'));
+    return;
+  }
+  idbSet(DB_KEY, parsed).then(() => {
+    delete window._pendingRestoreBackup;
+    delete window._pendingRestoreBackupExpectedName;
+    location.reload();
+  }).catch(e => {
+    console.error('Error restaurando backup', e);
+    showToast(t('msg.restoreInvalidFile'));
+  });
 }
 
 // No hay backend para backups automáticos de verdad (eso sería un proyecto
