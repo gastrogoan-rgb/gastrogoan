@@ -630,17 +630,17 @@ const GE = (function(){
     openGVModal(v);
   }
   function openGVModal(v){
-    const provs = proveedores().map(p=>`<option value="${escapeHtml(p)}">`).join('');
+    const provs = proveedores();
     openModal(`
       <div class="modal-header"><h3>${editingGV?t('hr.gv.editPurchase'):t('hr.gv.addPurchase')}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="field">
         <label>${t('common.category')}</label>
         <select id="gv-f-cat">${VARIABLE_CATEGORIES.map(c=>`<option value="${c}" ${v.categoria===c?'selected':''}>${escapeHtml(variableCategoryLabel(c))}</option>`).join('')}</select>
       </div>
-      <div class="field">
+      <div class="field" style="position:relative">
         <label>${t('common.supplier')}</label>
-        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" list="gv-prov-list">
-        <datalist id="gv-prov-list">${provs}</datalist>
+        <input type="text" id="gv-f-prov" value="${escapeHtml(v.proveedor||'')}" autocomplete="off" oninput="runTypeahead('gv-f-prov')" onfocus="runTypeahead('gv-f-prov')" onblur="setTimeout(()=>hideTypeahead('gv-f-prov'),150)">
+        <div id="gv-f-prov-results" class="typeahead-results" style="display:none"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>${t('hr.lbl.amountNoVat')}</label><input type="number" id="gv-f-imp" min="0" step="0.01" value="${v.importe||''}"></div>
@@ -654,6 +654,10 @@ const GE = (function(){
         <button class="btn btn-primary" onclick="GE.saveGV()">${t("common.save")}</button>
       </div>
     `);
+    attachTypeahead('gv-f-prov', 'gv-f-prov-results',
+      q => provs.filter(p => p.toLowerCase().includes(q)),
+      p => escapeHtml(p),
+      p => { document.getElementById('gv-f-prov').value = p; });
   }
   function saveGV(){
     const imp = parseFloat(document.getElementById('gv-f-imp').value);

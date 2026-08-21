@@ -542,6 +542,47 @@ function promptBusinessLicense(){
     setTimeout(()=>document.getElementById('new-lic-code')?.focus(), 50);
   });
 }
+// Buscador con sugerencias progresivas: reemplaza los <select>/<datalist>
+// que volcaban de golpe listas enteras (clientes, proveedores...) — con un
+// negocio de años esas listas son largas, y el usuario tiene que poder
+// escribir letra a letra y ver solo lo que coincide, no todo de una vez.
+// Uso: attachTypeahead('input-id', 'results-id', q => items, item => htmlLabel, item => {...onPick...}, {hiddenId, onClear}).
+const __typeaheadRegistry = {};
+function attachTypeahead(inputId, resultsId, getItems, renderLabel, onPick, opts){
+  opts = opts || {};
+  __typeaheadRegistry[inputId] = { resultsId, getItems, renderLabel, onPick, hiddenId: opts.hiddenId, onClear: opts.onClear, items: [] };
+}
+function runTypeahead(inputId){
+  const cfg = __typeaheadRegistry[inputId];
+  const input = document.getElementById(inputId);
+  const results = cfg && document.getElementById(cfg.resultsId);
+  if(!cfg || !input || !results) return;
+  const q = input.value.trim().toLowerCase();
+  if(!q){
+    results.style.display = 'none';
+    results.innerHTML = '';
+    if(cfg.hiddenId){ const h = document.getElementById(cfg.hiddenId); if(h) h.value = ''; }
+    if(cfg.onClear) cfg.onClear();
+    return;
+  }
+  cfg.items = cfg.getItems(q).slice(0, 30);
+  results.innerHTML = cfg.items.length
+    ? cfg.items.map((it,i) => `<div class="typeahead-item" onmousedown="pickTypeahead('${inputId}',${i})">${cfg.renderLabel(it)}</div>`).join('')
+    : `<div class="typeahead-item" style="cursor:default;color:var(--muted)">${t('common.noResults')}</div>`;
+  results.style.display = 'block';
+}
+function pickTypeahead(inputId, idx){
+  const cfg = __typeaheadRegistry[inputId];
+  if(!cfg || !cfg.items[idx]) return;
+  cfg.onPick(cfg.items[idx]);
+  hideTypeahead(inputId);
+}
+function hideTypeahead(inputId){
+  const cfg = __typeaheadRegistry[inputId];
+  const results = cfg && document.getElementById(cfg.resultsId);
+  if(results) results.style.display = 'none';
+}
+
 // Sustituto de prompt() con el diseño de la app, para los sitios donde se
 // pide un texto suelto (p.ej. el nombre de una sucursal recién creada).
 // Mantiene la misma forma de uso: devuelve el texto, o null si se cancela.

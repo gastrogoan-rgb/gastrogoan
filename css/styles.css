@@ -351,6 +351,9 @@ input[type="checkbox"],input[type="radio"]{
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .search-input{max-width:280px}
 #reservas-search-input{width:100%;min-width:0}
+.typeahead-results{position:absolute;z-index:20;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:2px}
+.typeahead-item{padding:8px 10px;font-size:13px;cursor:pointer}
+.typeahead-item:hover{background:var(--brand-cream)}
 @media (max-width:480px){#reservas-search-input{font-size:14px}}
 #gv-search{min-width:260px}
 

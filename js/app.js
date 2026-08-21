@@ -2046,18 +2046,20 @@ function openMergeClientModal(id){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('merge.desc').replace('${name}', escapeHtml(c.name))}</p>
-    <div class="field">
+    <div class="field" style="position:relative">
       <label>${t('merge.pickDuplicate')}</label>
-      <input type="text" id="merge-client-search" list="merge-client-list" placeholder="${t('ph.clientName')}" autocomplete="off">
-      <datalist id="merge-client-list">
-        ${others.map(o => `<option value="${escapeHtml(o.name)}">`).join('')}
-      </datalist>
+      <input type="text" id="merge-client-search" placeholder="${t('ph.clientName')}" autocomplete="off" oninput="runTypeahead('merge-client-search')" onfocus="runTypeahead('merge-client-search')" onblur="setTimeout(()=>hideTypeahead('merge-client-search'),150)">
+      <div id="merge-client-search-results" class="typeahead-results" style="display:none"></div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="openClientModal(${id})">${t('common.cancel')}</button>
       <button class="btn btn-danger" onclick="confirmMergeClient(${id})"><i class="ti ti-git-merge"></i> ${t('btn.mergeClient')}</button>
     </div>
   `);
+  attachTypeahead('merge-client-search', 'merge-client-search-results',
+    q => others.filter(o => o.name.toLowerCase().includes(q)),
+    o => escapeHtml(o.name),
+    o => { document.getElementById('merge-client-search').value = o.name; });
 }
 async function confirmMergeClient(targetId){
   const target = DB.clients.find(x=>x.id===targetId);
@@ -3003,16 +3005,18 @@ function openReservationModal(id){
   const r = id ? DB.reservations.find(x=>x.id===id) : {clientId:null, clientName:'', date: reservasDate || todayStr(), time:'20:00', people:2, tableId:null, notes:'', status:'confirmada'};
   currentReservationId = id || null;
 
-  const clientOptions = `<option value="">${t('label.clientNoRecord')}</option>` + DB.clients.map(c=>`<option value="${c.id}" ${r.clientId===c.id?'selected':''}>${escapeHtml(c.name)}${c.noShows?` (${c.noShows} no-show${c.noShows===1?'':'s'})`:''}</option>`).join('');
+  const selectedClient = r.clientId ? DB.clients.find(c=>c.id===r.clientId) : null;
 
   openModal(`
     <div class="modal-header">
       <h3>${id?t('title.editReservation'):t('title.newReservation')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
-    <div class="field">
+    <div class="field" style="position:relative">
       <label>${t('th.client')}</label>
-      <select id="reservation-client" onchange="updateReservationClientNoShowHint()">${clientOptions}</select>
+      <input type="text" id="reservation-client-search" placeholder="${t('label.clientNoRecord')}" autocomplete="off" value="${escapeHtml(selectedClient?selectedClient.name:'')}" oninput="runTypeahead('reservation-client-search')" onfocus="runTypeahead('reservation-client-search')" onblur="setTimeout(()=>hideTypeahead('reservation-client-search'),150)">
+      <input type="hidden" id="reservation-client" value="${r.clientId||''}">
+      <div id="reservation-client-search-results" class="typeahead-results" style="display:none"></div>
       <div id="reservation-client-noshow-hint"></div>
     </div>
     <div class="field">
@@ -3048,6 +3052,15 @@ function openReservationModal(id){
       <button class="btn btn-primary" onclick="saveReservation(${id||'null'})">${t("common.save")}</button>
     </div>
   `);
+  attachTypeahead('reservation-client-search', 'reservation-client-search-results',
+    q => DB.clients.filter(c => c.name.toLowerCase().includes(q)),
+    c => `${escapeHtml(c.name)}${c.noShows?` (${c.noShows} no-show${c.noShows===1?'':'s'})`:''}`,
+    c => {
+      document.getElementById('reservation-client').value = c.id;
+      document.getElementById('reservation-client-search').value = c.name;
+      updateReservationClientNoShowHint();
+    },
+    { hiddenId: 'reservation-client', onClear: updateReservationClientNoShowHint });
   updateReservationClientNoShowHint();
 }
 

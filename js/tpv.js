@@ -1286,10 +1286,10 @@ function openNewOrderPaxModal(tableId){
       <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
       <label style="margin-top:8px">${t('label.walkInClientOptional')}</label>
-      <input type="text" id="new-order-client-name" list="new-order-client-list" placeholder="${t('ph.walkInClientName')}" autocomplete="off">
-      <datalist id="new-order-client-list">
-        ${DB.clients.map(c => `<option value="${escapeHtml(c.name)}">`).join('')}
-      </datalist>
+      <div style="position:relative">
+        <input type="text" id="new-order-client-name" placeholder="${t('ph.walkInClientName')}" autocomplete="off" oninput="runTypeahead('new-order-client-name')" onfocus="runTypeahead('new-order-client-name')" onblur="setTimeout(()=>hideTypeahead('new-order-client-name'),150)">
+        <div id="new-order-client-name-results" class="typeahead-results" style="display:none"></div>
+      </div>
       <small style="color:var(--muted)">${t('label.walkInClientHint')}</small>
     </div>
     <div class="modal-footer">
@@ -1297,6 +1297,10 @@ function openNewOrderPaxModal(tableId){
       <button class="btn btn-primary" onclick="confirmOpenTableOrder(${tableId})">${t('title.openTable')}</button>
     </div>
   `);
+  attachTypeahead('new-order-client-name', 'new-order-client-name-results',
+    q => DB.clients.filter(c => c.name.toLowerCase().includes(q)),
+    c => escapeHtml(c.name),
+    c => { document.getElementById('new-order-client-name').value = c.name; });
 }
 
 function toggleNewOrderReservaField(){
