@@ -4286,21 +4286,32 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
     })),
     total,
   };
-  const createRes = await fetch(`${apiBase}/invoices`, {method: 'POST', headers, body: JSON.stringify(body)});
-  if(!createRes.ok) throw new Error(`VeriFactuAPI (crear factura) respondió ${createRes.status}`);
-  const created = await createRes.json();
-  const item = created.data && created.data.items && created.data.items[0];
-  if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de factura');
-  sale.verifactuInvoiceId = item.id;
+  // Idempotencia: si un intento anterior ya creó la factura (sale.verifactuInvoiceId
+  // guardado) pero falló el paso de validar, un reintento NO debe volver a crear
+  // otra factura desde cero — eso duplicaba la factura en el proveedor cada vez
+  // que fallaba justo después de crearla. Se reutiliza el id ya creado.
+  let itemId = sale.verifactuInvoiceId;
+  if(!itemId){
+    const createRes = await fetch(`${apiBase}/invoices`, {method: 'POST', headers, body: JSON.stringify(body)});
+    if(!createRes.ok) throw new Error(`VeriFactuAPI (crear factura) respondió ${createRes.status}`);
+    const created = await createRes.json();
+    const item = created.data && created.data.items && created.data.items[0];
+    if(!item || !item.id) throw new Error('VeriFactuAPI no devolvió un id de factura');
+    itemId = item.id;
+    sale.verifactuInvoiceId = itemId;
+    saveDB();
+  }
 
   // Validar la factura (dispara la generación del número definitivo y el
   // envío a la AEAT) — CONFIRMADO en vivo el 10/08/2026: HTTP 200,
   // "validated":true, número de factura asignado. OJO: este endpoint solo
-  // se puede llamar UNA VEZ por factura (su propia documentación lo avisa),
-  // así que si esto falla NO se debe reintentar creando o validando de
-  // nuevo la misma factura — solo queda registrada la incidencia.
-  const validateRes = await fetch(`${apiBase}/invoice/${item.id}/validate`, {method: 'POST', headers});
-  if(!validateRes.ok) throw new Error(`VeriFactuAPI (validar factura #${item.id}) respondió ${validateRes.status} — NO reintentar automáticamente, revisar a mano en su panel`);
+  // se puede llamar UNA VEZ por factura (su propia documentación lo avisa).
+  // Si esto falla, el siguiente reintento (más arriba) reutiliza itemId en
+  // vez de crear otra factura — pero este POST en sí no se reintenta contra
+  // el mismo id sin más: si vuelve a fallar, queda registrada la incidencia
+  // para revisar a mano en el panel del proveedor.
+  const validateRes = await fetch(`${apiBase}/invoice/${itemId}/validate`, {method: 'POST', headers});
+  if(!validateRes.ok) throw new Error(`VeriFactuAPI (validar factura #${itemId}) respondió ${validateRes.status} — revisar a mano en su panel`);
   const validated = await validateRes.json();
   const vItem = validated.data && validated.data.items && validated.data.items[0];
 
@@ -4311,7 +4322,7 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
   // lo que se imprime/adjunta al ticket.
   let pdfBase64 = null;
   try{
-    const pdfRes = await fetch(`${apiBase}/invoice/${item.id}/downloadPdf`, {headers});
+    const pdfRes = await fetch(`${apiBase}/invoice/${itemId}/downloadPdf`, {headers});
     if(pdfRes.ok){
       const pdfJson = await pdfRes.json();
       if(pdfJson && pdfJson.success && pdfJson.data) pdfBase64 = pdfJson.data;
@@ -4319,7 +4330,7 @@ async function submitSaleToVerifactuApi(sale, cfg, provider){
   }catch(e){ /* el PDF es un extra, no bloquea la venta si falla */ }
 
   return {
-    invoiceId: (vItem && vItem.invoicenumber) || item.id,
+    invoiceId: (vItem && vItem.invoicenumber) || itemId,
     hash: null,
     qrData: null,
     pdfBase64,
@@ -4340,17 +4351,25 @@ async function submitSaleToFacturaHub(sale, cfg, provider){
   // simplificadas. Cada línea lleva su propio tipo de IVA real (no uno
   // único adivinado para todo el ticket), para declarar bien una venta que
   // mezcle platos con distinto IVA.
-  const createRes = await fetch(`${provider.apiBase}/api/invoices`, {
-    method: 'POST', headers,
-    body: JSON.stringify({
-      client: {name: sale.clienteNombre || t('ticket.finalConsumer')},
-      items: sale.items.map(l => ({description: l.name, quantity: l.qty, unitPrice: l.price, taxRate: fiscalLineIvaPct(l)})),
-    }),
-  });
-  if(!createRes.ok) throw new Error(`FacturaHub (crear factura) respondió ${createRes.status}`);
-  const created = await createRes.json();
-  const invoiceId = created._id || created.id;
-  if(!invoiceId) throw new Error('FacturaHub no devolvió un id de factura');
+  // Idempotencia: igual que en submitSaleToVerifactuApi, si un intento
+  // anterior ya creó la factura pero falló el paso de emitir, un reintento
+  // no debe volver a crear otra desde cero.
+  let invoiceId = sale.verifactuInvoiceId;
+  if(!invoiceId){
+    const createRes = await fetch(`${provider.apiBase}/api/invoices`, {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        client: {name: sale.clienteNombre || t('ticket.finalConsumer')},
+        items: sale.items.map(l => ({description: l.name, quantity: l.qty, unitPrice: l.price, taxRate: fiscalLineIvaPct(l)})),
+      }),
+    });
+    if(!createRes.ok) throw new Error(`FacturaHub (crear factura) respondió ${createRes.status}`);
+    const created = await createRes.json();
+    invoiceId = created._id || created.id;
+    if(!invoiceId) throw new Error('FacturaHub no devolvió un id de factura');
+    sale.verifactuInvoiceId = invoiceId;
+    saveDB();
+  }
 
   // 2) Emitirla a VeriFactu.
   const emitRes = await fetch(`${provider.apiBase}/api/einvoice/emit`, {
@@ -4399,8 +4418,17 @@ async function processVerifactuQueue(){
   if(verifactuProcessing) return;
   const cfg = verifactuConfig();
   if(!cfg.enabled || !cfg.provider || !cfg.apiKey) return;
-  const pending = DB.sales.filter(s => s.verifactu && s.verifactu.status === 'pending');
-  if(!pending.length) return;
+  // Una venta anulada mientras estaba pendiente de envío (p. ej. cobrada sin
+  // conexión y anulada antes de que el reintento tuviera éxito) no debe
+  // enviarse a Hacienda como si fuera válida: se marca aparte para que quede
+  // constancia de por qué no se envió, en vez de reintentarla como si nada.
+  const pending = DB.sales.filter(s => s.verifactu && s.verifactu.status === 'pending' && s.status !== 'anulada');
+  const anuladasPendientes = DB.sales.filter(s => s.verifactu && s.verifactu.status === 'pending' && s.status === 'anulada');
+  anuladasPendientes.forEach(s => { s.verifactu = {status: 'cancelled_before_send', cancelledAt: new Date().toISOString()}; });
+  if(!pending.length){
+    if(anuladasPendientes.length) saveDB();
+    return;
+  }
   verifactuProcessing = true;
   for(const sale of pending){
     try{

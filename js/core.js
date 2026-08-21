@@ -619,11 +619,12 @@ async function confirmBusinessLicensePrompt(){
 async function addNewBusiness(){
   const lic = await promptBusinessLicense();
   if(!lic) return;
-  // Antes se guardaba siempre con el nombre literal "Nuevo negocio": si el
-  // propietario daba de alta varios locales seguidos sin entrar a renombrarlos,
-  // el selector mostraba varias filas idénticas e indistinguibles entre sí.
-  const nombre = await promptText(t('gate.newBusinessNamePrompt'), t('gate.newBusinessDefaultName'), {title: t('btn.newIndependent'), icon: 'ti-building-store'});
-  const name = (nombre || '').trim() || t('gate.newBusinessDefaultName');
+  // No se pide nombre aquí: el negocio nace con un nombre de relleno y toma
+  // el real en cuanto el dueño lo guarda en Mi Negocio (updateActiveSlotName
+  // se encarga de eso). Mientras tanto, el código de negocio se muestra en
+  // el selector (ver renderBsGroups) para poder distinguir dos negocios
+  // nuevos entre sí antes de que ninguno se haya configurado todavía.
+  const name = t('gate.newBusinessDefaultName');
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
   slots.push({ id, name, code: lic.code });
@@ -769,6 +770,17 @@ function removeBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
   if(!slot) return;
+  // Borrar un negocio "raíz" que tiene sucursales las dejaría huérfanas:
+  // renderBsGroups agrupa por padre (roots.filter(s=>!s.parentId)), así que
+  // en cuanto el padre desaparece sus sucursales (que siguen en la lista,
+  // con un parentId que ya no existe) dejan de listarse en ningún grupo —
+  // invisibles en el selector para siempre, aunque sus datos/licencia sigan
+  // intactos. Mejor bloquear con un aviso claro que dejar algo así.
+  const sucursales = slots.filter(s => s.parentId === slotId);
+  if(sucursales.length){
+    showToast(t('gate.cannotRemoveBusinessWithBranches').replace('${count}', sucursales.length));
+    return;
+  }
   const typed = prompt(t('gate.confirmRemoveBusiness').replace('${name}', slot.name));
   if(typed === null) return;
   if(typed.trim().toLowerCase() !== slot.name.trim().toLowerCase()){
@@ -953,11 +965,20 @@ function renderBsGroups(allSlots){
 
     if(!hasSuc){
       // Negocio independiente — muestra "(independiente)" como badge
+      // Mientras el negocio siga con el nombre de relleno (aún no se ha
+      // guardado nada en Mi Negocio), se muestra su código debajo para
+      // poder distinguirlo de otro negocio recién dado de alta igual de
+      // "sin nombre" — si no, dos altas seguidas serían indistinguibles
+      // en el selector hasta entrar a configurar cada una.
+      const showCode = !root.name || root.name === t('gate.newBusinessDefaultName') || root.name === t('bs.defaultBusinessName');
       return `
         <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
           <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
-            <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+            <div style="overflow:hidden">
+              <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
+              ${showCode && root.code ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${escapeHtml(root.code)}</div>` : ''}
+            </div>
             <span style="font-size:11px;color:var(--muted);font-weight:400;flex-shrink:0">(${t('bs.independentTag')})</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">

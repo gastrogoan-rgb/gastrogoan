@@ -2233,9 +2233,12 @@ function printWeeklySchedule(){
 }
 
 function openTurnoModal(id, employeeId, fecha){
-  const emps = areaEmployees();
-  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
   let turno = id ? (DB.turnos||[]).find(x => x.id===id) : null;
+  // Un empleado desactivado (baja temporal) no debería poder recibir turnos
+  // NUEVOS — solo se conserva en la lista si el turno que se está editando
+  // ya era suyo, para no romper la edición de algo ya asignado.
+  const emps = areaEmployees().filter(e => e.active!==false || (turno && turno.employeeId===e.id));
+  if(!emps.length){ showToast(t('msg.addEmployeesFirst')); return; }
   const state = turno ? {...turno} : {id:null, employeeId: employeeId||emps[0].id, fecha: fecha||dateStr(new Date()), tipo:'M', entrada:'09:00', salida:'17:00', notas:''};
   const empOptions = emps.map(e => `<option value="${e.id}"${e.id===state.employeeId?' selected':''}>${escapeHtml(e.name)}</option>`).join('');
   const tipoOptions = Object.entries(SHIFT_TYPES).map(([k,v]) => `<option value="${k}"${k===state.tipo?' selected':''}>${k} - ${v.label}</option>`).join('');
@@ -2960,6 +2963,12 @@ function reallyDeleteEmployee(id){
     });
   }
   (DB.promos||[]).forEach(p => { if(p.responsableId===id) p.responsableId = null; });
+  // Peticiones de cambio de turno / vacaciones pendientes de este empleado
+  // (como origen o como destino de un swap): si no se limpian, quedan
+  // "Pendientes" para siempre con nombre "?" y, si alguien las aprobara,
+  // reasignarían un turno real a un employeeId que ya no existe.
+  DB.turnoSwapRequests = (DB.turnoSwapRequests||[]).filter(r => r.employeeId!==id && r.toEmployeeId!==id);
+  DB.vacationRequests = (DB.vacationRequests||[]).filter(r => r.employeeId!==id);
   saveDB();
   closeModal();
   const active = document.querySelector('.view.active');
@@ -3279,7 +3288,19 @@ function ownerApproveTurnoSwap(requestId, approve){
   if(!r) return;
   if(approve){
     const turno = (DB.turnos||[]).find(t2=>t2.id===r.fromTurnoId);
-    if(turno) turno.employeeId = r.toEmployeeId;
+    // Reasignar el turno directamente (sin pasar por saveTurno) podía dejar
+    // dos turnos del mismo empleado el mismo día si quien acepta cubrir ya
+    // tenía uno propio esa fecha — las horas de esa semana descuadraban en
+    // silencio (la vista solo mostraba/contaba uno de los dos). Se bloquea
+    // igual que saveTurno bloquearía esa misma colisión.
+    if(turno){
+      const yaTieneOtro = (DB.turnos||[]).some(t2 => t2.id !== turno.id && t2.employeeId === r.toEmployeeId && t2.fecha === turno.fecha);
+      if(yaTieneOtro){
+        showToast(t('swap.targetAlreadyHasShift'));
+        return;
+      }
+      turno.employeeId = r.toEmployeeId;
+    }
     r.status = 'approved';
   }else{
     r.status = 'rejected';
@@ -3345,9 +3366,13 @@ function ownerRespondVacationRequest(requestId, approve){
     const end = new Date(r.toDate);
     while(d <= end){
       const fecha = dateStr(d);
-      if(!(DB.turnos||[]).some(t2 => t2.employeeId===r.employeeId && t2.fecha===fecha)){
-        DB.turnos.push({id: genId(), employeeId: r.employeeId, fecha, tipo:'V', entrada:'', salida:''});
-      }
+      // Si ya tenía un turno de trabajo normal asignado ese día, se
+      // convertía en un fantasma: la vacación quedaba "aprobada" pero el
+      // cuadrante seguía esperando que fichara ese turno. Aquí se convierte
+      // el turno existente a vacaciones en vez de dejarlo tal cual.
+      const existente = (DB.turnos||[]).find(t2 => t2.employeeId===r.employeeId && t2.fecha===fecha);
+      if(existente) existente.tipo = 'V';
+      else DB.turnos.push({id: genId(), employeeId: r.employeeId, fecha, tipo:'V', entrada:'', salida:''});
       d.setDate(d.getDate()+1);
     }
   }else{

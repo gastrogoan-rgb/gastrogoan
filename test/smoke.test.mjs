@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'tpv.js'), 'utf8');
 
 function loadTpv(DB) {
-  const sandbox = { DB, t: (k) => k, window: undefined, console };
+  const sandbox = { DB, t: (k) => k, window: undefined, console, saveDB: () => {} };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: 'js/tpv.js' });
   return sandbox;
