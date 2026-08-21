@@ -1403,7 +1403,11 @@ function submitReserva(){
   const clientEmail = document.getElementById('r-email').value.trim();
   const date = document.getElementById('r-date').value;
   const time = document.getElementById('r-time').value;
-  const people = parseInt(document.getElementById('r-people').value) || 1;
+  // El "max" del input es solo una pista visual del navegador — se puede
+  // teclear/pegar cualquier número saltándosela, así que se acota aquí
+  // también (evita reservas de miles de comensales cuando el negocio aún
+  // no tiene aforo/mesas configurados, que es cuando no hay más validación).
+  const people = Math.min(50, Math.max(1, parseInt(document.getElementById('r-people').value) || 1));
   const notes = document.getElementById('r-notes').value.trim();
   const referral = document.getElementById('r-referral')?.value || '';
 
@@ -1414,6 +1418,16 @@ function submitReserva(){
     if(!clientEmail) markFieldInvalid('r-email');
     if(!date) markFieldInvalid('r-date');
     if(!time) markFieldInvalid('r-time');
+    showInlineError(t('error.campos.reserva'));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+  // El "min" del &lt;input type=date&gt; también es solo una pista del navegador
+  // (editable a mano, o con el reloj del dispositivo cambiado) — se revalida
+  // aquí que no sea una fecha ya pasada respecto a "hoy" en el propio envío.
+  if(date < todayStr()){
+    markFieldInvalid('r-date');
     showInlineError(t('error.campos.reserva'));
     submittingRequest = false;
     setBtnLoading('r-submit', false);

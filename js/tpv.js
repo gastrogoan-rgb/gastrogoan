@@ -2298,6 +2298,7 @@ function markLineRecogida(orderId, idx){
   const line = order && order.items[idx];
   if(!line || line.recogidoAt) return;
   line.recogidoAt = new Date().toISOString();
+  if(typeof checkComandaCierre === 'function') checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   const active = document.querySelector('.view.active');
@@ -3513,6 +3514,14 @@ function finalizeCharge(orderId){
   // con subtotal - descuento + propina.
   const propina = roundMoney(propinaCaja + (order.propinaPagadaOnline || 0));
   const metodoPago = document.getElementById('payment-method').value;
+  // Si el camarero teclea por error un importe entregado menor que lo
+  // debido, el cambio mostrado se queda en 0€ (Math.max(0,...) en
+  // updatePaymentChange) y no avisa de nada raro — sin este control el
+  // cobro se cerraría igual, dando de facto un descuento no autorizado.
+  if(metodoPago === 'Efectivo'){
+    const cashGiven = parseFloat(document.getElementById('payment-cash').value) || 0;
+    if(cashGiven + 0.01 < amountDue){ showToast(t('msg.cashGivenInsufficient')); return; }
+  }
   let pagos = null;
   if(metodoPago === 'Mixto'){
     const cash = Math.max(0, parseFloat(document.getElementById('payment-mixed-cash').value) || 0);
@@ -3570,7 +3579,11 @@ function renderEqualSplitTab(order){
 function generateEqualSplit(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const n = Math.max(2, Math.min(20, parseInt(document.getElementById('split-equal-n').value) || 2));
-  const total = orderTotal(order);
+  // Un descuento ya autorizado a la mesa (PIN + motivo) tiene que reflejarse
+  // también al dividir cuenta — si no, cada comensal pagaría sobre el precio
+  // lleno y el descuento desaparecería sin dejar rastro en lo cobrado.
+  const descuentoPct = order.descuentoPct || 0;
+  const total = roundMoney(orderTotal(order) * (1 - descuentoPct/100)) + (order.propina || 0);
   order.splitMode = 'equal';
   order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
     id: i+1, label: t('label.personN').replace('${n}', i+1), amount, paid:false, metodoPago:null
@@ -3659,6 +3672,14 @@ function generateItemsSplit(orderId){
   const costeEnvioCents = Math.round(costeEnvio * 100);
   const envioBaseCents = Math.floor(costeEnvioCents / n);
   const envioRestoCents = costeEnvioCents - envioBaseCents * n;
+  // Igual que en el reparto a partes iguales: un descuento ya autorizado a la
+  // mesa se aplica a partes iguales sobre cada comensal (no tiene sentido
+  // repartirlo por plato), y la propina se reparte también a partes iguales.
+  const descuentoPct = order.descuentoPct || 0;
+  const propina = order.propina || 0;
+  const propinaCents = Math.round(propina * 100);
+  const propinaBaseCents = Math.floor(propinaCents / n);
+  const propinaRestoCents = propinaCents - propinaBaseCents * n;
   order.splitPayments = Array.from({length:n}, (_,i) => {
     const personIdx = i+1;
     let amount = 0;
@@ -3675,6 +3696,11 @@ function generateItemsSplit(orderId){
       const envioAsignado = envioAsignadoCents / 100;
       amount += envioAsignado;
       itemNames.push(`${t('label.deliveryCost')}: ${fmtMoney(envioAsignado)}`);
+    }
+    if(descuentoPct > 0) amount = amount * (1 - descuentoPct/100);
+    if(propina > 0){
+      const propinaAsignadoCents = propinaBaseCents + (personIdx <= propinaRestoCents ? 1 : 0);
+      amount += propinaAsignadoCents / 100;
     }
     return {
       id: personIdx, label: t('label.dinerN').replace('${n}', personIdx), amount: roundMoney(amount),
@@ -3784,12 +3810,20 @@ function confirmSplitPartPayment(orderId, partId){
 function finalizeSplitOrder(orderId){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items.length || !order.splitPayments || !order.splitPayments.every(p=>p.paid)) return;
-  const total = orderTotal(order);
+  const subtotal = orderTotal(order);
+  const descuentoPct = order.descuentoPct || 0;
+  const descuentoImporte = roundMoney(subtotal * descuentoPct / 100);
+  const propina = order.propina || 0;
+  // El total real cobrado es la suma de las partes ya pagadas (incluye
+  // descuento y propina repartidos en generateEqualSplit/generateItemsSplit),
+  // no subtotal - así la venta refleja lo que de verdad entró en caja.
+  const total = roundMoney(order.splitPayments.reduce((s,p)=>s+p.amount,0));
   discountStockForOrder(order);
   const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
   const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
   const sale = {
-    id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total,
+    id: genId(), date: todayStr(), createdAt: new Date().toISOString(), total, subtotal,
+    descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina,
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
     metodoPago: metodos.length===1?metodos[0]:'Dividido',

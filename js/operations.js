@@ -36,6 +36,7 @@ function getSalesForClosure(){
   const {desde, hasta, lastClosure} = getCashClosurePeriod();
   const today = todayStr();
   return DB.sales.filter(s => {
+    if(s.status === 'anulada') return false;
     if(s.date !== today) return false;
     if(!s.createdAt) return !lastClosure;
     const dt = new Date(s.createdAt);
@@ -555,6 +556,7 @@ function openTipsSplitModal(closureId){
   if(!c) return;
   const desde = new Date(c.desde), hasta = new Date(c.hasta);
   const sales = DB.sales.filter(s => {
+    if(s.status === 'anulada') return false;
     if(s.date !== c.fecha) return false;
     if(!s.createdAt) return true;
     const dt = new Date(s.createdAt);

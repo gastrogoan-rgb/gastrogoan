@@ -2059,7 +2059,14 @@ function pinMatchesHash(pin, storedHash, licenseCode){
   return pin === storedHash;
 }
 
+// Recuerda el último estado real de la nube (más allá de si el badge del
+// header está pintado en pantalla ahora mismo) para que openCloudWizard()
+// pueda avisar de un error de conexión real, en vez de dar por "conectado"
+// cualquier negocio que simplemente tenga apiKey/databaseURL rellenados
+// (que es lo único que comprueba getCloudConfig()).
+let lastSyncBadgeState = null;
 function updateSyncBadge(state){
+  lastSyncBadgeState = state;
   const el = document.getElementById('sync-badge');
   if(!el) return;
   if(state === 'local'){ el.style.display = 'none'; return; }
@@ -2375,7 +2382,11 @@ function initPublicRequestsListener(){
           id: genId(), clientId: matchedClient ? matchedClient.id : null,
           clientName: req.clientName || '', clientPhone: req.clientPhone || '', clientEmail: req.clientEmail || '',
           date: req.date, time: req.time, people: req.people || 1,
-          tableId: confirmedTableId, notes: req.notes || '', status: confirmedTableId ? 'confirmada' : 'pendiente',
+          // Si la reserva exige señal, NO se autoconfirma solo por tener mesa asignada:
+          // se queda "pendiente" hasta que llegue el evento pago_confirmado real del
+          // banco (más abajo en esta función). Si no, un cliente que abandona el pago
+          // a mitad se quedaría con la mesa/aforo bloqueados como si hubiera pagado.
+          tableId: confirmedTableId, notes: req.notes || '', status: (confirmedTableId && !req.depositRequired) ? 'confirmada' : 'pendiente',
           referral: req.referral || '',
           depositRequired: req.depositRequired || false, depositAmount: req.depositAmount || '', depositConfirmed: false,
           origen: 'publico', createdAt: new Date().toISOString(),
@@ -2559,6 +2570,9 @@ function initPublicRequestsListener(){
           reservationPaid.depositConfirmed = true;
           reservationPaid.depositPagoImporte = req.amount;
           reservationPaid.depositPagoFecha = req.createdAt;
+          // Ahora sí que el pago está confirmado por el banco: si se había quedado
+          // "pendiente" solo por exigir señal (ya tenía mesa asignada), se confirma.
+          if(reservationPaid.status === 'pendiente' && reservationPaid.tableId) reservationPaid.status = 'confirmada';
           syncReservationStatusForPublic(reservationPaid);
           logAudit('edit', t('audit.depositConfirmed').replace('${name}', reservationPaid.clientName||'?'));
         }
@@ -4075,7 +4089,9 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-    <div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>
+    ${lastSyncBadgeState === 'error'
+      ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}</div>`
+      : `<div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>`}
     <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <p style="font-size:13.5px;margin-bottom:8px"><strong><i class="ti ti-device-mobile"></i> ${t('mn.online.title')}</strong></p>
@@ -4091,7 +4107,7 @@ function openCloudWizard(){
       <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <details>
+    <details${lastSyncBadgeState === 'error' ? ' open' : ''}>
       <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
       <div style="margin-top:10px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>
