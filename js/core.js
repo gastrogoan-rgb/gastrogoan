@@ -2441,6 +2441,19 @@ function initPublicRequestsListener(){
       const req = snap.val();
       const reqRef = snap.ref;
       if(!req || !req.type){ reqRef.remove(); return; }
+      // Reclamación atómica: si el negocio tiene más de un dispositivo con
+      // la app abierta a la vez (dos TPV, tablet de cocina + caja...),
+      // TODOS reciben este mismo evento child_added de forma independiente.
+      // Sin este candado, cada uno crearía su propio pedido/reserva con id
+      // distinto — duplicado en cocina, stock descontado dos veces,
+      // repartidor asignado dos veces. Mismo patrón que reserveAforoAtomic/
+      // reserveTableAtomic: una transacción sobre un hijo de la propia
+      // request (_claimedAt, permiso añadido aparte en las reglas de
+      // Firebase) para que solo el primer dispositivo en procesarla gane —
+      // los demás no hacen nada con ese evento, y es el ganador quien borra
+      // la request al terminar.
+      reqRef.child('_claimedAt').transaction(current => current === null ? Date.now() : undefined).then(claimResult => {
+      if(!claimResult.committed) return; // otro dispositivo ya se está encargando de esta solicitud
       let notifyNewRequest = false;
       if(req.type === 'reserva'){
         // Igual que ya se hacía con los pedidos para llevar/delivery
@@ -2736,6 +2749,7 @@ function initPublicRequestsListener(){
       refreshAfterRemoteChange();
       if(notifyNewRequest) playNewRequestAlert();
       reqRef.remove();
+      }).catch(e => console.error('Error reclamando solicitud pública', e));
     }, err => console.error('Error escuchando pedidos públicos', err));
   }).catch(e => console.error('Error escuchando pedidos públicos', e));
 }
