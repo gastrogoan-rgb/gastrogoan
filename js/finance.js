@@ -250,15 +250,24 @@ function renderDashboard(){
     });
   });
   let avgFoodCost = 0;
+  // recipeFoodCostPct() da Infinity si la receta no tiene precio de venta
+  // fijado todavía en Carta (caso típico al arrancar, o con un plato nuevo
+  // recién creado) — se filtra con isFinite. Si TODAS las recetas están en
+  // ese caso, ni el promedio ponderado ni el fallback pueden calcular nada
+  // real: antes avgFoodCost se quedaba en su valor inicial 0, y se mostraba
+  // como si el food cost fuera literalmente 0% (dato saludable falso) en vez
+  // de "—" (sin datos suficientes). foodCostCalculable distingue ambos casos.
   const weightedFc = DB.recipes
     .map(r => ({pct: recipeFoodCostPct(r), units: recipeUnits30[r.id]||0}))
     .filter(e => isFinite(e.pct) && e.units>0);
   const weightedFcUnits = weightedFc.reduce((s,e)=>s+e.units,0);
+  let foodCostCalculable = false;
   if(weightedFcUnits > 0){
     avgFoodCost = weightedFc.reduce((s,e)=>s+e.pct*e.units,0) / weightedFcUnits;
+    foodCostCalculable = true;
   } else if(DB.recipes.length){
     const pcts = DB.recipes.map(r => recipeFoodCostPct(r)).filter(p => isFinite(p));
-    if(pcts.length) avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length;
+    if(pcts.length){ avgFoodCost = pcts.reduce((a,b)=>a+b,0) / pcts.length; foodCostCalculable = true; }
   }
 
   /* ---------- Hoy — Atención (acciones a un vistazo) ---------- */
@@ -430,7 +439,7 @@ function renderDashboard(){
   const margenPct = facturacionNeta > 0 ? (resultado/facturacionNeta)*100 : 0;
   const personalCost = geTotalPersonalNetoForMonth(year, month);
   const staffCostPct = facturacionNeta > 0 ? (personalCost/facturacionNeta)*100 : 0;
-  const hasFoodCost = weightedFcUnits>0||DB.recipes.length;
+  const hasFoodCost = foodCostCalculable;
   const primeCostPct = (hasFoodCost?fcPct:0) + staffCostPct;
   document.getElementById('dashboard-resultado').innerHTML = `
     <div class="grid grid-4">
@@ -440,10 +449,10 @@ function renderDashboard(){
       <div class="kpi ${resultado>=0?'ok':'warn'}"><div class="label">${t('dash.result')}</div><div class="value">${fmtMoney(resultado)}</div></div>
     </div>
     <div style="margin-top:8px;font-size:13px;color:var(--muted)">
-      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacion>0?margenPct.toFixed(1)+'%':'—'}</strong>
+      ${t('dash.marginOnSales')} <strong style="color:${resultado>=0?'var(--green)':'var(--red)'}">${facturacionNeta>0?margenPct.toFixed(1)+'%':'—'}</strong>
       &nbsp;·&nbsp; ${t('dash.avgFoodCost')} <strong style="color:${fcPct>35?'var(--red)':'var(--green)'}">${hasFoodCost?fcPct.toFixed(1)+'%':'—'}</strong> ${t('dash.foodCostTarget').replace('${n}', DB.ge.config.foodCostObj||35)}
-      &nbsp;·&nbsp; ${t('dash.staffCostPct')} <strong style="color:${staffCostPct>30?'var(--red)':'var(--green)'}">${facturacion>0&&personalCost>0?staffCostPct.toFixed(1)+'%':'—'}</strong>
-      ${facturacion>0 && personalCost>0 && hasFoodCost ? `&nbsp;·&nbsp; ${t('dash.primeCost')} <strong style="color:${primeCostPct>65?'var(--red)':'var(--green)'}">${primeCostPct.toFixed(1)}%</strong>` : ''}
+      &nbsp;·&nbsp; ${t('dash.staffCostPct')} <strong style="color:${staffCostPct>30?'var(--red)':'var(--green)'}">${facturacionNeta>0&&personalCost>0?staffCostPct.toFixed(1)+'%':'—'}</strong>
+      ${facturacionNeta>0 && personalCost>0 && hasFoodCost ? `&nbsp;·&nbsp; ${t('dash.primeCost')} <strong style="color:${primeCostPct>65?'var(--red)':'var(--green)'}">${primeCostPct.toFixed(1)}%</strong>` : ''}
     </div>
   `;
 
@@ -457,7 +466,11 @@ function renderDashboard(){
     const sales = salesTotalForMonth(y, m);
     const variablesM = geTotalVariablesNetoMes(y, m);
     const fijosM = geTotalFijosNetoForMonth(y, m);
-    const label = monthFull(m).slice(0,3);
+    // El mes en curso (i===0) es parcial — solo lleva los días transcurridos,
+    // no el mes completo como los 11 anteriores. Sin distinguirlo, su barra
+    // sale visualmente más baja dando una falsa impresión de caída de ventas
+    // justo los primeros días de cada mes. Se marca con un asterisco.
+    const label = monthFull(m).slice(0,3) + (i===0 ? '*' : '');
     ventasTrend.push({label, value: sales});
     gastosTrend.push({label, value: variablesM + fijosM});
     // Misma fórmula que el KPI "Resultado del mes" de arriba (facturación
