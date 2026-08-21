@@ -1577,6 +1577,14 @@ function logStockAdjustment(type, refId, name, before, after, source){
     actor: (typeof currentActorName === 'function') ? currentActorName() : ''
   });
   if(DB.stockLog.length > 500) DB.stockLog = DB.stockLog.slice(-500);
+  // Solo se mira aquí una corrección manual del stock (source==='manual'):
+  // la de tipo 'purchase' (recibir un pedido) ya se refleja en el Registro
+  // de actividad desde changePedidoEstado, con su propio texto — mirarla
+  // también aquí la duplicaría dos veces para la misma acción.
+  if((source || 'manual') === 'manual' && typeof logAudit === 'function'){
+    const bajada = (after - before) < 0;
+    logAudit('stock_adjust', t('audit.stockAdjusted').replace('${name}', name||'?').replace('${before}', before).replace('${after}', after), bajada && before > 0 ? 'critical' : 'normal');
+  }
 }
 
 function openStockLogModal(){

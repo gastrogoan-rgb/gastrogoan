@@ -4978,7 +4978,14 @@ function openTrashModal(){
 // reasignar camarero...). 'normal' si no se indica, a propósito: así una
 // llamada antigua a logAudit() sin este argumento sigue funcionando igual
 // que siempre, sin marcarse en rojo por defecto.
+// El Registro de actividad es, a propósito, SOLO de empleados: la idea es
+// poder ver qué ha hecho cada persona del equipo, no auditar al propio
+// dueño (que ya tiene acceso a todo y no tiene sentido que se audite a sí
+// mismo). Si quien hace la acción entró como propietario (o no hay sesión
+// reconocible), no se registra nada aquí.
 function logAudit(action, summary, severity){
+  const session = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  if(!session || session.type !== 'employee') return;
   if(!DB.auditLog) DB.auditLog = [];
   DB.auditLog.unshift({id: genId(), ts: new Date().toISOString(), actor: currentActorName(), action, summary, severity: severity||'normal'});
   if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);

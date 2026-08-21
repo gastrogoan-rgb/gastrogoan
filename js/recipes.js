@@ -335,6 +335,7 @@ let recipeModalLines = [];
 function openRecipeModal(id, forceBase){
   const r = id ? getRecipe(id) : {name:'', price:0, comensales:2, consumiblesPct:5, ingredients:[], steps:'', presentation:'', allergens:[], area: currentArea(), isBase:!!forceBase, baseYield:1, baseUnit:'L'};
   recipeModalLines = (r.ingredients||[]).map(l => ({...l}));
+  if(id && typeof logAudit === 'function') logAudit('recipe_view', t('audit.recipeViewed').replace('${name}', r.name||'?'));
   renderRecipeModal(id, r);
 }
 
