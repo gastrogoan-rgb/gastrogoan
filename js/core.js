@@ -2575,8 +2575,18 @@ function initPublicRequestsListener(){
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
         }
       }else if(req.type === 'nps_response'){
-        if(!DB.npsScores) DB.npsScores = [];
-        DB.npsScores.push({id: genId(), score: req.score, comment: req.comment || '', createdAt: new Date().toISOString()});
+        // req llega de la web pública, sin autenticar de verdad más allá de
+        // lo que exige la regla de Firebase (solo type/createdAt) — nada
+        // impide que alguien mande un score que no sea un número 0-10 desde
+        // la consola del navegador. Sin esta validación, un score con texto
+        // (incluido HTML) se guardaba tal cual y se pintaba SIN escapeHtml
+        // en el resumen de NPS del panel del negocio (renderNpsSummaryHtml,
+        // js/app.js) — XSS real contra el propio dueño.
+        const scoreNum = parseFloat(req.score);
+        if(Number.isFinite(scoreNum) && scoreNum >= 0 && scoreNum <= 10){
+          if(!DB.npsScores) DB.npsScores = [];
+          DB.npsScores.push({id: genId(), score: Math.round(scoreNum*10)/10, comment: String(req.comment || '').slice(0, 2000), createdAt: new Date().toISOString()});
+        }
       }else if(req.type === 'pedido' && req.tipo === 'mesa'){
         // Auto-pedido desde la mesa: se añade directamente a la comanda de esa
         // mesa (si ya está abierta) o se abre una comanda nueva, sin pasar por
@@ -3182,7 +3192,16 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'chatMessages' && Array.isArray(DB[key]) && Array.isArray(merged)){
     const knownIds = new Set(DB[key].map(m => m.id));
     const me = (typeof getChatAuthor === 'function') ? getChatAuthor() : null;
-    merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me))
+    // Firebase dispara 'child_added' también para los datos YA EXISTENTES la
+    // primera vez que un dispositivo nuevo (o una reinstalación) se conecta
+    // — con DB.chatMessages local vacío, "desconocido para mí" era cierto
+    // para TODO mensaje urgente de la historia del negocio, así que se
+    // avisaba de golpe de meses de avisos ya desfasados. Se acota a los
+    // mensajes de los últimos 5 minutos, que es lo que de verdad significa
+    // "urgente ahora mismo".
+    const RECENT_MS = 5*60*1000;
+    const now = Date.now();
+    merged.filter(m => m.urgent && !knownIds.has(m.id) && String(m.authorId) !== String(me) && m.ts && (now - new Date(m.ts).getTime()) <= RECENT_MS)
       .forEach(m => notifyDesktop('🚨 ' + (m.authorName||''), m.text||''));
   }
   if(key === 'cashClosures' && Array.isArray(DB[key]) && Array.isArray(merged)){
@@ -4803,12 +4822,21 @@ function sendPushToAll(title, body){
 }
 // Se usa el Service Worker si está listo (más fiable, sigue vivo aunque la
 // pestaña no tenga el foco); si no, cae en una Notification normal.
-function notifyDesktop(title, body){
+// El `tag` de una notificación decide si sustituye a otra visible con el
+// mismo tag o si se apila aparte. Antes se usaba siempre el título tal
+// cual: dos avisos urgentes seguidos del MISMO autor (mismo "🚨 Nombre")
+// se pisaban entre sí en el sistema operativo — el destinatario solo veía
+// el último y podía perderse el primero sin enterarse. Por defecto ahora
+// cada aviso es único (no se pisa con ningún otro); solo se pasa un `tag`
+// explícito cuando de verdad se quiere que un aviso más reciente sustituya
+// a uno anterior sobre lo mismo (p. ej. no hay ningún caso así hoy).
+function notifyDesktop(title, body, tag){
   if(!desktopNotificationsEnabled()) return;
+  const notifTag = tag || (title + '-' + genId());
   try{
     if(navigator.serviceWorker && navigator.serviceWorker.ready){
       navigator.serviceWorker.ready.then(reg => {
-        if(reg && reg.showNotification) reg.showNotification(title, {body, icon: 'icon-192.png', tag: title});
+        if(reg && reg.showNotification) reg.showNotification(title, {body, icon: 'icon-192.png', tag: notifTag});
         else new Notification(title, {body});
       }).catch(() => { try{ new Notification(title, {body}); }catch(e){} });
     }else{
@@ -4890,12 +4918,35 @@ async function connectThermalPrinter(printerId){
 // Convierte texto plano a bytes ESC/POS básicos: inicializar, texto en
 // codificación de 1 byte (cp437, suficiente para lo que ya usa el ticket:
 // letras, números, acentos comunes), salto de línea final y corte de papel.
+// Antes se copiaba el code point Unicode tal cual cuando era < 256 (mapeo
+// Latin-1), pero la impresora interpreta esos bytes como CP437 (página de
+// códigos estándar de impresoras ESC/POS) — Latin-1 y CP437 NO coinciden
+// para las vocales acentuadas ni la ñ, así que salían símbolos corruptos
+// (p.ej. "á" llegaba a la impresora como el byte de "ß"). Especialmente
+// grave en avisos de alérgenos: un símbolo ilegible ahí es un riesgo de
+// seguridad alimentaria, no solo un fallo estético. Se traducen los
+// caracteres españoles/catalanes más comunes a su byte REAL en CP437; los
+// que esa página no tiene (mayúsculas acentuadas: Á, É, Í, Ó, Ú) se
+// degradan a su vocal sin acento en vez de un símbolo erróneo — sigue
+// siendo legible, que es lo que importa.
+const CP437_MAP = {
+  'á':0xA0, 'é':0x82, 'í':0xA1, 'ó':0xA2, 'ú':0xA3, 'ñ':0xA4, 'Ñ':0xA5,
+  'ü':0x81, 'Ü':0x9A, 'ç':0x87, 'Ç':0x80, '¿':0xA8, '¡':0xAD,
+  'ª':0xA6, 'º':0xA7, '«':0xAE, '»':0xAF,
+  // No existen en CP437: se degradan a la letra sin acento (legible, no corrupto)
+  'Á':'A', 'É':'E', 'Í':'I', 'Ó':'O', 'Ú':'U',
+};
 function textToEscPos(text){
   const ESC = 0x1B, GS = 0x1D;
-  const bytes = [ESC, 0x40]; // ESC @ : inicializar impresora
+  // ESC @ (inicializar) + ESC t 0 (seleccionar página de códigos CP437,
+  // explícita en vez de confiar en el valor por defecto de la impresora).
+  const bytes = [ESC, 0x40, ESC, 0x74, 0x00];
   for(const ch of text){
+    const mapped = CP437_MAP[ch];
+    if(typeof mapped === 'number'){ bytes.push(mapped); continue; }
+    if(typeof mapped === 'string'){ bytes.push(mapped.codePointAt(0)); continue; }
     const code = ch.codePointAt(0);
-    bytes.push(code < 256 ? code : 0x3F); // fuera de rango de 1 byte -> '?'
+    bytes.push(code < 128 ? code : 0x3F); // fuera de ASCII y sin mapeo conocido -> '?'
   }
   bytes.push(0x0A, 0x0A, 0x0A);
   bytes.push(GS, 0x56, 0x42, 0x00); // GS V B 0 : corte parcial de papel
@@ -4905,10 +4956,19 @@ function textToEscPos(text){
 // que el ticket completo — hay que trocear el envío o la impresora corta o
 // ignora el resto.
 const THERMAL_CHUNK_SIZE = 180;
+// writeValueWithoutResponse() se resuelve en cuanto el navegador entrega el
+// paquete a la pila BLE, NO cuando la impresora térmica ha terminado de
+// procesarlo — su buffer interno suele ser de solo unos pocos cientos de
+// bytes. En tickets largos (mesa con muchas líneas), mandar decenas de
+// chunks seguidos sin pausa saturaba ese buffer y el ticket se cortaba o
+// salía con líneas repetidas/perdidas hacia el final. Una pequeña pausa
+// entre chunks le da tiempo a vaciarlo antes del siguiente envío.
+const THERMAL_CHUNK_DELAY_MS = 20;
 async function writeThermalChunks(characteristic, bytes){
   for(let i=0; i<bytes.length; i += THERMAL_CHUNK_SIZE){
     const chunk = bytes.slice(i, i + THERMAL_CHUNK_SIZE);
     await characteristic.writeValueWithoutResponse(chunk);
+    if(i + THERMAL_CHUNK_SIZE < bytes.length) await new Promise(r => setTimeout(r, THERMAL_CHUNK_DELAY_MS));
   }
 }
 async function printToThermalPrinter(text, printerId){
@@ -4969,7 +5029,31 @@ function restoreTrashItem(trashId){
   if(!entry) return;
   const key = TRASH_TYPE_ARRAY[entry.type];
   if(!key) return;
-  DB[key].push(entry.item);
+  // La ficha técnica de una receta borrada viaja dentro de la propia entrada
+  // de papelera (ver confirmDeleteRecipe, js/recipes.js) en vez de tener su
+  // propia papelera aparte — si al restaurar la receta no se restaura
+  // también su ficha, el plato vuelve sin pasos de elaboración ni alérgenos
+  // manuales, sin ningún aviso de que se han perdido.
+  const restoredItem = {...entry.item};
+  const trashedFicha = restoredItem._trashedFicha;
+  delete restoredItem._trashedFicha;
+  // Igual que con la ficha técnica de una receta: las reservas/ventas que
+  // quedaron desvinculadas al borrar un cliente (ver deleteClient, js/app.js)
+  // se re-vinculan aquí si el cliente se restaura a tiempo, en vez de dejar
+  // su historial huérfano para siempre pese a haber "deshecho" el borrado.
+  const unlinkedReservationIds = restoredItem._unlinkedReservationIds || [];
+  const unlinkedSaleIds = restoredItem._unlinkedSaleIds || [];
+  delete restoredItem._unlinkedReservationIds;
+  delete restoredItem._unlinkedSaleIds;
+  DB[key].push(restoredItem);
+  if(trashedFicha){
+    if(!DB.fichas) DB.fichas = [];
+    DB.fichas.push(trashedFicha);
+  }
+  if(entry.type === 'client' && (unlinkedReservationIds.length || unlinkedSaleIds.length)){
+    (DB.reservations||[]).forEach(r => { if(unlinkedReservationIds.includes(r.id)) r.clientId = restoredItem.id; });
+    (DB.sales||[]).forEach(s => { if(unlinkedSaleIds.includes(s.id)) s.clientId = restoredItem.id; });
+  }
   DB.trash = DB.trash.filter(x => x.id !== trashId);
   saveDB();
   showToast(t('trash.restoredOk'));

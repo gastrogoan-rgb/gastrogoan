@@ -798,8 +798,23 @@ function saveProvider(id){
 }
 
 function deleteProvider(id){
+  const p = DB.providers.find(x => x.id === id);
+  if(!p) return;
+  // Los ingredientes guardan el proveedor por NOMBRE (i.supplier), igual que
+  // los pedidos — igual que saveProvider ya propaga un renombrado a esos
+  // ingredientes/pedidos para no dejarlos huérfanos, borrar el proveedor sin
+  // más los dejaría con un proveedor que ya no existe. En la ficha del
+  // ingrediente eso hace que el desplegable no tenga ninguna opción
+  // "selected" y el navegador seleccione la primera de la lista — si luego
+  // se guarda ese ingrediente por cualquier otro motivo, queda reasignado a
+  // OTRO proveedor sin que nadie lo haya elegido a propósito.
+  const linkedCount = (DB.ingredients||[]).filter(i => (i.supplier||'').trim().toLowerCase() === p.nombre.trim().toLowerCase()).length;
+  if(linkedCount > 0){
+    showToast(t('msg.cannotDeleteSupplierLinked').replace('${count}', linkedCount));
+    return;
+  }
   if(!confirm(t('msg.confirmDeleteSupplier'))) return;
-  DB.providers = DB.providers.filter(p=>p.id!==id);
+  DB.providers = DB.providers.filter(x=>x.id!==id);
   saveDB();
   renderProveedores();
 }

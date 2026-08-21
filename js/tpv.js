@@ -1278,6 +1278,12 @@ function openNewOrderPaxModal(tableId){
     <div class="field" id="new-order-pax-field">
       <label>${t('label.howManyPeople')}</label>
       <input type="number" id="new-order-pax" min="1" value="2">
+      <label style="margin-top:8px">${t('label.walkInClientOptional')}</label>
+      <input type="text" id="new-order-client-name" list="new-order-client-list" placeholder="${t('ph.walkInClientName')}" autocomplete="off">
+      <datalist id="new-order-client-list">
+        ${DB.clients.map(c => `<option value="${escapeHtml(c.name)}">`).join('')}
+      </datalist>
+      <small style="color:var(--muted)">${t('label.walkInClientHint')}</small>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
@@ -1312,6 +1318,20 @@ function confirmOpenTableOrder(tableId){
   }else{
     pax = parseInt(document.getElementById('new-order-pax').value) || 0;
     if(pax <= 0){ showToast(t('msg.indicatePax')); return; }
+    // Antes "Cliente de paso" nunca vinculaba clientId: un habitual con una
+    // alergia grave registrada en su ficha, sentado directamente en una
+    // mesa (el caso más común, sin pasar por reserva), no disparaba ningún
+    // aviso de alergia ni en sala ni en cocina — el único aviso posible era
+    // que el camarero se acordara de teclearla a mano. Si el nombre
+    // tecleado aquí coincide con un cliente ya dado de alta, se vincula
+    // igual que ya hace el flujo de reserva, y el aviso de alergias
+    // (orderAllergyWarningHtml) empieza a funcionar también en este caso.
+    const typedName = (document.getElementById('new-order-client-name')?.value || '').trim();
+    if(typedName){
+      const matched = DB.clients.find(c => c.name.trim().toLowerCase() === typedName.toLowerCase());
+      if(matched){ clientId = matched.id; clienteNombre = matched.name; }
+      else clienteNombre = typedName;
+    }
     // Aviso (no bloqueante) si se va a sentar a alguien sin reserva en una
     // mesa que tiene una reserva próxima (dentro de la ventana de 90 min) —
     // el camarero decide si sentar igualmente porque sabe que esa mesa se

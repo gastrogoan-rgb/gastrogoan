@@ -2235,7 +2235,15 @@ function deleteClient(id){
   const c = DB.clients.find(x=>x.id===id);
   if(!c) return;
   requestBusinessPinAction(t('title.deleteClient'), t('msg.confirmDeleteClient'), () => {
-    moveToTrash('client', c);
+    // Se guarda aparte qué reservas/ventas quedan desvinculadas, para poder
+    // re-vincularlas si el cliente se restaura desde Papelera dentro de los
+    // 30 días — antes restaurar el cliente lo devolvía con el mismo id pero
+    // su historial de ventas/reservas se quedaba huérfano para siempre
+    // (clientId ya puesto a null), como si el "deshacer" no hubiera servido
+    // para nada de cara al histórico.
+    const linkedReservationIds = DB.reservations.filter(r => r.clientId===id).map(r => r.id);
+    const linkedSaleIds = DB.sales.filter(s => s.clientId===id).map(s => s.id);
+    moveToTrash('client', {...c, _unlinkedReservationIds: linkedReservationIds, _unlinkedSaleIds: linkedSaleIds});
     logAudit('delete', t('audit.deletedClient').replace('${name}', c.name), 'critical');
     DB.clients = DB.clients.filter(x=>x.id!==id);
     DB.reservations.forEach(r => { if(r.clientId===id) r.clientId = null; });
@@ -4125,7 +4133,7 @@ function renderNpsSummaryHtml(){
         <div style="font-size:12.5px;color:var(--muted)">${t('nps.responsesCount').replace('${n}', scores.length)}${detractors ? `<br>${t('nps.detractorsCount').replace('${n}', detractors)}` : ''}</div>
       </div>
       ${withComments.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
-        ${withComments.map(x => `<div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px"><strong>${x.score}/10</strong> — ${escapeHtml(x.comment)}</div>`).join('')}
+        ${withComments.map(x => `<div style="font-size:12.5px;border-top:1px solid var(--border);padding-top:6px"><strong>${escapeHtml(String(x.score))}/10</strong> — ${escapeHtml(x.comment)}</div>`).join('')}
       </div>` : ''}
     </div>
   `;

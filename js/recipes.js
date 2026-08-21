@@ -841,7 +841,17 @@ function deleteRecipe(id){
 }
 function confirmDeleteRecipe(id){
   const r0 = DB.recipes.find(r => r.id === id);
-  if(r0){ moveToTrash('recipe', r0); logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name), 'critical'); }
+  if(r0){
+    // La ficha técnica se guarda DENTRO de la misma entrada de la papelera
+    // que la receta (no en su propio array de papelera aparte): así, si se
+    // restaura la receta desde Papelera dentro de los 30 días, su ficha
+    // vuelve con ella en vez de quedar perdida para siempre — antes se
+    // borraba directamente sin pasar por la papelera en absoluto.
+    const ficha0 = (DB.fichas||[]).find(f => f.recipeId === id);
+    const r0ForTrash = ficha0 ? {...r0, _trashedFicha: ficha0} : r0;
+    moveToTrash('recipe', r0ForTrash);
+    logAudit('delete', t('audit.deletedRecipe').replace('${name}', r0.name), 'critical');
+  }
   DB.recipes = DB.recipes.filter(r => r.id !== id);
   // Si se borra "de todas formas" pese al aviso, no dejar líneas de otras
   // recetas apuntando a un baseRecipeId que ya no existe: recipeIngredientCost
