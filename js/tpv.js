@@ -2091,6 +2091,15 @@ function addWaitlistEntry(){
   const notes = document.getElementById('wl-notes').value.trim();
   if(!name){ showToast(t('waitlist.needName')); return; }
   if(!DB.waitlist) DB.waitlist = [];
+  // La lista sincroniza entre dispositivos y es normal que varios camareros
+  // la miren/editen a la vez (ver comentario en confirmSeatWaitlistAtTable)
+  // — sin este aviso, el mismo grupo podía quedar apuntado dos veces, doble
+  // puesto en la cola y contador del botón falseado.
+  const dupe = DB.waitlist.find(w => w.status==='esperando' && (
+    (phone && w.phone && w.phone.replace(/\D/g,'') === phone.replace(/\D/g,'')) ||
+    w.name.trim().toLowerCase() === name.toLowerCase()
+  ));
+  if(dupe && !confirm(t('waitlist.confirmDuplicate').replace('${name}', dupe.name))) return;
   DB.waitlist.push({id: genId(), name, phone, people, notes, status: 'esperando', createdAt: new Date().toISOString()});
   saveDB();
   openWaitlistModal();
@@ -2112,7 +2121,7 @@ function openSeatWaitlistTableModal(id){
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('waitlist.seatPickTableDesc')}</p>
     <div style="display:flex;flex-direction:column;gap:6px">
-      ${freeTables.map(t2 => `<button class="btn" onclick="confirmSeatWaitlistAtTable(${w.id}, ${t2.id})">${escapeHtml(t2.name)}${t2.zona?` · ${escapeHtml(t2.zona)}`:''}${t2.plazas?` · ${t2.plazas} ${t('common.persAbbr')}`:''}</button>`).join('')}
+      ${freeTables.map(t2 => `<button class="btn${t2.plazas && w.people>t2.plazas?' btn-danger':''}" onclick="confirmSeatWaitlistAtTable(${w.id}, ${t2.id})">${escapeHtml(t2.name)}${t2.zona?` · ${escapeHtml(t2.zona)}`:''}${t2.plazas?` · ${t2.plazas} ${t('common.persAbbr')}${w.people>t2.plazas?` <i class="ti ti-alert-triangle"></i>`:''}`:''}</button>`).join('')}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="openWaitlistModal()">${t('common.cancel')}</button>
@@ -2126,6 +2135,13 @@ function confirmSeatWaitlistAtTable(waitlistId, tableId){
   // (la lista de espera sincroniza entre dispositivos, así que dos personas
   // mirando la misma lista es el caso normal, no la excepción).
   if(getOpenOrderForTable(tableId)){ showToast(t('waitlist.tableNoLongerFree')); openSeatWaitlistTableModal(waitlistId); return; }
+  const table = DB.tables.find(t2 => t2.id === tableId);
+  // Mismo aviso (no bloqueante) que ya existe al crear una reserva para una
+  // mesa más pequeña que el grupo — aquí faltaba del todo: un grupo de 6 se
+  // podía sentar en una mesa de 2 sin ningún aviso de aforo.
+  if(table && table.plazas && w.people > table.plazas){
+    if(!confirm(t('msg.confirmTableTooSmall').replace('${table}', table.name).replace('${plazas}', table.plazas).replace('${people}', w.people))) return;
+  }
   const loggedEmployeeId = loggedInEmployeeId();
   const matchedClient = w.phone ? findClientByPhone(w.phone) : null;
   const order = {id: genId(), tableId, tipo:'mesa', pax: w.people, clienteNombre: w.name, clientId: matchedClient ? matchedClient.id : null, reservationId: null, camareroId: loggedEmployeeId, openedByOwner: loggedEmployeeId === null, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};

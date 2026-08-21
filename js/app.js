@@ -1062,7 +1062,15 @@ function renderDistList(){
   const cards = emps.map(emp => {
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
-    const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0);
+    // Antes solo contaba producción semanal recurrente (d.produccion) — un
+    // empleado con solo tareas puntuales (tareasUnicas), de limpieza
+    // (responsableId) o de promos asignadas podía aparecer con "0 tareas"
+    // en gris, como si no tuviera nada, aunque sí tuviera trabajo real
+    // pendiente (visible solo si se entraba a su ficha de detalle).
+    const nTareas = Object.values(d.produccion).reduce((s,arr)=>s+arr.length, 0)
+      + Object.values(d.tareasUnicas||{}).reduce((s,arr)=>s+arr.length, 0)
+      + (DB.limpieza?.tareas||[]).filter(x => x.responsableId === emp.id).length
+      + (DB.promos||[]).filter(x => x.responsableId === emp.id).length;
     // Un empleado dado de baja seguía apareciendo igual que uno activo,
     // pudiendo asignársele trabajo sin darse cuenta hasta entrar en su
     // ficha de Personal — mismo aviso visual que ya usa esa pestaña.
@@ -2398,10 +2406,28 @@ function markReservationNoShow(id){
   if(cid){
     const c = DB.clients.find(x=>x.id===cid);
     if(c) c.noShows = (c.noShows||0) + 1;
+    // Se guarda a qué cliente se le sumó el aviso, para poder revertirlo
+    // exactamente a ese si se deshace — antes un clic accidental en "Marcar
+    // no presentado" dejaba el aviso para siempre, sin ninguna forma de
+    // corregirlo desde la UI.
+    r._noShowClientId = cid;
   }
   saveDB();
   renderReservas();
   showToast(t('msg.markedNoShow'));
+}
+function undoReservationNoShow(id){
+  const r = DB.reservations.find(x=>x.id===id);
+  if(!r || r.status !== 'no_show') return;
+  r.status = 'confirmada';
+  if(r._noShowClientId){
+    const c = DB.clients.find(x=>x.id===r._noShowClientId);
+    if(c) c.noShows = Math.max(0, (c.noShows||0) - 1);
+    delete r._noShowClientId;
+  }
+  saveDB();
+  renderReservas();
+  showToast(t('msg.noShowUndone'));
 }
 
 function setReservasTab(t){
@@ -2664,7 +2690,7 @@ function renderReservasDia(){
                       <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
                       ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
                     </div>
-                  ` : '<strong>—</strong>'}
+                  ` : r.status==='no_show' ? `<button class="btn btn-sm" onclick="undoReservationNoShow(${r.id})" title="${t('btn.undoNoShow')}"><i class="ti ti-arrow-back-up"></i> ${t('btn.undoNoShow')}</button>` : '<strong>—</strong>'}
                 </div>
                 <div class="reserva-card-actions">
                   ${r.status==='lista_espera' ? `<button class="btn btn-sm btn-primary" onclick="setReservationStatus(${r.id}, 'confirmada')" title="${t('btn.confirmAnyway')}"><i class="ti ti-check"></i> ${t('common.confirm')}</button>` : ''}

@@ -691,6 +691,12 @@ async function addSucursal(parentSlotId){
     {title: t('btn.openBranch'), icon: 'ti-building-store'}
   );
   if(!nombre) return;
+  // nombreSugerido evita la colisión solo al SUGERIR un nombre, pero se
+  // puede escribir cualquier cosa encima, incluido el de una sucursal
+  // hermana ya existente — el selector las mostraría idénticas salvo por
+  // cuál está activa, fácil de entrar a la equivocada por error.
+  const nombreDuplicado = slots.some(s => s.parentId === parentSlotId && s.name.trim().toLowerCase() === nombre.trim().toLowerCase());
+  if(nombreDuplicado && !confirm(t('gate.confirmDuplicateBranchName').replace('${name}', nombre))) return;
 
   // Leer datos del padre (puede ser el activo u otro slot)
   let src;
@@ -759,9 +765,17 @@ async function addSucursal(parentSlotId){
     req.onerror = () => reject(req.error);
   });
 
+  // La licencia se guarda ANTES de hacer visible el slot en el selector
+  // (antes era al revés): si la app se cerraba justo entre medias, quedaba
+  // un slot ya visible en el selector, con datos clonados, pero sin
+  // licencia guardada — al entrar pedía reactivar un código ya comprado,
+  // sin explicar por qué, dando la sensación de que la sucursal "perdió"
+  // la licencia. Con este orden, si se corta aquí, el slot simplemente no
+  // llega a aparecer todavía (se puede reintentar sin arrastrar ningún
+  // estado a medias).
+  localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
   slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code });
   saveBusinessSlots(slots);
-  localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
   linkBusinessToOwnerAccount(lic.tenantId, lic.code, nombre);
   switchToBusiness(newId);
 }

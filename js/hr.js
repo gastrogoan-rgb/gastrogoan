@@ -1066,6 +1066,13 @@ const GE = (function(){
     if(isNaN(imp) || imp<=0){ showToast(t('msg.enterAmount')); return; }
     const ivaRaw = document.getElementById('cx-f-iva').value;
     if(ivaRaw === ''){ showToast(t('msg.chooseIvaForExpense')); return; }
+    // Sin fecha, la inversión sigue viéndose en la propia lista de CAPEX
+    // (engañoso: parece que todo está bien) pero desaparece EN SILENCIO del
+    // IVA a liquidar, del Resultado/CDR, de Tesorería y del CSV mensual —
+    // todas esas funciones filtran por c.fecha y la descartan sin avisar.
+    // El campo de fecha (input type=date) se puede vaciar con la "x" del
+    // propio input, así que hacía falta exigirlo igual que el resto.
+    if(!document.getElementById('cx-f-fecha').value){ showToast(t('msg.chooseDateForExpense')); return; }
     const financiado = document.getElementById('cx-f-financiado').checked;
     const cuotaMensual = financiado ? (parseFloat(document.getElementById('cx-f-cuota').value)||0) : 0;
     const cuotas = financiado ? (parseInt(document.getElementById('cx-f-numcuotas').value)||0) : 0;
