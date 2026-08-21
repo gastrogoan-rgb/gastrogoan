@@ -2303,11 +2303,13 @@ function setLineEstado(orderId, idx, estado){
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
   if((order.tipo === 'takeaway' || order.tipo === 'delivery') && typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
-  const active = document.querySelector('.view.active');
-  if(active && active.id === 'view-comandascocina') renderComandasCocina();
-  else if(active && active.id === 'view-tpv') renderTPV();
-  const overlay = document.getElementById('modal-overlay');
-  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+    else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  });
 }
 
 function comandaOrderTitle(order){
@@ -2365,11 +2367,13 @@ function markLineRecogida(orderId, idx){
   if(typeof checkComandaCierre === 'function') checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
-  const active = document.querySelector('.view.active');
-  if(active && active.id === 'view-comandascocina') renderComandasCocina();
-  else if(active && active.id === 'view-tpv') renderTPV();
-  const overlay = document.getElementById('modal-overlay');
-  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+    else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  });
 }
 
 /* Sala confirma que ha recogido del pase los platos de una tanda que cocina
@@ -2391,7 +2395,7 @@ function marcarTandaRecogida(orderId, tanda, isMenu){
   if(!cambiadas) return;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
-  renderTPV();
+  withScrollPreserved(() => renderTPV());
   showToast(t('msg.tandaPickedUp').replace('${n}', cambiadas));
 }
 
@@ -2411,11 +2415,13 @@ function cycleGroupEstado(orderId, tanda){
   checkComandaCierre(order);
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
-  const active = document.querySelector('.view.active');
-  if(active && active.id === 'view-comandascocina') renderComandasCocina();
-  else if(active && active.id === 'view-tpv') renderTPV();
-  const overlay = document.getElementById('modal-overlay');
-  if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  withScrollPreserved(() => {
+    const active = document.querySelector('.view.active');
+    if(active && active.id === 'view-comandascocina') renderComandasCocina();
+    else if(active && active.id === 'view-tpv') renderTPV();
+    const overlay = document.getElementById('modal-overlay');
+    if(overlay && overlay.classList.contains('active')) renderTableOrderModal(orderId);
+  });
 }
 
 // Marcar un plato/bebida como agotado a media comanda, sin salir de la

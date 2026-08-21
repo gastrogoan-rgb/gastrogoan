@@ -114,6 +114,25 @@ function showToast(msg, duration){
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=>toastEl.classList.remove('show'), duration||2200);
 }
+// Repintar una vista (innerHTML de golpe) tras un cambio de estado, sin más,
+// hacía que la página "saltara" hacia arriba: al cambiar de estado un plato,
+// las tarjetas de Comandas Cocina/TPV cambian de alto (una pasa a otra
+// columna, otra se hace más corta al desaparecer un botón...) y el navegador
+// recorta el scroll actual si ya no cabe en la nueva altura de la página —
+// visible como un salto brusco justo al pulsar, especialmente molesto en
+// cocina, donde se pulsa un plato tras otro sin parar. Se guarda la posición
+// antes de repintar y se restaura después (el navegador la recorta solo si
+// de verdad ya no cabe, así que nunca se fuerza a un sitio inválido).
+function withScrollPreserved(fn){
+  // El scroll real de la app no es el de window/body: todas las vistas
+  // viven dentro de #content, que es quien tiene overflow-y:auto (ver
+  // css/styles.css, .content). window.scrollY siempre vale 0 aquí — hay
+  // que guardar y restaurar el scrollTop de #content, no el de la ventana.
+  const el = document.getElementById('content');
+  const y = el ? el.scrollTop : window.scrollY;
+  fn();
+  if(el) el.scrollTop = y; else window.scrollTo(0, y);
+}
 function getIngredient(id){
   return DB.ingredients.find(i => i.id === id);
 }
