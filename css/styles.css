@@ -199,6 +199,21 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .card-compact{padding:10px 12px;margin-bottom:0}
 .card-compact h3{font-size:13.5px;margin-bottom:6px}
 .card-compact summary{cursor:pointer;font-size:12px;color:var(--brand-orange);font-weight:600;margin:6px 0}
+/* Nombre de una carpeta de categoría (Mega Lista, Stock, Escandallo,
+   Fichas...): con un nombre largo se comía el botón de lápiz de al lado
+   empujándolo fuera de la tarjeta. Se recorta a 2 líneas como mucho, más
+   pequeño, y el resto de la fila (icono, botón) ya no se deja empujar. */
+.folder-card-name{
+  flex:1;min-width:0;font-size:12.5px;line-height:1.25;font-weight:700;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+/* Tarjetas compactas (Fichas Técnicas, Mega Lista...): badges y botones de
+   fila más pequeños — a este tamaño de tarjeta, el tamaño normal de la app
+   se comía el hueco disponible y el botón de más a la derecha acababa
+   saliéndose. */
+.card-compact .badge{font-size:10px;padding:2px 7px}
+.card-compact .actions-cell .btn{padding:5px 8px;font-size:11px;min-height:30px}
+.card-compact .actions-cell .btn i{font-size:13px}
 
 /* Canal de Para Llevar / Delivery: usa el mismo tipo de sección que las
    mesas (mismo encabezado), pero con su propia tarjeta más ancha: lo que
@@ -339,6 +354,18 @@ input[type="checkbox"],input[type="radio"]{
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;justify-content:space-between}
 .toolbar .left{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1}
 
+/* Base para cualquier <input>/<select>/<textarea> suelto FUERA de .field
+   (edición inline dentro de una fila: pasos de protocolo, nombre de una
+   mesa, responsable de un equipo...) — sin esto salían con el aspecto de
+   fábrica del navegador, sin borde redondeado ni relleno, muy distinto al
+   resto de la app. Los campos dentro de .field siguen mandando con su
+   propia regla (misma especificidad, pero definida después: gana ella). */
+input[type="text"],input[type="number"],input[type="search"],input[type="tel"],input[type="email"],input[type="date"],select,textarea{
+  font-family:inherit;border:1px solid var(--border);border-radius:8px;
+  padding:6px 9px;font-size:13px;background:#fff;color:var(--text);
+}
+input[type="text"],input[type="search"],input[type="tel"],input[type="email"]{text-overflow:ellipsis}
+
 /* ===== Forms ===== */
 .field{margin-bottom:14px}
 .field label{display:block;font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)}
@@ -349,6 +376,13 @@ input[type="checkbox"],input[type="radio"]{
 }
 .field textarea{resize:vertical;min-height:70px}
 .field-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+/* Fila de filtros compacta (buscar/proveedor/fechas...): se queda siempre
+   en 2 columnas, incluso en móvil, y con campos/etiquetas más pequeños —
+   la fila de filtros no necesita el mismo tamaño que un formulario. */
+.field-row.filter-compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.filter-compact .field{margin-bottom:0}
+.filter-compact .field label{font-size:11px;margin-bottom:3px}
+.filter-compact .field input,.filter-compact .field select{padding:8px 10px;min-height:36px;font-size:13px}
 .search-input{max-width:280px}
 #reservas-search-input{width:100%;min-width:0}
 .typeahead-results{position:absolute;z-index:20;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);margin-top:2px}
@@ -426,7 +460,7 @@ td.wrap{white-space:normal}
    y antes se salía de la casilla entera (grid-template-columns:1fr sin
    minmax(0,...) no deja encoger por debajo del contenido). Aquí se permite
    partir en dos líneas y encoger la letra en vez de desbordar. */
-.cal-day-badge{white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;max-width:100%}
+.cal-day-badge{white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;max-width:100%;overflow-wrap:break-word;box-sizing:border-box}
 .badge-green{background:var(--green-l);color:var(--green)}
 .badge-red{background:var(--red-l);color:var(--red)}
 .badge-amber{background:var(--amber-l);color:var(--amber-dark)}

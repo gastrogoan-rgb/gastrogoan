@@ -964,7 +964,7 @@ function renderPedidoList(){
 
   const suppliers = [...new Set(allOrders.map(o => o.supplier))].sort((a,b)=>a.localeCompare(b));
   const filterHtml = `
-    <div class="field-row" style="margin-bottom:12px;flex-wrap:wrap">
+    <div class="field-row filter-compact" style="margin-bottom:12px">
       <div class="field" style="max-width:220px">
         <input type="text" class="search-input" value="${escapeHtml(pedidoHistorialSearch)}" placeholder="${t('ph.searchOrder')}" oninput="setPedidoHistorialSearch(this.value)">
       </div>
@@ -975,11 +975,11 @@ function renderPedidoList(){
         </select>
       </div>
       <div class="field" style="max-width:160px">
-        <label style="font-size:11px">${t('label.dateFrom')}</label>
+        <label>${t('label.dateFrom')}</label>
         <input type="date" value="${pedidoHistorialDateFrom}" onchange="setPedidoHistorialDateFilter('from', this.value)">
       </div>
       <div class="field" style="max-width:160px">
-        <label style="font-size:11px">${t('label.dateTo')}</label>
+        <label>${t('label.dateTo')}</label>
         <input type="date" value="${pedidoHistorialDateTo}" onchange="setPedidoHistorialDateFilter('to', this.value)">
       </div>
     </div>

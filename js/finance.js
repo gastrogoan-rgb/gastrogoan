@@ -804,10 +804,10 @@ function renderMegalista(){
       const isCustom = !ingredientCategories().includes(cat);
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${safeCat}')">
-        <h3>
-          <span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
-          ${escapeHtml(ingredientCategoryLabel(cat))}
-          ${isCustom ? `<button class="btn btn-sm btn-icon" style="margin-left:auto" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil"></i></button>` : ''}
+        <h3 style="flex-wrap:nowrap;align-items:flex-start">
+          <span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
+          <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
+          ${isCustom ? `<button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil"></i></button>` : ''}
         </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
@@ -1454,7 +1454,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> ${escapeHtml(ingredientCategoryLabel(cat))}</h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -1513,7 +1513,7 @@ function renderStock(){
       const n = (elabsByRecipeCat[key]||[]).length;
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
-        <h3><span style="font-size:18px;cursor:pointer" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> ${escapeHtml(label)}</h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
       </div>`;
     }).join('')}</div>`;
