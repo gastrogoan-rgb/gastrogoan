@@ -1014,7 +1014,7 @@ const I18N = {
     'msg.invalidEmail': 'Email no válido',
     'msg.openingEmail': 'Abriendo tu programa de correo...',
     'msg.emailTicketMightTruncate': 'Ticket largo: tu programa de correo podría cortar el contenido. Comprueba que ha llegado completo.',
-    'msg.cashCloseDone': 'Cierre de caja registrado',
+    'msg.cashCloseDone': 'Cierre de caja registrado', 'msg.cashClosureLocked': 'Otro dispositivo está cerrando caja ahora mismo. Espera unos segundos y vuelve a intentarlo.',
     'common.understood': 'Entendido', 'common.unknown': 'Desconocido', 'common.owner': 'Propietario/a', 'common.type': 'Tipo',
     'label.employee': 'Empleado/a', 'label.client': 'Cliente', 'label.recipe': 'Receta',
     'trash.title': 'Papelera', 'trash.desc': 'Lo borrado en los últimos ${n} días se puede restaurar desde aquí. Pasado ese tiempo desaparece del todo.',
@@ -1894,7 +1894,7 @@ const I18N = {
     'tpv.onlineOrders': 'Pedidos online', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'Con esto en OFF, la web deja de admitir pedidos para llevar y delivery temporalmente.',
     'tpv.onlineOrdersPausedWarning': 'Pedidos online en pausa: los clientes no pueden pedir Take Away ni Delivery desde la web hasta que lo vuelvas a activar.',
-    'empty.noTogoOrders': 'No hay pedidos para llevar ni delivery abiertos ahora mismo.',
+    'empty.noTogoOrders': 'No hay pedidos para llevar ni delivery abiertos ahora mismo.', 'empty.noPendingOnline': 'No hay pedidos online esperando aceptar o rechazar.', 'tab.pendingOnline': 'Pendientes', 'tab.activeTogoOrders': 'En curso',
     'mn.ticket.preview': 'Vista previa del ticket', 'mn.ticket.previewTitle': 'Así se verá tu ticket',
     'thermal.sectionTitle': 'Impresora térmica (Bluetooth)', 'thermal.sectionDesc': 'Conecta una impresora térmica de recibos por Bluetooth para imprimir tickets directamente, sin pasar por el diálogo de imprimir del navegador.',
     'thermal.connectBtn': 'Conectar impresora', 'thermal.notSupportedHint': 'Tu navegador no soporta impresión Bluetooth (disponible en Chrome/Edge en Android o escritorio). El botón normal de "Imprimir" sigue funcionando igual.',
@@ -2903,7 +2903,7 @@ const I18N = {
     'msg.invalidEmail': 'Email no vàlid',
     'msg.openingEmail': 'Obrint el programa de correu...',
     'msg.emailTicketMightTruncate': 'Tiquet llarg: el teu programa de correu podria tallar el contingut. Comprova que ha arribat complet.',
-    'msg.cashCloseDone': 'Tancament de caixa registrat',
+    'msg.cashCloseDone': 'Tancament de caixa registrat', 'msg.cashClosureLocked': 'Un altre dispositiu està tancant caixa ara mateix. Espera uns segons i torna-ho a provar.',
     'common.understood': 'Entès', 'common.unknown': 'Desconegut', 'common.owner': 'Propietari/ària', 'common.type': 'Tipus',
     'label.employee': 'Empleat/ada', 'label.client': 'Client', 'label.recipe': 'Recepta',
     'trash.title': 'Paperera', 'trash.desc': 'El que s\'ha esborrat en els últims ${n} dies es pot restaurar des d\'aquí. Passat aquest temps desapareix del tot.',
@@ -3783,7 +3783,7 @@ const I18N = {
     'tpv.onlineOrders': 'Comandes online', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'Amb això en OFF, la web deixa d\'admetre comandes per emportar i delivery temporalment.',
     'tpv.onlineOrdersPausedWarning': 'Comandes online en pausa: els clients no poden demanar Take Away ni Delivery des de la web fins que ho tornis a activar.',
-    'empty.noTogoOrders': 'No hi ha comandes per emportar ni delivery obertes ara mateix.',
+    'empty.noTogoOrders': 'No hi ha comandes per emportar ni delivery obertes ara mateix.', 'empty.noPendingOnline': 'No hi ha comandes online esperant acceptar o rebutjar.', 'tab.pendingOnline': 'Pendents', 'tab.activeTogoOrders': 'En curs',
 
 
     'mn.ticket.preview': 'Vista prèvia del tiquet', 'mn.ticket.previewTitle': 'Així es veurà el teu tiquet',
@@ -4796,7 +4796,7 @@ const I18N = {
     'msg.invalidEmail': 'Invalid email',
     'msg.openingEmail': 'Opening your email client...',
     'msg.emailTicketMightTruncate': 'Long ticket: your email client might cut off the content. Check that it arrived complete.',
-    'msg.cashCloseDone': 'Cash register closure recorded',
+    'msg.cashCloseDone': 'Cash register closure recorded', 'msg.cashClosureLocked': 'Another device is closing the register right now. Wait a few seconds and try again.',
     'common.understood': 'Got it', 'common.unknown': 'Unknown', 'common.owner': 'Owner', 'common.type': 'Type',
     'label.employee': 'Employee', 'label.client': 'Client', 'label.recipe': 'Recipe',
     'trash.title': 'Recycle bin', 'trash.desc': 'Anything deleted in the last ${n} days can be restored from here. After that it\'s gone for good.',
@@ -5676,7 +5676,7 @@ const I18N = {
     'tpv.onlineOrders': 'Online orders', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'With this OFF, the website temporarily stops accepting Take Away and Delivery orders.',
     'tpv.onlineOrdersPausedWarning': 'Online orders paused: customers can\'t place Take Away or Delivery orders from the website until you turn this back on.',
-    'empty.noTogoOrders': 'No takeaway or delivery orders open right now.',
+    'empty.noTogoOrders': 'No takeaway or delivery orders open right now.', 'empty.noPendingOnline': 'No online orders waiting to be accepted or rejected.', 'tab.pendingOnline': 'Pending', 'tab.activeTogoOrders': 'Active',
 
 
     'mn.ticket.preview': 'Receipt preview', 'mn.ticket.previewTitle': 'This is how your receipt will look',

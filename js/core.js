@@ -2273,6 +2273,11 @@ const MERGEABLE_ARRAYS = new Set([
   'auditLog','moodCheckins','turnoSwapRequests','trash'
 ]);
 
+// Objetos de nivel superior que son mapas planos {clave: valor} sin id ni
+// array dentro (mismo problema que DB.stock, fusionable con mergeStockField
+// campo a campo) — ver el comentario junto a su uso en applyRemoteBlock.
+const FLAT_MAP_FIELDS = new Set(['shifts', 'workDistribution', 'chatPinned', 'shiftHandoffNotes']);
+
 // Hash simple para PINs (4 dígitos) — no almacenar en texto plano.
 // La sal incluye el código de licencia del propio negocio (DB.license.code):
 // antes era una constante fija igual para TODAS las instalaciones, lo que
@@ -3356,6 +3361,22 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
   }
+  // Mismo problema que DB.stock (mapas planos {clave: valor}, sin id ni
+  // array): shifts (cuadrante por empleado), workDistribution (reparto de
+  // tareas por empleado), chatPinned (mensaje fijado por canal) y
+  // shiftHandoffNotes (nota de traspaso por área+fecha) se sustituían
+  // enteros al sincronizar — dos encargados editando el turno de DOS
+  // empleados distintos, offline a la vez, podían perder el de uno de los
+  // dos. Se fusionan campo a campo con el mismo mecanismo que ya usa stock.
+  if(FLAT_MAP_FIELDS.has(key) && DB[key] && typeof merged === 'object'){
+    merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+  }
+  if(key === 'categoryIcons' && DB[key] && typeof merged === 'object'){
+    merged = {
+      recipe: mergeStockField((DB[key]||{}).recipe, (merged||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
+      ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
+    };
+  }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
@@ -3495,6 +3516,15 @@ function mergeRemoteIntoLocal(val){
     }
     if(key === 'limpieza' && DB[key] && typeof value === 'object'){
       value = mergeNestedArraysByKey(DB[key], value, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
+    }
+    if(FLAT_MAP_FIELDS.has(key) && DB[key] && typeof value === 'object'){
+      value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+    }
+    if(key === 'categoryIcons' && DB[key] && typeof value === 'object'){
+      value = {
+        recipe: mergeStockField((DB[key]||{}).recipe, (value||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
+        ingredient: mergeStockField((DB[key]||{}).ingredient, (value||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
+      };
     }
     const valueJson = JSON.stringify(value);
     // Igual que en applyRemoteBlock: si la fusión conservó algo local que la

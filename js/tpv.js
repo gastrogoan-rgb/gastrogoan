@@ -797,17 +797,28 @@ function renderTpvToGo(tiposServicio){
     return ma - mb;
   });
   const pedidosOnlineOn = DB.business.pedidosOnlineActivos !== false;
+  const pendingCount = getPendingOnlineOrders().length;
+  // Mientras el personal no haya elegido pestaña a mano, se sigue el
+  // contenido: en cuanto llega algo por aceptar, la vista salta sola a
+  // "Pendientes" (para que no pase desapercibido); si no hay nada pendiente,
+  // se queda en "En curso". Elegir una pestaña a mano (setTogoTabManual) dejar
+  // de seguir esto hasta que se recargue la pantalla.
+  if(!togoTabManual) togoTab = pendingCount ? 'pendientes' : 'activos';
   return `
     <h3 style="margin-top:16px;display:flex;align-items:center;flex-wrap:nowrap;gap:8px;overflow-x:auto">
-      <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')} ${toGoOrders.length ? `<span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</span>
+      <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')}</span>
       <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" id="tpv-online-toggle-btn" style="white-space:nowrap;margin-left:auto" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
         <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
       </button>
       ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
       <button class="btn btn-sm" style="white-space:nowrap" onclick="openTogoCalendarModal()"><i class="ti ti-calendar-stats"></i> ${t('title.togoCalendar')}</button>
     </h3>
+    <div style="display:flex;gap:6px;margin:10px 0">
+      <button class="btn btn-sm ${togoTab==='pendientes'?'btn-primary':''}" onclick="setTogoTabManual('pendientes')"><i class="ti ti-bell-ringing"></i> ${t('tab.pendingOnline')}${pendingCount ? ` <span class="badge badge-amber">${pendingCount}</span>` : ''}</button>
+      <button class="btn btn-sm ${togoTab==='activos'?'btn-primary':''}" onclick="setTogoTabManual('activos')"><i class="ti ti-list-check"></i> ${t('tab.activeTogoOrders')}${toGoOrders.length ? ` <span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</button>
+    </div>
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
-    ${!toGoOrders.length
+    ${togoTab === 'pendientes' ? renderTpvPendingOnline() : (!toGoOrders.length
       ? `<div class="grid grid-4" style="margin-top:14px"><div class="empty"><i class="ti ti-moped"></i>${t('empty.noTogoOrders')}</div></div>`
       : `<div class="grid grid-togo" style="margin-top:14px">${toGoOrders.map(o => {
           const plat = o.tipo==='delivery' && o.plataformaId ? (DB.business.deliveryPlatforms||[]).find(p=>p.id===o.plataformaId) : null;
@@ -837,7 +848,7 @@ function renderTpvToGo(tiposServicio){
               ${repartidorChip}
             </div>` : ''}
           </div>
-        `}).join('')}</div>`}
+        `}).join('')}</div>`)}
   `;
 }
 
@@ -965,12 +976,26 @@ function isTogoOrderVisibleNow(o){
   return dueMins === null || dueMins <= TOGO_VISIBILITY_WINDOW_MIN;
 }
 
+// Pestaña activa dentro de Para Llevar/Delivery: 'activos' (pedidos ya
+// aceptados/en curso) o 'pendientes' (recién llegados, esperando aceptar o
+// rechazar). Antes los pendientes se mostraban en su propia sección arriba
+// de TODO el TPV, lejos del interruptor de Pedidos Online y de la sección
+// de Para Llevar/Delivery a la que en realidad pertenecen.
+let togoTab = 'pendientes';
+let togoTabManual = false;
+function setTogoTabManual(tabName){
+  togoTab = tabName;
+  togoTabManual = true;
+  renderTPV();
+}
+function getPendingOnlineOrders(){
+  return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && isTogoOrderVisibleNow(o));
+}
 function renderTpvPendingOnline(){
-  const pendingOnline = DB.tpvOrders.filter(o => o.status === 'pendiente-online' && isTogoOrderVisibleNow(o));
-  if(!pendingOnline.length) return '';
+  const pendingOnline = getPendingOnlineOrders();
+  if(!pendingOnline.length) return `<div class="grid grid-4" style="margin-top:14px"><div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOnline')}</div></div>`;
   return `
-    <h3 style="margin-top:16px"><i class="ti ti-bell-ringing"></i> Pedidos online pendientes</h3>
-    <div class="grid grid-4">
+    <div class="grid grid-4" style="margin-top:14px">
       ${pendingOnline.map(o => `
         <div class="card" style="border:2px solid var(--brand-orange)">
           <h3 style="justify-content:space-between;font-size:14px">
@@ -1025,7 +1050,6 @@ function renderTPV(){
     ${renderTpvCartaSelector()}
     ${renderTpvMenuSelector()}
     ${renderLastCallBanner()}
-    ${renderTpvPendingOnline()}
     <div id="tpv-mesas-section">${chaosMode ? renderChaosModeMesas() : renderTpvMesas(tiposServicio)}</div>
     <div id="tpv-togo-section">${renderTpvToGo(tiposServicio)}</div>
   `;

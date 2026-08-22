@@ -301,7 +301,50 @@ function registerPlatformSettlementSale(plat, totalBruto, closureHasta){
   return sale;
 }
 
-function performCashClosure(){
+// Dos propietarios/encargados cerrando caja casi a la vez desde dispositivos
+// distintos (antes de que el sync de uno le llegue al otro) calculaban el
+// mismo periodo y generaban dos cierres con el mismo rango de ventas — como
+// DB.cashClosures se fusiona por id (MERGEABLE_ARRAYS), los dos sobrevivían
+// enteros y duplicaban el importe del turno en el histórico de arqueos. Se
+// usa una transacción de Firebase (mismo mecanismo que ya se usa para
+// reservar un código de licencia o el nombre de usuario del propietario)
+// sobre un nodo pequeño y aparte, no sobre el arqueo en sí: solo uno de los
+// dos dispositivos "gana" el turno de cerrar caja, el otro recibe un aviso
+// claro y no llega a crear su cierre. Es una mejora "si hay internet
+// ahora mismo" — el arqueo tiene que poder seguir haciéndose sin conexión
+// (es una caja registradora, no puede depender de la nube para funcionar
+// el día a día), así que sin red se procede igual que antes.
+async function acquireCashClosureLock(){
+  if(typeof firebase === 'undefined' || !cloudRef) return {ok: true};
+  const tenantId = getTenantId();
+  if(!tenantId) return {ok: true};
+  try{
+    const lockRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/cashClosureLock');
+    // Si una transacción se queda a medias (se cierra la pestaña justo
+    // después de ganar el turno, se cae la conexión...), el bloqueo no debe
+    // dejar el cierre de caja inutilizable para siempre — pasados unos
+    // segundos se considera abandonado y cualquiera puede reclamarlo.
+    const STALE_MS = 20000;
+    const myId = getOrCreateDeviceId();
+    const result = await lockRef.transaction(current => {
+      if(current === null || (Date.now() - (current.ts||0)) > STALE_MS) return {ts: Date.now(), by: myId};
+      return; // no tocar: aborta la transacción, no se compromete el cambio
+    });
+    if(result.committed && result.snapshot.val() && result.snapshot.val().by === myId) return {ok: true, lockRef};
+    return {ok: false};
+  }catch(e){
+    // Fallo de red/permisos al intentar el candado: es una mejora, no debe
+    // poder impedir cerrar caja por sí sola.
+    return {ok: true};
+  }
+}
+
+async function performCashClosure(){
+  const lock = await acquireCashClosureLock();
+  if(!lock.ok){
+    showToast(t('msg.cashClosureLocked'));
+    return;
+  }
   const sales = getSalesForClosure();
   const {totales, total, ticketCount} = computeClosureTotals(sales);
   const discounts = getDiscountsForClosure();
@@ -355,6 +398,7 @@ function performCashClosure(){
   closeModal();
   renderTPV();
   printCashClosure(closure);
+  if(lock.lockRef) lock.lockRef.remove().catch(()=>{});
   if(warnings.length){
     showClosureWarningsModal(warnings);
     if(typeof sendPushToAll === 'function') sendPushToAll(t('notif.cashWarningTitle'), warnings[0]);
