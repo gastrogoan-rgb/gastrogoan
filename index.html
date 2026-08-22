@@ -462,7 +462,8 @@
       </div>
 
       <nav class="ge-tab-row" id="ge-tabs-row">
-        <button class="ge-tab active" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> <span data-i18n="hr.lbl.fixedExpenses">Gastos Fijos</span></button>
+        <button class="ge-tab active" onclick="GE.tab('ventas')"><i class="ti ti-chart-line"></i> <span data-i18n="tab.sales">Ventas</span></button>
+        <button class="ge-tab" onclick="GE.tab('fijos')"><i class="ti ti-receipt"></i> <span data-i18n="hr.lbl.fixedExpenses">Gastos Fijos</span></button>
         <button class="ge-tab" onclick="GE.tab('variables')"><i class="ti ti-shopping-cart"></i> <span data-i18n="hr.lbl.variableExpenses">Gastos Variables</span></button>
         <button class="ge-tab" onclick="GE.tab('cdr')"><i class="ti ti-report-analytics"></i> <span data-i18n="tab.incomeStatement">Cuenta de Resultados</span></button>
         <button class="ge-tab" onclick="GE.tab('resultado')"><i class="ti ti-trending-up"></i> <span data-i18n="common.result">Resultado</span></button>
@@ -471,8 +472,29 @@
         <button class="ge-tab" onclick="GE.tab('capex')"><i class="ti ti-tools"></i> <span data-i18n="tab.capex">CAPEX</span></button>
       </nav>
 
+      <!-- VENTAS (histórico por día y por mes) -->
+      <div id="ge-ventas" class="ge-tab-panel active">
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+          <button class="btn btn-sm btn-icon" onclick="GE.setVentasYear(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span style="font-size:16px;font-weight:700" id="ventas-year"></span>
+          <button class="btn btn-sm btn-icon" onclick="GE.setVentasYear(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <div class="month-sel" id="ventas-months"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0" id="ventas-tipo-filter"></div>
+        <div class="ge-kpi-grid" id="ventas-kpis"></div>
+        <div id="ventas-depositos-note"></div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 id="ventas-dia-title" data-i18n="ge.ventas.byDay">Ventas por día</h4></div>
+          <div class="table-wrap"><table id="ventas-dia-table"></table></div>
+        </div>
+        <div class="ge-section">
+          <div class="ge-sec-head"><h4 data-i18n="ge.ventas.byMonth">Ventas por mes</h4></div>
+          <div class="table-wrap"><table id="ventas-mes-table"></table></div>
+        </div>
+      </div>
+
       <!-- GASTOS FIJOS -->
-      <div id="ge-fijos" class="ge-tab-panel active">
+      <div id="ge-fijos" class="ge-tab-panel">
         <div class="ge-kpi-grid" id="gf-kpis"></div>
         <div class="ge-section">
           <div class="ge-sec-head"><h4 data-i18n="hr.gf.titlePersonal">Personal (nóminas + SS)</h4>

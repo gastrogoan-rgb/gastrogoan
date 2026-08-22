@@ -1214,7 +1214,10 @@ function orderTotal(order){
 // contabilidad); esto es aparte, para saber cuánto queda por cobrar en caja.
 function orderAmountPaidOnline(order){
   const itemsPaid = (order.items||[]).filter(l => l.pagadoOnline).reduce((sum, l) => sum + l.price * l.qty, 0);
-  return itemsPaid + (order.propinaPagadaOnline || 0);
+  // order.depositAmount: señal de la reserva vinculada, ya cobrada aparte
+  // (ver confirmOpenTableOrder) — se resta igual que lo pagado por móvil,
+  // para que el cliente no la pague dos veces al cobrar la mesa.
+  return itemsPaid + (order.propinaPagadaOnline || 0) + (order.depositAmount || 0);
 }
 
 // Coste real de ingredientes de todo lo vendido en un pedido/venta, a
@@ -1316,7 +1319,7 @@ function toggleNewOrderReservaField(){
 
 async function confirmOpenTableOrder(tableId){
   const tipo = document.querySelector('input[name="new-order-tipo-cliente"]:checked')?.value || 'paso';
-  let pax, clienteNombre = '', clientId = null, reservationId = null;
+  let pax, clienteNombre = '', clientId = null, reservationId = null, depositToApply = 0;
   if(tipo === 'reserva'){
     const resId = parseInt(document.getElementById('new-order-reserva-sel').value);
     const r = DB.reservations.find(x=>x.id===resId);
@@ -1326,6 +1329,16 @@ async function confirmOpenTableOrder(tableId){
     const client = DB.clients.find(c=>c.id===r.clientId);
     clienteNombre = client ? client.name : (r.clientName||'');
     reservationId = r.id;
+    // Si esta reserva pagó una señal (ya registrada como venta aparte el
+    // día que se cobró de verdad, ver 'pago_confirmado' en js/core.js), se
+    // traslada aquí para descontarla del total quel se cobre en esta mesa
+    // — si no, el cliente pagaría la señal dos veces. Se consume ahora
+    // (depositSalePending a 0) para que no se pueda aplicar dos veces si la
+    // mesa se abre/cierra/reabre varias veces para la misma reserva.
+    if(r.depositSalePending){
+      depositToApply = r.depositSalePending;
+      r.depositSalePending = 0;
+    }
     // Marca la llegada y, sobre todo, actualiza la mesa de la reserva a la
     // mesa REAL donde se sienta (no solo si estaba sin asignar): si la sala
     // se reorganiza sobre la marcha, la reserva no debe quedar "atada" a una
@@ -1379,7 +1392,7 @@ async function confirmOpenTableOrder(tableId){
   const camareroId = loggedEmployeeId;
   const openedByOwner = loggedEmployeeId === null;
 
-  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, openedByOwner, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString()};
+  const order = {id: genId(), tableId, tipo:'mesa', pax, clienteNombre, clientId, reservationId, camareroId, openedByOwner, status:'abierta', items:[], tandas:[], createdAt: new Date().toISOString(), depositAmount: depositToApply || undefined};
   DB.tpvOrders.push(order);
   saveDB();
   renderTableOrderModal(order.id);
@@ -3539,7 +3552,14 @@ function finalizeCharge(orderId){
   // que una parte ya se cobró antes, no ahora mismo en caja.
   if(amountPaidOnline > 0){
     if(!pagos) pagos = [{label: paymentMethodTpvLabel(metodoPago), amount: amountDue, metodoPago}];
-    pagos.push({label: t('label.paidOnlinePartialShort'), amount: amountPaidOnline, metodoPago: 'Online'});
+    // La señal de la reserva (si la hay) se desglosa aparte del resto de lo
+    // ya pagado por móvil, para que quede claro en el ticket/informe de
+    // dónde viene cada parte — orderAmountPaidOnline() ya la suma dentro
+    // de amountPaidOnline, aquí solo se separa para mostrarla.
+    const depositPart = Math.min(order.depositAmount||0, amountPaidOnline);
+    const onlinePart = roundMoney(amountPaidOnline - depositPart);
+    if(onlinePart > 0.001) pagos.push({label: t('label.paidOnlinePartialShort'), amount: onlinePart, metodoPago: 'Online'});
+    if(depositPart > 0.001) pagos.push({label: t('label.depositAlreadyPaid'), amount: depositPart, metodoPago: 'Online'});
   }
   // El id de la venta es el del propio pedido, no uno aleatorio: si dos
   // dispositivos cobran la misma mesa casi a la vez (cada uno la ve como
@@ -3547,7 +3567,15 @@ function finalizeCharge(orderId){
   // comparten id y la fusión remota (mergeArraysById) se queda con una
   // sola en vez de duplicar el importe — un pedido genera como mucho una
   // venta normal, así que no hay riesgo de colisión con otra venta real.
-  const sale = {id: order.id, date: todayStr(), createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
+  // Si el pedido ya se pagó por adelantado online (TPV virtual/Redsys,
+  // order.pagado), el dinero de verdad entró el día que el banco confirmó
+  // el cobro (order.pagoFecha) — no el día en que el personal termina de
+  // cerrar el pedido, que en uno programado con antelación (para llevar o
+  // delivery de otro día) puede ser bastante después. Sin esto, un pedido
+  // cobrado hoy para dentro de una semana aparecía como venta de dentro de
+  // una semana, no de hoy.
+  const saleDate = (order.pagado && order.pagoFecha) ? order.pagoFecha.slice(0,10) : todayStr();
+  const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
   DB.sales.push(sale);

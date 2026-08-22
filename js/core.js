@@ -2871,6 +2871,15 @@ function initPublicRequestsListener(){
           reservationPaid.depositConfirmed = true;
           reservationPaid.depositPagoImporte = req.amount;
           reservationPaid.depositPagoFecha = req.createdAt;
+          // Pendiente de descontar cuando se abra la mesa de esta reserva
+          // (ver confirmOpenTableOrder, js/tpv.js) — así el cliente no paga
+          // la señal dos veces. No se registra como venta aparte aquí: no
+          // se sabe todavía qué va a pedir ni con qué IVA, así que crear ya
+          // una "venta" con datos inventados podría descuadrar el desglose
+          // fiscal frente a la cuenta real de la mesa. El dinero cobrado
+          // hoy se ve igualmente en Gestión Económica → Ventas, aparte de
+          // la facturación oficial (ver ventasDepositosDelDia, js/hr.js).
+          reservationPaid.depositSalePending = req.amount;
           // Ahora sí que el pago está confirmado por el banco: si se había quedado
           // "pendiente" solo por exigir señal (ya tenía mesa asignada), se confirma.
           if(reservationPaid.status === 'pendiente' && reservationPaid.tableId) reservationPaid.status = 'confirmada';

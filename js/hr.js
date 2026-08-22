@@ -4,7 +4,7 @@
    ============================================================ */
 const GE = (function(){
   function getMeses(){ return t('months.short'); }
-  const TABS = ['fijos','variables','cdr','resultado','tesoreria','pe','capex'];
+  const TABS = ['ventas','fijos','variables','cdr','resultado','tesoreria','pe','capex'];
   const GF_PERSONAL = ['RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS','SUELDO BRUTO PERSONAL','SS EMPRESA'];
   const GF_FIJOS = ['ALQUILER','SEGURO DEL LOCAL','TASAS MUNICIPALES','ELECTRICIDAD','GAS','AGUA','INTERNET/TELEFONÍA','GESTORÍA','SOFTWARE/TPV','COMISIONES BANCARIAS','PRÉSTAMOS','MANTENIMIENTO','PUBLICIDAD','OTROS GASTOS FIJOS'];
   const VARIABLE_CATEGORIES = ['MATERIA PRIMA','BEBIDAS','CAFÉ/INFUSIONES','PACKAGING','CONSUMIBLES','LIMPIEZA','COMISIONES VENTA','MANO DE OBRA EXTRA','OTROS'];
@@ -88,13 +88,14 @@ const GE = (function(){
   // la consola de un dispositivo de empleado).
   function init(){
     if(isGestionLocked('economia')){ denyGestionAccess(); return; }
-    tab('fijos');
+    tab('ventas');
   }
   function tab(name){
     document.querySelectorAll('#ge-tabs-row .ge-tab').forEach((b,i)=>b.classList.toggle('active', TABS[i]===name));
     document.querySelectorAll('#view-economia .ge-tab-panel').forEach(el=>el.classList.remove('active'));
     document.getElementById('ge-'+name).classList.add('active');
     scrollActiveTabIntoView(document.getElementById('ge-tabs-row'));
+    if(name==='ventas') renderVentas();
     if(name==='fijos') renderFijos();
     if(name==='variables') renderVariables();
     if(name==='cdr') renderCDR();
@@ -517,6 +518,107 @@ const GE = (function(){
     snapshotGeFijosNeto();
     saveDB();
     renderFijos();
+  }
+
+  /* -- VENTAS (histórico por día y por mes) --
+     Antes Gestión Económica solo tenía histórico de GASTOS (fijos, variables,
+     CAPEX) — para ver cuánto se vendió un día concreto, o comparar meses,
+     había que ir a TPV → Historial de cierres de caja y sumar a mano. Con el
+     dueño probando un pedido online programado para dentro de una semana,
+     quedó claro además que sin una vista por FECHA no hay forma de ver de un
+     vistazo "¿tengo algo entrando ese día?" — el pedido en sí (DB.tpvOrders)
+     no es una venta todavía (no se cobra hasta que se sirve/entrega), así
+     que no aparece aquí hasta que se cobre; esta pestaña muestra ventas ya
+     cerradas, no pedidos pendientes. */
+  let ventasYear = new Date().getFullYear();
+  let ventasMonth = new Date().getMonth();
+  let ventasTipoFiltro = ''; // '' = todos, o 'mesa'|'takeaway'|'delivery'
+  function setVentasYear(delta){ ventasYear += delta; renderVentas(); }
+  function setVentasMonth(i){ ventasMonth = i; renderVentas(); }
+  function setVentasTipoFiltro(tipo){ ventasTipoFiltro = tipo; renderVentas(); }
+  function ventasSalesForMonth(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    return activeSales().filter(v => (v.date||'').startsWith(mesStr) && (!ventasTipoFiltro || (v.tipo||'mesa')===ventasTipoFiltro));
+  }
+  function ventasSalesForDay(dateStr){
+    return activeSales().filter(v => v.date===dateStr && (!ventasTipoFiltro || (v.tipo||'mesa')===ventasTipoFiltro));
+  }
+  function ventasTotalForYear(año){
+    return getMeses().reduce((s,_,i) => s + ventasSalesForMonth(i,año).reduce((s2,v)=>s2+parseFloat(v.total||0),0), 0);
+  }
+  // Señales de reserva cobradas ese mes — aparte de la facturación oficial
+  // a propósito (ver pago_confirmado, js/core.js): todavía no se sabe qué
+  // va a pedirse en la mesa ni con qué IVA, así que no se mete como venta
+  // fiscal hasta que se cobre la cuenta real (donde se descuenta, ver
+  // confirmOpenTableOrder/orderAmountPaidOnline, js/tpv.js). Aun así el
+  // dinero SÍ entró ese mes, y sin esto no había forma de verlo en ningún
+  // sitio hasta que llegara el día de la reserva.
+  function ventasDepositosForMonth(mes, año){
+    const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
+    return (DB.reservations||[]).filter(r => r.depositConfirmed && (r.depositPagoFecha||'').startsWith(mesStr)).reduce((s,r)=>s+parseFloat(r.depositPagoImporte||0),0);
+  }
+  function renderVentas(){
+    document.getElementById('ventas-year').textContent = ventasYear;
+    document.getElementById('ventas-months').innerHTML = getMeses().map((m,i)=>`
+      <div class="month-pill${i===ventasMonth?' active':''}" onclick="GE.setVentasMonth(${i})">${m}</div>`).join('');
+    const tipos = [
+      {v:'', lbl:t('common.all')},
+      {v:'mesa', lbl:t('ge.ventas.tipo.mesa')},
+      {v:'takeaway', lbl:t('ge.ventas.tipo.takeaway')},
+      {v:'delivery', lbl:t('ge.ventas.tipo.delivery')}
+    ];
+    document.getElementById('ventas-tipo-filter').innerHTML = tipos.map(x=>`
+      <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
+
+    const salesMes = ventasSalesForMonth(ventasMonth, ventasYear);
+    const totalMes = salesMes.reduce((s,v)=>s+parseFloat(v.total||0),0);
+    const ticketsMes = salesMes.length;
+    const ticketMedioMes = ticketsMes ? totalMes/ticketsMes : 0;
+    document.getElementById('ventas-kpis').innerHTML = `
+      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.totalMonth')}</div><div class="val">${fmtMoney(totalMes)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.ticketsMonth')}</div><div class="val">${ticketsMes}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.avgTicket')}</div><div class="val">${fmtMoney(ticketMedioMes)}</div></div>
+      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.totalYear')}</div><div class="val">${fmtMoney(ventasTotalForYear(ventasYear))}</div></div>`;
+    const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
+    document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
+    ` : '';
+
+    // -- Tabla por día del mes seleccionado --
+    document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${getMeses()[ventasMonth]} ${ventasYear}`;
+    const nDias = daysInMonth(ventasYear, ventasMonth);
+    let diaRows = '';
+    for(let d=1; d<=nDias; d++){
+      const dateStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const salesDia = ventasSalesForDay(dateStr);
+      if(!salesDia.length) continue;
+      const totalDia = salesDia.reduce((s,v)=>s+parseFloat(v.total||0),0);
+      const ticketsDia = salesDia.length;
+      diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}</td></tr>`;
+    }
+    document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
+      <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
+      <tbody>${diaRows}</tbody>` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
+
+    // -- Tabla por mes del año seleccionado (con variación vs año anterior) --
+    let mesRows = '';
+    getMeses().forEach((m,i)=>{
+      const salesM = ventasSalesForMonth(i, ventasYear);
+      const totalM = salesM.reduce((s,v)=>s+parseFloat(v.total||0),0);
+      const ticketsM = salesM.length;
+      const salesPrev = ventasSalesForMonth(i, ventasYear-1);
+      const totalPrev = salesPrev.reduce((s,v)=>s+parseFloat(v.total||0),0);
+      let yoyHtml = '';
+      if(totalPrev > 0){
+        const pct = (totalM-totalPrev)/totalPrev*100;
+        const color = pct>=0?'var(--green)':'var(--red)';
+        yoyHtml = ` <span style="font-size:10px;color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+      }
+      mesRows += `<tr class="${i===ventasMonth?'highlight':''}" style="cursor:pointer" onclick="GE.setVentasMonth(${i})"><td>${m}</td><td>${ticketsM}</td><td>${fmtMoney(ticketsM?totalM/ticketsM:0)}</td><td style="font-weight:700">${fmtMoney(totalM)}${yoyHtml}</td></tr>`;
+    });
+    document.getElementById('ventas-mes-table').innerHTML = `
+      <thead><tr><th>${t('hr.lbl.month')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
+      <tbody>${mesRows}</tbody>`;
   }
 
   /* -- GASTOS VARIABLES -- */
@@ -1925,7 +2027,7 @@ const GE = (function(){
     );
   }
 
-  const api = {init, tab, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
+  const api = {init, tab, renderVentas, setVentasYear, setVentasMonth, setVentasTipoFiltro, newGF, newGFFromEmployee, editGF, saveGF, deleteGF, toggleGFAutoCalc, recalcGFAuto, setMonth, setGVSearch, setGVYear, newGV, editGV, saveGV, deleteGV, deleteGVGroup, calcPE, peUseRealData, peSaveScenario, peLoadScenario, peDeleteScenario, newCapex, editCapex, saveCapex, deleteCapex, toggleCapexFinanciado, setMonthTe, setTeYear, toggleCierreTe, adjustDistPct, setPctImpuesto, setPctIvaCompras, renderTesoreria, setCDRYear, renderResultado, renderPlatos, setPlatosPeriod, setPlatosCustom, openExportModal, exportMonth, emailMonth, copyMonthSummary};
   // GE se expone como objeto global (window.GE) para que los onclick="GE.x()"
   // del HTML funcionen — pero eso también significa que cualquiera con la
   // consola del navegador puede llamar GE.saveGF()/GE.deleteCapex()/etc.
