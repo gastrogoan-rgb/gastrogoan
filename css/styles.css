@@ -818,11 +818,16 @@ td.wrap{white-space:normal}
 .manual-detail ul{margin:0 0 12px 18px;font-size:14px;line-height:1.8;color:var(--text)}
 .manual-step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:8px}
 .manual-step .sn{min-width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.manual-step .st{font-size:13px;line-height:1.5}
-.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:flex;gap:8px;align-items:flex-start}
+/* Sin min-width:0, un elemento flex no encoge nunca por debajo del ancho
+   de su contenido — con textos largos (o una palabra/URL sin espacios) el
+   texto del manual se salía por el margen derecho en vez de partirse en
+   más líneas. overflow-wrap:anywhere para el caso extremo de una palabra
+   suelta más ancha que la columna entera. */
+.manual-step .st{font-size:13px;line-height:1.5;min-width:0;flex:1;overflow-wrap:anywhere}
+.manual-tip{background:var(--teal-l);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:var(--teal-d);display:flex;gap:8px;align-items:flex-start;overflow-wrap:anywhere}
 .manual-warning{background:#F5F0E3;border-left:3px solid var(--amber);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;margin-bottom:10px;color:#8A7440;display:flex;gap:8px;align-items:flex-start}
 .manual-tip i,.manual-warning i{flex-shrink:0;margin-top:2px;font-size:15px}
-.manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px}
+.manual-detail table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;display:block;overflow-x:auto}
 .manual-detail table th,.manual-detail table td{border:1px solid var(--border);padding:6px 10px;text-align:left}
 .manual-detail table th{background:var(--bg);font-weight:700}
 @media (max-width:720px){.manual-wrap{grid-template-columns:1fr}.manual-nav{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border)}.manual-chapter{border-left:none;border-bottom:3px solid transparent}.manual-chapter.active{border-left:none;border-bottom-color:var(--teal)}}

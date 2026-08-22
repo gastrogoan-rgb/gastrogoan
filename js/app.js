@@ -107,7 +107,14 @@ function getLimpiezaDefaultAperturaSala(){ return t('limpieza.defaultAperturaSal
 function getLimpiezaDefaultCierreSala(){ return t('limpieza.defaultCierreSala'); }
 
 let limpiezaTab = 'protocolo';
-let limpiezaMonthOffset = 0;
+// Antes la vista de mes pintaba el nombre completo de cada tarea + su
+// checkbox dentro de la casilla del día — con dos o tres tareas ese día ya
+// no cabía y se salía de la casilla (mismo problema que el calendario de
+// Turnos, ver .cal-day-cell/.cal-day-badge). Ahora el mes solo muestra un
+// contador por día (como Turnos y el calendario de pedidos programados) y
+// hay vistas de semana y día para ver el detalle real con sitio de sobra.
+let limpiezaCalMode = 'mes'; // 'dia'|'semana'|'mes'
+let limpiezaCalDate = null; // Date del día de referencia
 
 // Devuelve la lista de pasos (apertura o cierre) del área actual, creándola
 // con sus valores por defecto propios si aún no existe para esa área.
@@ -402,69 +409,126 @@ async function deleteLimpiezaTarea(id){
   renderLimpiezaTab();
 }
 
-function renderLimpiezaMes(){
-  const box = document.getElementById('limpieza-tab-content');
-  const tareasMes = DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea());
-  const today = new Date();
-  const base = new Date(today.getFullYear(), today.getMonth() + limpiezaMonthOffset, 1);
-  const year = base.getFullYear(), month = base.getMonth();
-  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+// Checklist del mes para una fecha concreta: las tareas mensuales se
+// definen por "día del mes" (t.diaMes, 1-31), no por fecha exacta, así que
+// se repiten todos los meses — el checkKey de si se hizo o no sí es por mes
+// concreto (monthKey), en DB.limpieza.checksMes.
+function limpiezaTareasParaDia(day){
+  return DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea() && parseInt(t.diaMes)===day);
+}
+function limpiezaMonthKeyFor(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+}
+function limpiezaChecksFor(monthKey){
   if(!DB.limpieza.checksMes) DB.limpieza.checksMes = {};
   if(!DB.limpieza.checksMes[monthKey]) DB.limpieza.checksMes[monthKey] = {};
-  const checks = DB.limpieza.checksMes[monthKey];
+  return DB.limpieza.checksMes[monthKey];
+}
+// Fila de detalle completo de una tarea (nombre, checkbox, responsable) —
+// compartida por la vista de semana y la de día, donde sí hay sitio de
+// sobra para verla entera (a diferencia de la casilla del mes, que ahora
+// solo muestra un contador).
+function limpiezaTareaRowHtml(t, checks, monthKey){
+  const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
+  const info = limpiezaCheckInfo(checks, t.id);
+  const canToggle = canToggleLimpiezaTarea(t);
+  const doneTitle = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre?` · ${escapeHtml(info.checkedByNombre)}`:''}` : (canToggle ? '' : t('limpieza.notYourTask'));
+  return `
+    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
+        <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
+        <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
+      </label>
+      ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
+    </div>
+  `;
+}
+function setLimpiezaCalMode(mode){ limpiezaCalMode = mode; renderLimpiezaMes(); }
+function shiftLimpiezaCal(delta){
+  const d = new Date(limpiezaCalDate);
+  if(limpiezaCalMode==='dia') d.setDate(d.getDate()+delta);
+  else if(limpiezaCalMode==='semana') d.setDate(d.getDate()+delta*7);
+  else d.setMonth(d.getMonth()+delta);
+  limpiezaCalDate = d;
+  renderLimpiezaMes();
+}
+function goToLimpiezaDia(dateStrVal){
+  limpiezaCalDate = new Date(dateStrVal+'T00:00:00');
+  limpiezaCalMode = 'dia';
+  renderLimpiezaMes();
+}
+function renderLimpiezaMes(){
+  const box = document.getElementById('limpieza-tab-content');
+  if(!limpiezaCalDate) limpiezaCalDate = new Date();
+  const modeBtns = ['dia','semana','mes'].map(m => `<button class="btn btn-sm ${limpiezaCalMode===m?'btn-primary':''}" onclick="setLimpiezaCalMode('${m}')">${t('togocal.'+m)}</button>`).join('');
 
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay()+6)%7; // Lunes = 0
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-
-  // Capturadas fuera del bucle: dentro de tareasDelDia.map(t => ...) el
-  // parámetro "t" es la tarea (nombre ya usado en todo este módulo), y tapa
-  // a la función global de traducción t() — llamarla ahí dentro fallaba
-  // con "t is not a function".
-  const doneOnLabel = t('limpieza.doneOn');
-  const notYourTaskLabel = t('limpieza.notYourTask');
-
-  let cells = '';
-  for(let i=0; i<startOffset; i++) cells += `<div></div>`;
-  for(let day=1; day<=daysInMonth; day++){
-    const tareasDelDia = tareasMes.filter(t => parseInt(t.diaMes)===day);
-    const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
-    cells += `
-      <div class="card" style="padding:8px;${isToday?'border-color:var(--brand-orange)':''}">
-        <div style="font-weight:700;margin-bottom:4px">${day}</div>
-        ${tareasDelDia.map(t => {
-          const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
-          const info = limpiezaCheckInfo(checks, t.id);
-          const canToggle = canToggleLimpiezaTarea(t);
-          const doneTitle = info ? `${doneOnLabel.replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre?` · ${escapeHtml(info.checkedByNombre)}`:''}` : (canToggle ? '' : notYourTaskLabel);
-          return `
-          <div style="margin-bottom:4px;cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
-            <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
-              <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
-              <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
-            </label>
-            ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-left:20px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
-          </div>
-        `;}).join('')}
+  let label = '', bodyHtml = '';
+  if(limpiezaCalMode === 'mes'){
+    const year = limpiezaCalDate.getFullYear(), month = limpiezaCalDate.getMonth();
+    label = `${monthFull(month)} ${year}`;
+    const firstDay = new Date(year, month, 1);
+    const startOffset = (firstDay.getDay()+6)%7;
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const today = new Date();
+    let cells = '';
+    for(let i=0; i<startOffset; i++) cells += `<div></div>`;
+    for(let day=1; day<=daysInMonth; day++){
+      const count = limpiezaTareasParaDia(day).length;
+      const isToday = day===today.getDate() && month===today.getMonth() && year===today.getFullYear();
+      const ds = dateStr(new Date(year, month, day));
+      cells += `
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToLimpiezaDia('${ds}')">
+          <div style="font-weight:700">${day}</div>
+          ${count ? `<span class="badge badge-blue cal-day-badge">${count===1?t('limpieza.oneTask'):t('limpieza.nTasks').replace('${n}', count)}</span>` : ''}
+        </div>
+      `;
+    }
+    bodyHtml = `
+      <div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
+        ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
+        ${cells}
       </div>
     `;
+  } else if(limpiezaCalMode === 'semana'){
+    const dow = (limpiezaCalDate.getDay()+6)%7;
+    const monday = new Date(limpiezaCalDate); monday.setDate(limpiezaCalDate.getDate()-dow);
+    const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
+    label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
+    bodyHtml = `<div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${days.map(d => {
+      const tareasDelDia = limpiezaTareasParaDia(d.getDate());
+      const monthKey = limpiezaMonthKeyFor(d);
+      const checks = limpiezaChecksFor(monthKey);
+      const isToday = dateStr(d) === todayStr();
+      return `
+        <div class="card" style="padding:8px;min-width:0;${isToday?'border-color:var(--brand-orange)':''}">
+          <div style="font-weight:700;margin-bottom:6px;text-align:center;font-size:12px">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
+          ${tareasDelDia.length ? tareasDelDia.map(t => limpiezaTareaRowHtml(t, checks, monthKey)).join('') : `<div style="font-size:11px;color:var(--muted);text-align:center">—</div>`}
+        </div>
+      `;
+    }).join('')}</div>`;
+  } else {
+    const day = limpiezaCalDate.getDate();
+    const monthKey = limpiezaMonthKeyFor(limpiezaCalDate);
+    const checks = limpiezaChecksFor(monthKey);
+    const tareasDelDia = limpiezaTareasParaDia(day);
+    label = dateStr(limpiezaCalDate);
+    bodyHtml = tareasDelDia.length
+      ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(t => limpiezaTareaRowHtml(t, checks, monthKey)).join('')}</div>`
+      : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
   }
 
+  const tareasMesTotal = DB.limpieza.tareas.filter(t => t.tipo === 'mensual' && (t.zona||'cocina')===currentArea()).length;
   box.innerHTML = `
     <div class="toolbar">
-      <div class="left">
-        <button class="btn btn-sm" onclick="limpiezaMonthOffset--;renderLimpiezaMes()"><i class="ti ti-chevron-left"></i></button>
-        <button class="btn btn-sm" onclick="limpiezaMonthOffset=0;renderLimpiezaMes()">${t('common.today')}</button>
-        <button class="btn btn-sm" onclick="limpiezaMonthOffset++;renderLimpiezaMes()"><i class="ti ti-chevron-right"></i></button>
-        <strong style="margin-left:8px">${monthFull(month)} ${year}</strong>
-      </div>
+      <div class="left">${modeBtns}</div>
       <button class="owner-strict btn btn-sm btn-primary" onclick="openLimpiezaTareaMesModal()"><i class="ti ti-plus"></i> ${t('btn.addTask')}</button>
     </div>
-    ${tareasMes.length ? `
-    <div class="grid" style="grid-template-columns:repeat(7,1fr);gap:6px">
-      ${t('days.short').map(d=>`<div style="text-align:center;font-size:12px;font-weight:700;color:var(--muted)">${d}</div>`).join('')}
-      ${cells}
-    </div>` : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0">
+      <button class="btn btn-sm btn-icon" onclick="shiftLimpiezaCal(-1)"><i class="ti ti-chevron-left"></i></button>
+      <strong>${label}</strong>
+      <button class="btn btn-sm btn-icon" onclick="shiftLimpiezaCal(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    ${tareasMesTotal ? bodyHtml : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`}
   `;
 }
 // Una tarea marcada como hecha guarda quién y cuándo (no solo un booleano
