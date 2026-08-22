@@ -470,7 +470,7 @@ function setLang(lang){
   if(document.title === 'Reservas y Pedidos' || Object.values(I18N).some(d=>d['app.title']===document.title)) document.title = t('app.title');
   const loadingEl = document.getElementById('app-loading');
   if(loadingEl) loadingEl.textContent = t('app.loading');
-  if(currentTab) renderTabContent();
+  if(currentTab){ renderTabBar(); renderTabContent(); }
   else if(lastErrorKey) showError(lastErrorKey);
 }
 
@@ -936,12 +936,7 @@ function renderApp(){
     renderReservationManageView();
     return;
   }
-  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
-  const tabs = [];
-  if(tiposServicio.mesa !== false && (DB.tables||[]).length) tabs.push({id:'mesa', label: tableIdFromUrl ? t('tab.mesa.qr') : t('tab.mesa')});
-  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label: t('tab.reserva')});
-  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label: t('tab.takeaway')});
-  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label: t('tab.delivery')});
+  const tabs = computeTabs();
 
   if(!tabs.length){
     document.getElementById('app').innerHTML = `<div class="empty">${t('no.services')}</div>`;
@@ -956,11 +951,37 @@ function renderApp(){
 
   document.getElementById('app').innerHTML = `
     <div class="tabs" role="tablist">
-      ${tabs.map(t => `<button class="tab-btn ${currentTab===t.id?'active':''}" role="tab" aria-selected="${currentTab===t.id}" onclick="setTab('${t.id}')">${t.label}</button>`).join('')}
+      ${renderTabButtonsHtml(tabs)}
     </div>
     <div id="tab-content" role="tabpanel"></div>
   `;
   renderTabContent();
+}
+
+// Pedido en mesa SOLO se ofrece llegando desde el QR de la mesa (que ya
+// trae el número de mesa en la URL) — antes también aparecía como pestaña
+// normal con un desplegable para elegir mesa a mano, redundante con lo que
+// ya hacen los QR de cada mesa y una vía más para que un pedido llegara sin
+// que quedara claro a qué mesa.
+function computeTabs(){
+  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+  const tabs = [];
+  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label: t('tab.reserva')});
+  if(tiposServicio.mesa !== false && tableIdFromUrl && (DB.tables||[]).length) tabs.push({id:'mesa', label: t('tab.mesa.qr')});
+  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label: t('tab.takeaway')});
+  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label: t('tab.delivery')});
+  return tabs;
+}
+function renderTabButtonsHtml(tabs){
+  return tabs.map(t2 => `<button class="tab-btn ${currentTab===t2.id?'active':''}" role="tab" aria-selected="${currentTab===t2.id}" onclick="setTab('${t2.id}')">${t2.label}</button>`).join('');
+}
+// Cambiar de idioma repintaba el contenido de la pestaña activa pero no los
+// propios títulos de las pestañas — se quedaban congelados en el idioma
+// con el que se cargó la página la primera vez.
+function renderTabBar(){
+  const box = document.querySelector('.tabs');
+  if(!box) return;
+  box.innerHTML = renderTabButtonsHtml(computeTabs());
 }
 
 async function setTab(tab){
@@ -1623,11 +1644,39 @@ function dishAllergensHtml(platoId){
   if(!list || !list.length) return '';
   return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}">⚠️ ${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>`;
 }
+// Qué familias (secciones de la carta) están desplegadas — ver toda la
+// carta de golpe obligaba a un scroll larguísimo en cartas con muchos
+// platos; ahora se ven las familias primero y solo se despliega la que se
+// toca, como las carpetas de categorías del resto de la app.
+let expandedMenuSections = new Set();
+let lastMenuCartas = null;
+function toggleMenuSection(key){
+  if(expandedMenuSections.has(key)) expandedMenuSections.delete(key);
+  else expandedMenuSections.add(key);
+  const box = document.getElementById('menu-folders');
+  if(box && lastMenuCartas) box.innerHTML = buildMenuHtmlInner(lastMenuCartas);
+}
 function buildMenuHtml(cartas){
+  lastMenuCartas = cartas;
+  return `<div id="menu-folders">${buildMenuHtmlInner(cartas)}</div>`;
+}
+function buildMenuHtmlInner(cartas){
   return cartas.map(carta => `
     ${cartas.length > 1 ? `<h2>${escapeHtml(trItem(carta))}</h2>` : ''}
-    ${(carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).map(sec => `
-      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
+    ${(()=>{ const seccionesVisibles = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)); return seccionesVisibles.map(sec => {
+      const key = String(carta.id) + ':' + String(sec.id);
+      // Una sola familia, o platos sin sección (nombre vacío/"OTROS
+      // PLATOS"): no tiene sentido plegarla, se muestra siempre abierta.
+      const foldable = !!(sec.nombre && sec.nombre !== 'OTROS PLATOS') && seccionesVisibles.length > 1;
+      const isOpen = !foldable || expandedMenuSections.has(key);
+      return `
+      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? (foldable ? `
+        <button type="button" class="menu-folder-header" onclick="toggleMenuSection('${key}')" aria-expanded="${isOpen}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:none;border-bottom:1px solid var(--border);padding:14px 2px;font:inherit;text-align:left;cursor:pointer">
+          <h3 style="margin:0">${escapeHtml(trSection(sec))}</h3>
+          <span style="color:var(--muted);transition:transform .15s;transform:rotate(${isOpen?'180deg':'0deg'})">▾</span>
+        </button>
+      ` : `<h3>${escapeHtml(trSection(sec))}</h3>`) : ''}
+      <div style="${isOpen ? '' : 'display:none'}">
       ${sec.platos.filter(p=>p.disponible!==false).map(p => {
         const promo = getActivePromoForPlatoPublic(p.id);
         const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
@@ -1657,7 +1706,8 @@ function buildMenuHtml(cartas){
           `}
         </div>
       `;}).join('')}
-    `).join('')}
+      </div>
+    `;}).join(''); })()}
   `).join('');
 }
 
