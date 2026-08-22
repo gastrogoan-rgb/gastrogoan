@@ -814,7 +814,7 @@ function renderTpvToGo(tiposServicio){
       <button class="btn btn-sm" style="white-space:nowrap" onclick="openTogoCalendarModal()"><i class="ti ti-calendar-stats"></i> ${t('title.togoCalendar')}</button>
     </h3>
     <div style="display:flex;gap:6px;margin:10px 0">
-      <button class="btn btn-sm ${togoTab==='pendientes'?'btn-primary':''}" onclick="setTogoTabManual('pendientes')"><i class="ti ti-bell-ringing"></i> ${t('tab.pendingOnline')}${pendingCount ? ` <span class="badge badge-amber">${pendingCount}</span>` : ''}</button>
+      <button class="btn btn-sm ${togoTab==='pendientes'?'btn-primary':''}" onclick="setTogoTabManual('pendientes')"><i class="ti ti-bell-ringing"></i> ${t('tab.pendingOnline')}${pendingCount ? ` <span class="badge badge-amber">${pendingCount}</span>` : ''}${getTodayScheduledLaterOrders().length ? ` <span class="badge">${getTodayScheduledLaterOrders().length}</span>` : ''}</button>
       <button class="btn btn-sm ${togoTab==='activos'?'btn-primary':''}" onclick="setTogoTabManual('activos')"><i class="ti ti-list-check"></i> ${t('tab.activeTogoOrders')}${toGoOrders.length ? ` <span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</button>
     </div>
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
@@ -991,9 +991,48 @@ function setTogoTabManual(tabName){
 function getPendingOnlineOrders(){
   return DB.tpvOrders.filter(o => o.status === 'pendiente-online' && isTogoOrderVisibleNow(o));
 }
+// Pedidos de HOY, ya aceptados, pero programados para dentro de más de
+// TOGO_VISIBILITY_WINDOW_MIN (1h) — isTogoOrderVisibleNow los oculta a
+// propósito de "En curso" para no saturar esa pantalla con todo el día por
+// delante, pero eso los dejaba invisibles en cualquier sitio hasta que
+// faltaba poco: aquí sí se listan (sin botones de aceptar/rechazar, ya
+// están aceptados), para que el personal sepa de un vistazo qué hay
+// comprometido para más tarde hoy mismo sin tener que abrir el calendario.
+function getTodayScheduledLaterOrders(){
+  const today = todayStr();
+  return DB.tpvOrders.filter(o => {
+    if(o.status === 'pagada' || o.status === 'pendiente-online') return false;
+    if(o.tipo !== 'takeaway' && o.tipo !== 'delivery') return false;
+    if((o.date||today) !== today || !o.time) return false;
+    const dueMins = minutesUntilScheduled(o.time);
+    return dueMins !== null && dueMins > TOGO_VISIBILITY_WINDOW_MIN;
+  }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+}
+function renderTpvScheduledLaterCard(o){
+  const isDelivery = o.tipo === 'delivery';
+  return `
+    <div class="card" style="cursor:pointer" onclick="openTableOrder(null, ${o.id})">
+      <h3 style="justify-content:space-between;font-size:14px">
+        <span><i class="ti ${isDelivery?'ti-moped':'ti-shopping-bag'}"></i> ${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</span>
+        <span class="badge"><i class="ti ti-clock"></i> ${escapeHtml(o.time)}</span>
+      </h3>
+      <span class="badge ${isDelivery?'badge-blue':'badge-amber'}">${isDelivery?t('label.deliveryShort'):t('label.pickupOrder')}</span>
+      <div style="margin:8px 0;font-size:13px">
+        ${(o.items||[]).map(l => `${l.qty}× ${escapeHtml(l.name)}`).join('<br>')}
+      </div>
+      <div style="font-weight:700;font-size:16px">${fmtMoney(orderTotal(o))}</div>
+    </div>
+  `;
+}
 function renderTpvPendingOnline(){
   const pendingOnline = getPendingOnlineOrders();
-  if(!pendingOnline.length) return `<div class="grid grid-4" style="margin-top:14px"><div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOnline')}</div></div>`;
+  const scheduledLater = getTodayScheduledLaterOrders();
+  const laterSection = scheduledLater.length ? `
+    <h4 style="margin:18px 0 4px"><i class="ti ti-clock-hour-4"></i> ${t('title.scheduledLaterToday')} <span class="badge">${scheduledLater.length}</span></h4>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">${t('label.scheduledLaterTodayDesc')}</p>
+    <div class="grid grid-4">${scheduledLater.map(renderTpvScheduledLaterCard).join('')}</div>
+  ` : '';
+  if(!pendingOnline.length) return `<div class="grid grid-4" style="margin-top:14px"><div class="empty"><i class="ti ti-bell-ringing"></i>${t('empty.noPendingOnline')}</div></div>${laterSection}`;
   return `
     <div class="grid grid-4" style="margin-top:14px">
       ${pendingOnline.map(o => `
@@ -1024,6 +1063,7 @@ function renderTpvPendingOnline(){
         </div>
       `).join('')}
     </div>
+    ${laterSection}
   `;
 }
 

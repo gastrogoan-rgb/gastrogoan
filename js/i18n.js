@@ -1894,7 +1894,7 @@ const I18N = {
     'tpv.onlineOrders': 'Pedidos online', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'Con esto en OFF, la web deja de admitir pedidos para llevar y delivery temporalmente.',
     'tpv.onlineOrdersPausedWarning': 'Pedidos online en pausa: los clientes no pueden pedir Take Away ni Delivery desde la web hasta que lo vuelvas a activar.',
-    'empty.noTogoOrders': 'No hay pedidos para llevar ni delivery abiertos ahora mismo.', 'empty.noPendingOnline': 'No hay pedidos online esperando aceptar o rechazar.', 'tab.pendingOnline': 'Pendientes', 'tab.activeTogoOrders': 'En curso',
+    'empty.noTogoOrders': 'No hay pedidos para llevar ni delivery abiertos ahora mismo.', 'empty.noPendingOnline': 'No hay pedidos online esperando aceptar o rechazar.', 'tab.pendingOnline': 'Pendientes', 'tab.activeTogoOrders': 'En curso', 'title.scheduledLaterToday': 'Programados para más tarde hoy', 'label.scheduledLaterTodayDesc': 'Ya aceptados, pero para dentro de más de una hora — por eso no aparecen todavía en "En curso".',
     'mn.ticket.preview': 'Vista previa del ticket', 'mn.ticket.previewTitle': 'Así se verá tu ticket',
     'thermal.sectionTitle': 'Impresora térmica (Bluetooth)', 'thermal.sectionDesc': 'Conecta una impresora térmica de recibos por Bluetooth para imprimir tickets directamente, sin pasar por el diálogo de imprimir del navegador.',
     'thermal.connectBtn': 'Conectar impresora', 'thermal.notSupportedHint': 'Tu navegador no soporta impresión Bluetooth (disponible en Chrome/Edge en Android o escritorio). El botón normal de "Imprimir" sigue funcionando igual.',
@@ -3783,7 +3783,7 @@ const I18N = {
     'tpv.onlineOrders': 'Comandes online', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'Amb això en OFF, la web deixa d\'admetre comandes per emportar i delivery temporalment.',
     'tpv.onlineOrdersPausedWarning': 'Comandes online en pausa: els clients no poden demanar Take Away ni Delivery des de la web fins que ho tornis a activar.',
-    'empty.noTogoOrders': 'No hi ha comandes per emportar ni delivery obertes ara mateix.', 'empty.noPendingOnline': 'No hi ha comandes online esperant acceptar o rebutjar.', 'tab.pendingOnline': 'Pendents', 'tab.activeTogoOrders': 'En curs',
+    'empty.noTogoOrders': 'No hi ha comandes per emportar ni delivery obertes ara mateix.', 'empty.noPendingOnline': 'No hi ha comandes online esperant acceptar o rebutjar.', 'tab.pendingOnline': 'Pendents', 'tab.activeTogoOrders': 'En curs', 'title.scheduledLaterToday': 'Programades per més tard avui', 'label.scheduledLaterTodayDesc': 'Ja acceptades, però per d\'aquí més d\'una hora — per això encara no surten a "En curs".',
 
 
     'mn.ticket.preview': 'Vista prèvia del tiquet', 'mn.ticket.previewTitle': 'Així es veurà el teu tiquet',
@@ -5676,7 +5676,7 @@ const I18N = {
     'tpv.onlineOrders': 'Online orders', 'common.on': 'ON', 'common.off': 'OFF',
     'tpv.onlineOrdersSwitchHint': 'With this OFF, the website temporarily stops accepting Take Away and Delivery orders.',
     'tpv.onlineOrdersPausedWarning': 'Online orders paused: customers can\'t place Take Away or Delivery orders from the website until you turn this back on.',
-    'empty.noTogoOrders': 'No takeaway or delivery orders open right now.', 'empty.noPendingOnline': 'No online orders waiting to be accepted or rejected.', 'tab.pendingOnline': 'Pending', 'tab.activeTogoOrders': 'Active',
+    'empty.noTogoOrders': 'No takeaway or delivery orders open right now.', 'empty.noPendingOnline': 'No online orders waiting to be accepted or rejected.', 'tab.pendingOnline': 'Pending', 'tab.activeTogoOrders': 'Active', 'title.scheduledLaterToday': 'Scheduled for later today', 'label.scheduledLaterTodayDesc': 'Already accepted, but more than an hour away — that\'s why they don\'t show up in "Active" yet.',
 
 
     'mn.ticket.preview': 'Receipt preview', 'mn.ticket.previewTitle': 'This is how your receipt will look',

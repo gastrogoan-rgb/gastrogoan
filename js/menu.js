@@ -286,20 +286,27 @@ function migrateItemHorario(item){
 // las horas (antes las columnas eran tan estrechas que el propio campo de
 // hora cortaba el texto, p.ej. "11:0" en vez de "11:00").
 function renderScheduleRows(prefix, horario){
-  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">${horario.map((d,i) => {
+  // Los dos campos de hora llevaban un ancho fijo (112px cada uno): en un
+  // móvil estrecho (320-360px), con el padding de la tarjeta del día y el
+  // botón de quitar franja, la fila entera pasaba del ancho disponible y
+  // desbordaba en horizontal — no se veía en la auditoría visual automática
+  // porque esta sección empieza plegada y nadie la abría durante esa
+  // pasada. Con flex-wrap y anchos mínimos en vez de fijos, la fila
+  // encoge o pasa a dos líneas en vez de desbordar.
+  return `<div class="carta-schedule-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">${horario.map((d,i) => {
     const franjas = d.franjas && d.franjas.length ? d.franjas : [{desde:'', hasta:''}];
     return `
-    <div class="carta-schedule-day" style="padding:10px;border:1px solid var(--border);border-radius:8px;${d.activo===false?'opacity:.55':''}">
+    <div class="carta-schedule-day" style="padding:10px;border:1px solid var(--border);border-radius:8px;min-width:0;${d.activo===false?'opacity:.55':''}">
       <label style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px">
         <input type="checkbox" id="${prefix}-hor-${i}-activo" ${d.activo!==false?'checked':''} onchange="toggleScheduleDia('${prefix}',${i});updateScheduleSummary('${prefix}')" style="width:15px;height:15px;margin:0">
         ${weekDayFull(i)}
       </label>
       <div id="${prefix}-hor-${i}-rango" style="display:${d.activo!==false?'flex':'none'};flex-direction:column;gap:6px">
         ${franjas.map((f,j) => `
-          <div style="display:flex;align-items:center;gap:4px">
-            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:4px 5px;font-size:13px;width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+            <input type="time" id="${prefix}-hor-${i}-${j}-desde" class="carta-schedule-time" value="${escapeHtml(f.desde||'')}" style="padding:4px 5px;font-size:13px;flex:1 1 88px;min-width:88px;max-width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
             <span style="color:var(--muted);font-size:12px">–</span>
-            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:4px 5px;font-size:13px;width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
+            <input type="time" id="${prefix}-hor-${i}-${j}-hasta" class="carta-schedule-time" value="${escapeHtml(f.hasta||'')}" style="padding:4px 5px;font-size:13px;flex:1 1 88px;min-width:88px;max-width:112px;min-height:32px" onchange="updateScheduleSummary('${prefix}')">
             ${j>0 ? `<button class="btn btn-sm btn-icon btn-danger" style="flex-shrink:0" onclick="removeScheduleFranja('${prefix}',${i},${j})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>` : ''}
           </div>
         `).join('')}
@@ -708,41 +715,75 @@ async function removePlatoMod(secId, platoId, modId){
   openModal(renderPlatoModsModalHtml(secId, platoId));
 }
 
+// Antes se listaban TODOS los platos/bebidas del escandallo de golpe, sin
+// forma de buscar — con una carta grande, encontrar uno concreto significaba
+// desplazarse a mano por decenas de líneas. Con un buscador que filtra por
+// nombre, escribiendo 2-3 letras basta para encontrarlo.
+let importEscSecId = null;
 function importFromEscandallo(secId){
   const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
   if(!areaRecipes.length){ showToast(currentArea()==='sala' ? t('msg.noDrinksInCosting') : t('msg.noDishesInCosting')); return; }
-  const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
+  importEscSecId = secId;
   openModal(`
     <div class="modal-header">
       <h3>${t('title.importFromCosting')}</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="field" style="margin-bottom:8px">
+      <input type="text" id="import-esc-search" placeholder="${t('common.search')}" oninput="renderImportEscList()" autofocus>
+    </div>
+    <div class="field" style="margin-bottom:8px">
       <label style="display:flex;align-items:center;gap:6px">
         <input type="checkbox" id="import-esc-all" onchange="toggleImportEscAll(this.checked)" style="width:auto"> ${t('common.selectAll')}
       </label>
     </div>
-    <div id="import-esc-list" style="max-height:320px;overflow:auto">
-      ${areaRecipes.map(r => {
-        const done = existingIds.has(r.id);
-        return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
-          <input type="checkbox" value="${r.id}" ${done?'disabled checked':''} style="width:auto">
-          <span style="flex:1">${escapeHtml(r.name)}</span>
-          <span style="font-family:monospace;color:var(--brand-orange);font-weight:600">${fmtMoney(r.price)}</span>
-        </label>`;
-      }).join('')}
-    </div>
+    <div id="import-esc-list" style="max-height:320px;overflow:auto"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" onclick="confirmImportEsc(${secId})">${t('common.import')}</button>
     </div>
   `);
+  renderImportEscList();
+}
+// Al filtrar, las casillas ya marcadas se conservan aunque el plato deje de
+// verse (se guarda su estado en importEscChecked) — si no, buscar otra cosa
+// después de marcar algunos platos los desmarcaba sin que nadie lo pidiera.
+let importEscChecked = new Set();
+function renderImportEscList(){
+  const box = document.getElementById('import-esc-list');
+  if(!box) return;
+  // Conserva lo ya marcado en el DOM actual antes de volver a pintar.
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)').forEach(c => importEscChecked.add(parseInt(c.value)));
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:checked):not(:disabled)').forEach(c => importEscChecked.delete(parseInt(c.value)));
+  const query = (document.getElementById('import-esc-search')?.value || '').trim().toLowerCase();
+  const areaRecipes = DB.recipes.filter(r => (r.area||'cocina') === currentArea() && !r.isBase);
+  const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
+  const filtered = query ? areaRecipes.filter(r => (r.name||'').toLowerCase().includes(query)) : areaRecipes;
+  box.innerHTML = filtered.length ? filtered.map(r => {
+    const done = existingIds.has(r.id);
+    return `<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);${done?'opacity:.5':''}">
+      <input type="checkbox" value="${r.id}" ${done?'disabled checked':(importEscChecked.has(r.id)?'checked':'')} style="width:auto">
+      <span style="flex:1">${escapeHtml(r.name)}</span>
+      <span style="font-family:monospace;color:var(--brand-orange);font-weight:600">${fmtMoney(r.price)}</span>
+    </label>`;
+  }).join('') : `<div class="empty" style="padding:16px 4px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
+  const allBox = document.getElementById('import-esc-all');
+  if(allBox) allBox.checked = filtered.length > 0 && filtered.every(r => existingIds.has(r.id) || importEscChecked.has(r.id));
 }
 function toggleImportEscAll(checked){
-  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:disabled)').forEach(c=>c.checked=checked);
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:disabled)').forEach(c=>{
+    c.checked = checked;
+    if(checked) importEscChecked.add(parseInt(c.value)); else importEscChecked.delete(parseInt(c.value));
+  });
 }
 function confirmImportEsc(secId){
-  const checked = [...document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)')].map(c=>parseInt(c.value));
+  // No basta con leer las casillas visibles ahora mismo: si se marcó algo,
+  // se buscó otra cosa distinta y esa selección quedó fuera del filtro
+  // actual, seguiría contando (ver importEscChecked en renderImportEscList).
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:checked:not(:disabled)').forEach(c => importEscChecked.add(parseInt(c.value)));
+  document.querySelectorAll('#import-esc-list input[type=checkbox]:not(:checked):not(:disabled)').forEach(c => importEscChecked.delete(parseInt(c.value)));
+  const existingIds = new Set(cartaEdit.secciones.flatMap(s=>(s.platos||[]).map(p=>p.recipeId).filter(Boolean)));
+  const checked = [...importEscChecked].filter(id => !existingIds.has(id));
   if(!checked.length){ showToast(currentArea()==='sala' ? t('msg.selectAtLeastOneDrink') : t('msg.selectAtLeastOneDish')); return; }
   const sec = cartaEdit.secciones.find(s=>s.id===secId);
   if(!sec) return;
@@ -751,6 +792,7 @@ function confirmImportEsc(secId){
     if(!r) return;
     sec.platos.push({id: genId(), recipeId: r.id, nombre: r.name, precio: r.price||0, precioBase: r.priceBase, ivaPct: r.ivaPct, disponible:true});
   });
+  importEscChecked = new Set();
   closeModal();
   renderCartaSecciones();
   const isDrink = currentArea()==='sala';

@@ -801,13 +801,12 @@ function renderMegalista(){
   if(megalistaFolder === null){
     box.innerHTML = `<div class="grid grid-compact">${cats.map(cat => {
       const safeCat = cat.replace(/'/g,"\\'");
-      const isCustom = !ingredientCategories().includes(cat);
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${safeCat}')">
         <h3 style="flex-wrap:nowrap;align-items:flex-start">
           <span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
           <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
-          ${isCustom ? `<button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil"></i></button>` : ''}
+          <button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0;min-width:30px;min-height:30px;padding:4px" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
         </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
@@ -1146,7 +1145,11 @@ function onIngredientCategoryChange(id){
 // siempre — no había forma de arreglarlo, solo de crear una categoría
 // nueva y reasignar ingredientes a mano.
 async function renameIngredientCategory(oldName){
-  const nuevo = await promptText(t('msg.renameCategoryPrompt'), oldName);
+  // El valor guardado de una categoría de fábrica es siempre su clave en
+  // español (para poder traducirla), pero mostrarle esa clave tal cual a
+  // alguien usando la app en catalán o inglés sería confuso — se precarga
+  // con el texto ya traducido que está viendo en pantalla.
+  const nuevo = await promptText(t('msg.renameCategoryPrompt'), ingredientCategoryLabel(oldName));
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
   if(!trimmed || trimmed === oldName) return;

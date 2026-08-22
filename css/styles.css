@@ -1157,7 +1157,15 @@ td.wrap{white-space:normal}
 
   /* Subcarpetas (módulos) — vertical en móvil */
   .grid-3{grid-template-columns:1fr !important}
-  .grid-kds{columns:1 !important}
+  /* Antes forzaba 1 sola columna en móvil: con la pantalla de Cocina llena
+     de tickets, cada uno ocupaba el ancho completo y había que hacer mucho
+     scroll para ver el siguiente. Con columnas más estrechas y letra/
+     botones más pequeños caben 2-3 tickets por fila incluso en un móvil
+     normal, sin perder legibilidad. */
+  .grid-kds{columns:130px !important;column-gap:8px;font-size:12px}
+  .grid-kds .card{padding:8px}
+  .grid-kds .btn-sm{font-size:10.5px;padding:3px 7px;min-height:30px}
+  .grid-kds .badge{font-size:10px;padding:2px 6px}
   .grid-personal{grid-template-columns:1fr !important}
   .grid-modules{grid-template-columns:1fr !important}
   .module-card{padding:14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left}
