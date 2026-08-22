@@ -1455,7 +1455,7 @@ function renderStock(){
     // Con búsqueda o "solo alertas": resultados planos agrupados por categoría.
     groupsWrap.innerHTML = cats.map(cat => `
       <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(ingredientCategoryLabel(cat))}</strong> <span style="font-size:12px;color:var(--muted)">(${byCat[cat].length})</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">
         ${byCat[cat].map(renderRow).join('')}
       </div>
     `).join('');
@@ -1476,7 +1476,7 @@ function renderStock(){
     // Carpeta abierta: todo a la vista de golpe (cantidad, mínimo, +/-, ajustar),
     // sin tener que entrar a cada producto para verlo — mismo detalle que en
     // los resultados de búsqueda, solo que ya filtrado por esta categoría.
-    groupsWrap.innerHTML = backFolders + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">${folderItems.map(renderRow).join('')}</div>`;
+    groupsWrap.innerHTML = backFolders + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">${folderItems.map(renderRow).join('')}</div>`;
   }
 
   /* Elaboraciones — mismas carpetas por categoría que Escandallo → Elaboraciones
@@ -1513,7 +1513,7 @@ function renderStock(){
   } else if(searching){
     elabGroupsWrap.innerHTML = elabFolders.filter(([key]) => (elabsByRecipeCat[key]||[]).length).map(([key, label]) => `
       <div class="view-subtitle" style="margin-top:14px;margin-bottom:4px"><strong>${escapeHtml(label)}</strong> <span style="font-size:12px;color:var(--muted)">(${elabsByRecipeCat[key].length})</span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">
         ${elabsByRecipeCat[key].map(renderRow).join('')}
       </div>
     `).join('');
@@ -1532,7 +1532,7 @@ function renderStock(){
     // Carpeta abierta: todo a la vista de golpe, igual que Ingredientes — sin
     // tener que entrar en cada elaboración para ver cantidad/mínimo/ajustar.
     elabGroupsWrap.innerHTML = backBtn + (folderElabs.length
-      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:6px">${folderElabs.map(renderRow).join('')}</div>`
+      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:6px">${folderElabs.map(renderRow).join('')}</div>`
       : `<div class="empty" style="padding:10px">${t('empty.elaborations')}</div>`);
   }
 }

@@ -460,7 +460,17 @@ td.wrap{white-space:normal}
    y antes se salía de la casilla entera (grid-template-columns:1fr sin
    minmax(0,...) no deja encoger por debajo del contenido). Aquí se permite
    partir en dos líneas y encoger la letra en vez de desbordar. */
-.cal-day-badge{white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;max-width:100%;overflow-wrap:break-word;box-sizing:border-box}
+/* display:block + width:auto (nada de max-width:100%) a propósito: un
+   elemento de bloque con ancho automático siempre ocupa exactamente el
+   ancho de contenido de su padre, sin ambigüedad — con inline-flex +
+   max-width:100% (como estaba antes) el porcentaje a veces se resolvía
+   contra un ancestro mucho más ancho (el body) en vez de contra la propia
+   casilla del día, y el badge se salía por el lado derecho sin avisar. */
+.cal-day-badge{display:block;white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;overflow-wrap:break-word;box-sizing:border-box}
+/* Red de seguridad además de lo de arriba: pase lo que pase con el cálculo
+   del badge, nada puede salirse visualmente de la casilla del día (tanto en
+   el calendario de Turnos como en el de pedidos programados). */
+.cal-day-cell{overflow:hidden}
 /* Rejilla del calendario de pedidos programados (Para Llevar/Delivery): 7
    columnas con minmax(0,1fr) para que las celdas puedan encoger por debajo
    de su contenido en móvil, en vez de desbordar la fila (mismo problema que
