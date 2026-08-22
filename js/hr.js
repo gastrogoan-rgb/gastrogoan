@@ -543,9 +543,6 @@ const GE = (function(){
   function ventasSalesForDay(dateStr){
     return activeSales().filter(v => v.date===dateStr && (!ventasTipoFiltro || (v.tipo||'mesa')===ventasTipoFiltro));
   }
-  function ventasTotalForYear(año){
-    return getMeses().reduce((s,_,i) => s + ventasSalesForMonth(i,año).reduce((s2,v)=>s2+parseFloat(v.total||0),0), 0);
-  }
   // Señales de reserva cobradas ese mes — aparte de la facturación oficial
   // a propósito (ver pago_confirmado, js/core.js): todavía no se sabe qué
   // va a pedirse en la mesa ni con qué IVA, así que no se mete como venta
@@ -570,55 +567,30 @@ const GE = (function(){
     document.getElementById('ventas-tipo-filter').innerHTML = tipos.map(x=>`
       <button class="btn btn-sm ${ventasTipoFiltro===x.v?'btn-primary':''}" onclick="GE.setVentasTipoFiltro('${x.v}')">${x.lbl}</button>`).join('');
 
-    const salesMes = ventasSalesForMonth(ventasMonth, ventasYear);
-    const totalMes = salesMes.reduce((s,v)=>s+parseFloat(v.total||0),0);
-    const ticketsMes = salesMes.length;
-    const ticketMedioMes = ticketsMes ? totalMes/ticketsMes : 0;
-    document.getElementById('ventas-kpis').innerHTML = `
-      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.totalMonth')}</div><div class="val">${fmtMoney(totalMes)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.ticketsMonth')}</div><div class="val">${ticketsMes}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.avgTicket')}</div><div class="val">${fmtMoney(ticketMedioMes)}</div></div>
-      <div class="ge-kpi"><div class="lbl">${t('ge.ventas.totalYear')}</div><div class="val">${fmtMoney(ventasTotalForYear(ventasYear))}</div></div>`;
     const depositosMes = ventasDepositosForMonth(ventasMonth, ventasYear);
     document.getElementById('ventas-depositos-note').innerHTML = depositosMes > 0.001 ? `
       <p style="font-size:12px;color:var(--muted);margin:8px 0 0"><i class="ti ti-cash-banknote"></i> ${t('ge.ventas.depositsNote').replace('${amount}', fmtMoney(depositosMes))}</p>
     ` : '';
 
-    // -- Tabla por día del mes seleccionado --
+    // -- Histórico por día del mes seleccionado, con total al final --
     document.getElementById('ventas-dia-title').textContent = `${t('ge.ventas.byDay')} — ${getMeses()[ventasMonth]} ${ventasYear}`;
     const nDias = daysInMonth(ventasYear, ventasMonth);
     let diaRows = '';
+    let totalMes = 0, ticketsMes = 0;
     for(let d=1; d<=nDias; d++){
       const dateStr = `${ventasYear}-${String(ventasMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const salesDia = ventasSalesForDay(dateStr);
       if(!salesDia.length) continue;
       const totalDia = salesDia.reduce((s,v)=>s+parseFloat(v.total||0),0);
       const ticketsDia = salesDia.length;
+      totalMes += totalDia; ticketsMes += ticketsDia;
       diaRows += `<tr><td>${d} ${getMeses()[ventasMonth]}</td><td>${ticketsDia}</td><td>${fmtMoney(totalDia/ticketsDia)}</td><td style="font-weight:700">${fmtMoney(totalDia)}</td></tr>`;
     }
     document.getElementById('ventas-dia-table').innerHTML = diaRows ? `
       <thead><tr><th>${t('hr.lbl.day')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
-      <tbody>${diaRows}</tbody>` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
-
-    // -- Tabla por mes del año seleccionado (con variación vs año anterior) --
-    let mesRows = '';
-    getMeses().forEach((m,i)=>{
-      const salesM = ventasSalesForMonth(i, ventasYear);
-      const totalM = salesM.reduce((s,v)=>s+parseFloat(v.total||0),0);
-      const ticketsM = salesM.length;
-      const salesPrev = ventasSalesForMonth(i, ventasYear-1);
-      const totalPrev = salesPrev.reduce((s,v)=>s+parseFloat(v.total||0),0);
-      let yoyHtml = '';
-      if(totalPrev > 0){
-        const pct = (totalM-totalPrev)/totalPrev*100;
-        const color = pct>=0?'var(--green)':'var(--red)';
-        yoyHtml = ` <span style="font-size:10px;color:${color}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
-      }
-      mesRows += `<tr class="${i===ventasMonth?'highlight':''}" style="cursor:pointer" onclick="GE.setVentasMonth(${i})"><td>${m}</td><td>${ticketsM}</td><td>${fmtMoney(ticketsM?totalM/ticketsM:0)}</td><td style="font-weight:700">${fmtMoney(totalM)}${yoyHtml}</td></tr>`;
-    });
-    document.getElementById('ventas-mes-table').innerHTML = `
-      <thead><tr><th>${t('hr.lbl.month')}</th><th>${t('ge.ventas.tickets')}</th><th>${t('ge.ventas.avgTicket')}</th><th>${t('common.total')}</th></tr></thead>
-      <tbody>${mesRows}</tbody>`;
+      <tbody>${diaRows}</tbody>
+      <tfoot><tr style="font-weight:700;background:var(--teal-l,#e6f4f1)"><td>${t('ge.ventas.monthTotal')}</td><td>${ticketsMes}</td><td>${fmtMoney(ticketsMes?totalMes/ticketsMes:0)}</td><td>${fmtMoney(totalMes)}</td></tr></tfoot>
+      ` : `<tbody><tr><td colspan="4"><div class="empty">${t('ge.ventas.emptyMonth')}</div></td></tr></tbody>`;
   }
 
   /* -- GASTOS VARIABLES -- */
