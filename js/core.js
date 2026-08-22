@@ -2735,7 +2735,12 @@ function initPublicRequestsListener(){
           }
           target.date = newDate; target.time = newTime; target.people = newPeople;
           target.tableId = matchedTableId;
-          target.status = matchedTableId != null ? 'confirmada' : 'pendiente';
+          // Igual que al crear la reserva nueva (más arriba en esta misma
+          // función): si exige señal y todavía no se ha pagado, NUNCA se
+          // autoconfirma solo por tener mesa/aforo disponible — si no, un
+          // cliente que no llegó a pagar podía "confirmar" su reserva sin
+          // más que tocar Modificar y cambiar la hora un minuto.
+          target.status = (matchedTableId != null && !(target.depositRequired && !target.depositConfirmed)) ? 'confirmada' : 'pendiente';
           syncReservationStatusForPublic(target);
           logAudit('edit', t('audit.reservationModifiedByClient').replace('${name}', target.clientName||'?'));
         }

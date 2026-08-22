@@ -552,7 +552,11 @@ const GE = (function(){
   // sitio hasta que llegara el día de la reserva.
   function ventasDepositosForMonth(mes, año){
     const mesStr = `${año}-${String(mes+1).padStart(2,'0')}`;
-    return (DB.reservations||[]).filter(r => r.depositConfirmed && (r.depositPagoFecha||'').startsWith(mesStr)).reduce((s,r)=>s+parseFloat(r.depositPagoImporte||0),0);
+    // Una reserva cancelada tras cobrar la señal (ver setReservationStatus)
+    // ya no es un ingreso que se vaya a quedar el negocio — se excluye de
+    // esta nota informativa para no seguir contándola como venta del mes
+    // indefinidamente mientras esté pendiente de devolver.
+    return (DB.reservations||[]).filter(r => r.depositConfirmed && !r.depositNeedsRefund && (r.depositPagoFecha||'').startsWith(mesStr)).reduce((s,r)=>s+parseFloat(r.depositPagoImporte||0),0);
   }
   function renderVentas(){
     document.getElementById('ventas-year').textContent = ventasYear;
@@ -1754,11 +1758,11 @@ const GE = (function(){
 
     rows.push([t('hr.csv.salesLedger')]);
     rows.push([t('common.date'), t('hr.csv.invoiceNo'), t('hr.lbl.type'), t('hr.csv.client'), t('hr.csv.paymentMethod'), t('hr.csv.taxBase'), t('hr.csv.vatPct'), t('hr.csv.vatAmount'), t('hr.csv.totalEur')]);
-    let sumBase=0, sumIva=0, sumTotal=0;
+    let sumBase=0, sumIva=0, sumTotal=0, sumPropina=0;
     ventas.forEach(v => {
       const total = parseFloat(v.total||0);
       const {base, iva, pctLabel} = saleIvaBreakdown(v);
-      sumBase += base; sumIva += iva; sumTotal += total;
+      sumBase += base; sumIva += iva; sumTotal += total; sumPropina += parseFloat(v.propina||0);
       rows.push([v.date||'', v.facturaNum||'', v.tipo||'', v.clienteNombre||'', v.metodoPago||'', base, pctLabel==='mixto'?t('label.mixedRatesShort'):pctLabel, iva, total]);
     });
     if(!ventas.length) rows.push([t('hr.csv.noSalesThisMonth')]);
@@ -1874,9 +1878,16 @@ const GE = (function(){
     const totalIvaSoportado = sumVarIva + sumFijosIvaHist + sumCapexIva;
     rows.push([t('hr.csv.monthSummary')]);
     rows.push([t('hr.lbl.concept'), t('hr.lbl.amountEur')]);
-    rows.push([t('hr.csv.totalRevenueWithVat'), sumTotal]);
+    // "Total con IVA" tiene que cuadrar exactamente con base+IVA de las dos
+    // filas de abajo — antes se usaba sumTotal (que incluye propinas, sin
+    // IVA por no ser un ingreso del negocio) y esa fila no coincidía con el
+    // resto del propio informe: es la cifra que ve el gestor, y si no cuadra
+    // con base+IVA parece un error (o peor, se declara de más si el gestor
+    // la usa tal cual para el 303/347). La propina se informa aparte.
+    rows.push([t('hr.csv.totalRevenueWithVat'), roundMoney(sumBase + sumIva)]);
     rows.push([t('hr.csv.salesTaxBase'), sumBase]);
     rows.push([t('hr.csv.vatOnSalesLabel'), sumIva]);
+    rows.push([t('hr.csv.tipsCollected'), roundMoney(sumPropina)]);
     rows.push([t('hr.lbl.deliveryCommissions'), comisiones]);
     rows.push([t('hr.csv.variableExpensesBase'), sumVarBase]);
     rows.push([t('hr.csv.fixedExpensesBase'), sumFijosBaseHist]);
@@ -1944,7 +1955,7 @@ const GE = (function(){
       t('hr.email.intro').replace('${month}', getMeses()[mes]).replace('${year}', año).replace('${business}', b.name||t('hr.email.theBusiness')),
       ``,
       t('hr.email.summaryTitle'),
-      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumTotal)}`,
+      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumBase + report.sumIva)}`,
       `- ${t('hr.csv.salesTaxBase')}: ${fmt(report.sumBase)}`,
       `- ${t('hr.te.vatPassedOn')}: ${fmt(report.sumIva)}`,
       `- ${t('hr.lbl.fixedExpenses')}: ${fmt(report.sumFijos)}`,
@@ -1984,7 +1995,7 @@ const GE = (function(){
       t('hr.email.intro').replace('${month}', getMeses()[mes]).replace('${year}', año).replace('${business}', b.name||t('hr.email.theBusiness')),
       ``,
       t('hr.email.summaryTitle'),
-      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumTotal)}`,
+      `- ${t('hr.csv.totalRevenueWithVat')}: ${fmt(report.sumBase + report.sumIva)}`,
       `- ${t('hr.csv.salesTaxBase')}: ${fmt(report.sumBase)}`,
       `- ${t('hr.te.vatPassedOn')}: ${fmt(report.sumIva)}`,
       `- ${t('hr.lbl.fixedExpenses')}: ${fmt(report.sumFijos)}`,

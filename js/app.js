@@ -2613,6 +2613,17 @@ async function setReservationStatus(id, status){
   // camino, aunque la UI ya no ofrezca el botón para intentarlo.
   if(r.status === 'completada' && status !== 'completada') return;
 
+  // Cancelar una reserva que ya tenía la señal cobrada online no avisaba de
+  // nada: el dinero seguía contándose como venta del mes (ventasDepositosForMonth)
+  // y no quedaba ningún rastro de que hubiera que devolvérselo al cliente.
+  // Se marca aquí, no se intenta devolver solo (eso requeriría acceso a la
+  // pasarela de pago) — solo asegura que quede constancia clara.
+  if(status === 'cancelada' && r.depositConfirmed && !r.depositNeedsRefund){
+    r.depositNeedsRefund = true;
+    logAudit('edit', t('audit.reservationDepositNeedsRefund').replace('${name}', r.clientName||'?').replace('${amount}', fmtMoney(r.depositPagoImporte||0)), 'critical');
+    showToast(t('msg.reservationDepositNeedsRefund').replace('${amount}', fmtMoney(r.depositPagoImporte||0)));
+  }
+
   if(status === 'confirmada'){
     // Las reservas que llegan de la web pública nunca traen mesa asignada
     // (el cliente no elige mesa, solo el negocio) — asignar mesa es

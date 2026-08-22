@@ -1361,8 +1361,17 @@ function openTableOrder(tableId, orderId){
 
 function getTodayPendingReservations(){
   const today = todayStr();
-  return DB.reservations.filter(r => r.date === today && r.status === 'confirmada' && !r.llegada)
-    .sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  return DB.reservations.filter(r => r.date === today && (
+    (r.status === 'confirmada' && !r.llegada) ||
+    // Si la llegada ya se marcó desde la pestaña Reservas (toggleReservaLlegada,
+    // que solo cambia el estado y no abre ninguna comanda) pero la señal
+    // cobrada online todavía no se ha aplicado a ninguna mesa, la reserva
+    // sigue apareciendo aquí — si no, en cuanto se marcaba la llegada
+    // desaparecía de "Ya tiene reserva" y la señal se quedaba huérfana para
+    // siempre: al cerrar la mesa como cliente de paso, se le cobraba al
+    // cliente el importe completo, la señal ya pagada aparte.
+    (r.status === 'completada' && r.llegada && (r.depositSalePending||0) > 0)
+  )).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
 }
 
 function openNewOrderPaxModal(tableId){
@@ -3707,7 +3716,13 @@ function finalizeCharge(orderId){
   // delivery de otro día) puede ser bastante después. Sin esto, un pedido
   // cobrado hoy para dentro de una semana aparecía como venta de dentro de
   // una semana, no de hoy.
-  const saleDate = (order.pagado && order.pagoFecha) ? order.pagoFecha.slice(0,10) : todayStr();
+  // PERO solo cuando ya no queda nada por cobrar ahora mismo (amountDue==0):
+  // si al recoger el pedido se añade algo más (típicamente una propina en
+  // efectivo), ese dinero nuevo entra HOY y tiene que poder cuadrar en el
+  // arqueo de HOY — dejar la venta entera fechada en el pasado hacía que
+  // ese efectivo cobrado hoy no apareciera en ningún cierre de caja, ni
+  // hoy (el arqueo de hoy solo mira sale.date===hoy) ni nunca.
+  const saleDate = (order.pagado && order.pagoFecha && amountDue <= 0.001) ? order.pagoFecha.slice(0,10) : todayStr();
   const sale = {id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal, descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina, tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false, clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null, metodoPago, pagos, items: buildSaleItemsForOrder(order)};
   applyDeliveryCommission(order, sale);
   discountStockForOrder(order);
@@ -3756,8 +3771,33 @@ function generateEqualSplit(orderId){
   order.splitPayments = makeEqualParts(total, n).map((amount,i) => ({
     id: i+1, label: t('label.personN').replace('${n}', i+1), amount, paid:false, metodoPago:null
   }));
+  applyOnlinePrepaidToSplit(order);
   saveDB();
   renderPaymentModal(orderId);
+}
+
+// Lo que ya se pagó online (señal de reserva, líneas/propina pagadas por
+// móvil — ver orderAmountPaidOnline) no se les puede volver a cobrar a los
+// comensales al dividir cuenta: sin esto, cada comensal pagaba sobre el
+// importe COMPLETO de la mesa, cobrando dos veces esa parte ya pagada.
+// Reparte la resta entre las partes en céntimos, proporcional a lo que ya
+// le tocaba a cada una (método del resto mayor: no se pierde ni sobra
+// ningún céntimo, y ninguna parte puede quedar negativa).
+function applyOnlinePrepaidToSplit(order){
+  const paidOnline = orderAmountPaidOnline(order);
+  if(paidOnline <= 0.001 || !order.splitPayments || !order.splitPayments.length) return;
+  const totalCents = order.splitPayments.reduce((s,p) => s + Math.round(p.amount*100), 0);
+  if(totalCents <= 0) return;
+  const paidCents = Math.min(totalCents, Math.round(paidOnline*100));
+  const targetCents = totalCents - paidCents;
+  const raw = order.splitPayments.map(p => Math.round(p.amount*100) * targetCents / totalCents);
+  const floors = raw.map(Math.floor);
+  const used = floors.reduce((a,b)=>a+b,0);
+  const remainder = targetCents - used;
+  const byFrac = raw.map((v,i) => ({i, frac: v - floors[i]})).sort((a,b) => b.frac - a.frac);
+  const finalCents = floors.slice();
+  for(let k=0; k<remainder; k++) finalCents[byFrac[k % byFrac.length].i] += 1;
+  order.splitPayments.forEach((p,i) => { p.amount = finalCents[i] / 100; });
 }
 
 // Reparte el total en `n` partes en céntimos, sin perder ni un céntimo por redondeo
@@ -3875,6 +3915,7 @@ function generateItemsSplit(orderId){
       itemNames, paid:false, metodoPago:null
     };
   });
+  applyOnlinePrepaidToSplit(order);
   saveDB();
   renderPaymentModal(orderId);
 }
@@ -3985,19 +4026,43 @@ function finalizeSplitOrder(orderId){
   const subtotal = orderTotal(order);
   const descuentoPct = order.descuentoPct || 0;
   const descuentoImporte = roundMoney(subtotal * descuentoPct / 100);
-  const propina = order.propina || 0;
-  // El total real cobrado es la suma de las partes ya pagadas (incluye
-  // descuento y propina repartidos en generateEqualSplit/generateItemsSplit),
-  // no subtotal - así la venta refleja lo que de verdad entró en caja.
-  const total = roundMoney(order.splitPayments.reduce((s,p)=>s+p.amount,0));
+  // La propina real de la venta es la de caja (repartida en las partes) +
+  // la ya pagada online (order.propinaPagadaOnline) — igual que en
+  // finalizeCharge. Antes se perdía la propina online al dividir cuenta,
+  // porque aquí solo se sumaba order.propina.
+  const propina = roundMoney((order.propina || 0) + (order.propinaPagadaOnline || 0));
+  const amountPaidOnline = orderAmountPaidOnline(order);
+  // El total FISCAL de la venta es el de toda la cuenta (comida + propina),
+  // igual que en finalizeCharge — no solo la suma de las partes que se han
+  // cobrado ahora en caja, que ya excluye lo pagado online por adelantado
+  // (señal de reserva, líneas pagadas por móvil): generateEqualSplit/
+  // generateItemsSplit reparten precisamente ESE importe menor entre los
+  // comensales para que nadie pague dos veces lo ya cobrado online.
+  const total = roundMoney(subtotal - descuentoImporte + propina);
+  const collected = roundMoney(order.splitPayments.reduce((s,p)=>s+p.amount,0));
   discountStockForOrder(order);
   const pagos = order.splitPayments.map(p => ({label: p.label, amount: p.amount, metodoPago: p.metodoPago}));
-  const metodos = [...new Set(pagos.map(p=>p.metodoPago))];
+  if(amountPaidOnline > 0){
+    // Mismo desglose que finalizeCharge: separa la señal de reserva del
+    // resto de lo ya pagado por móvil, para que quede constancia exacta de
+    // dónde viene cada parte del total.
+    const depositPart = Math.min(order.depositAmount||0, amountPaidOnline);
+    const onlinePart = roundMoney(amountPaidOnline - depositPart);
+    if(onlinePart > 0.001) pagos.push({label: t('label.paidOnlinePartialShort'), amount: onlinePart, metodoPago: 'Online'});
+    if(depositPart > 0.001) pagos.push({label: t('label.depositAlreadyPaid'), amount: depositPart, metodoPago: 'Online'});
+  }
+  const metodos = [...new Set(order.splitPayments.map(p=>p.metodoPago))];
+  // Igual que en finalizeCharge: si el pedido ya venía pagado online para
+  // otro día y en caja no se ha cobrado nada nuevo ahora (collected==0), la
+  // venta se fecha el día real del cobro (pagoFecha), no hoy. Si sí se ha
+  // cobrado algo ahora en caja (lo normal al dividir cuenta), la fecha es
+  // hoy, para que ese dinero nuevo cuadre en el arqueo de hoy.
+  const saleDate = (order.pagado && order.pagoFecha && collected <= 0.001) ? order.pagoFecha.slice(0,10) : todayStr();
   // Mismo motivo que en finalizeCharge: id determinista a partir del
   // pedido, no aleatorio, para que dos dispositivos cobrando la misma
   // mesa dividida casi a la vez no dupliquen la venta al fusionarse.
   const sale = {
-    id: order.id, date: todayStr(), createdAt: new Date().toISOString(), total, subtotal,
+    id: order.id, date: saleDate, createdAt: new Date().toISOString(), total, subtotal,
     descuentoPct, descuentoImporte, descuentoMotivo: order.descuentoMotivo||'', descuentoResponsableNombre: order.descuentoResponsableNombre||'', propina,
     tableId: order.tableId, pax: order.pax||null, tipo: order.tipo||'mesa', express: order.express||false,
     clienteNombre: order.clienteNombre||'', clientId: order.clientId||null, camareroId: order.camareroId||null,
