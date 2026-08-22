@@ -804,6 +804,7 @@ function renderTpvToGo(tiposServicio){
         <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
       </button>
       ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
+      <button class="btn btn-sm" style="white-space:nowrap" onclick="openTogoCalendarModal()"><i class="ti ti-calendar-stats"></i> ${t('title.togoCalendar')}</button>
     </h3>
     ${!pedidosOnlineOn ? `<div class="manual-warning" style="margin:10px 0"><i class="ti ti-alert-triangle"></i> ${t('tpv.onlineOrdersPausedWarning')}</div>` : ''}
     ${!toGoOrders.length
@@ -837,6 +838,105 @@ function renderTpvToGo(tiposServicio){
             </div>` : ''}
           </div>
         `}).join('')}</div>`}
+  `;
+}
+
+/* ============================================================
+   CALENDARIO DE PEDIDOS PROGRAMADOS (Take Away / Delivery)
+   Un pedido para llevar/delivery ya aceptado y programado para dentro de
+   varios días no aparece en la pantalla principal (ver
+   TOGO_VISIBILITY_WINDOW_MIN más abajo, a propósito para no saturarla), así
+   que sin esto no había forma de ver de un vistazo cuántos pedidos hay ya
+   comprometidos para un día/semana/mes concreto — solo lo del día a día.
+   ============================================================ */
+let togoCalMode = 'mes'; // 'dia'|'semana'|'mes'
+let togoCalDate = null; // Date del día de referencia (hoy al abrir)
+function togoOrdersForDate(dateStr){
+  return (DB.tpvOrders||[]).filter(o => o.status !== 'pagada' && (o.tipo==='takeaway'||o.tipo==='delivery') && (o.date||todayStr())===dateStr);
+}
+function openTogoCalendarModal(){
+  togoCalMode = 'mes';
+  togoCalDate = new Date();
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-calendar-stats"></i> ${t('title.togoCalendar')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="togo-cal-body"></div>
+  `, {xl:true});
+  renderTogoCalendarBody();
+}
+function setTogoCalMode(mode){ togoCalMode = mode; renderTogoCalendarBody(); }
+function shiftTogoCal(delta){
+  const d = new Date(togoCalDate);
+  if(togoCalMode==='dia') d.setDate(d.getDate()+delta);
+  else if(togoCalMode==='semana') d.setDate(d.getDate()+delta*7);
+  else d.setMonth(d.getMonth()+delta);
+  togoCalDate = d;
+  renderTogoCalendarBody();
+}
+function renderTogoCalendarBody(){
+  const box = document.getElementById('togo-cal-body');
+  if(!box) return;
+  const modeBtns = ['dia','semana','mes'].map(m => `<button class="btn btn-sm ${togoCalMode===m?'btn-primary':''}" onclick="setTogoCalMode('${m}')">${t('togocal.'+m)}</button>`).join('');
+  let gridHtml = '', label = '', dayListHtml = '';
+  if(togoCalMode==='mes'){
+    const year = togoCalDate.getFullYear(), month = togoCalDate.getMonth();
+    label = `${t('months.short')[month]} ${year}`;
+    const firstDow = (new Date(year, month, 1).getDay()+6)%7; // 0=lunes
+    const nDias = daysInMonth(year, month);
+    let cells = '';
+    for(let i=0;i<firstDow;i++) cells += `<div></div>`;
+    for(let d=1; d<=nDias; d++){
+      const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const n = togoOrdersForDate(ds).length;
+      const isToday = ds === todayStr();
+      cells += `
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+          <div style="font-weight:700">${d}</div>
+          ${n ? `<span class="badge badge-blue cal-day-badge">${n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n)}</span>` : ''}
+        </div>`;
+    }
+    gridHtml = `<div class="cal-grid">${cells}</div>`;
+  }else if(togoCalMode==='semana'){
+    const dow = (togoCalDate.getDay()+6)%7;
+    const monday = new Date(togoCalDate); monday.setDate(togoCalDate.getDate()-dow);
+    const days = Array.from({length:7}, (_,i) => { const d = new Date(monday); d.setDate(monday.getDate()+i); return d; });
+    label = `${dateStr(days[0])} — ${dateStr(days[6])}`;
+    let cells = '';
+    days.forEach(d => {
+      const ds = dateStr(d);
+      const n = togoOrdersForDate(ds).length;
+      const isToday = ds === todayStr();
+      cells += `
+        <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
+          <div style="font-weight:700">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
+          ${n ? `<span class="badge badge-blue cal-day-badge">${n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n)}</span>` : ''}
+        </div>`;
+    });
+    gridHtml = `<div class="cal-grid" style="grid-template-columns:repeat(7,1fr)">${cells}</div>`;
+  }else{
+    const ds = dateStr(togoCalDate);
+    label = ds;
+    const orders = togoOrdersForDate(ds).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    dayListHtml = orders.length ? `
+      <div class="table-wrap"><table>
+        <thead><tr><th>${t('common.time')}</th><th>${t('th.client')}</th><th>${t('common.type')}</th><th>${t('common.total')}</th><th>${t('label.paidOnline')}</th></tr></thead>
+        <tbody>${orders.map(o => `<tr style="cursor:pointer" onclick="closeModal();openTableOrder(null, ${o.id})">
+          <td>${escapeHtml(o.time||'—')}</td><td>${escapeHtml(o.clienteNombre || togoOrderLabel(o))}</td>
+          <td>${o.tipo==='delivery'?t('label.deliveryShort'):t('label.pickupOrder')}</td><td>${fmtMoney(orderTotal(o))}</td>
+          <td>${o.pagado ? `<span class="badge badge-green">${t('common.yes')}</span>` : `<span class="badge badge-amber">${t('common.no')}</span>`}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty"><i class="ti ti-calendar-off"></i>${t('togocal.emptyDay')}</div>`;
+  }
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${modeBtns}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px">
+      <button class="btn btn-sm btn-icon" onclick="shiftTogoCal(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:15px;font-weight:700">${label}</span>
+      <button class="btn btn-sm btn-icon" onclick="shiftTogoCal(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    ${gridHtml}${dayListHtml}
   `;
 }
 
