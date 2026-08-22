@@ -227,6 +227,17 @@ const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
 function escapeHtml(str){
   return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+// Para insertar texto dentro de un literal JS '...' embebido en un atributo
+// onclick="...": el navegador decodifica las entidades HTML del atributo
+// ANTES de interpretarlo como JS, así que un nombre con apóstrofo (p.ej.
+// "Chef's special") escapado solo con escapeHtml (' -> &#39;) se decodifica
+// de vuelta a ' dentro del onclick y cierra la cadena JS a mitad, rompiendo
+// el botón sin ningún error visible (el "+" simplemente deja de añadir al
+// carrito). Escapa primero la barra invertida y la comilla simple para JS,
+// y luego para HTML.
+function escapeJsAttr(str){
+  return escapeHtml(String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+}
 
 /* ============ IDIOMA DE LA CARTA ============ */
 const LANGS = {es:'ES', en:'EN', ca:'CA'};
@@ -1722,9 +1733,9 @@ function buildMenuHtmlInner(cartas){
           </button>
           ` : `
           <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
-            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
+            <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
             <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
-            <button onclick="changeCartQty(${p.id}, '${escapeHtml(sec.id)}', 1, '${escapeHtml(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
+            <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', 1, '${escapeJsAttr(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
           </div>
           `}
         </div>

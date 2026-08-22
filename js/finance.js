@@ -1149,10 +1149,18 @@ async function renameIngredientCategory(oldName){
   // español (para poder traducirla), pero mostrarle esa clave tal cual a
   // alguien usando la app en catalán o inglés sería confuso — se precarga
   // con el texto ya traducido que está viendo en pantalla.
-  const nuevo = await promptText(t('msg.renameCategoryPrompt'), ingredientCategoryLabel(oldName));
+  const oldLabel = ingredientCategoryLabel(oldName);
+  const nuevo = await promptText(t('msg.renameCategoryPrompt'), oldLabel);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
-  if(!trimmed || trimmed === oldName) return;
+  // Comparar contra la etiqueta TRADUCIDA (lo que de verdad se precargó y
+  // ve quien escribe), no contra la clave interna en español: si no,
+  // aceptar sin tocar nada en catalán/inglés sobre una categoría de
+  // fábrica (p.ej. "Verduras" mostrada como "Vegetables") no se detectaba
+  // como "sin cambios" — trimmed ("Vegetables") nunca es igual a oldName
+  // ("Verduras") — y el código renombraba de verdad la categoría al texto
+  // traducido, perdiendo para siempre su vínculo con la traducción.
+  if(!trimmed || trimmed === oldLabel) return;
   // Solo los ingredientes de ESTA área: Cocina y Sala pueden tener, por
   // coincidencia, una categoría con el mismo nombre, y renombrarla en una
   // no debe tocar la de la otra.
@@ -1263,7 +1271,31 @@ function recipesUsingIngredient(id){
 function deleteIngredient(id){
   if(!isOwnerSession() && !editUnlocked) return;
   const ing = DB.ingredients.find(i=>i.id===id);
+  // Un pedido a proveedor ya en curso (BORRADOR/ENVIADO) que incluya este
+  // ingrediente perdía su línea SIN AVISO al borrarlo: pedidoOrderedBase()
+  // se salta las líneas cuyo ingrediente ya no existe, así que el
+  // subtotal/IVA/total que se comunica al proveedor (WhatsApp/email/
+  // impresión) quedaba por debajo de lo realmente pactado, sin que nadie lo
+  // notara. Mismo aviso que ya existía para recetas, aquí para pedidos.
+  const usedInOrders = (DB.purchaseOrders||[]).filter(o => (o.estado === 'BORRADOR' || o.estado === 'ENVIADO') && (o.items||[]).some(l => l.ingredientId === id));
   const usedIn = recipesUsingIngredient(id);
+  if(usedInOrders.length){
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ti-alert-triangle"></i> ${t('title.ingredientInUse')}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <p style="font-size:13px">${t('msg.ingredientInPendingOrderWarning').replace('${name}', escapeHtml(ing?ing.name:'')).replace('${count}', usedInOrders.length)}</p>
+      <div style="max-height:200px;overflow-y:auto;margin:10px 0;border:1px solid var(--border);border-radius:8px">
+        ${usedInOrders.map(o=>`<div class="ge-item"><span style="flex:1;font-weight:600">${escapeHtml(o.supplier)} — ${escapeHtml(o.date||'')}</span></div>`).join('')}
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+        <button class="btn btn-danger" onclick="confirmDeleteIngredient(${id})">${t('btn.deleteAnyway')}</button>
+      </div>
+    `);
+    return;
+  }
   if(usedIn.length){
     openModal(`
       <div class="modal-header">

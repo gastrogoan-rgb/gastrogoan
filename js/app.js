@@ -428,16 +428,21 @@ function limpiezaChecksFor(monthKey){
 // compartida por la vista de semana y la de día, donde sí hay sitio de
 // sobra para verla entera (a diferencia de la casilla del mes, que ahora
 // solo muestra un contador).
-function limpiezaTareaRowHtml(t, checks, monthKey){
-  const resp = t.responsableId ? DB.employees.find(e=>e.id===t.responsableId) : null;
-  const info = limpiezaCheckInfo(checks, t.id);
-  const canToggle = canToggleLimpiezaTarea(t);
+function limpiezaTareaRowHtml(tarea, checks, monthKey){
+  // OJO: el parámetro NUNCA debe llamarse "t" — tapa a la función global de
+  // traducción t() (usada un par de líneas más abajo) y provoca "t is not a
+  // function" en cuanto se pinta cualquier tarea ya marcada como hecha o
+  // asignada a otra persona (los dos casos que necesitan t() aquí dentro),
+  // rompiendo el render entero de las vistas semana/día.
+  const resp = tarea.responsableId ? DB.employees.find(e=>e.id===tarea.responsableId) : null;
+  const info = limpiezaCheckInfo(checks, tarea.id);
+  const canToggle = canToggleLimpiezaTarea(tarea);
   const doneTitle = info ? `${t('limpieza.doneOn').replace('${date}', escapeHtml(info.fecha||''))} ${escapeHtml(info.hora||'')}${info.checkedByNombre?` · ${escapeHtml(info.checkedByNombre)}`:''}` : (canToggle ? '' : t('limpieza.notYourTask'));
   return `
-    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openLimpiezaTareaMesModal(${t.id})">
+    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openLimpiezaTareaMesModal(${tarea.id})">
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:${canToggle?'pointer':'not-allowed'}" onclick="event.stopPropagation()" title="${doneTitle}">
-        <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${t.id},this.checked)">
-        <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(t.area)}</span>
+        <input type="checkbox" ${info?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMes('${monthKey}',${tarea.id},this.checked)">
+        <span style="${info?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(tarea.area)}</span>
       </label>
       ${resp ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:22px;margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${resp.color||'#DF7039'};display:inline-block;flex-shrink:0"></span>${escapeHtml(resp.name)}</div>` : ''}
     </div>
@@ -448,7 +453,17 @@ function shiftLimpiezaCal(delta){
   const d = new Date(limpiezaCalDate);
   if(limpiezaCalMode==='dia') d.setDate(d.getDate()+delta);
   else if(limpiezaCalMode==='semana') d.setDate(d.getDate()+delta*7);
-  else d.setMonth(d.getMonth()+delta);
+  else{
+    // Sin normalizar el día, cambiar de mes estando en un 29/30/31 puede
+    // saltarse un mes entero: 31 ene + 1 mes = "31 feb" no existe, Date lo
+    // rebota a marzo (Date.setMonth no clampa) — nunca se llegaba a ver
+    // febrero. Se fuerza al día 1 antes de cambiar de mes, que es lo único
+    // que importa aquí (mes/año), y luego se recalcula el día real si hacía
+    // falta conservarlo — pero como esta vista solo pinta el mes entero,
+    // basta con día 1.
+    d.setDate(1);
+    d.setMonth(d.getMonth()+delta);
+  }
   limpiezaCalDate = d;
   renderLimpiezaMes();
 }
@@ -502,7 +517,7 @@ function renderLimpiezaMes(){
       return `
         <div class="card" style="padding:8px;min-width:0;${isToday?'border-color:var(--brand-orange)':''}">
           <div style="font-weight:700;margin-bottom:6px;text-align:center;font-size:12px">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
-          ${tareasDelDia.length ? tareasDelDia.map(t => limpiezaTareaRowHtml(t, checks, monthKey)).join('') : `<div style="font-size:11px;color:var(--muted);text-align:center">—</div>`}
+          ${tareasDelDia.length ? tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('') : `<div style="font-size:11px;color:var(--muted);text-align:center">—</div>`}
         </div>
       `;
     }).join('')}</div>`;
@@ -513,7 +528,7 @@ function renderLimpiezaMes(){
     const tareasDelDia = limpiezaTareasParaDia(day);
     label = dateStr(limpiezaCalDate);
     bodyHtml = tareasDelDia.length
-      ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(t => limpiezaTareaRowHtml(t, checks, monthKey)).join('')}</div>`
+      ? `<div class="card" style="max-width:480px;margin:0 auto">${tareasDelDia.map(tarea => limpiezaTareaRowHtml(tarea, checks, monthKey)).join('')}</div>`
       : `<div class="empty"><i class="ti ti-calendar-month"></i>${t('empty.noMonthlyCleaningTasks')}</div>`;
   }
 
@@ -2977,7 +2992,14 @@ function getAvailableTablesForReservation(dateStr, time, excludeId, people){
   const occupied = new Set(
     DB.reservations
       .filter(r => {
-        if(r.date !== dateStr || r.id === excludeId || r.status === 'cancelada' || r.status === 'no_show') return false;
+        // 'lista_espera' no cuenta para el aforo hasta que se confirme de
+        // verdad (ver getReservedPeopleForTurno) — tampoco debe bloquear la
+        // mesa aquí, por la misma razón: si no, el personal no puede
+        // ofrecer esa mesa a otra reserva mientras la web pública SÍ la
+        // sigue ofreciendo (getMesasOcupadasForSync tampoco la cuenta como
+        // ocupada), abriendo la puerta a que dos reservas reales choquen en
+        // la misma mesa si la de lista de espera acaba confirmándose.
+        if(r.date !== dateStr || r.id === excludeId || r.status === 'cancelada' || r.status === 'no_show' || r.status === 'lista_espera') return false;
         const rMin = reservaTimeToMinutes(r.time);
         // Si no podemos comparar horas, caemos al criterio antiguo (hora exacta).
         if(reqMin == null || rMin == null) return r.time === time;
@@ -6332,20 +6354,20 @@ const MANUAL_CHAPTERS = [
     <div class="manual-step"><div class="sn">3</div><div class="st"><strong>Ordenador (Chrome/Edge):</strong> abre el Kit → busca el icono de instalar (un monitor con una flecha) en el extremo derecho de la barra de direcciones, o entra al menú ⋮ → "Instalar aplicación" o "Aplicaciones" → "Instalar este sitio como aplicación".</div></div>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Así tendrás un icono propio de GastroGoan para abrir el Kit al instante, igual que cualquier otra app: en el TPV de la barra, en la tablet de la cocina o en el móvil del encargado. Recomendamos instalarlo en cada dispositivo que vaya a usarse a diario.</div>
     <h4>Cómo entra cada persona a la app</h4>
-    <p>Al abrir la app aparece una pantalla inicial con dos accesos:</p>
+    <p>Al abrir la app aparece siempre la misma pantalla inicial, con dos accesos:</p>
     <ul>
-      <li><strong>Acceso Empleados</strong> — el trabajador escribe su nombre, su PIN (4 dígitos, "1234" la primera vez) y el <strong>código de negocio</strong> (se lo da el propietario). Entra directamente a su área de trabajo (Cocina o Sala, según lo configurado en su ficha de Personal), sin más preguntas. Funciona incluso en un dispositivo que nunca se usó antes para ese negocio: no hace falta que el propietario "presente" el dispositivo primero.</li>
-      <li><strong>Acceso Propietarios</strong> — pide el código de negocio y una contraseña (la de la licencia, o la que hayas cambiado después desde el panel). Da acceso al panel de negocios: cambiar de negocio o sucursal, dar de alta uno nuevo con su propia licencia, y todo lo que antes se veía nada más entrar.</li>
+      <li><strong>Acceso Empleados</strong> — el trabajador escribe su nombre, su PIN (4 dígitos) y el <strong>código de negocio</strong> (se lo da el propietario). Entra directamente a su área de trabajo (Cocina o Sala, según lo configurado en su ficha de Personal), sin más preguntas. Funciona incluso en un dispositivo que nunca se usó antes para ese negocio: no hace falta que el propietario "presente" el dispositivo primero.</li>
+      <li><strong>Acceso Propietarios</strong> — es una <strong>cuenta</strong> (usuario + PIN), separada del negocio en sí. La primera vez la creas tú; en cualquier otro dispositivo, entras con ese mismo usuario y PIN. Dentro de tu cuenta vas canjeando un <strong>código de negocio</strong> por cada local que compres — así aparecen solos en el selector de negocios en cualquier dispositivo donde inicies sesión.</li>
     </ul>
-    <p>Un empleado que entra por su acceso solo ve su área de trabajo (Cocina o Sala) y nunca ve el selector de negocios ni el botón "Negocios" de la cabecera — solo tiene un botón de "Cerrar sesión". El botón "Negocios" queda reservado a quien entró como propietario, y dentro de esa misma sesión ya no vuelve a pedir PIN.</p>
-    <div class="manual-tip"><i class="ti ti-bulb"></i>Si alguien olvida su contraseña (propietario) o su PIN (empleado), escribe <strong>GGGG</strong> en el campo de contraseña/PIN: la app pedirá fijar uno nuevo en el momento, sin necesidad de contactar con soporte.</div>
+    <p>Un empleado que entra por su acceso solo ve su área de trabajo (Cocina o Sala) y nunca ve el selector de negocios ni el botón "Negocios" de la cabecera — solo tiene un botón de "Cerrar sesión". El botón "Negocios" queda reservado a quien entró como propietario.</p>
+    <div class="manual-tip"><i class="ti ti-bulb"></i>Si alguien olvida su PIN, escribe <strong>GGGG</strong> en el campo de PIN: la app pedirá fijar uno nuevo en el momento. Esto solo funciona en un dispositivo donde esa cuenta (propietario) o ese empleado ya entraron alguna vez antes.</div>
     <h4>Licencias y varios negocios</h4>
-    <p>Cada negocio (o sucursal) tiene su propio código y contraseña, generados al comprar la licencia. Al registrar un negocio o sucursal nuevos desde el panel, siempre hay que introducir su código y contraseña reales — así se activa. Si el mismo propietario tiene varios negocios, basta con iniciar sesión en cualquier dispositivo con el código y contraseña de UNO de ellos: los demás negocios vinculados a ese propietario aparecen automáticamente en el panel, sin tener que registrarlos también ahí.</p>
-    <p>Desde el panel de negocios puedes borrar un negocio o sucursal de ese dispositivo (icono de papelera junto a su nombre). Te pedirá escribir el nombre exacto del negocio para confirmarlo, así no se borra nada por error. Borrarlo de un dispositivo no borra la licencia ni los datos en la nube: puedes volver a activarlo cuando quieras con su código y contraseña.</p>
+    <p>Un <strong>código de negocio</strong> (8 caracteres) ya no lleva contraseña — se canjea dentro de tu cuenta de propietario y queda vinculado a ella para siempre. Un negocio nuevo o una sucursal necesitan cada uno su propio código (otra licencia). Si tienes varios negocios, basta con entrar en cualquier dispositivo con tu usuario y PIN: todos los negocios que hayas canjeado aparecen solos en el selector, sin tener que volver a introducir sus códigos.</p>
+    <p>Desde el selector de negocios puedes cambiar entre los que ya tienes, o canjear uno nuevo desde el botón "Negocios" de la cabecera.</p>
     <h4>Roles: quién ve qué</h4>
-    <p>Dentro de la app, la sección <strong>Gestión</strong> sigue protegida con su propio PIN (configurable en Mi Negocio), independiente del acceso de empleados/propietarios, porque contiene información sensible: finanzas, costes y configuración general. El equipo de Cocina o Sala solo ve los módulos de su área (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...). Si das de alta empleados en un área, hace falta el PIN de alguno de ellos (o el del propietario) para entrar en ella; si un área no tiene ningún empleado dado de alta, se puede entrar libremente. Cada ficha de empleado tiene una casilla <strong>Activo</strong>: si la desmarcas, pierde el acceso a su área al instante sin borrar su ficha (útil para bajas temporales); si lo eliminas del todo, pierde el acceso y se borra su ficha.</p>
+    <p><strong>Gestión Económica y Mi Negocio son exclusivos del propietario</strong> — no hay ningún PIN alternativo para entrar ahí (se quitó a propósito): un empleado, por bien que se sepa cualquier PIN, no tiene acceso a esa información sensible (finanzas, costes, configuración general). El equipo de Cocina o Sala solo ve los módulos de su área (TPV, comandas, fichas técnicas, limpieza, personal, chat interno...). Si das de alta empleados en un área, hace falta el PIN de alguno de ellos (o entrar como propietario) para entrar en ella; si un área no tiene ningún empleado dado de alta, se puede entrar libremente. Cada ficha de empleado tiene una casilla <strong>Activo</strong>: si la desmarcas, pierde el acceso a su área al instante sin borrar su ficha (útil para bajas temporales); si lo eliminas del todo, pierde el acceso y se borra su ficha.</p>
     <h4>Registro de actividad: qué hace cada empleado</h4>
-    <p>Dentro de Gestión Económica (y también en Mi Negocio → Datos) hay un botón <strong>"Registro de actividad"</strong> que abre un historial de lo que ha ido haciendo tu equipo. <strong>Solo registra acciones de empleados, nunca las tuyas como propietario</strong> — la idea es poder ver qué ha hecho cada persona del equipo, no auditarte a ti mismo. Puedes filtrar por empleado para ver solo los movimientos de una persona concreta.</p>
+    <p>Dentro de <strong>Mi Negocio → Mantenimiento de datos</strong> hay un botón <strong>"Registro de actividad"</strong> que abre un historial de lo que ha ido haciendo tu equipo. <strong>Solo registra acciones de empleados, nunca las tuyas como propietario</strong> — la idea es poder ver qué ha hecho cada persona del equipo, no auditarte a ti mismo. Puedes filtrar por empleado para ver solo los movimientos de una persona concreta.</p>
     <p>Ahí queda registrado, entre otras cosas: <strong>inicios y cierres de sesión</strong> de cada empleado (quién ha entrado y cuándo), anulaciones de líneas en el TPV, cierres de caja (con aviso si hay descuadre), descuentos aplicados o retirados, cambios de disponibilidad de un plato, pedidos a proveedor marcados como recibidos, turnos creados/editados/borrados, reseteos de PIN, <strong>tareas de limpieza marcadas como hechas</strong>, <strong>correcciones manuales de stock</strong> (tras un recuento físico) y <strong>cada vez que alguien abre una receta o escandallo</strong>. Las acciones más delicadas (un descuadre de caja relevante, un descuento grande, un reseteo de PIN, una bajada fuerte de stock) aparecen <strong>destacadas en rojo</strong> para que las localices de un vistazo.</p>
     <p>Algunas acciones tienen además su propio historial detallado y siguen teniendo su pantalla dedicada (Anulaciones en el TPV, Historial de Arqueos, Historial de Personal, Historial de Stock): ese detalle completo sigue estando ahí igual que siempre, y el Registro de actividad simplemente añade también un resumen de esas mismas acciones para que tengas una vista única del equipo sin tener que ir módulo por módulo.</p>
     <div class="manual-tip"><i class="ti ti-bulb"></i>Es la herramienta ideal si notas algo raro (una caja descuadrada, un descuento que no cuadra, un plato que apareció como agotado sin motivo) y quieres saber rápidamente qué empleado lo hizo y cuándo.</div>`,
@@ -7222,7 +7244,7 @@ const MANUAL_CHAPTERS = [
   {
     title:{es:'<i class="ti ti-spray"></i> Plan de Limpieza', ca:'<i class="ti ti-spray"></i> Pla de Neteja', en:'<i class="ti ti-spray"></i> Cleaning Plan'},
     content:{es:`<h3>Qué es y para qué sirve</h3>
-    <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 6 hojas de registro más habituales que pide Sanidad, ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. Si te visita un inspector, aquí tienes el historial completo.</p>
+    <p>Todo restaurante está obligado por ley a tener un sistema de <strong>APPCC</strong> (Análisis de Peligros y Puntos de Control Crítico) y a poder demostrar, con registros fechados, que se cumple. Este módulo te da las 7 hojas de registro más habituales que pide Sanidad (Protocolo de apertura/cierre, Manos, Limpieza mensual, Temperaturas, Alérgenos, Plagas y Mantenimiento), ya organizadas y listas para rellenar desde el móvil o la tablet de cocina, sin papeles que se manchan o se pierden. La pestaña de Limpieza mensual tiene vistas de día, semana y mes para ver el detalle de cada tarea con sitio de sobra. Si te visita un inspector, aquí tienes el historial completo.</p>
 
     <h4>1. Manos — registro de lavado de manos</h4>
     <p>Cada vez que un empleado se lava las manos en momentos críticos (al empezar turno, tras tocar alimentos crudos, tras ir al baño, tras tocar dinero o basura), registra la hora y la persona.</p>
@@ -7583,7 +7605,7 @@ const MANUAL_CHAPTERS = [
     title:{es:'<i class="ti ti-device-desktop"></i> TPV', ca:'<i class="ti ti-device-desktop"></i> TPV', en:'<i class="ti ti-device-desktop"></i> POS'},
     content:{es:`<h3>Comandas, mesas y tickets</h3>
     <h4>Plano de sala</h4>
-    <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por zona (Interior, Terraza, Barra). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada se pinta con un <strong>color de borde según la fase del servicio</strong> (gris = tomando nota, ámbar = en cocina, morado = preparando, verde = servido/listo para cobrar), muestra el <strong>camarero/a asignado</strong> (avatar con su color de identificación), el número de comensales y el total. Una mesa libre con una reserva confirmada dentro de la próxima hora se marca con un borde discontinuo naranja y la hora, para no sentar ahí a nadie sin reserva justo antes de que llegue quien la reservó.</p>
+    <p>Las mesas que aparecen en el TPV son <strong>exactamente las que configuras en Mi Negocio → Operativa</strong>, agrupadas por las zonas que tú mismo has creado (con el nombre que quieras: Interior, Terraza, Barra, Planta 1...). Allí puedes ponerle a cada mesa el nombre o número que quieras, añadir o eliminar mesas. Cada mesa ocupada se pinta con un <strong>color de borde según la fase del servicio</strong> (gris = tomando nota, ámbar = en cocina, morado = preparando, verde = servido/listo para cobrar), muestra el <strong>camarero/a asignado</strong> (avatar con su color de identificación), el número de comensales y el total. Una mesa libre con una reserva confirmada dentro de la próxima hora se marca con un borde discontinuo naranja y la hora, para no sentar ahí a nadie sin reserva justo antes de que llegue quien la reservó.</p>
     <h4>Abrir una mesa: cliente de paso o con reserva</h4>
     <p>Al pulsar una mesa libre, eliges si el cliente es <strong>"de paso"</strong> (indicas el número de comensales) o <strong>"tiene reserva"</strong> (eliges la reserva del día y se rellena solo). El camarero/a que se asigna a la comanda solo puede ser <strong>personal del área Sala</strong>.</p>
     <h4>Tomar la comanda (selector a dos columnas)</h4>
@@ -7605,7 +7627,7 @@ const MANUAL_CHAPTERS = [
       <li><strong>Fecha y hora de recogida/entrega</strong> (opcional en el formulario público): si la deja en blanco se entiende "cuanto antes" y el pedido aparece ya en pantalla. Si se programa para más tarde o para otro día, <strong>el pedido no aparece en el TPV hasta una hora antes</strong> de la hora indicada, para no acumular pedidos lejanos en la pantalla.</li>
       <li>Para "A domicilio": dirección, la plataforma (Glovo, Uber Eats...) o <strong>"Reparto propio"</strong> si lo lleva alguien del propio negocio. Si es reparto propio, la app <strong>asigna sola</strong> el pedido al repartidor de turno (empleado de Sala marcado como "Es repartidor" en Personal) con menos repartos activos en ese momento — no hace falta elegirlo a mano, aunque puedes cambiarlo tú desde la ficha del pedido si hace falta. El coste de envío configurado en Mi Negocio solo se aplica cuando es reparto propio — si es una plataforma externa, esa plataforma ya cobra su propio envío aparte.</li>
     </ul>
-    <p>Estos pedidos aparecen en la sección <strong>"Para Llevar / Delivery"</strong>, al final de la pantalla de Sala, con el mismo estilo de tarjeta que las mesas — no es un panel aparte. Se muestra siempre que tengas alguno de los dos servicios activado en Mi Negocio → Tipos de servicio (aunque no haya ningún pedido abierto en ese momento). Las bebidas de estos pedidos no pasan por la pantalla de Cocina; su estado (pedida/preparando/servida) se marca desde el propio panel de Sala.</p>
+    <p>Estos pedidos aparecen en la sección <strong>"Para Llevar / Delivery"</strong>, al final de la pantalla de Sala, con el mismo estilo de tarjeta que las mesas — no es un panel aparte. Se muestra siempre que tengas alguno de los dos servicios activado en Mi Negocio → Tipos de servicio (aunque no haya ningún pedido abierto en ese momento). Tiene dos pestañas: <strong>Pendientes</strong> (pedidos online recién llegados esperando que los aceptes o rechaces, más los ya aceptados para hoy programados a más de una hora vista) y <strong>En curso</strong> (los que ya están en marcha). La pantalla salta sola a "Pendientes" en cuanto llega algo nuevo por aceptar. Las bebidas de estos pedidos no pasan por la pantalla de Cocina; su estado (pedida/preparando/servida) se marca desde el propio panel de Sala.</p>
     <h4>Control de repartos</h4>
     <p>Junto al título <strong>"Para Llevar / Delivery"</strong>, el botón <strong>"Control de repartos"</strong> abre un resumen con todos los repartos propios en curso y el histórico de entregados hoy. Dentro de cada pedido de reparto propio verás una tarjeta con todo lo necesario para llevarlo: <strong>dirección con botón directo a Google Maps</strong>, teléfono, importe a cobrar (o si ya está pagado online), repartidor asignado, y un espacio de <strong>observaciones</strong> para anotar incidencias ("no tenía cambio", "cancelado por llegar tarde"...). Si el cliente indicó en la web pública con qué billete iba a pagar, el <strong>cambio a preparar</strong> ya sale calculado. Cuando el mismo repartidor tiene varios pedidos activos a la vez, la app los agrupa solos en una <strong>ruta</strong> (respetando los límites de paradas y ventana de tiempo configurados en Mi Negocio → Pedidos) y el botón de Maps abre el recorrido completo optimizado en vez de una única dirección. Al entregar, un solo botón: <strong>"Marcar entregado"</strong>.</p>
     <h4>Anulaciones y descuentos</h4>
@@ -7765,7 +7787,7 @@ const MANUAL_CHAPTERS = [
   {
     title:{es:'<i class="ti ti-chart-bar"></i> Gestión Económica', ca:'<i class="ti ti-chart-bar"></i> Gestió Econòmica', en:'<i class="ti ti-chart-bar"></i> Financial Management'},
     content:{es:`<h3>Qué es y para qué sirve</h3>
-    <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 7 pestañas que conviene rellenar en este orden.</p>
+    <p>Esta sección es la "contabilidad de gestión" de tu negocio: junta lo que vendes (datos del TPV) con lo que gastas (lo que registras tú aquí) para decirte, sin esperar a fin de año ni a que te lo diga la gestoría, si tu negocio gana dinero, cuánto, y cuántos cubiertos necesitas vender para no perder. Tiene 8 pestañas: <strong>Ventas</strong> (histórico de ventas día a día, la primera y la que se abre por defecto) y las 7 siguientes que conviene rellenar en este orden.</p>
 
     <h4>1. Gastos Fijos</h4>
     <p>Aquí van todos los gastos mensuales que <strong>no cambian</strong> aunque vendas más o menos: nóminas (incluida la tuya si te pagas un sueldo), alquiler, seguros, cuotas de autónomo, luz/agua/internet si son más o menos estables, software, etc.</p>
@@ -8012,21 +8034,26 @@ const MANUAL_CHAPTERS = [
     title:{es:'<i class="ti ti-building-store"></i> Mi Negocio', ca:'<i class="ti ti-building-store"></i> El Meu Negoci', en:'<i class="ti ti-building-store"></i> My Business'},
     content:{es:`<h3>Datos del establecimiento</h3>
     <p>Esta sección reúne toda la configuración de tu negocio, organizada en tarjetas. El orden actual es:</p>
-    <div class="manual-step"><div class="sn">1</div><div class="st">🔒 <strong>Acceso propietario</strong> — cambia el PIN que protege la sección de Gestión.</div></div>
-    <div class="manual-step"><div class="sn">2</div><div class="st">🏢 <strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
-    <div class="manual-step"><div class="sn">3</div><div class="st">🏬 <strong>Operativa</strong> — aforo por turno y número de mesas de interior, exterior/terraza y barra.</div></div>
-    <div class="manual-step"><div class="sn">4</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
-    <div class="manual-step"><div class="sn">5</div><div class="st">📅 <strong>Horario de apertura</strong> — horario general del negocio, configurable día por día.</div></div>
-    <div class="manual-step"><div class="sn">6</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
-    <div class="manual-step"><div class="sn">7</div><div class="st">💳 <strong>TPV virtual</strong> — cobro online con tarjeta (Redsys).</div></div>
-    <div class="manual-step"><div class="sn">8</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
-    <div class="manual-step"><div class="sn">9</div><div class="st">🛵 <strong>Plataformas de delivery y repartidores propios</strong> — Glovo, Uber Eats, Just Eat... con su comisión, y tu propio equipo de reparto.</div></div>
-    <div class="manual-step"><div class="sn">10</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — enlace y QR para que tus clientes reserven o pidan desde el móvil.</div></div>
-    <div class="manual-step"><div class="sn">11</div><div class="st">🔳 <strong>QR auto pedido</strong> — un botón con QR por cada mesa configurada.</div></div>
-    <div class="manual-step"><div class="sn">12</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad y archivado.</div></div>
+    <div class="manual-step"><div class="sn">1</div><div class="st">🔑 <strong>Código de negocio</strong> — el código de 8 caracteres de tu licencia para este local, con el que se dan de alta empleados en dispositivos nuevos.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st">🔒 <strong>PIN del negocio</strong> — cámbialo aquí; se pide para confirmar acciones delicadas (anular una venta, borrar un empleado...), no para entrar en Gestión.</div></div>
+    <div class="manual-step"><div class="sn">3</div><div class="st">🔗 <strong>Conexiones externas</strong> — vincula servicios externos que uses (según lo que tengas activado).</div></div>
+    <div class="manual-step"><div class="sn">4</div><div class="st">🏢 <strong>Datos del negocio</strong> — identidad (logo, nombre, propietario, tipo, año), descripción, contacto y redes sociales. Aquí está el botón <strong>Guardar todo</strong>, que guarda los datos de todas las tarjetas de esta pantalla a la vez.</div></div>
+    <div class="manual-step"><div class="sn">5</div><div class="st">🏬 <strong>Operativa</strong> — aforo por turno y tus zonas de mesas, con el nombre y la cantidad que tú definas.</div></div>
+    <div class="manual-step"><div class="sn">6</div><div class="st">🔁 <strong>Tipos de servicio</strong> — activa/desactiva Mesa, Take Away y Delivery.</div></div>
+    <div class="manual-step"><div class="sn">7</div><div class="st">📅 <strong>Horario de apertura</strong> — horario general del negocio, configurable día por día.</div></div>
+    <div class="manual-step"><div class="sn">8</div><div class="st">🧾 <strong>Configuración del ticket</strong> — datos que aparecen impresos en los tickets.</div></div>
+    <div class="manual-step"><div class="sn">9</div><div class="st">🔳 <strong>QR de mesa</strong> — un botón con QR por cada mesa configurada.</div></div>
+    <div class="manual-step"><div class="sn">10</div><div class="st">🖨️ <strong>Comandas de cocina y sala</strong> — pantalla o vale impreso al marchar.</div></div>
+    <div class="manual-step"><div class="sn">11</div><div class="st">📱 <strong>Reserva y pedidos online</strong> — activa/desactiva, y enlace/QR para que tus clientes reserven o pidan desde el móvil.</div></div>
+    <div class="manual-step"><div class="sn">12</div><div class="st">🥡 <strong>Pedidos para llevar/domicilio</strong> — antelación, coste de envío y zona de reparto.</div></div>
+    <div class="manual-step"><div class="sn">13</div><div class="st">🛵 <strong>Plataformas de delivery</strong> — Glovo, Uber Eats, Just Eat... con su comisión.</div></div>
+    <div class="manual-step"><div class="sn">14</div><div class="st">💳 <strong>TPV virtual (Redsys)</strong> — cobro online con tarjeta.</div></div>
+    <div class="manual-step"><div class="sn">15</div><div class="st">✉️ <strong>Confirmación por email</strong> — envío automático al cliente.</div></div>
+    <div class="manual-step"><div class="sn">16</div><div class="st">🧮 <strong>VeriFactu</strong> — configuración fiscal de facturación verificable.</div></div>
+    <div class="manual-step"><div class="sn">17</div><div class="st">🗄️ <strong>Mantenimiento de datos</strong> — copias de seguridad, papelera, archivado y <strong>Registro de actividad</strong> (quién hizo qué, útil con varios encargados).</div></div>
 
-    <h4>🔒 Acceso propietario (PIN)</h4>
-    <p>Toda la sección de Gestión está protegida por PIN (por defecto <strong>1234</strong>). La primera vez que entres se te pedirá crear un PIN nuevo. Después puedes cambiarlo desde aquí. Usa el botón <strong>Bloquear</strong> de la cabecera para volver a cerrar el acceso.</p>
+    <h4>🔒 PIN del negocio</h4>
+    <p><strong>Gestión Económica y Mi Negocio son exclusivos del propietario</strong> — no hay ningún PIN alternativo para entrar ahí, un empleado simplemente no tiene acceso. El PIN que se cambia aquí es distinto: es el <strong>PIN del negocio</strong>, que se pide para confirmar acciones delicadas del día a día (anular una venta ya cobrada, borrar un empleado...), como último candado antes de una acción que no se puede deshacer sola.</p>
 
     <h4>🏢 Datos del negocio</h4>
     <p>Es la tarjeta principal con toda la información de identidad y contacto, dividida en cuatro bloques:</p>
@@ -8034,7 +8061,7 @@ const MANUAL_CHAPTERS = [
       <li><strong>Identidad</strong> — logo, nombre del negocio, <strong>propietario</strong>, tipo de negocio y año de apertura.</li>
       <li><strong>Descripción</strong> — el concepto de tu local (aparece en la web de pedidos online).</li>
       <li><strong>Contacto</strong> — dirección, teléfono, email, web y CIF/NIF.</li>
-      <li><strong>Redes sociales</strong> — Instagram y Facebook.</li>
+      <li><strong>Redes sociales</strong> — Instagram, Facebook, TikTok y enlace de Google Maps.</li>
     </ul>
     <p>Al final de esta tarjeta está el botón <strong>Guardar todo</strong>, que guarda los cambios de <em>todas</em> las tarjetas de Mi Negocio a la vez.</p>
 
@@ -8042,10 +8069,9 @@ const MANUAL_CHAPTERS = [
     <p>Aquí defines la capacidad y distribución física de tu local:</p>
     <ul>
       <li><strong>Aforo (plazas por turno)</strong> — número máximo de comensales que puedes atender en cada turno de comida/cena. Se usa en Reservas para avisarte si un turno se llena.</li>
-      <li><strong>Mesas de interior</strong>, <strong>mesas de exterior/terraza</strong> y <strong>mesas/taburetes de barra</strong> — indica cuántas tienes de cada tipo.</li>
+      <li><strong>Zonas de mesas</strong> — a diferencia de otras apps, aquí <strong>no hay tres zonas fijas</strong>: creas las que necesites, con el nombre que quieras (Interior, Terraza, Barra, Planta 1, Jardín...) y cuántas mesas tiene cada una.</li>
     </ul>
-    <p>Estas tres cantidades son las que verás organizadas por zonas (<strong>Interior</strong>, <strong>Terraza</strong>, <strong>Barra</strong>) en el plano de mesas del TPV.</p>
-    <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear mesas automáticamente</strong>: crea las mesas que falten hasta llegar a las cantidades indicadas. Después, en la lista <strong>"Mesas configuradas"</strong> de más abajo puedes <strong>ponerle a cada mesa el nombre o número que quieras</strong>, cambiarle la zona, o añadir/eliminar mesas una a una. Esas mesas son exactamente las que aparecen en el TPV, en las reservas y en los QR de auto-pedido (un QR por mesa).</div>
+    <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear zona con mesas</strong>: escribe el nombre de la zona y cuántas mesas tiene, y se crean todas de golpe. Después, en la lista <strong>"Mesas configuradas"</strong> de más abajo puedes <strong>ponerle a cada mesa el nombre o número que quieras</strong>, cambiarle la zona, o añadir/eliminar mesas una a una. Esas mesas son exactamente las que aparecen en el TPV, en las reservas y en los QR de mesa (un QR por mesa).</div>
 
     <h4>🖨️ Comandas de cocina y sala</h4>
     <p>Elige cómo recibe el equipo las comandas al marchar: <strong>verlas en pantalla</strong> (la pantalla de Cocina/Sala) o <strong>imprimir un vale</strong> automáticamente (un vale de cocina con la comida y otro de sala/barra con las bebidas). Si eliges imprimir, indica el ancho del papel (58 u 80 mm) y usa "Imprimir vale de prueba". La impresora concreta se elige en el cuadro de impresión del navegador/sistema; si tienes una impresora térmica de tickets, configúrala como impresora del dispositivo.</p>

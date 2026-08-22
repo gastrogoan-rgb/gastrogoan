@@ -254,6 +254,7 @@ body:not(.owner-session) .owner-strict{display:none !important}
 .mesa-card.mesa-phase-kitchen{border-top-color:var(--amber)}
 .mesa-card.mesa-phase-preparing{border-top-color:var(--purple)}
 .mesa-card.mesa-phase-served{border-top-color:var(--green)}
+.mesa-card.mesa-phase-occupied{border-top-color:var(--muted)}
 .mesa-card .mesa-name{font-size:16px;font-weight:800;margin-bottom:1px;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%;line-height:1.15}
 .mesa-card .badge{font-size:9.5px;padding:2px 6px;gap:2px}
 .mesa-card .mesa-status-free{font-size:12px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:4px}

@@ -663,15 +663,23 @@ function mesaPhase(order){
   // aunque en realidad quedara un plato pendiente de marchar.
   const allFoodLines = (order.items||[]).filter(l => !l.bebida);
   const foodItems = allFoodLines.filter(l => l.estado);
-  const allDelivered = allFoodLines.length > 0 && allFoodLines.every(l => l.estado === 'entregado');
+  // Si a un plato YA marcado "entregado" se le sube la cantidad (p.ej. una
+  // segunda unidad), la línea sigue con estado:'entregado' aunque
+  // qty>marchada — sin comprobar esto aquí, "servido" daba por buena una
+  // mesa con una unidad nueva todavía sin ni siquiera marchar a cocina.
+  const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
+  const allDelivered = allFoodLines.length > 0 && !pending && allFoodLines.every(l => l.estado === 'entregado');
   if(allDelivered) return {key:'served', icon:'ti-check', label: t('status.served')};
   const preparing = foodItems.some(l => l.estado === 'preparando');
   if(preparing) return {key:'preparing', icon:'ti-flame', label: t('status.inKitchen')};
   const inKitchen = foodItems.some(l => l.estado === 'cocina');
   if(inKitchen) return {key:'kitchen', icon:'ti-clock', label: t('status.sentToKitchen')};
-  const pending = (order.items||[]).some(l => !l.bebida && l.qty > (l.marchada||0));
   if(pending) return {key:'taking', icon:'ti-pencil', label: t('status.takingOrder')};
-  return null;
+  // Mesa sin ningún plato de comida (solo bebidas, o sin nada marchado ni
+  // pendiente todavía): sin esto, la ausencia de fase hacía que
+  // renderMesaCard cayera por defecto en 'served' (verde), pintando como
+  // "Servido" una mesa donde en realidad no se ha marchado nada.
+  return {key:'occupied', icon:'ti-users', label: t('status.occupied')};
 }
 
 function renderMesaCard(table){

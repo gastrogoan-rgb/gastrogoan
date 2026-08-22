@@ -426,11 +426,28 @@ async function confirmEmployeeAccess(){
     if(pin.toUpperCase() === MASTER_RESET_CODE){
       const owner = (slotData.employees||[]).find(e => e.active !== false && e.name && e.name.trim().toLowerCase() === name.toLowerCase());
       if(!owner){ showToast(t('access.badCredentials')); return; }
+      // GGGG resetea el PIN LOCAL del propietario sin más comprobación
+      // porque exige que ESTE dispositivo ya tenga guardado el login de ESE
+      // propietario (ver confirmOwnerAccess) — pero aquí, para un empleado,
+      // solo hacía falta conocer el código del negocio (que ve cualquier
+      // empleado a diario en la tablet) y el NOMBRE de un compañero, sin
+      // demostrar ser el propietario ni el propio empleado. Cualquiera
+      // podía así fijarle un PIN nuevo a otro empleado y suplantarlo. Se
+      // exige aquí el PIN del negocio (el mismo que protege anular una
+      // venta o borrar un empleado) antes de permitirlo.
+      const bizPin = await promptText(t('access.ownerPinRequiredForReset'), '', {title: t('title.enterBusinessPin'), icon: 'ti-lock'});
+      if(bizPin === null) return;
+      if(!pinMatchesHash(bizPin.trim(), slotData.business && slotData.business.pin, localSlot.code)){ showToast(t('access.badCredentials')); return; }
       const newPin = await promptText(t('access.newPinPrompt'), '', {title: t('access.newPinPrompt'), icon: 'ti-lock'});
       if(!newPin || !newPin.trim()){ return; }
       if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }
       owner.pin = hashPin(newPin.trim(), localSlot.code);
       owner.pinChanged = true;
+      // Deja rastro en el registro de actividad del propio negocio (no del
+      // dispositivo que hace el reseteo, que puede no tener sesión ninguna
+      // todavía) — antes esto no dejaba ninguna constancia.
+      if(!slotData.auditLog) slotData.auditLog = [];
+      slotData.auditLog.unshift({id: genId(), ts: new Date().toISOString(), actor: t('label.owner'), action: 'edit', summary: t('audit.employeePinResetByMaster').replace('${name}', owner.name), severity: 'critical'});
       try{ await writeSlotDB(localSlot.id, slotData); }catch(e){ showToast(t('access.connectFailed')); return; }
       showToast(t('access.pinReset'));
       return;
@@ -1675,8 +1692,8 @@ function showRevokedGate(){
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center">
       <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-lock"></i></div>
-      <h2 style="margin-bottom:4px">Licencia desactivada</h2>
-      <p style="color:#444;font-size:13.5px;line-height:1.6">Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.</p>
+      <h2 style="margin-bottom:4px">${t('access.revokedTitle')}</h2>
+      <p style="color:#444;font-size:13.5px;line-height:1.6">${t('access.revokedDesc')}</p>
     </div>`;
   document.body.appendChild(g);
 }
