@@ -1,0 +1,10 @@
+# Config de Netlify para el sitio de reservas (reservas.gastrogoan.com).
+# Da acceso por URL corta al enlace de cada negocio, en vez del feo
+# ?n=nombre-negocio: reservas.gastrogoan.com/casapaco en vez de
+# reservas.gastrogoan.com/?n=casapaco.
+#
+# Solo reescribe por dentro (código 200, no 301/302): la URL bonita se queda
+# en la barra del navegador. Los archivos reales (reservagastrogoan.html,
+# fonts/*, sw.js) se sirven tal cual porque Netlify prioriza un archivo
+# existente sobre esta regla — solo cae aquí lo que no coincide con nada.
+/:slug  /reservagastrogoan.html?n=:slug  200

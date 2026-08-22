@@ -55,6 +55,9 @@ cp fonts/*.woff2 dist/fonts/
 # Copy the offline app-shell service worker (must sit at the site root next to index.html)
 cp sw.js dist/sw.js
 
+# Copy Netlify redirect rules (URL corta para el sitio de reservas: ver _redirects)
+cp _redirects dist/_redirects
+
 LINES=$(wc -l < dist/index.html)
 SIZE=$(du -h dist/index.html | cut -f1)
 
