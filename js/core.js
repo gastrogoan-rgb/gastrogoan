@@ -4695,10 +4695,21 @@ const dbReadyPromise = loadDB().then(d => {
   if(dbLoadFailedFlag){
     // El aviso se dispara aparte (no bloquea la carga de DB) y esperando a
     // que exista el DOM/las traducciones, porque loadDB() puede terminar
-    // antes de que app.js haya montado la pantalla.
-    const warn = () => { if(typeof alertModal === 'function' && typeof t === 'function') alertModal(t('msg.dbLoadFailed')); };
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', warn);
-    else warn();
+    // antes de que app.js haya montado la pantalla. Con try/catch y
+    // comprobando también openModal (del que depende alertModal): en un
+    // entorno sin la interfaz completa cargada (p.ej. los tests que cargan
+    // core.js aislado, donde indexedDB tampoco existe y este camino se
+    // dispara siempre) esto NO debe convertirse en una excepción sin
+    // capturar que tire abajo el resto del arranque.
+    const warn = () => {
+      try{
+        if(typeof alertModal === 'function' && typeof openModal === 'function' && typeof t === 'function') alertModal(t('msg.dbLoadFailed'));
+      }catch(e){ console.error('No se pudo mostrar el aviso de fallo al cargar datos', e); }
+    };
+    try{
+      if(typeof document !== 'undefined' && document.readyState === 'loading') document.addEventListener('DOMContentLoaded', warn);
+      else warn();
+    }catch(e){ console.error('No se pudo programar el aviso de fallo al cargar datos', e); }
   }
 });
 
