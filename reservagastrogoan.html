@@ -269,6 +269,7 @@ const I18N = {
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
     'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
     'modifiers.hint':'Elige los extras que quieras (opcional).','modifiers.add':'Añadir al pedido','modifiers.addBtn':'Añadir','modifiers.fromPrice':'desde',
+    'menus.title':'Menús','common.unavailable':'Agotado',
     'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
@@ -344,6 +345,7 @@ const I18N = {
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
     'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
     'modifiers.hint':'Pick any extras you\'d like (optional).','modifiers.add':'Add to order','modifiers.addBtn':'Add','modifiers.fromPrice':'from',
+    'menus.title':'Set menus','common.unavailable':'Sold out',
     'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
@@ -419,6 +421,7 @@ const I18N = {
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
     'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
     'modifiers.hint':'Tria els extres que vulguis (opcional).','modifiers.add':'Afegir a la comanda','modifiers.addBtn':'Afegir','modifiers.fromPrice':'des de',
+    'menus.title':'Menús','common.unavailable':'Exhaurit',
     'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
@@ -803,6 +806,8 @@ function loadBusinessInfo(){
       business: val.business || {},
       cartas: val.cartas || [],
       activeCartaIds: val.activeCartaIds || (val.activeCartaId ? [val.activeCartaId] : []),
+      menus: val.menus || [],
+      activeMenuIds: val.activeMenuIds || [],
       reservasResumen: val.reservasResumen || {},
       // Antes faltaba "pedidosResumen" aquí: el límite de pedidos por franja
       // (submitOrder → reservePedidoSlotAtomic) siempre veía un baseline de 0
@@ -818,11 +823,11 @@ function loadBusinessInfo(){
     renderHeader();
     if(!businessInfoLoadedOnce){
       businessInfoLoadedOnce = true;
-      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
+      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       renderApp();
       checkRedsysConfigured();
     }else if(currentTab && document.getElementById('tab-content')){
-      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
+      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
       if(newSignature !== lastRenderSignature){
         lastRenderSignature = newSignature;
         renderTabContentPreservingForm();
@@ -891,9 +896,19 @@ function renderHeader(){
   renderLangSwitcher();
 }
 
+// Mismo criterio que ya usa el TPV interno (isBebidaCarta, js/tpv.js): las
+// cartas de bebidas (área "sala") siempre se muestran antes que las de
+// comida, sea cual sea el orden en que se crearon.
+function isBebidaCarta(c){
+  if(c && c.area) return c.area === 'sala';
+  return /bebida/i.test(c.nombre||'');
+}
 function getActiveCartas(){
   const ids = DB.activeCartaIds || [];
-  return (DB.cartas || []).filter(c => ids.includes(c.id));
+  const active = (DB.cartas || []).filter(c => ids.includes(c.id));
+  const bebidaCartas = active.filter(isBebidaCarta);
+  const comidaCartas = active.filter(c => !isBebidaCarta(c));
+  return [...bebidaCartas, ...comidaCartas];
 }
 
 // Promo con descuento activa AHORA MISMO (día + franja horaria) para un
@@ -1033,6 +1048,14 @@ function getTurnosForDate(dateStr){
     add(d.t1i, d.t1f);
     add(d.t2i, d.t2f);
   }
+  // Un día marcado como abierto pero sin ninguna franja horaria rellenada
+  // (el estado de fábrica: defaultHorario() deja ini/fin en blanco) no
+  // significa "cerrado" — significa que el negocio aún no ha configurado
+  // Horario de apertura en Mi Negocio. Sin esto, esta página bloqueaba
+  // CUALQUIER reserva/pedido (isTimeAllowed devuelve false para un array
+  // vacío) hasta que alguien rellenara el horario — mismo fix que ya tenía
+  // el panel interno (js/menu.js), que aquí no se había aplicado.
+  if(!turnos.length && d.abierto !== false) return null;
   return turnos;
 }
 
@@ -1658,7 +1681,7 @@ function toggleMenuSection(key){
 }
 function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
-  return `<div id="menu-folders">${buildMenuHtmlInner(cartas)}</div>`;
+  return `<div id="menu-folders">${buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
 }
 function buildMenuHtmlInner(cartas){
   return cartas.map(carta => `
@@ -1716,7 +1739,7 @@ function renderOrderForm(){
   const box = document.getElementById('tab-content');
   const cartas = getActiveCartasConPlatos();
 
-  if(!cartas.length){
+  if(!cartas.length && !getActiveMenusPublic().length){
     box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty')}</div></div>`;
     return;
   }
@@ -1964,6 +1987,90 @@ function confirmAddWithModifiers(){
   modModalContext = null;
   closeInfoModal();
   renderCartSummary();
+}
+
+// Menús combo (ej. "Menú del día"): antes no se publicaban al espejo
+// público en absoluto (ver syncPublicMirror, js/core.js), así que un
+// cliente nunca podía pedir un menú desde el móvil, solo platos sueltos.
+function getActiveMenusPublic(){
+  const ids = DB.activeMenuIds || [];
+  return (DB.menus||[]).filter(m => ids.includes(m.id) && m.disponible !== false && (m.grupos||[]).length);
+}
+let menuModalContext = null;
+function openMenuModal(menuId){
+  const m = (DB.menus||[]).find(x=>x.id===menuId);
+  if(!m) return;
+  menuModalContext = { menuId };
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(trItem(m))} · ${fmtMoney(m.precio)}</h2>
+    ${(m.grupos||[]).map(g => `
+      <div class="field">
+        <label>${escapeHtml(trItem(g))}</label>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${(()=>{
+            const opcionesDisponibles = (g.opciones||[]);
+            const primeraLibre = opcionesDisponibles.findIndex(o => o.disponible !== false);
+            return opcionesDisponibles.map((o,i) => `
+              <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
+                <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:20px;height:20px;flex:none">
+                <span style="flex:1;font-size:14px">${escapeHtml(trItem(o))}</span>
+                ${o.suplemento ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(o.suplemento)}</span>` : ''}
+                ${o.disponible===false ? `<span style="font-size:11px;color:var(--red)">${t('common.unavailable')}</span>` : ''}
+              </label>
+            `).join('');
+          })()}
+        </div>
+      </div>
+    `).join('')}
+    <button class="btn btn-primary" style="width:100%" onclick="confirmAddMenuFromModal()">${t('modifiers.add')}</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function confirmAddMenuFromModal(){
+  if(!menuModalContext) return;
+  const m = (DB.menus||[]).find(x=>x.id===menuModalContext.menuId);
+  if(!m){ closeInfoModal(); return; }
+  let extra = 0;
+  const selections = (m.grupos||[]).map(g => {
+    const selId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
+    const o = (g.opciones||[]).find(x=>x.id===selId) || (g.opciones||[]).find(x=>x.disponible!==false);
+    if(!o) return null;
+    extra += o.suplemento||0;
+    return { nombre: `${trItem(g)}: ${trItem(o)}`, precio: o.suplemento||0 };
+  }).filter(Boolean);
+  const finalPrice = (m.precio||0) + extra;
+  const key = 'menu:' + m.id + ':' + selections.map(s=>s.nombre).join('|');
+  let line = cart.find(l => l.key === key);
+  if(!line){
+    line = { key, recipeId: null, sectionId: null, name: m.nombre, price: finalPrice, qty: 0, modificadores: selections };
+    cart.push(line);
+  }
+  line.qty += 1;
+  menuModalContext = null;
+  closeInfoModal();
+  renderCartSummary();
+}
+function buildMenusHtml(){
+  const menus = getActiveMenusPublic();
+  if(!menus.length) return '';
+  return `
+    <h2>${escapeHtml(t('menus.title'))}</h2>
+    ${menus.map(m => {
+      const totalInCart = cart.filter(l => l.key.startsWith('menu:'+m.id+':')).reduce((s,l)=>s+l.qty,0);
+      return `
+      <div class="menu-item">
+        <div>
+          <div class="name">${escapeHtml(trItem(m))}</div>
+          <div class="price">${fmtMoney(m.precio)} <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span></div>
+        </div>
+        <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openMenuModal(${m.id})">
+          ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
+        </button>
+      </div>
+    `;}).join('')}
+  `;
 }
 
 // Coste de envío a domicilio, con posibilidad de que el negocio lo haga
@@ -2319,7 +2426,7 @@ function renderMesaOrderForm(){
   const box = document.getElementById('tab-content');
   const cartas = getActiveCartasConPlatos();
 
-  if(!cartas.length){
+  if(!cartas.length && !getActiveMenusPublic().length){
     box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty.mesa')}</div></div>`;
     return;
   }

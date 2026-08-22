@@ -3040,6 +3040,11 @@ function syncPublicMirror(){
         business: DB.business,
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
+        // Los menús combo (Menú del día, etc.) nunca se publicaban al espejo
+        // público — la web de reservas/pedidos solo mostraba la carta suelta,
+        // así que un cliente jamás podía pedir un menú desde el móvil.
+        menus: DB.menus,
+        activeMenuIds: DB.activeMenuIds,
         reservasResumen: getReservasResumenForSync(),
         mesasOcupadas: getMesasOcupadasForSync(),
         pedidosResumen: getPedidosResumenForSync(),
