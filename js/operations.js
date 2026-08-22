@@ -1691,7 +1691,14 @@ function orderFormBodyHtml(){
 const ORDER_ITEMS_AUTOLIST_MAX = 8;
 function orderItemsRowsHtml(){
   const search = orderModalSearch.toLowerCase();
-  const showAll = !search && orderModalLines.length <= ORDER_ITEMS_AUTOLIST_MAX;
+  // "Sugerir por déficit de stock" rellena cantidades directamente sobre
+  // orderModalLines sin pasar por el buscador — con más de 8 artículos, la
+  // lista se quedaba oculta tras el mensaje de "busca productos" y el
+  // resultado solo se veía en el resumen de la derecha, pareciendo que el
+  // botón no había hecho nada. Con alguna cantidad ya sugerida, se enseña
+  // la lista igualmente aunque el catálogo sea grande.
+  const hasSuggested = orderModalLines.some(l => l.cantidad > 0);
+  const showAll = !search && (orderModalLines.length <= ORDER_ITEMS_AUTOLIST_MAX || hasSuggested);
   const rows = (!search && !showAll) ? '' : orderModalLines.filter(line => {
     const ing = getIngredient(line.ingredientId);
     return ing && (!search || ing.name.toLowerCase().includes(search));

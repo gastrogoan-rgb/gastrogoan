@@ -1827,6 +1827,10 @@ function renderOrderForm(){
           <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
         </div>
       </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="o-privacy-consent" style="width:auto;margin-top:2px">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
     </div>
   `;
@@ -2234,6 +2238,12 @@ async function submitOrder(){
     setBtnLoading('o-submit', false);
     return;
   }
+  if(!document.getElementById('o-privacy-consent').checked){
+    showInlineError(t('privacy.mustAccept'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
 
   const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
   const pedidoMinimo = p.pedidoMinimo || 0;
@@ -2487,6 +2497,10 @@ function renderMesaOrderForm(){
         </label>
       </div>
       ` : ''}
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="o-privacy-consent" style="width:auto;margin-top:2px">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
       <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">${t('order.submit.mesa')}</button>
     </div>
   `;
@@ -2496,6 +2510,7 @@ function renderMesaOrderForm(){
 function submitMesaOrder(){
   if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
   if(submittingRequest) return;
+  if(!document.getElementById('o-privacy-consent').checked){ showInlineError(t('privacy.mustAccept')); return; }
   submittingRequest = true;
   setBtnLoading('o-submit', true);
 
