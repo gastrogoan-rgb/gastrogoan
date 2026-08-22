@@ -3094,14 +3094,21 @@ function confirmVoidLine(){
   // nada que devolver. Restaura justo esa parte, no toda la línea, para no
   // sobre-restituir si solo se había marchado una parte de la cantidad.
   const firedQty = line.marchada || 0;
+  // Los ingredientes de la receta (Mega Lista) NUNCA se descuentan al marchar
+  // a cocina — eso solo pasa al cobrar (discountStockForOrder, en
+  // finalizeCharge/finalizeSplitOrder). Devolverlos aquí (como se hacía
+  // antes) sumaba stock de ingredientes que nunca se había restado, inflando
+  // el inventario en cada anulación previa al cobro. Solo se restituyen las
+  // raciones directas del plato (p.stock), que sí se descontaron al marchar
+  // (decrementDishStock).
   if(type === 'remove'){
-    if(firedQty > 0) restockForVoidedItems([{...line, qty: firedQty}]);
+    if(firedQty > 0) restockForVoidedItems([{...line, qty: firedQty}], {includeIngredients: false});
     order.items.splice(idx,1);
     reassignMenuBasePrice(order, line);
   } else {
     const removedQty = Math.abs(delta);
     const restockQty = Math.min(removedQty, firedQty);
-    if(restockQty > 0) restockForVoidedItems([{...line, qty: restockQty}]);
+    if(restockQty > 0) restockForVoidedItems([{...line, qty: restockQty}], {includeIngredients: false});
     line.qty += delta;
     if(line.qty <= 0){
       order.items.splice(idx,1);
@@ -3126,7 +3133,12 @@ function requestCancelSale(saleId){
   if(!sale || sale.status === 'anulada') return;
   requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
-function restockForVoidedItems(items){
+function restockForVoidedItems(items, opts){
+  // includeIngredients=false: solo se restituyen las raciones directas del
+  // plato (p.stock), no los ingredientes de su escandallo — para el caso de
+  // anular ANTES de cobrar, donde discountStockForOrder todavía no se ha
+  // ejecutado y no hay nada que devolver a Mega Lista (ver confirmVoidLine).
+  const includeIngredients = !opts || opts.includeIngredients !== false;
   (items||[]).forEach(line => {
     if(!line.isShipping && line.platoId != null){
       const p = findCartaPlatoById(line.platoId);
@@ -3136,6 +3148,22 @@ function restockForVoidedItems(items){
         if(wasOut) p.disponible = true;
       }
     }
+    // Una opción de menú elegida por stock directo (bebida de Carta con
+    // raciones limitadas, sel.platoId) se descuenta igual que un plato normal
+    // en discountStockForOrder — sin esto, aquí nunca se le devolvía su
+    // ración al anular, dejando su contador de raciones por debajo de lo real.
+    if(Array.isArray(line.menuSelections)){
+      line.menuSelections.forEach(sel => {
+        if(sel.platoId == null) return;
+        const p = findCartaPlatoById(sel.platoId);
+        if(p && p.stock != null){
+          const wasOut = p.stock === 0;
+          p.stock = p.stock + (line.qty||0);
+          if(wasOut) p.disponible = true;
+        }
+      });
+    }
+    if(!includeIngredients) return;
     const recetas = [];
     if(line.recipeId) recetas.push(line.recipeId);
     else if(Array.isArray(line.menuSelections)) line.menuSelections.forEach(sel => { if(sel.recipeId) recetas.push(sel.recipeId); });
@@ -3143,13 +3171,18 @@ function restockForVoidedItems(items){
       const r = getRecipe(recipeId);
       if(!r) return;
       (r.ingredients||[]).forEach(ri => {
+        // Misma merma (%) que discountStockForOrder aplica al descontar: sin
+        // esto se devolvía menos de lo que de verdad se había restado, y cada
+        // anulación de una venta ya cobrada dejaba el stock por debajo del
+        // consumo real, tanto más cuanta más merma tuviera la receta.
+        const bruto = ri.qty * (1 + (ri.merma||0)/100) * (line.qty||0);
         if(ri.type === 'base'){
           const elab = (DB.elaboraciones||[]).find(e => e.recipeId === ri.baseRecipeId);
-          if(elab) elab.qty = (elab.qty||0) + ri.qty * (line.qty||0);
+          if(elab) elab.qty = (elab.qty||0) + bruto;
           return;
         }
         const s = getStockEntry(ri.ingredientId);
-        s.qty = (s.qty||0) + ri.qty * (line.qty||0);
+        s.qty = (s.qty||0) + bruto;
       });
     });
   });
@@ -4020,6 +4053,21 @@ function warnIfRecipeStockShort(recipeId){
 
 function discountStockForOrder(order){
   order.items.forEach(line => {
+    // Una opción de menú puede llevar un plato de Carta con raciones
+    // limitadas en vez de una receta (p.ej. una bebida gestionada por stock
+    // directo, sel.platoId) — sin esto, elegirla dentro de un menú nunca
+    // descontaba su ración, dejando su contador de disponibilidad por
+    // encima de lo real.
+    if(Array.isArray(line.menuSelections)){
+      line.menuSelections.forEach(sel => {
+        if(sel.platoId == null) return;
+        const p = findCartaPlatoById(sel.platoId);
+        if(p && p.stock != null){
+          p.stock = Math.max(0, p.stock - (line.qty||0));
+          if(p.stock === 0) p.disponible = false;
+        }
+      });
+    }
     // Una línea normal descuenta su propia receta; un menú sin desglosar
     // descuenta las recetas de cada opción elegida (menuSelections).
     const recetas = [];

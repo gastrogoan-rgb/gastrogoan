@@ -826,6 +826,17 @@ async function addSucursal(parentSlotId){
   try { src = await readSlotDB(parentSlotId); } catch(e){ src = defaultData(); }
 
   const def = defaultData();
+  // Las raciones disponibles ahora mismo (p.stock) de un plato del padre son
+  // inventario físico real de SU local, no de la sucursal nueva — clonar la
+  // carta tal cual dejaba nacer la sucursal con, p.ej., "quedan 12" de un
+  // plato que ahí ni siquiera se ha empezado a cocinar. Se copia el límite
+  // de raciones configurado (si el dueño usa esa función) pero puesto a
+  // disponible desde cero, no el recuento actual del padre.
+  const cartasClonadas = JSON.parse(JSON.stringify(src.cartas || []));
+  cartasClonadas.forEach(c => (c.secciones||[]).forEach(sec => (sec.platos||[]).forEach(p => {
+    if(p.stock != null) delete p.stock;
+    if(p.disponible === false) p.disponible = true;
+  })));
   const snap = {
     ...def,
     business: JSON.parse(JSON.stringify(src.business || def.business)),
@@ -836,7 +847,7 @@ async function addSucursal(parentSlotId){
     recipeCategories: JSON.parse(JSON.stringify(src.recipeCategories || [])),
     fichas: JSON.parse(JSON.stringify(src.fichas || [])),
     menuItems: JSON.parse(JSON.stringify(src.menuItems || [])),
-    cartas: JSON.parse(JSON.stringify(src.cartas || [])),
+    cartas: cartasClonadas,
     activeCartaIds: JSON.parse(JSON.stringify(src.activeCartaIds || [])),
     menus: JSON.parse(JSON.stringify(src.menus || [])),
     activeMenuIds: JSON.parse(JSON.stringify(src.activeMenuIds || [])),
@@ -2253,7 +2264,13 @@ const MERGEABLE_ARRAYS = new Set([
   'cashClosures','employees','turnos','fichajes','promos',
   'cleaningTasks','clients','chatMessages','reservations',
   'ingredientCategories','recipeCategories','elaboraciones',
-  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations'
+  'voidLog','discountLog','waitlist','vacationRequests','npsScores','bankReconciliations',
+  // Arrays con id que se quedaban fuera: dos dispositivos que añaden cada uno
+  // una entrada distinta (una anulación aquí, un check-in de ánimo allá, una
+  // solicitud de cambio de turno acullá) casi a la vez y en ese hueco sin
+  // sincronizar, sin esto uno de los dos arrays completos ganaba entero al
+  // fusionar y la entrada del otro dispositivo desaparecía sin aviso.
+  'auditLog','moodCheckins','turnoSwapRequests','trash'
 ]);
 
 // Hash simple para PINs (4 dígitos) — no almacenar en texto plano.
