@@ -804,12 +804,23 @@ function renderTabContentPreservingForm(){
   const box = document.getElementById('tab-content');
   const saved = {};
   if(box){
-    box.querySelectorAll('input[id], textarea[id], select[id]').forEach(el => { saved[el.id] = el.value; });
+    // En una casilla o un radio, .value es siempre "on" — lo que hay que
+    // conservar es .checked. Sin esto, una actualización en vivo de la carta
+    // (o la respuesta de la comprobación de Redsys) desmarcaba el
+    // consentimiento de privacidad que el cliente ya había marcado, y al
+    // enviar le saltaba "tienes que aceptar el aviso" sobre una casilla que
+    // él juraría haber marcado.
+    box.querySelectorAll('input[id], textarea[id], select[id]').forEach(el => {
+      saved[el.id] = (el.type === 'checkbox' || el.type === 'radio') ? {checked: el.checked} : {value: el.value};
+    });
   }
   renderTabContent();
   Object.keys(saved).forEach(id => {
     const el = document.getElementById(id);
-    if(el && el.value !== saved[id]) el.value = saved[id];
+    if(!el) return;
+    const s = saved[id];
+    if(s.checked !== undefined){ if(el.checked !== s.checked) el.checked = s.checked; }
+    else if(el.value !== s.value) el.value = s.value;
   });
 }
 function loadBusinessInfo(){
@@ -1041,6 +1052,11 @@ async function setTab(tab){
   currentTab = tab;
   cart = [];
   cartTipPct = 0; cartTipCustom = 0;
+  // Volver también al índice de carpetas de la carta: si no, al cambiar de
+  // Take Away a Delivery el cliente seguía "dentro" de la última familia que
+  // había abierto (p.ej. solo Entrantes), dando la impresión de que en esa
+  // otra pestaña hay muchos menos platos.
+  menuOpenSection = null;
   renderApp();
 }
 
@@ -1776,7 +1792,7 @@ function buildMenuHtmlInner(cartas){
       const {sec} = found;
       return `
         <button type="button" class="menu-back-btn" onclick="closeMenuFolder()">← ${t('common.back')}</button>
-        <h2 style="margin-top:0">${escapeHtml(trSection(sec))}</h2>
+        <h2 style="margin-top:0">${escapeHtml(trSection(sec) || t('label.dishes'))}</h2>
         ${renderMenuDishesHtml(sec)}
       `;
     }
@@ -1796,7 +1812,11 @@ function buildMenuHtmlInner(cartas){
     <div class="menu-folder-grid">
       ${allSections.map(({carta, sec, key}, i) => {
         const count = sec.platos.filter(p=>p.disponible!==false).length;
-        const label = cartas.length > 1 ? `${escapeHtml(trItem(carta))} · ${escapeHtml(trSection(sec))}` : escapeHtml(trSection(sec) || t('label.dishes'));
+        // El nombre de sección puede venir vacío (o ser "OTROS PLATOS"): sin
+        // el respaldo, con varias cartas activas quedaba un "Bebidas · " con
+        // el separador colgando y sin nada detrás.
+        const secName = trSection(sec) || t('label.dishes');
+        const label = cartas.length > 1 ? `${escapeHtml(trItem(carta))} · ${escapeHtml(secName)}` : escapeHtml(secName);
         return `
         <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
           <span class="icon">${menuFolderIcon(i)}</span>
@@ -2219,7 +2239,11 @@ function renderCartSummary(){
       // carta solo tienen el botón "Añadir", ver buildMenuHtml) — así se
       // puede ajustar la cantidad de "pizza con extra queso" sin afectar a
       // "pizza sin nada", que es una línea distinta del carrito.
-      const hasMods = (l.modificadores||[]).length > 0;
+      // También los menús combo (recipeId null): no se pueden ajustar desde
+      // el listado de la carta, así que sin sus propios +/- aquí una línea
+      // de menú cuyos grupos se quedaran sin opciones disponibles (y por
+      // tanto sin extras) no había forma humana de quitarla del carrito.
+      const hasMods = (l.modificadores||[]).length > 0 || l.recipeId == null;
       return `
       <div class="cart-line" style="align-items:flex-start;padding:8px 0">
         <div style="flex:1">
@@ -2228,9 +2252,9 @@ function renderCartSummary(){
         </div>
         ${hasMods
           ? `<div class="qty-ctl" style="gap:6px">
-               <button onclick="changeCartLineQty('${escapeHtml(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">−</button>
+               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">−</button>
                <span class="mono" style="min-width:14px;text-align:center">${l.qty}</span>
-               <button onclick="changeCartLineQty('${escapeHtml(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">+</button>
+               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">+</button>
              </div>`
           : ''}
         <span style="white-space:nowrap;margin-left:8px">${fmtMoney(l.price*l.qty)}</span>
@@ -2780,7 +2804,7 @@ function renderReservationStatus(data){
       <div style="margin-top:6px;font-size:13px;font-weight:700;color:${statusClass}">${statusLabel}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.date')}</span><strong>${escapeHtml(data.date||'')} · ${escapeHtml(data.time||'')}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.people')}</span><strong>${data.people||''}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.people')}</span><strong>${escapeHtml(data.people||'')}</strong></div>
       </div>
       ${resEditing ? `
         <div class="field-row" style="margin-top:16px">
@@ -2796,7 +2820,7 @@ function renderReservationStatus(data){
         <div id="res-edit-hint"></div>
         <div class="field">
           <label>${t('personas')}</label>
-          <input type="number" id="res-edit-people" value="${data.people||1}" min="1" max="50">
+          <input type="number" id="res-edit-people" value="${escapeHtml(data.people||1)}" min="1" max="50">
         </div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)">${t('common.close')}</button>
