@@ -517,7 +517,7 @@ const I18N = {
     'btn.cancelReservation': 'Cancelar reserva', 'label.reservedAt': 'Reserva a las ${time}', 'label.reservedAtFor': 'Reservada a las ${time} para ${name}',
     'msg.confirmArrivalTable': 'Confirma o corrige en qué mesa se ha sentado el grupo (por si se organizó en una distinta a la reservada).',
     'th.time': 'Hora', 'th.client': 'Cliente', 'th.people': 'Personas', 'th.table': 'Mesa',
-    'th.notes': 'Notas', 'th.status': 'Estado', 'th.arrival': 'Llegada', 'btn.arrived': 'Llegó',
+    'th.notes': 'Notas', 'th.status': 'Estado', 'th.arrival': 'Llegada', 'btn.arrived': 'Ha llegado',
     'btn.notYet': 'Aún no', 'label.notAssigned': 'Sin asignar', 'empty.noReservationsDay': 'No hay reservas para este día.',
     'label.chooseTableRequired': 'Elige una mesa', 'msg.selectReservationTableRequired': 'Tienes que asignar una mesa a la reserva',
     'msg.assignTableBeforeConfirm': 'Antes de confirmarla, asigna una mesa a esta reserva',

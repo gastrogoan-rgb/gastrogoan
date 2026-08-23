@@ -508,7 +508,7 @@ function renderLimpiezaMes(){
       cells += `
         <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="goToLimpiezaDia('${ds}')">
           <div style="font-weight:700">${day}</div>
-          ${count ? `<span class="badge badge-blue cal-day-badge">${count===1?t('limpieza.oneTask'):t('limpieza.nTasks').replace('${n}', count)}</span>` : ''}
+          ${count ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(count===1?t('limpieza.oneTask'):t('limpieza.nTasks').replace('${n}', count))}">${count}</span>` : ''}
         </div>
       `;
     }

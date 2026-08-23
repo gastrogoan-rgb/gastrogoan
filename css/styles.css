@@ -467,7 +467,13 @@ td.wrap{white-space:normal}
    max-width:100% (como estaba antes) el porcentaje a veces se resolvía
    contra un ancestro mucho más ancho (el body) en vez de contra la propia
    casilla del día, y el badge se salía por el lado derecho sin avisar. */
-.cal-day-badge{display:block;white-space:normal;text-align:center;font-size:9.5px;padding:2px 5px;line-height:1.15;overflow-wrap:break-word;box-sizing:border-box}
+/* white-space:nowrap a propósito. Antes había un overflow-wrap:break-word
+   aquí para que no se desbordara: no se desbordaba, pero en móvil la
+   casilla es tan estrecha que partía "1 TURNO" letra a letra en vertical
+   y estiraba toda la fila del calendario a lo alto. Ahora el badge lleva
+   solo el número (el resto del texto va en el title), así que cabe
+   siempre en una línea y no hay nada que partir. */
+.cal-day-badge{display:inline-block;white-space:nowrap;text-align:center;font-size:10px;padding:1px 6px;line-height:1.3;max-width:100%;overflow:hidden;box-sizing:border-box}
 /* Red de seguridad además de lo de arriba: pase lo que pase con el cálculo
    del badge, nada puede salirse visualmente de la casilla del día (tanto en
    el calendario de Turnos como en el de pedidos programados). */

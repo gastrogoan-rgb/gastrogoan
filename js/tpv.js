@@ -915,7 +915,7 @@ function renderTogoCalendarBody(){
       cells += `
         <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
           <div style="font-weight:700">${d}</div>
-          ${n ? `<span class="badge badge-blue cal-day-badge">${n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n)}</span>` : ''}
+          ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
     }
     gridHtml = `<div class="cal-grid">${cells}</div>`;
@@ -932,7 +932,7 @@ function renderTogoCalendarBody(){
       cells += `
         <div class="card cal-day-cell" style="cursor:pointer;padding:8px;text-align:center;min-width:0;${isToday?'border-color:var(--brand-orange)':''}" onclick="togoCalDate=new Date('${ds}T00:00:00');setTogoCalMode('dia')">
           <div style="font-weight:700">${t('days.short')[(d.getDay()+6)%7]} ${d.getDate()}</div>
-          ${n ? `<span class="badge badge-blue cal-day-badge">${n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n)}</span>` : ''}
+          ${n ? `<span class="badge badge-blue cal-day-badge" title="${escapeHtml(n===1?t('togocal.oneOrder'):t('togocal.nOrders').replace('${n}', n))}">${n}</span>` : ''}
         </div>`;
     });
     gridHtml = `<div class="cal-grid" style="grid-template-columns:repeat(7,1fr)">${cells}</div>`;
