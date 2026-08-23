@@ -1728,20 +1728,32 @@ let lastMenuCartas = null;
 // así que es lo consistente con su propio estilo.
 const MENU_FOLDER_ICONS = ['🍲','🥩','🐟','🥗','🧀','🍰','🍷','☕','🍕','🥖','🍽️'];
 function menuFolderIcon(index){ return MENU_FOLDER_ICONS[index % MENU_FOLDER_ICONS.length]; }
+// Repinta el bloque entero de la carta. Tiene que pasar SIEMPRE por aquí (y
+// no escribir buildMenuHtmlInner suelto) porque los menús combo del día se
+// pintan aparte, encima de las carpetas: al entrar en una carpeta se
+// reescribía el contenedor sin ellos y ya no volvían ni pulsando "Volver",
+// así que el cliente perdía de vista el menú del día en cuanto tocaba la
+// carta — y entrar en una carpeta es ahora la única forma de verla.
+// Dentro de una carpeta sí se ocultan a propósito: ahí se está mirando una
+// familia concreta, y el menú del día sería ruido.
+function repaintMenu(){
+  const box = document.getElementById('menu-folders');
+  if(!box || !lastMenuCartas) return;
+  box.innerHTML = (menuOpenSection ? '' : buildMenusHtml()) + buildMenuHtmlInner(lastMenuCartas);
+}
 function openMenuFolder(key){
   menuOpenSection = key;
+  repaintMenu();
   const box = document.getElementById('menu-folders');
-  if(box && lastMenuCartas) box.innerHTML = buildMenuHtmlInner(lastMenuCartas);
   box && box.scrollIntoView({block:'start', behavior:'smooth'});
 }
 function closeMenuFolder(){
   menuOpenSection = null;
-  const box = document.getElementById('menu-folders');
-  if(box && lastMenuCartas) box.innerHTML = buildMenuHtmlInner(lastMenuCartas);
+  repaintMenu();
 }
 function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
-  return `<div id="menu-folders">${buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
+  return `<div id="menu-folders">${menuOpenSection ? '' : buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
 }
 function renderMenuDishesHtml(sec){
   return sec.platos.filter(p=>p.disponible!==false).map(p => {

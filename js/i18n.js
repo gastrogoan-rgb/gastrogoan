@@ -121,17 +121,17 @@ function showToast(msg, duration){
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   clearTimeout(showToast._t);
+  // Cada aviso se muestra el tiempo que pide y punto. Hubo un intento de
+  // añadir un tope absoluto de 6 s como red de seguridad contra un aviso que
+  // se quedara pegado en pantalla, pero ese temporizador extra no se
+  // cancelaba cuando el aviso se ocultaba con normalidad: cualquier aviso
+  // lanzado dentro de los 6 s siguientes heredaba un plazo ya gastado y se
+  // cortaba a media lectura — justo los que piden 6 s explícitos ("descarga
+  // el CSV y adjúntalo a mano") eran los más perjudicados. No se puede a la
+  // vez garantizar "nunca se queda pegado" y "siempre se lee entero", y lo
+  // que de verdad dejaba un aviso pegado era el bucle de sincronización, ya
+  // resuelto de raíz (ver canonicalStringify en js/core.js).
   showToast._t = setTimeout(()=>toastEl.classList.remove('show'), duration||2200);
-  // Red de seguridad: si algo (un bucle de sincronización, un evento que se
-  // repite sin parar) llama a showToast() una y otra vez antes de que le dé
-  // tiempo a desaparecer, el temporizador de arriba se reinicia siempre y el
-  // aviso puede quedar pegado en pantalla indefinidamente. Este segundo
-  // temporizador, con un plazo fijo desde el PRIMER aviso de una racha (no
-  // se reinicia con cada llamada), garantiza que como muy tarde a los 6s
-  // desaparece pase lo que pase.
-  if(!showToast._maxT){
-    showToast._maxT = setTimeout(() => { toastEl.classList.remove('show'); showToast._maxT = null; }, 6000);
-  }
 }
 // Repintar una vista (innerHTML de golpe) tras un cambio de estado, sin más,
 // hacía que la página "saltara" hacia arriba: al cambiar de estado un plato,
