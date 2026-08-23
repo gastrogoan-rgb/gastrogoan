@@ -202,7 +202,7 @@ function renderEscandallo(){
   document.getElementById('escandallo-search').placeholder = isElab ? t('ph.searchElaboration') : t('ph.searchDish');
 
   if(!areaRecipes.length){
-    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
+    box.innerHTML = `<div class="empty"><i class="ti ti-calculator"></i>${isElab ? t(currentArea()==='sala' ? 'empty.elaborations.none.sala' : 'empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
     return;
   }
 
@@ -1002,7 +1002,7 @@ function renderFichas(){
 
   if(!areaRecipes.length){
     if(!orphanFichas.length){
-      box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t('empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
+      box.innerHTML = `<div class="empty"><i class="ti ti-file-description"></i>${isElab ? t(currentArea()==='sala' ? 'empty.elaborations.none.sala' : 'empty.elaborations.none') : (currentArea()==='sala' ? t('empty.drinks') : t('empty.dishes'))}</div>`;
       return;
     }
   } else if(!searching && fichasFolder === null){

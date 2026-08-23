@@ -424,10 +424,13 @@ await testAsync('FIX A7: una colisión real (local Y remoto cambiaron el mismo p
   // ...y a la vez llegó de OTRO dispositivo con un cambio DISTINTO del mismo pedido.
   const remote = [{id: 1, items: [{name:'Original'}, {name:'Añadido en el otro dispositivo'}]}];
   sandbox.warnIfConcurrentEditLost('tpvOrders', local, remote);
-  assert.equal(toasts.length, 1, 'debería haber avisado de la colisión con un toast');
+  // El aviso ya NO es un toast: saltaba en mitad del servicio, no se podía
+  // hacer nada con él en ese momento y solo tapaba la pantalla. Lo que
+  // importa es que quede rastro consultable en el registro de actividad.
+  assert.equal(toasts.length, 0, 'la colisión no debe interrumpir el servicio con un toast');
   const dbAfter = sandbox.__getDB ? sandbox.__getDB() : null;
   assert.ok(dbAfter && dbAfter.auditLog.length === 1, 'debería quedar constancia en el registro de auditoría');
-  console.log('   → colisión real detectada y avisada: ' + toasts[0]);
+  console.log('   → colisión real detectada y anotada en el registro: ' + dbAfter.auditLog[0].summary);
 });
 
 await testAsync('warnIfConcurrentEditLost NO avisa si solo cambió un lado (caso normal, sin colisión)', async () => {

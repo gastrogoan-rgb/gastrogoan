@@ -2805,7 +2805,13 @@ function renderReservasDia(){
                 <div class="reserva-card-detail-row"><span>${t('th.arrival')}</span>
                   ${(r.status==='confirmada' || r.status==='completada') ? `
                     <div style="display:flex;gap:4px;flex-wrap:wrap">
-                      <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})">${r.llegada?`<i class="ti ti-check"></i> ${t('btn.arrived')}`:t('btn.notYet')}</button>
+                      <!-- El botón dice siempre "Ha llegado": es la acción que
+                           hace al pulsarlo, no el estado. Poner "Aún no"
+                           confundía — parecía una etiqueta y nadie lo tocaba.
+                           Cuando ya está marcado se ve relleno (btn-primary);
+                           mientras no lo está, con el tick en verde invitando
+                           a pulsarlo. -->
+                      <button class="btn btn-sm ${r.llegada?'btn-primary':''}" onclick="toggleReservaLlegada(${r.id})"><i class="ti ti-check"${r.llegada?'':' style="color:var(--green)"'}></i> ${t('btn.arrived')}</button>
                       ${!r.llegada ? `<button class="btn btn-sm btn-danger" onclick="markReservationNoShow(${r.id})">${t('status.noShow')}</button>` : ''}
                     </div>
                   ` : r.status==='no_show' ? `<button class="btn btn-sm" onclick="undoReservationNoShow(${r.id})" title="${t('btn.undoNoShow')}"><i class="ti ti-arrow-back-up"></i> ${t('btn.undoNoShow')}</button>` : '<strong>—</strong>'}
@@ -4621,12 +4627,11 @@ function renderTramoFields(prefix, tramo, label){
   // interpretarlo como medianoche si se vuelve a guardar sin tocarlo.
   const finDisplay = tramo.fin === '24:00' ? '00:00' : (tramo.fin||'');
   return `
-    <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--muted);min-width:52px">${label}</span>
-      <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
+    <div class="mn-tramo-row" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:nowrap">
+      <span style="font-size:11.5px;color:var(--muted);min-width:44px">${label}</span>
+      <input type="time" id="${prefix}-ini" class="mn-horario-time" value="${escapeHtml(tramo.ini||'')}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness(true)">
       <span style="color:var(--muted);font-size:12px">${t('common.to')}</span>
-      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(finDisplay)}" style="padding:4px 6px;font-size:13px;width:auto;min-height:auto" onchange="saveBusiness(true)">
-      <span style="font-size:11px;color:var(--muted)">${t('mn.schedule.midnightHint')}</span>
+      <input type="time" id="${prefix}-fin" class="mn-horario-time" value="${escapeHtml(finDisplay)}" style="padding:3px 5px;font-size:12.5px;width:auto;min-height:auto" onchange="saveBusiness(true)">
     </div>
   `;
 }
@@ -4659,7 +4664,11 @@ function renderHorarioRows(horario){
     </div>
   `;
   });
-  return `<div class="mn-horario-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${cards.join('')}</div>`;
+  // La nota de la medianoche salía repetida en cada tramo (hasta 21 veces),
+  // y era lo que hacía que cada día ocupara el triple de alto de lo
+  // necesario. Se dice una sola vez, arriba.
+  return `<p style="font-size:11px;color:var(--muted);margin:0 0 6px">${t('mn.schedule.midnightHint')}</p>
+    <div class="mn-horario-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">${cards.join('')}</div>`;
 }
 
 function toggleHorarioDia(i){
@@ -5431,15 +5440,21 @@ function daysSinceLastBackup(){
 // Antes esto solo encendía un botón discreto en la cabecera (fácil de no
 // ver nunca si no se mira arriba a la derecha). Ahora, en vez de vivir
 // callado en la barra, se avisa activamente con un modal al entrar en la
-// sesión — una vez por sesión, para no ser pesado si el dueño decide
-// posponerlo y sigue trabajando — con un botón directo para descargarla ya.
-let backupReminderShownThisSession = false;
+// sesión, con un botón directo para descargarla ya.
+// "Una vez por sesión" resultó ser pesadísimo en la práctica: cada recarga
+// de la app es una sesión nueva, así que el dueño se lo comía diez veces al
+// día. Ahora se recuerda el día en el que ya se avisó (en localStorage, que
+// sobrevive a la recarga) y no se vuelve a pedir hasta el día siguiente.
+const BACKUP_REMINDER_DAY_KEY = 'gastrogoan_backup_reminder_day';
 function checkBackupReminder(){
-  if(backupReminderShownThisSession) return;
   if(daysSinceLastBackup() < BACKUP_REMINDER_DAYS) return;
+  // Solo el propietario: un empleado no puede (ni debe) descargarse la
+  // base entera del negocio, así que avisarle a él no sirve de nada.
   const session = getAccessSession();
   if(!session || session.type !== 'owner') return;
-  backupReminderShownThisSession = true;
+  const hoy = todayStr();
+  try{ if(localStorage.getItem(BACKUP_REMINDER_DAY_KEY) === hoy) return; }catch(e){}
+  try{ localStorage.setItem(BACKUP_REMINDER_DAY_KEY, hoy); }catch(e){}
   openBackupReminderModal();
 }
 function openBackupReminderModal(){

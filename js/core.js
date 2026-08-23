@@ -2400,6 +2400,29 @@ function pinMatchesHash(pin, storedHash, licenseCode){
 // cualquier negocio que simplemente tenga apiKey/databaseURL rellenados
 // (que es lo único que comprueba getCloudConfig()).
 let lastSyncBadgeState = null;
+// Causa REAL del último fallo de sincronización. Antes solo quedaba en la
+// consola del navegador (console.error), sitio al que un hostelero no entra
+// nunca: veía "Error de nube" con el consejo genérico de revisar la clave de
+// API, aunque el motivo casi siempre fuera otro — falta activar el acceso
+// anónimo, el dominio no está autorizado, o no se pegaron las reglas. Se
+// guarda el código de Firebase para poder decirle qué paso le falta.
+let lastSyncErrorCode = null;
+function recordSyncError(err){
+  lastSyncErrorCode = (err && (err.code || err.message)) || 'desconocido';
+  console.error('Error de sincronización', err);
+  updateSyncBadge('error');
+}
+/* Traduce el código técnico de Firebase al paso concreto de la guía que
+   falta. Devuelve null si no lo reconoce, y entonces se enseña el genérico. */
+function syncErrorHintKey(){
+  const code = String(lastSyncErrorCode || '');
+  if(code.includes('operation-not-allowed')) return 'gate.cloudError.anon';
+  if(code.includes('unauthorized-domain')) return 'gate.cloudError.domain';
+  if(code.includes('api-key') || code.includes('invalid-api-key')) return 'gate.cloudError.apikey';
+  if(code.includes('network-request-failed')) return 'gate.cloudError.network';
+  if(code.toUpperCase().includes('PERMISSION_DENIED')) return 'gate.cloudError.rules';
+  return null;
+}
 function updateSyncBadge(state){
   lastSyncBadgeState = state;
   const el = document.getElementById('sync-badge');
@@ -3352,10 +3375,7 @@ function initCloud(){
     if(firebase.auth().currentUser){
       startCloudSync(tenantId);
     } else {
-      firebase.auth().signInAnonymously().then(() => startCloudSync(tenantId)).catch(err => {
-        console.error('Error de autenticación con la nube', err);
-        updateSyncBadge('error');
-      });
+      firebase.auth().signInAnonymously().then(() => startCloudSync(tenantId)).catch(err => recordSyncError(err));
     }
   }catch(e){
     console.error('Error iniciando la nube', e);
@@ -3553,7 +3573,7 @@ function applyRemoteBlock(key, remoteValue){
    datos por cada dispositivo conectado), escuchamos solo los bloques
    ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
 function attachCloudChildListeners(){
-  const onErr = err => { console.error('Error de sincronización', err); updateSyncBadge('error'); };
+  const onErr = err => recordSyncError(err);
   cloudRef.on('child_added', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
   cloudRef.on('child_changed', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
   cloudRef.on('child_removed', snap => {
@@ -4633,7 +4653,11 @@ function openCloudWizard(){
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
     ${lastSyncBadgeState === 'error'
-      ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}</div>`
+      ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}${
+          // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
+          // falta en vez de dejar al usuario adivinando entre seis pasos.
+          syncErrorHintKey() ? `<div style="font-weight:400;font-size:13px;margin-top:8px;line-height:1.5">${t(syncErrorHintKey())}</div>` : ''
+        }</div>`
       : `<div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>`}
     <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
