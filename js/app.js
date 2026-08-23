@@ -239,7 +239,10 @@ function renderLimpiezaManos(){
           <div class="protocolo-step-row" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
             <div class="step-num">${i+1}</div>
             <input type="text" value="${escapeHtml(p)}" style="flex:1;min-width:140px" onchange="updateManosPaso(${i}, this.value)" ${editUnlocked?'':'disabled'}>
-            <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+            <div class="owner-strict" style="display:flex;gap:2px;margin-left:auto">
+              ${reorderButtons(`moveManosPaso(${i},-1)`, `moveManosPaso(${i},1)`, i===0, i===pasos.length-1)}
+              <button class="owner-strict btn btn-sm btn-icon btn-danger" onclick="removeManosPaso(${i})" ${pasos.length===1?'style="visibility:hidden"':''}><i class="ti ti-x"></i></button>
+            </div>
           </div>
         `).join('')}
         <button class="owner-strict btn btn-sm" onclick="addManosPaso()"><i class="ti ti-plus"></i> ${t('btn.addStep')}</button>
@@ -267,6 +270,11 @@ function renderLimpiezaManos(){
   `;
 }
 function resetManosPasos(){ DB.limpieza.manosPasos[currentArea()] = [...getLimpiezaDefaultManos()]; saveDB(); renderLimpiezaManos(); showToast(t('msg.stepsReset')); }
+function moveManosPaso(i,dir){
+  moveArrayItem(limpiezaManosPasos(), i, dir);
+  saveDB();
+  renderLimpiezaManos();
+}
 function updateManosPaso(i, val){ if(!editUnlocked) return; limpiezaManosPasos()[i] = val; saveDB(); }
 function addManosPaso(){ limpiezaManosPasos().push(t('label.newStep')); saveDB(); renderLimpiezaManos(); }
 async function removeManosPaso(i){
