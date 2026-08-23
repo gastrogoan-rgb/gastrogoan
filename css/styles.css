@@ -507,11 +507,19 @@ td.wrap{white-space:normal}
 .modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
   /* Por encima de TODO lo demás, incluidas las pantallas de selector de
-     negocio/acceso (9998-9999) y el tour (10000-10004): varias acciones de
-     esas pantallas (cambiar PIN, nuevo negocio, nueva sucursal) abren un
-     modal normal mientras siguen de fondo — si el modal quedaba por debajo,
-     se abría "invisible" detrás y parecía que el botón no hacía nada. */
-  z-index:10010;padding:16px;
+     negocio/acceso (9998-9999), el tour (10000-10004) y las pantallas de
+     configuración inicial a pantalla completa (Netlify/Activación/
+     Firebase/Licencia revocada, z-index 100000-100001 en el propio JS):
+     varias acciones de esas pantallas (cambiar PIN, nuevo negocio, nueva
+     sucursal, "Guardar y conectar" de Firebase) abren un modal normal
+     (alertModal/confirmModal/promptText) mientras siguen de fondo — si el
+     modal quedaba por debajo, se abría "invisible" detrás y parecía que el
+     botón no hacía nada (p.ej. el aviso de "Firebase guardado" nunca se
+     veía ni se podía cerrar, así que el reload que viene después de
+     cerrarlo tampoco llegaba a disparar — SIGUE guardado, pero el asistente
+     se queda "colgado" en apariencia). Por eso este valor va muy por encima
+     de esos 100001, no solo de las pantallas antiguas de 9998-10004. */
+  z-index:200010;padding:16px;
   overflow-y:auto;
 }
 .modal-overlay.active{display:flex;animation:modalFadeIn .18s ease}
@@ -708,7 +716,7 @@ td.wrap{white-space:normal}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--dark2);color:#fff;padding:12px 20px;border-radius:8px;
-  font-size:14px;font-weight:600;z-index:10020;opacity:0;transition:.25s;
+  font-size:14px;font-weight:600;z-index:200020;opacity:0;transition:.25s;
   pointer-events:none;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
