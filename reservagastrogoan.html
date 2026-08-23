@@ -142,6 +142,27 @@
   .cart-total.bump{animation:total-bump .3s ease;}
   @keyframes total-bump{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
   .empty{text-align:center;color:var(--muted);padding:22px;font-size:13.5px;}
+  /* Carpetas de la carta: en vez de una lista larga con todo desplegado
+     (o un acordeón que sigue amontonando secciones en la misma pantalla),
+     se entra y se sale de cada sección como en el selector de carta del
+     TPV que usa el camarero — una pantalla a la vez, sin scroll interminable. */
+  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:6px}
+  .menu-folder-card{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    border:1px solid var(--border);background:var(--surface);padding:20px 10px;cursor:pointer;
+    text-align:center;font-family:inherit;transition:border-color .15s,transform .1s;min-height:104px;
+  }
+  .menu-folder-card:hover{border-color:var(--ink)}
+  .menu-folder-card:active{transform:translateY(1px)}
+  .menu-folder-card .icon{font-size:26px;color:var(--olive)}
+  .menu-folder-card .name{font-weight:700;font-size:13.5px;color:var(--ink);line-height:1.25}
+  .menu-folder-card .count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+  .menu-back-btn{
+    display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+    font-weight:600;color:var(--ink);padding:10px 2px;margin-bottom:4px;min-height:44px;
+  }
+  .menu-back-btn:hover{color:var(--olive)}
   .success{
     text-align:center;padding:44px 16px;animation:fade-up .35s ease;
   }
@@ -319,7 +340,7 @@ const I18N = {
     'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
     'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
     'branch.title':'¿En qué local quieres reservar o pedir?','branch.subtitle':'Este negocio tiene varios locales. Elige el tuyo:',
-    'app.title':'Reservas y Pedidos','app.loading':'Cargando…'
+    'app.title':'Reservas y Pedidos','app.loading':'Cargando…','common.back':'Volver','label.dishes':'Platos','label.oneDish':'1 plato','label.nDishes':'${n} platos'
   },
   en: {
     'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
@@ -395,7 +416,7 @@ const I18N = {
     'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
     'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
     'branch.title':'Which location would you like?','branch.subtitle':'This business has multiple locations. Choose yours:',
-    'app.title':'Reservations and Orders','app.loading':'Loading…'
+    'app.title':'Reservations and Orders','app.loading':'Loading…','common.back':'Back','label.dishes':'Dishes','label.oneDish':'1 dish','label.nDishes':'${n} dishes'
   },
   ca: {
     'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
@@ -471,7 +492,7 @@ const I18N = {
     'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
     'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
     'branch.title':'A quin local vols reservar o demanar?','branch.subtitle':'Aquest negoci té diversos locals. Tria el teu:',
-    'app.title':'Reserves i Comandes','app.loading':'Carregant…'
+    'app.title':'Reserves i Comandes','app.loading':'Carregant…','common.back':'Enrere','label.dishes':'Plats','label.oneDish':'1 plat','label.nDishes':'${n} plats'
   }
 };
 function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
@@ -1678,15 +1699,27 @@ function dishAllergensHtml(platoId){
   if(!list || !list.length) return '';
   return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}">⚠️ ${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>`;
 }
-// Qué familias (secciones de la carta) están desplegadas — ver toda la
-// carta de golpe obligaba a un scroll larguísimo en cartas con muchos
-// platos; ahora se ven las familias primero y solo se despliega la que se
-// toca, como las carpetas de categorías del resto de la app.
-let expandedMenuSections = new Set();
+// Navegación de la carta por carpetas: se entra en una familia (Entrantes,
+// Principales...), se ve solo lo suyo, y "Volver" regresa al índice — como
+// el selector de carta del TPV que usa el camarero. Antes era un acordeón
+// que iba amontonando secciones abiertas en la misma pantalla larga; con
+// muchos platos, eso seguía siendo un scroll interminable en el móvil.
+let menuOpenSection = null; // null = índice de carpetas; si no, "cartaId:secId"
 let lastMenuCartas = null;
-function toggleMenuSection(key){
-  if(expandedMenuSections.has(key)) expandedMenuSections.delete(key);
-  else expandedMenuSections.add(key);
+// Emoji, no la fuente de iconos Tabler: esta página (a diferencia de la app
+// principal) nunca ha cargado esa fuente, así que un <i class="ti ..."> no
+// se vería (caja vacía). El resto de la web pública ya usa emoji (✅, ⚠️),
+// así que es lo consistente con su propio estilo.
+const MENU_FOLDER_ICONS = ['🍲','🥩','🐟','🥗','🧀','🍰','🍷','☕','🍕','🥖','🍽️'];
+function menuFolderIcon(index){ return MENU_FOLDER_ICONS[index % MENU_FOLDER_ICONS.length]; }
+function openMenuFolder(key){
+  menuOpenSection = key;
+  const box = document.getElementById('menu-folders');
+  if(box && lastMenuCartas) box.innerHTML = buildMenuHtmlInner(lastMenuCartas);
+  box && box.scrollIntoView({block:'start', behavior:'smooth'});
+}
+function closeMenuFolder(){
+  menuOpenSection = null;
   const box = document.getElementById('menu-folders');
   if(box && lastMenuCartas) box.innerHTML = buildMenuHtmlInner(lastMenuCartas);
 }
@@ -1694,55 +1727,85 @@ function buildMenuHtml(cartas){
   lastMenuCartas = cartas;
   return `<div id="menu-folders">${buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
 }
-function buildMenuHtmlInner(cartas){
-  return cartas.map(carta => `
-    ${cartas.length > 1 ? `<h2>${escapeHtml(trItem(carta))}</h2>` : ''}
-    ${(()=>{ const seccionesVisibles = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)); return seccionesVisibles.map(sec => {
-      const key = String(carta.id) + ':' + String(sec.id);
-      // Una sola familia, o platos sin sección (nombre vacío/"OTROS
-      // PLATOS"): no tiene sentido plegarla, se muestra siempre abierta.
-      const foldable = !!(sec.nombre && sec.nombre !== 'OTROS PLATOS') && seccionesVisibles.length > 1;
-      const isOpen = !foldable || expandedMenuSections.has(key);
-      return `
-      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? (foldable ? `
-        <button type="button" class="menu-folder-header" onclick="toggleMenuSection('${key}')" aria-expanded="${isOpen}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:none;border-bottom:1px solid var(--border);padding:14px 2px;font:inherit;text-align:left;cursor:pointer">
-          <h3 style="margin:0">${escapeHtml(trSection(sec))}</h3>
-          <span style="color:var(--muted);transition:transform .15s;transform:rotate(${isOpen?'180deg':'0deg'})">▾</span>
-        </button>
-      ` : `<h3>${escapeHtml(trSection(sec))}</h3>`) : ''}
-      <div style="${isOpen ? '' : 'display:none'}">
-      ${sec.platos.filter(p=>p.disponible!==false).map(p => {
-        const promo = getActivePromoForPlatoPublic(p.id);
-        const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
-        const hasMods = (p.modificadores||[]).length > 0;
-        // Cuántas unidades de este plato hay YA en el carrito, sumando
-        // TODAS sus variantes de extras (la línea sin extras + cada
-        // combinación elegida) — para que el cliente vea de un vistazo que
-        // ya tiene algo añadido aunque esté repartido en varias líneas.
-        const totalInCart = cart.filter(l => l.recipeId === p.id).reduce((s,l)=>s+l.qty, 0);
-        return `
-        <div class="menu-item">
-          <div>
-            <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
-            <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
-            ${dishAllergensHtml(p.id)}
-          </div>
-          ${hasMods ? `
-          <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openModifierModal(${p.id})">
-            ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
-          </button>
-          ` : `
-          <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
-            <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
-            <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
-            <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', 1, '${escapeJsAttr(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
-          </div>
-          `}
-        </div>
-      `;}).join('')}
+function renderMenuDishesHtml(sec){
+  return sec.platos.filter(p=>p.disponible!==false).map(p => {
+    const promo = getActivePromoForPlatoPublic(p.id);
+    const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
+    const hasMods = (p.modificadores||[]).length > 0;
+    // Cuántas unidades de este plato hay YA en el carrito, sumando TODAS
+    // sus variantes de extras (la línea sin extras + cada combinación
+    // elegida) — para que el cliente vea de un vistazo que ya tiene algo
+    // añadido aunque esté repartido en varias líneas.
+    const totalInCart = cart.filter(l => l.recipeId === p.id).reduce((s,l)=>s+l.qty, 0);
+    return `
+    <div class="menu-item">
+      <div>
+        <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
+        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
+        ${dishAllergensHtml(p.id)}
       </div>
-    `;}).join(''); })()}
-  `).join('');
+      ${hasMods ? `
+      <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openModifierModal(${p.id})">
+        ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
+      </button>
+      ` : `
+      <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
+        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
+        <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
+        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', 1, '${escapeJsAttr(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
+      </div>
+      `}
+    </div>
+  `;}).join('');
+}
+function buildMenuHtmlInner(cartas){
+  // Todas las secciones visibles de todas las cartas activas, en una sola
+  // lista de carpetas — si hay más de una carta (comida + bebidas, p.ej.)
+  // el nombre de la carta se antepone al de la sección para distinguirlas.
+  const allSections = [];
+  cartas.forEach(carta => {
+    (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).forEach(sec => {
+      allSections.push({carta, sec, key: String(carta.id)+':'+String(sec.id)});
+    });
+  });
+
+  if(menuOpenSection){
+    const found = allSections.find(x => x.key === menuOpenSection);
+    if(!found){ menuOpenSection = null; }
+    else{
+      const {sec} = found;
+      return `
+        <button type="button" class="menu-back-btn" onclick="closeMenuFolder()">← ${t('common.back')}</button>
+        <h2 style="margin-top:0">${escapeHtml(trSection(sec))}</h2>
+        ${renderMenuDishesHtml(sec)}
+      `;
+    }
+  }
+
+  // Solo una sección en total (o platos sueltos sin nombre de familia):
+  // no tiene sentido un índice de carpetas de una sola carpeta — se
+  // muestra directamente, como antes.
+  if(allSections.length <= 1){
+    return allSections.map(({sec}) => `
+      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
+      ${renderMenuDishesHtml(sec)}
+    `).join('');
+  }
+
+  return `
+    <div class="menu-folder-grid">
+      ${allSections.map(({carta, sec, key}, i) => {
+        const count = sec.platos.filter(p=>p.disponible!==false).length;
+        const label = cartas.length > 1 ? `${escapeHtml(trItem(carta))} · ${escapeHtml(trSection(sec))}` : escapeHtml(trSection(sec) || t('label.dishes'));
+        return `
+        <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
+          <span class="icon">${menuFolderIcon(i)}</span>
+          <span class="name">${label}</span>
+          <span class="count">${count===1?t('label.oneDish'):t('label.nDishes').replace('${n}', count)}</span>
+        </button>
+      `;}).join('')}
+    </div>
+  `;
 }
 
 /* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
@@ -2175,7 +2238,7 @@ function renderCartSummary(){
     }).join('')}
     ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
     ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
-    ${missingForFreeDelivery > 0 ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0"><i class="ti ti-truck"></i> ${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
+    ${missingForFreeDelivery > 0 ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">🚚 ${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
     <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
     ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
     ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
