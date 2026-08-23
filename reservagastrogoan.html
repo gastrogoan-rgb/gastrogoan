@@ -301,7 +301,7 @@ const I18N = {
     'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
     'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
     'modifiers.hint':'Elige los extras que quieras (opcional).','modifiers.add':'Añadir al pedido','modifiers.addBtn':'Añadir','modifiers.fromPrice':'desde',
-    'menus.title':'Menús','common.unavailable':'Agotado',
+    'menus.title':'Menús','carta.sectionTitle':'Carta','common.unavailable':'Agotado',
     'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
     'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
     'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
@@ -377,7 +377,7 @@ const I18N = {
     'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
     'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
     'modifiers.hint':'Pick any extras you\'d like (optional).','modifiers.add':'Add to order','modifiers.addBtn':'Add','modifiers.fromPrice':'from',
-    'menus.title':'Set menus','common.unavailable':'Sold out',
+    'menus.title':'Set menus','carta.sectionTitle':'À la carte','common.unavailable':'Sold out',
     'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
     'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
     'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
@@ -453,7 +453,7 @@ const I18N = {
     'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
     'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
     'modifiers.hint':'Tria els extres que vulguis (opcional).','modifiers.add':'Afegir a la comanda','modifiers.addBtn':'Afegir','modifiers.fromPrice':'des de',
-    'menus.title':'Menús','common.unavailable':'Exhaurit',
+    'menus.title':'Menús','carta.sectionTitle':'Carta','common.unavailable':'Exhaurit',
     'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
     'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
     'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
@@ -1820,7 +1820,14 @@ function buildMenuHtmlInner(cartas){
     `).join('');
   }
 
-  return `
+    // Título de la carta SOLO si además hay menús cerrados: son dos cosas
+    // distintas (un menú a precio fijo frente a platos sueltos) y sin nada que
+    // las separe el cliente ve una lista de menús y debajo unas carpetas sin
+    // explicación, sin entender que son ofertas diferentes. Si no hay menús no
+    // se pone título: no habría ambigüedad que resolver y sería solo ruido.
+    const hayMenus = getActiveMenusPublic().length > 0;
+    return `
+      ${hayMenus ? `<h2 style="margin-top:22px">${escapeHtml(t('carta.sectionTitle'))}</h2>` : ''}
     <div class="menu-folder-grid">
       ${allSections.map(({carta, sec, key}, i) => {
         const count = sec.platos.filter(p=>p.disponible!==false).length;

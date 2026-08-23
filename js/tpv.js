@@ -3913,7 +3913,15 @@ function renderItemsSplitTab(order){
     return `
       <div class="field">
         <label>${t('label.numDiners')}</label>
-        <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" oninput="updateItemsSplitDiners(${order.id})">
+        <!-- onchange, NO oninput: con oninput se recalculaba en CADA tecla y,
+             como el número de comensales se fuerza a un mínimo de 2, al
+             escribir "10" el primer "1" se convertía en "2" al instante y ya
+             no había forma de terminar de escribir el número — parecía que el
+             campo estuviera bloqueado en 2. Con onchange se recalcula al
+             salir del campo, cuando ya está escrito entero. El select() al
+             enfocar hace que teclear sustituya el valor en vez de añadirse
+             detrás (mismo comportamiento que el reparto a partes iguales). -->
+        <input type="number" id="split-items-n" min="2" max="20" step="1" value="${n}" onfocus="this.select()" onchange="updateItemsSplitDiners(${order.id})">
       </div>
       <p style="font-size:13px;color:var(--muted);margin:0 0 8px">${t('label.assignUnitsHint')}</p>
       <div id="split-items-body" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
