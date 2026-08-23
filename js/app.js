@@ -5916,9 +5916,21 @@ function renderTicketConfigCard(){
       <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-device-usb"></i> ${t('thermal.sectionTitle')}</p>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('thermal.sectionDesc')}</p>
       <button class="btn btn-sm" onclick="connectThermalPrinter()"><i class="ti ti-bluetooth"></i> ${t('thermal.connectBtn')}</button>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-cash"></i> ${t('drawer.sectionTitle')}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${t('drawer.sectionDesc')}</p>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:13px;cursor:pointer;margin-bottom:10px">
+        <input type="checkbox" id="mn-cash-drawer" ${DB.business.cashDrawerOnSale?'checked':''} onchange="saveCashDrawerSetting(this.checked)" style="width:auto;margin-top:2px">
+        <span>${t('drawer.enableLabel')}</span>
+      </label>
+      ${DB.business.cashDrawerOnSale ? `<button class="btn btn-sm" onclick="openCashDrawerManually()"><i class="ti ti-cash"></i> ${t('drawer.testBtn')}</button>` : ''}
       ` : `
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
       <p style="font-size:12.5px;color:var(--muted)"><i class="ti ti-device-usb-off"></i> ${t('thermal.notSupportedHint')}</p>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <p style="font-size:13px;font-weight:700;margin-bottom:6px"><i class="ti ti-cash"></i> ${t('drawer.sectionTitle')}</p>
+      <p style="font-size:12.5px;color:var(--muted)">${t('drawer.driverFallbackHint')}</p>
       `}
     </div>
   `;
@@ -6278,6 +6290,16 @@ function testComandaPrint(printerId){
   const lineas = printer.contenido==='todo' ? sample : sample.filter(l => printer.contenido==='comida' ? !l.bebida : l.bebida);
   if(!lineas.length){ showToast(t('mn.comandas.testNoLines')); return; }
   printComandaTicket(printer.nombre, 'Mesa de prueba', lineas, printer.anchoTicket, null, printer.id);
+}
+
+// Se guarda al instante al marcar/desmarcar (no espera a "Guardar todo"),
+// igual que los tipos de servicio: es un interruptor suelto y esperar a otro
+// botón para que tenga efecto confunde.
+function saveCashDrawerSetting(enabled){
+  DB.business.cashDrawerOnSale = !!enabled;
+  saveDB();
+  renderMiNegocio();
+  showToast(t(enabled ? 'drawer.enabled' : 'drawer.disabled'));
 }
 
 function saveTicketConfig(){
@@ -8081,6 +8103,13 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear zona con mesas</strong>: escribe el nombre de la zona y cuántas mesas tiene, y se crean todas de golpe. Después, en la lista <strong>"Mesas configuradas"</strong> de más abajo puedes <strong>ponerle a cada mesa el nombre o número que quieras</strong>, cambiarle la zona, o añadir/eliminar mesas una a una. Esas mesas son exactamente las que aparecen en el TPV, en las reservas y en los QR de mesa (un QR por mesa).</div>
 
+    <h4>💵 Cajón portamonedas</h4>
+    <p>Lo primero que conviene saber, porque casi todo el mundo lo entiende al revés: <strong>el cajón no se conecta al ordenador ni a la tablet</strong>. Va enchufado a la <strong>impresora de tickets</strong> con un cable RJ11 (parecido al del teléfono fijo), y es la impresora la que lo abre mandándole un pulso eléctrico. Por eso no necesitas ningún aparato ni cable adicional: si puedes imprimir, puedes abrir el cajón.</p>
+    <p>Tienes dos formas de conseguirlo, y puedes usar la que mejor te encaje:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Desde la app</strong> (recomendado si usas Chrome o Edge en Android o en ordenador) — conecta la impresora térmica por Bluetooth en esta misma pantalla y marca la casilla <strong>"Abrir el cajón automáticamente al cobrar"</strong>. El cajón se abrirá en cada cobro, sea en efectivo, tarjeta o mixto. Además te aparece un botón <strong>"Abrir cajón"</strong> en el TPV para abrirlo sin cobrar (por ejemplo, para dar cambio a un cliente): esas aperturas manuales <strong>quedan registradas en el Registro de actividad</strong>, con quién y cuándo, que es justo lo que querrás mirar si algún día no cuadra la caja.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Desde el driver de la impresora</strong> (funciona en cualquier dispositivo, también iPad y iPhone) — en las propiedades de la impresora de tu sistema hay una casilla del tipo "abrir cajón al imprimir". Al marcarla, el cajón se abre con cada ticket que salga, venga de donde venga. No requiere tocar nada en la app.</div></div>
+    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>La opción 1 usa Bluetooth desde el navegador, que <strong>solo funciona en Chrome y Edge</strong> (en Android o en ordenador). <strong>En iPhone y iPad no está disponible</strong>: si tu TPV es un iPad, usa la opción 2.</div>
+
     <h4>🖨️ Comandas de cocina y sala</h4>
     <p>Elige cómo recibe el equipo las comandas al marchar: <strong>verlas en pantalla</strong> (la pantalla de Cocina/Sala) o <strong>imprimir un vale</strong> automáticamente (un vale de cocina con la comida y otro de sala/barra con las bebidas). Si eliges imprimir, indica el ancho del papel (58 u 80 mm) y usa "Imprimir vale de prueba". La impresora concreta se elige en el cuadro de impresión del navegador/sistema; si tienes una impresora térmica de tickets, configúrala como impresora del dispositivo.</p>
 
@@ -8151,6 +8180,13 @@ const MANUAL_CHAPTERS = [
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Crear zona amb taules</strong>: escriu el nom de la zona i quantes taules té, i es creen totes de cop. Després, a la llista <strong>"Taules configurades"</strong> de més avall pots <strong>posar a cada taula el nom o número que vulguis</strong>, canviar-li la zona, o afegir/eliminar taules una a una. Aquestes taules són exactament les que apareixen al TPV, a les reserves i als QR de taula (un QR per taula).</div>
 
+    <h4>💵 Calaix portamonedes</h4>
+    <p>El primer que convé saber, perquè gairebé tothom ho entén al revés: <strong>el calaix no es connecta a l'ordinador ni a la tauleta</strong>. Va endollat a la <strong>impressora de tiquets</strong> amb un cable RJ11 (semblant al del telèfon fix), i és la impressora qui l'obre enviant-li un pols elèctric. Per això no necessites cap aparell ni cable addicional: si pots imprimir, pots obrir el calaix.</p>
+    <p>Tens dues maneres d'aconseguir-ho, i pots fer servir la que millor t'encaixi:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>Des de l'app</strong> (recomanat si fas servir Chrome o Edge a Android o a l'ordinador) — connecta la impressora tèrmica per Bluetooth en aquesta mateixa pantalla i marca la casella <strong>"Obrir el calaix automàticament en cobrar"</strong>. El calaix s'obrirà en cada cobrament, sigui en efectiu, targeta o mixt. A més t'apareix un botó <strong>"Obrir calaix"</strong> al TPV per obrir-lo sense cobrar (per exemple, per donar canvi a un client): aquestes obertures manuals <strong>queden registrades al Registre d'activitat</strong>, amb qui i quan, que és just el que voldràs mirar si algun dia no quadra la caixa.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>Des del driver de la impressora</strong> (funciona en qualsevol dispositiu, també iPad i iPhone) — a les propietats de la impressora del teu sistema hi ha una casella del tipus "obrir calaix en imprimir". En marcar-la, el calaix s'obre amb cada tiquet que surti, vingui d'on vingui. No requereix tocar res a l'app.</div></div>
+    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>L'opció 1 fa servir Bluetooth des del navegador, que <strong>només funciona a Chrome i Edge</strong> (a Android o a l'ordinador). <strong>A iPhone i iPad no està disponible</strong>: si el teu TPV és un iPad, fes servir l'opció 2.</div>
+
     <h4>🖨️ Comandes de cuina i sala</h4>
     <p>Tria com rep l'equip les comandes en marxar: <strong>veure-les en pantalla</strong> (la pantalla de Cuina/Sala) o <strong>imprimir un val</strong> automàticament (un val de cuina amb el menjar i un altre de sala/barra amb les begudes). Si tries imprimir, indica l'amplada del paper (58 o 80 mm) i fes servir "Imprimir val de prova". La impressora concreta es tria al quadre d'impressió del navegador/sistema; si tens una impressora tèrmica de tiquets, configura-la com a impressora del dispositiu.</p>
 
@@ -8220,6 +8256,13 @@ const MANUAL_CHAPTERS = [
       <li><strong>Table zones</strong> — there are no three fixed zones: you create whichever ones you need, with any name (Indoor, Terrace, Bar, Floor 1, Garden...) and how many tables each has.</li>
     </ul>
     <div class="manual-tip"><i class="ti ti-bulb"></i><strong>Create zone with tables</strong>: type the zone's name and how many tables it has, and they're all created at once. Afterwards, in the <strong>"Configured tables"</strong> list below, you can <strong>give each table whatever name or number you like</strong>, change its zone, or add/remove tables one by one. These tables are exactly the ones that show up in the POS, in reservations and on the table QR codes (one QR per table).</div>
+
+    <h4>💵 Cash drawer</h4>
+    <p>The first thing worth knowing, because almost everyone gets it backwards: <strong>the drawer doesn't connect to the computer or tablet</strong>. It plugs into the <strong>receipt printer</strong> with an RJ11 cable (like a landline phone cable), and the printer is what opens it by sending an electrical pulse. That's why you don't need any extra device or cable: if you can print, you can open the drawer.</p>
+    <p>There are two ways to set it up, and you can use whichever suits you:</p>
+    <div class="manual-step"><div class="sn">1</div><div class="st"><strong>From the app</strong> (recommended if you use Chrome or Edge on Android or desktop) — connect the thermal printer over Bluetooth on this same screen and tick <strong>"Open the drawer automatically on every charge"</strong>. The drawer will open on every charge, whether cash, card or mixed. You also get an <strong>"Open drawer"</strong> button in the POS to open it without charging (to give change, for instance): those manual openings <strong>are recorded in the Activity log</strong>, with who and when — exactly what you'll want to check if the till ever doesn't add up.</div></div>
+    <div class="manual-step"><div class="sn">2</div><div class="st"><strong>From the printer driver</strong> (works on any device, including iPad and iPhone) — your system's printer properties have an option along the lines of "open cash drawer when printing". Tick it and the drawer opens with every receipt printed, whatever produced it. No app settings involved.</div></div>
+    <div class="manual-warning"><i class="ti ti-alert-triangle"></i>Option 1 uses Bluetooth from the browser, which <strong>only works in Chrome and Edge</strong> (on Android or desktop). <strong>It is not available on iPhone or iPad</strong>: if your POS is an iPad, use option 2.</div>
 
     <h4>🖨️ Kitchen and floor tickets</h4>
     <p>Choose how the team receives orders when fired: <strong>viewing them on screen</strong> (the Kitchen/Floor screen) or <strong>automatically printing a ticket</strong> (one kitchen ticket with the food and a separate floor/bar ticket with the drinks). If you choose printing, set the paper width (58 or 80 mm) and use "Print test ticket". The specific printer is chosen in your browser/system's print dialog; if you have a thermal receipt printer, set it up as your device's printer.</p>

@@ -1094,6 +1094,7 @@ function renderTPV(){
       <button class="btn" onclick="openVoidLogModal()"><i class="ti ti-alert-triangle"></i> ${t('title.voidLog')}</button>
       <button class="btn" onclick="openMarkDishOutModal()"><i class="ti ti-flame-off"></i> ${t('btn.markDishOut')}</button>
       <button class="btn" onclick="openCashClosureHistory()"><i class="ti ti-history"></i> ${t('title.cashHistory')}</button>
+      ${(DB.business && DB.business.cashDrawerOnSale && typeof thermalPrintingSupported === 'function' && thermalPrintingSupported()) ? `<button class="btn" onclick="openCashDrawerManually()" title="${t('drawer.manualHint')}"><i class="ti ti-cash"></i> ${t('drawer.openBtn')}</button>` : ''}
       <button class="btn" id="tpv-close-cash-btn" onclick="openCashClosureModal()"><i class="ti ti-cash-register"></i> ${t('btn.cashClose')}</button>
     </div>
     ${renderTpvKpis()}
@@ -3806,6 +3807,12 @@ function finalizeCharge(orderId){
   order.status = 'pagada';
   order.closedAt = new Date().toISOString();
   saveDB();
+  // Cajón portamonedas: se abre en CUALQUIER forma de pago (también tarjeta),
+  // que es como funciona un TPV normal — el camarero puede necesitar dar
+  // cambio, guardar un justificante o dejar el ticket dentro. En silencio y
+  // sin await: si el negocio no tiene cajón, o la impresora no está
+  // conectada, no pasa absolutamente nada y el cobro sigue su curso.
+  if(typeof openCashDrawerOnSale === 'function') openCashDrawerOnSale();
   if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order);
   renderTPV();
   openTicketDeliveryModal(sale.id);
@@ -4086,6 +4093,12 @@ function confirmSplitPartPayment(orderId, partId){
   part.paid = true;
   part.metodoPago = document.getElementById('split-part-method').value;
   saveDB();
+  // Cada parte de una cuenta dividida es un cobro real por sí mismo (el
+  // comensal entrega su dinero ahí), así que el cajón se abre en cada una.
+  // A propósito NO se abre además en finalizeSplitOrder: ese cierre ocurre
+  // justo después de pagarse la última parte y abriría el cajón dos veces
+  // seguidas sin motivo.
+  if(typeof openCashDrawerOnSale === 'function') openCashDrawerOnSale();
   showToast(escapeHtml(part.label) + ': ' + t('title.chargeRegistered'));
   renderPaymentModal(orderId);
 }

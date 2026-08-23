@@ -5326,6 +5326,70 @@ async function writeThermalChunks(characteristic, bytes){
     if(i + THERMAL_CHUNK_SIZE < bytes.length) await new Promise(r => setTimeout(r, THERMAL_CHUNK_DELAY_MS));
   }
 }
+/* ============================================================
+   CAJÓN PORTAMONEDAS
+   El cajón NO se conecta al ordenador ni a la tablet: va enchufado a la
+   IMPRESORA de tickets con un cable RJ11 (parecido al del teléfono fijo),
+   y es la impresora la que lo abre mandándole un pulso eléctrico. Ese
+   pulso es un comando ESC/POS más, así que se envía por la misma conexión
+   Bluetooth que ya usamos para imprimir: no hace falta ningún cable, driver
+   ni aparato adicional.
+   ============================================================ */
+// ESC p m t1 t2 — m=0 es el pin 2 del conector, que es el que usa la
+// inmensa mayoría de cajones (algunos modelos raros van por el pin 5, m=1).
+// t1/t2 son la duración del pulso en unidades de 2 ms: 25 y 250 son los
+// valores que recomienda Epson y que aceptan también los clones.
+const CASH_DRAWER_KICK = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+
+/* Abre el cajón. opts.silent = true para el cobro automático: en ese caso,
+   si no hay impresora ya conectada NO se hace nada y no se avisa de nada —
+   abrir el selector de dispositivos Bluetooth en mitad de cada cobro, o
+   soltar un aviso de error a un negocio que ni tiene cajón, sería mucho
+   peor que no hacer nada. El botón manual sí es interactivo (silent=false):
+   ahí el usuario ha pedido explícitamente abrirlo y espera respuesta. */
+async function openCashDrawer(opts){
+  const o = opts || {};
+  const key = o.printerId || 'ticket';
+  if(!thermalPrintingSupported()){
+    if(!o.silent) showToast(t('thermal.notSupported'));
+    return false;
+  }
+  if(!thermalPrinterCharacteristics.has(key)){
+    if(o.silent) return false;
+    const connected = await connectThermalPrinter(key);
+    if(!connected) return false;
+  }
+  try{
+    await writeThermalChunks(thermalPrinterCharacteristics.get(key), CASH_DRAWER_KICK);
+    return true;
+  }catch(e){
+    console.error('Error abriendo el cajón portamonedas', e);
+    // Puede haberse desconectado: forzar reconexión la próxima vez.
+    thermalPrinterCharacteristics.delete(key);
+    if(!o.silent) showToast(t('drawer.openFailed'));
+    return false;
+  }
+}
+
+/* Apertura automática al cobrar. Solo actúa si el negocio lo tiene activado
+   (la mayoría no tiene cajón) y siempre en silencio, para no interrumpir el
+   cobro pase lo que pase con la impresora. */
+function openCashDrawerOnSale(){
+  if(!DB.business || !DB.business.cashDrawerOnSale) return;
+  openCashDrawer({silent: true});
+}
+
+/* Apertura manual desde el TPV. A diferencia de la automática, esta SÍ deja
+   rastro en el registro de actividad: abrir el cajón fuera de un cobro es
+   justo el movimiento que un dueño querría poder revisar ante un descuadre. */
+async function openCashDrawerManually(){
+  const okAbierto = await openCashDrawer({silent: false});
+  if(!okAbierto) return;
+  if(typeof logAudit === 'function') logAudit('drawer_open', t('audit.cashDrawerOpened'), 'critical');
+  saveDB();
+  showToast(t('drawer.opened'));
+}
+
 async function printToThermalPrinter(text, printerId){
   const key = printerId || 'ticket';
   if(!thermalPrintingSupported()){ showToast(t('thermal.notSupported')); return; }
