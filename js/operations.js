@@ -1433,7 +1433,10 @@ function updatePedidoLineNota(idx, value){
   if(!o || idx < 0 || idx >= (o.items||[]).length) return;
   if(o.estado === 'RECIBIDO' && !editUnlocked){
     showToast(t('msg.editModeRequiredForLog'));
-    renderPedidoDetail();
+    // Conserva la posición de la pantalla: sin esto, escribir un valor en
+    // una lista larga repintaba la vista entera y te devolvía arriba del
+    // todo, obligando a bajar otra vez tras CADA dato introducido.
+    withScrollPreserved(() => renderPedidoDetail());
     return;
   }
   o.items[idx].notaRecepcion = value.trim();

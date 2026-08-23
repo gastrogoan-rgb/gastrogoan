@@ -741,7 +741,7 @@ function renderMegalistaTable(items){
     ? `<tr><td colspan="8"><div class="empty"><i class="ti ti-list-details"></i>${t('empty.ingredients')}</div></td></tr>`
     : items.map(ing => `
       <tr style="${ing.activo===false?'opacity:.55':''}">
-        <td><strong>${escapeHtml(ing.name)}</strong>${ing.activo===false?` <span class="badge badge-gray" style="font-size:9px">${t('label.discontinued')}</span>`:''}</td>
+        <td><strong>${escapeHtml(ing.name)}</strong></td>
         <td><span class="badge badge-gray">${escapeHtml(ing.category?ingredientCategoryLabel(ing.category):'—')}</span></td>
         <td>${escapeHtml(ing.supplier||'—')}</td>
         <td>${escapeHtml(ing.unit)}</td>
@@ -774,13 +774,16 @@ function renderMegalista(){
   const prov = document.getElementById('megalista-filter-prov').value;
   const box = document.getElementById('megalista-content');
 
-  const showInactive = document.getElementById('megalista-show-inactive')?.checked;
+    // Se quitó el filtro "Mostrar descatalogados": ya no existía forma de
+    // marcar un ingrediente como descatalogado, así que era un filtro para un
+    // estado que no se podía crear. A propósito NO se filtra por i.activo: si
+    // algún ingrediente quedó marcado de antes, sin la casilla para mostrarlo
+    // se habría vuelto invisible para siempre.
   const items = DB.ingredients.filter(i => {
     const matchArea = (i.area||'cocina') === currentArea();
     const matchSearch = !search || i.name.toLowerCase().includes(search) || (i.supplier||'').toLowerCase().includes(search);
     const matchProv = !prov || (i.supplier||'') === prov;
-    const matchActivo = showInactive || i.activo !== false;
-    return matchArea && matchSearch && matchProv && matchActivo;
+    return matchArea && matchSearch && matchProv;
   });
 
   if(!items.length){
@@ -1246,23 +1249,6 @@ function updateIngredientIva(id, val){
   saveDB();
 }
 
-// Marca un ingrediente como descatalogado/inactivo sin borrarlo — a
-// diferencia de borrarlo (deleteIngredient), esto NO desvincula el
-// ingrediente de las recetas que ya lo usan (su coste histórico sigue
-// intacto), solo deja de ofrecerse para comprarlo o para añadirlo a un
-// plato nuevo. Útil para un ingrediente de temporada o que ha dejado de
-// servir el proveedor, sin perder ni el histórico ni el vínculo con las
-// recetas que lo llevan.
-function toggleIngredientActivo(id){
-  if(!isOwnerSession() && !editUnlocked) return;
-  const ing = DB.ingredients.find(i=>i.id===id);
-  if(!ing) return;
-  ing.activo = ing.activo===false ? true : false;
-  saveDB();
-  renderMegalista();
-  showToast(ing.activo===false ? t('msg.ingredientDiscontinued') : t('msg.ingredientReactivated'));
-}
-
 // Recetas (Escandallo) que usan un ingrediente, para avisar antes de
 // borrarlo y evitar descuadrar el coste de esos platos sin darse cuenta.
 function recipesUsingIngredient(id){
@@ -1577,7 +1563,10 @@ function updateStockMin(ingredientId, value){
   const s = getStockEntry(ingredientId);
   s.min = parseFloat(value) || 0;
   saveDB();
-  renderStock();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderStock());
 }
 
 // Registro de ajustes de stock (manuales y rápidos), para poder investigar
@@ -1724,7 +1713,10 @@ function updateStockQty(ingredientId, value){
   const ing = getIngredient(ingredientId);
   logStockAdjustment('ing', ingredientId, ing?ing.name:'', before, num);
   saveDB();
-  renderStock();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderStock());
 }
 
 /* ============== Elaboraciones propias (caldos, salsas, etc.) ============== */
@@ -1821,7 +1813,10 @@ function updateElaboracionMin(id, value){
   const e = getElaboracion(id); if(!e) return;
   e.min = parseFloat(value) || 0;
   saveDB();
-  renderStock();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderStock());
 }
 
 function updateElaboracionQty(id, value){
@@ -1834,5 +1829,8 @@ function updateElaboracionQty(id, value){
   e.qty = num;
   logStockAdjustment('elab', id, e.name, before, num);
   saveDB();
-  renderStock();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderStock());
 }

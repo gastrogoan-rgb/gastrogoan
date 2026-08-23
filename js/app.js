@@ -283,7 +283,10 @@ async function removeManosPaso(i){
   if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
   pasos.splice(i,1);
   saveDB();
-  renderLimpiezaManos();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderLimpiezaManos());
 }
 function renderLimpiezaProtocolo(){
   const box = document.getElementById('limpieza-tab-content');
@@ -336,7 +339,10 @@ function updateProtocoloPaso(type,i,val){ if(!editUnlocked) return; limpiezaProt
 function moveProtocoloPaso(type,i,dir){
   moveArrayItem(limpiezaProtocoloPasos(type), i, dir);
   saveDB();
-  renderLimpiezaProtocolo();
+  // Conserva la posición de la pantalla: sin esto, escribir un valor en
+  // una lista larga repintaba la vista entera y te devolvía arriba del
+  // todo, obligando a bajar otra vez tras CADA dato introducido.
+  withScrollPreserved(() => renderLimpiezaProtocolo());
 }
 // Quién registra el cumplimiento lo decide la propia sesión con la que se
 // ha entrado (igual que el chat interno), no un desplegable donde se podía

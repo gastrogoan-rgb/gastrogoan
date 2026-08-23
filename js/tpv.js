@@ -2779,11 +2779,24 @@ function renderComandasCocina(){
             ${g.tanda ? `<div style="flex:1;min-width:0;overflow-wrap:anywhere;font-size:11px;font-weight:700;color:var(--brand-orange);text-transform:uppercase"><i class="ti ti-chevrons-right"></i> ${escapeHtml(g.tanda)}</div>` : `<div></div>`}
             ${groupBtn}
           </div>
-          ${g.lines.map(({line, idx}) => `
+          ${g.lines.map(({line, idx}) => {
+            // En cocina importa distinguir de un vistazo un plato suelto de la
+            // carta de uno que forma parte de un menú cerrado: el del menú
+            // tiene que salir coordinado con el resto de su menú, no en cuanto
+            // esté listo. El menú ya viaja en la línea (line.menuId), así que
+            // se marca con una etiqueta bien visible en vez de dejarlo
+            // escondido dentro de la nota en gris, donde se pasa por alto.
+            const menuNombre = line.menuId ? ((DB.menus||[]).find(m => m.id === line.menuId)||{}).nombre : null;
+            // La nota de una línea de menú es autogenerada ("Menú: X"): si ya
+            // se enseña la etiqueta, repetirla debajo sobra. Una nota escrita
+            // a mano por el camarero sí se sigue mostrando.
+            const notaEsAutoMenu = menuNombre && line.notas === `Menú: ${menuNombre}`;
+            return `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
               <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-                ${line.notas ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
+                ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
+                ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`
               : line.estado==='cocina' ? `<button class="btn btn-sm" style="flex:none;background:var(--amber);color:#fff;border-color:var(--amber)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`
@@ -2791,7 +2804,7 @@ function renderComandasCocina(){
               : line.recogidoAt ? `<span class="badge badge-green" style="flex:none"><i class="ti ti-circle-check"></i> ${t('kitchen.delivered')}</span>`
               : `<button class="btn btn-sm" style="flex:none;background:var(--olive);color:#fff;border-color:var(--olive)" onclick="cycleLineEstado(${order.id}, ${idx})"><i class="ti ti-bell-ringing"></i> ${t('tpv.readyToPickup')}</button>`}
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>
       `;}).join('')}
     </div>
