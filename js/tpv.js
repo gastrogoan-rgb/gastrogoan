@@ -813,14 +813,16 @@ function renderTpvToGo(tiposServicio){
   // de seguir esto hasta que se recargue la pantalla.
   if(!togoTabManual) togoTab = pendingCount ? 'pendientes' : 'activos';
   return `
-    <h3 style="margin-top:16px;display:flex;align-items:center;flex-wrap:nowrap;gap:8px;overflow-x:auto">
+    <h3 style="margin-top:16px">
       <span style="white-space:nowrap"><i class="ti ti-shopping-bag"></i> ${t('title.togoDelivery')}</span>
-      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" id="tpv-online-toggle-btn" style="white-space:nowrap;margin-left:auto" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
+    </h3>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <button class="btn btn-sm ${pedidosOnlineOn?'btn-primary':'btn-danger'}" id="tpv-online-toggle-btn" style="white-space:nowrap" onclick="toggleOnlineOrdersSwitch()" title="${t('tpv.onlineOrdersSwitchHint')}">
         <i class="ti ${pedidosOnlineOn?'ti-toggle-right':'ti-toggle-left'}"></i> ${t('tpv.onlineOrders')}: ${pedidosOnlineOn?t('common.on'):t('common.off')}
       </button>
       ${getActiveRepartosOrders().length ? `<button class="btn btn-sm btn-primary" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')} (${getActiveRepartosOrders().length})</button>` : `<button class="btn btn-sm" style="white-space:nowrap" onclick="openRepartosControlModal()"><i class="ti ti-moped"></i> ${t('title.repartosControl')}</button>`}
       <button class="btn btn-sm" style="white-space:nowrap" onclick="openTogoCalendarModal()"><i class="ti ti-calendar-stats"></i> ${t('title.togoCalendar')}</button>
-    </h3>
+    </div>
     <div style="display:flex;gap:6px;margin:10px 0">
       <button class="btn btn-sm ${togoTab==='pendientes'?'btn-primary':''}" onclick="setTogoTabManual('pendientes')"><i class="ti ti-bell-ringing"></i> ${t('tab.pendingOnline')}${pendingCount ? ` <span class="badge badge-amber">${pendingCount}</span>` : ''}${getTodayScheduledLaterOrders().length ? ` <span class="badge">${getTodayScheduledLaterOrders().length}</span>` : ''}</button>
       <button class="btn btn-sm ${togoTab==='activos'?'btn-primary':''}" onclick="setTogoTabManual('activos')"><i class="ti ti-list-check"></i> ${t('tab.activeTogoOrders')}${toGoOrders.length ? ` <span class="badge ${pedidosOnlineOn?'badge-blue':'badge-red'}">${toGoOrders.length}</span>` : ''}</button>

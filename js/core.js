@@ -1387,6 +1387,30 @@ let cloudSyncTimer = null;
 let publicMirrorSyncTimer = null;
 const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un solo envío a la nube
 
+// Firebase Realtime Database NO garantiza el orden de las claves de un
+// objeto al devolverlo (las reordena, normalmente por orden alfabético) —
+// un JSON.stringify normal de "lo mismo" antes y después de pasar por la
+// nube puede salir con las claves en otro orden, aunque el contenido sea
+// idéntico. Usado tal cual para comparar "¿ha cambiado de verdad esto?"
+// (lastSyncedSnapshot, warnIfConcurrentEditLost...), eso produce falsos
+// positivos permanentes: cada ida y vuelta a la nube parece un cambio
+// nuevo aunque nadie haya tocado nada, y como cada "cambio" dispara otro
+// envío a la nube, entra en un bucle de sincronización que nunca se
+// detiene — visible como el aviso de "cambios sobrescritos" reapareciendo
+// sin parar, cifras que no dejan de refrescarse solas, y cualquier lista
+// que se repinta perdiendo el scroll continuamente. Esta versión ordena
+// las claves de cualquier objeto (recursivamente, los arrays mantienen su
+// orden) antes de convertir a texto, así la comparación no depende del
+// orden con que Firebase decida devolver las claves.
+function canonicalStringify(value){
+  if(Array.isArray(value)) return '[' + value.map(canonicalStringify).join(',') + ']';
+  if(value && typeof value === 'object'){
+    const keys = Object.keys(value).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + canonicalStringify(value[k])).join(',') + '}';
+  }
+  return JSON.stringify(value);
+}
+
 /* ============================================================
    LICENCIA — Clave de activación
    Cada copia vendida se activa con una clave generada por el
@@ -2249,8 +2273,8 @@ function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
   const merged = {};
   const allIds = new Set([...Object.keys(localStock), ...Object.keys(remoteStock)]);
   allIds.forEach(id => {
-    const localJson = JSON.stringify(localStock[id]);
-    const lastJson = JSON.stringify(lastSynced[id]);
+    const localJson = canonicalStringify(localStock[id]);
+    const lastJson = canonicalStringify(lastSynced[id]);
     const localChanged = localStock[id] !== undefined && localJson !== lastJson;
     merged[id] = localChanged ? localStock[id] : remoteStock[id];
   });
@@ -3338,9 +3362,9 @@ function warnIfConcurrentEditLost(key, localArr, remoteArr){
     let lastSynced;
     try{ lastSynced = JSON.parse(lastSyncedSnapshot[key]); }catch(e){ return; }
     if(!Array.isArray(lastSynced)) return;
-    const lastById = new Map(lastSynced.filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
-    const localById = new Map((localArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
-    const remoteById = new Map((remoteArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, JSON.stringify(x)]));
+    const lastById = new Map(lastSynced.filter(x=>x&&x.id!=null).map(x=>[x.id, canonicalStringify(x)]));
+    const localById = new Map((localArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, canonicalStringify(x)]));
+    const remoteById = new Map((remoteArr||[]).filter(x=>x&&x.id!=null).map(x=>[x.id, canonicalStringify(x)]));
     const collided = [];
     localById.forEach((localJson, id) => {
       if(!remoteById.has(id)) return;
@@ -3350,9 +3374,11 @@ function warnIfConcurrentEditLost(key, localArr, remoteArr){
       // último sync, remoto también cambió, y no son el mismo cambio).
       if(localJson !== lastJson && remoteJson !== lastJson && localJson !== remoteJson) collided.push(id);
     });
-    if(collided.length && typeof showToast === 'function'){
-      showToast(t('msg.concurrentEditOverwritten').replace('${count}', collided.length));
-    }
+    // Antes se avisaba con un toast cada vez que pasaba esto — molestaba
+    // en el día a día (salta con cualquier coincidencia de sincronización,
+    // no solo con pérdidas graves) y no es información que el personal
+    // necesite ver en caliente. Queda igualmente el rastro en el registro
+    // de actividad para quien quiera revisarlo con calma.
     if(collided.length && DB.auditLog){
       DB.auditLog.push({id: genId(), fecha: todayStr(), hora: new Date().toTimeString().slice(0,5), tipo: 'sync_conflict', desc: `${key}: ${collided.join(',')}`});
     }
@@ -3364,7 +3390,7 @@ function applyRemoteBlock(key, remoteValue){
   // Lo que la nube tiene de verdad ahora mismo, ANTES de fusionar con nada
   // local — se necesita para saber, después, si el resultado fusionado
   // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
-  const remoteOnlyJson = JSON.stringify(merged);
+  const remoteOnlyJson = canonicalStringify(merged);
   if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
@@ -3390,14 +3416,14 @@ function applyRemoteBlock(key, remoteValue){
   }
   if(key === 'categoryIcons' && DB[key] && typeof merged === 'object'){
     merged = {
-      recipe: mergeStockField((DB[key]||{}).recipe, (merged||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
-      ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
+      recipe: mergeStockField((DB[key]||{}).recipe, (merged||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
+      ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
     };
   }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
   }
-  const json = JSON.stringify(merged);
+  const json = canonicalStringify(merged);
   if(lastSyncedSnapshot && lastSyncedSnapshot[key] === json) return;
   // Si la fusión conservó algo local que la nube todavía no tiene (p.ej. un
   // pedido tomado offline en ESTE dispositivo que el otro no llegó a ver
@@ -3520,7 +3546,7 @@ function mergeRemoteIntoLocal(val){
     // página). Aplicar aquí la misma fusión por id que ya usa
     // applyRemoteBlock para los listeners incrementales evita perder en
     // silencio comandas/ventas/stock hechos offline en esta misma carga.
-    const remoteOnlyJson = JSON.stringify(merged[key]);
+    const remoteOnlyJson = canonicalStringify(merged[key]);
     let value = merged[key];
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
@@ -3539,11 +3565,11 @@ function mergeRemoteIntoLocal(val){
     }
     if(key === 'categoryIcons' && DB[key] && typeof value === 'object'){
       value = {
-        recipe: mergeStockField((DB[key]||{}).recipe, (value||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
-        ingredient: mergeStockField((DB[key]||{}).ingredient, (value||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? JSON.stringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
+        recipe: mergeStockField((DB[key]||{}).recipe, (value||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
+        ingredient: mergeStockField((DB[key]||{}).ingredient, (value||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
       };
     }
-    const valueJson = JSON.stringify(value);
+    const valueJson = canonicalStringify(value);
     // Igual que en applyRemoteBlock: si la fusión conservó algo local que la
     // nube todavía no tenía (turno entero trabajado offline antes de esta
     // recarga), NO se marca como sincronizado con el resultado fusionado —
@@ -4917,7 +4943,7 @@ function pushAllToCloud(){
   const updates = {};
   Object.keys(DB).forEach(key => {
     updates[key] = DB[key];
-    lastSyncedSnapshot[key] = JSON.stringify(DB[key]);
+    lastSyncedSnapshot[key] = canonicalStringify(DB[key]);
   });
   cloudRef.set(updates).catch(e => {
     console.error('Error guardando en la nube', e);
@@ -4967,7 +4993,7 @@ function flushCloudSync(){
   const updates = {};
   const pendingJson = {};
   Object.keys(DB).forEach(key => {
-    const json = JSON.stringify(DB[key]);
+    const json = canonicalStringify(DB[key]);
     if(lastSyncedSnapshot[key] !== json){
       updates[key] = DB[key];
       pendingJson[key] = json;
@@ -4987,7 +5013,7 @@ function flushCloudSync(){
       // del último sincronizado — si mientras tanto se hizo otro cambio
       // local (o el reintento de otro bloque sigue en curso), se queda en
       // "pending" hasta que de verdad no falte nada por confirmar.
-      const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== JSON.stringify(DB[key]));
+      const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== canonicalStringify(DB[key]));
       if(!stillPending && socketConnected) updateSyncBadge('online');
     }).catch(onFail);
   }catch(e){
