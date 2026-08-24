@@ -468,5 +468,34 @@ await testAsync('FIX M3: el badge pasa a "pending" al programar un envío, y sol
   console.log('   → badge: pending mientras se envía → online solo tras confirmarse de verdad');
 });
 
+console.log('\n--- H. Sincronización: ¿un borrado en la nube deja basura que rompe la pantalla? ---\n');
+
+await testAsync('mergeStockField: si la nube ya no tiene una entrada, la clave se QUITA (antes quedaba valiendo undefined)', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  // Los dos empleados estaban sincronizados...
+  const local = {1:{platos:[],produccion:{}}, 2:{platos:[],produccion:{}}};
+  const yaSincronizado = sandbox.canonicalStringify(local);
+  // ...y otro dispositivo borró al 2, así que la nube ya solo devuelve el 1.
+  const remoto = {1:{platos:[],produccion:{}}};
+  const merged = sandbox.mergeStockField(local, remoto, yaSincronizado);
+  assert.ok(!('2' in merged),
+    'la clave borrada en la nube no debe quedarse puesta: dejarla valiendo undefined hacía reventar a quien recorriera el mapa (Distribución del Trabajo se quedaba congelada y sus botones parecían muertos)');
+  assert.ok(merged['1'], 'la entrada que sigue existiendo debe conservarse');
+  console.log('   → borrado remoto = clave fuera, no clave sin valor');
+});
+
+await testAsync('mergeStockField: un cambio LOCAL sin subir no se pierde aunque la nube no lo tenga', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  const local = {1:{platos:['algo tomado en este dispositivo']}};
+  const remoto = {};
+  // lastSynced vacío = lo local es más nuevo que lo que la nube conoce
+  const merged = sandbox.mergeStockField(local, remoto, sandbox.canonicalStringify({}));
+  assert.deepEqual(merged['1'], local['1'],
+    'quitar claves no puede llevarse por delante lo editado en local que aún no se ha subido');
+  console.log('   → lo local sin subir se conserva');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

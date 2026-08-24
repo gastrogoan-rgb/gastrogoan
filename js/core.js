@@ -2299,7 +2299,20 @@ function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
     const localJson = canonicalStringify(localStock[id]);
     const lastJson = canonicalStringify(lastSynced[id]);
     const localChanged = localStock[id] !== undefined && localJson !== lastJson;
-    merged[id] = localChanged ? localStock[id] : remoteStock[id];
+    const valor = localChanged ? localStock[id] : remoteStock[id];
+    // Si la nube ya no tiene esa entrada y aquí tampoco se ha tocado desde
+    // la última sincronización, es que se borró de verdad: la clave se
+    // QUITA, no se deja puesta valiendo undefined.
+    //
+    // Dejarla puesta era un desastre silencioso: quien luego recorriera el
+    // mapa con Object.keys se encontraba una clave cuyo valor no existe y
+    // reventaba al leer dentro. Pasaba en Distribución del Trabajo (al
+    // borrar un empleado desde otro dispositivo, la pantalla entera dejaba
+    // de dibujarse y los botones parecían muertos), y podía pasar igual en
+    // turnos, mensajes fijados del chat y notas de traspaso, que usan esta
+    // misma fusión.
+    if(valor === undefined) return;
+    merged[id] = valor;
   });
   return merged;
 }

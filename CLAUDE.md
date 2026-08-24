@@ -120,6 +120,7 @@ node -c js/<fichero>.js       # sintaxis
 node test/smoke.test.mjs      # cálculos de dinero/IVA, stock, recetas
 node test/audit-active.mjs    # regresiones de sincronización
 python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 24 vistas
+python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 248 botones visibles de las 30 pantallas
 bash build.sh                 # regenerar dist/
 ```
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
@@ -156,6 +157,27 @@ localStorage.setItem('gastrogoan_owner_pass_prompted','1');
 | Crash al sembrar datos | Casi siempre **nombres de campo inventados** en la semilla. Verificar la estructura real con grep antes. |
 | `DB` es `null` a media prueba | `setViewport({isMobile:true})` **recarga la página** y borra el estado inyectado. Re-sembrar después. |
 | Abriendo el HTML como archivo local aparecen datos raros | `file://` y `content://` comparten `localStorage` entre archivos: se ven datos de pruebas anteriores. **Nada de esto le pasa a un cliente que entra por gastrogoan.com.** Probar siempre servido por HTTP. |
+
+### El hueco que dejó pasar dos bugs a producción
+
+Las pruebas corren **en local, sin Firebase**, así que solo cubrían "¿funciona
+la app?" y no "¿qué pasa cuando la nube contesta?". Por ahí se colaron dos
+fallos que solo aparecen con la nube conectada de verdad:
+
+- **El selector de idioma no hacía nada.** El idioma vivía en `DB.business`,
+  que se sincroniza; la recarga de `setLang` cortaba el guardado y la nube
+  devolvía el idioma viejo. Ahora vive en `localStorage` (es de cada
+  dispositivo, no del negocio).
+- **Distribución del Trabajo se quedaba congelada.** Al borrarse un empleado
+  en otro dispositivo, `mergeStockField` dejaba su clave puesta valiendo
+  `undefined`, y recorrer el mapa reventaba antes de dibujar nada — los
+  botones parecían muertos. Afectaba igual a `shifts`, `chatPinned` y
+  `shiftHandoffNotes`, que usan esa misma fusión.
+
+**Al tocar cualquier cosa que se sincronice, simular la respuesta de la nube**
+(`applyRemoteBlock` / `mergeStockField` a mano) y no darlo por bueno solo
+porque funcione en local. Los dos casos tienen ya prueba permanente en
+`test/audit-active.mjs`, bloque H.
 
 ---
 

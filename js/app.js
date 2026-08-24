@@ -876,6 +876,12 @@ function migrateWorkDistribution(){
     // solo texto), para poder marcarla como hecha por fecha sin que el
     // estado se desplace a otra tarea si se borra o reordena alguna.
     const d = DB.workDistribution[empId];
+    // Cinturón además del arreglo de mergeStockField: una entrada sin valor
+    // (empleado borrado desde otro dispositivo) hacía reventar la línea de
+    // abajo, y como esto se ejecuta ANTES de pintar nada, la pantalla entera
+    // se quedaba como estaba y los botones parecían muertos. Se descarta y
+    // se sigue, que es lo único sensato: esa persona ya no existe.
+    if(!d || typeof d !== 'object'){ delete DB.workDistribution[empId]; return; }
     if(!d.doneDates) d.doneDates = {};
     if(!d.tareasUnicas) d.tareasUnicas = {};
     Object.keys(d.produccion||{}).forEach(dayIdx => {
