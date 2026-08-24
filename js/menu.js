@@ -478,6 +478,11 @@ function renderCartaSecciones(){
       <div class="ge-sec-head">
         <div style="display:flex;align-items:center;gap:4px">
           ${reorderButtons(`moveCartaSection(${si},-1)`, `moveCartaSection(${si},1)`, si===0, si===secciones.length-1)}
+          <!-- El icono de la sección es el que ve el cliente en la web de
+               reservas y pedidos: allí cada sección es una carpeta, y este
+               es su dibujo. Se elige a mano porque adivinarlo por el nombre
+               nunca acierta del todo ("Cosas del chef", "La pizarra"). -->
+          <button class="btn btn-sm btn-icon" style="font-size:18px;line-height:1" title="${t('title.chooseFolderIcon')}" onclick="openCartaSectionIconModal(${sec.id})">${sec.icono || cartaSectionFallbackIcon(tItem(sec))}</button>
           <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
         </div>
         <div class="actions-cell">
@@ -523,6 +528,107 @@ function renderCartaSecciones(){
   }).join('');
   box.innerHTML = searchBox + (rows.trim() ? rows : `<div class="empty"><i class="ti ti-search"></i>${t('empty.noSearchResults')}</div>`);
 }
+/* ---- Icono de cada sección de la carta ----
+   Catálogo aparte del de CATEGORY_ICON_CHOICES (Escandallo/Mega Lista) a
+   propósito: aquel es de uso interno y puede permitirse dibujos simpáticos,
+   pero estos los ve el cliente final en la web del restaurante, así que se
+   dejan fuera los infantiles (golosinas, caritas, pescaditos de colores,
+   comida rápida) y se queda producto y servicio de mesa. */
+const CARTA_SECTION_ICON_CHOICES = [
+  // Para empezar
+  '🫒','🧀','🥖','🍞','🧈','🥯',
+  // Verdura y huerta
+  '🥗','🥬','🍅','🍆','🥒','🌽','🥕','🥔','🧄','🧅','🫑','🌶️','🍄','🥑','🌿',
+  // Cuchara y guisos
+  '🍲','🥘','🫕','🍛',
+  // Arroces y pasta
+  '🍚','🍝','🫓',
+  // Carnes
+  '🥩','🍖','🍗','🥓',
+  // Pescado y marisco
+  '🐟','🦐','🦞','🦑','🦪','🐚',
+  // Huevos
+  '🥚','🍳',
+  // Postres
+  '🍰','🍮','🍫','🥧','🍯',
+  // Fruta
+  '🍇','🍑','🍐','🍋','🍊','🍎','🍈','🫐','🍓','🥭','🍍',
+  // Vinos y espumosos
+  '🍷','🥂','🍾','🫗',
+  // Cerveza y destilados
+  '🍺','🍻','🥃','🍸',
+  // Café e infusiones
+  '☕','🍵',
+  // Sin alcohol
+  '🥤','🧃','🧊','🥛',
+  // Genéricos
+  '🍽️','🍴','🥄','🧂','📖',
+];
+// Respaldo mientras el hostelero no elija: se adivina por el nombre de la
+// sección. Gemelo del de reservagastrogoan.html — si se toca uno hay que
+// tocar el otro, para que lo que ve el dueño al editar sea exactamente lo
+// que verá su cliente en la web.
+const CARTA_SECTION_ICON_WORDS = [
+  ['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'], '🫒',
+  ['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'], '🥗',
+  ['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'], '🍲',
+  ['arroz','arroces','arros','paella','risotto','rice','fideua'], '🍚',
+  ['pasta','macarron','espagueti','spaghetti','lasan'], '🍝',
+  ['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'], '🥩',
+  ['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'], '🐟',
+  ['huevo','egg','tortilla','truita','revuelto','ou'], '🍳',
+  ['queso','formatge','cheese','embutido','embotit','curado','charcuter'], '🧀',
+  ['pan','bread','coca','tosta','torrada','pa'], '🥖',
+  ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
+  ['fruta','fruita','fruit'], '🍇',
+  ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
+  ['cerveza','cervesa','beer','birra','caña'], '🍺',
+  ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
+  ['cafe','cafeteria','coffee','infusion','infusio','tea','te'], '☕',
+  ['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'], '🥤',
+  ['desayuno','esmorzar','breakfast','brunch'], '🥯',
+];
+// Las palabras de tres letras o menos ('ou', 'pa', 'vi', 'te') solo valen
+// como palabra entera: buscándolas por dentro, "Pasta" y "Paella" salían
+// con un pan.
+function cartaSectionIconMatches(n, w){
+  const k = String(w).toLowerCase();
+  if(k.length > 3) return n.includes(k);
+  return new RegExp('(^|[^a-z0-9])' + k + '([^a-z0-9]|$)').test(n);
+}
+function cartaSectionFallbackIcon(name){
+  const n = String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(let i=0; i<CARTA_SECTION_ICON_WORDS.length; i+=2){
+    if(CARTA_SECTION_ICON_WORDS[i].some(w => cartaSectionIconMatches(n, w))) return CARTA_SECTION_ICON_WORDS[i+1];
+  }
+  return '🍽️';
+}
+function openCartaSectionIconModal(secId){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
+  openModal(`
+    <div class="modal-header">
+      <h3>${t('title.chooseFolderIcon')}: ${escapeHtml(tItem(sec))}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 10px">${t('carta.sectionIconHint')}</p>
+    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:12px">
+      ${CARTA_SECTION_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCartaSectionIcon(${sec.id},'${e}')">${e}</button>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="setCartaSectionIcon(${sec.id},'')">${t('btn.removeIcon')}</button>
+      <button class="btn" onclick="closeModal()">${t('common.close')}</button>
+    </div>
+  `);
+}
+function setCartaSectionIcon(secId, emoji){
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
+  if(emoji) sec.icono = emoji; else delete sec.icono;
+  closeModal();
+  renderCartaSecciones();
+}
+
 function moveCartaSection(index, dir){
   moveArrayItem(cartaEdit.secciones, index, dir);
   renderCartaSecciones();

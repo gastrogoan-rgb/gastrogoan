@@ -1726,8 +1726,56 @@ let lastMenuCartas = null;
 // principal) nunca ha cargado esa fuente, así que un <i class="ti ..."> no
 // se vería (caja vacía). El resto de la web pública ya usa emoji (✅, ⚠️),
 // así que es lo consistente con su propio estilo.
-const MENU_FOLDER_ICONS = ['🍲','🥩','🐟','🥗','🧀','🍰','🍷','☕','🍕','🥖','🍽️'];
-function menuFolderIcon(index){ return MENU_FOLDER_ICONS[index % MENU_FOLDER_ICONS.length]; }
+// El icono de cada carpeta lo elige el hostelero al montar la sección de su
+// carta (botón del emoji en Carta → sección), y viaja dentro de la propia
+// sección. Antes era MENU_FOLDER_ICONS[i % 11]: a "Postres" le podía tocar
+// un pescado, y el mismo apartado cambiaba de dibujo según cuántas carpetas
+// hubiera delante.
+// Si todavía no ha elegido ninguno se adivina por el nombre. Esta tabla es
+// GEMELA de CARTA_SECTION_ICON_WORDS (js/menu.js): si se toca una hay que
+// tocar la otra, para que lo que el dueño ve al editar su carta sea
+// exactamente lo que verá su cliente aquí.
+const MENU_FOLDER_ICON_WORDS = [
+  ['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'], '🫒',
+  ['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'], '🥗',
+  ['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'], '🍲',
+  ['arroz','arroces','arros','paella','risotto','rice','fideua'], '🍚',
+  ['pasta','macarron','espagueti','spaghetti','lasan'], '🍝',
+  ['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'], '🥩',
+  ['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'], '🐟',
+  ['huevo','egg','tortilla','truita','revuelto','ou'], '🍳',
+  ['queso','formatge','cheese','embutido','embotit','curado','charcuter'], '🧀',
+  ['pan','bread','coca','tosta','torrada','pa'], '🥖',
+  ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
+  ['fruta','fruita','fruit'], '🍇',
+  ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
+  ['cerveza','cervesa','beer','birra','caña'], '🍺',
+  ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
+  ['cafe','cafeteria','coffee','infusion','infusio','tea','te'], '☕',
+  ['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'], '🥤',
+  ['desayuno','esmorzar','breakfast','brunch'], '🥯',
+];
+// Sin acentos y en minúsculas: el hostelero escribe "Postres", "POSTRES" o
+// "Postres del día" indistintamente y todos tienen que caer en el mismo sitio.
+function normalizeFolderName(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+// Las palabras de tres letras o menos ('ou' huevo, 'pa' pan, 'vi' vino, 'te')
+// solo valen si son la palabra entera: buscandolas por dentro, "Pasta" y
+// "Paella" salian con un pan, y "Mousses" con un huevo.
+function folderNameMatches(n, w){
+  const k = normalizeFolderName(w);
+  if(k.length > 3) return n.includes(k);
+  return new RegExp('(^|[^a-z0-9])' + k + '([^a-z0-9]|$)').test(n);
+}
+function menuFolderIcon(sec, name){
+  if(sec && sec.icono) return sec.icono;
+  const n = normalizeFolderName(name);
+  for(let i=0; i<MENU_FOLDER_ICON_WORDS.length; i+=2){
+    if(MENU_FOLDER_ICON_WORDS[i].some(w => folderNameMatches(n, w))) return MENU_FOLDER_ICON_WORDS[i+1];
+  }
+  return '🍽️'; // nombre que no reconocemos: cubiertos, neutro y siempre correcto
+}
 // Repinta el bloque entero de la carta. Tiene que pasar SIEMPRE por aquí (y
 // no escribir buildMenuHtmlInner suelto) porque los menús combo del día se
 // pintan aparte, encima de las carpetas: al entrar en una carpeta se
@@ -1820,31 +1868,36 @@ function buildMenuHtmlInner(cartas){
     `).join('');
   }
 
-    // Título de la carta SOLO si además hay menús cerrados: son dos cosas
-    // distintas (un menú a precio fijo frente a platos sueltos) y sin nada que
-    // las separe el cliente ve una lista de menús y debajo unas carpetas sin
-    // explicación, sin entender que son ofertas diferentes. Si no hay menús no
-    // se pone título: no habría ambigüedad que resolver y sería solo ruido.
-    const hayMenus = getActiveMenusPublic().length > 0;
+  // Una carta detrás de otra, cada una con su propio título y sus propias
+  // carpetas debajo. Antes iban todas las secciones de todas las cartas
+  // revueltas en una sola rejilla, distinguidas solo por un prefijo
+  // "Carta · Sección" dentro de cada botón: con dos o tres cartas activas
+  // (comida, bebidas, vinos) el cliente veía doce carpetas seguidas sin
+  // saber dónde acababa una carta y empezaba la siguiente.
+  return cartas.map(carta => {
+    const secciones = allSections.filter(x => x.carta === carta);
+    if(!secciones.length) return '';
+    // El nombre de la carta puede venir vacío; entonces se usa el título
+    // genérico ("Carta"), que es lo que hace falta para separarla de los
+    // menús de arriba.
+    const titulo = trItem(carta) || t('carta.sectionTitle');
     return `
-      ${hayMenus ? `<h2 style="margin-top:22px">${escapeHtml(t('carta.sectionTitle'))}</h2>` : ''}
-    <div class="menu-folder-grid">
-      ${allSections.map(({carta, sec, key}, i) => {
-        const count = sec.platos.filter(p=>p.disponible!==false).length;
-        // El nombre de sección puede venir vacío (o ser "OTROS PLATOS"): sin
-        // el respaldo, con varias cartas activas quedaba un "Bebidas · " con
-        // el separador colgando y sin nada detrás.
-        const secName = trSection(sec) || t('label.dishes');
-        const label = cartas.length > 1 ? `${escapeHtml(trItem(carta))} · ${escapeHtml(secName)}` : escapeHtml(secName);
-        return `
-        <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
-          <span class="icon">${menuFolderIcon(i)}</span>
-          <span class="name">${label}</span>
-          <span class="count">${count===1?t('label.oneDish'):t('label.nDishes').replace('${n}', count)}</span>
-        </button>
-      `;}).join('')}
-    </div>
-  `;
+      <h2 style="margin-top:22px">${escapeHtml(titulo)}</h2>
+      <div class="menu-folder-grid">
+        ${secciones.map(({sec, key}) => {
+          const count = sec.platos.filter(p=>p.disponible!==false).length;
+          // El nombre de sección puede venir vacío (o ser "OTROS PLATOS").
+          const secName = trSection(sec) || t('label.dishes');
+          return `
+          <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
+            <span class="icon">${menuFolderIcon(sec, secName)}</span>
+            <span class="name">${escapeHtml(secName)}</span>
+            <span class="count">${count===1?t('label.oneDish'):t('label.nDishes').replace('${n}', count)}</span>
+          </button>
+        `;}).join('')}
+      </div>
+    `;
+  }).join('');
 }
 
 /* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
