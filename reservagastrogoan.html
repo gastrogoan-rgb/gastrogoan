@@ -146,17 +146,22 @@
      (o un acordeón que sigue amontonando secciones en la misma pantalla),
      se entra y se sale de cada sección como en el selector de carta del
      TPV que usa el camarero — una pantalla a la vez, sin scroll interminable. */
-  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:6px}
+  /* Carpetas compactas a propósito: con la tarjeta grande, una carta de
+     seis secciones ocupaba dos pantallas de móvil y el cliente tenía que
+     bajar solo para ver qué hay. Así caben tres por fila y se ve toda la
+     carta de un vistazo. Siguen midiendo bastante más de 44 px, que es el
+     mínimo para poder pulsarlas con el dedo. */
+  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:6px}
   .menu-folder-card{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-    border:1px solid var(--border);background:var(--surface);padding:20px 10px;cursor:pointer;
-    text-align:center;font-family:inherit;transition:border-color .15s,transform .1s;min-height:104px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    border:1px solid var(--border);background:var(--surface);padding:12px 6px;cursor:pointer;
+    text-align:center;font-family:inherit;transition:border-color .15s,transform .1s;min-height:78px;
   }
   .menu-folder-card:hover{border-color:var(--ink)}
   .menu-folder-card:active{transform:translateY(1px)}
-  .menu-folder-card .icon{font-size:26px;color:var(--olive)}
-  .menu-folder-card .name{font-weight:700;font-size:13.5px;color:var(--ink);line-height:1.25}
-  .menu-folder-card .count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+  .menu-folder-card .icon{font-size:22px;color:var(--olive);line-height:1}
+  .menu-folder-card .name{font-weight:700;font-size:12.5px;color:var(--ink);line-height:1.2}
+  .menu-folder-card .count{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
   .menu-back-btn{
     display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
