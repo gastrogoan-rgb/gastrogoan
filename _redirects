@@ -7,4 +7,12 @@
 # en la barra del navegador. Los archivos reales (reservagastrogoan.html,
 # fonts/*, sw.js) se sirven tal cual porque Netlify prioriza un archivo
 # existente sobre esta regla — solo cae aquí lo que no coincide con nada.
+
+# La raíz a pelo (reservas.gastrogoan.com, sin negocio detrás). Este sitio
+# no tiene index.html, así que sin esta regla saldría el 404 genérico de
+# Netlify. La propia página ya sabe explicar el caso ("Enlace no válido o
+# incompleto — pide al restaurante que te envíe un enlace válido"), que es
+# mucho más útil para alguien que ha llegado ahí por error. Va antes que la
+# regla de abajo porque las reglas se aplican en orden.
+/       /reservagastrogoan.html         200
 /:slug  /reservagastrogoan.html?n=:slug  200
