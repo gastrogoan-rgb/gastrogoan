@@ -45,6 +45,40 @@ function saveBusinessSlots(slots){
   localStorage.setItem(SLOTS_LS, JSON.stringify(slots));
 }
 
+/* La lista de negocios se guarda POR DISPOSITIVO. Sin nada más, al entrar
+   otro dueño en el mismo aparato le aparecían —y podía abrir— los negocios
+   del anterior: un problema de verdad si un cliente presta la tablet, la
+   revende, o simplemente si dos socios usan el mismo mostrador.
+
+   Cada negocio lleva ahora el `ownerId` de quien lo canjeó (el id ESTABLE
+   del dueño, derivado solo del usuario: no cambia aunque cambie el PIN) y
+   el selector solo enseña los suyos. Los datos de los demás siguen en el
+   aparato, pero no se listan ni se pueden abrir desde otra cuenta. */
+function currentOwnerId(){
+  const login = getOwnerLogin();
+  return login && login.user ? ggOwnerId(login.user) : null;
+}
+// Los negocios que ya existían antes de este cambio no llevan ownerId. En
+// ese momento solo había una cuenta en el aparato —canjear exige estar
+// dentro— así que son de quien tiene la sesión guardada: se le adjudican al
+// arrancar, y así ningún cliente ve desaparecer sus negocios al actualizar.
+function migrateSlotOwners(){
+  const me = currentOwnerId();
+  if(!me) return;
+  const slots = getBusinessSlots();
+  let changed = false;
+  slots.forEach(s => { if(s.code && !s.ownerId){ s.ownerId = me; changed = true; } });
+  if(changed) saveBusinessSlots(slots);
+}
+function slotsOfCurrentOwner(){
+  const me = currentOwnerId();
+  const slots = getBusinessSlots();
+  if(!me) return slots; // sin sesión de propietario (empleado): no se filtra
+  // El hueco vacío (sin `code`) es de quien esté delante: es donde canjea
+  // su primer negocio una cuenta recién creada.
+  return slots.filter(s => !s.code || s.ownerId === me);
+}
+
 function slotIdbName(slotId){
   return slotId === 'default' ? 'gastrogoan_db' : 'gastrogoan_db_' + slotId;
 }
@@ -270,7 +304,21 @@ const MASTER_RESET_CODE = 'GGGG';
 function enterAsOwner(){
   setAccessSession({type:'owner'});
   applyOwnerSessionEditRights();
+  migrateSlotOwners();
   hideAccessSelectScreen();
+  // Si el negocio que se quedó abierto en este aparato es de OTRA cuenta,
+  // no se entra en él: al selector, que ya solo enseña los suyos. Sin esto
+  // la cuenta nueva aterrizaba directamente dentro del negocio del dueño
+  // anterior, que es justo lo que se quiere evitar.
+  const mios = slotsOfCurrentOwner();
+  if(currentOwnerId() && !mios.some(s => s.id === getActiveSlot())){
+    showBusinessSelectScreen();
+    syncOwnerBusinessList().then(() => {
+      const s2 = getAccessSession();
+      if(s2 && s2.type === 'owner') showBusinessSelectScreen();
+    });
+    return;
+  }
   if(continuePendingOwnerSetup()) return;
   showBusinessSelectScreen();
   // La lista de negocios de la cuenta puede tardar en llegar: la pantalla
@@ -400,7 +448,7 @@ async function registerRemoteBusinessLocally(tenantId, code, remoteData){
   });
   localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code, tenantId}));
   const slots = getBusinessSlots();
-  slots.push({ id: newId, name: (remoteData.business && remoteData.business.name) || t('bs.defaultBusinessName'), code });
+  slots.push({ id: newId, name: (remoteData.business && remoteData.business.name) || t('bs.defaultBusinessName'), code, ownerId: currentOwnerId() });
   saveBusinessSlots(slots);
   return newId;
 }
@@ -767,7 +815,7 @@ async function addNewBusiness(){
   const name = t('gate.newBusinessDefaultName');
   const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const slots = getBusinessSlots();
-  slots.push({ id, name, code: lic.code });
+  slots.push({ id, name, code: lic.code, ownerId: currentOwnerId() });
   saveBusinessSlots(slots);
   localStorage.setItem(slotLicenseKey(id), JSON.stringify(lic));
   linkBusinessToOwnerAccount(lic.tenantId, lic.code, name);
@@ -925,7 +973,7 @@ async function addSucursal(parentSlotId){
   // llega a aparecer todavía (se puede reintentar sin arrastrar ningún
   // estado a medias).
   localStorage.setItem(slotLicenseKey(newId), JSON.stringify(lic));
-  slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code });
+  slots.push({ id: newId, name: nombre, parentId: parentSlotId, code: lic.code, ownerId: currentOwnerId() });
   saveBusinessSlots(slots);
   linkBusinessToOwnerAccount(lic.tenantId, lic.code, nombre);
   switchToBusiness(newId);
@@ -1039,7 +1087,7 @@ let _bsOpenGroups = new Set();
 // slot sin `code` es solo el hueco vacío que existe desde el arranque
 // (getBusinessSlots siempre devuelve al menos uno), no un negocio canjeado.
 function ownerHasAnyBusiness(){
-  return getBusinessSlots().some(s => s.code);
+  return slotsOfCurrentOwner().some(s => s.code);
 }
 
 // Canjea el primer negocio dentro del hueco que ya existe, en vez de crear
@@ -1051,7 +1099,7 @@ function redeemFirstBusiness(){
 }
 
 function renderBusinessSelectScreenHtml(){
-  const slots = getBusinessSlots();
+  const slots = slotsOfCurrentOwner();
   // Cuenta nueva: todavía no ha canjeado ningún negocio. Sin este caso
   // aparte se vería una lista con un "Mi negocio" fantasma que no lleva a
   // ninguna parte, y los botones de "nuevo" y "sucursal" sin nada de lo que
@@ -3379,7 +3427,7 @@ async function syncOwnerBusinessList(){
       if(!info || !info.code) return;
       if(slots.some(s => s.code === info.code)) return; // ya lo conoce este dispositivo
       const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6) + tId.slice(0,3);
-      slots.push({ id: newId, name: info.name || t('bs.defaultBusinessName'), code: info.code });
+      slots.push({ id: newId, name: info.name || t('bs.defaultBusinessName'), code: info.code, ownerId: currentOwnerId() });
       localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code: info.code, tenantId: tId}));
       changed = true;
     });
