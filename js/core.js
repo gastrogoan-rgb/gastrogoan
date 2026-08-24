@@ -1874,6 +1874,29 @@ const FIREBASE_GATE_STEPS = [
         Click <strong>"Get started"</strong> (if it's the first time) and then open the <strong>"Sign-in method"</strong> tab.<br><br>
         In the provider list, find <strong>"Anonymous"</strong>, click it, toggle it on and click <strong>"Save"</strong>.<br><br>
         <span style="color:var(--muted)">This lets the app connect on its own, without asking anyone for a username or password.</span>`}},
+  // Firebase solo acepta conexiones desde direcciones apuntadas en esta
+  // lista, y de fábrica trae localhost y las suyas propias. Sin este paso,
+  // el cliente termina el alta entero y se encuentra un "error de nube" al
+  // final, sin manera de saber por qué: la app publicada en gastrogoan.com
+  // no está autorizada en SU proyecto. Va justo detrás del paso del inicio
+  // anónimo porque es la misma pantalla de Firebase (Authentication).
+  {title:{es:'Autoriza la dirección de la app', ca:'Autoritza l\'adreça de l\'app', en:'Authorize the app address'},
+   body:{
+     es:`Sigue en <strong>"Authentication"</strong>. Abre ahora la pestaña <strong>"Settings"</strong> (Configuración) y baja hasta <strong>"Dominios autorizados"</strong>.<br><br>
+        Pulsa <strong>"Añadir dominio"</strong> y añade estas dos, una a una:<br>
+        <code>app.gastrogoan.com</code><br>
+        <code>reservas.gastrogoan.com</code><br><br>
+        <span style="color:var(--muted)">Firebase solo acepta conexiones desde las direcciones de esta lista, y de fábrica no trae las nuestras. Si te saltas este paso, todo lo demás estará bien pero los datos no se sincronizarán.</span>`,
+     ca:`Continua a <strong>"Authentication"</strong>. Obre ara la pestanya <strong>"Settings"</strong> (Configuració) i baixa fins a <strong>"Dominis autoritzats"</strong>.<br><br>
+        Prem <strong>"Afegir domini"</strong> i afegeix aquestes dues, una a una:<br>
+        <code>app.gastrogoan.com</code><br>
+        <code>reservas.gastrogoan.com</code><br><br>
+        <span style="color:var(--muted)">Firebase només accepta connexions des de les adreces d'aquesta llista, i de fàbrica no porta les nostres. Si et saltes aquest pas, tota la resta estarà bé però les dades no se sincronitzaran.</span>`,
+     en:`Stay in <strong>"Authentication"</strong>. Now open the <strong>"Settings"</strong> tab and scroll down to <strong>"Authorized domains"</strong>.<br><br>
+        Click <strong>"Add domain"</strong> and add these two, one at a time:<br>
+        <code>app.gastrogoan.com</code><br>
+        <code>reservas.gastrogoan.com</code><br><br>
+        <span style="color:var(--muted)">Firebase only accepts connections from the addresses in this list, and ours are not there out of the box. Skip this step and everything else will be fine, but your data will not sync.</span>`}},
   {title:{es:'Pega las reglas de seguridad', ca:'Enganxa les regles de seguretat', en:'Paste the security rules'},
    body:{
      es:`Vuelve a <strong>Realtime Database</strong> (menú "Base de datos y almacenamiento") y abre la pestaña <strong>"Reglas"</strong> (Rules), arriba del todo.<br><br>
