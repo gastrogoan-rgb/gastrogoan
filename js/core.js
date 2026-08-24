@@ -2224,7 +2224,9 @@ async function saveOwnFirebaseConfig(){
     if(!DB.business.ownFirebase) return;
     if(!(await confirmModal(t('msg.confirmRemoveFirebase')))) return;
     delete DB.business.ownFirebase;
-    saveDB();
+    // Se espera al guardado: recargar sin esperarlo cortaba la escritura y
+    // la nube seguía puesta al volver, sin ningún aviso.
+    await saveDB();
     location.reload();
     return;
   }
@@ -2237,7 +2239,7 @@ async function saveOwnFirebaseConfig(){
     return;
   }
   DB.business.ownFirebase = { apiKey, databaseURL };
-  saveDB();
+  await saveDB();
   await alertModal(t('msg.firebaseSaved'));
   location.reload();
 }
@@ -4992,8 +4994,13 @@ async function loadDB(){
   }
 }
 
+// Devuelve la promesa del guardado local para quien necesite ESPERARLO.
+// Casi nadie: guardar y seguir es lo normal. Pero quien recarga la página
+// justo después tiene que esperar, o la recarga corta la escritura a medio
+// hacer y el cambio se pierde sin decir nada (es lo que le pasaba al
+// selector de idioma). Los que no lo esperan siguen funcionando igual.
 function saveDB(){
-  idbSet(DB_KEY, DB).catch(e => {
+  const guardado = idbSet(DB_KEY, DB).catch(e => {
     console.error('Error guardando datos', e);
     if(typeof showToast === 'function') showToast(t('msg.localSaveFailed'));
     // Reintento único: si el primer guardado falló por algo pasajero (p.ej.
@@ -5002,6 +5009,7 @@ function saveDB(){
     setTimeout(() => idbSet(DB_KEY, DB).catch(e2 => console.error('Reintento de guardado local también falló', e2)), 3000);
   });
   scheduleCloudSync();
+  return guardado;
 }
 
 /* Sube a la nube solo los bloques de DB (ingredients, tpvOrders, sales...)
