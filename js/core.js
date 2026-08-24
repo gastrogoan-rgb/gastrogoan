@@ -1099,6 +1099,22 @@ function ownerHasAnyBusiness(){
 // uno nuevo al lado: si no, el hueco vacío se quedaría para siempre en la
 // lista, encima del negocio recién dado de alta.
 function redeemFirstBusiness(){
+  const me = currentOwnerId();
+  const slots = getBusinessSlots();
+  const activo = slots.find(s => s.id === getActiveSlot());
+  // El hueco donde se canjea tiene que ser MÍO y estar vacío. Si el que
+  // está activo es el negocio de otra cuenta (pasa en cuanto dos dueños
+  // usan el mismo aparato), la licencia se escribía justo encima: el
+  // negocio ajeno se quedaba con el código nuevo y la cuenta recién creada
+  // aterrizaba dentro de él. En ese caso se abre un hueco nuevo, propio.
+  const sirve = activo && !activo.code && (!me || !activo.ownerId || activo.ownerId === me);
+  if(!sirve){
+    const id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    slots.push({ id, name: t('bs.defaultBusinessName'), ownerId: me });
+    saveBusinessSlots(slots);
+    switchToBusiness(id); // recarga: al volver, el hueco activo ya es suyo y está vacío
+    return;
+  }
   hideBusinessSelectScreen();
   showActivationGate();
 }
@@ -2219,7 +2235,12 @@ async function activateLicenseFromGate(){
   // "Acceso Empleados".
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === ACTIVE_SLOT);
-  if(slot){ slot.code = lic.code; saveBusinessSlots(slots); }
+  if(slot){
+    slot.code = lic.code;
+    // Que el negocio quede a nombre de quien lo acaba de canjear.
+    if(typeof currentOwnerId === 'function'){ const me = currentOwnerId(); if(me) slot.ownerId = me; }
+    saveBusinessSlots(slots);
+  }
   // Que quede en la cuenta del dueño: así este negocio aparece solo en
   // cualquier otro dispositivo donde entre, sin volver a canjear el código.
   linkBusinessToOwnerAccount(lic.tenantId, lic.code, DB.business && DB.business.name);
