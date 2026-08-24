@@ -3740,10 +3740,22 @@ function startCloudSync(tenantId){
   }
 }
 
+// Dónde vive la web pública de reservas y pedidos. Se publica en un sitio
+// APARTE del panel (el panel en app.gastrogoan.com, la web pública en
+// reservas.gastrogoan.com), y por eso hay que decirlo aquí: antes el enlace
+// se deducía de dónde estuviera abierta la app, así que con los dos sitios
+// separados habría generado app.gastrogoan.com/reservagastrogoan.html —
+// que no existe, y el QR de todos los clientes habría dado error.
+// Vacío = la web pública está junto al index.html (un solo sitio, y las
+// pruebas en local, que es como se ha probado hasta ahora).
+const PUBLIC_RESERVAS_BASE = 'https://reservas.gastrogoan.com/';
 function getPublicClientLink(){
   const publicId = getPublicId();
   if(!publicId) return '';
-  const base = location.href.replace(/[^/]*$/, '') + 'reservagastrogoan.html';
+  // Siempre con el nombre del archivo y siempre con '?': hay sitios que le
+  // añaden '&mesa=' (QR de mesa), '&res=' (email de la reserva) o '&nps=1'
+  // (encuesta), y todos ellos dan por hecho que ya hay una query abierta.
+  const base = (PUBLIC_RESERVAS_BASE || location.href.replace(/[^/]*$/, '')) + 'reservagastrogoan.html';
   const slug = DB.business && DB.business.publicSlug;
   return slug ? base + '?n=' + encodeURIComponent(slug) : base + '?neg=' + publicId;
 }
