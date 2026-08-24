@@ -121,6 +121,12 @@ function getOwnerLogin(){
 }
 function setOwnerLogin(user, authKey, pinPlain){
   const u = ggOwnerUser(user);
+  // ANTES de pisar la sesión: los negocios de este aparato que todavía no
+  // llevan dueño son de quien estaba entrando hasta ahora, no de quien
+  // acaba de identificarse. Hacerlo al revés (adjudicar después) le
+  // regalaba a la cuenta nueva los negocios de la anterior — que es
+  // exactamente lo que se quería evitar.
+  migrateSlotOwners();
   localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({user: u, authKey, pinHash: hashPin(pinPlain, u)}));
 }
 // Comprobación puramente local: una vez la cuenta se validó online al
@@ -304,7 +310,6 @@ const MASTER_RESET_CODE = 'GGGG';
 function enterAsOwner(){
   setAccessSession({type:'owner'});
   applyOwnerSessionEditRights();
-  migrateSlotOwners();
   hideAccessSelectScreen();
   // Si el negocio que se quedó abierto en este aparato es de OTRA cuenta,
   // no se entra en él: al selector, que ya solo enseña los suyos. Sin esto
@@ -3423,9 +3428,16 @@ async function syncOwnerBusinessList(){
     const businesses = bizSnap.val() || {};
     const slots = getBusinessSlots();
     let changed = false;
+    const me = currentOwnerId();
     Object.entries(businesses).forEach(([tId, info]) => {
       if(!info || !info.code) return;
-      if(slots.some(s => s.code === info.code)) return; // ya lo conoce este dispositivo
+      const existente = slots.find(s => s.code === info.code);
+      if(existente){
+        // Ya está en este aparato. Si figuraba a nombre de otro (marca mal
+        // puesta), se corrige: la lista de la cuenta es la que manda.
+        if(me && existente.ownerId !== me){ existente.ownerId = me; changed = true; }
+        return;
+      }
       const newId = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2,6) + tId.slice(0,3);
       slots.push({ id: newId, name: info.name || t('bs.defaultBusinessName'), code: info.code, ownerId: currentOwnerId() });
       localStorage.setItem(slotLicenseKey(newId), JSON.stringify({code: info.code, tenantId: tId}));
