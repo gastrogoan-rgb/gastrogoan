@@ -146,22 +146,22 @@
      (o un acordeón que sigue amontonando secciones en la misma pantalla),
      se entra y se sale de cada sección como en el selector de carta del
      TPV que usa el camarero — una pantalla a la vez, sin scroll interminable. */
-  /* Carpetas compactas a propósito: con la tarjeta grande, una carta de
-     seis secciones ocupaba dos pantallas de móvil y el cliente tenía que
-     bajar solo para ver qué hay. Así caben tres por fila y se ve toda la
-     carta de un vistazo. Siguen midiendo bastante más de 44 px, que es el
+  /* Carpetas compactas a propósito: con la tarjeta grande y cuadrada, una
+     carta de seis secciones ocupaba dos pantallas de móvil y el cliente
+     tenía que bajar solo para ver qué apartados hay. Son botones
+     rectangulares con el emoji al lado del nombre, en dos columnas: la
+     carta entera se ve de un vistazo y siguen midiendo 48 px de alto, el
      mínimo para poder pulsarlas con el dedo. */
-  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:6px}
+  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin-bottom:6px}
   .menu-folder-card{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    border:1px solid var(--border);background:var(--surface);padding:12px 6px;cursor:pointer;
-    text-align:center;font-family:inherit;transition:border-color .15s,transform .1s;min-height:78px;
+    display:flex;flex-direction:row;align-items:center;gap:8px;
+    border:1px solid var(--border);background:var(--surface);padding:10px 12px;cursor:pointer;
+    text-align:left;font-family:inherit;transition:border-color .15s,transform .1s;min-height:48px;
   }
   .menu-folder-card:hover{border-color:var(--ink)}
   .menu-folder-card:active{transform:translateY(1px)}
-  .menu-folder-card .icon{font-size:22px;color:var(--olive);line-height:1}
-  .menu-folder-card .name{font-weight:700;font-size:12.5px;color:var(--ink);line-height:1.2}
-  .menu-folder-card .count{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+  .menu-folder-card .icon{font-size:20px;color:var(--olive);line-height:1;flex:none}
+  .menu-folder-card .name{font-weight:700;font-size:13px;color:var(--ink);line-height:1.2;min-width:0;overflow-wrap:anywhere}
   .menu-back-btn{
     display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
     font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
@@ -1890,14 +1890,12 @@ function buildMenuHtmlInner(cartas){
       <h2 style="margin-top:22px">${escapeHtml(titulo)}</h2>
       <div class="menu-folder-grid">
         ${secciones.map(({sec, key}) => {
-          const count = sec.platos.filter(p=>p.disponible!==false).length;
           // El nombre de sección puede venir vacío (o ser "OTROS PLATOS").
           const secName = trSection(sec) || t('label.dishes');
           return `
           <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
             <span class="icon">${menuFolderIcon(sec, secName)}</span>
             <span class="name">${escapeHtml(secName)}</span>
-            <span class="count">${count===1?t('label.oneDish'):t('label.nDishes').replace('${n}', count)}</span>
           </button>
         `;}).join('')}
       </div>
