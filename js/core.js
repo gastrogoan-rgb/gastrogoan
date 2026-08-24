@@ -3369,7 +3369,7 @@ async function syncOwnerBusinessList(){
 function initCloud(){
   cloudConfig = getCloudConfig();
   if(!cloudConfig){ updateSyncBadge('local'); return; }
-  if(typeof firebase === 'undefined'){ console.error('Firebase no disponible (¿sin internet?)'); updateSyncBadge('error'); return; }
+  if(typeof firebase === 'undefined'){ recordSyncError(new Error('network-request-failed: Firebase no disponible (¿sin internet?)')); return; }
   const tenantId = getTenantId();
   if(!tenantId){ updateSyncBadge('local'); return; } // aún sin licencia activada
   publishTenantLookup(tenantId, cloudConfig);
@@ -3393,8 +3393,7 @@ function initCloud(){
       firebase.auth().signInAnonymously().then(() => startCloudSync(tenantId)).catch(err => recordSyncError(err));
     }
   }catch(e){
-    console.error('Error iniciando la nube', e);
-    updateSyncBadge('error');
+    recordSyncError(e);
   }
 }
 
@@ -3697,7 +3696,7 @@ function waitForWinnerAfterLostRace(attempt){
     if(attempt < CLOUD_INIT_RACE_MAX_ATTEMPTS){
       setTimeout(() => waitForWinnerAfterLostRace(attempt+1), attempt*1000);
     }else{
-      updateSyncBadge('error');
+      recordSyncError(new Error('No se pudo conectar con la nube tras varios intentos'));
       attachCloudChildListeners();
     }
   });
@@ -3733,8 +3732,7 @@ function startCloudSync(tenantId){
             setTimeout(() => waitForWinnerAfterLostRace(1), 1000);
           }
         }).catch(e => {
-          console.error('Error reclamando la inicialización de la nube', e);
-          updateSyncBadge('error');
+          recordSyncError(e);
           attachCloudChildListeners();
         });
       }else{
@@ -3742,16 +3740,14 @@ function startCloudSync(tenantId){
         attachCloudChildListeners();
       }
     }, err => {
-      console.error('Error de sincronización', err);
-      updateSyncBadge('error');
+      recordSyncError(err);
     });
     firebase.database().ref('.info/connected').on('value', s => {
       socketConnected = !!s.val();
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
-    console.error('Error iniciando la nube', e);
-    updateSyncBadge('error');
+    recordSyncError(e);
   }
 }
 
@@ -4665,6 +4661,7 @@ function openCloudWizard(){
         <li>${t('gate.miniStep3')}</li>
         <li>${t('gate.miniStep4')}</li>
         <li>${t('gate.miniStep5')}</li>
+        <li>${t('gate.miniStep6')}</li>
       </ol>
       ${renderOwnFirebaseForm()}
     `);
@@ -5038,8 +5035,7 @@ function pushAllToCloud(){
     lastSyncedSnapshot[key] = canonicalStringify(DB[key]);
   });
   cloudRef.set(updates).catch(e => {
-    console.error('Error guardando en la nube', e);
-    updateSyncBadge('error');
+    recordSyncError(e);
   });
 }
 
@@ -5094,8 +5090,7 @@ function flushCloudSync(){
   const keys = Object.keys(updates);
   if(keys.length === 0) return;
   const onFail = (e) => {
-    console.error('Error guardando en la nube', e);
-    updateSyncBadge('error');
+    recordSyncError(e);
     scheduleCloudSyncRetry();
   };
   try{
