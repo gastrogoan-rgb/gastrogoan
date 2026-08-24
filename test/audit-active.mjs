@@ -497,5 +497,33 @@ await testAsync('mergeStockField: un cambio LOCAL sin subir no se pierde aunque 
   console.log('   → lo local sin subir se conserva');
 });
 
+await testAsync('Los avisos push de un dispositivo no borran los de los demás', async () => {
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setLastSyncedSnapshot({});
+  // applyRemoteBlock repinta la pantalla al terminar, y eso vive en otros
+  // ficheros del bundle que aquí no se cargan: se sustituyen por vacíos.
+  sandbox.refreshAfterRemoteChange = () => {};
+  sandbox.renderHeader = () => {};
+  sandbox.notifyDesktop = () => {};
+  sandbox.showToast = () => {};
+  // La tablet de cocina acaba de suscribirse; solo lo sabe ella.
+  sandbox.__setDB({pushSubscriptions: [{deviceId:'tablet-cocina', subscription:{a:1}, updatedAt:200}]});
+  // Y llega de la nube lo que tenía el móvil del camarero.
+  sandbox.applyRemoteBlock('pushSubscriptions', [{deviceId:'movil-camarero', subscription:{b:1}, updatedAt:100}]);
+  const ids = (sandbox.__getDB().pushSubscriptions||[]).map(s=>s.deviceId).sort();
+  // Como texto: el array nace dentro del entorno aislado y deepEqual lo ve
+  // distinto del de Node aunque el contenido sea el mismo.
+  assert.equal(ids.join(','), 'movil-camarero,tablet-cocina',
+    'sustituir el array entero borraba la suscripción del otro aparato, que dejaba de recibir avisos sin ningún síntoma');
+  // Y una versión más nueva del mismo aparato debe ganar a la vieja.
+  sandbox.applyRemoteBlock('pushSubscriptions', [
+    {deviceId:'tablet-cocina', subscription:{a:2}, updatedAt:300},
+    {deviceId:'movil-camarero', subscription:{b:1}, updatedAt:100}]);
+  const tablet = sandbox.__getDB().pushSubscriptions.find(s=>s.deviceId==='tablet-cocina');
+  assert.equal(tablet.subscription.a, 2, 'de cada aparato debe quedar su suscripción más reciente');
+  console.log('   → cada aparato conserva la suya, y gana la más reciente de cada uno');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

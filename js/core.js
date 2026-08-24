@@ -3584,6 +3584,22 @@ function applyRemoteBlock(key, remoteValue){
   // enteros al sincronizar — dos encargados editando el turno de DOS
   // empleados distintos, offline a la vez, podían perder el de uno de los
   // dos. Se fusionan campo a campo con el mismo mecanismo que ya usa stock.
+  // Los avisos push: cada dispositivo escribe SU entrada, identificada por
+  // deviceId. Sustituir el array entero (que es lo que se hacía, porque no
+  // llevan campo `id` y mergeArraysById los dejaba pasar de largo) borraba
+  // la de los demás: el móvil del camarero se quedaba sin recibir avisos en
+  // cuanto la tablet de cocina guardaba la suya, y sin ningún síntoma —
+  // simplemente dejaban de llegar. Se fusiona por deviceId, quedándose con
+  // la versión más reciente de cada aparato.
+  if(key === 'pushSubscriptions' && Array.isArray(DB[key]) && Array.isArray(merged)){
+    const porAparato = new Map();
+    [...merged, ...DB[key]].forEach(sub => {
+      if(!sub || !sub.deviceId) return;
+      const previo = porAparato.get(sub.deviceId);
+      if(!previo || (sub.updatedAt || 0) > (previo.updatedAt || 0)) porAparato.set(sub.deviceId, sub);
+    });
+    merged = [...porAparato.values()];
+  }
   if(FLAT_MAP_FIELDS.has(key) && DB[key] && typeof merged === 'object'){
     merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   }
@@ -3864,6 +3880,27 @@ function startCloudSync(tenantId){
 // Vacío = la web pública está junto al index.html (un solo sitio, y las
 // pruebas en local, que es como se ha probado hasta ahora).
 const PUBLIC_RESERVAS_BASE = 'https://reservas.gastrogoan.com/';
+/* El que se ENSEÑA al hostelero y se convierte en QR: la versión corta,
+   reservas.gastrogoan.com/casapaco, que es la que va a repartir a sus
+   clientes y pegar en la puerta. Funciona gracias a la regla del archivo
+   _redirects del sitio de reservas.
+
+   Distinto de getPublicClientLink() a propósito: ese lleva siempre el
+   nombre del archivo y siempre un '?' abierto porque hay cuatro sitios que
+   le añaden parámetros detrás (el QR de cada mesa, el enlace de gestionar
+   la reserva que va en el email, y la encuesta de satisfacción). Si esos
+   partieran del enlace corto, quedaría un '&' colgando de una URL sin
+   query y no abriría nada.
+
+   Sin nombre corto elegido todavía, se devuelve el largo: es lo único que
+   identifica el negocio. */
+function getPublicClientLinkPretty(){
+  const publicId = getPublicId();
+  if(!publicId) return '';
+  const slug = DB.business && DB.business.publicSlug;
+  if(PUBLIC_RESERVAS_BASE && slug) return PUBLIC_RESERVAS_BASE + encodeURIComponent(slug);
+  return getPublicClientLink();
+}
 function getPublicClientLink(){
   const publicId = getPublicId();
   if(!publicId) return '';
@@ -3964,7 +4001,7 @@ function renderOnlineCard(){
       </div>
     `;
   }
-  const link = getPublicClientLink();
+  const link = getPublicClientLinkPretty();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(link);
   const activeCartas = (typeof getActiveCartas === 'function') ? getActiveCartas() : [];
   const activeCartaLine = activeCartas.length
@@ -4771,7 +4808,7 @@ function openCloudWizard(){
     `);
     return;
   }
-  const link = getPublicClientLink();
+  const link = getPublicClientLinkPretty();
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(link);
   const otrosServicios = (DB.business?.tiposServicio?.takeaway !== false || DB.business?.tiposServicio?.delivery !== false) ? t('mn.online.andOrder') : '';
   openModal(`
@@ -5008,6 +5045,14 @@ const dbReadyPromise = loadDB().then(d => {
     }catch(e){ console.error('No se pudo programar el aviso de fallo al cargar datos', e); }
   }
 });
+
+// Adjudicar los negocios antiguos a su dueño tiene que pasar SIEMPRE al
+// arrancar, no solo al identificarse por primera vez: quien ya entró alguna
+// vez en este aparato entra por el camino rápido (sin internet, validando
+// el PIN en local), que no pasa por setOwnerLogin. Sin esto, un cliente que
+// actualizaba y entraba con normalidad se encontraba el selector VACÍO: sus
+// negocios seguían ahí, pero sin dueño puesto, y el filtro no los enseñaba.
+try{ migrateSlotOwners(); }catch(e){ console.error('No se pudieron adjudicar los negocios al dueño', e); }
 
 async function loadDB(){
   try{

@@ -5606,6 +5606,7 @@ function businessTypeServiceMismatchWarning(tipo, tiposServicio){
   return null;
 }
 
+let _lastLinkedBusinessName = null;
 async function saveBusiness(silent){
   const el = id => document.getElementById(id);
   if(!DB.business) DB.business = {};
@@ -5681,6 +5682,17 @@ async function saveBusiness(silent){
   // negocio se notaba poco; con varios, todos se llamaban igual y no había
   // forma de distinguirlos en la pantalla desde la que se elige.
   updateActiveSlotName(DB.business.name);
+  // Y también en la cuenta del dueño, no solo en este aparato. Ahí el
+  // nombre se escribía únicamente al activar la licencia, cuando todavía
+  // estaba vacío, y no se refrescaba nunca: en un móvil nuevo el negocio
+  // aparecía en el selector como "Mi negocio" hasta que se entraba dentro
+  // (que es cuando llega el nombre real por la nube). Con varios locales,
+  // todos iguales y sin poder distinguirlos.
+  if(DB.business.name && DB.license && DB.license.tenantId && typeof linkBusinessToOwnerAccount === 'function'
+     && _lastLinkedBusinessName !== DB.business.name){
+    _lastLinkedBusinessName = DB.business.name;
+    linkBusinessToOwnerAccount(DB.license.tenantId, DB.license.code, DB.business.name);
+  }
   renderHeader();
   updateAutoActiveCarta(true);
   updateAutoActiveMenu(true);

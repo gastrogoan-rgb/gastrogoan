@@ -667,6 +667,16 @@ function getSlugFromUrl(){
     const v = p.get('n');
     if(v) return v;
   }catch(e){}
+  // Red de seguridad para la dirección corta (reservas.gastrogoan.com/casapaco):
+  // el hosting la reescribe por dentro añadiendo ?n=casapaco, pero si esa
+  // regla faltara o se cambiara de hosting, el cliente se encontraría un
+  // "enlace no válido" con un enlace que es perfectamente válido. Leyéndolo
+  // también de la ruta, la dirección corta funciona sola.
+  try{
+    const seg = location.pathname.split('/').filter(Boolean);
+    // Un solo tramo y sin extensión: es el nombre del negocio, no un archivo.
+    if(seg.length === 1 && !seg[0].includes('.')) return decodeURIComponent(seg[0]);
+  }catch(e){}
   return null;
 }
 
