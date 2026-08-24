@@ -181,9 +181,9 @@ porque funcione en local. Los dos casos tienen ya prueba permanente en
 
 ---
 
-## Estado actual (13 ago 2026)
+## Estado actual (24 ago 2026)
 
-**Veredicto: LISTO PARA VENDER — 9/10.** Análisis completo en `ANALISIS_GENERAL.md` (8 bloques).
+**Veredicto: PUBLICADO Y VENDIBLE.** Circuito completo verificado en producción (ver más abajo). Análisis completo en `ANALISIS_GENERAL.md` (8 bloques).
 
 Verificado con pruebas reales, no solo revisión de código: concurrencia genuina en reservas (20 simultáneas contra aforo 10), volumen realista (500 clientes / 10.000 ventas), inyección XSS, responsive en 3 idiomas × 5 resoluciones × 18 módulos, y una auditoría ciega por una sesión de IA independiente (7,5/10 antes de corregir su hallazgo del hash débil).
 
@@ -196,12 +196,50 @@ Verificado con pruebas reales, no solo revisión de código: concurrencia genuin
 - **Acceso de empleado verificado** contra la plataforma real desde un dispositivo que no conocía el negocio (nombre + PIN + código). Con esto, todo el modelo de acceso -propietario y empleado- está probado de punta a punta.
 - **Configuración de la nube probada** como cliente nuevo, de principio a fin. Era el paso que se daba por más frágil: el único del alta donde un cliente podía atascarse.
 
-### Pendiente — solo lo puede hacer el dueño
+### Publicado y verificado en producción (24 ago 2026)
 
-1. Subir `dist/` a gastrogoan.com (la prueba se hizo en Netlify Drop). Si el acceso fallara desde ese dominio, añadirlo en Firebase → Authentication → Settings → Dominios autorizados.
-2. Un pago real con **Redsys** (o su sandbox).
-3. Una vuelta desde el móvil, **ya servido desde gastrogoan.com**.
-4. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo antes de manejar pagos de forma continuada.
+La app vive en **dos sitios de Netlify** bajo el dominio (gestionado por
+Netlify DNS, así que los subdominios se crean solos):
+
+| Sitio | Contenido | Quién entra |
+|---|---|---|
+| `app.gastrogoan.com` | `index.html` + `sw.js` | El hostelero y su personal |
+| `reservas.gastrogoan.com` | `reservagastrogoan.html` + `fonts/` + `_redirects` | Clientes del restaurante |
+
+`gastrogoan.com` a secas sigue siendo la web comercial, intacta.
+
+⚠️ **Al canjear una licencia**, el enlace público NO se deduce de dónde esté
+abierta la app: se dice en `PUBLIC_RESERVAS_BASE` (js/core.js). Con los dos
+sitios separados, deducirlo generaba `app.gastrogoan.com/reservagastrogoan.html`
+— que no existe, y el QR de todos los clientes daba error.
+
+⚠️ **Cada negocio tiene que autorizar los dos dominios en SU PROPIO proyecto
+de Firebase** (Authentication → Settings → Dominios autorizados). No basta con
+autorizarlos en `plataforma-gastrogoan`: la app se autentica contra la nube del
+negocio. Firebase solo trae `localhost` y los suyos de fábrica. Es el paso 4 de
+`FIREBASE_GATE_STEPS` — sin él, el alta termina bien y la nube falla al final.
+
+Verificado de punta a punta el 24 de agosto, por el dueño, sobre el dominio real:
+
+- Alta completa desde cero con una cuenta nueva (**~10 min** con soltura,
+  ~20 min alguien sin nociones — el tiempo que promete la guía).
+- Indicador de nube en verde.
+- **Sincronización real entre tablet y móvil**, con una reserva de verdad
+  entrando por la web pública y apareciendo en el panel.
+- **Un pago de prueba con Redsys, correcto.**
+
+Con esto, todo el circuito de venta está probado: cuenta → código →
+alta → nube → panel → web pública → reserva → cobro.
+
+### Pendiente
+
+1. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
+   antes de manejar pagos de forma continuada.
+2. iPhone/iPad: todo se ha probado en Chromium y Android.
+3. La impresora térmica y el cajón con el hardware delante.
+4. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
+   verdad encuentra fallos: de los cinco del 24 de agosto, cuatro los encontró
+   el dueño usando la app, no las pruebas.
 
 > La cuenta de prueba `pruebamia` **se deja a propósito**: sirve para verificar el alta completa tras cualquier cambio en el acceso, sin gastar un código real ni tocar datos de un cliente. Conviene marcarla como prueba en el registro de ventas del generador para no contarla como venta al revisar el CSV.
 
