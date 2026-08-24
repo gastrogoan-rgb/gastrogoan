@@ -2,3 +2,6 @@ node_modules/
 dist/
 test-3years.mjs
 node_modules/
+
+# Capturas de pantalla de las pruebas — material temporal, no del producto
+*.png
