@@ -5866,8 +5866,34 @@ const I18N = {
     'label.orderTag': 'Order', 'label.reservationTag': 'Reservation',
   }
 };
+// El idioma es de CADA DISPOSITIVO, no del negocio, y por eso vive en
+// localStorage y no dentro de DB.business.
+//
+// Estaba en DB.business.lang, que se sincroniza con la nube, y eso rompía
+// el selector de idioma de dos maneras:
+//
+//   1. setLang guarda y recarga la página al momento. El guardado local es
+//      asíncrono y el envío a la nube va agrupado, así que la recarga los
+//      cortaba a los dos; al volver, la nube mandaba su copia del negocio
+//      —con el idioma viejo dentro— y como el bloque `business` se
+//      reemplaza entero al sincronizar (no se fusiona campo a campo), el
+//      idioma volvía a castellano. Desde fuera: pulsabas la bandera y no
+//      pasaba nada. Solo se notaba con la nube conectada, que es por lo
+//      que no salió en las pruebas y sí al publicar.
+//   2. Aunque hubiera aguantado, era un ajuste compartido: un camarero
+//      poniéndose la app en catalán se la cambiaba a todo el mundo.
+//
+// localStorage es síncrono (está escrito antes de que la recarga empiece)
+// y no se sincroniza, así que resuelve las dos cosas.
+const LANG_LS = 'gastrogoan_lang';
 function getLang(){
-  return (DB.business && DB.business.lang) || 'es';
+  try{
+    const stored = localStorage.getItem(LANG_LS);
+    if(stored && I18N[stored]) return stored;
+  }catch(e){}
+  // Respaldo para los negocios que ya venían con el idioma guardado dentro
+  // del negocio, para que no se les cambie solo al actualizar.
+  return (DB && DB.business && DB.business.lang) || 'es';
 }
 // Para bloques largos de prosa (no cadenas cortas de UI): {es,ca,en} -> texto en el idioma activo.
 function gl(obj){
@@ -5875,8 +5901,12 @@ function gl(obj){
   return obj[l] !== undefined ? obj[l] : obj.es;
 }
 function setLang(lang){
-  DB.business.lang = lang;
-  saveDB();
+  // Primero lo que manda y es inmediato: la recarga de abajo ya no puede
+  // dejarlo a medias.
+  try{ localStorage.setItem(LANG_LS, lang); }catch(e){}
+  // Se sigue dejando en el negocio para que un dispositivo con una versión
+  // anterior de la app no se quede sin idioma elegido.
+  if(DB && DB.business){ DB.business.lang = lang; saveDB(); }
   location.reload();
 }
 const LANG_FLAGS = {es:'🇪🇸', en:'🇬🇧', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};
