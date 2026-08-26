@@ -1,13 +1,15 @@
 // La web pública de reservas y pedidos: la que ven los CLIENTES del
 // restaurante. Defectos visuales en las tres pantallas.
 import puppeteer from 'puppeteer-core';
+const IDIOMAS = ['es','ca','en'];
 const TAMANOS = [
   {n:'MÓVIL', w:390, h:844},
   {n:'MÓVIL PEQUEÑO', w:320, h:568},
   {n:'TABLET', w:768, h:1024},
 ];
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox'],headless:true});
-const hallazgos=[];
+const hallazgos=[]; let paradas=0;
+for(const lang of IDIOMAS){
 for(const T of TAMANOS){
   const page = await browser.newPage();
   await page.setViewport({width:T.w,height:T.h,isMobile:T.w<500,hasTouch:true});
@@ -16,8 +18,13 @@ for(const T of TAMANOS){
   await page.setRequestInterception(true);
   page.on('request', r => /firebase|firebaseio|gstatic|googleapis|qrserver/.test(r.url()) ? r.abort() : r.continue());
   await page.goto('http://localhost:8950/reservagastrogoan.html',{waitUntil:'domcontentloaded'});
+  await page.evaluate(l=>{ localStorage.setItem('gastrogoan_lang', l); }, lang);
+  await page.reload({waitUntil:'domcontentloaded'});
+  await new Promise(r=>setTimeout(r,900));
   await new Promise(r=>setTimeout(r,1200));
 
+  const idiomaReal = await page.evaluate(()=>currentLang);
+  if(idiomaReal !== lang) throw new Error(`idioma no aplicado: pedí ${lang} y quedó ${idiomaReal}`);
   for(const pestana of ['reserva','takeaway','delivery']){
     const r = await page.evaluate(({pestana})=>{
       window.DB = DB = {};
@@ -64,7 +71,8 @@ for(const T of TAMANOS){
       return out;
     }, {pestana});
     await new Promise(r=>setTimeout(r,300));
-    const clave=`${T.n} · ${pestana}`;
+    paradas++;
+    const clave=`${lang.toUpperCase()} ${T.n} · ${pestana}`;
     if(r.scrollH>1) hallazgos.push([clave,'SCROLL HORIZONTAL',`${r.scrollH}px de más`]);
     [...new Set(r.cortados)].slice(0,3).forEach(x=>hallazgos.push([clave,'TEXTO CORTADO',x]));
     [...new Set(r.chicos)].slice(0,3).forEach(x=>hallazgos.push([clave,'OBJETIVO PEQUEÑO',x]));
@@ -73,8 +81,9 @@ for(const T of TAMANOS){
   if(errs.length) hallazgos.push([T.n,'ERROR JS',errs[0].slice(0,90)]);
   await page.close();
 }
+}
 await browser.close();
 console.log('═'.repeat(64));
 if(!hallazgos.length) console.log('✅ la web pública se ve bien en las tres pantallas');
 else hallazgos.forEach(([c,t,d])=>console.log(`❌ ${c}\n     ${t}: ${d}`));
-console.log('─'.repeat(64)); console.log(hallazgos.length+' hallazgos');
+console.log('─'.repeat(64)); console.log(`${paradas} paradas revisadas · ${hallazgos.length} hallazgos`);
