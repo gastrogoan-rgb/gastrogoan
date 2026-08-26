@@ -115,21 +115,17 @@ falta de método, sino porque no se puede hacer desde aquí: iPhone/iPad
 reales, la impresora térmica con el cajón delante, y un servicio de
 verdad con clientes.*
 
-**Los huecos grandes, por orden de riesgo:**
+**Los huecos que este mapa destapó** (y que ya están cerrados):
 
-1. **Z1 y Z2 casi sin mirar.** Son las **dos primeras pantallas** que ve
-   cada cliente que compra. Un fallo ahí no se arregla después: se pierde
-   la venta. Y encima son las únicas que las pruebas no recorren, porque
-   todas empiezan saltándose el acceso.
-2. **Las pestañas internas.** El recorrido automático entra en los 30
-   módulos, pero dentro de Limpieza hay 7 pestañas, en Gestión Económica
-   8, en Horarios 4... **Ninguna se abre.** Es donde estaba el fallo de
-   Distribución del Trabajo.
-3. **L7 (idiomas) casi en blanco.** Solo se comprueba que no falten
-   traducciones, no que quepan: en catalán e inglés los textos son más
-   largos y ahí es donde se rompen los diseños.
-4. **L3 en Z6 y Z7.** Nadie ha probado la web pública con una carta de 200
-   platos, ni el chat con 500 mensajes.
+1. **Z1 y Z2 estaban casi sin mirar.** Son las dos primeras pantallas que
+   ve quien compra, y ninguna prueba las recorría: todas empezaban
+   saltándose el acceso para llegar antes a los módulos.
+2. **Las pestañas internas no las abría nadie.** 84 en total. Ahí estaba
+   el fallo de Distribución del Trabajo, y ahí apareció el del Historial
+   de pedidos.
+3. **Los idiomas solo se comprobaban por traducciones que faltaran**, no
+   por que cupieran.
+4. **La web pública nunca se probó con volumen.**
 
 ---
 
