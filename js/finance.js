@@ -1430,7 +1430,7 @@ function renderStock(){
     // tener que leer cada fila una a una.
     return `
       <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
-        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10px">${t('label.costingSheet')}</span>` : ''}</div>
+        <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10.5px">${t('label.costingSheet')}</span>` : ''}</div>
         <div class="stock-row-values">
           <span class="stock-row-field">
             <span style="font-size:11.5px;color:var(--muted)">${t('label.minAbbrev')}</span>

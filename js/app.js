@@ -1323,7 +1323,7 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTarea(${idx},'${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTarea(${idx},'${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1338,8 +1338,8 @@ function renderDistDetail(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="toggleDistTareaDone('${ds}','${task.id}',this.checked)" title="${t('title.markAsDone')}">
         <input type="text" value="${escapeHtml(task.text)}" style="flex:1;padding:5px 8px;border:1px solid ${task.bySelf?'var(--teal)':'var(--border)'};border-radius:6px;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':(isPast?'color:var(--red)':'')}" onchange="updateDistTareaUnica('${ds}','${task.id}',this.value)" ${canEditThis?'':'disabled'}>
-        <span class="badge badge-purple" style="font-size:10px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
-        ${task.bySelf ? `<span class="badge" style="font-size:10px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
+        <span class="badge badge-purple" style="font-size:10.5px" title="${t('dist.onlyThisWeek')}"><i class="ti ti-calendar-event"></i></span>
+        ${task.bySelf ? `<span class="badge" style="font-size:10.5px;color:var(--teal);background:transparent" title="${t('dist.selfAddedHint')}"><i class="ti ti-user"></i> ${t('dist.selfAdded')}</span>` : ''}
         <button class="${task.bySelf?'':'owner-strict'} btn btn-sm btn-icon btn-danger" onclick="removeDistTareaUnica('${ds}','${task.id}')"><i class="ti ti-x"></i></button>
       </div>
     `;}).join('');
@@ -1356,7 +1356,7 @@ function renderDistDetail(){
       return `
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:${canToggle?'pointer':'not-allowed'}">
         <input type="checkbox" ${done?'checked':''} ${canToggle?'':'disabled'} onchange="toggleLimpiezaCheckMesFromDist('${monthKey}',${lt.id},this.checked)">
-        <span class="badge badge-blue" style="font-size:10px"><i class="ti ti-spray"></i> Limpieza</span>
+        <span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-spray"></i> Limpieza</span>
         <span style="flex:1;font-size:13px;${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(lt.area)}${lt.producto?` <span style="color:var(--muted);font-size:12px">(${escapeHtml(lt.producto)})</span>`:''}</span>
       </label>
     `;}).join('');
@@ -1369,14 +1369,14 @@ function renderDistDetail(){
       return `
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
         <input type="checkbox" ${done?'checked':''} onchange="event.stopPropagation();togglePromoDone(${p.id},this.checked,'${ds}')" title="${t('title.markAsDone')}">
-        <span class="badge badge-amber" style="font-size:10px"><i class="ti ti-speakerphone"></i> Promo</span>
+        <span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-speakerphone"></i> Promo</span>
         <span style="flex:1;font-size:13px;cursor:pointer;${done?'text-decoration:line-through;color:var(--muted)':''}" onclick="openPromoModal(${p.id})">${escapeHtml(p.titulo)}</span>
       </div>
     `;}).join('');
 
     return `
       <div style="padding:10px 0;border-bottom:1px solid var(--border);${isToday?'background:var(--brand-cream)':(dayHasPending?'background:var(--red-l)':'')}">
-        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10px">${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red" style="font-size:10px"><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--brand-orange);margin-bottom:6px;text-transform:uppercase">${label} · ${date.getDate()}/${date.getMonth()+1}${isToday?` <span class="badge badge-green" style="font-size:10.5px">${t('common.today')}</span>`:''}${dayHasPending?` <span class="badge badge-red" style="font-size:10.5px"><i class="ti ti-alert-triangle"></i> ${t('dist.overdue')}</span>`:''}</div>
         ${promosHtml}
         ${limpiezaHtml}
         ${tareasHtml}
@@ -3617,13 +3617,13 @@ function renderPromoDia(){
                 <input type="checkbox" ${done?'checked':''} onchange="togglePromoDone(${p.id},this.checked,'${date}')">
                 <span style="${done?'text-decoration:line-through;color:var(--muted)':''}">${escapeHtml(p.titulo)}</span>
               </label>
-              ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
+              ${p.recurrence==='weekly' ? `<span class="badge badge-blue" style="font-size:10.5px" title="${t('promo.modal.recurrenceHint')}"><i class="ti ti-repeat"></i></span>` : ''}
             </h3>
             ${p.descripcion ? `<div style="font-size:13px;color:var(--muted)">${escapeHtml(p.descripcion)}</div>` : ''}
             ${p.menuItemName ? `<div style="font-size:12px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
               <span class="badge badge-green"><i class="ti ti-discount-2"></i> ${escapeHtml(p.menuItemName)} -${p.discountPct}%</span>
-              ${p.horaInicio && p.horaFin ? `<span class="badge" style="font-size:10px"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
-              ${p.maxUses ? `<span class="badge" style="font-size:10px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
+              ${p.horaInicio && p.horaFin ? `<span class="badge" style="font-size:10.5px"><i class="ti ti-clock"></i> ${escapeHtml(p.horaInicio)}-${escapeHtml(p.horaFin)}</span>` : ''}
+              ${p.maxUses ? `<span class="badge" style="font-size:10.5px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
             ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
@@ -3667,7 +3667,7 @@ function renderPromoSemana(){
   const headerCells = dates.map((d,i) => {
     const ds = dateStr(d);
     const isToday = ds === todayStr();
-    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span style="font-size:10px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
+    return `<th ${isToday?'style="color:var(--brand-orange)"':''}>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`;
   }).join('');
 
   const bodyCells = dates.map(d => {

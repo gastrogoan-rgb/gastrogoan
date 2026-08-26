@@ -2075,14 +2075,14 @@ function renderTandaGroupCard(order, g, isMenu){
     const hasCocina = bebidaInGroup.some(({line}) => line.estado === 'cocina');
     const hasPreparando = bebidaInGroup.some(({line}) => line.estado === 'preparando');
     const allServed = bebidaInGroup.every(({line}) => line.estado === 'entregado');
-    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
+    if(allServed) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('kitchen.delivered')}</span>`;
     else if(hasCocina) statusBadge = `<button class="btn btn-sm" style="background:var(--amber);color:#fff;border-color:var(--amber);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-clock"></i> ${t('kitchen.waiting')}</button>`;
     else if(hasPreparando) statusBadge = `<button class="btn btn-sm" style="background:var(--teal);color:#fff;border-color:var(--teal);font-size:11px;padding:4px 8px;min-height:auto" onclick="cycleGroupEstado(${order.id}, '${escapeJsAttr(g.tanda||'')}')"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</button>`;
   }else{
-    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
-    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
-    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
-    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
+    if(allPicked) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-check"></i> ${t('tpv.pickedUp')}</span>`;
+    else if(listos.length) statusBadge = `<span class="badge badge-green" style="font-size:10.5px"><i class="ti ti-tools-kitchen-2"></i> ${t('tpv.readyToPickup')}</span>`;
+    else if(foodInGroup.some(({line}) => line.estado === 'preparando')) statusBadge = `<span class="badge badge-blue" style="font-size:10.5px"><i class="ti ti-flame"></i> ${t('kitchen.preparing')}</span>`;
+    else if(allFired) statusBadge = `<span class="badge badge-amber" style="font-size:10.5px"><i class="ti ti-clock"></i> ${t('tpv.fired')}</span>`;
   }
 
   return `
@@ -2128,7 +2128,7 @@ function renderTandaGroupCard(order, g, isMenu){
         ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
         ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
       </div>
-      ${line.notas ? `<div style="font-size:10px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
+      ${line.notas ? `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
     `;}).join('')}
   </div>
   `;
@@ -2796,7 +2796,7 @@ function renderComandasCocina(){
             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;gap:8px">
               <div style="flex:1;min-width:0;overflow-wrap:anywhere">
                 <strong style="${line.estado==='entregado'?'color:var(--muted);text-decoration:line-through':''}">${fmtNum(line.qty)} × ${escapeHtml(line.name)}</strong>
-                ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
+                ${menuNombre ? `<span class="badge badge-purple" style="margin-left:6px;font-size:10.5px">${t('kitchen.fromMenu')}: ${escapeHtml(menuNombre)}</span>` : ''}
                 ${line.notas && !notaEsAutoMenu ? `<div style="font-size:12px;color:var(--muted)">${escapeHtml(line.notas)}</div>` : ''}
               </div>
               ${!line.estado ? `<span class="badge badge-gray" style="flex:none"><i class="ti ti-clock-pause"></i> ${t('kitchen.notFired')}</span>`

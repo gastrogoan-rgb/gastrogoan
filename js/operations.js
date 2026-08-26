@@ -688,7 +688,7 @@ function renderProveedores(){
 function openSupplierIngredientsModal(providerId){
   const p = DB.providers.find(x=>x.id===providerId);
   if(!p) return;
-  const ings = ingredientsForSupplier(p.nombre).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const ings = ingredientsForSupplier(p.nombre).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   openModal(`
     <div class="modal-header">
       <h3><i class="ti ti-list"></i> ${escapeHtml(p.nombre)}</h3>
@@ -1008,7 +1008,12 @@ function renderPedidoList(){
     return;
   }
 
-  const suppliers = [...new Set(allOrders.map(o => o.supplier))].sort((a,b)=>a.localeCompare(b));
+  // Un solo pedido sin proveedor (o sin fecha, más abajo) tumbaba la
+  // pantalla ENTERA del historial con un error, dejando al dueño sin ver
+  // ninguno de sus pedidos y sin ningún aviso de por qué. Es la misma
+  // forma del fallo de Distribución del Trabajo: un dato suelto corrupto
+  // que revienta al recorrer la lista. Se ordena a prueba de huecos.
+  const suppliers = [...new Set(allOrders.map(o => o.supplier).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
   const filterHtml = `
     <div class="field-row filter-compact" style="margin-bottom:12px">
       <div class="field" style="max-width:220px">
@@ -1053,7 +1058,7 @@ function renderPedidoResultsList(){
   const totalFiltrado = orders.reduce((sum,o) => sum + pedidoTotalConIva(o), 0);
   const totalHtml = `<div style="font-size:13px;color:var(--muted);margin-bottom:10px">${t('label.totalFiltered')}: <strong style="color:var(--teal)">${fmtMoney(totalFiltrado)}</strong></div>`;
 
-  const sorted = orders.slice().sort((a,b) => b.date.localeCompare(a.date));
+  const sorted = orders.slice().sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
   box.innerHTML = totalHtml + sorted.map(o => {
     const itemCount = (o.items||[]).length;
     const withQty = (o.items||[]).filter(i => (i.cantidad||0) > 0).length;
