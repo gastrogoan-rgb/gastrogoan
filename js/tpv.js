@@ -1725,6 +1725,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       line = existing;
     } else {
       line = {
+        lineId: genId(),
         menuId: m.id, recipeId: s.recipeId, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
@@ -2976,7 +2977,7 @@ function addOrderItem(orderId, secId, platoId){
   let line;
   if(existing){ existing.qty += 1; line = existing; }
   else{
-    line = {platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -3049,6 +3050,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
     line = existing;
   } else {
     line = {
+      lineId: genId(),
       platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };

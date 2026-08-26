@@ -124,6 +124,13 @@ python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 248 boton
 bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (emulador oficial)
 bash build.sh                 # regenerar dist/
 ```
+
+O de una vez, con las cuatro grandes en paralelo (son independientes;
+encadenarlas solo servía para esperar):
+
+```bash
+bash test/todo.sh
+```
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
 
 ### Rama

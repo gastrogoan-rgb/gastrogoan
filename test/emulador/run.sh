@@ -36,21 +36,36 @@ cp "$SDK/firebase-app-compat.js" "$SDK/firebase-database-compat.js" "$RAIZ/__sdk
 cat "$SDK/firebase-auth-compat.js" > "$RAIZ/__sdk/firebase-auth-compat.js"
 cat >> "$RAIZ/__sdk/firebase-auth-compat.js" <<'PATCH'
 
-/* Solo para pruebas: manda la autenticación al emulador local. */
+/* Solo para pruebas: toda la autenticación al emulador local. Hay que
+   cubrir los DOS caminos — firebase.auth() (la nube del negocio) y
+   app.auth() sobre una instancia con nombre (la plataforma) — porque el
+   segundo se salta cualquier parche hecho solo sobre el primero. */
 ;(function(){
+  function alEmulador(au){
+    if(au && !au.__emu){ au.__emu = true; try{ au.useEmulator('http://127.0.0.1:9099', {disableWarnings:true}); }catch(e){} }
+    return au;
+  }
+  function envolver(obj, prop){
+    var orig = obj[prop];
+    if(typeof orig !== 'function' || orig.__envuelto) return;
+    var w = function(){ return alEmulador(orig.apply(this, arguments)); };
+    for(var k in orig){ try{ w[k] = orig[k]; }catch(e){} }
+    try{ Object.setPrototypeOf(w, orig); }catch(e){}
+    w.__envuelto = true;
+    obj[prop] = w;
+  }
   try{
     var ns = (typeof firebase !== 'undefined') ? firebase : window.firebase;
-    if(!ns || typeof ns.auth !== 'function') return;
-    var orig = ns.auth;
-    var wrapped = function(){
-      var au = orig.apply(this, arguments);
-      if(au && !au.__emu){ au.__emu = true; try{ au.useEmulator('http://127.0.0.1:9099', {disableWarnings:true}); }catch(e){} }
-      return au;
+    if(!ns) return;
+    envolver(ns, 'auth');
+    var origInit = ns.initializeApp;
+    ns.initializeApp = function(){
+      var app = origInit.apply(this, arguments);
+      try{ if(app && typeof app.auth === 'function') envolver(app, 'auth'); }catch(e){}
+      return app;
     };
-    for(var k in orig){ try{ wrapped[k] = orig[k]; }catch(e){} }
-    Object.setPrototypeOf(wrapped, orig);
-    ns.auth = wrapped;
-  }catch(e){}
+    for(var k in origInit){ try{ ns.initializeApp[k] = origInit[k]; }catch(e){} }
+  }catch(e){ console.warn('parche del emulador de auth falló', e); }
 })();
 PATCH
 
@@ -93,5 +108,7 @@ echo "→ emuladores listos (database:9000, auth:9099)"
 
 node "$RAIZ/test/emulador/sync-real.mjs"
 SALIDA=$?
+echo
+node "$RAIZ/test/emulador/escenarios.mjs" || SALIDA=1
 rm -rf "$RAIZ/__sdk"
 exit $SALIDA

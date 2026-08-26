@@ -5907,12 +5907,17 @@ function gl(obj){
   return obj[l] !== undefined ? obj[l] : obj.es;
 }
 function setLang(lang){
-  // Primero lo que manda y es inmediato: la recarga de abajo ya no puede
-  // dejarlo a medias.
+  // localStorage y NADA MÁS. Es inmediato (la recarga de abajo no puede
+  // dejarlo a medias) y, sobre todo, no se sincroniza.
+  //
+  // Antes esto además escribía DB.business.lang "por compatibilidad", y eso
+  // arruinaba el propio arreglo: ese campo sí viaja a la nube, así que
+  // cualquier OTRO dispositivo que no hubiera elegido idioma propio lo
+  // heredaba por el respaldo de getLang(). Un camarero poniéndose la app en
+  // catalán se la cambiaba al dueño en su tablet. El campo se sigue LEYENDO
+  // como respaldo (getLang) para no dejar sin idioma a quien ya lo tuviera
+  // guardado de antes, pero no se vuelve a escribir nunca.
   try{ localStorage.setItem(LANG_LS, lang); }catch(e){}
-  // Se sigue dejando en el negocio para que un dispositivo con una versión
-  // anterior de la app no se quede sin idioma elegido.
-  if(DB && DB.business){ DB.business.lang = lang; saveDB(); }
   location.reload();
 }
 const LANG_FLAGS = {es:'🇪🇸', en:'🇬🇧', ca:'<svg width="20" height="14" viewBox="0 0 27 18" style="border-radius:2px;flex-shrink:0;vertical-align:middle"><rect width="27" height="18" fill="#FCDD09"/><rect y="2" width="27" height="2" fill="#DA121A"/><rect y="6" width="27" height="2" fill="#DA121A"/><rect y="10" width="27" height="2" fill="#DA121A"/><rect y="14" width="27" height="2" fill="#DA121A"/></svg>'};

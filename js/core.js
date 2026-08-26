@@ -3634,6 +3634,33 @@ function warnIfConcurrentEditLost(key, localArr, remoteArr){
     }
   }catch(e){ console.error('Error detectando conflicto de sincronización', e); }
 }
+/* Une las líneas de una misma comanda tomadas en dos dispositivos.
+   Cada línea lleva su propio `lineId` desde que se crea; las comandas
+   abiertas ANTES de esa versión no lo tienen, y ahí no hay forma fiable de
+   saber qué línea es cuál, así que se respeta lo que diga la nube — el
+   comportamiento de siempre, nunca peor.
+
+   Si la misma línea existe en los dos lados (los dos camareros sumaron una
+   unidad del mismo plato), se queda la de la nube: no se inventan
+   cantidades sumando, que sería peor error que perder una unidad. */
+function mergeOrderLines(localOrder, remoteOrder){
+  const locales = Array.isArray(localOrder.items) ? localOrder.items : [];
+  const remotas = Array.isArray(remoteOrder.items) ? remoteOrder.items : [];
+  if(!locales.length) return remoteOrder;
+  const todasConId = arr => arr.every(l => l && l.lineId != null);
+  if(!todasConId(locales) || !todasConId(remotas)) return remoteOrder;
+  const remotasPorId = new Map();
+  remotas.forEach(l => remotasPorId.set(l.lineId, l));
+  const unidas = [];
+  const vistas = new Set();
+  locales.forEach(l => {
+    vistas.add(l.lineId);
+    unidas.push(remotasPorId.has(l.lineId) ? remotasPorId.get(l.lineId) : l);
+  });
+  remotas.forEach(l => { if(!vistas.has(l.lineId)) unidas.push(l); });
+  return Object.assign({}, remoteOrder, {items: unidas});
+}
+
 function applyRemoteBlock(key, remoteValue){
   const def = defaultData();
   let merged = def.hasOwnProperty(key) ? withDefaults(def[key], remoteValue) : remoteValue;
@@ -3685,6 +3712,23 @@ function applyRemoteBlock(key, remoteValue){
       recipe: mergeStockField((DB[key]||{}).recipe, (merged||{}).recipe, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).recipe) : null),
       ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
     };
+  }
+  // Dos camareros en la MISMA mesa: uno toma las bebidas en la barra y otro
+  // la comida en el salón. Como tpvOrders se fusiona por id de comanda, la
+  // comanda entera de la nube sustituía a la local y las líneas del otro
+  // camarero desaparecían sin dejar rastro: un plato servido que no se
+  // cobra. Aquí se fusionan también las LÍNEAS de cada comanda.
+  if(key === 'tpvOrders' && Array.isArray(DB[key]) && Array.isArray(merged)){
+    const localesPorId = new Map();
+    DB[key].forEach(o => { if(o && o.id != null) localesPorId.set(o.id, o); });
+    merged = merged.map(o => {
+      if(!o || o.id == null) return o;
+      const local = localesPorId.get(o.id);
+      // Si no había versión local, o mergeArraysById ya se quedó con la
+      // local (la nube no la tiene), no hay nada que fusionar.
+      if(!local || local === o) return o;
+      return mergeOrderLines(local, o);
+    });
   }
   if(key === 'tpvOrders'){
     (merged||[]).forEach(o => { if(!Array.isArray(o.items)) o.items = []; if(!Array.isArray(o.tandas)) o.tandas = []; });
