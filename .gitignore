@@ -5,3 +5,6 @@ node_modules/
 
 # Capturas de pantalla de las pruebas — material temporal, no del producto
 *.png
+
+# SDK de Firebase servido en local durante las pruebas del emulador
+__sdk/

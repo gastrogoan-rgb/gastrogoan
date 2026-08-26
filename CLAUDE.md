@@ -121,6 +121,7 @@ node test/smoke.test.mjs      # cálculos de dinero/IVA, stock, recetas
 node test/audit-active.mjs    # regresiones de sincronización
 python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 24 vistas
 python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 248 botones visibles de las 30 pantallas
+bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (emulador oficial)
 bash build.sh                 # regenerar dist/
 ```
 Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba temporales.
@@ -178,6 +179,12 @@ fallos que solo aparecen con la nube conectada de verdad:
 (`applyRemoteBlock` / `mergeStockField` a mano) y no darlo por bueno solo
 porque funcione en local. Los dos casos tienen ya prueba permanente en
 `test/audit-active.mjs`, bloque H.
+
+Y mejor todavía, sin simular nada: `bash test/emulador/run.sh` levanta el
+**emulador oficial de Firebase** y abre **dos navegadores reales** contra
+él. Es el único sitio donde se ve lo que de verdad hace la nube — ahí se
+descubrió, por ejemplo, que **Firebase no guarda objetos vacíos**, que es
+la raíz del bug de Distribución del Trabajo. Ver `test/emulador/README.md`.
 
 ---
 
