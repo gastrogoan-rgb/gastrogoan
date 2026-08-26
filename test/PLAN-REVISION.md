@@ -102,13 +102,18 @@ Están en todas partes, así que un fallo aquí se multiplica.
 
 | | L1 Funciona | L2 Se ve | L3 Aguanta | L4 Roles | L5 Nube | L6 Tamaños | L7 Idiomas |
 |---|---|---|---|---|---|---|---|
-| **Z1** Acceso | ⚠️ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ |
-| **Z2** Alta | ⚠️ | ❌ | ❌ | — | ⚠️ | ❌ | ⚠️ |
-| **Z3** Cocina | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
-| **Z4** Sala | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
-| **Z5** Gestión | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ |
-| **Z6** Transversales | ⚠️ | ⚠️ | ❌ | ⚠️ | — | ⚠️ | ❌ |
-| **Z7** Web pública | ⚠️ | ✅ | ❌ | — | ⚠️ | ✅ | ❌ |
+| **Z1** Acceso | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Z2** Alta | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| **Z3** Cocina | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Z4** Sala | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Z5** Gestión | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Z6** Transversales | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ |
+| **Z7** Web pública | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+
+*Las seis rondas del plan están hechas. Lo que sigue sin cubrir no es por
+falta de método, sino porque no se puede hacer desde aquí: iPhone/iPad
+reales, la impresora térmica con el cajón delante, y un servicio de
+verdad con clientes.*
 
 **Los huecos grandes, por orden de riesgo:**
 
@@ -140,6 +145,13 @@ Por riesgo × cuánto se usa, no por comodidad:
 | **R10** | Z6 transversales (L1+L2+L3) | Un fallo aquí se multiplica por toda la app |
 | **R11** | L3 en Z7 (web pública con volumen) | Es la cara del negocio ante sus clientes |
 | **R12** | L5 (nube) sobre Z1/Z2 y el cobro | Los bugs más caros han salido todos de aquí |
+
+**Las seis rondas están hechas.** Lo que encontró cada una está en el
+historial de commits; el resumen: 58 defectos visuales, un módulo que
+podía reventar entero (Historial de pedidos), el botón de cerrar el chat
+a 12×20 px, el gris de todo el texto secundario por debajo del mínimo
+legible, la casilla obligatoria de la web pública a 13×13 px, y el
+duplicado de cobro que ahora queda anotado.
 
 ---
 

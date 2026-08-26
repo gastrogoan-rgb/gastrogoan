@@ -3634,6 +3634,50 @@ function warnIfConcurrentEditLost(key, localArr, remoteArr){
     }
   }catch(e){ console.error('Error detectando conflicto de sincronización', e); }
 }
+/* Dos camareros cobrando la MISMA mesa a la vez acaban creando dos ventas
+   del mismo pedido. Es raro, pero pasa: cada dispositivo ve la mesa
+   abierta porque la sincronización aún no le ha llegado, y la guarda de
+   finalizeCharge ("si ya está pagada, no cobres") solo protege del doble
+   toque en el MISMO aparato.
+
+   Cerrarlo del todo exigiría preguntar a la nube antes de cada cobro, y la
+   app cobra sin internet a propósito — un restaurante no puede quedarse
+   sin caja porque se caiga el wifi. Entre perder una venta y duplicarla,
+   se duplica: una venta de más se ve y se anula, una de menos no la
+   detecta nadie.
+
+   Lo que sí se puede es que NO pase desapercibida: un cobro duplicado
+   infla la facturación y el IVA declarado. Queda anotado en el registro de
+   actividad como crítico. Se avisa una sola vez por pedido, no en cada
+   sincronización. */
+const cobrosDuplicadosAvisados = new Set();
+function avisarSiCobroDuplicado(ventas){
+  try{
+    if(!Array.isArray(ventas) || !DB.auditLog) return;
+    const porPedido = new Map();
+    ventas.forEach(v => {
+      if(!v || v.orderId == null || v.anulada) return;
+      if(!porPedido.has(v.orderId)) porPedido.set(v.orderId, []);
+      porPedido.get(v.orderId).push(v);
+    });
+    porPedido.forEach((lista, orderId) => {
+      if(lista.length < 2 || cobrosDuplicadosAvisados.has(orderId)) return;
+      cobrosDuplicadosAvisados.add(orderId);
+      const importe = lista.reduce((s,v) => s + (parseFloat(v.total)||0), 0);
+      DB.auditLog.unshift({
+        id: genId(), ts: new Date().toISOString(),
+        actor: (typeof currentActorName === 'function' ? currentActorName() : ''),
+        action: 'cobro_duplicado',
+        summary: t('msg.duplicateChargeDetected')
+                  .replace('${n}', lista.length)
+                  .replace('${total}', (typeof fmtMoney === 'function' ? fmtMoney(importe) : importe)),
+        severity: 'critical'
+      });
+      if(DB.auditLog.length > 500) DB.auditLog = DB.auditLog.slice(0, 500);
+    });
+  }catch(e){ console.error('Error detectando cobro duplicado', e); }
+}
+
 /* Une las líneas de una misma comanda tomadas en dos dispositivos.
    Cada línea lleva su propio `lineId` desde que se crea; las comandas
    abiertas ANTES de esa versión no lo tienen, y ahí no hay forma fiable de
@@ -3713,6 +3757,7 @@ function applyRemoteBlock(key, remoteValue){
       ingredient: mergeStockField((DB[key]||{}).ingredient, (merged||{}).ingredient, lastSyncedSnapshot && lastSyncedSnapshot[key] ? canonicalStringify((JSON.parse(lastSyncedSnapshot[key])||{}).ingredient) : null),
     };
   }
+  if(key === 'sales' && Array.isArray(merged)) avisarSiCobroDuplicado(merged);
   // Dos camareros en la MISMA mesa: uno toma las bebidas en la barra y otro
   // la comida en el salón. Como tpvOrders se fusiona por id de comanda, la
   // comanda entera de la nube sustituía a la local y las líneas del otro
