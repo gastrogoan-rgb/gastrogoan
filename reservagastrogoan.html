@@ -9,7 +9,12 @@
   :root{
     --ink:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
     --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
-    --body:#3D3A34; --muted:#8A857C;
+    /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
+       blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
+       del formulario de reserva ("Nombre *", "Teléfono *"). Este es el
+       formulario que rellena el cliente del restaurante: si no lo lee
+       bien, no reserva. */
+    --body:#3D3A34; --muted:#716C65;
     --green:#4A5D4E; --green-l:#EDF1EC;
     --red:#8A4A3B; --red-l:#F5EBE7;
   }
@@ -152,6 +157,19 @@
      rectangulares con el emoji al lado del nombre, en dos columnas: la
      carta entera se ve de un vistazo y siguen midiendo 48 px de alto, el
      mínimo para poder pulsarlas con el dedo. */
+  /* La casilla de aceptar el tratamiento de datos salía a 13x13 px (el
+     tamaño por defecto del navegador, sin estilo) y es OBLIGATORIA para
+     enviar la reserva: un cliente que no acierta a marcarla no puede
+     reservar, y se va. El enlace "Ver más" tenía 15 px de alto. */
+  .consent-check{
+    width:24px;height:24px;min-width:24px;min-height:24px;
+    margin:0;flex:none;accent-color:var(--olive, #7E9B84);cursor:pointer;
+  }
+  label:has(> .consent-check){min-height:44px;align-items:center !important;gap:12px !important}
+  label:has(> .consent-check) a{
+    display:inline-block;padding:6px 2px;min-height:32px;line-height:20px;
+  }
+
   .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin-bottom:6px}
   .menu-folder-card{
     display:flex;flex-direction:row;align-items:center;gap:8px;
@@ -1493,7 +1511,7 @@ function renderReservaForm(){
         ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}
       </div>` : ''}
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
-        <input type="checkbox" id="r-privacy-consent" style="width:auto;margin-top:2px">
+        <input type="checkbox" id="r-privacy-consent" class="consent-check">
         <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
       </label>
       <button class="btn btn-primary" id="r-submit" onclick="submitReserva()">${(DB.business||{}).requireDeposit ? t('reserva.submitWithDeposit') : t('reserva.submit')}</button>
@@ -1996,7 +2014,7 @@ function renderOrderForm(){
         </div>
       </div>
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
-        <input type="checkbox" id="o-privacy-consent" style="width:auto;margin-top:2px">
+        <input type="checkbox" id="o-privacy-consent" class="consent-check">
         <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
       </label>
       <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
@@ -2670,7 +2688,7 @@ function renderMesaOrderForm(){
       </div>
       ` : ''}
       <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
-        <input type="checkbox" id="o-privacy-consent" style="width:auto;margin-top:2px">
+        <input type="checkbox" id="o-privacy-consent" class="consent-check">
         <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
       </label>
       <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">${t('order.submit.mesa')}</button>

@@ -1284,7 +1284,7 @@ function renderPedidoDetail(){
         ${o.estado==='BORRADOR' ? `<button class="btn btn-primary" onclick="changePedidoEstado('ENVIADO')"><i class="ti ti-send"></i> ${t('btn.markSent')}</button>` : ''}
         ${o.estado==='ENVIADO' ? `<button class="btn btn-primary" onclick="changePedidoEstado('RECIBIDO')"><i class="ti ti-check"></i> ${t('btn.markReceived')}</button>` : ''}
         ${o.estado==='RECIBIDO' ? `<button class="owner-only btn" onclick="revertPedidoRecepcion(${o.id})"><i class="ti ti-arrow-back-up"></i> ${t('btn.revertReception')}</button>` : ''}
-        <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn" style="background:#188842;color:#fff;border-color:#188842" onclick="sendPedidoWhatsapp()"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn" onclick="sendPedidoEmail()"><i class="ti ti-mail"></i> Email</button>
         <button class="btn" onclick="printPedido()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         <button class="owner-only btn" onclick="duplicateOrder(${o.id})"><i class="ti ti-copy"></i> ${t('btn.duplicateOrder')}</button>
@@ -1735,7 +1735,7 @@ function updateOrderItemSearch(val){
 function orderFormButtonsHtml(){
   return `
     <button class="btn" onclick="printPedidoBorrador()"><i class="ti ti-printer"></i> ${t('common.print')}</button>
-    <button class="btn" style="background:#25D366;color:#fff;border-color:#25D366" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
+    <button class="btn" style="background:#188842;color:#fff;border-color:#188842" onclick="sendNewPedido('whatsapp')"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendByWhatsapp')}</button>
     <button class="btn btn-primary" onclick="sendNewPedido('email')"><i class="ti ti-mail"></i> ${t('btn.sendByEmail')}</button>
   `;
 }

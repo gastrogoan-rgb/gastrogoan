@@ -213,7 +213,7 @@ function renderEscandallo(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
       </div>
     `).join('')}</div>`;
@@ -1010,7 +1010,7 @@ function renderFichas(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
       </div>
     `).join('')}</div>`;

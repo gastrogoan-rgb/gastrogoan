@@ -216,7 +216,7 @@ function renderDashboardBarTrend(elId, trend, allowNegative){
         const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--brand-orange)';
         return `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${t.value!==0?fmtMoney(t.value):''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px;white-space:nowrap">${t.value!==0?fmtMoney(t.value):''}</div>
           <div style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${Math.max(2,(Math.abs(t.value)/maxVal*100))}%"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
         </div>
@@ -559,7 +559,7 @@ function renderDashboard(){
           ${hourTotals.map((v,h) => `
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${h}:00 - ${fmtMoney(v)}">
               <div style="width:100%;background:var(--brand-orange);border-radius:2px 2px 0 0;height:${Math.max(2,(v/maxHour*100))}%"></div>
-              ${h%3===0?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${h}h</div>`:''}
+              ${h%3===0?`<div style="font-size:10.5px;color:var(--muted);margin-top:2px">${h}h</div>`:''}
             </div>
           `).join('')}
         </div>
@@ -639,7 +639,7 @@ function renderSalesHeatmap(){
               ${grid[di].map(v => {
                 const intensity = v/maxVal;
                 const bg = v>0 ? `rgba(255,138,0,${(0.12+intensity*0.78).toFixed(2)})` : 'transparent';
-                return `<td style="padding:4px"><div title="${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${intensity>0.5?'#fff':'var(--muted)'}">${v>0?fmtMoney(v):''}</div></td>`;
+                return `<td style="padding:4px"><div title="${fmtMoney(v)}" style="height:34px;border-radius:6px;background:${bg};border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${intensity>0.5?'#1C1A17':'var(--muted)'}">${v>0?fmtMoney(v):''}</div></td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -807,9 +807,9 @@ function renderMegalista(){
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openMegalistaFolder('${safeCat}')">
         <h3 style="flex-wrap:nowrap;align-items:flex-start">
-          <span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
+          <span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
           <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
-          <button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0;min-width:30px;min-height:30px;padding:4px" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+          <button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
         </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
@@ -1481,7 +1481,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -1540,7 +1540,7 @@ function renderStock(){
       const n = (elabsByRecipeCat[key]||[]).length;
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span style="font-size:18px;cursor:pointer;flex-shrink:0" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
         <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
       </div>`;
     }).join('')}</div>`;

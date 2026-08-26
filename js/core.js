@@ -4155,7 +4155,7 @@ function renderOnlineCard(){
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-sm" style="flex:1" onclick="copyPublicLinkFrom('mn-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-        <a class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <a class="btn btn-sm" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', b.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
       </div>
       <div class="field" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
         <label>${t('mn.online.slugLabel')}</label>
@@ -4957,7 +4957,7 @@ function openCloudWizard(){
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1" onclick="copyPublicLinkFrom('cloud-public-link')"><i class="ti ti-copy"></i> ${t('mn.online.copyLink')}</button>
-      <a class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+      <a class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
     <details${lastSyncBadgeState === 'error' ? ' open' : ''}>

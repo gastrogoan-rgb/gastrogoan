@@ -2384,7 +2384,7 @@ function openRewardNotifyModal(id, reward){
       <textarea id="reward-notify-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendRewardWhatsapp(${id})" ${!c.phone?`disabled title="${t('msg.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendRewardEmail(${id})" ${!c.email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3443,7 +3443,7 @@ function openReservationReminderModal(id){
       <textarea id="reservation-reminder-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendReservationReminderWhatsapp(${id})" ${!phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendReservationReminderEmail(${id})" ${!email?`disabled title="${t('msg.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -3503,7 +3503,7 @@ function renderReservasRemindersDue(){
         <div class="card">
           <h3 style="justify-content:space-between;font-size:14px"><span>${escapeHtml(name)}</span></h3>
           <div style="font-size:13px"><i class="ti ti-clock"></i> ${escapeHtml(r.time||'')} · <i class="ti ti-users"></i> ${r.people}</div>
-          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#25D366;color:#fff;border-color:#25D366" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
+          <button class="btn btn-sm" style="margin-top:8px;width:100%;background:#188842;color:#fff;border-color:#188842" onclick="openReservationReminderModal(${r.id})"><i class="ti ti-brand-whatsapp"></i> ${t('btn.sendReminder')}</button>
         </div>`;
       }).join('')}
     </div>
@@ -4328,7 +4328,7 @@ function renderPromoClientes(){
     <div class="card">
       <h3 style="font-size:14px;justify-content:space-between;gap:6px"><span>${escapeHtml(c.name)}</span>${badge}</h3>
       <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn btn-sm" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-sm" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
         <button class="btn btn-sm" style="flex:1" onclick="openClientMessageModal(${c.id}, '${templateKey}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
       </div>
       <button class="owner-only btn btn-sm" style="width:100%;margin-top:6px" ${registered?'disabled':''} onclick="registerClientOutreachAsPromo(${c.id},'${templateKey}')"><i class="ti ${registered?'ti-check':'ti-calendar-plus'}"></i> ${registered?t('promo.clients.alreadyRegisteredToday'):t('promo.clients.registerAsAction')}</button>
@@ -4407,7 +4407,7 @@ function openClientMessageModal(clientId, templateKey){
       <textarea id="promo-msg-text" rows="4">${escapeHtml(msg)}</textarea>
     </div>
     <div class="promo-share-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" style="flex:1;background:#25D366;color:#fff;border-color:#25D366" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
+      <button class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842" onclick="sendPromoClientWhatsapp(${clientId})" ${!c.phone?`disabled title="${t('promo.clients.noPhone')}"`:''}><i class="ti ti-brand-whatsapp"></i> WhatsApp / SMS</button>
       <button class="btn" style="flex:1" onclick="sendPromoClientEmail(${clientId}, '${escapeJsAttr((PROMO_MESSAGE_SUBJECTS[templateKey]&&PROMO_MESSAGE_SUBJECTS[templateKey]())||'')}')" ${!c.email?`disabled title="${t('promo.clients.noEmail')}"`:''}><i class="ti ti-mail"></i> Email</button>
     </div>
     <div class="modal-footer">
@@ -4657,7 +4657,7 @@ function renderHorarioRows(horario){
           <input type="checkbox" id="mn-hor-${i}-abierto" ${d.abierto!==false?'checked':''} onchange="toggleHorarioDia(${i})">
           ${weekDayFull(i)}
         </label>
-        <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})" style="padding:2px 4px;font-size:11px;width:auto;min-height:auto;display:${d.abierto!==false?'inline-block':'none'}">
+        <select id="mn-hor-${i}-modo" onchange="toggleHorarioModo(${i})" style="padding:4px 6px;font-size:11.5px;width:auto;min-height:32px;display:${d.abierto!==false?'inline-block':'none'}">
           <option value="turnos" ${!modoSeguido?'selected':''}>${t('mn.schedule.byShift')}</option>
           <option value="seguido" ${modoSeguido?'selected':''}>${t('mn.schedule.continuous')}</option>
         </select>
@@ -5766,7 +5766,7 @@ function renderDeliveryPlatformsCard(){
         ${couriers.length ? couriers.map(c=>`
           <div class="ge-item">
             <span style="flex:1;font-size:14px;font-weight:600">${escapeHtml(c.nombre)}</span>
-            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#25D366" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
+            ${c.telefono ? `<a class="btn btn-sm btn-icon" style="color:#188842" href="https://wa.me/${c.telefono.replace(/[^0-9]/g,'')}" target="_blank" rel="noopener" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>` : ''}
             <button class="btn btn-sm btn-icon" onclick="editOwnCourier(${c.id})"><i class="ti ti-edit"></i></button>
             <button class="btn btn-sm btn-icon btn-danger" onclick="deleteOwnCourier(${c.id})"><i class="ti ti-trash"></i></button>
           </div>`).join('')

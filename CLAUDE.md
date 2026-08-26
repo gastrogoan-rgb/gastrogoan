@@ -111,7 +111,14 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
 - **Comentarios**: explican **por qué**, no qué. Suelen documentar el bug que motivó el código.
 - **i18n**: 3 idiomas (`es`, `ca`, `en`) en `js/i18n.js`. Toda cadena nueva va en los tres. `t('clave')` para UI, `gl({es,ca,en})` para prosa larga.
 - **Escapado**: `escapeHtml()` en **todo** dato de usuario que entre en HTML. Verificado sin huecos.
-- **Objetivo táctil mínimo**: 44×44 px.
+- **Objetivo táctil mínimo**: 44×44 px. Ojo con dos trampas ya pisadas:
+  las reglas de pantallas MÁS pequeñas encogían los botones aún más
+  (34-36 px), y varios tamaños estaban escritos a mano en el HTML, donde
+  ninguna regla de CSS los alcanza.
+- **Contraste mínimo del texto**: 4,5:1 (3:1 si es grande). `--muted` es el
+  gris de TODO el texto secundario y aparece 150+ veces por pantalla: si se
+  toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
+  `#F1EFE9`, `#F4F4F4`). Lo verifica `test/contraste.mjs`.
 
 ### Antes de dar algo por terminado
 

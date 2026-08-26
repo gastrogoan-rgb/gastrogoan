@@ -26,8 +26,12 @@ node test/smoke.test.mjs           > "$SALIDA/smoke.txt"   2>&1 & P1=$!
 node test/audit-active.mjs         > "$SALIDA/sync.txt"    2>&1 & P2=$!
 node test/click-audit.mjs          > "$SALIDA/botones.txt" 2>&1 & P3=$!
 node test/visual-audit.mjs         > "$SALIDA/visual.txt"  2>&1 & P4=$!
+node test/visual-defectos.mjs      > "$SALIDA/defectos.txt" 2>&1 & P5=$!
+node test/contraste.mjs            > "$SALIDA/contraste.txt" 2>&1 & P6=$!
+node test/publica-visual.mjs       > "$SALIDA/publica.txt"  2>&1 & P7=$!
+node test/extremos.mjs             > "$SALIDA/extremos.txt" 2>&1 & P8=$!
 
-echo "→ 4 pruebas corriendo a la vez…"
+echo "→ 8 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -38,5 +42,9 @@ espera $P1 "cálculos (dinero, IVA, stock, recetas)" "$SALIDA/smoke.txt"   "✅ 
 espera $P2 "sincronización"                          "$SALIDA/sync.txt"    "Todas las pruebas activas"
 espera $P3 "botones (248 en 30 pantallas)"           "$SALIDA/botones.txt" "Ninguno lanzó un error"
 espera $P4 "responsive (6 tamaños × 24 vistas)"      "$SALIDA/visual.txt"  "Sin desbordamientos"
+espera $P5 "defectos visuales (móvil/tablet/escritorio)" "$SALIDA/defectos.txt"  "nada que señalar"
+espera $P6 "contraste del texto"                      "$SALIDA/contraste.txt" "contraste suficiente"
+espera $P7 "web pública (3 pantallas)"                "$SALIDA/publica.txt"   "se ve bien"
+espera $P8 "contenido extremo"                        "$SALIDA/extremos.txt"  "aguanta contenido largo"
 
 exit $FALLOS
