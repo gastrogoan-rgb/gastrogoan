@@ -73,11 +73,24 @@ for(const T of TAMANOS){
           if(t) out.cortados.push(`${e.clientWidth}px de ${e.scrollWidth}px  "${t}"`);
         }
       });
-      // Botones que se pisan entre sí
+      // Botones que se pisan entre sí. Comprobar solo la geometría da
+      // falsas alarmas: un botón dentro de una lista con desplazamiento
+      // puede quedar "encima" de otro sobre el papel y en realidad estar
+      // recortado, ni visible ni pulsable. Se confirma preguntando qué hay
+      // de verdad en ese punto de la pantalla.
       const bts=[...c.querySelectorAll('button')].filter(e=>{const r2=e.getBoundingClientRect(); return r2.width>0&&r2.height>0;}).slice(0,60);
+      const visibleEnSuCentro = e => {
+        const r2=e.getBoundingClientRect();
+        const cx=r2.left+r2.width/2, cy=r2.top+r2.height/2;
+        if(cy<0||cy>window.innerHeight||cx<0||cx>window.innerWidth) return false;
+        const enPunto=document.elementFromPoint(cx,cy);
+        return !!enPunto && (enPunto===e || e.contains(enPunto));
+      };
       for(let i=0;i<bts.length;i++) for(let j=i+1;j<bts.length;j++){
         const a=bts[i].getBoundingClientRect(), b=bts[j].getBoundingClientRect();
-        if(a.left<b.right-2&&b.left<a.right-2&&a.top<b.bottom-2&&b.top<a.bottom-2) out.solapes++;
+        if(a.left<b.right-2&&b.left<a.right-2&&a.top<b.bottom-2&&b.top<a.bottom-2){
+          if(visibleEnSuCentro(bts[i]) && visibleEnSuCentro(bts[j])) out.solapes++;
+        }
       }
       return out;
     }, {vista,carpeta});

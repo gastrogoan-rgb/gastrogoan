@@ -363,7 +363,12 @@ body:not(.owner-session) .owner-strict{display:none !important}
    (por encima del mínimo táctil cómodo de ~36px) en cualquier tamaño de
    pantalla, no solo en el breakpoint móvil más estrecho — antes se
    quedaban en 32px en tablets y móviles en horizontal. */
-.comanda-qty-btn{width:40px;height:40px;min-width:40px;min-height:40px;padding:0;font-size:14px}
+/* Tamaño FIJO, con min y max: la regla general de .btn-icon (44 px) los
+   estiraba por encima del alto de su fila y se salían por abajo, llegando
+   a solaparse con el botón de Cobrar del pie — pulsar "+" en el último
+   plato podía acabar cobrando la mesa. Van en pareja dentro de cada línea
+   de la comanda, así que su alto lo manda la fila, no la regla general. */
+.btn.btn-sm.btn-icon.comanda-qty-btn,.comanda-qty-btn{width:40px;height:40px;min-width:40px;min-height:40px;max-height:40px;padding:0;font-size:14px;flex:none}
 /* Checkboxes y radios: no tenían NINGUNA regla de tamaño en toda la app, así
    que se quedaban en el ~13px diminuto por defecto del navegador — muy por
    debajo de cualquier objetivo táctil, en cada alérgeno, cada "solo
@@ -530,6 +535,12 @@ td.wrap{white-space:normal}
    de su contenido en móvil, en vez de desbordar la fila (mismo problema que
    .cal-day-badge arriba, pero a nivel de rejilla). */
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+/* Un "badge" que se pulsa sigue siendo un botón: el de alérgenos de la
+   mesa (información de seguridad alimentaria) y el de cambiar de camarero
+   salían a 22 px de alto, imposibles de acertar con el dedo en mitad del
+   servicio. Se les da área sin engordar el diseño. */
+.badge-pulsable{cursor:pointer;min-height:30px;padding-top:5px;padding-bottom:5px;display:inline-flex;align-items:center;gap:4px}
+@media (max-width:1024px){.badge-pulsable{min-height:38px;padding-left:12px;padding-right:12px}}
 .badge-green{background:var(--green-l);color:var(--green)}
 .badge-red{background:var(--red-l);color:var(--red)}
 .badge-amber{background:var(--amber-l);color:var(--amber-dark)}
@@ -1423,7 +1434,10 @@ td.wrap{white-space:normal}
      bajara de línea — se le da su propia fila completa, precio y botones
      debajo. */
   .comanda-item-row > span:first-child{flex-basis:100%}
-  .comanda-qty-btn{width:30px !important;height:30px !important;min-width:30px !important;min-height:30px !important;padding:0 !important}
+  /* 30 px era demasiado poco para el dedo justo donde más prisa hay
+     (sumar y restar unidades en mitad del servicio). 38 sin descolocar la
+     fila. */
+  .comanda-qty-btn{width:38px !important;height:38px !important;min-width:38px !important;min-height:38px !important;max-height:38px !important;padding:0 !important}
   .comanda-qty-btn i{font-size:13px !important}
 
   /* Tarjetas de sección de la carta (ENTRANTES/PRINCIPALES...): más
