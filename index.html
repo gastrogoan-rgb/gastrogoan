@@ -59,7 +59,14 @@
     <i class="ti ti-messages"></i>
     <span class="chat-badge" id="chat-badge" style="display:none"></span>
   </button>
-  <button class="btn btn-sm hdr-icon-btn" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
+  <!-- owner-strict (no owner-only): el Centro de ayuda es para el dueño
+       resolviendo dudas de gestión, cobros, la nube... nada de eso le
+       compete a un empleado, y darle acceso a "hablar con soporte" podía
+       generar tickets sobre configuración que él no puede cambiar. Con
+       owner-only seguiría viéndolo un empleado con permiso de editar su
+       área; owner-strict lo oculta a cualquier sesión de empleado, tenga
+       o no ese permiso. -->
+  <button class="btn btn-sm hdr-icon-btn owner-strict" id="help-fab" onclick="toggleHelpPanel()" data-i18n-title="title.help" title="Ayuda"><i class="ti ti-help-hexagon" id="help-fab-icon"></i></button>
 </header>
 
   <!-- Content -->

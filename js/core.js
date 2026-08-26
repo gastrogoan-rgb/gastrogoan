@@ -789,11 +789,32 @@ function redeemErrorKey(reason){
   if(reason === 'claimed') return 'gate.codeAlreadyClaimed';
   return 'gate.newLicenseBad';
 }
+// Un negocio nuevo (independiente o sucursal) SIEMPRE necesita un código
+// que no esté ya en uso en otro hueco de este dispositivo. El propio
+// backend SÍ permite que el mismo dueño reactive un código que ya tiene
+// (es lo que hace posible reinstalar en otro aparato) — pero eso es
+// distinto de teclearlo aquí sin querer: si se dejaba pasar, los dos
+// huecos acababan apuntando al MISMO tenantId, es decir a la MISMA nube.
+// Localmente parecían dos negocios distintos en el selector, pero por
+// dentro sincronizaban la misma base de datos: el stock, la carta y las
+// ventas de uno se veían dentro del otro sin ningún aviso.
+function codeUsedByOtherSlot(code, excludeSlotId){
+  return getBusinessSlots().some(s => s.id !== excludeSlotId && s.code === code);
+}
 async function confirmBusinessLicensePrompt(){
   const code = (document.getElementById('new-lic-code')?.value || '').trim();
   const errEl = document.getElementById('new-lic-error');
   const showErr = msg => { if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; } };
   if(!code){ showErr(t('gate.newLicenseMissing')); return; }
+  // Este flujo (addNewBusiness/addSucursal) es SIEMPRE para un negocio
+  // nuevo: reutilizar aquí un código que ya es otro hueco es siempre un
+  // error de tecleo, nunca una reinstalación legítima (eso ya pasa solo,
+  // sin pasar por aquí — ver syncOwnerBusinessList).
+  const codigoNormalizado = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(codeUsedByOtherSlot(codigoNormalizado, null)){
+    showErr(t('gate.codeAlreadyOtherBusiness'));
+    return;
+  }
   // La comprobación contra la plataforma tarda: sin deshabilitar el botón se
   // puede pulsar dos veces y lanzar dos canjes a la vez.
   const btn = document.getElementById('new-lic-ok');
@@ -1144,6 +1165,22 @@ function renderBusinessSelectScreenHtml(){
   else if(slots.some(s => s.parentId === ACTIVE_SLOT)) _bsOpenGroups.add(ACTIVE_SLOT);
 
   const showSearch = slots.length > 5;
+  // Aviso permanente por si dos huecos de este dispositivo quedaron
+  // apuntando al MISMO código antes del guardián de arriba (o por cualquier
+  // otro camino que se nos haya escapado): sin esto, dos negocios que
+  // comparten nube por dentro seguirían pareciendo dos negocios normales
+  // en esta lista, sin ninguna pista de por qué comparten stock y ventas.
+  const codigosVistos = {};
+  const duplicados = new Set();
+  slots.forEach(s => {
+    if(!s.code) return;
+    if(codigosVistos[s.code]) duplicados.add(s.code);
+    codigosVistos[s.code] = true;
+  });
+  const avisoDuplicado = duplicados.size ? `
+    <div style="background:var(--red-l);color:var(--red);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:10px">
+      <i class="ti ti-alert-triangle"></i> ${t('bs.duplicateCodeWarning')}
+    </div>` : '';
   return `
     <div class="bs-box">
       <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>
@@ -1151,6 +1188,7 @@ function renderBusinessSelectScreenHtml(){
         <div class="splash-icon" style="position:static"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain;border-radius:14px"></div>
         ${t('bs.title')}
       </div>
+      ${avisoDuplicado}
       ${showSearch ? `<input id="bs-search" type="search" placeholder="${t('bs.searchPh')}" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:2px" oninput="filterBusinessSlots(this.value)" autofocus>` : ''}
       <div class="bs-list" id="bs-list">
         ${renderBsGroups(slots)}
@@ -2218,6 +2256,16 @@ function confirmNetlifyDone(){
 async function activateLicenseFromGate(){
   const code = (document.getElementById('license-code-input').value || '').trim();
   const btn = document.getElementById('license-activate-btn');
+  const err0 = document.getElementById('license-error');
+  const codigoNormalizado = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Mismo guardián que confirmBusinessLicensePrompt: al llegar aquí, el
+  // hueco activo ya está garantizado nuevo y vacío (ver redeemFirstBusiness),
+  // así que un código que ya sea OTRO hueco solo puede ser un error de
+  // tecleo, nunca una reinstalación legítima.
+  if(codeUsedByOtherSlot(codigoNormalizado, ACTIVE_SLOT)){
+    if(err0){ err0.textContent = t('gate.codeAlreadyOtherBusiness'); err0.style.display = 'block'; }
+    return;
+  }
   if(btn) btn.disabled = true;
   const {lic, reason} = await redeemBusinessCode(code);
   if(btn) btn.disabled = false;
@@ -3470,9 +3518,38 @@ async function syncOwnerBusinessList(){
   }
 }
 
+// Un dispositivo puede tener el negocio dado de alta y aun así no saber a
+// qué nube conectarse: al entrar como PROPIETARIO en un móvil nuevo, el
+// negocio aparece solo (viene de la lista de la cuenta) pero la
+// configuración de Firebase vive dentro de los datos del negocio, que
+// todavía no se han descargado — y sin ella no hay de dónde descargarlos.
+// El acceso de empleado ya resolvía esto consultando tenantLookup; el del
+// dueño no, así que su segundo dispositivo se quedaba en local para
+// siempre, sin ningún aviso: la tablet sincronizaba y el móvil no.
+// Qué negocio se ha intentado buscar ya, no un simple sí/no: si el primer
+// intento falla (arranque sin cobertura, que es lo normal en un móvil), hay
+// que poder reintentarlo después, y si se cambia de negocio hay que buscar
+// el suyo y no darlo por hecho.
+let tenantLookupIntentado = null;
 function initCloud(){
   cloudConfig = getCloudConfig();
-  if(!cloudConfig){ updateSyncBadge('local'); return; }
+  if(!cloudConfig){
+    const tId = getTenantId();
+    if(tId && tenantLookupIntentado !== tId && typeof firebase !== 'undefined'){
+      tenantLookupIntentado = tId;
+      lookupTenantFirebaseConfig(tId).then(cfg => {
+        if(!cfg || !cfg.apiKey || !cfg.databaseURL){
+          tenantLookupIntentado = null; // negocio recién creado, o sin cobertura: se podrá reintentar
+          return;
+        }
+        DB.business.ownFirebase = {apiKey: cfg.apiKey, databaseURL: cfg.databaseURL};
+        saveDB();
+        initCloud();
+      }).catch(() => { tenantLookupIntentado = null; });
+    }
+    updateSyncBadge('local');
+    return;
+  }
   if(typeof firebase === 'undefined'){ recordSyncError(new Error('network-request-failed: Firebase no disponible (¿sin internet?)')); return; }
   const tenantId = getTenantId();
   if(!tenantId){ updateSyncBadge('local'); return; } // aún sin licencia activada

@@ -3164,8 +3164,28 @@ function getLongShiftWarnings(){
 // entrada/salida de otro empleado sin que constara quién lo hizo de verdad.
 let personalFicharAuthMethod = 'self';
 function openEmployeePersonalCard(employeeId){
-  if((getAccessSession()||{}).type === 'owner'){
+  const session = getAccessSession();
+  if((session||{}).type === 'owner'){
     personalFicharAuthMethod = 'owner_session';
+    openEmployeeFicharModal(employeeId);
+    return;
+  }
+  // Igual que en Distribución del Trabajo: un empleado abriendo SU PROPIA
+  // ficha ya se identificó al entrar por Acceso Empleados, así que volver
+  // a pedirle el PIN aquí era un paso de más. La de un compañero sí lo
+  // sigue pidiendo.
+  if((session||{}).type === 'employee' && session.employeeId === employeeId){
+    // 'self', no un valor nuevo: es exactamente el mismo caso que teclear
+    // su propio PIN (wasOwnPin=true en confirmEmployeePersonalPin) — ya
+    // demostró ser él al entrar por Acceso Empleados. Con cualquier otro
+    // valor, el aviso de "fichado por otra persona" (más abajo, donde se
+    // compara contra 'self') saltaría sin sentido en su propio fichaje.
+    personalFicharAuthMethod = 'self';
+    // La encuesta semanal de clima solo se dispara hoy justo tras
+    // confirmar el PIN (ver confirmEmployeePersonalPin) — sin repetir ese
+    // paso aquí, un empleado que entra directo a su ficha dejaría de verla
+    // nunca, precisamente el caso para el que existe.
+    if(!hasAnsweredMoodThisWeek(employeeId)){ promptMoodCheckin(employeeId); return; }
     openEmployeeFicharModal(employeeId);
     return;
   }

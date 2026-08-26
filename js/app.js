@@ -1210,8 +1210,12 @@ function openDistEmployee(id){
   if(!e) return;
   // El dueño ya se identificó a nivel de sesión al entrar: no tiene sentido
   // volver a pedirle el PIN del empleado solo para ver o repartir su
-  // trabajo (igual que en Personal — openEmployeePersonalCard).
-  if(isOwnerSession()){ openDistEmployeeAuthed(id); return; }
+  // trabajo (igual que en Personal — openEmployeePersonalCard). Y un
+  // empleado que abre SU PROPIA ficha tampoco: para tener la sesión ya
+  // tecleó su PIN al entrar por Acceso Empleados — pedírselo otra vez aquí
+  // solo era un paso de más. Sigue pidiéndoselo si abre la de un
+  // compañero: loggedInEmployeeId() es SU id, no el que se está abriendo.
+  if(isOwnerSession() || loggedInEmployeeId() === id){ openDistEmployeeAuthed(id); return; }
   distPendingPinEmployeeId = id;
   openModal(`
     <div class="modal-header">
