@@ -87,6 +87,7 @@ Están en todas partes, así que un fallo aquí se multiplica.
 | | Lente | Qué busca |
 |---|---|---|
 | **L1** | **Funciona** | Ningún error de JavaScript; cada botón visible hace algo |
+| **L8** | **Hace lo correcto** | Recorridos completos: se encadenan los pasos reales de un servicio y se verifica el resultado en cada uno. Que no reviente no basta — el número tiene que salir bien |
 | **L2** | **Se ve bien** | Objetivos táctiles ≥44 px, letra ≥10,5 px, texto sin cortar, contraste ≥4,5:1, nada que se pise de verdad |
 | **L3** | **Aguanta** | Vacío del todo, contenido larguísimo, mucho volumen |
 | **L4** | **Roles** | Cada rol ve lo suyo y **solo** lo suyo (5 vistas: cocinero, cocinero con edición, camarero, camarero con edición, dueño) |
@@ -142,12 +143,36 @@ Por riesgo × cuánto se usa, no por comodidad:
 | **R11** | L3 en Z7 (web pública con volumen) | Es la cara del negocio ante sus clientes |
 | **R12** | L5 (nube) sobre Z1/Z2 y el cobro | Los bugs más caros han salido todos de aquí |
 
-**Las seis rondas están hechas.** Lo que encontró cada una está en el
+| **R13** | Recorridos completos de principio a fin | Medida la cobertura: solo el 43% del código llegaba a ejecutarse, y lo que faltaba era justo la lógica de negocio |
+
+**Las siete rondas están hechas.** Lo que encontró cada una está en el
 historial de commits; el resumen: 58 defectos visuales, un módulo que
 podía reventar entero (Historial de pedidos), el botón de cerrar el chat
 a 12×20 px, el gris de todo el texto secundario por debajo del mínimo
-legible, la casilla obligatoria de la web pública a 13×13 px, y el
-duplicado de cobro que ahora queda anotado.
+legible, la casilla obligatoria de la web pública a 13×13 px, el
+duplicado de cobro que ahora queda anotado, y —el más caro— el coste de
+los escandallos, que salía por debajo del real porque la merma se sumaba
+en vez de descontarse.
+
+### Los 10 recorridos completos (R13)
+
+Encadenan pasos reales y comprueban el resultado, no solo que no
+reviente:
+
+1. De ingrediente a factura (escandallo → carta → venta → IVA → Gestión Económica)
+2. Descuento, propina y arqueo
+3. Raciones limitadas que se agotan solas
+4. Dividir la cuenta entre 4 (y el caso feo: 100 € entre 3)
+5. Pedido recibido a medias (lo que no llega no suma stock)
+6. Fichajes y horas del mes
+7. Anular devuelve el stock, ingrediente a ingrediente
+8. Aforo (las canceladas no ocupan plaza)
+9. Coste de envío y umbral de envío gratis
+10. Menú con grupos y suplementos
+
+**Lo que sigue sin cubrirse** y no se puede desde aquí: iPhone/iPad
+reales, la impresora térmica con el cajón delante, el pago con Redsys en
+producción continuada, y un servicio real con clientes.
 
 ---
 
