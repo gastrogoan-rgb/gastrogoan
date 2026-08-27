@@ -1822,16 +1822,72 @@ function getTenantId(){
 }
 
 /* Identificador público (de menor privilegio) que se incrusta en el
-   enlace/QR de reservas y pedidos online. Se calcula a partir del
-   tenantId, pero no permite deducir la clave de licencia ni acceder
-   al resto de los datos del negocio. */
-function getPublicId(){
-  const tenantId = getTenantId();
-  if(!tenantId) return null;
+   enlace/QR de reservas y pedidos online. No permite deducir la clave de
+   licencia ni acceder al resto de los datos del negocio.
+
+   ⚠️ ANTES se calculaba a partir del tenantId, y eso lo hacía DEDUCIBLE:
+   quien conociera el código del negocio podía derivar su enlace público, y
+   eran solo 7 caracteres salidos de un hash de 32 bits. Como las reglas de
+   Firebase dejan LEER `public/{publicId}/requests` a cualquiera autenticado
+   (una sesión anónima la abre cualquiera), quien acertara el identificador
+   se llevaba el nombre, el teléfono, el email y las notas —donde los
+   clientes apuntan sus alergias— de todas las reservas del restaurante.
+
+   Ahora se sortea una sola vez, con el generador criptográfico del
+   navegador, y se guarda en el negocio (así viaja a los demás dispositivos
+   por la sincronización normal). Adivinarlo deja de ser posible.
+
+   Esto NO arregla el fondo del asunto: quien tenga el enlace —que el propio
+   restaurante reparte en su QR— sigue pudiendo leer esos datos. Cerrarlo de
+   verdad exige una Cloud Function que dé identidad al panel del negocio, y
+   con ella el plan Blaze de Firebase. Queda como decisión de negocio
+   (ver ANALISIS_GENERAL.md, punto 7). */
+function publicIdDerivadoAntiguo(tenantId){
   // padStart asegura siempre 7 caracteres (un uint32 en base36 ocupa
   // como máximo 7), para cumplir el mínimo de 4 que exigen las reglas
   // de Firebase ($publicId.length >= 4) sin importar el valor del hash.
   return ggLicHash(tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
+}
+function nuevoPublicIdAleatorio(){
+  const abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const n = 22; // dentro del 4–30 que exigen las reglas de Firebase
+  let out = '';
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  const bytes = c ? c.getRandomValues(new Uint8Array(n)) : null;
+  for(let i=0;i<n;i++){
+    // Sin crypto (navegador muy viejo) se degrada a Math.random antes que
+    // quedarse sin enlace público: peor que aleatorio de verdad, pero
+    // sigue siendo mucho mejor que el derivado del código.
+    const v = bytes ? bytes[i] : Math.floor(Math.random()*256);
+    out += abc[v % abc.length];
+  }
+  return out;
+}
+function getPublicId(){
+  const tenantId = getTenantId();
+  if(!tenantId) return null;
+  if(!DB || !DB.business) return null;
+  if(DB.business.publicId) return DB.business.publicId;
+  // Un negocio que YA terminó su configuración puede tener carteles y QR
+  // impresos con el enlace viejo: se le conserva el identificador derivado
+  // para no dejarle el QR muerto de un día para otro. Solo estrenan
+  // identificador sorteado los negocios nuevos.
+  const pid = DB.business.netlifySetupDone ? publicIdDerivadoAntiguo(tenantId) : nuevoPublicIdAleatorio();
+  DB.business.publicId = pid;
+  recordarPublicIdEnLicencia(pid);
+  if(typeof saveDB === 'function') saveDB();
+  return pid;
+}
+// El selector de locales de la web pública lee los negocios hermanos desde
+// localStorage, sin abrir la base de cada uno: por eso el identificador se
+// deja también junto a su licencia.
+function recordarPublicIdEnLicencia(pid){
+  try{
+    const lic = getLicense();
+    if(!lic || lic.publicId === pid) return;
+    lic.publicId = pid;
+    localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
+  }catch(e){}
 }
 
 /* Lista de revocación: un JSON público y gratuito (alojado en GitHub) con
@@ -3241,7 +3297,9 @@ function buildSucursalesList(){
       if(!raw) continue;
       const lic = JSON.parse(raw);
       if(!isStoredLicenseValid(lic)) continue;
-      const pid = ggLicHash(lic.tenantId + '·gastrogoan·public·v1').toString(36).padStart(7, '0');
+      // El sorteado se guarda junto a la licencia (recordarPublicIdEnLicencia).
+      // El derivado solo queda para los negocios de antes del cambio.
+      const pid = lic.publicId || publicIdDerivadoAntiguo(lic.tenantId);
       list.push({name: s.name, publicId: pid});
     }catch(e){}
   }

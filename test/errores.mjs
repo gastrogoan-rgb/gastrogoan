@@ -81,6 +81,49 @@ await caso('El PIN del negocio no se guarda en claro', async ()=>{
   return 'hasheado con la sal del negocio';
 });
 
+// El enlace público daba acceso de lectura a nombre, teléfono, email y notas
+// de todas las reservas. Si además se podía DEDUCIR del código del negocio,
+// bastaba conocer el código para leerlas todas.
+await caso('El enlace público no se puede deducir del código del negocio', async ()=>{
+  const r = await page.evaluate(()=>{
+    delete DB.business.publicId;
+    DB.business.netlifySetupDone = false; // negocio nuevo
+    const pid = getPublicId();
+    const derivado = publicIdDerivadoAntiguo(getTenantId());
+    // Un segundo negocio con OTRO código: no deben salir parecidos ni iguales
+    delete DB.business.publicId;
+    const otro = getPublicId();
+    return {pid, derivado, otro, persistido: DB.business.publicId};
+  });
+  assert.notEqual(r.pid, r.derivado, 'no debería poder deducirse del código');
+  assert.ok(r.pid.length >= 12, `demasiado corto para no acertarlo: ${r.pid.length}`);
+  assert.ok(r.pid.length <= 30, 'las reglas de Firebase no admiten más de 30');
+  assert.notEqual(r.pid, r.otro, 'dos sorteos no deberían coincidir');
+  assert.ok(r.persistido, 'debe guardarse, o cambiaría en cada llamada');
+  return `${r.pid.length} caracteres sorteados (antes 7 deducibles)`;
+});
+await caso('Un negocio que ya tenía carteles impresos conserva su enlace', async ()=>{
+  const r = await page.evaluate(()=>{
+    delete DB.business.publicId;
+    DB.business.netlifySetupDone = true; // ya configurado antes del cambio
+    return {pid: getPublicId(), derivado: publicIdDerivadoAntiguo(getTenantId())};
+  });
+  assert.equal(r.pid, r.derivado, 'no se le puede matar el QR ya impreso');
+  return 'mantiene el suyo, el QR sigue vivo';
+});
+await caso('Una vez sorteado, el enlace público ya no cambia nunca', async ()=>{
+  const r = await page.evaluate(()=>{
+    delete DB.business.publicId;
+    DB.business.netlifySetupDone = false;
+    const a = getPublicId();
+    return {a, b: getPublicId(), c: getPublicId(), enLicencia: (getLicense()||{}).publicId};
+  });
+  assert.equal(r.a, r.b, 'cambiar de enlace rompería los QR ya repartidos');
+  assert.equal(r.a, r.c);
+  assert.equal(r.enLicencia, r.a, 'debe quedar junto a la licencia, para el selector de locales');
+  return 'estable y guardado en los dos sitios';
+});
+
 /* ─── Códigos de licencia ─── */
 await caso('Un código de licencia inventado se rechaza', async ()=>{
   const r = await page.evaluate(async ()=>{ try{ return await redeemBusinessCode('INVENTAD'); }catch(e){ return {error:e.message}; } });
