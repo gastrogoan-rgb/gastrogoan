@@ -3004,7 +3004,7 @@ async function resetEmployeePin(id){
   // — pero sí una confirmación explícita, porque deja el PIN de esa persona
   // en el valor por defecto (1234) hasta que vuelva a cambiarlo.
   if(!(await confirmModal(t('msg.confirmResetEmployeePin').replace('${name}', e.name)))) return;
-  e.pin = hashPin('1234');
+  e.pin = hashPin('1234', codigoNegocioParaPin());
   e.pinChanged = false;
   logPersonalEvent('pinReset', {name: e.name});
   saveDB();
@@ -3037,7 +3037,7 @@ function saveEmployee(id){
     if(empActiveEl) emp.active = empActiveEl.checked;
   } else {
     // Nuevo empleado: se asigna automáticamente al área desde la que se crea, siempre activo.
-    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234'), pinChanged:false, active:true, fechaAlta: todayStr()});
+    DB.employees.push({id: genId(), name, rol, color, phone, email, canUnlockEdit, esRepartidor, area: currentArea(), pin:hashPin('1234', codigoNegocioParaPin()), pinChanged:false, active:true, fechaAlta: todayStr()});
     logAudit('create', t('audit.createdEmployee').replace('${name}', name));
   }
   saveDB();
@@ -3062,7 +3062,7 @@ function reallyDeleteEmployee(id, pin){
   // Comprobación real del PIN dentro de la función (no solo en el modal
   // que la llama), para que no se pueda borrar un empleado llamando esta
   // función directamente desde la consola sin conocer el PIN del negocio.
-  if(!pinMatchesHash(pin, DB.business.pin)) return;
+  if(!pinDeNegocioCoincide(pin)) return;
   const e0 = DB.employees.find(e => e.id === id);
   if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name), 'critical'); }
   DB.employees = DB.employees.filter(e => e.id!==id);
@@ -3221,10 +3221,10 @@ function requestEmployeePersonalPin(employeeId){
 function pinMatchesEmployeeOrBusiness(val, employee){
   if(employee.active === false) return false;
   const storedPin = employee.pin || '1234';
-  const empMatch = pinMatchesHash(val, storedPin);
-  if(empMatch) return true;
-  const bp = DB.business.pin;
-  return pinMatchesHash(val, bp);
+  // Con la sal del negocio, igual que el acceso de empleados: antes esta
+  // comprobación iba sin sal y las dos rutas se contradecían.
+  if(pinDeEmpleadoCoincide(val, storedPin, codigoNegocioParaPin())) return true;
+  return pinDeNegocioCoincide(val);
 }
 function confirmEmployeePersonalPin(){
   const e = DB.employees.find(x=>x.id===personalPendingPinEmployeeId);
@@ -3651,8 +3651,7 @@ function confirmFichajeEditPin(){
   const f = (DB.fichajes||[]).find(x=>x.id===fichajePendingEditId);
   if(!f) return;
   const val = document.getElementById('fichaje-edit-pin-input').value;
-  const bp = DB.business.pin;
-  const match = pinMatchesHash(val, bp);
+  const match = pinDeNegocioCoincide(val);
   if(!match){
     showToast(t('msg.pinIncorrect'));
     return;
@@ -3758,7 +3757,7 @@ function confirmNewPin(employeeId, action){
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
   if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
-  e.pin = hashPin(p1);
+  e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
   doFichaje(employeeId, action);
@@ -3801,7 +3800,7 @@ function confirmFirstPinChange(employeeId){
   if(p1 !== p2){ showToast(t('msg.pinsDontMatch')); return; }
   if(p1 === '1234'){ showToast(t('msg.pinNotDefault')); return; }
   if(employeePinCollides(p1, employeeId)){ showToast(t('msg.pinAlreadyUsed')); return; }
-  e.pin = hashPin(p1);
+  e.pin = hashPin(p1, codigoNegocioParaPin());
   e.pinChanged = true;
   saveDB();
   closeModal();

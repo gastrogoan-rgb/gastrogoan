@@ -1301,8 +1301,7 @@ function requestBusinessPinAction(title, desc, actionFn){
 }
 function confirmBusinessPinAction(){
   const val = document.getElementById('biz-pin-action-input').value;
-  const bp = DB.business.pin;
-  const match = pinMatchesHash(val, bp);
+  const match = pinDeNegocioCoincide(val);
   if(!match){ showToast(t('msg.pinIncorrect')); return; }
   const fn = businessPinPendingAction;
   businessPinPendingAction = null;
@@ -3295,7 +3294,7 @@ function reallyCancelSale(saleId, pin){
   // función: sin esto, cualquiera con la consola del navegador podía anular
   // cualquier venta llamando reallyCancelSale(id) directamente, sin conocer
   // el PIN del negocio — el modal era un candado de interfaz, no de datos.
-  if(!pinMatchesHash(pin, DB.business.pin)) return;
+  if(!pinDeNegocioCoincide(pin)) return;
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
   restockForVoidedItems(sale.items);

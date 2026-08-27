@@ -423,12 +423,46 @@ async function changeOwnerAccessPin(newPin){
 // dispositivo aún no conocía). El PIN se guardó hasheado con la sal de SU
 // propio negocio (hr.js: confirmNewPin/confirmFirstPinChange), así que hay
 // que verificarlo con esa misma sal, no con la del negocio activo global.
+/* La sal del PIN de un empleado es el CÓDIGO DE SU NEGOCIO. Tiene que
+   serlo: el acceso de empleados valida desde un dispositivo que puede no
+   haber visto nunca ese negocio, y lo único que aporta quien entra es
+   nombre + PIN + código.
+
+   Hasta ahora había un desajuste que dejaba fuera a todo el equipo: al
+   GUARDAR un PIN nuevo (js/hr.js) se hasheaba SIN sal, pero al entrar se
+   validaba CON ella. Como la app no deja dejarse el 1234 de fábrica, todo
+   empleado que se ponía su propio PIN —o sea, todos— no volvía a entrar.
+   Y al revés en Personal/Distribución, que validaba sin sal: ahí entraba
+   el que se lo había cambiado y no el que tenía el de fábrica.
+
+   Se unifica en el código del negocio. La comprobación sin sal se
+   mantiene como respaldo para no dejar fuera a quien ya tuviera el PIN
+   guardado de la forma antigua. */
+function pinDeEmpleadoCoincide(pin, storedPin, licenseCode){
+  if(pinMatchesHash(pin, storedPin, licenseCode)) return true;
+  // Respaldo: PIN guardado antes de unificar la sal.
+  return licenseCode ? pinMatchesHash(pin, storedPin, undefined) : false;
+}
+function codigoNegocioParaPin(){
+  const lic = (typeof getLicense === 'function') ? getLicense() : null;
+  return (lic && lic.code) || (DB && DB.license && DB.license.code) || undefined;
+}
+// El PIN del negocio se guardaba en TEXTO PLANO en DB.business.pin, y ese
+// bloque se sincroniza con Firebase: cualquiera con acceso a la base del
+// negocio lo leía tal cual. Ahora se guarda hasheado con la sal del código
+// de licencia, igual que el de los empleados. El respaldo sin sal cubre el
+// '1234' de fábrica (se siembra plano al crear el negocio) y los que se
+// guardaron antes de este cambio.
+function pinDeNegocioCoincide(pin, storedPin){
+  const bp = (storedPin === undefined) ? (DB.business && DB.business.pin) : storedPin;
+  return pinDeEmpleadoCoincide(pin, bp, codigoNegocioParaPin());
+}
 function findEmployeeMatch(employees, name, pin, licenseCode){
   return (employees||[]).find(e => {
     if(e.active === false) return false;
     if(!e.name || e.name.trim().toLowerCase() !== name.toLowerCase()) return false;
     const storedPin = e.pin || '1234';
-    return pinMatchesHash(pin, storedPin, licenseCode);
+    return pinDeEmpleadoCoincide(pin, storedPin, licenseCode);
   });
 }
 
@@ -490,7 +524,7 @@ async function confirmEmployeeAccess(){
       // venta o borrar un empleado) antes de permitirlo.
       const bizPin = await promptText(t('access.ownerPinRequiredForReset'), '', {title: t('title.enterBusinessPin'), icon: 'ti-lock'});
       if(bizPin === null) return;
-      if(!pinMatchesHash(bizPin.trim(), slotData.business && slotData.business.pin, localSlot.code)){ showToast(t('access.badCredentials')); return; }
+      if(!pinDeEmpleadoCoincide(bizPin.trim(), slotData.business && slotData.business.pin, localSlot.code)){ showToast(t('access.badCredentials')); return; }
       const newPin = await promptText(t('access.newPinPrompt'), '', {title: t('access.newPinPrompt'), icon: 'ti-lock'});
       if(!newPin || !newPin.trim()){ return; }
       if(!/^\d{4}$/.test(newPin.trim())){ showToast(t('msg.pin4digits')); return; }

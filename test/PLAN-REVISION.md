@@ -145,7 +145,9 @@ Por riesgo × cuánto se usa, no por comodidad:
 
 | **R13** | Recorridos completos de principio a fin | Medida la cobertura: solo el 43% del código llegaba a ejecutarse, y lo que faltaba era justo la lógica de negocio |
 
-**Las siete rondas están hechas.** Lo que encontró cada una está en el
+| **R15** | Los caminos de error (lo que la app debe **rechazar**) | Hasta aquí solo se probaba el camino feliz: nadie comprobaba qué pasa con el cliente confundido |
+
+**Las ocho rondas están hechas.** Lo que encontró cada una está en el
 historial de commits; el resumen: 58 defectos visuales, un módulo que
 podía reventar entero (Historial de pedidos), el botón de cerrar el chat
 a 12×20 px, el gris de todo el texto secundario por debajo del mínimo
@@ -182,6 +184,25 @@ producción continuada, y un servicio real con clientes.
 2. **Confirmar antes de avisar.** Una alarma geométrica no basta: si dos
    botones "se pisan", se comprueba con `elementFromPoint` que de verdad
    sean pulsables ahí. Ya hubo una falsa alarma así.
+### Lo que destapó R15 (caminos de error)
+
+Dos fallos reales, los dos en el mismo sitio: **el PIN**.
+
+1. **Ningún empleado que cambiara su PIN podía volver a entrar.** Se
+   guardaba sin sal (`hashPin(p1)`) y se validaba con la sal del código del
+   negocio: las dos rutas nunca coincidían. Y como la app prohíbe quedarse
+   con el '1234' de fábrica, el bloqueo era seguro para todos. Habría
+   aparecido el primer día de servicio real, con el personal delante.
+2. **El PIN del negocio se guardaba en texto plano** en `DB.business.pin`, y
+   ese bloque **se sincroniza con Firebase**: quedaba legible en la nube.
+   Ahora se hashea con la misma sal que el de los empleados, con respaldo
+   para los guardados de antes.
+
+Y una **falsa alarma más** (van 11): "sin nube el indicador se queda mudo".
+No: se **oculta a propósito** (`updateSyncBadge('local')`), porque el
+asistente de nube es obligatorio en el alta y un aviso permanente ahí solo
+sería ruido.
+
 3. **Desconfiar de la propia prueba.** Cuando algo falla, la primera
    sospecha es la semilla de datos, no el producto. Ha pasado media docena
    de veces (nombres de campo inventados, dispositivos que en realidad

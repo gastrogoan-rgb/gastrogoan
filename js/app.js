@@ -6422,11 +6422,11 @@ function changeOwnerPin(){
   const n2 = document.getElementById('mn-pin-new2').value;
   if(!/^\d{4}$/.test(n1)){ showToast(t('msg.pinMustBe4')); return; }
   if(n1 !== n2){ showToast(t('msg.pinsDontMatch')); return; }
-  if(DB.business.pinSet && n1 === DB.business.pin){ showToast(t('msg.pinSameAsOld')); return; }
+  if(DB.business.pinSet && pinDeNegocioCoincide(n1)){ showToast(t('msg.pinSameAsOld')); return; }
   const WEAK_PINS = ['0000','1111','2222','3333','4444','5555','6666','7777','8888','9999','1234','4321','1212','2580','0123'];
   const isWeak = WEAK_PINS.includes(n1);
   requestBusinessPinAction(t('title.changeOwnerPin'), t('msg.confirmCurrentPin'), () => {
-    DB.business.pin = n1;
+    DB.business.pin = hashPin(n1, codigoNegocioParaPin());
     DB.business.pinSet = true;
     logBusinessSettingChange('PIN del negocio cambiado');
     saveDB();
