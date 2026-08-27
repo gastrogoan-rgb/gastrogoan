@@ -670,6 +670,54 @@ td.wrap{white-space:normal}
 
 /* Empty state */
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+/* Un mensaje de "aún no hay nada" dentro de una rejilla se colocaba como
+   una celda más: en el TPV quedaba en una columna de 181 px de 370 y el
+   texto se partía en cuatro líneas estrechísimas. Tiene que ocupar el
+   ancho entero, que para eso es un mensaje. */
+[class*="grid"] > .empty{grid-column:1 / -1}
+
+/* Índice de Mi Negocio: 24 apartados y casi 16 pantallas de móvil
+   seguidas. Sin esto, cambiar un teléfono o llegar a "Mantenimiento de
+   datos" obliga a recorrerla entera. */
+.mn-indice{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:10px 12px;margin-bottom:14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+}
+/* En móvil, envolver los 14 accesos ocupaba casi una pantalla entera: el
+   índice puesto para no hacer scroll obligaba a hacer scroll. Una sola
+   fila que se desliza con el dedo, como las pestañas del resto de la
+   app. */
+@media (max-width:1024px){
+  .mn-indice{
+    flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+    padding:8px 10px;
+  }
+  .mn-indice::-webkit-scrollbar{display:none}
+  .mn-indice-lbl{flex:none}
+  .mn-indice-chip{flex:none;white-space:nowrap}
+}
+.mn-indice-lbl{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--muted);margin-right:2px;
+}
+.mn-indice-chip{
+  font-family:inherit;font-size:12px;font-weight:500;color:var(--body);
+  background:var(--bg);border:1px solid var(--border);border-radius:999px;
+  padding:6px 12px;min-height:36px;cursor:pointer;
+  display:inline-flex;align-items:center;
+  transition:border-color .12s ease,background .12s ease;
+}
+.mn-indice-chip:hover{border-color:var(--text);background:var(--surface)}
+@media (max-width:1024px){ .mn-indice-chip{min-height:44px} }
+/* Destello al aterrizar: en una pantalla tan larga, saltar sin más deja
+   dudando si se ha movido algo. */
+.mn-ap-resaltado{animation:mn-destello 1.4s ease}
+@keyframes mn-destello{
+  0%,100%{box-shadow:0 0 0 0 rgba(126,155,132,0)}
+  15%{box-shadow:0 0 0 4px rgba(126,155,132,.45)}
+}
 .empty i{font-size:32px;display:block;margin-bottom:10px;color:var(--border)}
 
 /* ===== Tour guiado: velo + foco recortado sobre lo que se explica =====
@@ -1516,8 +1564,15 @@ td.wrap{white-space:normal}
      derecha y se comprimía hasta quedar ilegible (p.ej. "Busca" en vez de
      "Buscar empleado...") en vez de bajar a su propia línea — se fuerza
      aquí a ocupar el ancho completo, con los botones debajo. */
-  .toolbar{flex-direction:column;align-items:stretch}
-  .toolbar .left{width:100%;flex:none}
+  /* Antes esto era flex-direction:column, y con align-items:stretch cada
+     hijo pasaba a ocupar una fila entera: en el TPV los seis botones de
+     arriba (Lista de espera, Modo caos, Anulaciones...) se comían media
+     pantalla de scroll antes de llegar a las mesas, que es lo que el
+     camarero necesita ver. El objetivo era solo que el buscador no
+     compartiera fila; se consigue igual dándole el 100% a .left y dejando
+     que los botones sigan fluyendo en fila, dos o tres por línea. */
+  .toolbar{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .toolbar .left{width:100%;flex:0 0 100%}
   .kpi-row{flex-wrap:wrap}
   .grid-compact{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)) !important}
 

@@ -62,7 +62,7 @@ for(const T of TAMANOS){
     await page.evaluate(({vista,carpeta})=>{ if(carpeta) currentFolder=carpeta; navigate(vista); },{vista,carpeta});
     await new Promise(r=>setTimeout(r,450));
     const d = await page.evaluate((esMovil)=>{
-      const out = {tactiles:[], letraPequena:[], cortado:[], solapes:[], scrollH:0};
+      const out = {tactiles:[], letraPequena:[], cortado:[], solapes:[], fugas:[], scrollH:0};
       const visible = e => { const r=e.getBoundingClientRect(); return r.width>0 && r.height>0 && getComputedStyle(e).visibility!=='hidden'; };
       const cont = document.getElementById('content');
       if(!cont) return out;
@@ -99,6 +99,31 @@ for(const T of TAMANOS){
         const fs = parseFloat(getComputedStyle(e).fontSize);
         if(fs && fs < 10.5) out.letraPequena.push({px:fs.toFixed(1), txt:e.textContent.trim().replace(/\s+/g,' ').slice(0,34)});
       });
+      // Contenido que se sale de SU TARJETA sin poder desplazarlo: queda
+      // recortado y no hay forma de verlo. Es distinto de "texto cortado"
+      // (ahí el elemento se pasa de su propia caja) y de "scroll
+      // horizontal" (ahí se sale la página entera). Así estaban los
+      // gráficos anuales del Panel: 48 trozos fuera de la tarjeta, hasta
+      // 73 px, sin manera de llegar a los últimos meses.
+      cont.querySelectorAll('.card').forEach(card=>{
+        const rc = card.getBoundingClientRect();
+        if(rc.width === 0) return;
+        card.querySelectorAll('*').forEach(e=>{
+          const re = e.getBoundingClientRect();
+          if(re.width === 0 || re.right <= rc.right + 2) return;
+          let n = e, desplazable = false;
+          while(n && n !== card.parentElement){
+            const cs2 = getComputedStyle(n);
+            if(['auto','scroll'].includes(cs2.overflowX)){ desplazable = true; break; }
+            n = n.parentElement;
+          }
+          if(!desplazable){
+            const txt = (e.textContent||'').trim().replace(/\s+/g,' ').slice(0,30);
+            out.fugas.push(`se sale ${Math.round(re.right-rc.right)}px de su tarjeta: "${txt||e.tagName}"`);
+          }
+        });
+      });
+
       // Texto cortado: se sale de su caja y está oculto
       cont.querySelectorAll('*').forEach(e=>{
         if(!visible(e)) return;
@@ -117,6 +142,7 @@ for(const T of TAMANOS){
     d.tactiles.slice(0,4).forEach(x=>hallazgos.push({clave, tipo:'OBJETIVO PEQUEÑO', detalle:`${x.w}×${x.h}px  "${x.txt}"  [${x.cls}] minH=${x.minH} padre=[${x.padre}]`}));
     d.letraPequena.slice(0,3).forEach(x=>hallazgos.push({clave, tipo:'LETRA PEQUEÑA', detalle:`${x.px}px  "${x.txt}"`}));
     d.cortado.slice(0,3).forEach(x=>hallazgos.push({clave, tipo:'TEXTO CORTADO', detalle:`${x.visible}px de ${x.real}px  "${x.txt}"`}));
+    [...new Set(d.fugas||[])].slice(0,3).forEach(x=>hallazgos.push({clave, tipo:'SE SALE DE SU TARJETA', detalle:x}));
   }
   await page.close();
 }

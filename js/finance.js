@@ -210,17 +210,24 @@ function geResultadoAntesImpMes(year, month){
 }
 function renderDashboardBarTrend(elId, trend, allowNegative){
   const maxVal = Math.max(...trend.map(t=>Math.abs(t.value)), 1);
+  // Con 12 meses en un móvil cada barra queda en unos 29 px y la cifra de
+   // encima necesita 55: se salía de la tarjeta y quedaba recortada, así que
+   // los últimos meses no se podían leer. Se le da un ancho mínimo por mes
+   // y desplazamiento lateral, como ya hacen las tablas de la app.
+  const anchoMin = trend.length > 8 ? 54 : 0;
   document.getElementById(elId).innerHTML = `
-    <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
+    <div style="overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;max-width:100%">
+    <div style="display:flex;align-items:flex-end;gap:6px;height:140px;${anchoMin?`min-width:${trend.length*(anchoMin+6)}px`:''}">
       ${trend.map(t => {
         const color = (allowNegative && t.value < 0) ? 'var(--red)' : 'var(--brand-orange)';
         return `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+        <div style="flex:1;${anchoMin?`min-width:${anchoMin}px`:''};display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
           <div style="font-size:11px;color:var(--muted);margin-bottom:2px;white-space:nowrap">${t.value!==0?fmtMoney(t.value):''}</div>
           <div style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${Math.max(2,(Math.abs(t.value)/maxVal*100))}%"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${t.label}</div>
         </div>
       `}).join('')}
+    </div>
     </div>
   `;
 }

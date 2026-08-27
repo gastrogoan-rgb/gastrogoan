@@ -4792,6 +4792,51 @@ function readLeadTimeDHM(idPrefix){
 // Última barrera antes de pintar Mi Negocio, por si se llega aquí
 // saltándose navigate()/renderView() (p.ej. renderMiNegocio() a mano desde
 // la consola de un dispositivo de empleado).
+/* Mi Negocio son 24 apartados y casi 16 pantallas de móvil seguidas: para
+   cambiar un teléfono o llegar a "Mantenimiento de datos" hay que
+   recorrerla entera. Se le pone un índice arriba que salta a cada sitio.
+
+   Se construye SOBRE LO YA PINTADO en vez de tocar las diez funciones que
+   generan los apartados: así el índice se mantiene solo si mañana se
+   añade o se quita uno. */
+function renderMiNegocioIndice(){
+  const cont = document.getElementById('minegocio-content');
+  if(!cont) return;
+  const grid = cont.querySelector('.mn-grid');
+  if(!grid) return;
+  cont.querySelector('.mn-indice')?.remove();
+
+  const apartados = [...grid.children]
+    .filter(el => el.classList && el.classList.contains('card'))
+    .map((el, i) => {
+      const h = el.querySelector('h3');
+      if(!h) return null;
+      if(!el.id) el.id = 'mn-ap-' + i;
+      // Solo el texto, sin el icono, y sin insignias tipo "Próximamente"
+      const titulo = [...h.childNodes]
+        .filter(n => n.nodeType === 3 || (n.nodeType === 1 && !n.classList.contains('badge') && n.tagName !== 'I'))
+        .map(n => n.textContent).join(' ').trim().replace(/\s+/g, ' ');
+      return titulo ? {id: el.id, titulo} : null;
+    })
+    .filter(Boolean);
+  if(apartados.length < 5) return;   // con pocos apartados el índice sobra
+
+  const nav = document.createElement('div');
+  nav.className = 'mn-indice';
+  nav.innerHTML = `<span class="mn-indice-lbl">${escapeHtml(t('mn.indexLabel'))}</span>` +
+    apartados.map(a => `<button type="button" class="mn-indice-chip" onclick="irAApartadoMiNegocio('${a.id}')">${escapeHtml(a.titulo)}</button>`).join('');
+  cont.insertBefore(nav, cont.firstChild);
+}
+function irAApartadoMiNegocio(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  // Un destello breve para que se vea a cuál se ha saltado: en una pantalla
+  // tan larga, aterrizar sin más deja dudando si se ha movido algo.
+  el.classList.add('mn-ap-resaltado');
+  setTimeout(()=>el.classList.remove('mn-ap-resaltado'), 1400);
+}
+
 function renderMiNegocio(){
   if(isGestionLocked('minegocio')){ denyGestionAccess(); return; }
   const b = DB.business || {};
@@ -5062,6 +5107,7 @@ function renderMiNegocio(){
     ${renderDataMaintenanceCard()}
     </div>
   `;
+  renderMiNegocioIndice();
   loadRedsysCardStatus();
   renderMesasConfigList();
 }

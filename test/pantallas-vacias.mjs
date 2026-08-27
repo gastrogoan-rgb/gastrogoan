@@ -6,7 +6,8 @@ const VISTAS = [
   ['comandascocina','cocina'],['carta','cocina'],['megalista','cocina'],['escandallo','cocina'],
   ['fichas','cocina'],['pedidos','cocina'],['stock','cocina'],['horarios','cocina'],
   ['distribucion','cocina'],['limpieza','cocina'],['proveedores','cocina'],
-  ['tpv','sala'],['reservas','sala'],['clientes','sala'],['promocion','sala'],['togo','sala'],
+  ['tpv','sala'],['reservas','sala'],['clientes','sala'],['promocion','sala'],
+  // 'togo' NO es una pantalla: es una sección dentro del TPV (#tpv-togo-section).
   ['dashboard','gestion'],['economia','gestion'],['minegocio','gestion'],
 ];
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox'],headless:true});
