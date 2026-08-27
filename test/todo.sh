@@ -38,8 +38,9 @@ node test/transversales.mjs        > "$SALIDA/transv.txt"    2>&1 & P13=$!
 node test/modales.mjs              > "$SALIDA/modales.txt"   2>&1 & P14=$!
 node test/pantallas-vacias.mjs     > "$SALIDA/vacias.txt"    2>&1 & P15=$!
 node test/publica-volumen.mjs      > "$SALIDA/volumen.txt"   2>&1 & P16=$!
+node test/formularios.mjs          > "$SALIDA/formularios.txt" 2>&1 & P17=$!
 
-echo "→ 16 pruebas corriendo a la vez…"
+echo "→ 17 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -62,5 +63,6 @@ espera $P13 "cabecera, chat y ayuda"                  "$SALIDA/transv.txt"    "n
 espera $P14 "ventanas emergentes"                     "$SALIDA/modales.txt"   "se comportan bien"
 espera $P15 "pantallas vacías"                        "$SALIDA/vacias.txt"    "se comportan bien"
 espera $P16 "web pública con carta grande"            "$SALIDA/volumen.txt"   "aguanta una carta grande"
+espera $P17 "formularios: rellenar y guardar de verdad" "$SALIDA/formularios.txt" "casos pasaron"
 
 exit $FALLOS
