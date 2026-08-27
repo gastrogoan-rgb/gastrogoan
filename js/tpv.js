@@ -3274,7 +3274,11 @@ function restockForVoidedItems(items, opts){
         // esto se devolvía menos de lo que de verdad se había restado, y cada
         // anulación de una venta ya cobrada dejaba el stock por debajo del
         // consumo real, tanto más cuanta más merma tuviera la receta.
-        const bruto = ri.qty * (1 + (ri.merma||0)/100) * (line.qty||0);
+        // mermaBruto (js/recipes.js): la misma cuenta que el escandallo.
+        // Antes aquí se sumaba el % de merma en vez de descontarlo, así que
+        // se descontaba MENOS ingrediente del que de verdad se gasta y el
+        // inventario se iba quedando optimista servicio tras servicio.
+        const bruto = mermaBruto(ri) * (line.qty||0);
         if(ri.type === 'base'){
           const elab = (DB.elaboraciones||[]).find(e => e.recipeId === ri.baseRecipeId);
           if(elab) elab.qty = (elab.qty||0) + bruto;
@@ -4205,7 +4209,7 @@ function recipeStockShortageWarning(recipeId){
   if(!r) return null;
   const short = [];
   (r.ingredients||[]).forEach(line => {
-    const need = line.qty * (1 + (line.merma||0)/100);
+    const need = mermaBruto(line);
     if(line.type === 'base'){
       const elab = (DB.elaboraciones||[]).find(e => e.recipeId === line.baseRecipeId);
       if(elab && (elab.qty||0) < need) short.push(elab.name);
@@ -4258,7 +4262,7 @@ function discountStockForOrder(order){
         // antes se descontaba sin merma, así que el inventario se quedaba
         // sistemáticamente por encima del consumo real declarado en el
         // escandallo, tanto más cuanta más merma tuviera la receta.
-        const bruto = ri.qty * (1 + (ri.merma||0)/100) * line.qty;
+        const bruto = mermaBruto(ri) * line.qty;
         if(ri.type === 'base'){
           // La línea usa una elaboración base (almíbar, caldo...) como ingrediente:
           // esa elaboración tiene su propio stock (DB.elaboraciones), no Mega Lista.

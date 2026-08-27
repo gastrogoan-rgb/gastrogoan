@@ -30,17 +30,38 @@ function recipeBaseCostPerUnit(baseRecipe, visited, ctx){
   const yieldQty = baseRecipe.baseYield || 1;
   return yieldQty > 0 ? total / yieldQty : 0;
 }
+/* Cuánto hay que COMPRAR para que quede en el plato la cantidad que el
+   escandallo pide.
+
+   La columna donde se escribe la cantidad se llama "Cantidad neta" y al
+   lado va "Merma %": el hostelero apunta lo que quiere que llegue al
+   plato (220 g de solomillo limpio) y qué porcentaje se pierde al
+   limpiarlo. Para que queden 220 g netos con un 8% de merma hay que
+   comprar 220/0,92 = 239,1 g, no 220×1,08 = 237,6 g.
+
+   Antes se sumaba el porcentaje (qty × (1+m)) en vez de descontarlo
+   (qty ÷ (1−m)), y el coste salía SIEMPRE por debajo del real. Con mermas
+   pequeñas se nota poco, pero crece rápido con las normales de cocina:
+
+     merma 8%  → 0,6% de menos      merma 30% → 9% de menos
+     merma 40% → 16% de menos       merma 50% → 25% de menos
+
+   Un 30% de merma es lo corriente en pescado entero o alcachofas. El
+   efecto es que el food cost sale más bajo de lo que es y el margen más
+   alto: se ponen precios sobre un coste que no es el real. */
+function mermaBruto(line){
+  const m = Math.min(99, Math.max(0, line.merma || 0));
+  return line.qty / (1 - m/100);
+}
 function recipeIngredientCost(line, visited, ctx){
   if(line.type === 'base'){
     const baseRecipe = getRecipe(line.baseRecipeId);
     if(!baseRecipe) return 0;
-    const bruto = line.qty * (1 + (line.merma||0)/100);
-    return recipeBaseCostPerUnit(baseRecipe, visited, ctx) * bruto;
+    return recipeBaseCostPerUnit(baseRecipe, visited, ctx) * mermaBruto(line);
   }
   const ing = getIngredient(line.ingredientId);
   if(!ing) return 0;
-  const bruto = line.qty * (1 + (line.merma||0)/100);
-  return ing.price * bruto;
+  return ing.price * mermaBruto(line);
 }
 function recipeCostBreakdown(r, visited, ctx){
   const costeIng = (r.ingredients||[]).reduce((sum, line) => sum + recipeIngredientCost(line, visited, ctx), 0);
