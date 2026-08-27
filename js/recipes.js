@@ -913,6 +913,276 @@ function fichaTempLabel(value){
   return FICHA_TEMP_LABEL_KEYS[value] ? t(FICHA_TEMP_LABEL_KEYS[value]) : (value||'');
 }
 
+/* ============================================================
+   FICHA DE BEBIDA — Sala
+   ============================================================
+   La ficha de sala era la de cocina con otra etiqueta: pedía
+   "comensales", "tiempo" y "emplatado". A un vino eso no le dice nada, y
+   lo que de verdad hace falta —la añada, la temperatura de servicio en
+   grados, la copa, la nota de cata, con qué plato marida— no cabía en
+   ningún sitio.
+
+   Esto es un REGISTRO, no una lista cerrada: añadir un tipo de bebida
+   nuevo (sidra, vermut, kombucha, lo que sea) es añadir una entrada aquí
+   y nada más — el formulario, el impreso y el guardado salen solos. Por
+   eso los campos se declaran en vez de escribirse a mano en el HTML.
+
+   Los textos van con gl({es,ca,en}) y no en i18n.js a propósito: son
+   vocabulario del oficio, y tenerlos junto al campo que nombran evita
+   que al añadir un tipo se olvide un idioma (que es justo el fallo que
+   más se repite al tocar i18n).
+
+   El VALOR guardado de las opciones es siempre el de `v` (estable, en
+   español), igual que en las categorías y los alérgenos: así se puede
+   cambiar la etiqueta o el idioma sin tocar los datos ya guardados. */
+
+// Tipos de campo: 'text' | 'num' | 'sel' | 'area' (texto largo)
+const BEBIDA_CAMPOS_COMUNES = [
+  {k:'tempServicio', tipo:'num', unidad:'°C', min:-10, max:100, l:{es:'Temperatura de servicio',ca:'Temperatura de servei',en:'Serving temperature'}, ph:{es:'Ej. 8',ca:'Ex. 8',en:'e.g. 8'}},
+  {k:'cristaleria', tipo:'text', l:{es:'Copa / cristalería',ca:'Copa / cristalleria',en:'Glassware'}, ph:{es:'Ej. Copa de balón',ca:'Ex. Copa de baló',en:'e.g. Balloon glass'}},
+  {k:'racion', tipo:'num', unidad:'ml', min:0, max:5000, l:{es:'Ración servida',ca:'Ració servida',en:'Serving size'}, ph:{es:'Ej. 150',ca:'Ex. 150',en:'e.g. 150'}},
+  {k:'graduacion', tipo:'num', unidad:'% vol', min:0, max:100, paso:'0.1', l:{es:'Graduación',ca:'Graduació',en:'ABV'}, ph:{es:'Ej. 13,5',ca:'Ex. 13,5',en:'e.g. 13.5'}},
+];
+
+const BEBIDA_CATA = [
+  {k:'cataVista', tipo:'area', l:{es:'Cata — vista',ca:'Tast — vista',en:'Tasting — appearance'}, ph:{es:'Color, capa, lágrima…',ca:'Color, capa, llàgrima…',en:'Colour, depth, legs…'}},
+  {k:'cataNariz', tipo:'area', l:{es:'Cata — nariz',ca:'Tast — nas',en:'Tasting — nose'}, ph:{es:'Intensidad, aromas…',ca:'Intensitat, aromes…',en:'Intensity, aromas…'}},
+  {k:'cataBoca', tipo:'area', l:{es:'Cata — boca',ca:'Tast — boca',en:'Tasting — palate'}, ph:{es:'Acidez, taninos, final…',ca:'Acidesa, tanins, final…',en:'Acidity, tannins, finish…'}},
+];
+const BEBIDA_MARIDAJE = {k:'maridaje', tipo:'area', l:{es:'Maridaje',ca:'Maridatge',en:'Food pairing'}, ph:{es:'Con qué platos de la carta va bien',ca:'Amb quins plats de la carta va bé',en:'Which dishes on the menu it goes with'}};
+
+const BEBIDA_TIPOS = [
+  {
+    key:'vino', icon:'ti-glass-full',
+    l:{es:'Vino',ca:'Vi',en:'Wine'},
+    campos:[
+      {k:'tipoVino', tipo:'sel', l:{es:'Tipo',ca:'Tipus',en:'Style'}, opts:[
+        {v:'Tinto', l:{es:'Tinto',ca:'Negre',en:'Red'}},
+        {v:'Blanco', l:{es:'Blanco',ca:'Blanc',en:'White'}},
+        {v:'Rosado', l:{es:'Rosado',ca:'Rosat',en:'Rosé'}},
+        {v:'Generoso', l:{es:'Generoso',ca:'Generós',en:'Fortified'}},
+        {v:'Dulce', l:{es:'Dulce',ca:'Dolç',en:'Sweet'}},
+        {v:'Naranja', l:{es:'Naranja',ca:'Taronja',en:'Orange'}},
+      ]},
+      {k:'do', tipo:'text', l:{es:'D.O. / zona',ca:'D.O. / zona',en:'Appellation / region'}, ph:{es:'Ej. Ribera del Duero',ca:'Ex. Ribera del Duero',en:'e.g. Ribera del Duero'}},
+      {k:'bodega', tipo:'text', l:{es:'Bodega',ca:'Celler',en:'Winery'}, ph:{es:'Ej. Bodegas…',ca:'Ex. Cellers…',en:'e.g. …Estate'}},
+      {k:'anada', tipo:'num', min:1900, max:2100, l:{es:'Añada',ca:'Anyada',en:'Vintage'}, ph:{es:'Ej. 2019',ca:'Ex. 2019',en:'e.g. 2019'}},
+      {k:'uvas', tipo:'text', l:{es:'Uva(s)',ca:'Raïm(s)',en:'Grape(s)'}, ph:{es:'Ej. Tempranillo 100%',ca:'Ex. Tempranillo 100%',en:'e.g. 100% Tempranillo'}},
+      {k:'crianza', tipo:'text', l:{es:'Crianza',ca:'Criança',en:'Ageing'}, ph:{es:'Ej. 12 meses en roble francés',ca:'Ex. 12 mesos en roure francès',en:'e.g. 12 months in French oak'}},
+      {k:'decantar', tipo:'sel', l:{es:'Decantación',ca:'Decantació',en:'Decanting'}, opts:[
+        {v:'', l:{es:'No necesita',ca:'No cal',en:'Not needed'}},
+        {v:'15 min', l:{es:'15 minutos',ca:'15 minuts',en:'15 minutes'}},
+        {v:'30 min', l:{es:'30 minutos',ca:'30 minuts',en:'30 minutes'}},
+        {v:'60 min', l:{es:'1 hora',ca:'1 hora',en:'1 hour'}},
+        {v:'+60 min', l:{es:'Más de 1 hora',ca:'Més d\'1 hora',en:'Over 1 hour'}},
+      ]},
+      {k:'copasBotella', tipo:'num', min:0, max:50, l:{es:'Copas por botella',ca:'Copes per ampolla',en:'Glasses per bottle'}, ph:{es:'Ej. 5',ca:'Ex. 5',en:'e.g. 5'}},
+      ...BEBIDA_CATA,
+      BEBIDA_MARIDAJE,
+      {k:'consumoDesde', tipo:'num', min:1900, max:2100, l:{es:'Beber desde',ca:'Beure des de',en:'Drink from'}, ph:{es:'Ej. 2024',ca:'Ex. 2024',en:'e.g. 2024'}},
+      {k:'consumoHasta', tipo:'num', min:1900, max:2100, l:{es:'Beber hasta',ca:'Beure fins a',en:'Drink until'}, ph:{es:'Ej. 2030',ca:'Ex. 2030',en:'e.g. 2030'}},
+    ],
+  },
+  {
+    key:'espumoso', icon:'ti-glass-champagne',
+    l:{es:'Espumoso (cava, champagne…)',ca:'Escumós (cava, xampany…)',en:'Sparkling (cava, champagne…)'},
+    campos:[
+      {k:'do', tipo:'text', l:{es:'D.O. / zona',ca:'D.O. / zona',en:'Appellation / region'}, ph:{es:'Ej. Cava, Champagne…',ca:'Ex. Cava, Xampany…',en:'e.g. Cava, Champagne…'}},
+      {k:'bodega', tipo:'text', l:{es:'Bodega',ca:'Celler',en:'House'}, ph:{es:'Ej. Bodegas…',ca:'Ex. Cellers…',en:'e.g. …House'}},
+      {k:'anada', tipo:'num', min:1900, max:2100, l:{es:'Añada',ca:'Anyada',en:'Vintage'}, ph:{es:'En blanco si no lleva',ca:'En blanc si no en porta',en:'Blank if non-vintage'}},
+      {k:'metodo', tipo:'sel', l:{es:'Método',ca:'Mètode',en:'Method'}, opts:[
+        {v:'Tradicional', l:{es:'Tradicional (en botella)',ca:'Tradicional (en ampolla)',en:'Traditional (bottle)'}},
+        {v:'Granvás', l:{es:'Granvás / Charmat',ca:'Granvàs / Charmat',en:'Charmat (tank)'}},
+        {v:'Ancestral', l:{es:'Ancestral',ca:'Ancestral',en:'Ancestral'}},
+      ]},
+      {k:'dosaje', tipo:'sel', l:{es:'Dosaje / dulzor',ca:'Dosatge / dolçor',en:'Dosage / sweetness'}, opts:[
+        {v:'Brut Nature', l:{es:'Brut Nature',ca:'Brut Nature',en:'Brut Nature'}},
+        {v:'Extra Brut', l:{es:'Extra Brut',ca:'Extra Brut',en:'Extra Brut'}},
+        {v:'Brut', l:{es:'Brut',ca:'Brut',en:'Brut'}},
+        {v:'Extra Seco', l:{es:'Extra Seco',ca:'Extra Sec',en:'Extra Dry'}},
+        {v:'Seco', l:{es:'Seco',ca:'Sec',en:'Dry'}},
+        {v:'Semiseco', l:{es:'Semiseco',ca:'Semisec',en:'Demi-sec'}},
+        {v:'Dulce', l:{es:'Dulce',ca:'Dolç',en:'Sweet'}},
+      ]},
+      {k:'uvas', tipo:'text', l:{es:'Uva(s)',ca:'Raïm(s)',en:'Grape(s)'}, ph:{es:'Ej. Macabeo, Xarel·lo, Parellada',ca:'Ex. Macabeu, Xarel·lo, Parellada',en:'e.g. Macabeo, Xarel·lo, Parellada'}},
+      {k:'crianza', tipo:'text', l:{es:'Meses en rima',ca:'Mesos en rima',en:'Months on lees'}, ph:{es:'Ej. 18 meses',ca:'Ex. 18 mesos',en:'e.g. 18 months'}},
+      ...BEBIDA_CATA,
+      BEBIDA_MARIDAJE,
+    ],
+  },
+  {
+    key:'cerveza', icon:'ti-beer',
+    l:{es:'Cerveza',ca:'Cervesa',en:'Beer'},
+    campos:[
+      {k:'estilo', tipo:'text', l:{es:'Estilo',ca:'Estil',en:'Style'}, ph:{es:'Ej. IPA, Pilsner, Stout…',ca:'Ex. IPA, Pilsner, Stout…',en:'e.g. IPA, Pilsner, Stout…'}},
+      {k:'cervecera', tipo:'text', l:{es:'Cervecera',ca:'Cerveseria',en:'Brewery'}, ph:{es:'Ej. …',ca:'Ex. …',en:'e.g. …'}},
+      {k:'ibu', tipo:'num', min:0, max:200, l:{es:'Amargor (IBU)',ca:'Amargor (IBU)',en:'Bitterness (IBU)'}, ph:{es:'Ej. 40',ca:'Ex. 40',en:'e.g. 40'}},
+      {k:'formato', tipo:'sel', l:{es:'Formato',ca:'Format',en:'Format'}, opts:[
+        {v:'Barril', l:{es:'Barril (de grifo)',ca:'Barril (de aixeta)',en:'Keg (draught)'}},
+        {v:'Botella', l:{es:'Botella',ca:'Ampolla',en:'Bottle'}},
+        {v:'Lata', l:{es:'Lata',ca:'Llauna',en:'Can'}},
+      ]},
+      {k:'tirada', tipo:'area', l:{es:'Cómo tirarla',ca:'Com tirar-la',en:'How to pour it'}, ph:{es:'Ángulo, dedos de espuma, cómo enjuagar la copa…',ca:'Angle, dits d\'escuma, com esbandir la copa…',en:'Angle, head, how to rinse the glass…'}},
+      BEBIDA_MARIDAJE,
+    ],
+  },
+  {
+    key:'destilado', icon:'ti-bottle',
+    l:{es:'Destilado y licor',ca:'Destil·lat i licor',en:'Spirit & liqueur'},
+    campos:[
+      {k:'categoria', tipo:'sel', l:{es:'Categoría',ca:'Categoria',en:'Category'}, opts:[
+        {v:'Whisky', l:{es:'Whisky',ca:'Whisky',en:'Whisky'}},
+        {v:'Ginebra', l:{es:'Ginebra',ca:'Ginebra',en:'Gin'}},
+        {v:'Ron', l:{es:'Ron',ca:'Rom',en:'Rum'}},
+        {v:'Vodka', l:{es:'Vodka',ca:'Vodka',en:'Vodka'}},
+        {v:'Brandy', l:{es:'Brandy / Coñac',ca:'Brandi / Conyac',en:'Brandy / Cognac'}},
+        {v:'Tequila', l:{es:'Tequila',ca:'Tequila',en:'Tequila'}},
+        {v:'Mezcal', l:{es:'Mezcal',ca:'Mezcal',en:'Mezcal'}},
+        {v:'Vermut', l:{es:'Vermut',ca:'Vermut',en:'Vermouth'}},
+        {v:'Anís', l:{es:'Anís',ca:'Anís',en:'Anise'}},
+        {v:'Orujo', l:{es:'Orujo / Aguardiente',ca:'Orujo / Aiguardent',en:'Grappa / Marc'}},
+        {v:'Licor', l:{es:'Licor / Crema',ca:'Licor / Crema',en:'Liqueur / Cream'}},
+        {v:'Otro', l:{es:'Otro',ca:'Altre',en:'Other'}},
+      ]},
+      {k:'destileria', tipo:'text', l:{es:'Destilería / marca',ca:'Destil·leria / marca',en:'Distillery / brand'}, ph:{es:'Ej. …',ca:'Ex. …',en:'e.g. …'}},
+      {k:'origen', tipo:'text', l:{es:'Origen',ca:'Origen',en:'Origin'}, ph:{es:'Ej. Escocia, Highlands',ca:'Ex. Escòcia, Highlands',en:'e.g. Scotland, Highlands'}},
+      {k:'anejamiento', tipo:'text', l:{es:'Añejamiento',ca:'Envelliment',en:'Ageing'}, ph:{es:'Ej. 12 años en barrica de jerez',ca:'Ex. 12 anys en bóta de xerès',en:'e.g. 12 years in sherry casks'}},
+      {k:'servir', tipo:'sel', l:{es:'Cómo se sirve',ca:'Com se serveix',en:'How it is served'}, opts:[
+        {v:'Solo', l:{es:'Solo',ca:'Sol',en:'Neat'}},
+        {v:'Con hielo', l:{es:'Con hielo',ca:'Amb gel',en:'On the rocks'}},
+        {v:'Combinado', l:{es:'Combinado',ca:'Combinat',en:'Long drink'}},
+        {v:'En coctelería', l:{es:'En coctelería',ca:'En cocteleria',en:'In cocktails'}},
+      ]},
+      {k:'guarnicion', tipo:'text', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, ph:{es:'Ej. Piel de limón',ca:'Ex. Pell de llimona',en:'e.g. Lemon peel'}},
+      BEBIDA_MARIDAJE,
+    ],
+  },
+  {
+    key:'coctel', icon:'ti-glass-cocktail',
+    l:{es:'Coctelería',ca:'Cocteleria',en:'Cocktail'},
+    campos:[
+      {k:'familia', tipo:'sel', l:{es:'Familia',ca:'Família',en:'Family'}, opts:[
+        {v:'Sour', l:{es:'Sour',ca:'Sour',en:'Sour'}},
+        {v:'Highball', l:{es:'Highball',ca:'Highball',en:'Highball'}},
+        {v:'Old Fashioned', l:{es:'Old Fashioned',ca:'Old Fashioned',en:'Old Fashioned'}},
+        {v:'Martini', l:{es:'Martini',ca:'Martini',en:'Martini'}},
+        {v:'Tiki', l:{es:'Tiki',ca:'Tiki',en:'Tiki'}},
+        {v:'Spritz', l:{es:'Spritz / Aperitivo',ca:'Spritz / Aperitiu',en:'Spritz / Aperitif'}},
+        {v:'Otro', l:{es:'Otra',ca:'Altra',en:'Other'}},
+      ]},
+      {k:'tecnica', tipo:'sel', l:{es:'Técnica',ca:'Tècnica',en:'Technique'}, opts:[
+        {v:'Batido', l:{es:'Batido (coctelera)',ca:'Batut (cocteleria)',en:'Shaken'}},
+        {v:'Refrescado', l:{es:'Refrescado (vaso mezclador)',ca:'Refrescat (got mesclador)',en:'Stirred'}},
+        {v:'Directo', l:{es:'Directo en copa',ca:'Directe a la copa',en:'Built in glass'}},
+        {v:'Licuado', l:{es:'Licuado / frozen',ca:'Liquat / frozen',en:'Blended / frozen'}},
+        {v:'Flameado', l:{es:'Flameado',ca:'Flamejat',en:'Flamed'}},
+      ]},
+      {k:'hielo', tipo:'sel', l:{es:'Hielo',ca:'Gel',en:'Ice'}, opts:[
+        {v:'Sin hielo', l:{es:'Sin hielo',ca:'Sense gel',en:'No ice'}},
+        {v:'Cubo', l:{es:'Cubo',ca:'Cub',en:'Cubed'}},
+        {v:'Roca grande', l:{es:'Roca grande',ca:'Roca gran',en:'Large rock'}},
+        {v:'Picado', l:{es:'Picado',ca:'Picat',en:'Crushed'}},
+        {v:'Escarchado', l:{es:'Copa escarchada',ca:'Copa gebrada',en:'Frosted glass'}},
+      ]},
+      {k:'guarnicion', tipo:'text', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, ph:{es:'Ej. Twist de naranja',ca:'Ex. Twist de taronja',en:'e.g. Orange twist'}},
+      // La dilución del hielo es lo que hace que el coste por copa de un
+      // cóctel batido no cuadre nunca si se calcula como un plato: gana
+      // entre un 20% y un 25% de agua.
+      {k:'dilucion', tipo:'num', unidad:'%', min:0, max:60, l:{es:'Dilución del hielo',ca:'Dilució del gel',en:'Ice dilution'}, ph:{es:'Ej. 22',ca:'Ex. 22',en:'e.g. 22'}},
+    ],
+  },
+  {
+    key:'cafe', icon:'ti-coffee',
+    l:{es:'Café',ca:'Cafè',en:'Coffee'},
+    campos:[
+      {k:'metodo', tipo:'sel', l:{es:'Método',ca:'Mètode',en:'Method'}, opts:[
+        {v:'Espresso', l:{es:'Espresso',ca:'Espresso',en:'Espresso'}},
+        {v:'Filtro', l:{es:'Filtro / goteo',ca:'Filtre / degoteig',en:'Filter / drip'}},
+        {v:'V60', l:{es:'V60 / Chemex',ca:'V60 / Chemex',en:'V60 / Chemex'}},
+        {v:'Aeropress', l:{es:'Aeropress',ca:'Aeropress',en:'Aeropress'}},
+        {v:'Cold brew', l:{es:'Cold brew',ca:'Cold brew',en:'Cold brew'}},
+        {v:'Italiana', l:{es:'Italiana / moka',ca:'Italiana / moka',en:'Moka pot'}},
+        {v:'Prensa', l:{es:'Prensa francesa',ca:'Premsa francesa',en:'French press'}},
+      ]},
+      {k:'origen', tipo:'text', l:{es:'Origen',ca:'Origen',en:'Origin'}, ph:{es:'Ej. Etiopía, Yirgacheffe',ca:'Ex. Etiòpia, Yirgacheffe',en:'e.g. Ethiopia, Yirgacheffe'}},
+      {k:'tueste', tipo:'sel', l:{es:'Tueste',ca:'Torrat',en:'Roast'}, opts:[
+        {v:'Claro', l:{es:'Claro',ca:'Clar',en:'Light'}},
+        {v:'Medio', l:{es:'Medio',ca:'Mitjà',en:'Medium'}},
+        {v:'Oscuro', l:{es:'Oscuro',ca:'Fosc',en:'Dark'}},
+        {v:'Torrefacto', l:{es:'Torrefacto',ca:'Torrefacte',en:'Torrefacto'}},
+      ]},
+      {k:'molienda', tipo:'text', l:{es:'Molienda',ca:'Mòlta',en:'Grind'}, ph:{es:'Ej. Fina, punto 3 del molino',ca:'Ex. Fina, punt 3 del molí',en:'e.g. Fine, grinder setting 3'}},
+      {k:'gramaje', tipo:'num', unidad:'g', min:0, max:200, paso:'0.1', l:{es:'Gramaje',ca:'Gramatge',en:'Dose'}, ph:{es:'Ej. 18',ca:'Ex. 18',en:'e.g. 18'}},
+      {k:'tiempoExtraccion', tipo:'num', unidad:'s', min:0, max:1200, l:{es:'Tiempo de extracción',ca:'Temps d\'extracció',en:'Extraction time'}, ph:{es:'Ej. 27',ca:'Ex. 27',en:'e.g. 27'}},
+      {k:'tempAgua', tipo:'num', unidad:'°C', min:0, max:100, l:{es:'Temperatura del agua',ca:'Temperatura de l\'aigua',en:'Water temperature'}, ph:{es:'Ej. 93',ca:'Ex. 93',en:'e.g. 93'}},
+      {k:'tempLeche', tipo:'num', unidad:'°C', min:0, max:100, l:{es:'Temperatura de la leche',ca:'Temperatura de la llet',en:'Milk temperature'}, ph:{es:'Ej. 65',ca:'Ex. 65',en:'e.g. 65'}},
+    ],
+  },
+  {
+    key:'infusion', icon:'ti-mug',
+    l:{es:'Té e infusiones',ca:'Te i infusions',en:'Tea & infusions'},
+    campos:[
+      {k:'tipoInfusion', tipo:'sel', l:{es:'Tipo',ca:'Tipus',en:'Type'}, opts:[
+        {v:'Verde', l:{es:'Té verde',ca:'Te verd',en:'Green tea'}},
+        {v:'Negro', l:{es:'Té negro',ca:'Te negre',en:'Black tea'}},
+        {v:'Blanco', l:{es:'Té blanco',ca:'Te blanc',en:'White tea'}},
+        {v:'Oolong', l:{es:'Oolong',ca:'Oolong',en:'Oolong'}},
+        {v:'Rooibos', l:{es:'Rooibos',ca:'Rooibos',en:'Rooibos'}},
+        {v:'Herbal', l:{es:'Infusión de hierbas',ca:'Infusió d\'herbes',en:'Herbal infusion'}},
+      ]},
+      {k:'tempAgua', tipo:'num', unidad:'°C', min:0, max:100, l:{es:'Temperatura del agua',ca:'Temperatura de l\'aigua',en:'Water temperature'}, ph:{es:'Ej. 80',ca:'Ex. 80',en:'e.g. 80'}},
+      {k:'tiempoInfusion', tipo:'num', unidad:'min', min:0, max:60, paso:'0.5', l:{es:'Tiempo de infusión',ca:'Temps d\'infusió',en:'Steeping time'}, ph:{es:'Ej. 3',ca:'Ex. 3',en:'e.g. 3'}},
+      {k:'gramaje', tipo:'num', unidad:'g', min:0, max:200, paso:'0.1', l:{es:'Gramaje',ca:'Gramatge',en:'Dose'}, ph:{es:'Ej. 2',ca:'Ex. 2',en:'e.g. 2'}},
+    ],
+  },
+  {
+    key:'sinalcohol', icon:'ti-glass',
+    l:{es:'Sin alcohol (refrescos, zumos, mocktails)',ca:'Sense alcohol (refrescs, sucs, mocktails)',en:'Non-alcoholic (soft drinks, juices, mocktails)'},
+    campos:[
+      {k:'guarnicion', tipo:'text', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, ph:{es:'Ej. Rodaja de lima',ca:'Ex. Rodanxa de llima',en:'e.g. Lime wheel'}},
+      {k:'hielo', tipo:'sel', l:{es:'Hielo',ca:'Gel',en:'Ice'}, opts:[
+        {v:'Sin hielo', l:{es:'Sin hielo',ca:'Sense gel',en:'No ice'}},
+        {v:'Cubo', l:{es:'Cubo',ca:'Cub',en:'Cubed'}},
+        {v:'Picado', l:{es:'Picado',ca:'Picat',en:'Crushed'}},
+      ]},
+    ],
+  },
+  {
+    key:'otra', icon:'ti-glass-gin',
+    l:{es:'Otra bebida o preparado',ca:'Altra beguda o preparat',en:'Other drink or preparation'},
+    campos:[],
+  },
+];
+
+function bebidaTipoDef(key){ return BEBIDA_TIPOS.find(x => x.key === key) || null; }
+// Todos los campos de un tipo = los comunes de cualquier bebida + los suyos.
+function bebidaCamposDe(key){
+  const def = bebidaTipoDef(key);
+  if(!def) return [];
+  return [...BEBIDA_CAMPOS_COMUNES, ...def.campos];
+}
+// Firebase no guarda objetos vacíos: una ficha sincronizada puede volver sin
+// `bebida`. Se normaliza siempre aquí en vez de en cada sitio que la lee.
+function bebidaDatos(f){
+  return (f && f.bebida && typeof f.bebida === 'object') ? f.bebida : {};
+}
+function bebidaValorLabel(campo, valor){
+  if(!campo.opts) return valor;
+  const op = campo.opts.find(o => o.v === valor);
+  return op ? gl(op.l) : valor;
+}
+// Las líneas rellenas de la ficha, ya traducidas, para el formulario impreso
+// y para la tarjeta. Las vacías no se enseñan: una ficha de vino a medias
+// llena de "—" se lee peor que una corta.
+function bebidaLineasRellenas(f){
+  const datos = bebidaDatos(f);
+  return bebidaCamposDe(f && f.bebidaTipo).map(c => {
+    const v = datos[c.k];
+    if(v === undefined || v === null || String(v).trim() === '') return null;
+    return {label: gl(c.l), valor: bebidaValorLabel(c, String(v)) + (c.unidad ? ' ' + c.unidad : ''), largo: c.tipo === 'area'};
+  }).filter(Boolean);
+}
+
 let fichaModalState = null;
 
 function getFicha(id){ return DB.fichas.find(f => f.id === id); }
@@ -1065,7 +1335,8 @@ function renderFichas(){
   if(orphanFichas.length){
     html += `<h3 class="cat-heading">${currentArea()==='sala' ? t('title.unlinkedTechSheetsDrink') : t('title.unlinkedTechSheetsDish')}</h3><div class="${gridClass}">` + orphanFichas.map(f => fichasView==='list' ? `
       <div class="list-row" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <div class="list-row-name"><i class="ti ti-file-description"></i> <span>${escapeHtml(f.name)}</span></div>
+        <div class="list-row-name">${fichaTipoIconoHtml(f)} <span>${escapeHtml(f.name)}</span></div>
+        ${fichaTipoBadgeHtml(f)}
         <div class="actions-cell">
           <button class="btn btn-sm btn-icon" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i></button>
           <button class="owner-only btn btn-sm btn-icon" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
@@ -1074,7 +1345,8 @@ function renderFichas(){
       </div>
     ` : `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaModal(${f.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:visible;text-overflow:clip;white-space:normal"><i class="ti ti-file-description"></i> ${escapeHtml(f.name)}</span></h3>
+        <h3 style="justify-content:space-between"><span style="overflow:visible;text-overflow:clip;white-space:normal">${fichaTipoIconoHtml(f)} ${escapeHtml(f.name)}</span></h3>
+        ${fichaTipoBadgeHtml(f)}
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();printFicha(${f.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
           <button class="owner-only btn btn-sm" onclick="event.stopPropagation();duplicateFicha(${f.id})"><i class="ti ti-copy"></i></button>
@@ -1153,6 +1425,11 @@ function openFichaModal(id, recipeId){
     if(!Array.isArray(fichaModalState.allergens)) fichaModalState.allergens = [];
     if(!fichaModalState.baseComensales) fichaModalState.baseComensales = fichaModalState.comensales || 1;
     if(!fichaModalState.produccion) fichaModalState.produccion = fichaModalState.comensales || fichaModalState.baseComensales;
+    // La nube tampoco guarda objetos vacíos: `bebida` puede volver sin nada.
+    if(!fichaModalState.bebida || typeof fichaModalState.bebida !== 'object') fichaModalState.bebida = {};
+    // Un tipo que ya no exista (ficha de una versión con otro registro) se
+    // trata como "sin tipo" en vez de pintar un formulario vacío.
+    if(fichaModalState.bebidaTipo && !bebidaTipoDef(fichaModalState.bebidaTipo)) fichaModalState.bebidaTipo = '';
   } else if(recipeId){
     const r = getRecipe(recipeId);
     if(!r){ showToast(t('msg.recordNoLongerExists')); return; }
@@ -1166,12 +1443,13 @@ function openFichaModal(id, recipeId){
       }).filter(Boolean),
       pasos: r.steps ? r.steps.split('\n').filter(Boolean) : [''],
       allergens: [],
-      presentation: r.presentation || ''
+      presentation: r.presentation || '',
+      bebidaTipo: '', bebida: {}
     };
     if(!fichaModalState.ingredients.length) fichaModalState.ingredients = [''];
     if(!fichaModalState.pasos.length) fichaModalState.pasos = [''];
   } else {
-    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:''};
+    fichaModalState = {id:null, name:'', recipeId:'', comensales:2, baseComensales:1, produccion:1, tiempo:'', temp: currentArea()==='sala' ? 'FRÍO' : 'CALIENTE', ingredients:[''], pasos:[''], allergens:[], presentation:'', bebidaTipo:'', bebida:{}};
   }
   renderFichaModal();
 }
@@ -1232,6 +1510,54 @@ function renderFichaModal(){
   // si no, editar un ingrediente después dejaba este modal mostrando alérgenos
   // desactualizados aunque la impresión (getFichaAllergens, mismo cálculo en
   // vivo) ya mostrara los correctos.
+  // Ficha de bebida (solo sala): el tipo elegido decide qué campos se piden.
+  // Una ficha de vino no pregunta por el tiempo de extracción del café.
+  const bebidaHtml = !isSala ? '' : (() => {
+    const datos = bebidaDatos(f);
+    const campoHtml = c => {
+      const v = datos[c.k] !== undefined ? String(datos[c.k]) : '';
+      const id = `bebida-${c.k}`;
+      const lab = `<label>${escapeHtml(gl(c.l))}${c.unidad?` <span style="color:var(--muted);font-weight:400">(${escapeHtml(c.unidad)})</span>`:''}</label>`;
+      if(c.tipo === 'sel'){
+        // La opción vacía deja decir "todavía no lo sé" sin inventarse un valor.
+        const opts = (c.opts||[]).some(o => o.v === '') ? c.opts : [{v:'', l:{es:'—',ca:'—',en:'—'}}, ...(c.opts||[])];
+        return `<div class="field">${lab}<select id="${id}" ${roAttr}>${opts.map(o=>`<option value="${escapeHtml(o.v)}"${o.v===v?' selected':''}>${escapeHtml(gl(o.l))}</option>`).join('')}</select></div>`;
+      }
+      if(c.tipo === 'area'){
+        return `<div class="field">${lab}<textarea id="${id}" placeholder="${escapeHtml(c.ph?gl(c.ph):'')}" ${roAttr}>${escapeHtml(v)}</textarea></div>`;
+      }
+      if(c.tipo === 'num'){
+        return `<div class="field">${lab}<input type="number" id="${id}" value="${escapeHtml(v)}" placeholder="${escapeHtml(c.ph?gl(c.ph):'')}" step="${c.paso||'1'}"${c.min!==undefined?` min="${c.min}"`:''}${c.max!==undefined?` max="${c.max}"`:''} ${roAttr}></div>`;
+      }
+      return `<div class="field">${lab}<input type="text" id="${id}" value="${escapeHtml(v)}" placeholder="${escapeHtml(c.ph?gl(c.ph):'')}" ${roAttr}></div>`;
+    };
+    // Los textos largos (cata, maridaje, cómo tirarla) van a lo ancho; el
+    // resto de tres en tres, que es lo que cabe sin apretar en tablet.
+    const campos = bebidaCamposDe(f.bebidaTipo);
+    const bloques = [];
+    let fila = [];
+    campos.forEach(c => {
+      if(c.tipo === 'area'){
+        if(fila.length){ bloques.push(`<div class="field-row">${fila.join('')}</div>`); fila = []; }
+        bloques.push(campoHtml(c));
+      } else {
+        fila.push(campoHtml(c));
+        if(fila.length === 3){ bloques.push(`<div class="field-row">${fila.join('')}</div>`); fila = []; }
+      }
+    });
+    if(fila.length) bloques.push(`<div class="field-row">${fila.join('')}</div>`);
+    return `
+      <div class="field">
+        <label>${t('label.drinkType')}</label>
+        <select id="ficha-bebida-tipo" onchange="setFichaBebidaTipo(this.value)" ${roAttr}>
+          <option value="">${t('label.drinkTypeNone')}</option>
+          ${BEBIDA_TIPOS.map(x=>`<option value="${x.key}"${x.key===f.bebidaTipo?' selected':''}>${escapeHtml(gl(x.l))}</option>`).join('')}
+        </select>
+      </div>
+      ${f.bebidaTipo ? bloques.join('') : ''}
+    `;
+  })();
+
   const liveRecipeAllergens = recipeComputedAllergens(getFichaLiveRecipe(f));
   const allergenHtml = ALLERGEN_LIST.map(a => {
     const fromRecipe = liveRecipeAllergens.includes(a);
@@ -1270,11 +1596,15 @@ function renderFichaModal(){
         <label>${t('label.prepTime')}</label>
         <input type="number" id="ficha-tiempo" value="${f.tiempo||''}" step="1" min="0" ${roAttr}>
       </div>
+      ${isSala && f.bebidaTipo ? '' : `
       <div class="field">
         <label>${t('label.servingTemp')}</label>
         <select id="ficha-temp" ${roAttr}>${FICHA_TEMPS.map(tv=>`<option value="${tv}"${tv===f.temp?' selected':''}>${fichaTempLabel(tv)}</option>`).join('')}</select>
       </div>
+      `}
     </div>
+
+    ${bebidaHtml}
 
     <div class="field">
       <label>${t('label.ingredients')}</label>
@@ -1289,8 +1619,8 @@ function renderFichaModal(){
 
     ${isBaseElaboration ? '' : `
     <div class="field">
-      <label>${t('label.plating')}</label>
-      <textarea id="ficha-presentation" placeholder="${t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
+      <label>${isSala ? t('label.serviceNotes') : t('label.plating')}</label>
+      <textarea id="ficha-presentation" placeholder="${isSala ? t('ph.serviceNotes') : t('ph.presentationNotes')}" ${roAttr}>${escapeHtml(f.presentation||'')}</textarea>
       <div style="display:flex;align-items:flex-start;gap:12px;margin-top:8px;flex-wrap:wrap">
         ${f.photo ? `
           <img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="width:260px;height:260px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:zoom-in" onclick="openFichaPhotoLightbox('${escapeJsAttr(f.photo)}')" title="${t('title.clickToEnlarge')}">
@@ -1329,6 +1659,46 @@ function syncFichaModalFields(){
   if(tiempoEl) f.tiempo = tiempoEl.value;
   if(tempEl) f.temp = tempEl.value;
   if(presEl) f.presentation = presEl.value;
+  // Campos de la ficha de bebida: se leen por su tipo, no todos como texto,
+  // para que un número guardado siga siendo un número.
+  const tipoEl = document.getElementById('ficha-bebida-tipo');
+  if(tipoEl) f.bebidaTipo = tipoEl.value;
+  if(f.bebidaTipo){
+    if(!f.bebida || typeof f.bebida !== 'object') f.bebida = {};
+    bebidaCamposDe(f.bebidaTipo).forEach(c => {
+      const el = document.getElementById('bebida-' + c.k);
+      if(!el) return;
+      const v = (el.value||'').trim();
+      if(v === ''){ delete f.bebida[c.k]; return; }
+      f.bebida[c.k] = (c.tipo === 'num') ? clampBebidaNum(c, v) : v;
+    });
+  }
+}
+
+// Un número fuera de rango en una ficha no debe romper nada, pero tampoco
+// guardarse: 400 °C de servicio o una añada del año 12 son erratas de tecleo.
+function clampBebidaNum(campo, valor){
+  const n = parseFloat(String(valor).replace(',', '.'));
+  if(!isFinite(n)) return '';
+  const min = campo.min !== undefined ? campo.min : -Infinity;
+  const max = campo.max !== undefined ? campo.max : Infinity;
+  return Math.min(max, Math.max(min, n));
+}
+
+// Al cambiar de tipo se conservan los campos que los dos tipos comparten
+// (temperatura, copa, ración, graduación, guarnición…) y se sueltan los que
+// ya no existen: pasar un vino a espumoso no debería obligar a reescribirlo
+// todo, ni dejar guardado un "tiempo de extracción" invisible.
+function setFichaBebidaTipo(tipo){
+  syncFichaModalFields();
+  const f = fichaModalState;
+  f.bebidaTipo = tipo || '';
+  const validos = new Set(bebidaCamposDe(f.bebidaTipo).map(c => c.k));
+  const datos = bebidaDatos(f);
+  const limpio = {};
+  Object.keys(datos).forEach(k => { if(validos.has(k)) limpio[k] = datos[k]; });
+  f.bebida = limpio;
+  renderFichaModal();
 }
 
 
@@ -1416,7 +1786,16 @@ async function saveFicha(){
     pasos: f.pasos.filter(p => p && p.trim()),
     allergens: f.allergens || [],
     presentation: (f.presentation||'').trim(),
-    photo: f.photo || ''
+    photo: f.photo || '',
+    bebidaTipo: f.bebidaTipo || '',
+    // Solo los campos del tipo elegido: si alguien cambió de tipo, lo que
+    // sobra no se arrastra para siempre dentro de la ficha.
+    bebida: f.bebidaTipo ? (()=>{
+      const validos = new Set(bebidaCamposDe(f.bebidaTipo).map(c => c.k));
+      const datos = bebidaDatos(f); const out = {};
+      Object.keys(datos).forEach(k => { if(validos.has(k) && datos[k] !== '' && datos[k] !== undefined) out[k] = datos[k]; });
+      return out;
+    })() : {}
   };
   if(f.id){
     const ficha = getFicha(f.id);
@@ -1463,6 +1842,38 @@ function duplicateFicha(id){
   showToast(t('msg.techSheetSaved'));
 }
 
+// El bloque de bebida del impreso. Los campos cortos van en dos columnas y
+// los largos (cata, maridaje) debajo, a lo ancho: una nota de cata metida en
+// media columna se lee fatal en un papel colgado en la barra.
+// En una lista de 40 fichas de sala, saber de un vistazo qué es cada una
+// ahorra abrirlas: el icono y la etiqueta del tipo lo dicen sin ocupar sitio.
+function fichaTipoIconoHtml(f){
+  const def = f && f.bebidaTipo ? bebidaTipoDef(f.bebidaTipo) : null;
+  return `<i class="ti ${def ? def.icon : 'ti-file-description'}"></i>`;
+}
+function fichaTipoBadgeHtml(f){
+  const def = f && f.bebidaTipo ? bebidaTipoDef(f.bebidaTipo) : null;
+  if(!def) return '';
+  // El nombre corto: los tipos largos llevan una aclaración entre
+  // paréntesis que en una etiqueta pequeña solo estorba.
+  const nombre = gl(def.l).split(' (')[0];
+  return `<span class="badge">${escapeHtml(nombre)}</span>`;
+}
+
+function bebidaImpresoHtml(f){
+  const lineas = bebidaLineasRellenas(f);
+  if(!lineas.length) return '';
+  const def = bebidaTipoDef(f.bebidaTipo);
+  const cortas = lineas.filter(l => !l.largo);
+  const largas = lineas.filter(l => l.largo);
+  const filas = cortas.map(l => `<tr><td style="padding:3px 10px 3px 0;color:#777;white-space:nowrap">${escapeHtml(l.label)}</td><td style="padding:3px 0"><strong>${escapeHtml(l.valor)}</strong></td></tr>`).join('');
+  return `
+    <h2>${escapeHtml(def ? gl(def.l) : '')}</h2>
+    ${cortas.length ? `<table style="width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:10px">${filas}</table>` : ''}
+    ${largas.map(l => `<p style="margin:6px 0"><strong style="color:#777">${escapeHtml(l.label)}:</strong> ${escapeHtml(l.valor)}</p>`).join('')}
+  `;
+}
+
 function printFicha(id){
   const f = getFicha(id);
   if(!f) return;
@@ -1486,7 +1897,12 @@ function printFicha(id){
   const metaChips = [
     produccion ? `<span><i class="ti ${fArea==='sala'?'ti-glass-cocktail':'ti-users'}"></i> ${fmtNum(produccion)} ${produccion!==1?t('noun.rations'):t('noun.ration')}</span>` : '',
     f.tiempo ? `<span><i class="ti ti-clock"></i> ${f.tiempo} min</span>` : '',
-    f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : ''
+    // Con ficha de bebida manda la temperatura en grados: "FRÍO" no
+    // distingue un blanco a 8° de un tinto a 16°, que es justo lo que
+    // separa a quien sabe servir de quien no.
+    (f.bebidaTipo && bebidaDatos(f).tempServicio !== undefined)
+      ? `<span><i class="ti ti-temperature"></i> ${escapeHtml(String(bebidaDatos(f).tempServicio))} °C</span>`
+      : (f.temp ? `<span>${escapeHtml(fichaTempLabel(f.temp))}</span>` : '')
   ].filter(Boolean).join('');
   const body = `
     ${printReportHeaderHtml(displayName)}
@@ -1494,7 +1910,8 @@ function printFicha(id){
     ${isBaseElaboration ? '' : (f.photo ? `<img src="${f.photo}" alt="${t('label.platingPhotoAlt')}" style="max-width:100%;max-height:100mm;border-radius:8px;display:block;margin:0 0 18px;object-fit:cover">` : '')}
     <h2>${t('label.ingredients')}</h2><ul class="pr-steps">${ings || `<li class="pr-empty">${t('empty.noIngredients')}</li>`}</ul>
     <h2>${t('label.prepMethod')}</h2>${steps || `<p class="pr-empty">${t('label.notSpecified')}</p>`}
-    ${isBaseElaboration ? '' : `<h2>${t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
+    ${isBaseElaboration ? '' : `<h2>${fArea==='sala' ? t('label.serviceNotes') : t('label.plating')}</h2><p>${escapeHtml(f.presentation) || t('label.notSpecified')}</p>`}
+    ${bebidaImpresoHtml(f)}
     <h2>${t('label.allergens')}</h2><div>${algs}</div>
   `;
   printReportWindow(displayName, body, {winSize:'width=800,height=1000'});

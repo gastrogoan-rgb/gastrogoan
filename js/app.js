@@ -897,6 +897,10 @@ function getDistEmpData(empId){
   if(!d.produccion) d.produccion = {};
   if(!d.doneDates) d.doneDates = {};
   if(!d.tareasUnicas) d.tareasUnicas = {};
+  // Sala reparte rangos (mesas, barra, terraza) donde cocina reparte platos.
+  // Antes a sala simplemente se le quitaba la columna de platos y no se le
+  // ponía nada en su lugar, así que la pantalla se quedaba coja.
+  if(!Array.isArray(d.rangos)) d.rangos = [];
   return d;
 }
 
@@ -1162,6 +1166,7 @@ function renderDistList(){
   const cards = emps.map(emp => {
     const d = getDistEmpData(emp.id);
     const nPlatos = d.platos.length;
+    const nRangos = d.rangos.length;
     // Antes solo contaba producción semanal recurrente (d.produccion) — un
     // empleado con solo tareas puntuales (tareasUnicas), de limpieza
     // (responsableId) o de promos asignadas podía aparecer con "0 tareas"
@@ -1184,7 +1189,9 @@ function renderDistList(){
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${escapeHtml(emp.rol||t('label.noRole'))}</div>
         <div style="display:flex;gap:12px;font-size:12px;color:${nPlatos||nTareas?'var(--brand-orange)':'var(--muted)'}">
-          ${isSala ? '' : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos===1?t('dist.oneDish'):t('dist.nDishes').replace('${n}', nPlatos)}</span>`}
+          ${isSala
+            ? `<span><i class="ti ti-map-pin"></i> ${nRangos===1?t('dist.oneZone'):t('dist.nZones').replace('${n}', nRangos)}</span>`
+            : `<span><i class="ti ti-tools-kitchen-2"></i> ${nPlatos===1?t('dist.oneDish'):t('dist.nDishes').replace('${n}', nPlatos)}</span>`}
           <span><i class="ti ti-clipboard-list"></i> ${nTareas===1?t('dist.oneTask'):t('dist.nTasks').replace('${n}', nTareas)}</span>
         </div>
       </div>
@@ -1295,6 +1302,18 @@ function renderDistDetail(){
       `;}).join('') + `</div>`
     : `<div class="empty" style="padding:10px"><i class="ti ti-tools-kitchen-2"></i>${t('dist.noDishesAssigned')}</div>`;
 
+  // Mismo formato de tarjeta que los platos de cocina: en un turno de sala
+  // el reparto se mira de un vistazo, no se lee.
+  const rangosHtml = d.rangos.length
+    ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">` + d.rangos.map((rg,i)=>`
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 8px;min-height:76px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--surface)">
+          <button class="owner-strict btn-danger" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;min-width:0;min-height:0;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border:2px solid var(--surface);cursor:pointer" onclick="removeDistRango(${i})" title="${t('common.remove')}"><i class="ti ti-x"></i></button>
+          <i class="ti ti-map-pin" style="font-size:20px;color:var(--brand-orange)"></i>
+          <span style="font-size:12.5px;font-weight:600;line-height:1.2">${escapeHtml(rg)}</span>
+        </div>
+      `).join('') + `</div>`
+    : `<div class="empty" style="padding:10px"><i class="ti ti-map-pin"></i>${t('dist.noZonesAssigned')}</div>`;
+
   const platosOptions = allDishes.filter(pl=>!d.platos.includes(pl))
     .map(pl=>`<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`).join('');
 
@@ -1403,10 +1422,21 @@ function renderDistDetail(){
     </div>
 
     <div class="grid ${isSala?'':'grid-2'}" style="${isSala?'max-width:280px':''}">
-      ${isSala ? '' : `<div class="kpi"><div class="label">${t('dist.dishesInCharge')}</div><div class="value">${d.platos.length}</div></div>`}
+      <div class="kpi"><div class="label">${isSala ? t('dist.zonesInCharge') : t('dist.dishesInCharge')}</div><div class="value">${isSala ? d.rangos.length : d.platos.length}</div></div>
       <div class="kpi"><div class="label">${t('dist.tasksThisWeek')}</div><div class="value">${nTareasHechas} / ${nTareasTotal}</div></div>
     </div>
     ${nTareasAtrasadas ? `<div class="badge badge-red" style="font-size:12px;margin:8px 0;padding:6px 10px;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-alert-triangle"></i> ${nTareasAtrasadas===1?t('dist.oneOverdueTask'):t('dist.nOverdueTasks').replace('${n}', nTareasAtrasadas)}</div>` : ''}
+
+    ${!isSala ? '' : `
+    <div class="card">
+      <h3><i class="ti ti-map-pin"></i> ${t('dist.zonesTitle')}</h3>
+      ${rangosHtml}
+      <div class="owner-strict" style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+        <input type="text" id="dist-rango-input" style="flex:1;min-width:140px" placeholder="${t('dist.zonePlaceholder')}" onkeydown="if(event.key==='Enter'){event.preventDefault();addDistRango();}">
+        <button class="btn btn-default" style="flex:none" onclick="addDistRango()">${t('btn.assign')}</button>
+      </div>
+    </div>
+    `}
 
     ${isSala ? '' : `
     <div class="card">
@@ -1450,6 +1480,34 @@ function addDistPlato(){
   if(!nombre) return;
   const d = getDistEmpData(distCurrentEmployeeId);
   if(!d.platos.includes(nombre)) d.platos.push(nombre);
+  saveDB();
+  renderDistDetail();
+}
+
+function addDistRango(){
+  if(!isOwnerSession()) return;
+  const input = document.getElementById('dist-rango-input');
+  if(!input) return;
+  const nombre = (input.value||'').trim().slice(0, 60);
+  if(!nombre) return;
+  const d = getDistEmpData(distCurrentEmployeeId);
+  // Sin distinguir mayúsculas: "Terraza" y "terraza" son el mismo sitio, y
+  // duplicarlas dejaría a dos camareros creyendo que llevan zonas distintas.
+  if(d.rangos.some(r => r.toLowerCase() === nombre.toLowerCase())){
+    showToast(t('dist.zoneAlreadyAssigned'));
+    input.value = '';
+    return;
+  }
+  d.rangos.push(nombre);
+  saveDB();
+  renderDistDetail();
+}
+
+async function removeDistRango(idx){
+  if(!isOwnerSession()) return;
+  if(!(await confirmModal(t('msg.confirmDeleteGeneric')))) return;
+  const d = getDistEmpData(distCurrentEmployeeId);
+  d.rangos.splice(idx, 1);
   saveDB();
   renderDistDetail();
 }
@@ -1552,6 +1610,7 @@ function printDistribucion(empId){
   targets.forEach(emp => {
     const d = getDistEmpData(emp.id);
     const rows = [];
+    if(isSala && d.rangos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.zones')}</strong></td><td>${d.rangos.map(escapeHtml).join(' · ')}</td></tr>`);
     if(!isSala && d.platos.length) rows.push(`<tr><td style="width:110px"><strong>${t('common.dishes')}</strong></td><td>${d.platos.map(escapeHtml).join(' · ')}</td></tr>`);
     WEEK_DAYS.forEach((_, idx) => {
       const label = weekDayFull(idx);

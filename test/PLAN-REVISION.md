@@ -184,6 +184,41 @@ producción continuada, y un servicio real con clientes.
 2. **Confirmar antes de avisar.** Una alarma geométrica no basta: si dos
    botones "se pisan", se comprueba con `elementFromPoint` que de verdad
    sean pulsables ahí. Ya hubo una falsa alarma así.
+### R16 — Sala deja de ser "cocina con otra etiqueta"
+
+La ficha técnica de sala pedía *comensales*, *tiempo* y *emplatado*. A un
+vino eso no le dice nada, y lo que de verdad hace falta —añada,
+temperatura de servicio **en grados**, copa, nota de cata, maridaje— no
+cabía en ningún sitio.
+
+Ahora la ficha de sala **se elige por tipo de bebida** y cada tipo pide
+solo lo suyo: vino, espumoso, cerveza, destilado y licor, coctelería,
+café, té e infusiones, sin alcohol, y otra. Son **9 tipos y 93 campos**.
+
+Es un **registro, no una lista cerrada** (`BEBIDA_TIPOS`, js/recipes.js):
+añadir sidra o kombucha es añadir una entrada — el formulario, el impreso
+y el guardado salen solos. Los textos van en `gl({es,ca,en})` junto al
+campo que nombran, para que no se pueda añadir un tipo olvidando un
+idioma.
+
+Cubierto por `test/bebidas.mjs` (11 casos): el registro completo en tres
+idiomas, los 93 campos pintados, lo escrito se guarda con su tipo, los
+números imposibles se recortan, cambiar de tipo conserva lo común y
+suelta lo que sobra, un tipo desconocido no rompe nada, el impreso, que
+la ficha de cocina siga intacta, y que la ficha de vino —la ventana más
+larga de la app— quepa en 320 px.
+
+**Dos cosas que resultaron ser falsas alarmas mías** al ir a arreglarlas:
+
+- *"Faltan los alérgenos de barra (sulfitos, gluten de cervezas)"*. No
+  faltan: `ALLERGENS` ya son los 14 obligatorios de la UE, sulfitos
+  incluidos.
+- *"La dilución del hielo descuadra el coste del cóctel"*. No lo
+  descuadra: el agua del hielo no cuesta dinero, así que el coste de los
+  ingredientes es el que es. La dilución sí importa como **dato de
+  barra** (volumen y grado finales), y por eso queda recogida en la ficha
+  — pero no toca el escandallo.
+
 ### Lo que destapó R15 (caminos de error)
 
 Dos fallos reales, los dos en el mismo sitio: **el PIN**.
