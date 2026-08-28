@@ -372,6 +372,197 @@ await caso('Una prueba nace en la carpeta que estás mirando', async ()=>{
   return 'cae donde estás';
 });
 
+/* ─── LA APP JUZGA AL MODELO (lo que ningún chat puede hacer) ─── */
+await caso('Detecta un food cost por encima del objetivo de la casa', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {foodCostObjetivo: 30};
+    // 200 g de bacalao = 4,40 · +5% = 4,62. A 10 € de PVP son el 46,2%
+    const receta = {id:9001, name:'Caro', price:10, comensales:2, consumiblesPct:5, area:'cocina',
+      ingredients:[{type:'ingredient', ingredientId:1, qty:200, merma:0}], allergens:[]};
+    DB.recipes.push(receta);
+    const malo = idrValidarPlato(receta);
+    receta.price = 20; // ahora el 23,1%
+    const bueno = idrValidarPlato(receta);
+    return {malo, bueno};
+  });
+  assert.equal(r.malo.length, 1, 'debería avisar');
+  assert.ok(/46,2|46\.2/.test(r.malo[0]) && r.malo[0].includes('30'), `mensaje: ${r.malo[0]}`);
+  assert.deepEqual(r.bueno, [], 'al bajar el food cost debería callarse');
+  return 'avisa al 46,2% con objetivo 30%';
+});
+
+await caso('Detecta una técnica que su cocina no puede hacer', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {equipamiento: 'Horno mixto, brasa y abatidor. Sin Roner ni deshidratador.'};
+    const receta = {id:9002, name:'x', price:0, comensales:2, consumiblesPct:5, area:'cocina', ingredients:[], allergens:[],
+      steps:'Cocinar a baja temperatura 4 horas y terminar en la brasa'};
+    const con = idrValidarPlato(receta);
+    const sin = idrValidarPlato({...receta, steps:'Marcar en la brasa y terminar al horno'});
+    return {con, sin};
+  });
+  assert.equal(r.con.length, 1, 'baja temperatura sin Roner debería avisar');
+  assert.ok(r.con[0].includes('baja temperatura'));
+  assert.deepEqual(r.sin, [], 'brasa y horno sí los tiene: no debe avisar');
+  return 'caza la baja temperatura, deja pasar la brasa';
+});
+
+await caso('Detecta producto fuera de temporada con el calendario de la app', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {producto: 'Mercado y temporada'};
+    DB.ingredients.push({id:50, name:'Tomate', unit:'g', price:0.003, category:'Verduras', supplier:'Huerta Local', allergens:[], area:'cocina'});
+    DB.ingredients.push({id:51, name:'Calabaza', unit:'g', price:0.002, category:'Verduras', supplier:'Huerta Local', allergens:[], area:'cocina'});
+    const receta = {id:9003, name:'x', price:0, comensales:2, consumiblesPct:5, area:'cocina', allergens:[],
+      ingredients:[{type:'ingredient', ingredientId:50, qty:100, merma:0},{type:'ingredient', ingredientId:51, qty:100, merma:0}]};
+    // Mes fijo, no "hoy": una comprobación que cambia con el calendario no
+    // es reproducible. En enero no hay ni tomate ni calabaza.
+    return {enero: idrValidarPlato(receta, {mes:1}), agosto: idrValidarPlato(receta, {mes:8})};
+  });
+  assert.equal(r.enero.length, 1, 'en enero los dos están fuera de temporada');
+  assert.ok(r.enero[0].includes('Tomate') && r.enero[0].includes('Calabaza'), `debería nombrarlos: ${r.enero[0]}`);
+  assert.deepEqual(r.agosto, [], 'en agosto los dos son de temporada: no debe avisar');
+  return 'en enero avisa de los dos, en agosto de ninguno';
+});
+
+await caso('El calendario de temporada está completo, los 12 meses', async ()=>{
+  const fallos = await page.evaluate(()=>{
+    const f=[];
+    for(let m=1;m<=12;m++){
+      const d = IDR_TEMPORADA[m];
+      if(!d){ f.push(`falta el mes ${m}`); continue; }
+      ['verduras','frutas','pescados'].forEach(k=>{ if(!d[k] || d[k].length < 10) f.push(`mes ${m}: ${k} pobre`); });
+    }
+    if(!/temporada/i.test(idrTemporadaTexto())) f.push('el texto no se genera');
+    return f;
+  });
+  assert.deepEqual(fallos, [], fallos.join(' | '));
+  return '12 meses con verduras, frutas y pescados';
+});
+
+await caso('Detecta una carta repetitiva y las dietas sin cubrir', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {dietas:'Siempre una opción vegetariana y una sin gluten', equipo:'2 cocineros'};
+    const conBacalao = n => ({id:9100+n, name:'Bacalao '+n, price:18, comensales:2, consumiblesPct:5, area:'cocina', allergens:[],
+      ingredients:[{type:'ingredient', ingredientId:1, qty:180, merma:0}]});
+    const repetitiva = [conBacalao(1), conBacalao(2), conBacalao(3), conBacalao(4)];
+    const avisos = idrValidarConjunto(repetitiva, {});
+    // Una carta con un plato de verdura sí cubre la vegetariana
+    const variada = [conBacalao(1), {id:9200, name:'Espinacas', price:9, comensales:2, consumiblesPct:5, area:'cocina', allergens:[],
+      ingredients:[{type:'ingredient', ingredientId:3, qty:200, merma:0}]}];
+    return {avisos, variada: idrValidarConjunto(variada, {})};
+  });
+  const texto = r.avisos.join(' | ');
+  assert.ok(/Bacalao/.test(texto) && /4/.test(texto), `debería avisar de la base repetida: ${texto}`);
+  assert.ok(/vegetarian/i.test(texto), 'y de que falta la opción vegetariana');
+  assert.ok(!/vegetarian/i.test(r.variada.join(' ')), 'con un plato de verdura ya no debe avisar');
+  return 'base repetida 4 veces y sin opción vegetariana';
+});
+
+await caso('Avisa si la carta pide más trabajo del que el equipo puede sacar', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {equipo:'2 cocineros y un ayudante'};
+    const recetas = [{id:9300, name:'x', price:10, comensales:2, consumiblesPct:5, area:'cocina', ingredients:[], allergens:[]}];
+    return {mucho: idrValidarConjunto(recetas, {alMomento: 9}), poco: idrValidarConjunto(recetas, {alMomento: 4})};
+  });
+  assert.ok(r.mucho.some(x=>/al momento/i.test(x)), 'con 9 platos al momento y 2 cocineros debería avisar');
+  assert.deepEqual(r.poco.filter(x=>/al momento/i.test(x)), [], 'con 4 no');
+  return '9 platos con 2 cocineros: avisa';
+});
+
+await caso('La ingeniería de menú se calcula con SUS ventas, o calla', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.ventas = [];
+    const sinDatos = idrIngenieriaMenu();
+    // 60 ventas: un plato que se vende y deja, otro que se vende y no deja,
+    // otro que deja pero no se vende, y un perro.
+    const items = [];
+    for(let i=0;i<60;i++){
+      const l = [];
+      l.push({name:'Estrella', qty:3, price:20, costeUnitario:4, bebida:false});
+      if(i%2===0) l.push({name:'Caballo', qty:3, price:10, costeUnitario:7, bebida:false});
+      if(i%20===0) l.push({name:'Puzle', qty:1, price:30, costeUnitario:5, bebida:false});
+      if(i%25===0) l.push({name:'Perro', qty:1, price:8, costeUnitario:7, bebida:false});
+      items.push({id:i, date:'2026-08-01', items:l});
+    }
+    DB.ventas = items;
+    const g = idrIngenieriaMenu();
+    return {sinDatos, g, texto: idrIngenieriaTexto()};
+  });
+  assert.equal(r.sinDatos, null, 'sin ventas suficientes debe callar, no inventar');
+  assert.ok(r.g.estrella.includes('Estrella'), `estrellas: ${JSON.stringify(r.g)}`);
+  assert.ok(r.g.puzle.includes('Puzle') || r.g.perro.includes('Puzle'), 'el puzle no se vende');
+  assert.ok(r.texto.includes('Estrellas'));
+  return 'clasifica los 4 grupos con datos reales';
+});
+
+await caso('El asistente recibe temporada, proporciones y marco de oficio', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {cocina:'Catalana de mercado'};
+    const sis = idrSistema();
+    return {
+      temporada: /PRODUCTO DE TEMPORADA/.test(sis),
+      proporciones: /PROPORCIONES CL/.test(sis) && sis.includes('3 partes de grasa'),
+      marcoPlato: /CÓMO PIENSAS UN PLATO/.test(sis),
+      marcoConjunto: /CÓMO PIENSAS UN CONJUNTO/.test(sis),
+      ingenieria: /INGENIER/.test(sis),
+    };
+  });
+  Object.keys(r).forEach(k => assert.ok(r[k], `falta en las instrucciones: ${k}`));
+  return 'temporada, proporciones, marco de plato y de conjunto, e ingeniería';
+});
+
+await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    DB.idr.adn = {foodCostObjetivo: 30, equipamiento:'Horno y brasa. Sin Roner.'};
+    let llamada = 0;
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async (sis, msgs) => {
+      llamada++;
+      // 1ª: propone algo caro. 2ª: lo corrige tras el aviso de la app.
+      // Propone una técnica que su cocina NO tiene: es lo que la app caza.
+      if(llamada === 1) return {ok:true, texto: JSON.stringify({nombre:'Caro', descripcion:'x',
+        pasos:['Cocinar a baja temperatura 6 horas'],
+        ingredientes:[{nombre:'Bacalao', cantidad:400, unidad:'g'}]})};
+      window.__correccion = msgs[msgs.length-1].content;
+      return {ok:true, texto: JSON.stringify({nombre:'Ajustado', descripcion:'x', pasos:['Marcar en la brasa'], nota:'He bajado la ración y cambiado a brasa',
+        ingredientes:[{nombre:'Bacalao', cantidad:120, unidad:'g'},{nombre:'Garbanzos', cantidad:120, unidad:'g'}]})};
+    };
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasoActual = 6; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const cc = idrCreacion(c.id);
+    const receta = DB.recipes.find(x=>x.id===cc.recipeId);
+    return {llamadas: llamada, corregido: cc.corregido, nota: cc.nota, nombre: receta.name,
+      qty: receta.ingredients[0].qty, correccion: window.__correccion, avisos: cc.avisos};
+  });
+  assert.equal(r.llamadas, 2, 'debería hacer una segunda pasada de corrección');
+  assert.ok(/baja temperatura/i.test(r.correccion), 'debe decirle QUÉ falló, medido por la app');
+  assert.ok(r.corregido, 'debería marcar que se corrigió');
+  assert.equal(r.nombre, 'Ajustado', 'debe quedarse con la versión corregida');
+  assert.equal(r.qty, 120);
+  assert.ok(r.nota.includes('bajado'), 'la explicación del asistente se conserva');
+  assert.deepEqual(r.avisos, [], 'tras corregir, la app vuelve a medir y ya no debe quedar aviso');
+  return `2 pasadas, corrigió la técnica y bajó 400 g → 120 g`;
+});
+
+await caso('Propone el PVP que cumple el objetivo de food cost', async ()=>{
+  await fingir(JSON.stringify({nombre:'Con precio', descripcion:'x', pasos:['x'],
+    ingredientes:[{nombre:'Bacalao', cantidad:200, unidad:'g'}]}));
+  const r = await page.evaluate(async ()=>{
+    DB.idr.adn = {foodCostObjetivo: 30};
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasoActual = 6; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const receta = DB.recipes.find(x=>x.id===idrCreacion(c.id).recipeId);
+    return {precio: receta.price, coste: recipeCost(receta), fc: recipeCost(receta)/receta.price*100};
+  });
+  // 200*0,022 = 4,40 · +5% = 4,62 → PVP para el 30% = 15,40
+  assert.ok(Math.abs(r.precio - 15.4) < 0.001, `PVP sugerido: ${r.precio}`);
+  assert.ok(Math.abs(r.fc - 30) < 0.5, `el food cost resultante debería ser el objetivo, es ${r.fc}`);
+  return `coste ${r.coste.toFixed(2)} € → PVP sugerido ${r.precio} € (30%)`;
+});
+
 /* ─── Los caminos de error ─── */
 await caso('Sin internet avisa en cristiano y no rompe', async ()=>{
   await fingir(null);

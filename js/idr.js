@@ -303,7 +303,12 @@ function idrContextoNegocio(){
   const ventas = idrVentasTexto();
   if(ventas) partes.push('VENTAS:\n' + ventas);
   else partes.push('VENTAS: no hay datos suficientes. No opines sobre qué se vende.');
-  return partes.join('\n\n');
+  const ing = idrIngenieriaTexto();
+  if(ing) partes.push(ing);
+  // Datos que viven en la app para que no salgan de la memoria del modelo.
+  partes.push(idrTemporadaTexto());
+  partes.push(IDR_PROPORCIONES);
+  return partes.filter(Boolean).join('\n\n');
 }
 
 /* ============================================================
@@ -332,6 +337,20 @@ REGLAS QUE NO SE ROMPEN NUNCA:
 7. SIN DATOS, NO OPINAS. Si no hay ventas suficientes, no hables de lo que se vende.
 
 8. CONSERVACIÓN FUERA. No des tiempos ni temperaturas de conservación, fermentación, envasado al vacío, curados ni conservas: es seguridad alimentaria y no es tu terreno. Si sale el tema, dilo y remite al APPCC del negocio.
+
+CÓMO PIENSAS UN PLATO (marco de trabajo, no lo recites: úsalo):
+- Un plato se sostiene sobre UN producto principal. Todo lo demás está para que ese producto se entienda mejor, no para competir con él.
+- Busca contraste en tres ejes: temperatura, textura y acidez o grasa. Un plato donde todo está templado, blando y graso aburre al tercer bocado.
+- La salsa liga el plato; la guarnición le da contexto. Si la guarnición no aporta nada, sobra.
+- El punto de sal y la acidez los ajusta el cocinero probando: tú no puedes probar, así que no des el sazonado por cerrado.
+- Emplatado: un punto focal, altura solo si aporta, y nada en el plato que no se coma.
+
+CÓMO PIENSAS UN CONJUNTO (menú o carta):
+- Que no se repitan la base ni la técnica principal entre platos. Tres cremas o todo al horno es una carta pobre aunque cada plato sea bueno.
+- Aprovecha fondos y mise en place entre platos: es lo que hace viable una carta en un servicio real.
+- Cuenta cuántos platos exigen trabajo al momento y compáralo con la gente que hay en partida.
+- En un degustación manda la progresión: de menos a más intensidad, sin repetir técnicas, y con el postre cerrando lo que abrió el primer pase.
+- En un menú del día mandan el coste y la rotación.
 
 CÓMO TRABAJAS: paso a paso, un paso corto cada vez. En cada uno propones DOS O TRES caminos con el motivo de cada uno, para que el cocinero elija; no impones uno solo. Hablas como un jefe de partida: claro, sin florituras y sin darle lecciones a alguien que lleva años en esto.`;
 
@@ -579,6 +598,13 @@ function renderIdrCreacion(box){
         ${c.logica ? `<div class="card" style="border-left:4px solid var(--brand-orange)"><h3 style="font-size:14px"><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h3><p style="font-size:13px;margin:0;white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
         ${(c.recipeIds||[]).length ? `<p style="font-size:13px">${t('idr.setDishes').replace('${n}', c.recipeIds.length)} · <strong>${fmtMoney((c.recipeIds||[]).reduce((s,rid)=>{const rr=getRecipe(rid);return s+(rr?recipeCost(rr):0);},0))}</strong></p>` : ''}
         ${(c.faltan||[]).length ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.missingIngredients')}: ${escapeHtml(c.faltan.join(' · '))}</p>` : ''}
+        ${c.corregido ? `<p style="font-size:12.5px;color:var(--muted)"><i class="ti ti-wand"></i> ${t('idr.autoFixed')}</p>` : ''}
+        ${c.nota ? `<p style="font-size:12.5px;color:var(--muted)">${escapeHtml(c.nota)}</p>` : ''}
+        ${(c.avisos||[]).length ? `
+          <div class="card" style="border-left:4px solid var(--red)">
+            <h3 style="font-size:14px"><i class="ti ti-alert-triangle"></i> ${t('idr.checksFailed')}</h3>
+            <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          </div>` : ((c.recipeId||(c.recipeIds||[]).length) ? `<p style="font-size:12.5px;color:var(--green,#1F8A4C)"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>` : '')}
         ${c.tipo === 'plato'
           ? `<button class="owner-only btn btn-primary" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
           : `<button class="owner-only btn btn-primary" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>`}
@@ -771,8 +797,58 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   };
   DB.recipes.push(receta);
 
+  // Un plato recién creado no tiene precio de venta, así que el food cost no
+  // se podía comprobar contra nada. Se propone el PVP que CUMPLE su objetivo
+  // (coste ÷ objetivo), redondeado a los 10 céntimos de arriba. Es una
+  // sugerencia con la que empezar, no una imposición: el hostelero la cambia
+  // en el escandallo cuando quiera.
+  const objetivoFC = parseFloat(idrAdn().foodCostObjetivo);
+  if(isFinite(objetivoFC) && objetivoFC > 0){
+    const costeIni = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+    if(costeIni > 0){
+      receta.price = Math.ceil((costeIni / (objetivoFC/100)) * 10) / 10;
+      receta.priceBase = receta.price;
+      c.precioSugerido = receta.price;
+    }
+  }
+
   c.recipeId = receta.id;
   c.faltan = faltan;
+
+  // NIVEL 3 + 4: la app juzga el plato en frío contra sus datos, y lo que
+  // falla vuelve al modelo para que lo corrija ANTES de que el cocinero lo
+  // vea. Cuesta una consulta más y es lo que separa "opina" de "rinde
+  // cuentas".
+  const problemas = idrValidarPlato(receta, {textoLibre: resumen});
+  c.avisos = problemas;
+  if(problemas.length){
+    const arreglo = await llmChat(idrSistema(), [
+      {role:'user', content: instruccion},
+      {role:'assistant', content: r.texto},
+      {role:'user', content: `He comprobado tu propuesta contra los datos reales del negocio y falla en esto:\n- ${problemas.join('\n- ')}\n\nCorrígelo y devuelve el MISMO JSON con la receta arreglada. Si algo no se puede arreglar sin traicionar el plato, déjalo y explica por qué en "nota".`}
+    ], {maxTokens: 1500});
+    const j2 = arreglo.ok ? idrExtraerJson(arreglo.texto) : null;
+    if(j2 && Array.isArray(j2.ingredientes)){
+      const lineas2 = []; const faltan2 = [];
+      j2.ingredientes.forEach(ing => {
+        const real = idrBuscarIngrediente(ing.nombre);
+        const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
+        if(real && qty > 0) lineas2.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+        else if(ing.nombre) faltan2.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
+      });
+      if(lineas2.length){
+        receta.ingredients = lineas2;
+        if(j2.nombre) receta.name = String(j2.nombre).slice(0,80);
+        if(Array.isArray(j2.pasos)) receta.steps = j2.pasos.join('\n');
+        if(j2.descripcion) receta.presentation = String(j2.descripcion);
+        c.faltan = faltan2;
+        c.nota = String(j2.nota||'');
+        // Se vuelve a medir: si sigue fallando, el cocinero lo sabrá.
+        c.avisos = idrValidarPlato(receta, {textoLibre: resumen});
+        c.corregido = true;
+      }
+    }
+  }
   c.updatedAt = new Date().toISOString();
   saveDB();
 
@@ -1030,6 +1106,13 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
   saveDB();
 
   // El coste, otra vez, lo pone la app con SUS precios.
+  // La app juzga también el conjunto: bases repetidas, carga de servicio y
+  // dietas obligatorias. Es lo que no se ve mirando plato a plato.
+  const avisos = idrValidarConjunto(creados, {});
+  creados.forEach(r2 => { idrValidarPlato(r2, {}).forEach(p2 => { if(!avisos.includes(p2)) avisos.push(p2); }); });
+  c.avisos = avisos;
+  saveDB();
+
   const costeTotal = creados.reduce((s, r2) => s + ((typeof recipeCost === 'function') ? recipeCost(r2) : 0), 0);
   showToast(t('idr.setCreated')
     .replace('${n}', creados.length)
@@ -1098,4 +1181,269 @@ function idrMoverA(creacionId, carpetaId){
   c.updatedAt = new Date().toISOString();
   saveDB();
   renderIdr();
+}
+
+/* ============================================================
+   CONOCIMIENTO QUE VIVE EN LA APP (no en la memoria del modelo)
+   ============================================================
+   Un modelo se sabe la temporada "de memoria", y de memoria se equivoca.
+   Escrita aquí es un DATO: no se inventa, no cambia entre consultas y no
+   depende de qué proveedor use el cliente. */
+
+// Producto de temporada en España, por mes (1 = enero).
+const IDR_TEMPORADA = {
+  1:  {verduras:'alcachofa, cardo, col, puerro, acelga, escarola, calçot', frutas:'naranja, mandarina, kiwi, granada', pescados:'bacalao, dorada, lubina, sepia, angula'},
+  2:  {verduras:'alcachofa, calçot, guisante, haba, espinaca, coliflor', frutas:'naranja, pomelo, manzana', pescados:'bacalao, rape, sardina, calamar'},
+  3:  {verduras:'espárrago, guisante, haba, acelga, ajo tierno', frutas:'fresa, naranja, níspero', pescados:'boquerón, sardina, salmonete, pulpo'},
+  4:  {verduras:'espárrago, guisante, haba, alcachofa, rábano', frutas:'fresa, níspero, cereza', pescados:'boquerón, caballa, salmonete, sepia'},
+  5:  {verduras:'espárrago, judía verde, calabacín, pepino, cebolla tierna', frutas:'cereza, fresa, albaricoque, nísperos', pescados:'boquerón, atún, sardina, jurel'},
+  6:  {verduras:'tomate, pimiento, calabacín, berenjena, judía verde', frutas:'cereza, melocotón, albaricoque, melón, ciruela', pescados:'atún, bonito, sardina, pulpo'},
+  7:  {verduras:'tomate, pimiento, berenjena, calabacín, pepino, maíz', frutas:'melón, sandía, melocotón, higo, nectarina', pescados:'bonito, atún, sardina, caballa'},
+  8:  {verduras:'tomate, pimiento, berenjena, judía verde, calabaza', frutas:'higo, melón, sandía, uva, ciruela', pescados:'bonito, sardina, jurel, calamar'},
+  9:  {verduras:'calabaza, pimiento, berenjena, seta, acelga', frutas:'uva, higo, granada, manzana, membrillo', pescados:'caballa, sepia, pulpo, merluza'},
+  10: {verduras:'calabaza, seta, boniato, col, brócoli, cardo', frutas:'granada, membrillo, caqui, castaña, manzana', pescados:'merluza, rape, besugo, calamar'},
+  11: {verduras:'seta, alcachofa, col, puerro, coliflor, cardo', frutas:'caqui, granada, castaña, naranja, chirimoya', pescados:'besugo, rape, bacalao, dorada'},
+  12: {verduras:'alcachofa, cardo, col lombarda, puerro, escarola', frutas:'naranja, mandarina, chirimoya, granada', pescados:'besugo, bacalao, lubina, gamba'},
+};
+function idrTemporadaTexto(mes){
+  const m = mes || (new Date().getMonth() + 1);
+  const d = IDR_TEMPORADA[m];
+  if(!d) return '';
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `PRODUCTO DE TEMPORADA en ${meses[m-1]} (dato, no lo cambies de memoria):\n- Verduras: ${d.verduras}\n- Frutas: ${d.frutas}\n- Pescados: ${d.pescados}`;
+}
+
+// Proporciones clásicas: números que no deberían salir de la memoria de
+// nadie. NO incluye nada de conservación (salmueras de curado, fermentos):
+// eso está fuera del módulo a propósito.
+const IDR_PROPORCIONES = `PROPORCIONES CLÁSICAS (úsalas como referencia, no las cambies):
+- Vinagreta: 3 partes de grasa por 1 de ácido.
+- Arroz seco: 2 partes de caldo por 1 de arroz. Meloso: 3 a 1. Caldoso: 4 a 1.
+- Bechamel media: 100 g de mantequilla + 100 g de harina por litro de leche.
+- Pasta fresca al huevo: 1 huevo por cada 100 g de harina.
+- Masa de pan corriente: 60-65% de hidratación sobre el peso de harina.
+- Mayonesa: 200-250 ml de aceite por yema.
+- Puré de patata: 20-25% del peso de la patata en grasa.
+- Sal de sazonado: 8-12 g por kilo de género.
+- Gelatina en hoja: 6-8 hojas por litro para un cuajado firme.
+- Sorbete: 25-30% de azúcar sobre el peso de la fruta.`;
+
+/* ── Ingeniería de menús ──
+   Estrellas (se vende y deja margen), caballos de batalla (se vende y deja
+   poco), puzles (deja margen pero no se vende) y perros (ni una cosa ni la
+   otra). Se calcula con SUS ventas y SUS costes: ningún chat puede hacer
+   esto porque hacen falta sus datos.
+
+   Sin ventas suficientes NO se calcula: es preferible callar a opinar
+   sobre una tendencia sacada de tres tickets. */
+function idrIngenieriaMenu(){
+  const ventas = DB.ventas || [];
+  if(ventas.length < IDR_MIN_VENTAS) return null;
+  const datos = {};
+  ventas.forEach(v => (v.items||[]).forEach(it => {
+    if(!it || it.isShipping || it.bebida || !it.name) return;
+    const d = datos[it.name] || (datos[it.name] = {uds:0, ingreso:0, coste:0});
+    const q = parseFloat(it.qty) || 0;
+    d.uds += q;
+    d.ingreso += (parseFloat(it.price)||0) * q;
+    if(it.costeUnitario != null) d.coste += (parseFloat(it.costeUnitario)||0) * q;
+  }));
+  const nombres = Object.keys(datos);
+  if(nombres.length < 4) return null;
+  const totalUds = nombres.reduce((s,n) => s + datos[n].uds, 0);
+  if(!totalUds) return null;
+  // Un plato "se vende" si supera el 70% de lo que le tocaría en un reparto
+  // equitativo: es el criterio habitual de la ingeniería de menús.
+  const umbralUds = (totalUds / nombres.length) * 0.7;
+  const margenes = nombres.map(n => datos[n].ingreso - datos[n].coste);
+  const margenMedio = margenes.reduce((a,b)=>a+b,0) / nombres.length;
+  const grupos = {estrella:[], caballo:[], puzle:[], perro:[]};
+  nombres.forEach(n => {
+    const d = datos[n];
+    const vende = d.uds >= umbralUds;
+    const margen = (d.ingreso - d.coste) >= margenMedio;
+    const g = vende ? (margen ? 'estrella' : 'caballo') : (margen ? 'puzle' : 'perro');
+    grupos[g].push(n);
+  });
+  return grupos;
+}
+function idrIngenieriaTexto(){
+  const g = idrIngenieriaMenu();
+  if(!g) return '';
+  const l = (k, etiqueta) => g[k].length ? `- ${etiqueta}: ${g[k].slice(0,8).join(', ')}` : '';
+  return ['INGENIERÍA DE MENÚ (calculada con SUS ventas y SUS costes, es un dato):',
+    l('estrella','Estrellas (se venden y dejan margen: mantener y dar visibilidad)'),
+    l('caballo','Caballos de batalla (se venden pero dejan poco: subir margen sin tocar el precio)'),
+    l('puzle','Puzles (dejan margen pero no se venden: renombrar, recolocar o explicar mejor)'),
+    l('perro','Perros (ni se venden ni dejan: candidatos a salir de la carta)'),
+  ].filter(Boolean).join('\n');
+}
+
+/* ============================================================
+   LA APP JUZGA AL MODELO
+   ============================================================
+   Esto es lo que ningún chat puede hacer, porque hace falta la base de
+   datos del negocio. El modelo propone; aquí se comprueba EN FRÍO contra
+   sus datos, y lo que falla vuelve para que lo corrija.
+
+   Todas las comprobaciones son deterministas: no opinan, miden. Por eso se
+   pueden probar y por eso son fiables. */
+
+// Técnicas que necesitan un equipo concreto. Si el ADN dice que no lo
+// tiene, proponerla es perder el tiempo del cocinero.
+const IDR_TECNICAS_EQUIPO = [
+  {tecnica:'baja temperatura', equipos:['roner','sous','vacío','circulador','termocirculador']},
+  {tecnica:'sous-vide', equipos:['roner','sous','vacío','circulador']},
+  {tecnica:'deshidratad', equipos:['deshidratador','horno']},
+  {tecnica:'esferificación', equipos:['esferific','alginato','jeringa']},
+  {tecnica:'nitrógeno', equipos:['nitrógeno']},
+  {tecnica:'ahumad', equipos:['ahumador','pistola','brasa']},
+  {tecnica:'brasa', equipos:['brasa','parrilla','josper','carbón']},
+  {tecnica:'plancha', equipos:['plancha','fry']},
+  {tecnica:'fritura', equipos:['freidora','sartén']},
+  {tecnica:'abatid', equipos:['abatidor']},
+  {tecnica:'sifón', equipos:['sifón','isi']},
+];
+
+/* ⚠️ "Horno y brasa. SIN Roner ni deshidratador" CONTIENE la palabra
+   "Roner", así que buscarla a secas daba por bueno justo lo contrario de lo
+   que dice el ADN. Se parte el texto en trozos y los que van detrás de un
+   "sin" cuentan como lo que NO se tiene. */
+function idrTieneEquipo(equipamiento, equipos){
+  const trozos = String(equipamiento||'').split(/[.,;\n]|\by\b/i);
+  let tiene = false, negado = false;
+  trozos.forEach(trozo => {
+    const tn = idrNormalizar(trozo);
+    if(!tn.trim()) return;
+    const esNegado = /(^|\s)(sin|no)\s/.test(' ' + tn);
+    const mencionado = equipos.some(e => tn.includes(idrNormalizar(e)));
+    if(!mencionado) return;
+    if(esNegado) negado = true; else tiene = true;
+  });
+  // `tiene` solo se pone a true en un trozo NO negado, así que basta con él;
+  // `negado` queda para que se lea por qué existe la distinción.
+  return tiene && !negado ? true : tiene;
+}
+
+function idrNormalizar(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+
+/* Comprueba UN plato contra el ADN y los datos del negocio.
+   Devuelve una lista de problemas en cristiano, vacía si todo cuadra. */
+function idrValidarPlato(receta, opciones){
+  const o = opciones || {};
+  const a = idrAdn();
+  const problemas = [];
+  if(!receta) return problemas;
+
+  // 1) Food cost contra el objetivo del ADN. El coste sale del escandallo,
+  //    con sus precios: es el número real, no una estimación del modelo.
+  const objetivo = parseFloat(a.foodCostObjetivo);
+  const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+  const pvp = parseFloat(receta.price) || 0;
+  if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
+    const pct = (coste / pvp) * 100;
+    if(pct > objetivo + 2) problemas.push(t('idr.check.foodCost').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+  }
+
+  // 2) Técnicas que su cocina no puede hacer.
+  if(a.equipamiento){
+    const texto = idrNormalizar((o.textoLibre||'') + ' ' + (receta.steps||'') + ' ' + (receta.presentation||''));
+    IDR_TECNICAS_EQUIPO.forEach(({tecnica, equipos}) => {
+      if(!texto.includes(idrNormalizar(tecnica))) return;
+      if(!idrTieneEquipo(a.equipamiento, equipos)) problemas.push(t('idr.check.equipment').replace('${tecnica}', tecnica));
+    });
+  }
+
+  // 3) Alérgenos: los del plato salen de SUS ingredientes, no del modelo.
+  const dietas = idrNormalizar(a.dietas);
+  if(dietas){
+    const alg = (typeof recipeComputedAllergens === 'function') ? recipeComputedAllergens(receta) : [];
+    const algN = alg.map(idrNormalizar);
+    if((dietas.includes('gluten') || dietas.includes('celia')) && algN.includes('gluten'))
+      problemas.push(t('idr.check.gluten'));
+    if(dietas.includes('vegetarian')){
+      const carnico = (receta.ingredients||[]).some(l => {
+        const ing = l.ingredientId ? getIngredient(l.ingredientId) : null;
+        const cat = idrNormalizar(ing && ing.category);
+        return cat.includes('carne') || cat.includes('pescado') || cat.includes('embutido');
+      });
+      if(carnico && o.exigirVegetariano) problemas.push(t('idr.check.vegetarian'));
+    }
+  }
+
+  // 4) Temporada: se compara con el calendario de la app, no con la memoria
+  //    del modelo. Solo si el negocio dice trabajar temporada.
+  const producto = idrNormalizar(a.producto);
+  if(producto.includes('temporada') || producto.includes('mercado')){
+    const mes = o.mes || (new Date().getMonth() + 1);
+    const dTemp = IDR_TEMPORADA[mes];
+    if(dTemp){
+      const enTemporada = idrNormalizar(`${dTemp.verduras}, ${dTemp.frutas}, ${dTemp.pescados}`);
+      const fuera = (receta.ingredients||[]).map(l => {
+        const ing = l.ingredientId ? getIngredient(l.ingredientId) : null;
+        const cat = idrNormalizar(ing && ing.category);
+        if(!ing || !(cat.includes('verdura') || cat.includes('fruta') || cat.includes('pescado'))) return null;
+        const n = idrNormalizar(ing.name);
+        // Un ingrediente cuenta como de temporada si su nombre aparece en el
+        // calendario del mes (singular o plural).
+        const raiz = n.replace(/s$/, '');
+        return enTemporada.includes(raiz) ? null : ing.name;
+      }).filter(Boolean);
+      if(fuera.length) problemas.push(t('idr.check.season').replace('${lista}', fuera.join(', ')));
+    }
+  }
+
+  return problemas;
+}
+
+/* Comprueba un CONJUNTO (menú o carta): lo que no se ve mirando plato a
+   plato y es justo lo que hace que una carta esté bien construida. */
+function idrValidarConjunto(recetas, opciones){
+  const o = opciones || {};
+  const a = idrAdn();
+  const problemas = [];
+  if(!recetas || !recetas.length) return problemas;
+
+  // 1) Bases repetidas: si el mismo ingrediente principal está en media
+  //    carta, la carta es más pobre de lo que parece.
+  const cuenta = {};
+  recetas.forEach(r => {
+    const principal = (r.ingredients||[])
+      .map(l => ({l, ing: l.ingredientId ? getIngredient(l.ingredientId) : null}))
+      .filter(x => x.ing)
+      .sort((x,y) => (y.l.qty||0) - (x.l.qty||0))[0];
+    if(principal) cuenta[principal.ing.name] = (cuenta[principal.ing.name]||0) + 1;
+  });
+  Object.keys(cuenta).forEach(n => {
+    if(cuenta[n] > Math.max(2, Math.ceil(recetas.length / 3)))
+      problemas.push(t('idr.check.repeatedBase').replace('${ing}', n).replace('${n}', cuenta[n]));
+  });
+
+  // 2) Carga de servicio contra la gente que hay en partida.
+  const equipo = String(a.equipo||'').match(/\d+/);
+  const nCocineros = equipo ? parseInt(equipo[0]) : 0;
+  if(nCocineros > 0 && o.alMomento != null && o.alMomento > nCocineros * 3)
+    problemas.push(t('idr.check.serviceLoad').replace('${n}', o.alMomento).replace('${cocineros}', nCocineros));
+
+  // 3) Dietas obligatorias cubiertas en el conjunto.
+  const dietas = idrNormalizar(a.dietas);
+  if(dietas.includes('vegetarian')){
+    const hayVeg = recetas.some(r => !(r.ingredients||[]).some(l => {
+      const ing = l.ingredientId ? getIngredient(l.ingredientId) : null;
+      const cat = idrNormalizar(ing && ing.category);
+      return cat.includes('carne') || cat.includes('pescado') || cat.includes('embutido');
+    }));
+    if(!hayVeg) problemas.push(t('idr.check.noVeg'));
+  }
+  if(dietas.includes('gluten') || dietas.includes('celia')){
+    const haySinGluten = recetas.some(r => {
+      const alg = (typeof recipeComputedAllergens === 'function') ? recipeComputedAllergens(r) : [];
+      return !alg.map(idrNormalizar).includes('gluten');
+    });
+    if(!haySinGluten) problemas.push(t('idr.check.noGlutenFree'));
+  }
+
+  return problemas;
 }
