@@ -52,8 +52,8 @@ espera(){ # pid, nombre, fichero, patrón de éxito
 }
 espera $P1 "cálculos (dinero, IVA, stock, recetas)" "$SALIDA/smoke.txt"   "✅ Todo OK"
 espera $P2 "sincronización"                          "$SALIDA/sync.txt"    "Todas las pruebas activas"
-espera $P3 "botones (248 en 30 pantallas)"           "$SALIDA/botones.txt" "Ninguno lanzó un error"
-espera $P4 "responsive (6 tamaños × 24 vistas)"      "$SALIDA/visual.txt"  "Sin desbordamientos"
+espera $P3 "botones (275 en 31 pantallas)"           "$SALIDA/botones.txt" "Ninguno lanzó un error"
+espera $P4 "responsive (6 tamaños × 25 vistas)"      "$SALIDA/visual.txt"  "Sin desbordamientos"
 espera $P5 "defectos visuales (móvil/tablet/escritorio)" "$SALIDA/defectos.txt"  "nada que señalar"
 espera $P6 "contraste del texto"                      "$SALIDA/contraste.txt" "contraste suficiente"
 espera $P7 "web pública (3 pantallas)"                "$SALIDA/publica.txt"   "se ve bien"
