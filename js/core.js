@@ -3817,6 +3817,14 @@ function applyRemoteBlock(key, remoteValue){
   if(key === 'limpieza' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['tareas','temperaturas','alergenos','plagas','mantenimiento']);
   }
+  // El cuaderno de I+D tiene el MISMO problema que ge y limpieza: sus
+  // arrays (creaciones y carpetas) cuelgan de un objeto, así que
+  // MERGEABLE_ARRAYS no los alcanza y el bloque entero se sustituía. Dos
+  // cocineros lanzando pruebas a la vez desde la tablet y el móvil perdían
+  // una de las dos. Es la misma familia de fallo que ya se coló dos veces.
+  if(key === 'idr' && DB[key] && typeof merged === 'object'){
+    merged = mergeNestedArraysByKey(DB[key], merged, ['creaciones','carpetas']);
+  }
   // Mismo problema que DB.stock (mapas planos {clave: valor}, sin id ni
   // array): shifts (cuadrante por empleado), workDistribution (reparto de
   // tareas por empleado), chatPinned (mensaje fijado por canal) y
@@ -5179,6 +5187,8 @@ function defaultData(){
     recipes: [],
     recipeCategories: [], // user-defined categories for Escandallo/Carta/Fichas
     fichas: [],
+    // I+D: el ADN de la casa, el cuaderno de pruebas y sus carpetas.
+    idr: {adn:{}, creaciones:[], carpetas:[]},
     menuItems: [],
     cartas: [],          // {id, nombre, horario:[7x{activo,desde,hasta}], secciones:[{id, nombre, platos:[{id, recipeId, nombre, precio, disponible}]}]}
     activeCartaIds: [],  // cartas activas en TPV a la vez (p.ej. comida + bebidas)

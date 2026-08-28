@@ -764,6 +764,63 @@ await caso('En un negocio vacío I+D no se rompe y guía qué hacer', async ()=>
   return 'aguanta vacío y señala el ADN';
 });
 
+/* ─── LA NUBE (la familia de fallo que ya se coló dos veces) ─── */
+await caso('Dos dispositivos creando pruebas a la vez no se pisan', async ()=>{
+  const r = await page.evaluate(()=>{
+    // Este dispositivo tiene la prueba A; la nube devuelve la B, creada en
+    // otro. Después del merge tienen que estar las DOS.
+    DB.idr = {adn:{cocina:'Catalana'}, carpetas:[{id:1,nombre:'Otoño'}], creaciones:[
+      {id:101, tipo:'plato', titulo:'Bacalao (tablet)', pasos:[], updatedAt:'2026-08-28T10:00:00Z'},
+    ]};
+    lastSyncedSnapshot = lastSyncedSnapshot || {};
+    lastSyncedSnapshot.idr = canonicalStringify({adn:{cocina:'Catalana'}, carpetas:[{id:1,nombre:'Otoño'}], creaciones:[]});
+    const remoto = {adn:{cocina:'Catalana'}, carpetas:[{id:1,nombre:'Otoño'},{id:2,nombre:'Brasa'}], creaciones:[
+      {id:202, tipo:'menu', titulo:'Menú del día (móvil)', pasos:[], updatedAt:'2026-08-28T10:01:00Z'},
+    ]};
+    applyRemoteBlock('idr', remoto);
+    return {
+      titulos: (DB.idr.creaciones||[]).map(c=>c.titulo).sort(),
+      carpetas: (DB.idr.carpetas||[]).map(c=>c.nombre).sort(),
+      adn: DB.idr.adn && DB.idr.adn.cocina,
+    };
+  });
+  assert.deepEqual(r.titulos, ['Bacalao (tablet)','Menú del día (móvil)'], 'no debería perderse ninguna de las dos');
+  assert.deepEqual(r.carpetas, ['Brasa','Otoño'], 'ni las carpetas');
+  assert.equal(r.adn, 'Catalana', 'y el ADN debe seguir en pie');
+  return 'las dos pruebas y las dos carpetas sobreviven';
+});
+
+await caso('La nube devolviendo el bloque vacío no borra el cuaderno', async ()=>{
+  // Firebase NO guarda objetos vacíos: un bloque puede volver a medias o
+  // sin nada. Es la raíz del bug histórico de Distribución del Trabajo.
+  const r = await page.evaluate(()=>{
+    DB.idr = {adn:{cocina:'Catalana'}, carpetas:[], creaciones:[{id:303, tipo:'plato', titulo:'Solo local', pasos:[]}]};
+    let roto = null;
+    try{
+      applyRemoteBlock('idr', undefined);
+      applyRemoteBlock('idr', {});
+      // Y que la pantalla siga pintándose después
+      currentArea = () => 'cocina';
+      navigate('idr'); renderIdr();
+    }catch(e){ roto = e.message; }
+    return {roto, creaciones: (idrCreaciones()||[]).length, adnOk: !!idrAdn(), pintado: !!document.getElementById('view-idr').innerHTML};
+  });
+  assert.ok(!r.roto, 'reventó: ' + r.roto);
+  assert.equal(r.creaciones, 1, 'la prueba local no debería desaparecer');
+  assert.ok(r.adnOk && r.pintado, 'y la pantalla debe seguir viva');
+  return 'aguanta el bloque vacío sin perder nada';
+});
+
+await caso('El cuaderno de I+D viaja de verdad a la nube', async ()=>{
+  const r = await page.evaluate(()=>{
+    const def = defaultData();
+    return {enDefaults: !!def.idr, forma: def.idr ? Object.keys(def.idr).sort() : null};
+  });
+  assert.ok(r.enDefaults, 'sin estar en los datos por defecto, el bloque no se trata como los demás');
+  assert.deepEqual(r.forma, ['adn','carpetas','creaciones']);
+  return 'adn, carpetas y creaciones';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
