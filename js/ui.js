@@ -1448,6 +1448,7 @@ const FOLDERS = {
     modules:[
       {id:'comandascocina', icon:'ti-bell-ringing'},
       {id:'carta', icon:'ti-tools-kitchen-2'},
+      {id:'idr', icon:'ti-flask'},
       {id:'proveedores', icon:'ti-building-factory-2'},
       {id:'megalista', icon:'ti-list-details'},
       {id:'escandallo', icon:'ti-calculator'},
@@ -1801,6 +1802,7 @@ function renderView(view){
     case 'home': renderHome(); break;
     case 'folder': renderFolder(); break;
     case 'dashboard': renderDashboard(); break;
+    case 'idr': renderIdr(); break;
     case 'megalista': renderMegalista(); break;
     case 'proveedores': renderProveedores(); break;
     case 'escandallo': renderEscandallo(); break;

@@ -1,0 +1,375 @@
+// I+D — R17.
+//
+// El problema nuevo: una IA no da siempre la misma respuesta, y las demás
+// pruebas se apoyan en que la app sí. Se resuelve FINGIENDO el proveedor:
+// con respuestas fijas se comprueba todo lo que sí es determinista, que es
+// casi todo lo que importa — que la propuesta se convierte en escandallo
+// correcto, que el coste lo pone la app y no el modelo, que sin clave o sin
+// internet avisa y no rompe, y que el ADN llega de verdad a cada consulta.
+import puppeteer from 'puppeteer-core';
+import assert from 'node:assert/strict';
+
+const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox'],headless:true});
+const res=[];
+async function caso(nombre, fn){
+  try{ const d = await fn(); console.log(`✅ ${nombre}${d?'  → '+d:''}`); res.push(true); }
+  catch(e){ console.log(`❌ ${nombre}\n     ⤷ ${e.message}`); res.push(false); }
+}
+
+const page = await browser.newPage();
+await page.setViewport({width:1280,height:900});
+const errs=[]; page.on('pageerror',e=>errs.push(e.message));
+await page.goto('http://localhost:8950/index.html',{waitUntil:'domcontentloaded'});
+await page.evaluate(()=>{
+  localStorage.setItem('gastrogoan_license_v1',JSON.stringify({code:'IDRTEST1',tenantId:ggBizTenantId('IDRTEST1')}));
+  localStorage.setItem('gastrogoan_owner_login','1');
+  localStorage.setItem('gastrogoan_access_session',JSON.stringify({type:'owner',ts:Date.now()}));
+  localStorage.setItem('gastrogoan_owner_pass_prompted','1');
+  localStorage.setItem('gastrogoan_backup_reminder_day', new Date().toISOString().slice(0,10));
+});
+await page.reload({waitUntil:'domcontentloaded'});
+await new Promise(r=>setTimeout(r,2400));
+
+// Semilla: ingredientes reales con precios reales, y una carta.
+await page.evaluate(()=>{
+  ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove());
+  Object.assign(DB.business,{netlifySetupDone:true,extConnPromptSeen:true,tourSeen:true,categoryIconHintSeen:true});
+  DB.business.ownFirebase={apiKey:'fake',databaseURL:'https://fake-default-rtdb.firebaseio.com'};
+  editUnlocked = true;
+  document.body.classList.add('owner-session');
+  currentArea = () => 'cocina';
+  DB.ingredients = [
+    {id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'Pescados Mar', allergens:['Pescado'], area:'cocina'},
+    {id:2, name:'Garbanzos', unit:'g', price:0.003, category:'Legumbres', supplier:'Legumbres SA', allergens:[], area:'cocina'},
+    {id:3, name:'Espinacas', unit:'g', price:0.006, category:'Verduras', supplier:'Huerta Local', allergens:[], area:'cocina'},
+    {id:4, name:'Aceite de oliva', unit:'ml', price:0.008, category:'Aceites', supplier:'Huerta Local', allergens:[], area:'cocina'},
+  ];
+  DB.recipes = []; DB.fichas = []; DB.idr = {};
+  DB.cartas = [{id:1, nombre:'CARTA GENERAL', tipo:'GENERAL', dias:[0,1,2,3,4,5,6], secciones:[
+    {id:1, nombre:'Entrantes', platos:[{nombre:'Escalivada'},{nombre:'Pa amb tomàquet'}]},
+    {id:2, nombre:'Principales', platos:[{nombre:'Fricandó'},{nombre:'Suquet de peix'}]},
+  ]}];
+  saveDB();
+});
+
+// El proveedor fingido: llmChat sustituido por una respuesta fija que la
+// prueba controla. Así el resto del circuito es determinista.
+async function fingir(respuesta){
+  await page.evaluate((r)=>{
+    window.__llamadas = [];
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async (sistema, mensajes, op) => {
+      window.__llamadas.push({sistema, mensajes, op});
+      if(r === null) return {ok:false, motivo:'sin-conexion'};
+      return {ok:true, texto: r};
+    };
+  }, respuesta);
+}
+
+/* ─── Sin clave, el módulo sigue ─── */
+await caso('Sin asistente el módulo funciona igual, a mano', async ()=>{
+  const r = await page.evaluate(()=>{
+    localStorage.removeItem('gastrogoan_idr_key');
+    navigate('idr');
+    renderIdr();
+    const html = document.getElementById('view-idr').innerHTML;
+    // Crear a mano una creación y avanzar un paso sin tocar la IA
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    document.getElementById('idr-libre').value = 'Bacalao';
+    idrElegirLibre();
+    return {hayIA: idrHayIA(), avisa: html.includes('no está activado') || html.includes('idr.noAssistantTitle') || /activad/i.test(html), paso: idrCreacion(c.id).pasoActual, elegido: idrCreacion(c.id).pasos[0].elegido};
+  });
+  assert.ok(!r.hayIA, 'no debería haber IA configurada');
+  assert.ok(r.avisa, 'debería avisar de que el asistente no está activado');
+  assert.equal(r.paso, 1, 'debería haber avanzado un paso sin IA');
+  assert.equal(r.elegido, 'Bacalao');
+  return 'avisa y deja trabajar a mano';
+});
+
+/* ─── El ADN llega a cada consulta ─── */
+await caso('El ADN entra de verdad en lo que se le pide al asistente', async ()=>{
+  await fingir('{"comentario":"vale","opciones":[{"titulo":"Bacalao","motivo":"de temporada"}]}');
+  const r = await page.evaluate(async ()=>{
+    idrGuardarConfig('google','clave-de-prueba','');
+    const a = idrAdn();
+    a.cocina = 'Catalana de mercado';
+    a.lineasRojas = 'Nada de cocina asiática';
+    a.nivel = 'Bistró';
+    saveDB();
+    idrEmpezar('plato');
+    await idrPedirPaso();
+    const sis = window.__llamadas[0].sistema;
+    return {
+      llevaCocina: sis.includes('Catalana de mercado'),
+      llevaLineasRojas: sis.includes('Nada de cocina asiática'),
+      llevaIngredientes: sis.includes('Bacalao') && sis.includes('0,022') || sis.includes('Bacalao'),
+      llevaCarta: sis.includes('Fricandó'),
+      llevaReglas: sis.includes('NO INVENTES'),
+      llevaConservacion: sis.includes('CONSERVACIÓN FUERA'),
+      opciones: idrCreacion(idrCreacionActiva).pasos[0].opciones.length,
+    };
+  });
+  assert.ok(r.llevaCocina, 'el ADN debería viajar en cada consulta');
+  assert.ok(r.llevaLineasRojas, 'las líneas rojas son lo más importante del ADN');
+  assert.ok(r.llevaIngredientes, 'debería llevar sus ingredientes reales');
+  assert.ok(r.llevaCarta, 'debería saber lo que ya tiene en carta');
+  assert.ok(r.llevaReglas, 'las reglas de honestidad deben ir siempre');
+  assert.ok(r.llevaConservacion, 'la conservación debe quedar fuera explícitamente');
+  assert.equal(r.opciones, 1);
+  return 'ADN, ingredientes, carta y reglas viajan juntos';
+});
+
+await caso('Sin ADN definido, avisa de que las propuestas serán genéricas', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.adn = {};
+    return idrContextoNegocio().includes('sin definir');
+  });
+  assert.ok(r, 'debería avisar en vez de callarse');
+  return 'lo avisa al asistente';
+});
+
+/* ─── La respuesta estructurada ─── */
+await caso('Entiende la respuesta aunque venga envuelta o con prosa delante', async ()=>{
+  const r = await page.evaluate(()=>({
+    limpio: idrExtraerJson('{"a":1}'),
+    vallado: idrExtraerJson('```json\n{"a":2}\n```'),
+    conPreambulo: idrExtraerJson('Claro, aquí tienes:\n{"a":3}\nEspero que sirva.'),
+    prosa: idrExtraerJson('No tengo ni idea de qué es eso'),
+  }));
+  assert.equal(r.limpio.a, 1);
+  assert.equal(r.vallado.a, 2, 'los modelos suelen envolverlo en ```json');
+  assert.equal(r.conPreambulo.a, 3, 'y a veces añaden una frase antes');
+  assert.equal(r.prosa, null, 'la prosa pura no es JSON y debe devolver null');
+  return 'las tres formas y el caso sin JSON';
+});
+
+await caso('Si contesta en prosa se enseña igual, no se pierde', async ()=>{
+  await fingir('No conozco bien ese plato, ¿me pasas una receta de referencia?');
+  const r = await page.evaluate(async ()=>{
+    idrEmpezar('plato');
+    await idrPedirPaso();
+    const p = idrCreacion(idrCreacionActiva).pasos[0];
+    return {texto: p.texto, opciones: (p.opciones||[]).length};
+  });
+  assert.ok(r.texto.includes('receta de referencia'), 'la pregunta del asistente debe verse');
+  assert.equal(r.opciones, 0);
+  return 'se muestra la pregunta al cocinero';
+});
+
+/* ─── De propuesta a plato real: LO IMPORTANTE ─── */
+await caso('Una propuesta se convierte en escandallo real con SUS precios', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Bacalao con garbanzos y espinacas',
+    descripcion:'Guiso de cuchara con bacalao desalado',
+    pasos:['Rehogar','Guisar'],
+    ingredientes:[
+      {nombre:'Bacalao', cantidad:180, unidad:'g'},
+      {nombre:'Garbanzos', cantidad:120, unidad:'g'},
+      {nombre:'Espinacas', cantidad:60, unidad:'g'},
+      {nombre:'Pimentón de la Vera', cantidad:5, unidad:'g'},
+    ],
+  }));
+  const r = await page.evaluate(async ()=>{
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    ['Bacalao','Guisado','Sofrito','Garbanzos','Aceite crudo','Bacalao con garbanzos'].forEach((v,i)=>{ c.pasos[i]={elegido:v}; });
+    c.pasoActual = 6;
+    saveDB();
+    await idrCrearPlatoReal(c.id);
+    const cc = idrCreacion(c.id);
+    const receta = DB.recipes.find(x => x.id === cc.recipeId);
+    return {
+      creada: !!receta,
+      lineas: receta ? receta.ingredients.length : 0,
+      faltan: cc.faltan,
+      // El coste que calcula LA APP con sus precios reales
+      coste: receta ? recipeCost(receta) : null,
+      pasos: receta ? receta.steps : '',
+    };
+  });
+  assert.ok(r.creada, 'debería haber creado la receta');
+  assert.equal(r.lineas, 3, 'los 3 ingredientes que sí tiene');
+  assert.deepEqual(r.faltan, ['Pimentón de la Vera (5 g)'], 'el que no tiene se marca aparte, no se inventa');
+  // 180*0,022 + 120*0,003 + 60*0,006 = 3,96 + 0,36 + 0,36 = 4,68 · +5% consumibles = 4,914
+  assert.ok(Math.abs(r.coste - 4.914) < 0.001, `el coste debería salir de SUS precios, salió ${r.coste}`);
+  assert.ok(r.pasos.includes('Rehogar'));
+  return `3 ingredientes casados, 1 marcado como pendiente, coste ${r.coste.toFixed(3)} €`;
+});
+
+await caso('El coste lo pone la app aunque el modelo diga otra cosa', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Plato con coste inventado', descripcion:'x', pasos:['x'],
+    coste: 0.5, precio: 99,   // el modelo se inventa números: deben ignorarse
+    ingredientes:[{nombre:'Bacalao', cantidad:100, unidad:'g'}],
+  }));
+  const r = await page.evaluate(async ()=>{
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasoActual = 6; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const receta = DB.recipes.find(x => x.id === idrCreacion(c.id).recipeId);
+    return {coste: recipeCost(receta), precio: receta.price};
+  });
+  // 100*0,022 = 2,20 · +5% = 2,31 — y NO el 0,5 que decía el modelo
+  assert.ok(Math.abs(r.coste - 2.31) < 0.001, `debería mandar el escandallo, salió ${r.coste}`);
+  assert.equal(r.precio, 0, 'el precio de venta lo pone el hostelero, no el modelo');
+  return 'manda el escandallo, no el modelo';
+});
+
+await caso('Una respuesta ilegible no crea nada a medias', async ()=>{
+  await fingir('lo siento, no puedo');
+  const r = await page.evaluate(async ()=>{
+    const antes = DB.recipes.length;
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasoActual = 6; saveDB();
+    await idrCrearPlatoReal(c.id);
+    return {antes, despues: DB.recipes.length, recipeId: idrCreacion(c.id).recipeId};
+  });
+  assert.equal(r.despues, r.antes, 'no debería crear una receta a medias');
+  assert.ok(!r.recipeId);
+  return 'no deja basura detrás';
+});
+
+/* ─── Los caminos de error ─── */
+await caso('Sin internet avisa en cristiano y no rompe', async ()=>{
+  await fingir(null);
+  const r = await page.evaluate(async ()=>{
+    idrEmpezar('plato');
+    try{ await idrPedirPaso(); }catch(e){ return {roto:e.message}; }
+    return {roto:null, mensaje: idrMensajeError({motivo:'sin-conexion'}), vista: !!document.getElementById('view-idr').innerHTML};
+  });
+  assert.ok(!r.roto, 'reventó: ' + r.roto);
+  assert.ok(/conexión|internet/i.test(r.mensaje), `mensaje poco claro: ${r.mensaje}`);
+  assert.ok(r.vista, 'la pantalla debería seguir pintada');
+  return `avisa: "${r.mensaje}"`;
+});
+
+await caso('Cada motivo de fallo tiene su mensaje, en los tres idiomas', async ()=>{
+  const r = await page.evaluate(()=>{
+    const motivos = ['sin-clave','tope','sin-conexion','clave-mala','cuota','proveedor','vacia'];
+    const fallos = [];
+    ['es','ca','en'].forEach(l => {
+      localStorage.setItem('gastrogoan_lang', l);
+      motivos.forEach(m => {
+        const msg = idrMensajeError({motivo:m});
+        if(!msg || msg.startsWith('idr.')) fallos.push(`${l}:${m}`);
+      });
+    });
+    localStorage.setItem('gastrogoan_lang','es');
+    return fallos;
+  });
+  assert.deepEqual(r, [], 'sin traducir: ' + r.join(', '));
+  return '7 motivos × 3 idiomas';
+});
+
+/* ─── El tope de gasto ─── */
+await caso('El tope de consultas corta antes de gastar más', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    // Se restaura el llmChat de verdad para comprobar el tope, que vive en él
+    localStorage.setItem('gastrogoan_idr_gasto', JSON.stringify({dia:new Date().toISOString().slice(0,10), llamadas: IDR_TOPE_DIA}));
+    const antes = idrQuedanLlamadas();
+    const r2 = await window.__llmChatReal('sistema', [{role:'user',content:'hola'}]);
+    localStorage.removeItem('gastrogoan_idr_gasto');
+    return {antes, motivo: r2.motivo, despues: idrQuedanLlamadas()};
+  });
+  assert.equal(r.antes, 0, 'no deberían quedar consultas');
+  assert.equal(r.motivo, 'tope', 'debería cortar por tope, no intentar la llamada');
+  assert.ok(r.despues > 0, 'al borrar el contador vuelven a quedar');
+  return 'corta en seco y no llama al proveedor';
+});
+
+/* ─── Que sobreviva a cerrar la tablet ─── */
+await caso('Una conversación a medias sobrevive a recargar la app', async ()=>{
+  const id = await page.evaluate(()=>{
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos[0] = {elegido:'Bacalao'};
+    c.pasos[1] = {elegido:'A la brasa'};
+    c.pasoActual = 2;
+    c.titulo = 'Prueba de otoño';
+    saveDB();
+    return c.id;
+  });
+  await new Promise(r=>setTimeout(r,400));
+  await page.reload({waitUntil:'domcontentloaded'});
+  await new Promise(r=>setTimeout(r,2400));
+  const r = await page.evaluate((id)=>{
+    const c = idrCreacion(id);
+    return c ? {titulo:c.titulo, paso:c.pasoActual, primero:c.pasos[0].elegido} : null;
+  }, id);
+  assert.ok(r, 'la creación debería seguir ahí después de recargar');
+  assert.equal(r.paso, 2, 'debería seguir por donde iba');
+  assert.equal(r.primero, 'Bacalao');
+  return 'sigue por el paso 2';
+});
+
+/* ─── Volver atrás ─── */
+await caso('Volver a un paso rehace lo que dependía y respeta lo anterior', async ()=>{
+  const r = await page.evaluate(()=>{
+    ['netlify-gate','license-gate','firebase-gate'].forEach(x=>document.getElementById(x)?.remove());
+    editUnlocked = true; document.body.classList.add('owner-session');
+    currentArea = () => 'cocina';
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Bacalao'},{elegido:'A la brasa'},{elegido:'Pilpil'},{elegido:'Garbanzos'}];
+    c.pasoActual = 4;
+    saveDB();
+    idrVolverA(1);
+    const cc = idrCreacion(c.id);
+    return {pasos: cc.pasos.map(p=>p.elegido), actual: cc.pasoActual};
+  });
+  assert.deepEqual(r.pasos, ['Bacalao'], 'lo anterior se respeta, lo que dependía se va');
+  assert.equal(r.actual, 1);
+  return 'conserva el paso 1, rehace del 2 en adelante';
+});
+
+/* ─── La clave no viaja a la nube ─── */
+await caso('La clave se queda en el dispositivo y no entra en la nube', async ()=>{
+  const r = await page.evaluate(()=>{
+    idrGuardarConfig('anthropic','sk-secreta-de-prueba','');
+    const enDB = JSON.stringify(DB).includes('sk-secreta-de-prueba');
+    const enLocal = (localStorage.getItem('gastrogoan_idr_key')||'').includes('sk-secreta-de-prueba');
+    return {enDB, enLocal, cfg: idrConfig().proveedor};
+  });
+  assert.ok(!r.enDB, 'la clave NUNCA debe estar en DB: ese bloque se sincroniza con Firebase');
+  assert.ok(r.enLocal, 'debería estar en este dispositivo');
+  assert.equal(r.cfg, 'anthropic');
+  return 'solo en localStorage, como el idioma';
+});
+
+/* ─── Los proveedores están bien formados ─── */
+await caso('Los proveedores tienen todo lo que necesitan para llamar', async ()=>{
+  const fallos = await page.evaluate(()=>{
+    const f=[];
+    Object.keys(IDR_PROVEEDORES).forEach(k=>{
+      const p = IDR_PROVEEDORES[k];
+      ['es','ca','en'].forEach(l=>{ if(!p.l||!p.l[l]) f.push(`${k}: falta idioma ${l}`); });
+      if(!p.modeloPorDefecto) f.push(`${k}: sin modelo por defecto`);
+      ['url','cabeceras','cuerpo','extraer'].forEach(fn=>{ if(typeof p[fn]!=='function') f.push(`${k}: falta ${fn}`); });
+      if(!/^https:\/\//.test(String(p.url(p.modeloPorDefecto,'k')))) f.push(`${k}: la URL no es https`);
+      if(!p.ayuda) f.push(`${k}: sin página de ayuda para sacar la clave`);
+      // El cuerpo debe llevar el sistema: es donde van las reglas y el ADN
+      const cuerpo = JSON.stringify(p.cuerpo('SISTEMA-X',[{role:'user',content:'hola'}],100,p.modeloPorDefecto));
+      if(!cuerpo.includes('SISTEMA-X')) f.push(`${k}: el cuerpo pierde las instrucciones`);
+      if(!cuerpo.includes('hola')) f.push(`${k}: el cuerpo pierde el mensaje`);
+    });
+    return f;
+  });
+  assert.deepEqual(fallos, [], fallos.join(' | '));
+  const n = await page.evaluate(()=>Object.keys(IDR_PROVEEDORES).length);
+  return `${n} proveedores bien formados`;
+});
+
+await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
+  const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
+  assert.deepEqual(reales, [], reales.join(' | '));
+  return 'consola limpia';
+});
+
+console.log('\n' + '═'.repeat(64));
+const fallos = res.filter(x=>!x).length;
+console.log(fallos ? `❌ ${fallos} de ${res.length} fallaron` : `✅ los ${res.length} casos pasaron`);
+await browser.close();
+process.exit(fallos ? 1 : 0);
