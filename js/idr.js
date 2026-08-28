@@ -321,7 +321,7 @@ REGLAS QUE NO SE ROMPEN NUNCA:
 
 2. LOS NÚMEROS NO LOS PONES TÚ. El coste, el food cost y el margen los calcula la aplicación con los precios reales del negocio. Puedes decir si algo te parece caro o barato, pero nunca des una cifra de coste como si fuera un dato.
 
-3. USA SUS INGREDIENTES. Trabaja con los que ya compra. Si necesitas algo que no tiene, márcalo aparte y di claramente que habría que comprarlo.
+3. INGREDIENTES: PROPÓN CON LIBERTAD. Aprovecha lo que ya compra siempre que encaje, porque abarata y simplifica. Pero NO te limites a su lista: si un producto que no tiene mejora el plato, propónlo igual y di que habría que darlo de alta. Un módulo de I+D que solo recombina lo de siempre no sirve para crear nada nuevo.
 
 4. RESPETA SU ADN. La cocina, el nivel de la casa y sobre todo sus LÍNEAS ROJAS mandan sobre cualquier idea tuya. Si te piden algo que choca con su ADN, dilo antes de proponerlo.
 
@@ -540,8 +540,13 @@ function renderIdrCreacion(box){
     ${terminado ? `
       <div class="card">
         <h3><i class="ti ti-flag-check"></i> ${t('idr.done')}</h3>
-        <p style="font-size:13px;color:var(--muted)">${t('idr.doneBody')}</p>
-        ${c.tipo === 'plato' ? `<button class="owner-only btn btn-primary" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>` : ''}
+        <p style="font-size:13px;color:var(--muted)">${c.tipo === 'plato' ? t('idr.doneBody') : t('idr.doneBodySet')}</p>
+        ${c.logica ? `<div class="card" style="border-left:4px solid var(--brand-orange)"><h3 style="font-size:14px"><i class="ti ti-bulb"></i> ${t('idr.setLogic')}</h3><p style="font-size:13px;margin:0;white-space:pre-wrap">${escapeHtml(c.logica)}</p></div>` : ''}
+        ${(c.recipeIds||[]).length ? `<p style="font-size:13px">${t('idr.setDishes').replace('${n}', c.recipeIds.length)} · <strong>${fmtMoney((c.recipeIds||[]).reduce((s,rid)=>{const rr=getRecipe(rid);return s+(rr?recipeCost(rr):0);},0))}</strong></p>` : ''}
+        ${(c.faltan||[]).length ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.missingIngredients')}: ${escapeHtml(c.faltan.join(' · '))}</p>` : ''}
+        ${c.tipo === 'plato'
+          ? `<button class="owner-only btn btn-primary" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
+          : `<button class="owner-only btn btn-primary" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>`}
         <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
       </div>
     ` : `
@@ -702,7 +707,7 @@ ${resumen}
 Escribe la receta para 2 comensales. Responde SOLO con este JSON:
 {"nombre":"...","descripcion":"descripción corta de carta","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
 
-Usa los ingredientes que YA COMPRA siempre que puedas, con el mismo nombre con el que los tiene. Si hace falta alguno que no tiene, inclúyelo igual: la aplicación lo marcará aparte. No pongas precios ni costes.`;
+Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
@@ -755,6 +760,8 @@ function idrImprimir(id){
   const body = `
     ${printReportHeaderHtml(c.titulo || t('idr.untitled'))}
     <table style="width:100%;border-collapse:collapse;font-size:11pt">${filas}</table>
+    ${c.logica ? `<h2>${t('idr.setLogic')}</h2><p>${escapeHtml(c.logica)}</p>` : ''}
+    ${(c.recipeIds||[]).length ? `<h2>${t('idr.setDishesTitle')}</h2><ul class="pr-steps">${c.recipeIds.map(rid=>{const rr=getRecipe(rid);return rr?`<li>${escapeHtml(rr.name)} — ${fmtMoney(recipeCost(rr))}</li>`:'';}).join('')}</ul>` : ''}
     ${(c.faltan||[]).length ? `<h2>${t('idr.missingIngredients')}</h2><ul class="pr-steps">${c.faltan.map(f=>`<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
   `;
   printReportWindow(c.titulo || t('idr.untitled'), body, {winSize:'width=800,height=1000'});
@@ -900,4 +907,98 @@ async function idrAdnBorrador(){
   saveDB();
   idrAdnModal();
   showToast(t('idr.dnaDraftDone'));
+}
+
+/* ============================================================
+   MENÚ Y CARTA — de la estructura a los platos, y luego el coste
+   ============================================================
+   El orden importa y es el que pidió el dueño: primero se define la
+   ESTRUCTURA y la lógica del conjunto, después qué platos la componen, y
+   solo al final el escandallo. Así el menú tiene sentido como conjunto en
+   vez de ser una suma de platos sueltos que salen baratos.
+
+   Se crea una receta por plato (con su coste real) y, si se quiere, la
+   carta entera con sus secciones. */
+
+async function idrCrearConjunto(id){
+  const c = idrCreacion(id);
+  if(!c || (c.tipo !== 'menu' && c.tipo !== 'carta')) return;
+  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+
+  const pasos = IDR_PASOS[c.tipo];
+  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
+
+  showToast(t('idr.buildingSet'));
+  const esMenu = c.tipo === 'menu';
+  const instruccion = `Esto es lo que hemos decidido para ${esMenu ? 'el menú' : 'la carta'}:
+
+${resumen}
+
+Ahora concrétalo. Responde SOLO con este JSON:
+{"nombre":"nombre del conjunto","logica":"en dos o tres frases, la lógica del conjunto: qué lo hace coherente, cómo se reparten técnicas y bases, y qué se aprovecha entre platos","secciones":[{"nombre":"...","platos":[{"nombre":"...","descripcion":"corta, de carta","ingredientes":[{"nombre":"...","cantidad":120,"unidad":"g"}]}]}]}
+
+Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place entre platos y no repitas técnicas. Los ingredientes que el negocio no tenga, inclúyelos igual: se marcarán como pendientes de dar de alta.`;
+
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 4000});
+  if(!r.ok){ showToast(idrMensajeError(r)); return; }
+  const j = idrExtraerJson(r.texto);
+  if(!j || !Array.isArray(j.secciones)){ showToast(t('idr.err.unreadable')); return; }
+
+  const faltan = [];
+  const creados = [];
+  const secciones = [];
+
+  j.secciones.forEach(sec => {
+    const platosSec = [];
+    (sec.platos||[]).forEach(pl => {
+      if(!pl || !pl.nombre) return;
+      const lineas = [];
+      (pl.ingredientes||[]).forEach(ing => {
+        const real = idrBuscarIngrediente(ing.nombre);
+        const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
+        if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+        else if(ing.nombre) faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''} — ${pl.nombre}`);
+      });
+      const receta = {
+        id: genId(), name: String(pl.nombre).slice(0,80), price: 0, priceBase: 0,
+        ivaPct: (DB.business && DB.business.ivaPct) || 10,
+        comensales: 2, consumiblesPct: 5,
+        category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
+        ingredients: lineas, allergens: [], area: 'cocina',
+        isBase: false, baseYield: 1, baseUnit: 'L',
+        steps: '', presentation: String(pl.descripcion || ''),
+      };
+      DB.recipes.push(receta);
+      creados.push(receta);
+      platosSec.push({id: genId(), recipeId: receta.id, nombre: receta.name, precio: 0, precioBase: 0, ivaPct: receta.ivaPct, disponible: true, modificadores: []});
+    });
+    if(platosSec.length) secciones.push({id: genId(), nombre: String(sec.nombre||'').slice(0,60), platos: platosSec});
+  });
+
+  if(!creados.length){ showToast(t('idr.err.unreadable')); return; }
+
+  c.logica = String(j.logica || '');
+  c.faltan = faltan;
+  c.recipeIds = creados.map(x => x.id);
+  if(j.nombre) c.titulo = String(j.nombre).slice(0,60);
+  c.updatedAt = new Date().toISOString();
+
+  // La carta se crea de verdad, con sus secciones. Un menú se queda en el
+  // cuaderno con sus platos ya creados: montarlo como carta es decisión
+  // suya, porque un menú del día convive con la carta y no la sustituye.
+  if(c.tipo === 'carta'){
+    if(!Array.isArray(DB.cartas)) DB.cartas = [];
+    const carta = {id: genId(), nombre: (c.titulo || 'NUEVA CARTA').toUpperCase(), tipo:'GENERAL', desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones};
+    DB.cartas.push(carta);
+    c.cartaId = carta.id;
+  }
+  saveDB();
+
+  // El coste, otra vez, lo pone la app con SUS precios.
+  const costeTotal = creados.reduce((s, r2) => s + ((typeof recipeCost === 'function') ? recipeCost(r2) : 0), 0);
+  showToast(t('idr.setCreated')
+    .replace('${n}', creados.length)
+    .replace('${coste}', fmtMoney(costeTotal))
+    + (faltan.length ? ' ' + t('idr.setMissing').replace('${n}', faltan.length) : ''));
+  renderIdr();
 }

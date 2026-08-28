@@ -232,6 +232,90 @@ await caso('Una respuesta ilegible no crea nada a medias', async ()=>{
   return 'no deja basura detrás';
 });
 
+/* ─── Menú y carta: estructura, platos y después el coste ─── */
+await caso('Una carta se crea entera: secciones, platos y su escandallo', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Carta de otoño',
+    logica:'Tres bases distintas y una sola brasa encendida; el fondo del suquet sirve para dos platos.',
+    secciones:[
+      {nombre:'Entrantes', platos:[
+        {nombre:'Espinacas a la catalana', descripcion:'Con pasas y piñones', ingredientes:[{nombre:'Espinacas',cantidad:200,unidad:'g'},{nombre:'Aceite de oliva',cantidad:20,unidad:'ml'}]},
+      ]},
+      {nombre:'Principales', platos:[
+        {nombre:'Bacalao con garbanzos', descripcion:'Guiso de cuchara', ingredientes:[{nombre:'Bacalao',cantidad:160,unidad:'g'},{nombre:'Garbanzos',cantidad:100,unidad:'g'}]},
+        {nombre:'Bacalao a la brasa', descripcion:'Con pimentón', ingredientes:[{nombre:'Bacalao',cantidad:180,unidad:'g'},{nombre:'Pimentón de la Vera',cantidad:4,unidad:'g'}]},
+      ]},
+    ],
+  }));
+  const r = await page.evaluate(async ()=>{
+    const cartasAntes = DB.cartas.length;
+    idrEmpezar('carta');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Entrantes y principales'},{elegido:'Brasa, guiso y crudo'},{elegido:'Producto de otoño'},{elegido:'Dos platos al momento como mucho'}];
+    c.pasoActual = 4; saveDB();
+    await idrCrearConjunto(c.id);
+    const cc = idrCreacion(c.id);
+    const carta = DB.cartas.find(x => x.id === cc.cartaId);
+    const recetas = (cc.recipeIds||[]).map(id => DB.recipes.find(x=>x.id===id));
+    return {
+      cartasAntes, cartasDespues: DB.cartas.length,
+      titulo: cc.titulo, logica: cc.logica, faltan: cc.faltan,
+      secciones: carta ? carta.secciones.map(s=>({n:s.nombre, platos:s.platos.length})) : null,
+      // Cada plato de la carta apunta a su receta real, con su coste
+      vinculados: carta ? carta.secciones.every(s => s.platos.every(p => !!p.recipeId)) : false,
+      costes: recetas.map(r2 => r2 ? Number(recipeCost(r2).toFixed(4)) : null),
+    };
+  });
+  assert.equal(r.cartasDespues, r.cartasAntes + 1, 'debería haber creado la carta de verdad');
+  assert.equal(r.titulo, 'Carta de otoño');
+  assert.ok(r.logica.includes('fondo del suquet'), 'la lógica del conjunto debe guardarse');
+  assert.deepEqual(r.secciones, [{n:'Entrantes',platos:1},{n:'Principales',platos:2}]);
+  assert.ok(r.vinculados, 'cada plato de la carta debe apuntar a su receta');
+  // 200*0,006 + 20*0,008 = 1,36 · +5% = 1,428
+  assert.ok(Math.abs(r.costes[0] - 1.428) < 0.001, `coste 1: ${r.costes[0]}`);
+  // 160*0,022 + 100*0,003 = 3,82 · +5% = 4,011
+  assert.ok(Math.abs(r.costes[1] - 4.011) < 0.001, `coste 2: ${r.costes[1]}`);
+  assert.equal(r.faltan.length, 1, 'el pimentón que no tiene, marcado');
+  assert.ok(r.faltan[0].includes('Bacalao a la brasa'), 'y con el plato al que pertenece');
+  return '2 secciones, 3 platos con su escandallo, 1 ingrediente pendiente';
+});
+
+await caso('Un menú crea sus platos pero no sustituye la carta', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Menú del día', logica:'Un fondo común para los dos segundos.',
+    secciones:[{nombre:'Segundos', platos:[
+      {nombre:'Garbanzos con espinacas', descripcion:'x', ingredientes:[{nombre:'Garbanzos',cantidad:150,unidad:'g'},{nombre:'Espinacas',cantidad:80,unidad:'g'}]},
+    ]}],
+  }));
+  const r = await page.evaluate(async ()=>{
+    const cartasAntes = DB.cartas.length;
+    idrEmpezar('menu');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasoActual = 4; saveDB();
+    await idrCrearConjunto(c.id);
+    const cc = idrCreacion(c.id);
+    return {cartasAntes, cartasDespues: DB.cartas.length, platos: (cc.recipeIds||[]).length, cartaId: cc.cartaId};
+  });
+  assert.equal(r.cartasDespues, r.cartasAntes, 'un menú del día NO debe sustituir la carta');
+  assert.ok(!r.cartaId);
+  assert.equal(r.platos, 1, 'pero sus platos sí se crean con su escandallo');
+  return 'crea los platos y deja la carta en paz';
+});
+
+await caso('Puede proponer productos que el negocio no tiene', async ()=>{
+  const r = await page.evaluate(()=>{
+    const sis = idrSistema();
+    return {
+      invita: /no te limites a su lista|PROPÓN CON LIBERTAD/i.test(sis),
+      // y la instrucción de la receta debe pedirlo explícitamente
+      reglas: IDR_REGLAS.includes('INCLÚYELO') || IDR_REGLAS.includes('propónlo igual'),
+    };
+  });
+  assert.ok(r.invita, 'debe invitar a salirse de la Mega Lista, no solo recombinar');
+  assert.ok(r.reglas);
+  return 'la regla lo pide explícitamente';
+});
+
 /* ─── Los caminos de error ─── */
 await caso('Sin internet avisa en cristiano y no rompe', async ()=>{
   await fingir(null);
