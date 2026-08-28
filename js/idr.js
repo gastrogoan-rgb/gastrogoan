@@ -401,6 +401,10 @@ async function idrBorrarCreacion(id){
 
 let idrVista = 'inicio';       // 'inicio' | 'creacion'
 let idrCreacionActiva = null;
+let idrCarpetaActiva = null;   // null = todo el cuaderno
+let idrFiltroTipo = '';        // '' | 'plato' | 'menu' | 'carta'
+function idrVerCarpeta(id){ idrCarpetaActiva = id || null; renderIdr(); }
+function idrFiltrar(tipo){ idrFiltroTipo = tipo || ''; renderIdr(); }
 
 function navIdr(vista, id){
   idrVista = vista;
@@ -416,7 +420,12 @@ function renderIdr(){
 
   const adnOk = idrAdnRelleno();
   const iaOk = idrHayIA();
-  const creaciones = idrCreaciones().slice().sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const todas = idrCreaciones();
+  const sinClasificar = todas.filter(x => !x.carpetaId).length;
+  const creaciones = todas
+    .filter(x => idrCarpetaActiva === null ? true : (idrCarpetaActiva === '__sin' ? !x.carpetaId : x.carpetaId === idrCarpetaActiva))
+    .filter(x => idrFiltroTipo ? x.tipo === idrFiltroTipo : true)
+    .slice().sort((a,b) => (b.updatedAt||'').localeCompare(a.updatedAt||''));
 
   const burbuja = (tipo, icono, titulo, desc) => `
     <div class="card" style="cursor:pointer;text-align:center;padding:22px 16px" onclick="idrEmpezar('${tipo}')">
@@ -459,16 +468,38 @@ function renderIdr(){
     </div>
 
     <h3 class="cat-heading">${t('idr.myWork')}</h3>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <button class="btn btn-sm ${idrCarpetaActiva===null?'btn-primary':''}" onclick="idrVerCarpeta(null)"><i class="ti ti-stack"></i> ${t('idr.allWork')}</button>
+      ${idrCarpetas().map(f => `
+        <button class="btn btn-sm ${idrCarpetaActiva===f.id?'btn-primary':''}" onclick="idrVerCarpeta(${f.id})"><i class="ti ti-folder"></i> ${escapeHtml(f.nombre)} (${idrCreaciones().filter(x=>x.carpetaId===f.id).length})</button>
+      `).join('')}
+      ${sinClasificar ? `<button class="btn btn-sm ${idrCarpetaActiva==='__sin'?'btn-primary':''}" onclick="idrVerCarpeta('__sin')"><i class="ti ti-folder-off"></i> ${t('idr.unfiled')} (${sinClasificar})</button>` : ''}
+      <button class="owner-only btn btn-sm" onclick="idrNuevaCarpeta()"><i class="ti ti-folder-plus"></i> ${t('idr.newFolder')}</button>
+      ${idrCarpetaActiva && idrCarpetaActiva !== '__sin' ? `
+        <button class="owner-only btn btn-sm btn-icon" onclick="idrRenombrarCarpeta(${idrCarpetaActiva})" title="${t('idr.renameFolder')}"><i class="ti ti-edit"></i></button>
+        <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="idrBorrarCarpeta(${idrCarpetaActiva})" title="${t('common.delete')}"><i class="ti ti-trash"></i></button>` : ''}
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]].map(([v, l]) =>
+        `<button class="btn btn-sm ${idrFiltroTipo===v?'btn-primary':''}" onclick="idrFiltrar('${v}')">${escapeHtml(l)}</button>`).join('')}
+    </div>
+
     ${creaciones.length ? `<div class="grid grid-2">` + creaciones.map(c => `
       <div class="card card-compact" style="cursor:pointer" onclick="navIdr('creacion', ${c.id})">
         <h3 style="justify-content:space-between"><span style="overflow:visible;white-space:normal"><i class="ti ${c.tipo==='plato'?'ti-tools-kitchen-2':(c.tipo==='menu'?'ti-list-numbers':'ti-book')}"></i> ${escapeHtml(c.titulo || t('idr.untitled'))}</span></h3>
         <p style="font-size:12px;color:var(--muted);margin:2px 0 8px">${idrProgresoTexto(c)}</p>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();navIdr('creacion', ${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.continue')}</button>
+          <select class="owner-only" style="max-width:150px" onclick="event.stopPropagation()" onchange="idrMoverA(${c.id}, this.value ? Number(this.value) : null)">
+            <option value="">${t('idr.unfiled')}</option>
+            ${idrCarpetas().map(f=>`<option value="${f.id}"${f.id===c.carpetaId?' selected':''}>${escapeHtml(f.nombre)}</option>`).join('')}
+          </select>
           <button class="owner-only btn btn-sm btn-danger" onclick="event.stopPropagation();idrBorrarCreacion(${c.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
-    `).join('') + `</div>` : `<div class="empty"><i class="ti ti-flask"></i>${t('idr.noWorkYet')}</div>`}
+    `).join('') + `</div>` : `<div class="empty"><i class="ti ti-flask"></i>${todas.length ? t('idr.noneHere') : t('idr.noWorkYet')}</div>`}
   `;
 }
 
@@ -492,6 +523,10 @@ function idrEmpezar(tipo){
     showToast(t('idr.dnaFirstHint'));
   }
   const c = idrNuevaCreacion(tipo);
+  // Nace donde estás mirando: si abres "Carta otoño 2026" y creas un plato,
+  // lo lógico es que caiga ahí y no en el montón general.
+  if(idrCarpetaActiva && idrCarpetaActiva !== '__sin') c.carpetaId = idrCarpetaActiva;
+  saveDB();
   navIdr('creacion', c.id);
 }
 
@@ -1000,5 +1035,67 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
     .replace('${n}', creados.length)
     .replace('${coste}', fmtMoney(costeTotal))
     + (faltan.length ? ' ' + t('idr.setMissing').replace('${n}', faltan.length) : ''));
+  renderIdr();
+}
+
+/* ============================================================
+   CARPETAS DEL CUADERNO
+   ============================================================
+   I+D es un laboratorio: se lanzan hipótesis, muchas no llegan a nada, y
+   las que llegan conviene tenerlas juntas ("Carta otoño 2026", "Pruebas de
+   brasa"). Sin carpetas, a los dos meses el cuaderno es una lista de
+   sesenta cosas sin orden.
+
+   Una creación sin carpeta NO se pierde: vive en "Sin clasificar", que es
+   donde caen todas las que nacen. Clasificar es opcional, como debe ser en
+   un cuaderno de pruebas. */
+
+function idrCarpetas(){
+  if(!DB.idr || typeof DB.idr !== 'object') DB.idr = {};
+  if(!Array.isArray(DB.idr.carpetas)) DB.idr.carpetas = [];
+  return DB.idr.carpetas;
+}
+function idrCarpeta(id){ return idrCarpetas().find(c => c.id === id) || null; }
+
+async function idrNuevaCarpeta(){
+  const nombre = await promptText(t('idr.folderName'), '', {title: t('idr.newFolder'), icon:'ti-folder-plus'});
+  if(nombre === null) return;
+  const n = (nombre||'').trim().slice(0, 40);
+  if(!n) return;
+  if(idrCarpetas().some(c => c.nombre.toLowerCase() === n.toLowerCase())){ showToast(t('idr.folderExists')); return; }
+  idrCarpetas().push({id: genId(), nombre: n});
+  saveDB();
+  renderIdr();
+}
+async function idrRenombrarCarpeta(id){
+  const c = idrCarpeta(id);
+  if(!c) return;
+  const nombre = await promptText(t('idr.folderName'), c.nombre, {title: t('idr.renameFolder'), icon:'ti-edit'});
+  if(nombre === null) return;
+  const n = (nombre||'').trim().slice(0, 40);
+  if(!n) return;
+  c.nombre = n;
+  saveDB();
+  renderIdr();
+}
+// Borrar la carpeta NO borra el trabajo: lo devuelve a "Sin clasificar".
+// Perder seis pruebas por vaciar una carpeta sería imperdonable.
+async function idrBorrarCarpeta(id){
+  const c = idrCarpeta(id);
+  if(!c) return;
+  const dentro = idrCreaciones().filter(x => x.carpetaId === id).length;
+  if(!(await confirmModal(t('idr.confirmDeleteFolder').replace('${n}', dentro).replace('${nombre}', c.nombre)))) return;
+  idrCreaciones().forEach(x => { if(x.carpetaId === id) delete x.carpetaId; });
+  DB.idr.carpetas = idrCarpetas().filter(x => x.id !== id);
+  if(idrCarpetaActiva === id) idrCarpetaActiva = null;
+  saveDB();
+  renderIdr();
+}
+function idrMoverA(creacionId, carpetaId){
+  const c = idrCreacion(creacionId);
+  if(!c) return;
+  if(carpetaId) c.carpetaId = carpetaId; else delete c.carpetaId;
+  c.updatedAt = new Date().toISOString();
+  saveDB();
   renderIdr();
 }

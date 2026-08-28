@@ -316,6 +316,62 @@ await caso('Puede proponer productos que el negocio no tiene', async ()=>{
   return 'la regla lo pide explícitamente';
 });
 
+/* ─── Carpetas del cuaderno ─── */
+await caso('El cuaderno se organiza en carpetas y filtra por tipo', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.creaciones = []; DB.idr.carpetas = [];
+    idrCarpetaActiva = null; idrFiltroTipo = '';
+    const f = {id: 555, nombre: 'Carta otoño 2026'};
+    DB.idr.carpetas.push(f);
+    const a1 = idrNuevaCreacion('plato'); a1.titulo = 'Bacalao'; a1.carpetaId = 555;
+    const a2 = idrNuevaCreacion('menu');  a2.titulo = 'Menú diario'; a2.carpetaId = 555;
+    const a3 = idrNuevaCreacion('plato'); a3.titulo = 'Suelto';
+    saveDB();
+    navigate('idr'); renderIdr();
+    const cuenta = () => document.querySelectorAll('#view-idr .card-compact').length;
+    const todo = cuenta();
+    idrVerCarpeta(555); const enCarpeta = cuenta();
+    idrFiltrar('plato');  const soloPlatos = cuenta();
+    idrVerCarpeta('__sin'); idrFiltrar(''); const sinClasificar = cuenta();
+    idrVerCarpeta(null); idrFiltrar('');
+    return {todo, enCarpeta, soloPlatos, sinClasificar};
+  });
+  assert.equal(r.todo, 3, 'sin filtro se ven las tres');
+  assert.equal(r.enCarpeta, 2, 'en la carpeta, dos');
+  assert.equal(r.soloPlatos, 1, 'filtrando por plato dentro de la carpeta, una');
+  assert.equal(r.sinClasificar, 1, 'la que no tiene carpeta vive en Sin clasificar');
+  return '3 → 2 → 1, y sin clasificar aparte';
+});
+
+await caso('Borrar una carpeta NO borra el trabajo de dentro', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    // confirmModal se acepta sin tocar pantalla
+    const orig = window.confirmModal;
+    window.confirmModal = async () => true;
+    const antes = idrCreaciones().length;
+    await idrBorrarCarpeta(555);
+    window.confirmModal = orig;
+    return {antes, despues: idrCreaciones().length, carpetas: idrCarpetas().length, huerfanas: idrCreaciones().filter(x=>!x.carpetaId).length};
+  });
+  assert.equal(r.despues, r.antes, 'perder pruebas por vaciar una carpeta sería imperdonable');
+  assert.equal(r.carpetas, 0);
+  assert.equal(r.huerfanas, 3, 'todas vuelven a Sin clasificar');
+  return 'las 3 vuelven a Sin clasificar';
+});
+
+await caso('Una prueba nace en la carpeta que estás mirando', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr.carpetas = [{id: 777, nombre:'Pruebas de brasa'}];
+    idrCarpetaActiva = 777;
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    idrCarpetaActiva = null;
+    return c.carpetaId;
+  });
+  assert.equal(r, 777, 'debería caer donde estás, no en el montón general');
+  return 'cae donde estás';
+});
+
 /* ─── Los caminos de error ─── */
 await caso('Sin internet avisa en cristiano y no rompe', async ()=>{
   await fingir(null);
