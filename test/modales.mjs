@@ -44,6 +44,11 @@ const CASOS = [
   ['Nuevo cliente',       'clientes','sala',     'openClientModal()'],
   ['Confirmación',        'megalista','cocina',  `confirmModal('¿Seguro que quieres continuar con esta acción que tiene un texto razonablemente largo?')`],
   ['Icono de carpeta',    'megalista','cocina',  `openCategoryIconModal('Carnes','Carnes','renderMegalista','ingredient')`],
+  // Las dos del módulo nuevo. La del ADN son 11 campos: es de las más
+  // largas de la app y la que más papeletas tiene de desbordar en móvil.
+  ['ADN gastronómico',    'idr','cocina',        'idrAdnModal()'],
+  ['Asistente de I+D',    'idr','cocina',        'idrConfigModal()'],
+  ['Ficha de vino',       'fichas','sala',       'openFichaModal(); setFichaBebidaTipo("vino")'],
 ];
 
 const hallazgos=[];

@@ -569,7 +569,11 @@ td.wrap{white-space:normal}
 .badge-gray{background:#eee;color:#555}
 
 /* ===== Fichas Técnicas ===== */
-.alg-pill{display:inline-block;padding:5px 12px;border-radius:99px;font-size:11.5px;font-weight:700;background:#eee;color:#666;cursor:pointer;border:1px solid var(--border);user-select:none}
+/* Se pulsan con el dedo para marcar alérgenos, y median 30 px de alto:
+   por debajo del mínimo táctil. Con 14 píldoras juntas, fallar una y
+   marcar la de al lado es fácil, y equivocarse en un alérgeno no es un
+   detalle estético. */
+.alg-pill{display:inline-flex;align-items:center;min-height:38px;padding:5px 14px;border-radius:99px;font-size:11.5px;font-weight:700;background:#eee;color:#666;cursor:pointer;border:1px solid var(--border);user-select:none}
 .alg-pill.on{background:var(--red-l);color:var(--red);border-color:var(--red)}
 .alg-grid{display:flex;flex-wrap:wrap;gap:6px}
 .ingredients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}

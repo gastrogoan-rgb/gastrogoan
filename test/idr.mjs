@@ -693,6 +693,77 @@ await caso('Los proveedores tienen todo lo que necesitan para llamar', async ()=
   return `${n} proveedores bien formados`;
 });
 
+/* ─── Los cinco roles ─── */
+// Un cocinero sin edición no debe poder tocar el ADN ni borrar el cuaderno
+// del negocio; uno con edición sí trabaja. El módulo vive en Cocina, así
+// que un camarero no debería ni verlo.
+await caso('Cada rol ve lo suyo en I+D y solo lo suyo', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr = {adn:{cocina:'Catalana'}, creaciones:[], carpetas:[]};
+    idrCarpetaActiva = null; idrFiltroTipo = '';
+    idrNuevaCreacion('plato').titulo = 'Prueba';
+    saveDB();
+    const visibles = () => {
+      renderIdr();
+      const box = document.getElementById('view-idr');
+      const vis = el => { const st = getComputedStyle(el); return st.display !== 'none' && st.visibility !== 'hidden'; };
+      const todos = [...box.querySelectorAll('button, select')];
+      return {
+        soloDuenyo: todos.filter(e => e.classList.contains('owner-strict') && vis(e)).length,
+        conEdicion: todos.filter(e => e.classList.contains('owner-only') && vis(e)).length,
+        libres: todos.filter(e => !e.classList.contains('owner-only') && !e.classList.contains('owner-strict') && vis(e)).length,
+      };
+    };
+    const poner = (owner, edit) => {
+      document.body.classList.toggle('owner-session', owner);
+      document.body.classList.toggle('edit-unlocked', edit || owner);
+      editUnlocked = edit || owner;
+    };
+    currentArea = () => 'cocina';
+    navigate('idr');
+    poner(false, false); const cocinero = visibles();
+    poner(false, true);  const cocineroEdit = visibles();
+    poner(true, true);   const duenyo = visibles();
+    // El módulo está en la carpeta de Cocina, no en la de Sala
+    const enSala = (FOLDERS.sala.modules||[]).some(m => m.id === 'idr');
+    const enCocina = (FOLDERS.cocina.modules||[]).some(m => m.id === 'idr');
+    return {cocinero, cocineroEdit, duenyo, enSala, enCocina};
+  });
+  assert.equal(r.cocinero.conEdicion, 0, 'un cocinero sin edición no debería ver los botones de editar');
+  assert.equal(r.cocinero.soloDuenyo, 0, 'ni los exclusivos del dueño');
+  assert.ok(r.cocinero.libres > 0, 'pero sí debe poder mirar y usar el asistente');
+  assert.ok(r.cocineroEdit.conEdicion > 0, 'con edición desbloqueada sí trabaja');
+  assert.ok(r.duenyo.conEdicion >= r.cocineroEdit.conEdicion, 'el dueño ve al menos lo mismo');
+  assert.ok(!r.enSala, 'I+D es de cocina: un camarero no debería verlo');
+  assert.ok(r.enCocina);
+  return `cocinero ${r.cocinero.libres} botones, con edición ${r.cocineroEdit.conEdicion} más, y no aparece en sala`;
+});
+
+/* ─── Un negocio recién dado de alta ─── */
+await caso('En un negocio vacío I+D no se rompe y guía qué hacer', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.idr = {}; DB.ingredients = []; DB.recipes = []; DB.cartas = []; DB.ventas = [];
+    localStorage.removeItem('gastrogoan_idr_key');
+    document.body.classList.add('owner-session','edit-unlocked'); editUnlocked = true;
+    currentArea = () => 'cocina';
+    let roto = null;
+    try{
+      navigate('idr'); renderIdr();
+      // Y que se pueda empezar algo aunque no haya NADA cargado
+      idrEmpezar('carta');
+      renderIdr();
+      navIdr('inicio');
+    }catch(e){ roto = e.message; }
+    const html = document.getElementById('view-idr').innerHTML;
+    return {roto, guia: /ADN/.test(html), contexto: idrContextoNegocio(), ing: idrIngenieriaMenu()};
+  });
+  assert.ok(!r.roto, 'reventó: ' + r.roto);
+  assert.ok(r.guia, 'debería guiar hacia el ADN, que es lo primero');
+  assert.ok(r.contexto.includes('sin definir'), 'y avisar al asistente de que no hay ADN');
+  assert.equal(r.ing, null, 'sin ventas no debe inventarse ninguna ingeniería de menú');
+  return 'aguanta vacío y señala el ADN';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

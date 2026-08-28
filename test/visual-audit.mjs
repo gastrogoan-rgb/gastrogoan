@@ -32,6 +32,7 @@ const VIEWS = [
   { name: 'reservas', fn: "navigate('reservas')" },
   { name: 'carta', fn: "navigate('carta')" },
   { name: 'megalista', fn: "navigate('megalista')" },
+  { name: 'idr', fn: "navigate('idr')" },
   { name: 'escandallo', fn: "navigate('escandallo')" },
   { name: 'fichas', fn: "navigate('fichas')" },
   { name: 'stock', fn: "navigate('stock')" },

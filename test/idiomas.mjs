@@ -10,7 +10,7 @@ import puppeteer from 'puppeteer-core';
 const IDIOMAS = ['ca','en'];              // el castellano ya lo cubren las otras
 const TAMANOS = [{n:'MÓVIL',w:390,h:844},{n:'ESCRITORIO',w:1440,h:900}];
 const VISTAS = [
-  ['comandascocina','cocina'],['carta','cocina'],['megalista','cocina'],['escandallo','cocina'],
+  ['comandascocina','cocina'],['carta','cocina'],['idr','cocina'],['megalista','cocina'],['escandallo','cocina'],
   ['fichas','cocina'],['pedidos','cocina'],['stock','cocina'],['horarios','cocina'],
   ['distribucion','cocina'],['limpieza','cocina'],['proveedores','cocina'],
   ['tpv','sala'],['reservas','sala'],['clientes','sala'],['promocion','sala'],

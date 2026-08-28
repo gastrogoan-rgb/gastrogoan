@@ -3,7 +3,7 @@
 // hay gente que sencillamente no lo lee.
 import puppeteer from 'puppeteer-core';
 const VISTAS=[['tpv','sala'],['reservas','sala'],['clientes','sala'],['comandascocina','cocina'],
-  ['carta','cocina'],['megalista','cocina'],['escandallo','cocina'],['stock','cocina'],
+  ['carta','cocina'],['idr','cocina'],['megalista','cocina'],['escandallo','cocina'],['stock','cocina'],
   ['horarios','cocina'],['distribucion','cocina'],['limpieza','cocina'],['pedidos','cocina'],
   ['dashboard','gestion'],['economia','gestion'],['minegocio','gestion']];
 const browser = await puppeteer.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox'],headless:true});

@@ -10,7 +10,7 @@ const TAMANOS = [
 ];
 const VISTAS = [
   ['home',null],['folder','cocina'],['folder','sala'],['folder','gestion'],
-  ['comandascocina','cocina'],['carta','cocina'],['megalista','cocina'],['escandallo','cocina'],
+  ['comandascocina','cocina'],['carta','cocina'],['idr','cocina'],['megalista','cocina'],['escandallo','cocina'],
   ['fichas','cocina'],['pedidos','cocina'],['stock','cocina'],['horarios','cocina'],
   ['distribucion','cocina'],['limpieza','cocina'],['proveedores','cocina'],
   ['tpv','sala'],['reservas','sala'],['clientes','sala'],['promocion','sala'],['togo','sala'],

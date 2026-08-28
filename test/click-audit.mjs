@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer-core';
 
 const VIEWS = [
   ['home',null], ['folder',null],
-  ['megalista','cocina'], ['proveedores','cocina'], ['escandallo','cocina'], ['fichas','cocina'],
+  ['idr','cocina'], ['megalista','cocina'], ['proveedores','cocina'], ['escandallo','cocina'], ['fichas','cocina'],
   ['carta','cocina'], ['stock','cocina'], ['pedidos','cocina'], ['limpieza','cocina'],
   ['personal','cocina'], ['horarios','cocina'], ['comandascocina','cocina'], ['chat','cocina'],
   ['distribucion','cocina'],                       // <-- faltaba en el recorrido

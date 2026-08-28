@@ -3,7 +3,7 @@
 // la primera impresión es que la app está rota.
 import puppeteer from 'puppeteer-core';
 const VISTAS = [
-  ['comandascocina','cocina'],['carta','cocina'],['megalista','cocina'],['escandallo','cocina'],
+  ['comandascocina','cocina'],['carta','cocina'],['idr','cocina'],['megalista','cocina'],['escandallo','cocina'],
   ['fichas','cocina'],['pedidos','cocina'],['stock','cocina'],['horarios','cocina'],
   ['distribucion','cocina'],['limpieza','cocina'],['proveedores','cocina'],
   ['tpv','sala'],['reservas','sala'],['clientes','sala'],['promocion','sala'],
