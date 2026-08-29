@@ -2771,7 +2771,13 @@ function confirmReservationDeposit(id){
   if(!r) return;
   r.depositConfirmed = true;
   r.depositConfirmedAt = new Date().toISOString();
-  logAudit('deposit_confirmed', t('audit.depositConfirmed').replace('${name}', r.clientName||'—'));
+  // ⚠️ Esta es la confirmación A MANO (alguien marca la señal como recibida).
+  // La automática, cuando llega el pago, es otra y tiene su propio texto: las
+  // dos compartían clave y la segunda pisaba a la primera, así que el
+  // registro decía "confirmada automáticamente" incluso cuando la había
+  // confirmado una persona. En un registro de auditoría eso es atribuir mal
+  // una acción.
+  logAudit('deposit_confirmed', t('audit.depositConfirmedByStaff').replace('${name}', r.clientName||'—'));
   saveDB();
   renderReservasPendingOnline();
   renderReservas();
