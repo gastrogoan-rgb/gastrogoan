@@ -18,9 +18,11 @@
 
 const IDR_KEY_LS = 'gastrogoan_idr_key';        // {proveedor, clave, modelo}
 const IDR_GASTO_LS = 'gastrogoan_idr_gasto';    // {dia, llamadas}
-// Tope duro de llamadas por día y dispositivo. El que paga es el cliente,
-// así que nada puede engancharse consumiendo su cuota sin que se vea.
-const IDR_TOPE_DIA = 120;
+// Tope duro de llamadas por día y dispositivo. El consumo lo paga el dueño
+// de la clave, así que nada puede engancharse gastando su cuota sin que se
+// vea. No es el límite de verdad -ese lo pone su proveedor-, es un freno
+// para que un fallo nuestro no le salga caro.
+const IDR_TOPE_DIA = 500;
 
 const IDR_PROVEEDORES = {
   google: {
