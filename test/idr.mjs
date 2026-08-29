@@ -821,6 +821,60 @@ await caso('El cuaderno de I+D viaja de verdad a la nube', async ()=>{
   return 'adn, carpetas y creaciones';
 });
 
+/* ─── Lo escrito no se pierde ─── */
+// Era el fallo que hacía parecer muerto el botón de continuar: al fallar
+// "Pedir ideas" la pantalla se repintaba y se llevaba por delante lo que el
+// cocinero había escrito, así que decía "escribe algo primero".
+await caso('Lo escrito sobrevive a que falle el asistente', async ()=>{
+  await fingir(null);   // el asistente no contesta
+  const r = await page.evaluate(async ()=>{
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    currentArea = () => 'cocina';
+    document.body.classList.add('owner-session','edit-unlocked'); editUnlocked = true;
+    navigate('idr'); renderIdr();
+    idrEmpezar('plato');
+    // Escribe, y LUEGO pide ideas (que falla)
+    document.getElementById('idr-libre').value = 'Bacalao a la brasa';
+    idrGuardarLibre('Bacalao a la brasa');
+    await idrPedirPaso();
+    const enPantalla = (document.getElementById('idr-libre')||{}).value;
+    idrElegirLibre();
+    const c = idrCreacion(idrCreacionActiva);
+    return {enPantalla, paso: c.pasoActual, elegido: (c.pasos[0]||{}).elegido};
+  });
+  assert.equal(r.enPantalla, 'Bacalao a la brasa', 'lo escrito debe seguir en el cuadro tras el fallo');
+  assert.equal(r.elegido, 'Bacalao a la brasa', 'y continuar debe funcionar');
+  assert.equal(r.paso, 1);
+  return 'se conserva y continúa';
+});
+
+await caso('Enter continúa; el borrador se borra al avanzar', async ()=>{
+  const r = await page.evaluate(()=>{
+    idrEmpezar('menu');
+    idrGuardarLibre('Menú de otoño');
+    const c = idrCreacion(idrCreacionActiva);
+    const antesDeAvanzar = c.pasos[0].libre;
+    idrElegirLibre();
+    return {antesDeAvanzar, libreTrasAvanzar: c.pasos[0].libre, elegido: c.pasos[0].elegido, paso: c.pasoActual};
+  });
+  assert.equal(r.antesDeAvanzar, 'Menú de otoño');
+  assert.equal(r.elegido, 'Menú de otoño');
+  assert.equal(r.libreTrasAvanzar, undefined, 'el borrador ya no hace falta una vez decidido');
+  return 'avanza y limpia el borrador';
+});
+
+await caso('La prueba de conexión dice exactamente qué pasa', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    // Un fallo con detalle técnico: debe quedar guardado para poder mirarlo
+    idrMensajeError({ok:false, motivo:'clave-mala', detalle:'HTTP 400 API_KEY_INVALID'});
+    return {motivo: idrUltimoFallo.motivo, detalle: idrUltimoFallo.detalle, hayFn: typeof idrProbarConexion};
+  });
+  assert.equal(r.motivo, 'clave-mala');
+  assert.ok(r.detalle.includes('API_KEY_INVALID'), 'el detalle técnico debe conservarse');
+  assert.equal(r.hayFn, 'function', 'debe existir el botón de probar la conexión');
+  return 'guarda motivo y detalle';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

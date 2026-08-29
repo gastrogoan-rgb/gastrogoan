@@ -144,8 +144,38 @@ const IDR_MOTIVO_KEYS = {
   'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider',
   'vacia':'idr.err.empty',
 };
+// El último fallo real, con su detalle técnico. En la cara del hostelero va
+// el mensaje en cristiano; el detalle se guarda para que se pueda ver desde
+// los ajustes del asistente y contárselo a quien pueda arreglarlo. Sin
+// esto, un "no ha podido responder" no se puede diagnosticar de ninguna
+// manera desde el otro lado del teléfono.
+let idrUltimoFallo = null;
 function idrMensajeError(r){
+  if(r && !r.ok) idrUltimoFallo = {motivo: r.motivo, detalle: r.detalle || '', cuando: new Date().toISOString()};
   return t(IDR_MOTIVO_KEYS[r && r.motivo] || 'idr.err.provider');
+}
+
+// Comprueba la clave de verdad, con la llamada más pequeña posible, y dice
+// exactamente qué ha pasado. Es lo primero que hay que hacer al configurar.
+async function idrProbarConexion(){
+  const btn = document.getElementById('idr-probar');
+  if(btn){ btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader"></i> ${t('idr.testing')}`; }
+  const p = document.getElementById('idr-prov').value;
+  const k = document.getElementById('idr-clave').value;
+  const m = document.getElementById('idr-modelo').value;
+  if(!(k||'').trim()){ showToast(t('idr.keyRequired')); idrConfigModal(); return; }
+  // Se guarda antes de probar: si funciona, ya queda puesta.
+  idrGuardarConfig(p, k, m);
+  const r = await llmChat('Responde solo con la palabra OK.', [{role:'user', content:'Di OK'}], {maxTokens: 20});
+  const res = document.getElementById('idr-test-res');
+  if(r.ok){
+    if(res) res.innerHTML = `<span style="color:#1F8A4C"><i class="ti ti-check"></i> ${escapeHtml(t('idr.testOk'))}</span>`;
+  } else {
+    const msg = idrMensajeError(r);
+    if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(msg)}</span>`
+      + (r.detalle ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word;max-height:120px;overflow:auto">${escapeHtml(String(r.detalle).slice(0,400))}</div>` : '');
+  }
+  if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-plug-connected"></i> ${t('idr.test')}`; }
 }
 
 /* ── Respuesta estructurada ──
@@ -635,10 +665,13 @@ function renderIdrCreacion(box){
 
         <div class="field" style="margin-top:12px">
           <label>${t('idr.orWriteYours')}</label>
-          <textarea id="idr-libre" placeholder="${escapeHtml(t('idr.orWriteYoursPh'))}"></textarea>
+          <textarea id="idr-libre" rows="2" placeholder="${escapeHtml(t('idr.orWriteYoursPh'))}"
+            oninput="idrGuardarLibre(this.value)"
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();idrElegirLibre();}">${escapeHtml(pActual.libre||'')}</textarea>
+          <p style="font-size:12px;color:var(--muted);margin:4px 0 0">${t('idr.enterHint')}</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="idrElegirLibre()"><i class="ti ti-check"></i> ${t('idr.useThis')}</button>
+          <button class="btn btn-primary" onclick="idrElegirLibre()"><i class="ti ti-arrow-right"></i> ${t('idr.continueStep')}</button>
           ${pActual.texto && iaOk ? `<button class="btn" onclick="idrPedirPaso(true)"><i class="ti ti-refresh"></i> ${t('idr.otherIdeas')}</button>` : ''}
         </div>
       </div>
@@ -697,9 +730,22 @@ function idrElegir(oi){
   if(!op) return;
   idrAvanzar(op.titulo);
 }
+// Lo que el cocinero escribe se guarda EN EL ESTADO, no solo en el cuadro.
+// Antes, si pedía ideas después de escribir (o si la petición fallaba), la
+// pantalla se volvía a pintar y se llevaba por delante lo escrito: el botón
+// de continuar decía "escribe algo primero" y parecía roto.
+function idrGuardarLibre(v){
+  const c = idrCreacion(idrCreacionActiva);
+  if(!c) return;
+  if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
+  c.pasos[c.pasoActual].libre = v;
+}
 function idrElegirLibre(){
+  const c = idrCreacion(idrCreacionActiva);
   const el = document.getElementById('idr-libre');
-  const v = el ? (el.value||'').trim() : '';
+  const enPantalla = el ? (el.value||'').trim() : '';
+  const guardado = (c && c.pasos[c.pasoActual] && c.pasos[c.pasoActual].libre || '').trim();
+  const v = enPantalla || guardado;
   if(!v){ showToast(t('idr.writeSomething')); return; }
   idrAvanzar(v);
 }
@@ -708,6 +754,7 @@ function idrAvanzar(elegido){
   if(!c) return;
   if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
   c.pasos[c.pasoActual].elegido = elegido;
+  delete c.pasos[c.pasoActual].libre;
   // El primer paso da nombre a la creación mientras no haya uno mejor.
   if(!c.titulo) c.titulo = elegido.slice(0, 60);
   const pasos = IDR_PASOS[c.tipo] || [];
@@ -915,7 +962,12 @@ function idrConfigModal(){
     <div class="card" style="border-left:4px solid var(--brand-orange);margin-top:10px">
       <p style="font-size:12.5px;margin:0">${t('idr.keyWarning')}</p>
     </div>
+    <div style="margin-top:12px">
+      <button class="btn" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
+      <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
+    </div>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.callsToday').replace('${n}', idrGastoHoy()).replace('${tope}', IDR_TOPE_DIA)}</p>
+    ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
     <div class="modal-footer">
       ${idrHayIA() ? `<button class="btn btn-danger" onclick="idrBorrarConfig();closeModal();renderIdr();showToast(t('idr.keyRemoved'))">${t('common.delete')}</button>` : ''}
       <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
