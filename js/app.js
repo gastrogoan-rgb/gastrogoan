@@ -62,10 +62,40 @@ function recipeAllergens(r, visited){
 function getAllDishAllergens(){
   // Solo interesan aquí los platos que SÍ tienen algún alérgeno: es un aviso
   // de alérgenos, no un listado general de la carta (eso ya está en Escandallo).
-  return DB.recipes.filter(r => (r.area||'cocina') === currentArea() && r.name)
-    .map(r => ({name: r.name, allergens: [...recipeAllergens(r)]}))
-    .filter(d => d.allergens.length)
-    .sort((a,b) => a.name.localeCompare(b.name));
+  //
+  // ⚠️ Antes esto leía SOLO los escandallos, y los alérgenos del escandallo
+  // se deducen de los ingredientes. Pero el único sitio donde se marcan A
+  // MANO es la ficha técnica (toggleFichaAllergen): el sésamo del pan, el
+  // huevo de un rebozado comprado hecho, la traza que avisa el proveedor.
+  // Todo eso lo marcaba el cocinero en la ficha y NO llegaba aquí — que es
+  // justo el papel que se enseña en una inspección. Y una ficha sin
+  // escandallo detrás no aparecía en absoluto.
+  //
+  // Ahora manda la ficha (lo deducido MÁS lo marcado a mano) y los
+  // escandallos sin ficha se añaden detrás, para que no falte nada.
+  const area = currentArea();
+  const porNombre = new Map();
+  const anotar = (nombre, alergenos) => {
+    const n = (nombre||'').trim();
+    if(!n || !alergenos.length) return;
+    const clave = n.toLowerCase();
+    const previo = porNombre.get(clave);
+    if(previo) previo.allergens = Array.from(new Set([...previo.allergens, ...alergenos]));
+    else porNombre.set(clave, {name: n, allergens: [...alergenos]});
+  };
+  (DB.fichas||[]).forEach(f => {
+    const r = (typeof getFichaLiveRecipe === 'function') ? getFichaLiveRecipe(f) : null;
+    const fArea = f.area || (r && r.area) || 'cocina';
+    if(fArea !== area) return;
+    // El nombre que vale es el del plato vinculado si existe (por si se
+    // renombró en el escandallo después de crear la ficha).
+    anotar(r ? r.name : f.name, (typeof getFichaAllergens === 'function') ? getFichaAllergens(f) : (f.allergens||[]));
+  });
+  (DB.recipes||[]).forEach(r => {
+    if((r.area||'cocina') !== area) return;
+    anotar(r.name, [...recipeAllergens(r)]);
+  });
+  return [...porNombre.values()].sort((a,b) => a.name.localeCompare(b.name));
 }
 function renderLimpiezaAlergenos(){
   const box = document.getElementById('limpieza-tab-content');

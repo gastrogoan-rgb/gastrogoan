@@ -42,8 +42,9 @@ node test/formularios.mjs          > "$SALIDA/formularios.txt" 2>&1 & P17=$!
 node test/errores.mjs             > "$SALIDA/errores.txt"     2>&1 & P18=$!
 node test/bebidas.mjs             > "$SALIDA/bebidas.txt"     2>&1 & P19=$!
 node test/idr.mjs                 > "$SALIDA/idr.txt"         2>&1 & P20=$!
+node test/alergenos.mjs           > "$SALIDA/alergenos.txt"   2>&1 & P21=$!
 
-echo "→ 20 pruebas corriendo a la vez…"
+echo "→ 21 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -70,5 +71,6 @@ espera $P17 "formularios: rellenar y guardar de verdad" "$SALIDA/formularios.txt
 espera $P18 "caminos de error (lo que debe rechazar)"    "$SALIDA/errores.txt"     "casos pasaron"
 espera $P19 "fichas de bebida (sala)"                  "$SALIDA/bebidas.txt"     "casos pasaron"
 espera $P20 "I+D (platos, menús y cartas)"             "$SALIDA/idr.txt"         "casos pasaron"
+espera $P21 "alérgenos: de la ficha al registro APPCC"   "$SALIDA/alergenos.txt"   "casos pasaron"
 
 exit $FALLOS
