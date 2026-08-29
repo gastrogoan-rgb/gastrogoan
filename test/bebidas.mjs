@@ -446,6 +446,80 @@ await caso('Una sección de bebidas acierta el icono sola, por su nombre', async
   return `12 secciones → ${distintos} iconos distintos (Tintos ${r['Tintos']}, Ginebras ${r['Ginebras']}, Cafés ${r['Cafés']})`;
 });
 
+/* ─── Los textos de sala hablan de bebida ─── */
+await caso('Los menús de sala hablan de bebidas, no de platos', async ()=>{
+  const r = await page.evaluate(()=>{
+    if(!document.getElementById('menu-grupos')) document.body.insertAdjacentHTML('beforeend','<div id="menu-grupos"></div>');
+    menuEdit = {id:1, nombre:'M', grupos:[]};
+    currentArea = () => 'sala';   renderMenuGrupos();
+    const sala = document.getElementById('menu-grupos').innerHTML;
+    currentArea = () => 'cocina'; renderMenuGrupos();
+    const cocina = document.getElementById('menu-grupos').innerHTML;
+    return {
+      salaBuscaBebida: /bebida/i.test(sala),
+      salaGruposDeBarra: /Aperitivo|Copa/i.test(sala),
+      salaSinPlato: !/plato/i.test(sala),
+      cocinaIntacta: /plato/i.test(cocina) && /Primero|Segundo/i.test(cocina),
+    };
+  });
+  assert.ok(r.salaBuscaBebida, 'el buscador de sala debe buscar bebidas');
+  assert.ok(r.salaGruposDeBarra, 'y proponer grupos de barra, no Primero/Segundo');
+  assert.ok(r.salaSinPlato, 'sin hablar de platos');
+  assert.ok(r.cocinaIntacta, 'cocina sigue como estaba');
+  return 'sala con bebidas, cocina con platos';
+});
+
+/* ─── El dueño no vuelve a teclear su PIN ─── */
+await caso('Al dueño se le pide confirmación, no el PIN', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    document.body.classList.add('owner-session');
+    let hecha = false;
+    const orig = window.confirmModal;
+    window.confirmModal = async () => true;
+    await requestBusinessPinAction('Anular','¿Seguro?', ()=>{ hecha = true; });
+    const pidioPin = !!document.getElementById('biz-pin-action-input');
+    window.confirmModal = orig;
+    // Y un empleado SÍ tiene que teclearlo
+    document.body.classList.remove('owner-session');
+    await requestBusinessPinAction('Anular','¿Seguro?', ()=>{});
+    const empleadoPin = !!document.getElementById('biz-pin-action-input');
+    closeModal();
+    // La guarda de fondo: llamar a la función desde la consola sin ser dueño
+    // y con un PIN inventado sigue sin funcionar.
+    const sinNada = accionSensibleAutorizada('0000');
+    document.body.classList.add('owner-session');
+    const comoDuenyo = accionSensibleAutorizada(null);
+    return {pidioPin, hecha, empleadoPin, sinNada, comoDuenyo};
+  });
+  assert.ok(!r.pidioPin, 'al dueño no se le puede volver a pedir el PIN');
+  assert.ok(r.hecha, 'y la acción debe ejecutarse al confirmar');
+  assert.ok(r.empleadoPin, 'a un empleado sí se le pide');
+  assert.equal(r.sinNada, false, 'sin sesión de dueño y con PIN falso, no pasa');
+  assert.equal(r.comoDuenyo, true);
+  return 'dueño confirma, empleado teclea, y la puerta de atrás sigue cerrada';
+});
+
+/* ─── El índice del manual ─── */
+await caso('El manual tiene índice arriba y marca dónde estás', async ()=>{
+  const r = await page.evaluate(()=>{
+    navigate('manual'); renderManual();
+    const idx = document.querySelector('#view-manual .mn-indice');
+    if(!idx) return {hay:false};
+    const chips = [...idx.querySelectorAll('.mn-indice-chip')];
+    // Pulsar uno debe cambiar de capítulo y mover la marca
+    chips[2] && chips[2].click();
+    const idx2 = document.querySelector('#view-manual .mn-indice');
+    const activo = idx2 ? idx2.querySelector('.mn-indice-chip.activo') : null;
+    return {hay:true, n: chips.length, capitulo: manualChapter,
+            marcado: activo ? [...idx2.querySelectorAll('.mn-indice-chip')].indexOf(activo) : -1};
+  });
+  assert.ok(r.hay, 'faltaba el índice');
+  assert.ok(r.n >= 5, `pocos capítulos: ${r.n}`);
+  assert.equal(r.capitulo, 2, 'pulsar un acceso debe llevar a ese capítulo');
+  assert.equal(r.marcado, 2, 'y la marca debe seguirlo');
+  return `${r.n} capítulos, y la marca sigue al que abres`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   assert.deepEqual(errs, [], errs.join(' | '));
   return 'consola limpia';

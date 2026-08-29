@@ -8622,6 +8622,27 @@ function renderManual(){
     <div class="manual-chapter${i===manualChapter?' active':''}" onclick="goManualChapter(${i})">${manualChapterTitle(ch)}</div>
   `).join('') : `<div class="empty" style="padding:14px"><i class="ti ti-search-off"></i>${t('common.noResults')}</div>`;
   detail.innerHTML = matches.length ? manualChapterText(MANUAL_CHAPTERS[manualChapter]) : '';
+  renderManualIndice(matches);
+}
+// Índice arriba, igual que en Mi Negocio: la lista de capítulos vive en una
+// columna lateral que en móvil queda por encima del texto y hay que
+// desplazarse para volver a ella. Una fila de accesos directos arriba
+// resuelve lo mismo sin tocar la columna.
+function renderManualIndice(matches){
+  const cont = document.getElementById('view-manual');
+  if(!cont) return;
+  cont.querySelector('.mn-indice')?.remove();
+  if(!matches || matches.length < 5) return;   // con pocos capítulos sobra
+  const wrap = cont.querySelector('.manual-wrap');
+  if(!wrap) return;
+  const nav = document.createElement('div');
+  nav.className = 'mn-indice';
+  nav.innerHTML = `<span class="mn-indice-lbl">${escapeHtml(t('mn.indexLabel'))}</span>` +
+    matches.map(({ch,i}) => {
+      const titulo = manualChapterTitle(ch).replace(/<[^>]+>/g, '').trim();
+      return `<button type="button" class="mn-indice-chip${i===manualChapter?' activo':''}" onclick="goManualChapter(${i})">${escapeHtml(titulo)}</button>`;
+    }).join('');
+  wrap.parentNode.insertBefore(nav, wrap);
 }
 function goManualChapter(i){
   manualChapter = i;

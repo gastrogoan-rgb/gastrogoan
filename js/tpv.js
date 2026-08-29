@@ -1320,7 +1320,25 @@ function cancelAcceptedOnlineOrder(orderId){
 // Pide el PIN del negocio antes de ejecutar una acción sensible (rechazar un
 // pedido online, borrar una mesa...), en vez de un simple confirm().
 let businessPinPendingAction = null;
-function requestBusinessPinAction(title, desc, actionFn){
+/* El PIN de una acción sensible es para que un empleado no pueda anular una
+   venta o borrar un empleado por su cuenta. Al PROPIETARIO, que ya ha
+   entrado con su usuario y su PIN, volvérselo a pedir cada vez solo estorba:
+   la sesión de dueño ES la autorización. Se le pide confirmación, que para
+   lo que sirve de verdad -no darle a un botón sin querer- vale igual.
+
+   Las really* siguen protegidas: comprueban esto mismo, así que llamarlas
+   desde la consola sin ser dueño ni saber el PIN sigue sin funcionar. */
+function accionSensibleAutorizada(pin){
+  if(typeof isOwnerSession === 'function' && isOwnerSession()) return true;
+  return pinDeNegocioCoincide(pin);
+}
+
+async function requestBusinessPinAction(title, desc, actionFn){
+  if(typeof isOwnerSession === 'function' && isOwnerSession()){
+    if(!(await confirmModal(desc, {title, danger:true}))) return;
+    actionFn(null);
+    return;
+  }
   businessPinPendingAction = actionFn;
   openModal(`
     <div class="modal-header">
@@ -3334,7 +3352,7 @@ function reallyCancelSale(saleId, pin){
   // función: sin esto, cualquiera con la consola del navegador podía anular
   // cualquier venta llamando reallyCancelSale(id) directamente, sin conocer
   // el PIN del negocio — el modal era un candado de interfaz, no de datos.
-  if(!pinDeNegocioCoincide(pin)) return;
+  if(!accionSensibleAutorizada(pin)) return;
   const sale = (DB.sales||[]).find(s => s.id === saleId);
   if(!sale || sale.status === 'anulada') return;
   restockForVoidedItems(sale.items);

@@ -1317,7 +1317,7 @@ function reallyDeleteIngredient(id, pin){
   // Comprobación real del PIN dentro de la función — igual que en
   // reallyCancelSale/reallyDeleteEmployee, para que no se pueda saltar
   // llamándola directamente desde la consola.
-  if(!pinDeNegocioCoincide(pin)) return;
+  if(!accionSensibleAutorizada(pin)) return;
   const ing0 = DB.ingredients.find(i => i.id === id);
   if(ing0){ moveToTrash('ingredient', ing0); logAudit('delete', t('audit.deletedIngredient').replace('${name}', ing0.name), 'critical'); }
   DB.ingredients = DB.ingredients.filter(i => i.id !== id);
@@ -1803,7 +1803,7 @@ function deleteElaboracion(id){
   requestBusinessPinAction(t('title.deleteElaboration'), t('msg.confirmDeleteElaboration'), (pin) => reallyDeleteElaboracion(id, pin));
 }
 function reallyDeleteElaboracion(id, pin){
-  if(!pinDeNegocioCoincide(pin)) return;
+  if(!accionSensibleAutorizada(pin)) return;
   const e = getElaboracion(id);
   if(!e) return;
   moveToTrash('elaboracion', e);

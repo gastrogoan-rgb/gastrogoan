@@ -3062,7 +3062,7 @@ function reallyDeleteEmployee(id, pin){
   // Comprobación real del PIN dentro de la función (no solo en el modal
   // que la llama), para que no se pueda borrar un empleado llamando esta
   // función directamente desde la consola sin conocer el PIN del negocio.
-  if(!pinDeNegocioCoincide(pin)) return;
+  if(!accionSensibleAutorizada(pin)) return;
   const e0 = DB.employees.find(e => e.id === id);
   if(e0){ moveToTrash('employee', e0); logAudit('delete', t('audit.deletedEmployee').replace('${name}', e0.name), 'critical'); }
   DB.employees = DB.employees.filter(e => e.id!==id);

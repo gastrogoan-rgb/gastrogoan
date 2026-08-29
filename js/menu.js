@@ -461,7 +461,7 @@ function renderCartaSecciones(){
   const q = cartaSearchQuery.trim().toLowerCase();
   const searchBox = `
     <div class="field" style="margin-bottom:10px">
-      <input type="text" id="carta-search-input" placeholder="${t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)" style="max-width:320px">
+      <input type="text" id="carta-search-input" placeholder="${currentArea()==='sala' ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(cartaSearchQuery)}" oninput="setCartaSearchQuery(this.value)" style="max-width:320px">
     </div>`;
   if(!cartaEdit.secciones.length){
     box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.sections')}</div>`;
@@ -1136,12 +1136,15 @@ function setMenuSearchQuery(val){
 function renderMenuGrupos(){
   const box = document.getElementById('menu-grupos');
   const q = menuSearchQuery.trim().toLowerCase();
+  // En sala esto son menús de BEBIDA: buscar "plato" y proponer grupos de
+  // "Primero, Segundo, Postre" no tiene sentido en una carta de vinos.
+  const isBebidas = currentArea()==='sala';
   const searchBox = `
     <div class="field" style="margin-bottom:10px">
-      <input type="text" id="menu-search-input" placeholder="${t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)" style="max-width:320px">
+      <input type="text" id="menu-search-input" placeholder="${isBebidas ? t('ph.searchDrink') : t('ph.searchDish')}" value="${escapeHtml(menuSearchQuery)}" oninput="setMenuSearchQuery(this.value)" style="max-width:320px">
     </div>`;
   if(!menuEdit.grupos.length){
-    box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${t('empty.groups')}</div>`;
+    box.innerHTML = searchBox + `<div class="empty"><i class="ti ti-list"></i>${isBebidas ? t('empty.groups.sala') : t('empty.groups')}</div>`;
     return;
   }
   const grupos = menuEdit.grupos;
@@ -1294,14 +1297,14 @@ function addMenuOpcion(grupoId){
       </select>
     </div>
     <div class="field" id="new-menu-opcion-recipe-field" style="display:${areaRecipes.length?'':'none'}">
-      <label>${t('label.dishEscandallo')}</label>
+      <label>${currentArea()==='sala' ? t('label.drinkEscandallo') : t('label.dishEscandallo')}</label>
       <select id="new-menu-opcion-recipe">
         ${areaRecipes.map(r=>`<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
       </select>
     </div>
     <div class="field" id="new-menu-opcion-manual-field" style="display:${areaRecipes.length?'none':''}">
-      <label>${t('label.dishName')}</label>
-      <input type="text" id="new-menu-opcion-nombre" placeholder="${t('ph.dishNameExample')}">
+      <label>${currentArea()==='sala' ? t('label.drinkName') : t('label.dishName')}</label>
+      <input type="text" id="new-menu-opcion-nombre" placeholder="${currentArea()==='sala' ? t('ph.drinkNameExample') : t('ph.dishNameExample')}">
     </div>
     <div class="field">
       <label>${t('label.supplementEur')} <span style="color:var(--muted);font-weight:400">${t('label.supplementHint')}</span></label>

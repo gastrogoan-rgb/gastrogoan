@@ -2003,7 +2003,7 @@ function reallyDeleteOrder(id, pin){
     // exige el PIN — igual que en requestBusinessPinAction más arriba. Se
     // vuelve a comprobar aquí para que no baste con llamar esta función
     // directamente desde la consola sin conocer el PIN del negocio.
-    if(!pinDeNegocioCoincide(pin)) return;
+    if(!accionSensibleAutorizada(pin)) return;
     (o.items||[]).forEach(line => {
       const ing = getIngredient(line.ingredientId);
       if(!ing) return;
@@ -2048,7 +2048,7 @@ function revertPedidoRecepcion(id){
   requestBusinessPinAction(t('title.revertReception'), t('msg.confirmRevertReception'), (pin) => reallyRevertPedidoRecepcion(id, pin));
 }
 function reallyRevertPedidoRecepcion(id, pin){
-  if(!pinDeNegocioCoincide(pin)) return;
+  if(!accionSensibleAutorizada(pin)) return;
   const o = getPurchaseOrder(id);
   if(!o) return;
   (o.items||[]).forEach(line => {
