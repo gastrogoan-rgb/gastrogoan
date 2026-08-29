@@ -564,6 +564,42 @@ const CARTA_SECTION_ICON_CHOICES = [
   // Genéricos
   '🍽️','🍴','🥄','🧂','📖',
 ];
+/* Catálogo de una CARTA DE BEBIDAS. Lo ve el cliente final en la web de
+   pedidos, igual que el de comida, así que fuera infantiles: solo producto
+   y servicio. Una carta de bebidas se organiza por familias (tintos,
+   blancos, ginebras, cafés...) y con la lista de comida no había forma de
+   distinguir una sección de otra: todas acababan con el mismo 🍷. */
+const CARTA_SECTION_ICON_CHOICES_BEBIDA = [
+  // Vino
+  '🍷','🍇','🫗','🏺','🛢️',
+  // Espumosos
+  '🍾','🥂',
+  // Cerveza
+  '🍺','🍻','🌾',
+  // Vermut y aperitivos
+  '🧉','🫒',
+  // Destilados y licores
+  '🥃','⚗️','🍶','🫙',
+  // Coctelería
+  '🍸','🍹','🧊','🍋',
+  // Café
+  '☕','🫘',
+  // Té e infusiones
+  '🍵','🫖','🌿','🍯',
+  // Sin alcohol
+  '🥤','🧃','🧋','🥛','🍼',
+  // Zumos y fruta
+  '🍊','🍓','🍍','🥭','🥥','🍑','🫐','🍏',
+  // Servicio
+  '🍽️','🥄','❄️','📖',
+];
+// La carta de bebidas de sala tiene su propio catálogo; la de comida, el suyo.
+function cartaSectionIconChoices(){
+  const esBebida = (typeof cartaEdit !== 'undefined' && cartaEdit && typeof isBebidaCarta === 'function')
+    ? isBebidaCarta(cartaEdit)
+    : (typeof currentArea === 'function' && currentArea() === 'sala');
+  return esBebida ? CARTA_SECTION_ICON_CHOICES_BEBIDA : CARTA_SECTION_ICON_CHOICES;
+}
 // Respaldo mientras el hostelero no elija: se adivina por el nombre de la
 // sección. Gemelo del de reservagastrogoan.html — si se toca uno hay que
 // tocar el otro, para que lo que ve el dueño al editar sea exactamente lo
@@ -581,6 +617,21 @@ const CARTA_SECTION_ICON_WORDS = [
   ['pan','bread','coca','tosta','torrada','pa'], '🥖',
   ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
   ['fruta','fruita','fruit'], '🍇',
+  ['tinto','negre','red wine','crianza','reserva','rioja','ribera'], '🍷',
+  ['blanco','blanc','white wine','albarino','verdejo','godello'], '🥂',
+  ['rosado','rosat','rose'], '🍷',
+  ['cava','champ','espumos','escumos','sparkling','prosecco','burbuja'], '🍾',
+  ['ginebra','gin','tonic'], '🍸',
+  ['ron','rum','whisky','whiskey','bourbon','vodka','tequila','mezcal','brandy','conyac','cognac','aguardiente','orujo','destilado','destil'], '🥃',
+  ['vermut','vermouth','aperitiu','aperitivo','spritz'], '🧉',
+  ['sidra','cider'], '🍺',
+  ['te ','tes','the','tea','infusio','infusion','tisana','rooibos','manzanilla','poleo'], '🍵',
+  ['zumo','suc','juice','smoothie','batido','batut'], '🧃',
+  ['agua','aigua','water','mineral'], '🥤',
+  ['sin alcohol','sense alcohol','alcohol free','mocktail','0.0','0,0'], '🍹',
+  ['hielo','gel','ice','granizado'], '🧊',
+  ['licor','crema','chupito','xopet','shot'], '🫙',
+  ['carta de vinos','bodega','celler','vinoteca'], '🍇',
   ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
   ['cerveza','cervesa','beer','birra','caña'], '🍺',
   ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
@@ -613,7 +664,7 @@ function openCartaSectionIconModal(secId){
     </div>
     <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 10px">${t('carta.sectionIconHint')}</p>
     <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:12px">
-      ${CARTA_SECTION_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCartaSectionIcon(${sec.id},'${e}')">${e}</button>`).join('')}
+      ${cartaSectionIconChoices().map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCartaSectionIcon(${sec.id},'${e}')">${e}</button>`).join('')}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="setCartaSectionIcon(${sec.id},'')">${t('btn.removeIcon')}</button>

@@ -323,6 +323,68 @@ await caso('La ficha de vino cabe en un móvil, sin desbordes ni botones diminut
   return '320, 390 y 768 px limpios';
 });
 
+/* ─── Iconos: sala vive en el mundo de la bebida ─── */
+await caso('En sala los iconos de carpeta son de bebida, no de carne', async ()=>{
+  const r = await page.evaluate(()=>{
+    currentArea = () => 'sala';
+    const sala = categoryIconChoices();
+    currentArea = () => 'cocina';
+    const cocina = categoryIconChoices();
+    // El mundo de la bebida completo: la uva, el tonel, la cebada y el
+    // alambique son tan de barra como la copa.
+    const bebida = ['🍷','🍸','🍺','☕','🍵','🥃','🍾','🥂','🧉','🍹','🧊','🫖','🫘','⚗️',
+                    '🍇','🏺','🛢️','🫗','🍻','🌾','🥤','🧃','🧋','🥛','🫙','🍶','🍼'];
+    const cuenta = l => bebida.filter(e => l.includes(e)).length;
+    // Cuántos de los 12 primeros (lo que se ve sin bajar) son de bebida
+    const arriba = sala.slice(0,12).filter(e => bebida.includes(e)).length;
+    return {distintas: sala !== cocina, nSala: sala.length, bebidaSala: cuenta(sala), arriba,
+            tieneCarne: sala.slice(0,20).includes('🥩')};
+  });
+  assert.ok(r.distintas, 'sala no puede ofrecer la misma lista que cocina');
+  assert.ok(r.bebidaSala >= 12, `pocos iconos de bebida: ${r.bebidaSala}`);
+  assert.ok(r.arriba >= 10, `los primeros deberían ser de bebida, hay ${r.arriba} de 12`);
+  assert.ok(!r.tieneCarne, 'la carne no debería estar entre los primeros de una barra');
+  return `${r.nSala} iconos, ${r.arriba}/12 de bebida arriba del todo`;
+});
+
+await caso('La carta de bebidas tiene su propio catálogo de iconos', async ()=>{
+  const r = await page.evaluate(()=>{
+    // Una carta marcada como de bebidas
+    cartaEdit = {id:1, nombre:'CARTA DE BEBIDAS', tipo:'BEBIDAS', secciones:[]};
+    const bebidas = cartaSectionIconChoices();
+    cartaEdit = {id:2, nombre:'CARTA', tipo:'GENERAL', secciones:[]};
+    const comida = cartaSectionIconChoices();
+    const setBebida = ['🍷','🍸','🍺','☕','🍵','🥃','🍾','🥂','🧉','🍹','🫖','🫘','⚗️','🧃'];
+    return {
+      distintas: bebidas !== comida,
+      nBebida: bebidas.length,
+      deBebida: setBebida.filter(e=>bebidas.includes(e)).length,
+      sinCarne: !bebidas.includes('🥩') && !bebidas.includes('🍗'),
+      comidaTieneCarne: comida.includes('🥩'),
+    };
+  });
+  assert.ok(r.distintas, 'la carta de bebidas necesita su propia lista');
+  assert.ok(r.deBebida >= 12, `pocos iconos de bebida: ${r.deBebida}`);
+  assert.ok(r.sinCarne, 'una carta de bebidas no necesita carne');
+  assert.ok(r.comidaTieneCarne, 'y la de comida debe seguir teniéndola');
+  return `${r.nBebida} iconos, ${r.deBebida} de bebida y sin carne`;
+});
+
+await caso('Una sección de bebidas acierta el icono sola, por su nombre', async ()=>{
+  const r = await page.evaluate(()=>{
+    const prueba = ['Tintos','Blancos','Cavas y espumosos','Ginebras','Vermut','Cafés','Infusiones','Zumos','Sin alcohol','Cervezas','Destilados','Licores'];
+    const out = {};
+    prueba.forEach(n => { out[n] = cartaSectionFallbackIcon(n); });
+    return out;
+  });
+  const genericos = Object.entries(r).filter(([n,i]) => !i || i === '📁' || i === '🍽️');
+  assert.deepEqual(genericos, [], 'sin icono propio: ' + JSON.stringify(genericos));
+  // Y que no todas caigan en el mismo
+  const distintos = new Set(Object.values(r)).size;
+  assert.ok(distintos >= 6, `demasiado repetido: solo ${distintos} iconos distintos para 12 secciones`);
+  return `12 secciones → ${distintos} iconos distintos (Tintos ${r['Tintos']}, Ginebras ${r['Ginebras']}, Cafés ${r['Cafés']})`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   assert.deepEqual(errs, [], errs.join(' | '));
   return 'consola limpia';

@@ -444,6 +444,46 @@ const CATEGORY_ICON_CHOICES = [
   // Otros / utensilios
   '📦','🔪','🍽️','🥄','🍴','🧊','🥗',
 ];
+/* En SALA el mundo es otro: una carpeta de Escandallo, Fichas, Stock o Mega
+   Lista de barra es "Vinos tintos", "Ginebras", "Cafés" o "Guarniciones",
+   no "Carnes". Antes se ofrecía la misma lista que en cocina, con más de
+   cien iconos de comida y apenas catorce de bebida al final: había que
+   bajar hasta el fondo para encontrar algo que encajara.
+   Aquí va primero todo el mundo de la bebida y, detrás, la comida —que en
+   una barra también hace falta: tapas, encurtidos, tostas. */
+const CATEGORY_ICON_CHOICES_SALA = [
+  // Vino
+  '🍷','🍇','🏺','🛢️','🫗',
+  // Espumosos y cava
+  '🍾','🥂',
+  // Cerveza
+  '🍺','🍻','🌾',
+  // Destilados y licores
+  '🥃','⚗️','🫙','🍶',
+  // Coctelería
+  '🍸','🍹','🧉','🧊',
+  // Café
+  '☕','🫘',
+  // Té e infusiones
+  '🍵','🫖','🌿',
+  // Sin alcohol
+  '🥤','🧃','🧋','🥛','🧊','🍼',
+  // Guarniciones y cítricos de barra
+  '🍋','🍊','🍒','🥒','🫒','🍓','🍍','🥭','🥥','🍑','🫐','🌶️','🍏','🥕',
+  // Azúcares, siropes y condimentos
+  '🍯','🧂','🍬','🧁',
+  // Cristalería, hielo y servicio
+  '🍽️','🥄','🥢','🧻','❄️','🔥',
+  // Para picar en barra
+  '🧀','🥖','🍞','🥓','🥜','🌰','🍿','🥪','🍕','🥗','🍫',
+  // Otros
+  '📦','🔪','🧴','🧾',
+];
+// El catálogo que toca según dónde se esté: en sala manda la bebida.
+function categoryIconChoices(){
+  return (typeof currentArea === 'function' && currentArea() === 'sala')
+    ? CATEGORY_ICON_CHOICES_SALA : CATEGORY_ICON_CHOICES;
+}
 function getCategoryIcon(key, ns){
   return (DB.categoryIcons && DB.categoryIcons[ns] && DB.categoryIcons[ns][key]) || '📁';
 }
@@ -468,7 +508,7 @@ function openCategoryIconModal(key, label, reRenderFn, ns){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
-      ${CATEGORY_ICON_CHOICES.map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}','${ns}')">${e}</button>`).join('')}
+      ${categoryIconChoices().map(e => `<button class="btn btn-sm" style="font-size:22px;padding:8px" onclick="setCategoryIcon('${safeKey}','${e}','${safeReRender}','${ns}')">${e}</button>`).join('')}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="setCategoryIcon('${safeKey}','','${safeReRender}','${ns}')">${t('btn.removeIcon')}</button>
