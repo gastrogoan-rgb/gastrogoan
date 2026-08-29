@@ -45,8 +45,10 @@ node test/idr.mjs                 > "$SALIDA/idr.txt"         2>&1 & P20=$!
 node test/alergenos.mjs           > "$SALIDA/alergenos.txt"   2>&1 & P21=$!
 node test/i18n-paridad.mjs        > "$SALIDA/i18n.txt"        2>&1 & P22=$!
 node test/estatico.mjs            > "$SALIDA/estatico.txt"    2>&1 & P23=$!
+node test/modales-todas.mjs        > "$SALIDA/modtodas.txt"    2>&1 & P24=$!
+node test/dinero.mjs               > "$SALIDA/dinero.txt"      2>&1 & P25=$!
 
-echo "→ 23 pruebas corriendo a la vez…"
+echo "→ 25 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -76,5 +78,7 @@ espera $P20 "I+D (platos, menús y cartas)"             "$SALIDA/idr.txt"       
 espera $P21 "alérgenos: de la ficha al registro APPCC"   "$SALIDA/alergenos.txt"   "casos pasaron"
 espera $P22 "los tres idiomas, clave a clave"          "$SALIDA/i18n.txt"        "casos pasaron"
 espera $P23 "auditoría en frío del código"              "$SALIDA/estatico.txt"    "casos pasaron"
+espera $P24 "las 73 ventanas emergentes, una a una"     "$SALIDA/modtodas.txt"    "se comportan bien"
+espera $P25 "el dinero, función por función"           "$SALIDA/dinero.txt"      "casos pasaron"
 
 exit $FALLOS
