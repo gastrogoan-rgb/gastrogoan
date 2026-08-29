@@ -202,46 +202,77 @@ function idrExtraerJson(texto){
 /* ============================================================
    ADN GASTRONÓMICO
    ============================================================
-   Lo que evita que a una casa de comidas catalana le proponga un ramen en
+   Lo que evita que a un negocio de cocina catalana le proponga un ramen en
    vez de una escudella. Se rellena una vez, se edita cuando cambia el
    negocio, y entra en CADA generación. */
 
 const IDR_ADN_CAMPOS = [
   {k:'cocina', tipo:'text', l:{es:'Cocina y tradición',ca:'Cuina i tradició',en:'Cuisine and tradition'},
    ph:{es:'Ej. Catalana de mercado con toques de brasa',ca:'Ex. Catalana de mercat amb tocs de brasa',en:'e.g. Catalan market cooking with grill accents'},
-   ayuda:{es:'La línea maestra. Es lo que más pesa en todo lo que se proponga.',ca:'La línia mestra. És el que més pesa en tot el que es proposi.',en:'The guiding line. It weighs most on everything proposed.'}},
-  {k:'nivel', tipo:'sel', l:{es:'Nivel de la casa',ca:'Nivell de la casa',en:'Level'}, opts:[
-    {v:'Casa de comidas', l:{es:'Casa de comidas',ca:'Casa de menjars',en:'Home-style eatery'}},
-    {v:'Bistró', l:{es:'Bistró / cocina de mercado',ca:'Bistró / cuina de mercat',en:'Bistro / market cooking'}},
-    {v:'Gastronómico', l:{es:'Gastronómico',ca:'Gastronòmic',en:'Fine dining'}},
-    {v:'Tapas', l:{es:'Tapas y raciones',ca:'Tapes i racions',en:'Tapas and sharing plates'}},
-    {v:'Casual', l:{es:'Casual / informal',ca:'Casual / informal',en:'Casual'}},
-  ]},
+   ayuda:{es:'La línea maestra: es lo que más pesa en todo lo que se proponga. Cuanto más concreto, mejor — "catalana de mercado" dice mucho más que "mediterránea".',
+          ca:'La línia mestra: és el que més pesa en tot el que es proposi. Com més concret, millor — "catalana de mercat" diu molt més que "mediterrània".',
+          en:'The guiding line: it weighs most on everything proposed. The more specific the better — "Catalan market cooking" says far more than "Mediterranean".'}},
+  // Texto libre a propósito: un desplegable de cinco opciones no describe
+  // ningún negocio de verdad, y el asistente saca más de una frase escrita
+  // por el hostelero que de una etiqueta elegida de una lista.
+  {k:'nivel', tipo:'area', l:{es:'Nivel',ca:'Nivell',en:'Level'},
+   ph:{es:'Ej. Comida de diario, precio ajustado, sin pretensiones pero con producto bueno',
+       ca:'Ex. Menjar de diari, preu ajustat, sense pretensions però amb producte bo',
+       en:'e.g. Everyday food, keen prices, unpretentious but with good produce'},
+   ayuda:{es:'Cuéntalo con tus palabras: si es comida de diario o de celebración, si se viene a comer rápido o a estar, y a qué precio trabajas.',
+          ca:'Explica-ho amb les teves paraules: si és menjar de diari o de celebració, si s\'hi ve a menjar ràpid o a estar-s\'hi, i a quin preu treballes.',
+          en:'In your own words: everyday food or special occasion, quick lunch or lingering, and at what price you work.'}},
   {k:'insignia', tipo:'area', l:{es:'Producto insignia',ca:'Producte insígnia',en:'Signature product'},
-   ph:{es:'Lo que no puede faltar nunca en esta casa',ca:'El que no pot faltar mai en aquesta casa',en:'What must never be missing here'}},
+   ph:{es:'Ej. El arroz de los domingos y las croquetas de la abuela: si no están, la gente pregunta',
+       ca:'Ex. L\'arròs dels diumenges i les croquetes de l\'àvia: si no hi són, la gent pregunta',
+       en:'e.g. The Sunday rice and grandma\'s croquettes: if they are missing, people ask'},
+   ayuda:{es:'Los platos o el producto por los que te conocen. El asistente los respetará y construirá alrededor.',
+          ca:'Els plats o el producte pels quals et coneixen. L\'assistent els respectarà i construirà al voltant.',
+          en:'The dishes or produce you are known for. The assistant will respect them and build around them.'}},
   {k:'lineasRojas', tipo:'area', l:{es:'Líneas rojas',ca:'Línies vermelles',en:'Red lines'},
-   ph:{es:'Lo que en esta casa NO se hace nunca',ca:'El que en aquesta casa NO es fa mai',en:'What is never done here'},
-   ayuda:{es:'Tan importante como lo anterior: marca lo que no se debe proponer.',ca:'Tan important com l\'anterior: marca el que no s\'ha de proposar.',en:'As important as the above: it marks what must not be proposed.'}},
+   ph:{es:'Ej. Nada de fusión asiática, ni espumas, ni platos que no se entiendan leyendo el nombre',
+       ca:'Ex. Res de fusió asiàtica, ni escumes, ni plats que no s\'entenguin llegint el nom',
+       en:'e.g. No Asian fusion, no foams, no dishes you cannot understand from the name'},
+   ayuda:{es:'Tan importante como lo de arriba: es lo que el asistente NO te va a proponer nunca. Escribe aquí lo que te haría decir "eso no es mi restaurante".',
+          ca:'Tan important com el de dalt: és el que l\'assistent NO et proposarà mai. Escriu-hi el que et faria dir "això no és el meu restaurant".',
+          en:'As important as the above: it is what the assistant will never propose. Write what would make you say "that is not my restaurant".'}},
   {k:'publico', tipo:'text', l:{es:'Público',ca:'Públic',en:'Clientele'},
-   ph:{es:'Ej. Barrio y oficinas entre semana',ca:'Ex. Barri i oficines entre setmana',en:'e.g. Locals and offices on weekdays'}},
+   ph:{es:'Ej. Oficinas al mediodía y familias del barrio los fines de semana',ca:'Ex. Oficines al migdia i famílies del barri els caps de setmana',en:'e.g. Offices at lunch and local families at weekends'},
+   ayuda:{es:'Quién se sienta en tus mesas y cuándo. Cambia el tamaño de las raciones, el precio y hasta el tiempo de espera que aguantan.',
+          ca:'Qui s\'asseu a les teves taules i quan. Canvia la mida de les racions, el preu i fins i tot el temps d\'espera que aguanten.',
+          en:'Who sits at your tables and when. It changes portion size, price and even how long they will wait.'}},
   {k:'foodCostObjetivo', tipo:'num', unidad:'%', min:0, max:100, l:{es:'Food cost objetivo',ca:'Food cost objectiu',en:'Target food cost'},
-   ph:{es:'Ej. 30',ca:'Ex. 30',en:'e.g. 30'}},
+   ph:{es:'Ej. 30',ca:'Ex. 30',en:'e.g. 30'},
+   ayuda:{es:'Qué parte del precio de venta quieres que sea coste de materia prima. Con esto la app te propone el precio de cada plato y te avisa si se pasa.',
+          ca:'Quina part del preu de venda vols que sigui cost de matèria primera. Amb això l\'app et proposa el preu de cada plat i t\'avisa si es passa.',
+          en:'What share of the selling price should be raw ingredient cost. With this the app suggests each dish price and warns you if it goes over.'}},
   {k:'equipamiento', tipo:'area', l:{es:'Equipamiento',ca:'Equipament',en:'Equipment'},
    ph:{es:'Ej. Horno mixto, brasa, abatidor. Sin Roner ni deshidratador',ca:'Ex. Forn mixt, brasa, abatedor. Sense Roner ni deshidratador',en:'e.g. Combi oven, grill, blast chiller. No sous-vide or dehydrator'},
-   ayuda:{es:'Sin esto puede proponerte técnicas que no puedes hacer.',ca:'Sense això pot proposar-te tècniques que no pots fer.',en:'Without this it may propose techniques you cannot do.'}},
+   ayuda:{es:'Lo que tienes y —muy importante— lo que NO tienes. Escribe "sin" delante de lo que te falte: la app lo entiende y no te propondrá esa técnica.',
+          ca:'El que tens i —molt important— el que NO tens. Escriu "sense" davant del que et falti: l\'app ho entén i no et proposarà aquesta tècnica.',
+          en:'What you have and — importantly — what you do NOT. Write "no" before what you lack: the app understands it and will not propose that technique.'}},
   {k:'equipo', tipo:'text', l:{es:'Equipo en partida',ca:'Equip a partida',en:'Kitchen brigade'},
    ph:{es:'Ej. 2 cocineros y un ayudante',ca:'Ex. 2 cuiners i un ajudant',en:'e.g. 2 cooks and one helper'},
-   ayuda:{es:'Limita cuántos platos pueden pedir trabajo al momento.',ca:'Limita quants plats poden demanar feina al moment.',en:'Limits how many dishes can need à la minute work.'}},
-  {k:'producto', tipo:'sel', l:{es:'Producto',ca:'Producte',en:'Sourcing'}, opts:[
-    {v:'Mercado y temporada', l:{es:'Mercado y temporada',ca:'Mercat i temporada',en:'Market and seasonal'}},
-    {v:'Proximidad', l:{es:'Proximidad / km 0',ca:'Proximitat / km 0',en:'Local / farm to table'}},
-    {v:'Carta fija', l:{es:'Carta fija todo el año',ca:'Carta fixa tot l\'any',en:'Fixed menu year-round'}},
-    {v:'Mixto', l:{es:'Mixto',ca:'Mixt',en:'Mixed'}},
-  ]},
+   ayuda:{es:'Cuántos sois en cocina durante el servicio. Con esto la app avisa si una carta pide más trabajo al momento del que podéis sacar.',
+          ca:'Quants sou a cuina durant el servei. Amb això l\'app avisa si una carta demana més feina al moment de la que podeu treure.',
+          en:'How many of you are on the line during service. With this the app warns if a menu needs more à la minute work than you can handle.'}},
+  {k:'producto', tipo:'area', l:{es:'Producto',ca:'Producte',en:'Produce'},
+   ph:{es:'Ej. Verdura del mercado cada mañana y pescado de lonja; la carne siempre del mismo ganadero',
+       ca:'Ex. Verdura del mercat cada matí i peix de llotja; la carn sempre del mateix ramader',
+       en:'e.g. Market veg every morning and fish from the quay; meat always from the same farmer'},
+   ayuda:{es:'De dónde sale lo que cocinas y cada cuánto cambia: si sigues la temporada, si trabajas proveedores fijos, o si la carta es la misma todo el año.',
+          ca:'D\'on surt el que cuines i cada quant canvia: si segueixes la temporada, si treballes amb proveïdors fixos, o si la carta és la mateixa tot l\'any.',
+          en:'Where your produce comes from and how often it changes: seasonal, fixed suppliers, or the same menu all year.'}},
   {k:'dietas', tipo:'text', l:{es:'Dietas obligatorias',ca:'Dietes obligatòries',en:'Required diets'},
-   ph:{es:'Ej. Siempre una opción vegetariana y una sin gluten',ca:'Ex. Sempre una opció vegetariana i una sense gluten',en:'e.g. Always a vegetarian and a gluten-free option'}},
+   ph:{es:'Ej. Siempre una opción vegetariana y una sin gluten',ca:'Ex. Sempre una opció vegetariana i una sense gluten',en:'e.g. Always a vegetarian and a gluten-free option'},
+   ayuda:{es:'Lo que nunca puede faltar en tu carta. La app comprueba que se cumpla y te avisa si un menú se queda sin ello.',
+          ca:'El que mai pot faltar a la teva carta. L\'app comprova que es compleixi i t\'avisa si un menú se\'n queda sense.',
+          en:'What your menu must always include. The app checks it and warns you if a menu ends up without it.'}},
   {k:'idiomaPlatos', tipo:'text', l:{es:'Idioma de los platos',ca:'Idioma dels plats',en:'Language of dish names'},
-   ph:{es:'Ej. Catalán',ca:'Ex. Català',en:'e.g. Catalan'}},
+   ph:{es:'Ej. Catalán',ca:'Ex. Català',en:'e.g. Catalan'},
+   ayuda:{es:'En qué idioma quieres que salgan los nombres de los platos para la carta.',
+          ca:'En quin idioma vols que surtin els noms dels plats per a la carta.',
+          en:'Which language you want the dish names written in for the menu.'}},
 ];
 
 function idrAdn(){
@@ -360,7 +391,7 @@ REGLAS QUE NO SE ROMPEN NUNCA:
 
 3. INGREDIENTES: PROPÓN CON LIBERTAD. Aprovecha lo que ya compra siempre que encaje, porque abarata y simplifica. Pero NO te limites a su lista: si un producto que no tiene mejora el plato, propónlo igual y di que habría que darlo de alta. Un módulo de I+D que solo recombina lo de siempre no sirve para crear nada nuevo.
 
-4. RESPETA SU ADN. La cocina, el nivel de la casa y sobre todo sus LÍNEAS ROJAS mandan sobre cualquier idea tuya. Si te piden algo que choca con su ADN, dilo antes de proponerlo.
+4. RESPETA SU ADN. La cocina, el nivel del negocio y sobre todo sus LÍNEAS ROJAS mandan sobre cualquier idea tuya. Si te piden algo que choca con su ADN, dilo antes de proponerlo.
 
 5. RESPETA SU COCINA REAL. No propongas técnicas que su equipamiento no permite, ni platos que su equipo no pueda sacar en servicio.
 
@@ -383,6 +414,8 @@ CÓMO PIENSAS UN CONJUNTO (menú o carta):
 - Cuenta cuántos platos exigen trabajo al momento y compáralo con la gente que hay en partida.
 - En un degustación manda la progresión: de menos a más intensidad, sin repetir técnicas, y con el postre cerrando lo que abrió el primer pase.
 - En un menú del día mandan el coste y la rotación.
+
+NO TE QUEDES EN LA IDEA. En cada paso, además de proponer, BAJA AL DETALLE: qué producto haría falta, en qué cantidad aproximada y cuánto trabajo lleva. Y termina preguntándole qué le parece. Estás cocinando CON él, no dándole un listado: "para esto necesitaríamos unos 180 g de bacalao, garbanzos cocidos y un buen sofrito, ¿te encaja o prefieres tirar por otro lado?".
 
 CÓMO TRABAJAS: paso a paso, un paso corto cada vez. En cada uno propones DOS O TRES caminos con el motivo de cada uno, para que el cocinero elija; no impones uno solo. Hablas como un jefe de partida: claro, sin florituras y sin darle lecciones a alguien que lleva años en esto.`;
 
@@ -410,10 +443,10 @@ const IDR_PASOS = {
   plato: [
     {k:'base', l:{es:'Producto base',ca:'Producte base',en:'Base product'}, p:'¿De qué producto partimos? Propón 3 opciones de temporada coherentes con su ADN, o trabaja sobre la que te diga.'},
     {k:'tecnica', l:{es:'Técnica principal',ca:'Tècnica principal',en:'Main technique'}, p:'¿Cómo tratamos el producto base elegido? Propón 3 técnicas posibles CON SU EQUIPAMIENTO, di qué aporta cada una.'},
-    {k:'salsa', l:{es:'Salsa o fondo',ca:'Salsa o fons',en:'Sauce or stock'}, p:'Propón 3 salsas o fondos que acompañen, coherentes con la casa.'},
+    {k:'salsa', l:{es:'Salsa o fondo',ca:'Salsa o fons',en:'Sauce or stock'}, p:'Propón 3 salsas o fondos que acompañen, coherentes con el negocio.'},
     {k:'guarnicion', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, p:'Propón 3 guarniciones. Ten en cuenta la carga de trabajo en servicio.'},
     {k:'acabado', l:{es:'Acabado y emplatado',ca:'Acabat i emplatat',en:'Finish and plating'}, p:'Propón 3 formas de acabar y emplatar el plato.'},
-    {k:'nombre', l:{es:'Nombre de carta',ca:'Nom de carta',en:'Menu name'}, p:'Propón 3 nombres para la carta, en el idioma de la casa, y una descripción corta para cada uno.'},
+    {k:'nombre', l:{es:'Nombre de carta',ca:'Nom de carta',en:'Menu name'}, p:'Propón 3 nombres para la carta, en el idioma del negocio, y una descripción corta para cada uno.'},
   ],
   menu: [
     {k:'formato', l:{es:'Formato',ca:'Format',en:'Format'}, p:'¿Menú tradicional (coste y rotación) o degustación (progresión)? Explica en una línea qué cambia y pregunta cuál quiere.'},
@@ -488,6 +521,7 @@ function renderIdr(){
   box.innerHTML = `
     <div class="view-header">
       <div>
+        <button class="btn btn-sm btn-back" onclick="navigate('folder')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
         <h2>${t('view.idr.title')}</h2>
         <p class="view-sub">${t('view.idr.subtitle')}</p>
       </div>
@@ -654,6 +688,7 @@ function renderIdrCreacion(box){
               <div class="card card-compact" style="cursor:pointer" onclick="idrElegir(${oi})">
                 <h3 style="font-size:14px"><span style="overflow:visible;white-space:normal">${escapeHtml(o.titulo||'')}</span></h3>
                 <p style="font-size:12px;color:var(--muted);margin:4px 0 0">${escapeHtml(o.motivo||'')}</p>
+                ${o.necesita ? `<p style="font-size:12px;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--border)"><strong>${t('idr.needs')}</strong> ${escapeHtml(o.necesita)}</p>` : ''}
               </div>`).join('')}
           </div>` : ''}
 
@@ -699,7 +734,9 @@ async function idrPedirPaso(otras){
   const instruccion = `${previo}${evitar}${def.p}
 
 Responde SOLO con este JSON, sin texto alrededor:
-{"comentario":"una o dos frases tuyas, o una pregunta si te falta información","opciones":[{"titulo":"...","motivo":"por qué lo propones"}]}
+{"comentario":"una o dos frases tuyas, y termina PREGUNTÁNDOLE qué le parece o qué prefiere","opciones":[{"titulo":"...","motivo":"por qué lo propones","necesita":"lo que haría falta, concreto: ingredientes con su cantidad aproximada para 2, y el trabajo que lleva"}]}
+
+En "necesita" baja al detalle de verdad, como se lo dirías a tu jefe de partida: "unos 180 g de bacalao, garbanzos cocidos, un buen sofrito y media hora de guiso". Nada de generalidades. Es lo que convierte una idea en algo que se puede cocinar mañana.
 Si te falta información para proponer con criterio, deja "opciones" vacío y pregunta en "comentario".`;
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1200});

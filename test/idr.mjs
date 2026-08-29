@@ -875,6 +875,95 @@ await caso('La prueba de conexión dice exactamente qué pasa', async ()=>{
   return 'guarda motivo y detalle';
 });
 
+/* ─── Que el módulo se trate como el resto de la app ─── */
+await caso('Se puede volver al panel desde I+D, como en cualquier módulo', async ()=>{
+  const r = await page.evaluate(()=>{
+    // Como llegaría un usuario: entrando por la carpeta de Cocina, y en la
+    // pantalla principal del módulo (dentro de una creación el "Volver" es
+    // otro: lleva al cuaderno, que es lo correcto).
+    currentFolder = 'cocina';
+    currentArea = () => 'cocina';
+    navigate('idr'); navIdr('inicio');
+    const volver = [...document.querySelectorAll('#view-idr button')].find(b => /volver|tornar|back/i.test(b.textContent));
+    if(!volver) return {hay:false};
+    volver.click();
+    // La vista activa se lee del DOM, que es lo que ve el usuario
+    const activa = document.querySelector('.view.active');
+    return {hay:true, vista: activa ? activa.id : null};
+  });
+  assert.ok(r.hay, 'faltaba el botón de volver: todos los módulos lo tienen');
+  assert.equal(r.vista, 'view-folder', 'debería llevar al panel de la carpeta');
+  // Y desde dentro de una creación, el Volver lleva al cuaderno
+  const dentro = await page.evaluate(()=>{
+    idrEmpezar('plato');
+    const v = [...document.querySelectorAll('#view-idr button')].find(b => /volver|tornar|back/i.test(b.textContent));
+    v.click();
+    return idrVista;
+  });
+  assert.equal(dentro, 'inicio', 'desde una creación debe volver al cuaderno, no salirse del módulo');
+  return 'del módulo al panel, y de una creación al cuaderno';
+});
+
+await caso('Todos los campos del ADN tienen ejemplo y ayuda', async ()=>{
+  const fallos = await page.evaluate(()=>{
+    const f = [];
+    IDR_ADN_CAMPOS.forEach(c => {
+      ['es','ca','en'].forEach(l => {
+        if(!c.l || !c.l[l]) f.push(`${c.k}: falta etiqueta ${l}`);
+        if(c.tipo !== 'sel'){
+          if(!c.ph || !c.ph[l]) f.push(`${c.k}: falta ejemplo ${l}`);
+          if(!c.ayuda || !c.ayuda[l]) f.push(`${c.k}: falta ayuda ${l}`);
+        }
+      });
+    });
+    return f;
+  });
+  assert.deepEqual(fallos, [], fallos.join(' | '));
+  const n = await page.evaluate(()=>IDR_ADN_CAMPOS.length);
+  return `${n} campos, todos con ejemplo y ayuda en 3 idiomas`;
+});
+
+await caso('Nivel y producto son texto libre, no listas cerradas', async ()=>{
+  const r = await page.evaluate(()=>{
+    const nivel = IDR_ADN_CAMPOS.find(c=>c.k==='nivel');
+    const producto = IDR_ADN_CAMPOS.find(c=>c.k==='producto');
+    // Y que lo escrito a mano llegue tal cual al asistente
+    DB.idr.adn = {nivel:'Comida de diario sin pretensiones', producto:'Verdura del mercado cada mañana'};
+    const sis = idrSistema();
+    return {tipoNivel: nivel.tipo, tipoProducto: producto.tipo,
+            llega: sis.includes('Comida de diario sin pretensiones') && sis.includes('Verdura del mercado cada mañana')};
+  });
+  assert.equal(r.tipoNivel, 'area', 'nivel debe ser texto libre');
+  assert.equal(r.tipoProducto, 'area', 'producto también');
+  assert.ok(r.llega, 'lo escrito debe llegar tal cual al asistente');
+  return 'texto libre y llega entero';
+});
+
+await caso('En cada paso baja al detalle de lo que haría falta', async ()=>{
+  await fingir(JSON.stringify({comentario:'¿Qué te parece?', opciones:[
+    {titulo:'Bacalao guisado', motivo:'de temporada', necesita:'180 g de bacalao, garbanzos cocidos y un buen sofrito'},
+  ]}));
+  const r = await page.evaluate(async ()=>{
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    currentArea = () => 'cocina';
+    idrEmpezar('plato');
+    await idrPedirPaso();
+    const pedido = window.__llamadas[0].mensajes[0].content;
+    const html = document.getElementById('view-idr').innerHTML;
+    return {
+      pideDetalle: /necesita/.test(pedido) && /cantidad aproximada/i.test(pedido),
+      pidePreguntar: /PREGUNT/i.test(pedido),
+      seVe: html.includes('180 g de bacalao'),
+      reglas: /NO TE QUEDES EN LA IDEA/.test(IDR_REGLAS),
+    };
+  });
+  assert.ok(r.pideDetalle, 'debe pedirle ingredientes y cantidades, no solo la idea');
+  assert.ok(r.pidePreguntar, 'y que termine preguntando al cocinero');
+  assert.ok(r.seVe, 'lo que haría falta debe verse en la tarjeta');
+  assert.ok(r.reglas);
+  return 'pide detalle, pregunta, y se ve en pantalla';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
