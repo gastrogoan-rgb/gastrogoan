@@ -67,6 +67,57 @@ await caso('Todos los tipos de bebida están completos en los tres idiomas', asy
   return `${n} tipos, sin huecos`;
 });
 
+/* ─── Que cada tipo pida SOLO lo que tiene sentido ─── */
+// Un zumo no tiene graduación alcohólica y a un café no se le pregunta la
+// temperatura de servicio: ya tiene la del agua y la de la leche.
+await caso('Ningún tipo pide un campo que no le corresponde', async ()=>{
+  const r = await page.evaluate(()=>{
+    const campos = k => bebidaCamposDe(k).map(c=>c.k);
+    const sinAlcohol = ['cafe','infusion','sinalcohol'];
+    const conAlcohol = ['vino','espumoso','cerveza','destilado','coctel'];
+    const fallos = [];
+    sinAlcohol.forEach(k => { if(campos(k).includes('graduacion')) fallos.push(`${k} pide graduación`); });
+    conAlcohol.forEach(k => { if(!campos(k).includes('graduacion')) fallos.push(`${k} NO pide graduación`); });
+    ['cafe','infusion'].forEach(k => { if(campos(k).includes('tempServicio')) fallos.push(`${k} pide temperatura de servicio`); });
+    // Y que café e infusión sí tengan la que de verdad se controla
+    ['cafe','infusion'].forEach(k => { if(!campos(k).includes('tempAgua')) fallos.push(`${k} no pide la del agua`); });
+    if(!campos('sinalcohol').includes('tempServicio')) fallos.push('un refresco sí se sirve a una temperatura');
+    return {fallos, cafe: campos('cafe'), zumo: campos('sinalcohol')};
+  });
+  assert.deepEqual(r.fallos, [], r.fallos.join(' | '));
+  return `café: ${r.cafe.length} campos · sin alcohol: ${r.zumo.length}`;
+});
+
+await caso('Cada tipo tiene los campos propios de su oficio', async ()=>{
+  const r = await page.evaluate(()=>{
+    const campos = k => bebidaCamposDe(k).map(c=>c.k);
+    const debe = {
+      vino:      ['anada','do','uvas','decantar','cataVista','cataNariz','cataBoca','maridaje','copasBotella'],
+      espumoso:  ['metodo','dosaje','anada','cataNariz'],
+      cerveza:   ['estilo','ibu','formato','tirada'],
+      destilado: ['categoria','destileria','anejamiento','servir'],
+      coctel:    ['familia','tecnica','hielo','guarnicion','dilucion'],
+      cafe:      ['metodo','molienda','gramaje','tiempoExtraccion','tempAgua','tempLeche','tueste'],
+      infusion:  ['tipoInfusion','tempAgua','tiempoInfusion','gramaje'],
+      sinalcohol:['guarnicion','hielo'],
+    };
+    const fallos = [];
+    Object.keys(debe).forEach(k => {
+      const tiene = campos(k);
+      debe[k].forEach(c => { if(!tiene.includes(c)) fallos.push(`${k}: falta ${c}`); });
+    });
+    // Y que no se cuelen campos de otro oficio
+    if(campos('vino').includes('molienda')) fallos.push('el vino no se muele');
+    if(campos('cafe').includes('anada')) fallos.push('el café no tiene añada');
+    if(campos('cerveza').includes('decantar')) fallos.push('la cerveza no se decanta');
+    if(campos('infusion').includes('ibu')) fallos.push('una infusión no tiene IBU');
+    if(campos('sinalcohol').includes('dosaje')) fallos.push('un refresco no tiene dosaje');
+    return fallos;
+  });
+  assert.deepEqual(r, [], r.join(' | '));
+  return 'los 8 tipos con lo suyo, y sin nada prestado';
+});
+
 /* ─── El formulario se pinta para cada tipo ─── */
 await caso('Cada tipo pinta sus campos y ninguno se queda sin dibujar', async ()=>{
   const r = await page.evaluate(async ()=>{
@@ -144,14 +195,24 @@ await caso('Cambiar de tipo conserva lo común y suelta lo que ya no aplica', as
     document.getElementById('bebida-tempServicio').value = '8';
     document.getElementById('bebida-cristaleria').value = 'Copa de balón';
     document.getElementById('bebida-anada').value = '2021';
-    setFichaBebidaTipo('cafe'); // el café no tiene añada
-    const tras = {...fichaModalState.bebida};
-    return tras;
+    setFichaBebidaTipo('cerveza'); // la cerveza no tiene añada
+    const aCerveza = {...fichaModalState.bebida};
+    // Y de vino a café: el café no tiene NI temperatura de servicio ni
+    // graduación, así que las dos se sueltan.
+    setFichaBebidaTipo('vino');
+    document.getElementById('bebida-tempServicio').value = '8';
+    document.getElementById('bebida-graduacion').value = '13';
+    document.getElementById('bebida-cristaleria').value = 'Copa de balón';
+    setFichaBebidaTipo('cafe');
+    return {aCerveza, aCafe: {...fichaModalState.bebida}};
   });
-  assert.equal(r.tempServicio, 8, 'la temperatura la tienen los dos, no debería perderse');
-  assert.equal(r.cristaleria, 'Copa de balón', 'la copa la tienen los dos');
-  assert.equal(r.anada, undefined, 'un café no tiene añada: no debe quedar escondida');
-  return 'conserva 2 comunes, suelta la que sobra';
+  assert.equal(r.aCerveza.tempServicio, 8, 'vino y cerveza comparten temperatura: no debería perderse');
+  assert.equal(r.aCerveza.cristaleria, 'Copa de balón', 'y la cristalería');
+  assert.equal(r.aCerveza.anada, undefined, 'una cerveza no tiene añada: no debe quedar escondida');
+  assert.equal(r.aCafe.cristaleria, 'Copa de balón', 'la taza del café es cristalería igual');
+  assert.equal(r.aCafe.tempServicio, undefined, 'el café no tiene temperatura de servicio');
+  assert.equal(r.aCafe.graduacion, undefined, 'ni graduación alcohólica');
+  return 'conserva lo compartido y suelta lo que el tipo nuevo no tiene';
 });
 
 await caso('Un tipo desconocido no rompe el formulario', async ()=>{

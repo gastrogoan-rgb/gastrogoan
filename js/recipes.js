@@ -937,11 +937,19 @@ function fichaTempLabel(value){
    cambiar la etiqueta o el idioma sin tocar los datos ya guardados. */
 
 // Tipos de campo: 'text' | 'num' | 'sel' | 'area' (texto largo)
+//
+// ⚠️ Estos campos NO son universales, aunque lo parezcan. Un zumo, un café
+// o una infusión no tienen graduación alcohólica, y pedirla es un campo que
+// nadie sabe qué rellenar. Y a un café tampoco se le pregunta la
+// "temperatura de servicio": ya tiene la del agua y la de la leche, que es
+// lo que de verdad se controla. Cada tipo declara lo que NO le aplica.
+const BEBIDA_CAMPO_TEMP_SERVICIO = {k:'tempServicio', tipo:'num', unidad:'°C', min:-10, max:100, l:{es:'Temperatura de servicio',ca:'Temperatura de servei',en:'Serving temperature'}, ph:{es:'Ej. 8',ca:'Ex. 8',en:'e.g. 8'}};
+const BEBIDA_CAMPO_GRADUACION = {k:'graduacion', tipo:'num', unidad:'% vol', min:0, max:100, paso:'0.1', l:{es:'Graduación',ca:'Graduació',en:'ABV'}, ph:{es:'Ej. 13,5',ca:'Ex. 13,5',en:'e.g. 13.5'}};
 const BEBIDA_CAMPOS_COMUNES = [
-  {k:'tempServicio', tipo:'num', unidad:'°C', min:-10, max:100, l:{es:'Temperatura de servicio',ca:'Temperatura de servei',en:'Serving temperature'}, ph:{es:'Ej. 8',ca:'Ex. 8',en:'e.g. 8'}},
-  {k:'cristaleria', tipo:'text', l:{es:'Copa / cristalería',ca:'Copa / cristalleria',en:'Glassware'}, ph:{es:'Ej. Copa de balón',ca:'Ex. Copa de baló',en:'e.g. Balloon glass'}},
+  BEBIDA_CAMPO_TEMP_SERVICIO,
+  {k:'cristaleria', tipo:'text', l:{es:'Copa, vaso o taza',ca:'Copa, got o tassa',en:'Glass or cup'}, ph:{es:'Ej. Copa de balón',ca:'Ex. Copa de baló',en:'e.g. Balloon glass'}},
   {k:'racion', tipo:'num', unidad:'ml', min:0, max:5000, l:{es:'Ración servida',ca:'Ració servida',en:'Serving size'}, ph:{es:'Ej. 150',ca:'Ex. 150',en:'e.g. 150'}},
-  {k:'graduacion', tipo:'num', unidad:'% vol', min:0, max:100, paso:'0.1', l:{es:'Graduación',ca:'Graduació',en:'ABV'}, ph:{es:'Ej. 13,5',ca:'Ex. 13,5',en:'e.g. 13.5'}},
+  BEBIDA_CAMPO_GRADUACION,
 ];
 
 const BEBIDA_CATA = [
@@ -1092,7 +1100,7 @@ const BEBIDA_TIPOS = [
     ],
   },
   {
-    key:'cafe', icon:'ti-coffee',
+    key:'cafe', icon:'ti-coffee', sinAlcohol:true, sinTempServicio:true,
     l:{es:'Café',ca:'Cafè',en:'Coffee'},
     campos:[
       {k:'metodo', tipo:'sel', l:{es:'Método',ca:'Mètode',en:'Method'}, opts:[
@@ -1119,7 +1127,7 @@ const BEBIDA_TIPOS = [
     ],
   },
   {
-    key:'infusion', icon:'ti-mug',
+    key:'infusion', icon:'ti-mug', sinAlcohol:true, sinTempServicio:true,
     l:{es:'Té e infusiones',ca:'Te i infusions',en:'Tea & infusions'},
     campos:[
       {k:'tipoInfusion', tipo:'sel', l:{es:'Tipo',ca:'Tipus',en:'Type'}, opts:[
@@ -1136,7 +1144,7 @@ const BEBIDA_TIPOS = [
     ],
   },
   {
-    key:'sinalcohol', icon:'ti-glass',
+    key:'sinalcohol', icon:'ti-glass', sinAlcohol:true,
     l:{es:'Sin alcohol (refrescos, zumos, mocktails)',ca:'Sense alcohol (refrescs, sucs, mocktails)',en:'Non-alcoholic (soft drinks, juices, mocktails)'},
     campos:[
       {k:'guarnicion', tipo:'text', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, ph:{es:'Ej. Rodaja de lima',ca:'Ex. Rodanxa de llima',en:'e.g. Lime wheel'}},
@@ -1155,11 +1163,16 @@ const BEBIDA_TIPOS = [
 ];
 
 function bebidaTipoDef(key){ return BEBIDA_TIPOS.find(x => x.key === key) || null; }
-// Todos los campos de un tipo = los comunes de cualquier bebida + los suyos.
+// Los campos de un tipo: los comunes que SÍ le aplican, más los suyos.
 function bebidaCamposDe(key){
   const def = bebidaTipoDef(key);
   if(!def) return [];
-  return [...BEBIDA_CAMPOS_COMUNES, ...def.campos];
+  const comunes = BEBIDA_CAMPOS_COMUNES.filter(c => {
+    if(def.sinAlcohol && c.k === 'graduacion') return false;
+    if(def.sinTempServicio && c.k === 'tempServicio') return false;
+    return true;
+  });
+  return [...comunes, ...def.campos];
 }
 // Firebase no guarda objetos vacíos: una ficha sincronizada puede volver sin
 // `bebida`. Se normaliza siempre aquí en vez de en cada sitio que la lee.
