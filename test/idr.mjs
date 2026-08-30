@@ -80,7 +80,7 @@ await caso('Sin asistente el módulo funciona igual, a mano', async ()=>{
     const html2 = document.getElementById('view-idr').innerHTML;
     return {hayIA: idrHayIA(),
             avisa: html.includes('no está activado') || html.includes('idr.noAssistantTitle') || /activad/i.test(html),
-            saludo: html2.includes('jefe de cocina'),
+            saludo: html2.includes('te doy opciones'),
             sinCuadro: !document.getElementById('idr-libre')};
   });
   assert.ok(!r.hayIA, 'no debería haber IA configurada');
@@ -1365,18 +1365,20 @@ await caso('Menú y carta ya no se pueden empezar, pero lo guardado se abre', as
   return 'dos burbujas, y el trabajo antiguo intacto';
 });
 
-await caso('El asistente lleva la conversación y no impone partes fijas', async ()=>{
+await caso('El asistente propone de verdad, y no impone partes fijas', async ()=>{
   // El guion de pasos se cayó en cuanto el dueño probó una ensalada (no lleva
   // salsa) y un helado (no lleva guarnición). Esto vigila que no vuelva.
   const r = await page.evaluate(()=>{
     const plato = idrGuionConversacion('plato');
     const base = idrGuionConversacion('base');
     return {
-      llevaEl: /LLEVAS TÚ LA CONVERSACIÓN/.test(plato),
-      sinGuionFijo: /no hay un guion fijo/i.test(plato),
+      ayudaACrear: /AYUDARLE A CREAR, NO INTERROGARLE/.test(plato),
+      sinGuionFijo: /No hay guion fijo/i.test(plato),
       ejemploEnsalada: /ensalada/i.test(plato) && /helado/i.test(plato),
-      pocasPreguntas: /de una en una/i.test(plato),
-      preguntaSiNoSabe: /PREGÚNTALO/.test(plato),
+      proponeDeVerdad: /DOS O TRES caminos distintos/.test(plato),
+      diceElPorque: /POR QUÉ funciona/.test(plato),
+      noCuestionario: /se encuentra un cuestionario, se va/.test(plato),
+      preguntaSiNoSabe: /receta de referencia/i.test(plato),
       pideJson: /"listo"/.test(plato),
       baseExigeRendimiento: /rendimiento/i.test(base) && /3 L/.test(base),
       // Los pasos fijos de plato y base ya no existen
@@ -1409,6 +1411,121 @@ await caso('El rendimiento de una base se saca de lo hablado', async ()=>{
   assert.deepEqual(r.loDijoLaIA, {qty:2.5, unit:'L'}, 'si él no lo dijo, vale lo que propuso el asistente');
   assert.deepEqual(r.nadie, {qty:1, unit:'L'}, 'nunca cero: reventaría el coste por unidad');
   return 'lo dicho, lo rectificado y el caso en que nadie lo dijo';
+});
+
+await caso('Un plato puede montarse sobre SUS elaboraciones, con el coste encadenado', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Ternera con su jugo', descripcion:'x', pasos:['Marcar','Napar'],
+    ingredientes:[
+      {nombre:'Jugo de asado de la casa', cantidad:0.15, unidad:'L'},   // una elaboración suya
+      {nombre:'Bacalao', cantidad:100, unidad:'g'},
+    ],
+  }));
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients = [{id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'}];
+    }
+    // Una elaboración base suya, ya hecha: 3 L que costaron 30 € → 10 €/L
+    const base = {id: genId(), name:'Jugo de asado de la casa', isBase:true, baseYield:3, baseUnit:'L',
+      area:'cocina', consumiblesPct:0, ingredients:[{type:'ingredient', ingredientId:1, qty:1363.6364, merma:0}],
+      allergens:[], price:0, priceBase:0, ivaPct:10, steps:'', presentation:''};
+    DB.recipes.push(base);
+    saveDB();
+    const contexto = idrContextoNegocio();
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{r:'yo', t:'Una ternera con su jugo, tirando del fondo que ya tengo'}]; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const cc = idrCreacion(c.id);
+    const receta = DB.recipes.find(x => x.id === cc.recipeId);
+    const linea = (receta.ingredients||[]).find(l => l.type === 'base');
+    return {
+      contextoLasNombra: contexto.includes('Jugo de asado de la casa') && /ELABORACIONES BASE QUE YA PRODUCE/.test(contexto),
+      hayLineaBase: !!linea,
+      apunta: linea && linea.baseRecipeId === base.id,
+      cantidad: linea && linea.qty,
+      faltan: cc.faltan.length,
+      // 0,15 L a 10 €/L = 1,50 · + 100 g de bacalao a 0,022 = 2,20 → 3,70 · +5% consumibles
+      coste: Number(recipeCost(receta).toFixed(3)),
+    };
+  });
+  assert.ok(r.contextoLasNombra, 'sus elaboraciones deben viajar al asistente, con su coste por unidad');
+  assert.ok(r.hayLineaBase, 'la elaboración debe entrar como línea de tipo base, no como pendiente');
+  assert.ok(r.apunta, 'y apuntar a la ficha real');
+  assert.equal(r.cantidad, 0.15);
+  assert.equal(r.faltan, 0, 'no debe marcarla como ingrediente que no tiene');
+  assert.ok(Math.abs(r.coste - 3.885) < 0.01, `coste encadenado: ${r.coste}`);
+  return 'monta sobre su fondo y le encadena el coste real';
+});
+
+await caso('Sabe lo que hay en cámara, para dar salida a lo que tiene', async ()=>{
+  const r = await page.evaluate(()=>{
+    DB.stock = DB.stock || {};
+    const cal = {id: 990, name:'Calabaza', unit:'kg', price:1.2, category:'Verduras', supplier:'x', allergens:[], area:'cocina'};
+    if(!(DB.ingredients||[]).some(i=>i.id===990)) DB.ingredients.push(cal);
+    DB.stock[990] = {qty: 6, min: 1};
+    // Un ingrediente a cero NO debe aparecer: no hay nada que dar salida
+    DB.stock[1] = {qty: 0, min: 1};
+    const texto = idrStockTexto();
+    const contexto = idrContextoNegocio();
+    return {
+      lleva: texto.includes('Calabaza: 6 kg'),
+      sinLosDeCero: !texto.includes('Bacalao'),
+      enElContexto: /EN CÁMARA AHORA MISMO/.test(contexto) && contexto.includes('Calabaza'),
+    };
+  });
+  assert.ok(r.lleva, 'debe decir qué hay y cuánto');
+  assert.ok(r.sinLosDeCero, 'lo que está a cero no se menciona');
+  assert.ok(r.enElContexto, 'y viajar al asistente');
+  return 'lo que hay en cámara, con su cantidad';
+});
+
+await caso('El coste se negocia: entra en la conversación y no duplica la ficha', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio', foodCostObjetivo: 30});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    let turno = 0;
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => {
+      turno++;
+      return {ok:true, texto: JSON.stringify(turno === 1
+        ? {nombre:'Bacalao caro', descripcion:'x', pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:300, unidad:'g'}]}
+        : {nombre:'Bacalao ajustado', descripcion:'x', pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:150, unidad:'g'}]})};
+    };
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{r:'yo', t:'Un bacalao'}]; saveDB();
+    const fichasAntes = DB.recipes.length;
+    await idrCrearPlatoReal(c.id);
+    const idPrimero = idrCreacion(c.id).recipeId;
+    const fichasTrasUna = DB.recipes.length;
+    // Ahora hablamos del coste: los números reales entran en el hilo
+    idrHablarDelCoste(c.id);
+    const hilo = idrCreacion(c.id).mensajes;
+    const ultimo = hilo[hilo.length-1];
+    // Y se vuelve a crear: tiene que REESCRIBIR la misma ficha
+    await idrCrearPlatoReal(c.id);
+    const cc = idrCreacion(c.id);
+    const receta = DB.recipes.find(x=>x.id===cc.recipeId);
+    return {
+      fichasNuevas: fichasTrasUna - fichasAntes,
+      fichasTrasRehacer: DB.recipes.length - fichasTrasUna,
+      mismaFicha: cc.recipeId === idPrimero,
+      nombre: receta.name, qty: receta.ingredients[0].qty,
+      mensajeDelCoste: ultimo.r === 'ia' && /escandallo/i.test(ultimo.t) && /food cost/i.test(ultimo.t),
+      vuelveAHablar: !cc.listo || true,
+    };
+  });
+  assert.equal(r.fichasNuevas, 1, 'la primera vez crea la ficha');
+  assert.equal(r.fichasTrasRehacer, 0, 'rehacer NO debe crear una segunda');
+  assert.ok(r.mismaFicha, 'y debe seguir siendo la misma');
+  assert.equal(r.nombre, 'Bacalao ajustado', 'con la versión nueva dentro');
+  assert.equal(r.qty, 150, 'y la ración ajustada');
+  assert.ok(r.mensajeDelCoste, 'los números reales deben entrar en la conversación');
+  return 'los números entran en el hilo y la ficha se reescribe, no se duplica';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{

@@ -470,6 +470,57 @@ function idrVentasTexto(){
   return `Más vendidos: ${top.join(' · ')}\nMenos vendidos: ${cola.join(' · ')}`;
 }
 
+/* Lo que YA tiene hecho. Era el hueco más grande del módulo: el asistente no
+   sabía que en esa cocina ya se hace un fondo oscuro y un sofrito, así que
+   empezaba cada plato desde cero. Un jefe de cocina no piensa así — monta
+   sobre su mise en place, porque es lo que abarata el plato y lo que lo hace
+   viable en un servicio de verdad.
+   Además la app SABE costear un plato que use una elaboración (línea de tipo
+   "base"), así que esto no es solo contexto: es coste real encadenado. */
+const IDR_MAX_ELABORACIONES = 40;
+function idrElaboracionesTexto(){
+  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === 'cocina');
+  if(!bases.length) return '';
+  const lineas = bases.slice(0, IDR_MAX_ELABORACIONES).map(r => {
+    const porUnidad = (typeof recipeBaseCostPerUnit === 'function') ? recipeBaseCostPerUnit(r) : 0;
+    return `${r.name} (${fmtNum(porUnidad)} €/${r.baseUnit||'L'})`;
+  });
+  return lineas.join(' · ');
+}
+// Sus fichas de plato, para que no repita lo que ya tiene resuelto y para que
+// pueda decir "esto es una variante de tu X".
+const IDR_MAX_FICHAS = 40;
+function idrRecetasTexto(){
+  const platos = (DB.recipes||[]).filter(r => !r.isBase && (r.area||'cocina') === 'cocina');
+  if(!platos.length) return '';
+  return platos.slice(0, IDR_MAX_FICHAS).map(r => r.name).join(' · ');
+}
+
+/* Lo que hay en cámara AHORA. Es lo que permite la pregunta que de verdad se
+   hace cada semana en una cocina: "tengo esto, sácame algo". No hay fechas de
+   caducidad por lote en la app, así que no se habla de lo que está a punto de
+   irse — solo de lo que hay y cuánto. Decir más sería inventar. */
+const IDR_MAX_STOCK = 40;
+function idrStockTexto(){
+  const stock = DB.stock || {};
+  const lineas = [];
+  (DB.ingredients||[]).forEach(i => {
+    if((i.area||'cocina') !== 'cocina') return;
+    const s2 = stock[i.id];
+    const qty = s2 ? parseFloat(s2.qty) : 0;
+    if(!isFinite(qty) || qty <= 0) return;
+    lineas.push(`${i.name}: ${fmtNum(qty)} ${i.unit}`);
+  });
+  (DB.elaboraciones||[]).forEach(e => {
+    if((e.area||'cocina') !== 'cocina') return;
+    const qty = parseFloat(e.qty);
+    if(!isFinite(qty) || qty <= 0) return;
+    lineas.push(`${e.name}: ${fmtNum(qty)} ${e.unit||'L'}`);
+  });
+  if(!lineas.length) return '';
+  return lineas.slice(0, IDR_MAX_STOCK).join(' · ');
+}
+
 function idrContextoNegocio(){
   const partes = [];
   const adn = idrAdnTexto();
@@ -479,6 +530,12 @@ function idrContextoNegocio(){
   if(ings) partes.push('INGREDIENTES QUE YA COMPRA, con su precio real:\n' + ings);
   const carta = idrCartaTexto();
   if(carta) partes.push('YA TIENE EN CARTA (no lo repitas salvo que se pida una variante):\n' + carta);
+  const elab = idrElaboracionesTexto();
+  if(elab) partes.push('ELABORACIONES BASE QUE YA PRODUCE, con su coste por unidad. Móntate encima de ellas siempre que encajen: es lo que abarata el plato y lo hace viable en servicio. Para usar una, nómbrala TAL CUAL:\n' + elab);
+  const fichas = idrRecetasTexto();
+  if(fichas) partes.push('FICHAS DE PLATO QUE YA TIENE:\n' + fichas);
+  const stock = idrStockTexto();
+  if(stock) partes.push('EN CÁMARA AHORA MISMO (si te pide algo para dar salida a lo que tiene, tira de aquí):\n' + stock);
   const ventas = idrVentasTexto();
   if(ventas) partes.push('VENTAS:\n' + ventas);
   else partes.push('VENTAS: no hay datos suficientes. No opines sobre qué se vende.');
@@ -881,6 +938,7 @@ function renderIdrCreacion(box){
             <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
           </div>` : `<p style="font-size:12.5px;color:#1F8A4C"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
           <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         </div>
       </div>` : ''}
@@ -983,18 +1041,27 @@ async function idrEnviarInterno(){
    ponerle salsa a una ensalada. */
 function idrGuionConversacion(tipo){
   const queEs = tipo === 'base'
-    ? `Estás ayudando a diseñar una ELABORACIÓN BASE (un fondo, una salsa madre, una crema, un escabeche): algo que se produce de antemano y luego se usa en varios platos.
-Antes de darlo por cerrado tienes que saber SIEMPRE, además: cuánto sale (rendimiento con su unidad, por ejemplo "3 L") — sin eso no se puede costear por litro.`
-    : `Estás ayudando a diseñar UN PLATO para la carta.`;
+    ? `Estás ayudando a crear una ELABORACIÓN BASE (un fondo, una salsa madre, una crema, un escabeche): algo que se produce de antemano y luego se usa en varios platos.
+Antes de darlo por cerrado tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro.`
+    : `Estás ayudando a crear UN PLATO para la carta.`;
   return `${queEs}
 
-LLEVAS TÚ LA CONVERSACIÓN, como un jefe de cocina hablando con un compañero.
+TU TRABAJO ES AYUDARLE A CREAR, NO INTERROGARLE.
 
-- Pregunta SOLO lo que te falte para ESE plato, y de una en una o dos como mucho. Nada de cuestionarios.
-- No hay un guion fijo: una ensalada no lleva salsa, un helado no lleva guarnición y un arroz no lleva emplatado de pinzas. Pregunta lo que ese plato pida y calla lo que no.
-- No des por hecho nada que no te hayan dicho. Si no sabes algo, PREGÚNTALO; y si te piden algo que no conoces, dilo y pide una receta de referencia.
-- Habla claro y corto, como en una cocina. Sin listas interminables ni palabrería.
-- Cuando ya tengas lo suficiente para escribir la receta entera (qué lleva, cómo se hace y para cuántos), dilo y pon "listo": true. No alargues por alargar.
+Si te pide algo concreto — "una salsa para un salmón", "un entrante de otoño", "algo con calabaza" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos entre sí, y de cada uno:
+- qué es, en una línea,
+- POR QUÉ funciona con ese producto (qué corta la grasa, qué aporta acidez, qué textura hace contraste),
+- y qué lleva, con cantidades aproximadas, para que se pueda cocinar mañana.
+
+Caminos DISTINTOS de verdad, no tres versiones de lo mismo: si una es una emulsión, que otra sea una vinagreta y otra un jugo o un fondo reducido. Y di cuál es un clásico y cuál es una vuelta tuya.
+
+Pregunta SOLO cuando la respuesta cambie de verdad lo que vas a proponer (el punto del pescado, si va frío o caliente, si es para carta o para menú del día). Una o dos preguntas como mucho, y NUNCA antes de haber dado algo con lo que trabajar. Un cocinero que viene a por ideas y se encuentra un cuestionario, se va.
+
+No hay guion fijo: una ensalada no lleva salsa, un helado no lleva guarnición y un arroz no lleva emplatado de pinzas. Habla de lo que ese plato pida y calla lo que no.
+
+No te limites a lo que ya compra: si un producto que no tiene mejora el plato, propónlo y di que habría que darlo de alta. Y no des por sabido lo que no te han dicho: si no conoces bien algo, dilo y pide una receta de referencia.
+
+Cuando ya tengáis decidido el plato y sepas qué lleva, cómo se hace y para cuántos, dilo y pon "listo": true.
 
 Responde SIEMPRE con este JSON, sin nada alrededor:
 {"respuesta":"lo que le dices al cocinero","listo":false,"falta":["lo que todavía necesitas saber"]}`;
@@ -1066,6 +1133,35 @@ function idrBuscarIngrediente(nombre){
   return ings.find(i => (i.name||'').trim().toLowerCase().includes(n) && n.length > 3) || null;
 }
 
+/* Convierte una línea propuesta por el asistente en una línea de escandallo
+   de verdad. Puede ser un ingrediente que compra o UNA DE SUS ELABORACIONES
+   BASE: si el plato lleva su fondo oscuro, la línea apunta a esa ficha y el
+   coste se encadena solo, igual que si la hubiera puesto un cocinero a mano.
+   Lo que no case con nada vuelve como null y se marca como pendiente de dar
+   de alta — nunca se inventa un ingrediente ni se descuenta del coste. */
+function idrCasarLinea(ing){
+  if(!ing || !ing.nombre) return null;
+  const base = idrBuscarElaboracion(ing.nombre);
+  if(base){
+    const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, base.baseUnit || 'L'));
+    if(qty > 0) return {type:'base', baseRecipeId: base.id, qty, merma: 0};
+  }
+  const real = idrBuscarIngrediente(ing.nombre);
+  if(real){
+    const qty = Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit));
+    if(qty > 0) return {type:'ingredient', ingredientId: real.id, qty, merma: 0};
+  }
+  return null;
+}
+function idrBuscarElaboracion(nombre){
+  const n = (nombre||'').trim().toLowerCase();
+  if(!n) return null;
+  const bases = (DB.recipes||[]).filter(r => r.isBase && (r.area||'cocina') === 'cocina');
+  return bases.find(r => (r.name||'').trim().toLowerCase() === n)
+      || bases.find(r => n.includes((r.name||'').trim().toLowerCase()) && (r.name||'').trim().length > 4)
+      || null;
+}
+
 async function idrCrearPlatoReal(id){
   try{ await idrCrearPlatoRealInterno(id); }
   catch(e){
@@ -1091,6 +1187,8 @@ ${resumen}
 Escribe la receta para 2 comensales. Responde SOLO con este JSON:
 {"nombre":"...","descripcion":"descripción corta de carta","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
 
+Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más con su nombre exacto y su cantidad en la unidad de la elaboración (por ejemplo {"nombre":"Fondo oscuro de ternera","cantidad":0.15,"unidad":"L"}). La aplicación le encadenará el coste real.
+
 Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
@@ -1103,14 +1201,18 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const lineas = [];
   const faltan = [];
   j.ingredientes.forEach(ing => {
-    const real = idrBuscarIngrediente(ing.nombre);
-    const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
-    if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+    const linea = idrCasarLinea(ing);
+    if(linea) lineas.push(linea);
     else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
 
   const nombre = String(j.nombre).slice(0, 80);
-  const receta = {
+  // Si esta prueba ya creó su ficha, se REESCRIBE esa misma. Antes, pedirle
+  // al asistente una versión más barata dejaba dos platos casi iguales en
+  // fichas técnicas y en la carta: el trabajo del cocinero no es limpiar
+  // duplicados detrás de la aplicación.
+  const existente = c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  const receta = existente || {
     id: genId(), name: nombre, price: 0, priceBase: 0,
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
     comensales: 2, consumiblesPct: 5,
@@ -1120,7 +1222,15 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : '',
     presentation: String(j.descripcion || ''),
   };
-  DB.recipes.push(receta);
+  if(existente){
+    // Se reescribe lo que ha cambiado y se respeta lo que el cocinero haya
+    // tocado a mano (categoría, IVA, alérgenos marcados).
+    Object.assign(receta, {name: nombre, ingredients: lineas,
+      steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : receta.steps,
+      presentation: String(j.descripcion || receta.presentation || '')});
+  } else {
+    DB.recipes.push(receta);
+  }
 
   // Un plato recién creado no tiene precio de venta, así que el food cost no
   // se podía comprobar contra nada. Se propone el PVP que CUMPLE su objetivo
@@ -1156,9 +1266,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     if(j2 && Array.isArray(j2.ingredientes)){
       const lineas2 = []; const faltan2 = [];
       j2.ingredientes.forEach(ing => {
-        const real = idrBuscarIngrediente(ing.nombre);
-        const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
-        if(real && qty > 0) lineas2.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+        const linea = idrCasarLinea(ing);
+        if(linea) lineas2.push(linea);
         else if(ing.nombre) faltan2.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
       });
       if(lineas2.length){
@@ -1267,13 +1376,13 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const lineas = [];
   const faltan = [];
   j.ingredientes.forEach(ing => {
-    const real = idrBuscarIngrediente(ing.nombre);
-    const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
-    if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+    const linea = idrCasarLinea(ing);
+    if(linea) lineas.push(linea);
     else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
 
-  const receta = {
+  const existente = c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  const receta = existente || {
     id: genId(), name: String(j.nombre).slice(0, 80), price: 0, priceBase: 0,
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
     comensales: 1, consumiblesPct: 0,
@@ -1283,7 +1392,14 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : '',
     presentation: String(j.descripcion || ''),
   };
-  DB.recipes.push(receta);
+  if(existente){
+    Object.assign(receta, {name: String(j.nombre).slice(0, 80), ingredients: lineas,
+      baseYield: rend.qty, baseUnit: rend.unit,
+      steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : receta.steps,
+      presentation: String(j.descripcion || receta.presentation || '')});
+  } else {
+    DB.recipes.push(receta);
+  }
   // Sin esto la elaboración existe como ficha pero no aparece en el stock de
   // elaboraciones, que es donde el equipo la busca y la produce.
   if(typeof syncElaboracionForRecipe === 'function') syncElaboracionForRecipe(receta.id, true, receta.name, receta.baseUnit);
@@ -1300,6 +1416,41 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     ? t('idr.baseCreatedMissing').replace('${n}', faltan.length).replace('${coste}', fmtMoney(coste)).replace('${unidad}', `${fmtMoney(porUnidad)}/${rend.unit}`)
     : t('idr.baseCreated').replace('${coste}', fmtMoney(coste)).replace('${unidad}', `${fmtMoney(porUnidad)}/${rend.unit}`);
   showToast(aviso, 5000);
+  renderIdr();
+}
+/* El escandallo deja de ser un veredicto y pasa a ser parte de la
+   conversación. Antes la app calculaba el coste, lo enseñaba y ahí moría: si
+   salía caro, el cocinero tenía que empezar de cero. Ahora los números reales
+   entran en el hilo y se puede seguir hablando — "bájalo sin tocar el
+   producto principal" — y al volver a crear se reescribe la MISMA ficha. */
+function idrHablarDelCoste(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const receta = c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  if(!receta){ showToast(t('idr.nothingToBuild')); return; }
+  const coste = recipeCost(receta);
+  const pvp = parseFloat(receta.price) || 0;
+  const objetivo = parseFloat(idrAdn().foodCostObjetivo);
+  const partes = [];
+  if(receta.isBase){
+    const y = parseFloat(receta.baseYield) || 1;
+    partes.push(t('idr.costTalkBase')
+      .replace('${coste}', fmtMoney(coste))
+      .replace('${unidad}', `${fmtMoney(coste / y)}/${receta.baseUnit || 'L'}`));
+  } else {
+    partes.push(t('idr.costTalkDish').replace('${coste}', fmtMoney(coste)).replace('${pvp}', fmtMoney(pvp)));
+    if(pvp > 0 && isFinite(objetivo) && objetivo > 0){
+      partes.push(t('idr.costTalkTarget')
+        .replace('${pct}', ((coste / pvp) * 100).toFixed(1))
+        .replace('${obj}', objetivo));
+    }
+  }
+  (c.avisos||[]).forEach(a => partes.push('· ' + a));
+  partes.push(t('idr.costTalkAsk'));
+  idrMensajes(c).push({r:'ia', t: partes.join('\n')});
+  c.listo = false;
+  c.updatedAt = new Date().toISOString();
+  saveDB();
   renderIdr();
 }
 
