@@ -385,9 +385,21 @@ function idrAdn(){
   if(!DB.idr.adn || typeof DB.idr.adn !== 'object') DB.idr.adn = {};
   return DB.idr.adn;
 }
+/* Antes bastaba con UN campo cualquiera para dar el ADN por hecho. Ahora que
+   el ADN es requisito para usar el asistente, "relleno" tiene que significar
+   algo: se exigen los tres que de verdad cambian lo que propone — qué cocina
+   es, a qué nivel juega y para quién cocina. Sin esos tres, cualquier
+   propuesta vale igual, que es lo mismo que decir que ninguna sirve. */
+const IDR_ADN_MINIMO = ['cocina', 'nivel', 'publico'];
 function idrAdnRelleno(){
   const a = idrAdn();
-  return IDR_ADN_CAMPOS.some(c => a[c.k] !== undefined && String(a[c.k]).trim() !== '');
+  return IDR_ADN_MINIMO.every(k => a[k] !== undefined && String(a[k]).trim() !== '');
+}
+function idrAdnQueFalta(){
+  const a = idrAdn();
+  return IDR_ADN_MINIMO
+    .filter(k => a[k] === undefined || String(a[k]).trim() === '')
+    .map(k => { const c = IDR_ADN_CAMPOS.find(x => x.k === k); return c ? gl(c.l) : k; });
 }
 // El bloque que se le pasa al modelo en CADA generación. Corto a propósito:
 // es lo que más cambia el resultado y lo que menos cuesta enviar.
@@ -558,28 +570,87 @@ function idrCreacion(id){
 
 // Los pasos de cada tipo. Añadir un paso es añadir una entrada: el guion
 // del asistente sale de aquí, no está escrito a mano en ningún sitio.
+/* Los pasos de cada tipo. El guion del asistente sale de aquí, no está
+   escrito a mano en ningún sitio.
+
+   Ya no hay botón de "pedir ideas": en cada paso lo explica la persona, con
+   sus palabras. El asistente no adivina lo que quiere el cocinero — recoge lo
+   que le dice y lo convierte en una receta costeada con SUS ingredientes.
+   Cada paso lleva su ayuda y su ejemplo, porque "descríbelo" a secas deja en
+   blanco a cualquiera.
+
+   `menu` y `carta` se quedan definidos aunque ya no se puedan empezar: hay
+   trabajo guardado de antes y tiene que seguir abriéndose. */
 const IDR_PASOS = {
   plato: [
-    {k:'base', l:{es:'Producto base',ca:'Producte base',en:'Base product'}, p:'¿De qué producto partimos? Propón 3 opciones de temporada coherentes con su ADN, o trabaja sobre la que te diga.'},
-    {k:'tecnica', l:{es:'Técnica principal',ca:'Tècnica principal',en:'Main technique'}, p:'¿Cómo tratamos el producto base elegido? Propón 3 técnicas posibles CON SU EQUIPAMIENTO, di qué aporta cada una.'},
-    {k:'salsa', l:{es:'Salsa o fondo',ca:'Salsa o fons',en:'Sauce or stock'}, p:'Propón 3 salsas o fondos que acompañen, coherentes con el negocio.'},
-    {k:'guarnicion', l:{es:'Guarnición',ca:'Guarnició',en:'Garnish'}, p:'Propón 3 guarniciones. Ten en cuenta la carga de trabajo en servicio.'},
-    {k:'acabado', l:{es:'Acabado y emplatado',ca:'Acabat i emplatat',en:'Finish and plating'}, p:'Propón 3 formas de acabar y emplatar el plato.'},
-    {k:'nombre', l:{es:'Nombre de carta',ca:'Nom de carta',en:'Menu name'}, p:'Propón 3 nombres para la carta, en el idioma del negocio, y una descripción corta para cada uno.'},
+    {k:'encargo', l:{es:'Qué plato quieres',ca:'Quin plat vols',en:'What dish you want'},
+     ayuda:{es:'Explícalo con tus palabras, como se lo dirías a tu jefe de cocina. Qué plato tienes en la cabeza y para qué momento del servicio.',
+            ca:'Explica-ho amb les teves paraules, com li ho diries al teu cap de cuina. Quin plat tens al cap i per a quin moment del servei.',
+            en:'In your own words, as you would tell your head chef. What dish you have in mind and for what part of service.'},
+     ej:{es:'Una ensalada de otoño para la carta de mediodía, que se salga de la típica de queso de cabra',
+         ca:'Una amanida de tardor per a la carta del migdia, que se surti de la típica de formatge de cabra',
+         en:'An autumn salad for the lunch menu, something beyond the usual goat cheese one'}},
+    {k:'producto', l:{es:'Producto principal',ca:'Producte principal',en:'Main product'},
+     ayuda:{es:'De qué parte el plato y cómo quieres tratarlo. Si tienes claro el corte, la pieza o la técnica, dilo aquí.',
+            ca:'De què parteix el plat i com el vols tractar. Si tens clar el tall, la peça o la tècnica, digues-ho aquí.',
+            en:'What the dish starts from and how you want it treated. Cut, piece or technique, if you know.'},
+     ej:{es:'Calabaza asada al horno y remolacha cocida, ambas en frío',
+         ca:'Carbassa rostida al forn i remolatxa bullida, totes dues en fred',
+         en:'Roast pumpkin and cooked beetroot, both served cold'}},
+    {k:'acompana', l:{es:'Salsa, guarnición y acabado',ca:'Salsa, guarnició i acabat',en:'Sauce, garnish and finish'},
+     ayuda:{es:'Con qué lo acompañas y cómo lo acabas. Si algo lo quieres fuera (frutos secos, lácteos…), dilo también.',
+            ca:'Amb què l\'acompanyes i com l\'acabes. Si vols deixar alguna cosa fora (fruita seca, lactis…), digues-ho també.',
+            en:'What goes with it and how you finish it. Say what you want left out too (nuts, dairy…).'},
+     ej:{es:'Vinagreta de miel y mostaza, brotes, y una crujiente de semillas. Sin frutos secos',
+         ca:'Vinagreta de mel i mostassa, brots, i un cruixent de llavors. Sense fruita seca',
+         en:'Honey-mustard vinaigrette, sprouts and a seed crisp. No nuts'}},
+    {k:'nombre', l:{es:'Nombre de carta',ca:'Nom de carta',en:'Menu name'},
+     ayuda:{es:'Cómo quieres que se llame en la carta. Si no lo tienes, escribe una idea aproximada y el asistente la afina.',
+            ca:'Com vols que es digui a la carta. Si no ho tens, escriu una idea aproximada i l\'assistent l\'afina.',
+            en:'What it should be called on the menu. A rough idea is enough; the assistant will polish it.'},
+     ej:{es:'Ensalada de otoño',ca:'Amanida de tardor',en:'Autumn salad'}},
+  ],
+  base: [
+    {k:'encargo', l:{es:'Qué elaboración quieres',ca:'Quina elaboració vols',en:'What prep you want'},
+     ayuda:{es:'Qué quieres tener hecho de antemano: un fondo, una salsa madre, una crema, un escabeche… y para qué lo vas a usar.',
+            ca:'Què vols tenir fet per endavant: un fons, una salsa mare, una crema, un escabetx… i per a què el faràs servir.',
+            en:'What you want ready in advance: a stock, a mother sauce, a purée, a marinade… and what you will use it for.'},
+     ej:{es:'Un fondo oscuro de ternera para las carnes y los guisos de la semana',
+         ca:'Un fons fosc de vedella per a les carns i els guisats de la setmana',
+         en:'A dark beef stock for the week\'s meats and stews'}},
+    {k:'producto', l:{es:'De qué parte',ca:'De què parteix',en:'What it starts from'},
+     ayuda:{es:'Los ingredientes de los que quieres partir, y cualquier cosa que quieras dentro o fuera sí o sí.',
+            ca:'Els ingredients dels quals vols partir, i qualsevol cosa que vulguis dins o fora sí o sí.',
+            en:'The ingredients to start from, plus anything that must be in or out.'},
+     ej:{es:'Huesos de ternera tostados, cebolla, zanahoria, puerro y vino tinto. Sin tomate',
+         ca:'Ossos de vedella torrats, ceba, pastanaga, porro i vi negre. Sense tomàquet',
+         en:'Roasted beef bones, onion, carrot, leek and red wine. No tomato'}},
+    {k:'rendimiento', l:{es:'Cuánto sale',ca:'Quant en surt',en:'How much it yields'},
+     ayuda:{es:'IMPORTANTE: una elaboración base no se cuesta "para dos", se cuesta por lo que sale. Escribe la cantidad y la unidad.',
+            ca:'IMPORTANT: una elaboració base no es costeja "per a dos", es costeja pel que en surt. Escriu la quantitat i la unitat.',
+            en:'IMPORTANT: a base prep is not costed "for two", it is costed by its yield. Write the amount and the unit.'},
+     ej:{es:'3 L',ca:'3 L',en:'3 L'}},
+    {k:'nombre', l:{es:'Cómo la llamas',ca:'Com l\'anomenes',en:'What you call it'},
+     ayuda:{es:'El nombre con el que la va a buscar tu equipo en fichas técnicas.',
+            ca:'El nom amb què la buscarà el teu equip a fitxes tècniques.',
+            en:'The name your team will look for in the tech sheets.'},
+     ej:{es:'Fondo oscuro de ternera',ca:'Fons fosc de vedella',en:'Dark beef stock'}},
   ],
   menu: [
-    {k:'formato', l:{es:'Formato',ca:'Format',en:'Format'}, p:'¿Menú tradicional (coste y rotación) o degustación (progresión)? Explica en una línea qué cambia y pregunta cuál quiere.'},
-    {k:'estructura', l:{es:'Estructura',ca:'Estructura',en:'Structure'}, p:'Propón 3 estructuras posibles: cuántos platos y de qué tipo.'},
-    {k:'platos', l:{es:'Los platos',ca:'Els plats',en:'The dishes'}, p:'Propón los platos del menú. Aprovecha fondos y mise en place entre ellos, y no repitas técnicas.'},
-    {k:'cierre', l:{es:'Postre y cierre',ca:'Postres i tancament',en:'Dessert and close'}, p:'Propón 3 cierres para el menú.'},
+    {k:'formato', l:{es:'Formato',ca:'Format',en:'Format'}},
+    {k:'estructura', l:{es:'Estructura',ca:'Estructura',en:'Structure'}},
+    {k:'platos', l:{es:'Los platos',ca:'Els plats',en:'The dishes'}},
+    {k:'cierre', l:{es:'Postre y cierre',ca:'Postres i tancament',en:'Dessert and close'}},
   ],
   carta: [
-    {k:'secciones', l:{es:'Secciones',ca:'Seccions',en:'Sections'}, p:'Propón 3 estructuras de secciones y cuántos platos en cada una.'},
-    {k:'reparto', l:{es:'Reparto de técnicas',ca:'Repartiment de tècniques',en:'Technique spread'}, p:'Propón cómo repartir bases y técnicas para que no vaya todo al horno ni todo lleve la misma crema.'},
-    {k:'platos', l:{es:'Los platos',ca:'Els plats',en:'The dishes'}, p:'Propón los platos sección a sección, cubriendo las dietas obligatorias de su ADN.'},
-    {k:'servicio', l:{es:'Carga de servicio',ca:'Càrrega de servei',en:'Service load'}, p:'Revisa cuántos platos exigen trabajo al momento y si su equipo puede sacarlo. Ajusta lo que haga falta.'},
+    {k:'secciones', l:{es:'Secciones',ca:'Seccions',en:'Sections'}},
+    {k:'reparto', l:{es:'Reparto de técnicas',ca:'Repartiment de tècniques',en:'Technique spread'}},
+    {k:'platos', l:{es:'Los platos',ca:'Els plats',en:'The dishes'}},
+    {k:'servicio', l:{es:'Carga de servicio',ca:'Càrrega de servei',en:'Service load'}},
   ],
 };
+// Solo se pueden EMPEZAR estos dos. Los otros siguen abriéndose si ya existen.
+const IDR_TIPOS_NUEVOS = ['plato', 'base'];
 
 function idrNuevaCreacion(tipo){
   const c = {
@@ -679,14 +750,12 @@ function renderIdrInterno(){
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm ${adnOk?'':'btn-primary'}" onclick="idrAdnModal()"><i class="ti ti-edit"></i> ${adnOk ? t('common.edit') : t('idr.fillDna')}</button>
-        ${iaOk ? `<button class="btn btn-sm" onclick="idrAdnBorrador()"><i class="ti ti-wand"></i> ${t('idr.dnaDraft')}</button>` : ''}
       </div>
     </div>
 
-    <div class="grid grid-3" style="margin-top:14px">
+    <div class="grid grid-2" style="margin-top:14px">
       ${burbuja('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
-      ${burbuja('menu','ti-list-numbers', t('idr.newMenu'), t('idr.newMenuDesc'))}
-      ${burbuja('carta','ti-book', t('idr.newCarta'), t('idr.newCartaDesc'))}
+      ${burbuja('base','ti-soup', t('idr.newBase'), t('idr.newBaseDesc'))}
     </div>
 
     <h3 class="cat-heading">${t('idr.myWork')}</h3>
@@ -704,13 +773,17 @@ function renderIdrInterno(){
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]].map(([v, l]) =>
+      ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['base', t('idr.newBase')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]]
+        // Menú y carta ya no se pueden empezar: su filtro solo se enseña si
+        // queda trabajo de antes, para no ofrecer un cajón siempre vacío.
+        .filter(([v]) => !['menu','carta'].includes(v) || todas.some(x => x.tipo === v))
+        .map(([v, l]) =>
         `<button class="btn btn-sm ${idrFiltroTipo===v?'btn-primary':''}" onclick="idrFiltrar('${v}')">${escapeHtml(l)}</button>`).join('')}
     </div>
 
     ${creaciones.length ? `<div class="grid grid-2">` + creaciones.map(c => `
       <div class="card card-compact" style="cursor:pointer" onclick="navIdr('creacion', ${c.id})">
-        <h3 style="justify-content:space-between"><span style="overflow:visible;white-space:normal"><i class="ti ${c.tipo==='plato'?'ti-tools-kitchen-2':(c.tipo==='menu'?'ti-list-numbers':'ti-book')}"></i> ${escapeHtml(c.titulo || t('idr.untitled'))}</span></h3>
+        <h3 style="justify-content:space-between"><span style="overflow:visible;white-space:normal"><i class="ti ${idrIconoTipo(c.tipo)}"></i> ${escapeHtml(c.titulo || t('idr.untitled'))}</span></h3>
         <p style="font-size:12px;color:var(--muted);margin:2px 0 8px">${idrProgresoTexto(c)}</p>
         <div class="actions-cell">
           <button class="btn btn-sm" onclick="event.stopPropagation();navIdr('creacion', ${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.continue')}</button>
@@ -737,12 +810,22 @@ function idrProgresoTexto(c){
 
 // Sin IA se puede empezar igual: los pasos se rellenan a mano. La IA es el
 // ayudante, no el soporte.
+function idrIconoTipo(tipo){
+  return tipo === 'plato' ? 'ti-tools-kitchen-2'
+       : tipo === 'base'  ? 'ti-soup'
+       : tipo === 'menu'  ? 'ti-list-numbers' : 'ti-book';
+}
+/* El ADN pasa de consejo a REQUISITO. Sin él el asistente propone cocina de
+   folleto: no sabe si es un bar de menú o un gastronómico, ni con qué
+   equipamiento cuenta, ni qué no se toca en esa casa. Una propuesta genérica
+   no solo no sirve — hace perder el tiempo y quema la confianza en la
+   herramienta. Así que sin ADN no se empieza nada. */
 function idrEmpezar(tipo){
-  if(!IDR_PASOS[tipo]) return;
-  if(!idrAdnRelleno() && !(DB.idr && DB.idr.avisoAdnVisto)){
-    DB.idr.avisoAdnVisto = true;
-    saveDB();
-    showToast(t('idr.dnaFirstHint'));
+  if(!IDR_TIPOS_NUEVOS.includes(tipo)) return;
+  if(!idrAdnRelleno()){
+    showToast(t('idr.dnaRequired') + ' (' + idrAdnQueFalta().join(', ') + ')', 5000);
+    idrAdnModal();
+    return;
   }
   const c = idrNuevaCreacion(tipo);
   // Nace donde estás mirando: si abres "Carta otoño 2026" y creas un plato,
@@ -810,6 +893,8 @@ function renderIdrCreacion(box){
           </div>` : ((c.recipeId||(c.recipeIds||[]).length) ? `<p style="font-size:12.5px;color:var(--green,#1F8A4C)"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>` : '')}
         ${c.tipo === 'plato'
           ? `<button class="owner-only btn btn-primary" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
+          : c.tipo === 'base'
+          ? `<button class="owner-only btn btn-primary" onclick="idrCrearBaseReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createBase')}</button>`
           : `<button class="owner-only btn btn-primary" onclick="idrCrearConjunto(${c.id})"><i class="ti ti-plus"></i> ${c.tipo==='menu' ? t('idr.createMenu') : t('idr.createCarta')}</button>`}
         <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
       </div>
@@ -829,101 +914,26 @@ function renderIdrCreacion(box){
               </div>`).join('')}
           </div>` : ''}
 
-        ${!pActual.texto && iaOk ? `
-          <button class="btn btn-primary" id="idr-pedir" onclick="idrPedirPaso()"><i class="ti ti-sparkles"></i> ${t('idr.askAssistant')}</button>
-          <span style="font-size:12px;color:var(--muted);margin-left:10px">${t('idr.callsLeft').replace('${n}', idrQuedanLlamadas())}</span>
-        ` : ''}
-        ${!iaOk ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.manualHint')}</p>` : ''}
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">${escapeHtml(gl(defActual.ayuda||{es:'',ca:'',en:''}))}</p>
         ${idrUltimoFallo ? `<div style="margin-top:10px;padding:8px 10px;border-left:3px solid var(--red);font-size:12.5px">
           <strong>${escapeHtml(t(IDR_MOTIVO_KEYS[idrUltimoFallo.motivo] || 'idr.err.provider'))}</strong>
           <details style="margin-top:4px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary>
           <div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:160px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,600))}</div></details>
         </div>` : ''}
 
-        <div class="field" style="margin-top:12px">
-          <label>${t('idr.orWriteYours')}</label>
-          <textarea id="idr-libre" rows="2" placeholder="${escapeHtml(t('idr.orWriteYoursPh'))}"
+        <div class="field">
+          <label>${t('idr.yourAnswer')}</label>
+          <textarea id="idr-libre" rows="3" placeholder="${escapeHtml(gl(defActual.ej||{es:'',ca:'',en:''}))}"
             oninput="idrGuardarLibre(this.value)"
             onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();idrElegirLibre();}">${escapeHtml(pActual.libre||'')}</textarea>
-          <p style="font-size:12px;color:var(--muted);margin:4px 0 0">${t('idr.enterHint')}</p>
+          ${defActual.ej ? `<p style="font-size:12px;color:var(--muted);margin:4px 0 0"><strong>${t('idr.forExample')}</strong> ${escapeHtml(gl(defActual.ej))}</p>` : ''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="idrElegirLibre()"><i class="ti ti-arrow-right"></i> ${t('idr.continueStep')}</button>
-          ${pActual.texto && iaOk ? `<button class="btn" onclick="idrPedirPaso(true)"><i class="ti ti-refresh"></i> ${t('idr.otherIdeas')}</button>` : ''}
         </div>
       </div>
     `}
   `;
-}
-
-// Le pide al asistente el paso actual. Le pasa lo ya decidido, para que no
-// vuelva a proponer lo mismo ni se contradiga.
-async function idrPedirPaso(otras){
-  // Envoltura de seguridad: hasta ahora solo estaba protegida la llamada al
-  // asistente, pero lo de ANTES (armar el resumen de lo ya decidido) tambien
-  // puede reventar, y como ya se ha puesto "Pensando..." en el boton, el
-  // resultado es un boton muerto sin ningun aviso. Nada dentro de esta
-  // funcion puede volver a fallar en silencio.
-  try{ await idrPedirPasoInterno(otras); }
-  catch(e){
-    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
-    if(typeof showToast === 'function') showToast(t('idr.err.render'));
-    renderIdr();
-  }
-}
-async function idrPedirPasoInterno(otras){
-  const c = idrCreacion(idrCreacionActiva);
-  if(!c) return;
-  const pasos = IDR_PASOS[c.tipo] || [];
-  const def = pasos[c.pasoActual];
-  if(!def) return;
-
-  const btn = document.getElementById('idr-pedir');
-  if(btn){ btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader"></i> ${t('idr.thinking')}`; }
-
-  const decidido = (c.pasos||[]).map((p, i) => (p && p.elegido) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
-  const previo = decidido ? `Ya está decidido:\n${decidido}\n\n` : '';
-  const evitar = otras && Array.isArray((c.pasos[c.pasoActual]||{}).opciones)
-    ? `Ya propusiste esto y no ha convencido, propón otras distintas: ${c.pasos[c.pasoActual].opciones.map(o=>o.titulo).join(', ')}.\n\n` : '';
-
-  const instruccion = `${previo}${evitar}${def.p}
-
-Responde SOLO con este JSON, sin texto alrededor:
-{"comentario":"una o dos frases tuyas, y termina PREGUNTÁNDOLE qué le parece o qué prefiere","opciones":[{"titulo":"...","motivo":"por qué lo propones","necesita":"lo que haría falta, concreto: ingredientes con su cantidad aproximada para 2, y el trabajo que lleva"}]}
-
-En "necesita" baja al detalle de verdad, como se lo dirías a tu jefe de partida: "unos 180 g de bacalao, garbanzos cocidos, un buen sofrito y media hora de guiso". Nada de generalidades. Es lo que convierte una idea en algo que se puede cocinar mañana.
-Si te falta información para proponer con criterio, deja "opciones" vacío y pregunta en "comentario".`;
-
-  // Si algo revienta aqui dentro, el boton se quedaba en "Pensando..." y no
-  // pasaba nada mas: ni aviso ni forma de reintentar. Pase lo que pase, se
-  // avisa y se repinta.
-  let r;
-  try{
-    r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1200});
-  }catch(e){
-    showToast(t('idr.err.provider'));
-    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && e.message || e), cuando: new Date().toISOString()};
-    renderIdr();
-    return;
-  }
-  if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
-
-  idrUltimoFallo = null;
-  const j = idrExtraerJson(r.texto);
-  if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
-  const paso = c.pasos[c.pasoActual];
-  if(j && (j.comentario || j.opciones)){
-    paso.texto = j.comentario || '';
-    paso.opciones = Array.isArray(j.opciones) ? j.opciones.slice(0, 4) : [];
-  } else {
-    // Contestó en prosa. Se enseña igual: es información útil, aunque no se
-    // pueda pintar en tarjetas.
-    paso.texto = r.texto;
-    paso.opciones = [];
-  }
-  c.updatedAt = new Date().toISOString();
-  saveDB();
-  renderIdr();
 }
 
 function idrElegir(oi){
@@ -1047,12 +1057,21 @@ function idrBuscarIngrediente(nombre){
 }
 
 async function idrCrearPlatoReal(id){
+  try{ await idrCrearPlatoRealInterno(id); }
+  catch(e){
+    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+    renderIdr();
+  }
+}
+async function idrCrearPlatoRealInterno(id){
   const c = idrCreacion(id);
   if(!c || c.tipo !== 'plato') return;
   if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+  if(!idrAdnRelleno()){ showToast(t('idr.dnaRequired') + ' (' + idrAdnQueFalta().join(', ') + ')', 5000); idrAdnModal(); return; }
 
   const pasos = IDR_PASOS.plato;
-  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
+  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido && pasos[i]) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
 
   showToast(t('idr.buildingDish'));
   const instruccion = `Este es el plato que hemos diseñado:
@@ -1157,11 +1176,110 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   renderIdr();
 }
 
+/* ── Elaboración base ──
+   Un fondo o una salsa madre no se cuestan "para dos comensales": se cuestan
+   por lo que SALE de la olla, y de ahí la app saca el precio por litro que
+   luego cobra cada plato que la usa. Por eso el rendimiento es un paso del
+   guion y no una suposición: sin él, el coste de todos los platos que la
+   lleven sale mal, y encima sin avisar. */
+const IDR_UNIDADES_BASE = ['L','ml','kg','g','ud'];
+function idrLeerRendimiento(texto){
+  const s = String(texto||'').trim().toLowerCase().replace(',', '.');
+  const m = s.match(/([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Zµ]+)?/);
+  if(!m) return {qty: 1, unit: 'L'};
+  const qty = parseFloat(m[1]);
+  let unit = idrNormalizaUnidad(m[2] || 'L');
+  // La ficha solo admite estas cinco. Lo que no sea una de ellas se lleva a
+  // la de su familia (un "litro y medio" en cl, a L) en vez de perderse.
+  if(!IDR_UNIDADES_BASE.includes(unit)){
+    if(unit === 'cl' || unit === 'dl'){ return {qty: Math.round((qty * IDR_A_BASE[unit] / 1000) * 10000)/10000, unit: 'L'}; }
+    if(unit === 'mg'){ return {qty: qty/1000, unit: 'g'}; }
+    unit = 'L';
+  }
+  return {qty: isFinite(qty) && qty > 0 ? qty : 1, unit};
+}
+
+async function idrCrearBaseReal(id){
+  try{ await idrCrearBaseRealInterno(id); }
+  catch(e){
+    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+    renderIdr();
+  }
+}
+async function idrCrearBaseRealInterno(id){
+  const c = idrCreacion(id);
+  if(!c || c.tipo !== 'base') return;
+  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+  if(!idrAdnRelleno()){ showToast(t('idr.dnaRequired') + ' (' + idrAdnQueFalta().join(', ') + ')', 5000); idrAdnModal(); return; }
+
+  const pasos = IDR_PASOS.base;
+  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido && pasos[i]) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
+  const rendPaso = (c.pasos||[]).find((p, i) => pasos[i] && pasos[i].k === 'rendimiento');
+  const rend = idrLeerRendimiento(rendPaso && rendPaso.elegido);
+
+  showToast(t('idr.buildingBase'));
+  const instruccion = `Esta es la elaboración base que me ha encargado el cocinero:
+
+${resumen}
+
+Escribe la receta para que salgan EXACTAMENTE ${rend.qty} ${rend.unit}. Responde SOLO con este JSON:
+{"nombre":"...","descripcion":"para qué sirve y cómo se guarda en servicio, en una línea","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
+
+Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
+Las cantidades tienen que dar ese rendimiento de verdad, contando lo que se reduce o se pierde al colar.
+Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Si hace falta alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
+
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
+  if(!r.ok){ showToast(idrMensajeError(r)); return; }
+  idrUltimoFallo = null;
+  const j = idrExtraerJson(r.texto);
+  if(!j || !j.nombre || !Array.isArray(j.ingredientes)){ showToast(t('idr.err.unreadable')); return; }
+
+  const lineas = [];
+  const faltan = [];
+  j.ingredientes.forEach(ing => {
+    const real = idrBuscarIngrediente(ing.nombre);
+    const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
+    if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
+    else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
+  });
+
+  const receta = {
+    id: genId(), name: String(j.nombre).slice(0, 80), price: 0, priceBase: 0,
+    ivaPct: (DB.business && DB.business.ivaPct) || 10,
+    comensales: 1, consumiblesPct: 0,
+    category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
+    ingredients: lineas, allergens: [], area: 'cocina',
+    isBase: true, baseYield: rend.qty, baseUnit: rend.unit,
+    steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : '',
+    presentation: String(j.descripcion || ''),
+  };
+  DB.recipes.push(receta);
+  // Sin esto la elaboración existe como ficha pero no aparece en el stock de
+  // elaboraciones, que es donde el equipo la busca y la produce.
+  if(typeof syncElaboracionForRecipe === 'function') syncElaboracionForRecipe(receta.id, true, receta.name, receta.baseUnit);
+
+  c.recipeId = receta.id;
+  c.faltan = faltan;
+  c.avisos = [];
+  c.updatedAt = new Date().toISOString();
+  saveDB();
+
+  const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+  const porUnidad = rend.qty > 0 ? coste / rend.qty : 0;
+  const aviso = faltan.length
+    ? t('idr.baseCreatedMissing').replace('${n}', faltan.length).replace('${coste}', fmtMoney(coste)).replace('${unidad}', `${fmtMoney(porUnidad)}/${rend.unit}`)
+    : t('idr.baseCreated').replace('${coste}', fmtMoney(coste)).replace('${unidad}', `${fmtMoney(porUnidad)}/${rend.unit}`);
+  showToast(aviso, 5000);
+  renderIdr();
+}
+
 function idrImprimir(id){
   const c = idrCreacion(id);
   if(!c) return;
   const pasos = IDR_PASOS[c.tipo] || [];
-  const filas = (c.pasos||[]).map((p, i) => (p && p.elegido)
+  const filas = (c.pasos||[]).map((p, i) => (p && p.elegido && pasos[i])
     ? `<tr><td style="padding:4px 12px 4px 0;color:#777;white-space:nowrap"><strong>${escapeHtml(gl(pasos[i].l))}</strong></td><td style="padding:4px 0">${escapeHtml(p.elegido)}</td></tr>` : ''
   ).join('');
   const body = `
@@ -1304,33 +1422,6 @@ function idrGuardarAdn(){
   showToast(t('idr.dnaSaved'));
 }
 
-// El atajo que engancha: en vez de empezar en blanco, el asistente lee la
-// carta que YA tienen y propone un borrador para corregir.
-async function idrAdnBorrador(){
-  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
-  const carta = idrCartaTexto();
-  if(!carta){ showToast(t('idr.dnaNoCarta')); return; }
-  showToast(t('idr.thinking'));
-  const campos = IDR_ADN_CAMPOS.map(c => `"${c.k}"`).join(', ');
-  const r = await llmChat(
-    IDR_REGLAS,
-    [{role:'user', content:`Esta es la carta de un restaurante:\n\n${carta}\n\nDeduce su identidad gastronómica. Responde SOLO con este JSON, con las claves ${campos}. Deja en blanco lo que no puedas deducir de la carta: no te lo inventes. En "cocina" sé concreto (por ejemplo "catalana de mercado", no "mediterránea").`}],
-    {maxTokens: 900}
-  );
-  if(!r.ok){ showToast(idrMensajeError(r)); return; }
-  idrUltimoFallo = null;
-  const j = idrExtraerJson(r.texto);
-  if(!j){ showToast(t('idr.err.unreadable')); return; }
-  const a = idrAdn();
-  IDR_ADN_CAMPOS.forEach(c => {
-    const v = j[c.k];
-    // Solo rellena lo que está vacío: no pisa lo que el cocinero ya escribió.
-    if(v !== undefined && String(v).trim() !== '' && (a[c.k] === undefined || String(a[c.k]).trim() === '')) a[c.k] = String(v).trim();
-  });
-  saveDB();
-  idrAdnModal();
-  showToast(t('idr.dnaDraftDone'));
-}
 
 /* ============================================================
    MENÚ Y CARTA — de la estructura a los platos, y luego el coste
@@ -1349,7 +1440,7 @@ async function idrCrearConjunto(id){
   if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
 
   const pasos = IDR_PASOS[c.tipo];
-  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
+  const resumen = (c.pasos||[]).map((p, i) => (p && p.elegido && pasos[i]) ? `${gl(pasos[i].l)}: ${p.elegido}` : null).filter(Boolean).join('\n');
 
   showToast(t('idr.buildingSet'));
   const esMenu = c.tipo === 'menu';

@@ -45,6 +45,8 @@ await page.evaluate(()=>{
     {id:4, name:'Aceite de oliva', unit:'ml', price:0.008, category:'Aceites', supplier:'Huerta Local', allergens:[], area:'cocina'},
   ];
   DB.recipes = []; DB.fichas = []; DB.idr = {};
+  // El ADN es REQUISITO desde R18: sin él no se puede empezar ninguna prueba.
+  DB.idr.adn = {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio, mediodía de oficina'};
   DB.cartas = [{id:1, nombre:'CARTA GENERAL', tipo:'GENERAL', dias:[0,1,2,3,4,5,6], secciones:[
     {id:1, nombre:'Entrantes', platos:[{nombre:'Escalivada'},{nombre:'Pa amb tomàquet'}]},
     {id:2, nombre:'Principales', platos:[{nombre:'Fricandó'},{nombre:'Suquet de peix'}]},
@@ -74,6 +76,7 @@ await caso('Sin asistente el módulo funciona igual, a mano', async ()=>{
     renderIdr();
     const html = document.getElementById('view-idr').innerHTML;
     // Crear a mano una creación y avanzar un paso sin tocar la IA
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
     document.getElementById('idr-libre').value = 'Bacalao';
@@ -89,7 +92,7 @@ await caso('Sin asistente el módulo funciona igual, a mano', async ()=>{
 
 /* ─── El ADN llega a cada consulta ─── */
 await caso('El ADN entra de verdad en lo que se le pide al asistente', async ()=>{
-  await fingir('{"comentario":"vale","opciones":[{"titulo":"Bacalao","motivo":"de temporada"}]}');
+  await fingir(JSON.stringify({nombre:'X', descripcion:'x', pasos:['x'], ingredientes:[{nombre:'Bacalao',cantidad:100,unidad:'g'}]}));
   const r = await page.evaluate(async ()=>{
     idrGuardarConfig('google','clave-de-prueba','');
     const a = idrAdn();
@@ -97,17 +100,20 @@ await caso('El ADN entra de verdad en lo que se le pide al asistente', async ()=
     a.lineasRojas = 'Nada de cocina asiática';
     a.nivel = 'Bistró';
     saveDB();
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
-    await idrPedirPaso();
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Un guiso de bacalao'}]; c.pasoActual = 4; saveDB();
+    await idrCrearPlatoReal(c.id);
     const sis = window.__llamadas[0].sistema;
     return {
       llevaCocina: sis.includes('Catalana de mercado'),
       llevaLineasRojas: sis.includes('Nada de cocina asiática'),
-      llevaIngredientes: sis.includes('Bacalao') && sis.includes('0,022') || sis.includes('Bacalao'),
+      llevaIngredientes: sis.includes('Bacalao'),
       llevaCarta: sis.includes('Fricandó'),
       llevaReglas: sis.includes('NO INVENTES'),
       llevaConservacion: sis.includes('CONSERVACIÓN FUERA'),
-      opciones: idrCreacion(idrCreacionActiva).pasos[0].opciones.length,
+      llevaEncargo: window.__llamadas[0].mensajes[0].content.includes('Un guiso de bacalao'),
     };
   });
   assert.ok(r.llevaCocina, 'el ADN debería viajar en cada consulta');
@@ -116,17 +122,22 @@ await caso('El ADN entra de verdad en lo que se le pide al asistente', async ()=
   assert.ok(r.llevaCarta, 'debería saber lo que ya tiene en carta');
   assert.ok(r.llevaReglas, 'las reglas de honestidad deben ir siempre');
   assert.ok(r.llevaConservacion, 'la conservación debe quedar fuera explícitamente');
-  assert.equal(r.opciones, 1);
-  return 'ADN, ingredientes, carta y reglas viajan juntos';
+  assert.ok(r.llevaEncargo, 'y lo que ha explicado el cocinero, tal cual');
+  return 'ADN, ingredientes, carta, reglas y el encargo del cocinero';
 });
 
 await caso('Sin ADN definido, avisa de que las propuestas serán genéricas', async ()=>{
   const r = await page.evaluate(()=>{
+    const antes = DB.idr.adn;
     DB.idr.adn = {};
-    return idrContextoNegocio().includes('sin definir');
+    const avisa = idrContextoNegocio().includes('sin definir');
+    const bloquea = !idrAdnRelleno();
+    DB.idr.adn = antes;   // los casos siguientes necesitan poder empezar
+    return {avisa, bloquea};
   });
-  assert.ok(r, 'debería avisar en vez de callarse');
-  return 'lo avisa al asistente';
+  assert.ok(r.avisa, 'debería avisar en vez de callarse');
+  assert.ok(r.bloquea, 'y sin ADN no se puede empezar nada');
+  return 'lo avisa y además bloquea';
 });
 
 /* ─── La respuesta estructurada ─── */
@@ -144,17 +155,30 @@ await caso('Entiende la respuesta aunque venga envuelta o con prosa delante', as
   return 'las tres formas y el caso sin JSON';
 });
 
-await caso('Si contesta en prosa se enseña igual, no se pierde', async ()=>{
-  await fingir('No conozco bien ese plato, ¿me pasas una receta de referencia?');
-  const r = await page.evaluate(async ()=>{
+// R18: se quitó el botón de pedir ideas. Lo explica la persona, y el
+// asistente solo escribe la receta al final. Esta prueba vigila que no
+// vuelva a colarse un atajo que invite a que la máquina decida el plato.
+await caso('No hay botón de pedir ideas: lo explica la persona', async ()=>{
+  const r = await page.evaluate(()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
-    await idrPedirPaso();
-    const p = idrCreacion(idrCreacionActiva).pasos[0];
-    return {texto: p.texto, opciones: (p.opciones||[]).length};
+    const html = document.getElementById('view-idr').innerHTML;
+    const botones = [...document.querySelectorAll('#view-idr button')].map(b=>b.textContent.trim());
+    const d = IDR_PASOS.plato[0];
+    return {
+      existeFuncion: typeof window.idrPedirPaso === 'function',
+      pedirIdeas: botones.some(b=>/pedir ideas|ideas/i.test(b)),
+      hayCuadro: !!document.getElementById('idr-libre'),
+      hayAyuda: html.includes(gl(d.ayuda).slice(0, 30)),
+      hayEjemplo: html.includes(gl(d.ej).slice(0, 25)),
+    };
   });
-  assert.ok(r.texto.includes('receta de referencia'), 'la pregunta del asistente debe verse');
-  assert.equal(r.opciones, 0);
-  return 'se muestra la pregunta al cocinero';
+  assert.ok(!r.existeFuncion, 'la función de pedir ideas debe estar fuera');
+  assert.ok(!r.pedirIdeas, 'y su botón también');
+  assert.ok(r.hayCuadro, 'el cuadro donde lo explica la persona debe estar');
+  assert.ok(r.hayAyuda, 'con la ayuda del paso');
+  assert.ok(r.hayEjemplo, 'y un ejemplo de qué escribir');
+  return 'solo el cuadro, con su ayuda y su ejemplo';
 });
 
 /* ─── De propuesta a plato real: LO IMPORTANTE ─── */
@@ -171,10 +195,11 @@ await caso('Una propuesta se convierte en escandallo real con SUS precios', asyn
     ],
   }));
   const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
-    ['Bacalao','Guisado','Sofrito','Garbanzos','Aceite crudo','Bacalao con garbanzos'].forEach((v,i)=>{ c.pasos[i]={elegido:v}; });
-    c.pasoActual = 6;
+    ['Bacalao guisado','Bacalao desalado','Garbanzos y sofrito','Bacalao con garbanzos'].forEach((v,i)=>{ c.pasos[i]={elegido:v}; });
+    c.pasoActual = 4;
     saveDB();
     await idrCrearPlatoReal(c.id);
     const cc = idrCreacion(c.id);
@@ -204,9 +229,10 @@ await caso('El coste lo pone la app aunque el modelo diga otra cosa', async ()=>
     ingredientes:[{nombre:'Bacalao', cantidad:100, unidad:'g'}],
   }));
   const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
-    c.pasoActual = 6; saveDB();
+    c.pasoActual = 4; saveDB();
     await idrCrearPlatoReal(c.id);
     const receta = DB.recipes.find(x => x.id === idrCreacion(c.id).recipeId);
     return {coste: recipeCost(receta), precio: receta.price};
@@ -221,9 +247,10 @@ await caso('Una respuesta ilegible no crea nada a medias', async ()=>{
   await fingir('lo siento, no puedo');
   const r = await page.evaluate(async ()=>{
     const antes = DB.recipes.length;
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
-    c.pasoActual = 6; saveDB();
+    c.pasoActual = 4; saveDB();
     await idrCrearPlatoReal(c.id);
     return {antes, despues: DB.recipes.length, recipeId: idrCreacion(c.id).recipeId};
   });
@@ -249,7 +276,7 @@ await caso('Una carta se crea entera: secciones, platos y su escandallo', async 
   }));
   const r = await page.evaluate(async ()=>{
     const cartasAntes = DB.cartas.length;
-    idrEmpezar('carta');
+    navIdr('creacion', idrNuevaCreacion('carta').id);
     const c = idrCreacion(idrCreacionActiva);
     c.pasos = [{elegido:'Entrantes y principales'},{elegido:'Brasa, guiso y crudo'},{elegido:'Producto de otoño'},{elegido:'Dos platos al momento como mucho'}];
     c.pasoActual = 4; saveDB();
@@ -289,7 +316,7 @@ await caso('Un menú crea sus platos pero no sustituye la carta', async ()=>{
   }));
   const r = await page.evaluate(async ()=>{
     const cartasAntes = DB.cartas.length;
-    idrEmpezar('menu');
+    navIdr('creacion', idrNuevaCreacion('menu').id);
     const c = idrCreacion(idrCreacionActiva);
     c.pasoActual = 4; saveDB();
     await idrCrearConjunto(c.id);
@@ -363,6 +390,7 @@ await caso('Una prueba nace en la carpeta que estás mirando', async ()=>{
   const r = await page.evaluate(()=>{
     DB.idr.carpetas = [{id: 777, nombre:'Pruebas de brasa'}];
     idrCarpetaActiva = 777;
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
     idrCarpetaActiva = null;
@@ -375,7 +403,7 @@ await caso('Una prueba nace en la carpeta que estás mirando', async ()=>{
 /* ─── LA APP JUZGA AL MODELO (lo que ningún chat puede hacer) ─── */
 await caso('Detecta un food cost por encima del objetivo de la casa', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {foodCostObjetivo: 30};
+    Object.assign(idrAdn(), {foodCostObjetivo: 30});
     // 200 g de bacalao = 4,40 · +5% = 4,62. A 10 € de PVP son el 46,2%
     const receta = {id:9001, name:'Caro', price:10, comensales:2, consumiblesPct:5, area:'cocina',
       ingredients:[{type:'ingredient', ingredientId:1, qty:200, merma:0}], allergens:[]};
@@ -393,7 +421,7 @@ await caso('Detecta un food cost por encima del objetivo de la casa', async ()=>
 
 await caso('Detecta una técnica que su cocina no puede hacer', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {equipamiento: 'Horno mixto, brasa y abatidor. Sin Roner ni deshidratador.'};
+    Object.assign(idrAdn(), {equipamiento: 'Horno mixto, brasa y abatidor. Sin Roner ni deshidratador.'});
     const receta = {id:9002, name:'x', price:0, comensales:2, consumiblesPct:5, area:'cocina', ingredients:[], allergens:[],
       steps:'Cocinar a baja temperatura 4 horas y terminar en la brasa'};
     const con = idrValidarPlato(receta);
@@ -408,7 +436,7 @@ await caso('Detecta una técnica que su cocina no puede hacer', async ()=>{
 
 await caso('Detecta producto fuera de temporada con el calendario de la app', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {producto: 'Mercado y temporada'};
+    Object.assign(idrAdn(), {producto: 'Mercado y temporada'});
     DB.ingredients.push({id:50, name:'Tomate', unit:'g', price:0.003, category:'Verduras', supplier:'Huerta Local', allergens:[], area:'cocina'});
     DB.ingredients.push({id:51, name:'Calabaza', unit:'g', price:0.002, category:'Verduras', supplier:'Huerta Local', allergens:[], area:'cocina'});
     const receta = {id:9003, name:'x', price:0, comensales:2, consumiblesPct:5, area:'cocina', allergens:[],
@@ -440,7 +468,7 @@ await caso('El calendario de temporada está completo, los 12 meses', async ()=>
 
 await caso('Detecta una carta repetitiva y las dietas sin cubrir', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {dietas:'Siempre una opción vegetariana y una sin gluten', equipo:'2 cocineros'};
+    Object.assign(idrAdn(), {dietas:'Siempre una opción vegetariana y una sin gluten', equipo:'2 cocineros'});
     const conBacalao = n => ({id:9100+n, name:'Bacalao '+n, price:18, comensales:2, consumiblesPct:5, area:'cocina', allergens:[],
       ingredients:[{type:'ingredient', ingredientId:1, qty:180, merma:0}]});
     const repetitiva = [conBacalao(1), conBacalao(2), conBacalao(3), conBacalao(4)];
@@ -459,7 +487,7 @@ await caso('Detecta una carta repetitiva y las dietas sin cubrir', async ()=>{
 
 await caso('Avisa si la carta pide más trabajo del que el equipo puede sacar', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {equipo:'2 cocineros y un ayudante'};
+    Object.assign(idrAdn(), {equipo:'2 cocineros y un ayudante'});
     const recetas = [{id:9300, name:'x', price:10, comensales:2, consumiblesPct:5, area:'cocina', ingredients:[], allergens:[]}];
     return {mucho: idrValidarConjunto(recetas, {alMomento: 9}), poco: idrValidarConjunto(recetas, {alMomento: 4})};
   });
@@ -496,7 +524,7 @@ await caso('La ingeniería de menú se calcula con SUS ventas, o calla', async (
 
 await caso('El asistente recibe temporada, proporciones y marco de oficio', async ()=>{
   const r = await page.evaluate(()=>{
-    DB.idr.adn = {cocina:'Catalana de mercado'};
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado'});
     const sis = idrSistema();
     return {
       temporada: /PRODUCTO DE TEMPORADA/.test(sis),
@@ -512,7 +540,7 @@ await caso('El asistente recibe temporada, proporciones y marco de oficio', asyn
 
 await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async ()=>{
   const r = await page.evaluate(async ()=>{
-    DB.idr.adn = {foodCostObjetivo: 30, equipamiento:'Horno y brasa. Sin Roner.'};
+    Object.assign(idrAdn(), {foodCostObjetivo: 30, equipamiento:'Horno y brasa. Sin Roner.'});
     let llamada = 0;
     if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
     window.llmChat = async (sis, msgs) => {
@@ -526,9 +554,10 @@ await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async
       return {ok:true, texto: JSON.stringify({nombre:'Ajustado', descripcion:'x', pasos:['Marcar en la brasa'], nota:'He bajado la ración y cambiado a brasa',
         ingredientes:[{nombre:'Bacalao', cantidad:120, unidad:'g'},{nombre:'Garbanzos', cantidad:120, unidad:'g'}]})};
     };
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
-    c.pasoActual = 6; saveDB();
+    c.pasoActual = 4; saveDB();
     await idrCrearPlatoReal(c.id);
     const cc = idrCreacion(c.id);
     const receta = DB.recipes.find(x=>x.id===cc.recipeId);
@@ -541,7 +570,12 @@ await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async
   assert.equal(r.nombre, 'Ajustado', 'debe quedarse con la versión corregida');
   assert.equal(r.qty, 120);
   assert.ok(r.nota.includes('bajado'), 'la explicación del asistente se conserva');
-  assert.deepEqual(r.avisos, [], 'tras corregir, la app vuelve a medir y ya no debe quedar aviso');
+  // Tras corregir ya no quedan ni la técnica imposible ni la ración cara. Sí
+  // puede quedar el aviso de temporada: el ADN de la casa dice que trabaja de
+  // mercado y el bacalao no es de este mes — eso no lo arregla reescribir la
+  // receta, y está bien que se siga viendo.
+  assert.ok(!r.avisos.some(a=>/baja temperatura|roner/i.test(a)), 'la técnica imposible debe estar resuelta');
+  assert.ok(!r.avisos.some(a=>/food cost/i.test(a)), 'y el food cost también');
   return `2 pasadas, corrigió la técnica y bajó 400 g → 120 g`;
 });
 
@@ -549,10 +583,11 @@ await caso('Propone el PVP que cumple el objetivo de food cost', async ()=>{
   await fingir(JSON.stringify({nombre:'Con precio', descripcion:'x', pasos:['x'],
     ingredientes:[{nombre:'Bacalao', cantidad:200, unidad:'g'}]}));
   const r = await page.evaluate(async ()=>{
-    DB.idr.adn = {foodCostObjetivo: 30};
+    Object.assign(idrAdn(), {foodCostObjetivo: 30});
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
-    c.pasoActual = 6; saveDB();
+    c.pasoActual = 4; saveDB();
     await idrCrearPlatoReal(c.id);
     const receta = DB.recipes.find(x=>x.id===idrCreacion(c.id).recipeId);
     return {precio: receta.price, coste: recipeCost(receta), fc: recipeCost(receta)/receta.price*100};
@@ -567,8 +602,11 @@ await caso('Propone el PVP que cumple el objetivo de food cost', async ()=>{
 await caso('Sin internet avisa en cristiano y no rompe', async ()=>{
   await fingir(null);
   const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
-    try{ await idrPedirPaso(); }catch(e){ return {roto:e.message}; }
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Algo'}]; c.pasoActual = 4; saveDB();
+    try{ await idrCrearPlatoReal(c.id); }catch(e){ return {roto:e.message}; }
     return {roto:null, mensaje: idrMensajeError({motivo:'sin-conexion'}), vista: !!document.getElementById('view-idr').innerHTML};
   });
   assert.ok(!r.roto, 'reventó: ' + r.roto);
@@ -614,6 +652,7 @@ await caso('El tope de consultas corta antes de gastar más', async ()=>{
 /* ─── Que sobreviva a cerrar la tablet ─── */
 await caso('Una conversación a medias sobrevive a recargar la app', async ()=>{
   const id = await page.evaluate(()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
     c.pasos[0] = {elegido:'Bacalao'};
@@ -642,6 +681,7 @@ await caso('Volver a un paso rehace lo que dependía y respeta lo anterior', asy
     ['netlify-gate','license-gate','firebase-gate'].forEach(x=>document.getElementById(x)?.remove());
     editUnlocked = true; document.body.classList.add('owner-session');
     currentArea = () => 'cocina';
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const c = idrCreacion(idrCreacionActiva);
     c.pasos = [{elegido:'Bacalao'},{elegido:'A la brasa'},{elegido:'Pilpil'},{elegido:'Garbanzos'}];
@@ -750,7 +790,7 @@ await caso('En un negocio vacío I+D no se rompe y guía qué hacer', async ()=>
     try{
       navigate('idr'); renderIdr();
       // Y que se pueda empezar algo aunque no haya NADA cargado
-      idrEmpezar('carta');
+      navIdr('creacion', idrNuevaCreacion('carta').id);
       renderIdr();
       navIdr('inicio');
     }catch(e){ roto = e.message; }
@@ -832,11 +872,12 @@ await caso('Lo escrito sobrevive a que falle el asistente', async ()=>{
     currentArea = () => 'cocina';
     document.body.classList.add('owner-session','edit-unlocked'); editUnlocked = true;
     navigate('idr'); renderIdr();
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     // Escribe, y LUEGO pide ideas (que falla)
     document.getElementById('idr-libre').value = 'Bacalao a la brasa';
     idrGuardarLibre('Bacalao a la brasa');
-    await idrPedirPaso();
+    renderIdr();   // cualquier repintado no puede llevarse lo escrito
     const enPantalla = (document.getElementById('idr-libre')||{}).value;
     idrElegirLibre();
     const c = idrCreacion(idrCreacionActiva);
@@ -850,7 +891,7 @@ await caso('Lo escrito sobrevive a que falle el asistente', async ()=>{
 
 await caso('Enter continúa; el borrador se borra al avanzar', async ()=>{
   const r = await page.evaluate(()=>{
-    idrEmpezar('menu');
+    navIdr('creacion', idrNuevaCreacion('menu').id);
     idrGuardarLibre('Menú de otoño');
     const c = idrCreacion(idrCreacionActiva);
     const antesDeAvanzar = c.pasos[0].libre;
@@ -895,6 +936,7 @@ await caso('Se puede volver al panel desde I+D, como en cualquier módulo', asyn
   assert.equal(r.vista, 'view-folder', 'debería llevar al panel de la carpeta');
   // Y desde dentro de una creación, el Volver lleva al cuaderno
   const dentro = await page.evaluate(()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
     const v = [...document.querySelectorAll('#view-idr button')].find(b => /volver|tornar|back/i.test(b.textContent));
     v.click();
@@ -928,7 +970,7 @@ await caso('Nivel y producto son texto libre, no listas cerradas', async ()=>{
     const nivel = IDR_ADN_CAMPOS.find(c=>c.k==='nivel');
     const producto = IDR_ADN_CAMPOS.find(c=>c.k==='producto');
     // Y que lo escrito a mano llegue tal cual al asistente
-    DB.idr.adn = {nivel:'Comida de diario sin pretensiones', producto:'Verdura del mercado cada mañana'};
+    Object.assign(idrAdn(), {nivel:'Comida de diario sin pretensiones', producto:'Verdura del mercado cada mañana'});
     const sis = idrSistema();
     return {tipoNivel: nivel.tipo, tipoProducto: producto.tipo,
             llega: sis.includes('Comida de diario sin pretensiones') && sis.includes('Verdura del mercado cada mañana')};
@@ -939,28 +981,25 @@ await caso('Nivel y producto son texto libre, no listas cerradas', async ()=>{
   return 'texto libre y llega entero';
 });
 
-await caso('En cada paso baja al detalle de lo que haría falta', async ()=>{
-  await fingir(JSON.stringify({comentario:'¿Qué te parece?', opciones:[
-    {titulo:'Bacalao guisado', motivo:'de temporada', necesita:'180 g de bacalao, garbanzos cocidos y un buen sofrito'},
-  ]}));
-  const r = await page.evaluate(async ()=>{
-    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
-    currentArea = () => 'cocina';
-    idrEmpezar('plato');
-    await idrPedirPaso();
-    const pedido = window.__llamadas[0].mensajes[0].content;
-    const html = document.getElementById('view-idr').innerHTML;
-    return {
-      pideDetalle: /necesita/.test(pedido) && /cantidad aproximada/i.test(pedido),
-      pidePreguntar: /PREGUNT/i.test(pedido),
-      seVe: html.includes('180 g de bacalao'),
-      reglas: /NO TE QUEDES EN LA IDEA/.test(IDR_REGLAS),
-    };
+await caso('Cada paso explica qué escribir, y con un ejemplo, en los 3 idiomas', async ()=>{
+  const r = await page.evaluate(()=>{
+    const fallos = [];
+    ['plato','base'].forEach(tipo => {
+      IDR_PASOS[tipo].forEach(p => {
+        ['es','ca','en'].forEach(idioma => {
+          if(!p.l || !p.l[idioma]) fallos.push(`${tipo}.${p.k}.nombre.${idioma}`);
+          if(!p.ayuda || !p.ayuda[idioma]) fallos.push(`${tipo}.${p.k}.ayuda.${idioma}`);
+          if(!p.ej || !p.ej[idioma]) fallos.push(`${tipo}.${p.k}.ejemplo.${idioma}`);
+        });
+      });
+    });
+    return {fallos, pasosPlato: IDR_PASOS.plato.length, pasosBase: IDR_PASOS.base.length,
+            hayRendimiento: IDR_PASOS.base.some(p=>p.k==='rendimiento')};
   });
-  assert.ok(r.pideDetalle, 'debe pedirle ingredientes y cantidades, no solo la idea');
-  assert.ok(r.pidePreguntar, 'y que termine preguntando al cocinero');
-  assert.ok(r.seVe, 'lo que haría falta debe verse en la tarjeta');
-  assert.ok(r.reglas);
+  assert.deepEqual(r.fallos, [], 'faltan textos: ' + r.fallos.join(', '));
+  assert.equal(r.pasosPlato, 4);
+  assert.equal(r.pasosBase, 4);
+  assert.ok(r.hayRendimiento, 'la base tiene que preguntar cuánto sale');
   return 'pide detalle, pregunta, y se ve en pantalla';
 });
 
@@ -1087,9 +1126,13 @@ await caso('Si el asistente revienta, avisa en vez de quedarse pensando', async 
     window.llmChat = async () => { throw new Error('algo raro'); };
     localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
     currentArea = () => 'cocina';
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
     idrEmpezar('plato');
-    await idrPedirPaso();
-    const boton = [...document.querySelectorAll('#view-idr button')].find(b=>/pedir ideas/i.test(b.textContent));
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Algo'}]; c.pasoActual = 4; saveDB();
+    renderIdr();
+    try{ await idrCrearPlatoReal(c.id); }catch(e){ window.__t.push('EXCEPCION ' + e.message); }
+    const boton = [...document.querySelectorAll('#view-idr button')].find(b=>/crear/i.test(b.textContent));
     const out = {avisos: window.__t.slice(), sigueVivo: !!boton && !boton.disabled, fallo: idrUltimoFallo && idrUltimoFallo.motivo};
     window.showToast = o;
     return out;
@@ -1176,6 +1219,126 @@ await caso('Las cantidades se pasan a la unidad en que el negocio compra', async
   assert.equal(r.incompatible, 3, 'unidades incompatibles: no se inventa un factor');
   assert.equal(r.basura, 0, 'lo que no es un número vale 0');
   return 'g→kg, ml→L y los casos raros';
+});
+
+await caso('Sin el ADN mínimo no se puede empezar nada', async ()=>{
+  const r = await page.evaluate(()=>{
+    const antes = JSON.parse(JSON.stringify(idrAdn()));
+    const cuantas = () => idrCreaciones().length;
+    DB.idr.adn = {};
+    const n0 = cuantas();
+    idrEmpezar('plato');   const trasPlato = cuantas();
+    idrEmpezar('base');    const trasBase  = cuantas();
+    // Con un solo campo tampoco: hacen falta cocina, nivel y público
+    DB.idr.adn = {cocina:'Catalana'};
+    const falta = idrAdnQueFalta().length;
+    idrEmpezar('plato');   const trasParcial = cuantas();
+    DB.idr.adn = antes;
+    const conAdn = (idrEmpezar('plato'), cuantas());
+    return {n0, trasPlato, trasBase, falta, trasParcial, conAdn};
+  });
+  assert.equal(r.trasPlato, r.n0, 'sin ADN no debe crearse ningún plato');
+  assert.equal(r.trasBase, r.n0, 'ni ninguna elaboración');
+  assert.equal(r.falta, 2, 'debe decir qué dos campos faltan');
+  assert.equal(r.trasParcial, r.n0, 'con el ADN a medias tampoco');
+  assert.equal(r.conAdn, r.n0 + 1, 'con el ADN puesto, sí');
+  return 'exige cocina, nivel y público, y dice cuál falta';
+});
+
+await caso('Una elaboración base se crea y aparece en Fichas Técnicas', async ()=>{
+  await fingir(JSON.stringify({
+    nombre:'Fondo oscuro de ternera',
+    descripcion:'Base para guisos y salsas. Se guarda en frío hasta 4 días.',
+    pasos:['Tostar los huesos','Mojar y reducir'],
+    ingredientes:[
+      {nombre:'Bacalao', cantidad:500, unidad:'g'},     // usa el que sí tiene
+      {nombre:'Huesos de ternera', cantidad:2000, unidad:'g'},
+    ],
+  }));
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    // Pruebas anteriores vacían el negocio a propósito: se repone lo que hace falta.
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients = [{id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'Pescados Mar', allergens:['Pescado'], area:'cocina'}];
+    }
+    const elabAntes = (DB.elaboraciones||[]).length;
+    idrEmpezar('base');
+    const c = idrCreacion(idrCreacionActiva);
+    c.pasos = [{elegido:'Un fondo oscuro para los guisos'},{elegido:'Huesos de ternera tostados'},{elegido:'3 L'},{elegido:'Fondo oscuro de ternera'}];
+    c.pasoActual = 4; saveDB();
+    await idrCrearBaseReal(c.id);
+    const cc = idrCreacion(c.id);
+    const receta = DB.recipes.find(x => x.id === cc.recipeId);
+    const elab = (DB.elaboraciones||[]).find(e => e.recipeId === cc.recipeId);
+    return {
+      creada: !!receta, esBase: receta && receta.isBase,
+      rendimiento: receta && receta.baseYield, unidad: receta && receta.baseUnit,
+      lineas: receta ? receta.ingredients.length : 0,
+      faltan: cc.faltan,
+      coste: receta ? Number(recipeCost(receta).toFixed(4)) : null,
+      porLitro: receta ? Number(recipeBaseCostPerUnit(receta).toFixed(4)) : null,
+      elabAntes, elabDespues: (DB.elaboraciones||[]).length, enStock: !!elab,
+      pasoDelGuion: IDR_PASOS.base[2].k,
+    };
+  });
+  assert.ok(r.creada, 'debería haber creado la ficha');
+  assert.ok(r.esBase, 'y marcarla como elaboración, no como plato');
+  assert.equal(r.rendimiento, 3, 'el rendimiento sale del paso del guion');
+  assert.equal(r.unidad, 'L');
+  assert.equal(r.lineas, 1, 'el ingrediente que sí tiene');
+  assert.equal(r.faltan.length, 1, 'y el que no, marcado aparte');
+  // 500 g de bacalao a 0,022 = 11,00 (sin consumibles en una base)
+  assert.ok(Math.abs(r.coste - 11) < 0.001, `coste: ${r.coste}`);
+  assert.ok(Math.abs(r.porLitro - 11/3) < 0.01, `coste por litro: ${r.porLitro}`);
+  assert.equal(r.elabDespues, r.elabAntes + 1, 'debe aparecer en el stock de elaboraciones');
+  assert.ok(r.enStock);
+  assert.equal(r.pasoDelGuion, 'rendimiento');
+  return '3 L, coste por litro correcto y visible en elaboraciones';
+});
+
+await caso('El rendimiento se entiende escrito como lo escribe un cocinero', async ()=>{
+  const r = await page.evaluate(()=>({
+    litros: idrLeerRendimiento('3 L'),
+    conTexto: idrLeerRendimiento('unos 2,5 litros'),
+    kilos: idrLeerRendimiento('1,2 kg'),
+    cl: idrLeerRendimiento('75 cl'),
+    unidades: idrLeerRendimiento('12 ud'),
+    soloNumero: idrLeerRendimiento('4'),
+    vacio: idrLeerRendimiento(''),
+  }));
+  assert.deepEqual(r.litros, {qty:3, unit:'L'});
+  assert.deepEqual(r.conTexto, {qty:2.5, unit:'L'}, '"unos 2,5 litros" también');
+  assert.deepEqual(r.kilos, {qty:1.2, unit:'kg'});
+  assert.deepEqual(r.cl, {qty:0.75, unit:'L'}, 'los cl se llevan a litros, que es lo que admite la ficha');
+  assert.deepEqual(r.unidades, {qty:12, unit:'ud'});
+  assert.deepEqual(r.soloNumero, {qty:4, unit:'L'}, 'sin unidad, litros');
+  assert.deepEqual(r.vacio, {qty:1, unit:'L'}, 'y en blanco, nunca cero');
+  return 'litros, kilos, cl, unidades y los casos sueltos';
+});
+
+await caso('Menú y carta ya no se pueden empezar, pero lo guardado se abre', async ()=>{
+  const r = await page.evaluate(()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    const antes = idrCreaciones().length;
+    idrEmpezar('menu'); idrEmpezar('carta');
+    const trasIntentar = idrCreaciones().length;
+    // Una carta guardada de antes tiene que seguir abriéndose sin romperse
+    const vieja = idrNuevaCreacion('carta');
+    vieja.titulo = 'Carta de antes'; vieja.pasos = [{elegido:'Entrantes y principales'}];
+    saveDB();
+    navIdr('creacion', vieja.id);
+    const html = document.getElementById('view-idr').innerHTML;
+    navIdr('inicio');
+    const inicio = document.getElementById('view-idr').innerHTML;
+    return {antes, trasIntentar, tipos: IDR_TIPOS_NUEVOS,
+            abre: html.includes('Carta de antes'),
+            burbujas: (inicio.match(/idrEmpezar\('/g)||[]).length};
+  });
+  assert.equal(r.trasIntentar, r.antes, 'ni menú ni carta deben poder empezarse');
+  assert.deepEqual(r.tipos, ['plato','base']);
+  assert.ok(r.abre, 'una carta guardada de antes tiene que seguir abriéndose');
+  assert.equal(r.burbujas, 2, 'solo dos burbujas en la pantalla de inicio');
+  return 'dos burbujas, y el trabajo antiguo intacto';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
