@@ -23,6 +23,9 @@ const IDR_GASTO_LS = 'gastrogoan_idr_gasto';    // {dia, llamadas}
 // vea. No es el límite de verdad -ese lo pone su proveedor-, es un freno
 // para que un fallo nuestro no le salga caro.
 const IDR_TOPE_DIA = 500;
+// Cuantos modelos se prueban al pedir la lista. Cada prueba es una llamada
+// minima, pero la cuota es del cliente: con los primeros hay de sobra.
+const IDR_MAX_MODELOS_A_PROBAR = 10;
 
 const IDR_PROVEEDORES = {
   google: {
@@ -196,6 +199,28 @@ async function idrCargarModelos(){
   if(fallo || !modelos.length){
     if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.modelsFailed'))}</span>`
       + (fallo ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word">${escapeHtml(String(fallo).slice(0,300))}</div>` : '');
+    return;
+  }
+
+  /* El proveedor lista MUCHOS modelos y la mayoria no sirven aqui: unos son
+     de otra generacion, otros piden permisos que esa clave no tiene, otros
+     no valen para escribir. Ofrecerlos todos es mandar al hostelero a
+     probar a ciegas — que es justo lo que le paso al dueño.
+     Asi que se prueban de verdad, uno a uno, con la peticion mas pequeña
+     posible, y solo se ofrecen los que contestan. */
+  const candidatos = modelos.slice(0, IDR_MAX_MODELOS_A_PROBAR);
+  const buenos = [];
+  for(let i = 0; i < candidatos.length; i++){
+    if(res) res.innerHTML = `<span style="color:var(--muted)"><i class="ti ti-loader"></i> ${escapeHtml(t('idr.testingModels').replace('${i}', i+1).replace('${n}', candidatos.length))}</span>`;
+    const antes = idrConfig();
+    idrGuardarConfig(p, k, candidatos[i]);
+    const prueba = await llmChat('Responde solo OK.', [{role:'user', content:'Di OK'}], {maxTokens: 12});
+    if(prueba.ok) buenos.push(candidatos[i]);
+    if(antes) idrGuardarConfig(antes.proveedor, antes.clave, antes.modelo);
+  }
+  modelos = buenos;
+  if(!modelos.length){
+    if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.noModelsWork'))}</span>`;
     return;
   }
   // Se sustituye el campo de texto por una lista con lo que de verdad hay.
@@ -1070,8 +1095,16 @@ function idrConfigModalRefrescar(){
   const p = document.getElementById('idr-prov').value;
   const def = IDR_PROVEEDORES[p];
   if(!def) return;
-  const m = document.getElementById('idr-modelo');
-  if(m) m.placeholder = def.modeloPorDefecto;
+  // Al cambiar de proveedor hay que soltar el modelo Y la clave: son de
+  // otra casa. Antes solo cambiaba el texto de ayuda, asi que al pasar de
+  // Google a Anthropic se seguia enviando el modelo de Google con la clave
+  // de Google — y parecia que cambiar de proveedor no servia de nada.
+  const campo = document.getElementById('idr-modelo-campo');
+  if(campo) campo.innerHTML = `<input type="text" id="idr-modelo" value="" placeholder="${escapeHtml(def.modeloPorDefecto)}">`;
+  const k = document.getElementById('idr-clave');
+  if(k) k.value = '';
+  const res = document.getElementById('idr-test-res');
+  if(res) res.innerHTML = `<span style="color:var(--muted)">${escapeHtml(t('idr.providerChanged'))}</span>`;
   const a = document.getElementById('idr-ayuda');
   if(a) a.innerHTML = `${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong>`;
 }

@@ -9055,7 +9055,10 @@ const I18N = {
     'idr.needs': 'Haría falta:',
     'idr.test': 'Probar la conexión', 'idr.testing': 'Probando...', 'idr.testOk': 'Funciona: el asistente responde',
     'idr.listModels': 'Ver modelos disponibles',
-    'idr.modelsOk': '${n} modelos disponibles con tu clave: elige uno arriba',
+    'idr.testingModels': 'Probando modelos... (${i} de ${n})',
+    'idr.noModelsWork': 'Ninguno de los modelos de tu clave responde. Revisa que la clave tenga permisos.',
+    'idr.providerChanged': 'Has cambiado de proveedor: pega la clave del nuevo.',
+    'idr.modelsOk': '${n} modelos comprobados y funcionando: elige uno arriba',
     'idr.modelsFailed': 'No se ha podido leer la lista de modelos. Revisa la clave.',
     'idr.err.model': 'Ese modelo ya no existe. Pulsa "Ver modelos disponibles" y elige otro.',
     'idr.lastError': 'Ver el detalle técnico del último fallo',
@@ -11032,7 +11035,10 @@ const I18N = {
     'idr.needs': 'Caldria:',
     'idr.test': 'Provar la connexió', 'idr.testing': 'Provant...', 'idr.testOk': 'Funciona: l\'assistent respon',
     'idr.listModels': 'Veure models disponibles',
-    'idr.modelsOk': '${n} models disponibles amb la teva clau: tria\'n un a dalt',
+    'idr.testingModels': 'Provant models... (${i} de ${n})',
+    'idr.noModelsWork': 'Cap dels models de la teva clau respon. Revisa que la clau tingui permisos.',
+    'idr.providerChanged': 'Has canviat de proveïdor: enganxa la clau del nou.',
+    'idr.modelsOk': '${n} models comprovats i funcionant: tria\'n un a dalt',
     'idr.modelsFailed': 'No s\'ha pogut llegir la llista de models. Revisa la clau.',
     'idr.err.model': 'Aquest model ja no existeix. Prem "Veure models disponibles" i tria\'n un altre.',
     'idr.lastError': 'Veure el detall tècnic de l\'últim error',
@@ -13013,7 +13019,10 @@ const I18N = {
     'idr.needs': 'You would need:',
     'idr.test': 'Test the connection', 'idr.testing': 'Testing...', 'idr.testOk': 'It works: the assistant responds',
     'idr.listModels': 'See available models',
-    'idr.modelsOk': '${n} models available with your key: pick one above',
+    'idr.testingModels': 'Testing models... (${i} of ${n})',
+    'idr.noModelsWork': 'None of your key\'s models responds. Check that the key has permissions.',
+    'idr.providerChanged': 'You changed provider: paste the new key.',
+    'idr.modelsOk': '${n} models tested and working: pick one above',
     'idr.modelsFailed': 'Could not read the model list. Check the key.',
     'idr.err.model': 'That model no longer exists. Tap "See available models" and pick another.',
     'idr.lastError': 'See the technical detail of the last error',
@@ -33266,6 +33275,9 @@ const IDR_GASTO_LS = 'gastrogoan_idr_gasto';    // {dia, llamadas}
 // vea. No es el límite de verdad -ese lo pone su proveedor-, es un freno
 // para que un fallo nuestro no le salga caro.
 const IDR_TOPE_DIA = 500;
+// Cuantos modelos se prueban al pedir la lista. Cada prueba es una llamada
+// minima, pero la cuota es del cliente: con los primeros hay de sobra.
+const IDR_MAX_MODELOS_A_PROBAR = 10;
 
 const IDR_PROVEEDORES = {
   google: {
@@ -33439,6 +33451,28 @@ async function idrCargarModelos(){
   if(fallo || !modelos.length){
     if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.modelsFailed'))}</span>`
       + (fallo ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word">${escapeHtml(String(fallo).slice(0,300))}</div>` : '');
+    return;
+  }
+
+  /* El proveedor lista MUCHOS modelos y la mayoria no sirven aqui: unos son
+     de otra generacion, otros piden permisos que esa clave no tiene, otros
+     no valen para escribir. Ofrecerlos todos es mandar al hostelero a
+     probar a ciegas — que es justo lo que le paso al dueño.
+     Asi que se prueban de verdad, uno a uno, con la peticion mas pequeña
+     posible, y solo se ofrecen los que contestan. */
+  const candidatos = modelos.slice(0, IDR_MAX_MODELOS_A_PROBAR);
+  const buenos = [];
+  for(let i = 0; i < candidatos.length; i++){
+    if(res) res.innerHTML = `<span style="color:var(--muted)"><i class="ti ti-loader"></i> ${escapeHtml(t('idr.testingModels').replace('${i}', i+1).replace('${n}', candidatos.length))}</span>`;
+    const antes = idrConfig();
+    idrGuardarConfig(p, k, candidatos[i]);
+    const prueba = await llmChat('Responde solo OK.', [{role:'user', content:'Di OK'}], {maxTokens: 12});
+    if(prueba.ok) buenos.push(candidatos[i]);
+    if(antes) idrGuardarConfig(antes.proveedor, antes.clave, antes.modelo);
+  }
+  modelos = buenos;
+  if(!modelos.length){
+    if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.noModelsWork'))}</span>`;
     return;
   }
   // Se sustituye el campo de texto por una lista con lo que de verdad hay.
@@ -34313,8 +34347,16 @@ function idrConfigModalRefrescar(){
   const p = document.getElementById('idr-prov').value;
   const def = IDR_PROVEEDORES[p];
   if(!def) return;
-  const m = document.getElementById('idr-modelo');
-  if(m) m.placeholder = def.modeloPorDefecto;
+  // Al cambiar de proveedor hay que soltar el modelo Y la clave: son de
+  // otra casa. Antes solo cambiaba el texto de ayuda, asi que al pasar de
+  // Google a Anthropic se seguia enviando el modelo de Google con la clave
+  // de Google — y parecia que cambiar de proveedor no servia de nada.
+  const campo = document.getElementById('idr-modelo-campo');
+  if(campo) campo.innerHTML = `<input type="text" id="idr-modelo" value="" placeholder="${escapeHtml(def.modeloPorDefecto)}">`;
+  const k = document.getElementById('idr-clave');
+  if(k) k.value = '';
+  const res = document.getElementById('idr-test-res');
+  if(res) res.innerHTML = `<span style="color:var(--muted)">${escapeHtml(t('idr.providerChanged'))}</span>`;
   const a = document.getElementById('idr-ayuda');
   if(a) a.innerHTML = `${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong>`;
 }

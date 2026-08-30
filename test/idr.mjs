@@ -1001,6 +1001,81 @@ await caso('La lista de modelos se lee bien de lo que devuelve cada proveedor', 
   return 'filtra los que no valen y quita el prefijo';
 });
 
+/* ─── La lista de modelos: solo los que responden ─── */
+// El proveedor lista muchos y la mayoria no sirven. Ofrecerlos todos es
+// mandar al hostelero a probar a ciegas, que es lo que le paso al dueño.
+await caso('Solo se ofrecen los modelos que de verdad contestan', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    // Se finge el proveedor: lista 4 modelos y solo 2 contestan
+    const probados = [];
+    window.fetch = async (url) => ({
+      ok: true,
+      json: async () => ({models: ['uno','dos','tres','cuatro'].map(n => ({name:'models/'+n, supportedGenerationMethods:['generateContent']}))}),
+      text: async () => '',
+    });
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => {
+      const m = (idrConfig()||{}).modelo;
+      probados.push(m);
+      return (m === 'dos' || m === 'cuatro') ? {ok:true, texto:'OK'} : {ok:false, motivo:'modelo'};
+    };
+    idrGuardarConfig('google','clave-buena','uno');
+    idrConfigModal();
+    document.getElementById('idr-clave').value = 'clave-buena';
+    await idrCargarModelos();
+    const sel = document.getElementById('idr-modelo');
+    const ofrecidos = sel && sel.tagName === 'SELECT' ? [...sel.options].map(o=>o.value) : null;
+    const aviso = (document.getElementById('idr-test-res')||{}).textContent || '';
+    // Y que la configuracion guardada NO se quede con el ultimo probado
+    const trasProbar = (idrConfig()||{}).modelo;
+    closeModal();
+    return {probados, ofrecidos, aviso, trasProbar};
+  });
+  assert.deepEqual(r.probados, ['uno','dos','tres','cuatro'], 'debe probarlos uno a uno');
+  assert.deepEqual(r.ofrecidos, ['dos','cuatro'], 'solo los que contestan: ' + JSON.stringify(r.ofrecidos));
+  assert.ok(/2/.test(r.aviso), 'debe decir cuántos han pasado la prueba');
+  assert.equal(r.trasProbar, 'uno', 'probar no puede cambiarle el modelo que tenía guardado');
+  return '4 probados, 2 ofrecidos, y no toca lo guardado';
+});
+
+await caso('Si ninguno responde, lo dice claro en vez de ofrecer una lista muerta', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    window.fetch = async () => ({ok:true, json: async () => ({models:[{name:'models/x', supportedGenerationMethods:['generateContent']}]}), text: async () => ''});
+    window.llmChat = async () => ({ok:false, motivo:'clave-mala'});
+    idrConfigModal();
+    document.getElementById('idr-clave').value = 'k';
+    await idrCargarModelos();
+    const sel = document.getElementById('idr-modelo');
+    const aviso = (document.getElementById('idr-test-res')||{}).textContent || '';
+    closeModal();
+    return {esLista: !!(sel && sel.tagName === 'SELECT'), aviso};
+  });
+  assert.ok(!r.esLista, 'no debe ofrecer una lista si ninguno vale');
+  assert.ok(/responde|permisos/i.test(r.aviso), `mensaje poco claro: ${r.aviso}`);
+  return 'lo dice y no ofrece nada';
+});
+
+await caso('Cambiar de proveedor suelta la clave y el modelo del anterior', async ()=>{
+  const r = await page.evaluate(()=>{
+    idrGuardarConfig('google','clave-de-google','gemini-x');
+    idrConfigModal();
+    // Se cambia el desplegable a Anthropic, como haría el dueño
+    document.getElementById('idr-prov').value = 'anthropic';
+    idrConfigModalRefrescar();
+    const modelo = document.getElementById('idr-modelo');
+    const clave = document.getElementById('idr-clave');
+    const aviso = (document.getElementById('idr-test-res')||{}).textContent || '';
+    const out = {modelo: modelo.value, clave: clave.value, marcador: modelo.placeholder, aviso};
+    closeModal();
+    return out;
+  });
+  assert.equal(r.modelo, '', 'el modelo del proveedor viejo no vale en el nuevo');
+  assert.equal(r.clave, '', 'ni la clave');
+  assert.ok(/claude/i.test(r.marcador), `debe sugerir un modelo del nuevo proveedor: ${r.marcador}`);
+  assert.ok(/proveedor/i.test(r.aviso), 'y avisar de que hace falta la clave nueva');
+  return 'suelta clave y modelo, y sugiere el del proveedor nuevo';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
