@@ -39,7 +39,11 @@ done
   # Sello de version: sin esto no habia forma de saber, mirando la app, si lo
   # que se esta viendo es lo ultimo publicado o una copia guardada en el
   # navegador. Se perdieron ratos enteros dudando de eso.
-  echo "const GG_BUILD = '$(date '+%d/%m/%Y %H:%M')';"
+  # Hora de Madrid, no la del servidor donde se compila (que va en UTC): el
+  # sello es para que el hostelero compare con SU reloj y sepa si está viendo
+  # la versión nueva. Dos horas de desfase convertían esa comprobación en otra
+  # duda más.
+  echo "const GG_BUILD = '$(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M')';"
   echo "$JS"
   echo "</script>"
 
