@@ -175,7 +175,7 @@ const IDR_MOTIVO_KEYS = {
   'sin-clave':'idr.err.noKey', 'tope':'idr.err.limit', 'sin-conexion':'idr.err.offline',
   'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider', 'modelo':'idr.err.model',
   'vacia':'idr.err.empty', 'tardanza':'idr.err.timeout',
-  'pantalla':'idr.err.render', 'avanzar':'idr.err.render', 'excepcion':'idr.err.provider',
+  'pantalla':'idr.err.render', 'avanzar':'idr.err.render', 'excepcion':'idr.err.render', 'js':'idr.err.render',
 };
 // El último fallo real, con su detalle técnico. En la cara del hostelero va
 // el mensaje en cristiano; el detalle se guarda para que se pueda ver desde
@@ -186,6 +186,20 @@ let idrUltimoFallo = null;
 function idrMensajeError(r){
   if(r && !r.ok) idrUltimoFallo = {motivo: r.motivo, detalle: r.detalle || '', cuando: new Date().toISOString()};
   return t(IDR_MOTIVO_KEYS[r && r.motivo] || 'idr.err.provider');
+}
+
+/* Ultima red: cualquier error de JavaScript que se escape queda apuntado con
+   su detalle. Diagnosticar "los botones no hacen nada" por telefono, sin esto,
+   es imposible. */
+if(typeof window !== 'undefined'){
+  window.addEventListener('error', ev => {
+    idrUltimoFallo = {motivo:'js', detalle: String((ev.error && ev.error.stack) || ev.message || '') + ' @ ' + (ev.filename||'') + ':' + (ev.lineno||''), cuando: new Date().toISOString()};
+    if(idrVista === 'creacion' && typeof showToast === 'function') showToast(t('idr.err.render'));
+  });
+  window.addEventListener('unhandledrejection', ev => {
+    const r = ev.reason;
+    idrUltimoFallo = {motivo:'js', detalle: String((r && (r.stack || r.message)) || r || ''), cuando: new Date().toISOString()};
+  });
 }
 
 /* Le pregunta al proveedor qué modelos admite ESTA clave y los ofrece en una
@@ -830,6 +844,19 @@ function renderIdrCreacion(box){
 // Le pide al asistente el paso actual. Le pasa lo ya decidido, para que no
 // vuelva a proponer lo mismo ni se contradiga.
 async function idrPedirPaso(otras){
+  // Envoltura de seguridad: hasta ahora solo estaba protegida la llamada al
+  // asistente, pero lo de ANTES (armar el resumen de lo ya decidido) tambien
+  // puede reventar, y como ya se ha puesto "Pensando..." en el boton, el
+  // resultado es un boton muerto sin ningun aviso. Nada dentro de esta
+  // funcion puede volver a fallar en silencio.
+  try{ await idrPedirPasoInterno(otras); }
+  catch(e){
+    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+    renderIdr();
+  }
+}
+async function idrPedirPasoInterno(otras){
   const c = idrCreacion(idrCreacionActiva);
   if(!c) return;
   const pasos = IDR_PASOS[c.tipo] || [];
