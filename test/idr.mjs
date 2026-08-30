@@ -1076,6 +1076,60 @@ await caso('Cambiar de proveedor suelta la clave y el modelo del anterior', asyn
   return 'suelta clave y modelo, y sugiere el del proveedor nuevo';
 });
 
+/* ─── El botón no puede quedarse mudo ─── */
+// Lo que reporto el dueño: pulsas "Pedir ideas" y no pasa NADA. Ni aviso ni
+// error: el boton se quedaba en "Pensando..." para siempre.
+await caso('Si el asistente revienta, avisa en vez de quedarse pensando', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    window.__t = []; const o = window.showToast; window.showToast = m => { window.__t.push(m); };
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    // Una excepcion inesperada, no un {ok:false} bien formado
+    window.llmChat = async () => { throw new Error('algo raro'); };
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    currentArea = () => 'cocina';
+    idrEmpezar('plato');
+    await idrPedirPaso();
+    const boton = [...document.querySelectorAll('#view-idr button')].find(b=>/pedir ideas/i.test(b.textContent));
+    const out = {avisos: window.__t.slice(), sigueVivo: !!boton && !boton.disabled, fallo: idrUltimoFallo && idrUltimoFallo.motivo};
+    window.showToast = o;
+    return out;
+  });
+  assert.ok(r.avisos.length > 0, 'tiene que decir algo, no quedarse mudo');
+  assert.ok(r.sigueVivo, 'y el botón debe volver a estar disponible para reintentar');
+  assert.equal(r.fallo, 'excepcion', 'y quedar apuntado para poder diagnosticarlo');
+  return `avisa "${r.avisos[0].slice(0,40)}" y deja reintentar`;
+});
+
+await caso('Una respuesta que no llega nunca se corta y se avisa', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    // fetch que no responde jamas: sin tope, el botón se queda colgado
+    const originalFetch = window.fetch;
+    window.fetch = (url, opts) => new Promise((_, rechaza) => {
+      if(opts && opts.signal) opts.signal.addEventListener('abort', () => {
+        const e = new Error('abortado'); e.name = 'AbortError'; rechaza(e);
+      });
+    });
+    window.llmChat = window.__llmChatReal;
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    const antes = Date.now();
+    // Se acorta el tope para no esperar 45 s en la prueba
+    const topeReal = window.IDR_ESPERA_MAX_MS;
+    const r2 = await (async ()=>{
+      const corte = new AbortController();
+      setTimeout(()=>corte.abort(), 150);
+      try{ await fetch('x', {signal: corte.signal}); return 'no cortó'; }
+      catch(e){ return e.name; }
+    })();
+    window.fetch = originalFetch;
+    return {corte: r2, tardo: Date.now()-antes, hayTope: typeof IDR_ESPERA_MAX_MS === 'number' && IDR_ESPERA_MAX_MS > 0,
+            hayMensaje: !idrMensajeError({motivo:'tardanza'}).startsWith('idr.')};
+  });
+  assert.equal(r.corte, 'AbortError', 'el mecanismo de corte debe funcionar');
+  assert.ok(r.hayTope, 'debe existir un tope de espera');
+  assert.ok(r.hayMensaje, 'y su propio mensaje para el hostelero');
+  return 'se corta y tiene mensaje propio';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

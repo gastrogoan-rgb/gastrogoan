@@ -26,6 +26,8 @@ const IDR_TOPE_DIA = 500;
 // Cuantos modelos se prueban al pedir la lista. Cada prueba es una llamada
 // minima, pero la cuota es del cliente: con los primeros hay de sobra.
 const IDR_MAX_MODELOS_A_PROBAR = 10;
+// Lo que se espera a una respuesta antes de darla por perdida.
+const IDR_ESPERA_MAX_MS = 45000;
 
 const IDR_PROVEEDORES = {
   google: {
@@ -132,17 +134,26 @@ async function llmChat(sistema, mensajes, opciones){
 
   idrApuntarLlamada();
   let res;
+  // Tope de espera: sin esto, una respuesta que no llega nunca deja el
+  // boton en "Pensando..." para siempre, sin error ni aviso. Desde fuera
+  // parece que el boton no hace nada, que es justo lo que reporto el dueño.
+  const corte = new AbortController();
+  const reloj = setTimeout(() => corte.abort(), IDR_ESPERA_MAX_MS);
   try{
     res = await fetch(def.url(modelo, cfg.clave), {
       method:'POST',
       headers: def.cabeceras(cfg.clave),
       body: JSON.stringify(def.cuerpo(sistema, mensajes, maxTokens, modelo)),
+      signal: corte.signal,
     });
   }catch(e){
+    clearTimeout(reloj);
+    if(e && e.name === 'AbortError') return {ok:false, motivo:'tardanza'};
     // fetch solo revienta así si no salió del dispositivo: sin cobertura,
     // o el navegador bloqueó la llamada.
     return {ok:false, motivo:'sin-conexion', detalle:e.message};
   }
+  clearTimeout(reloj);
   if(!res.ok){
     let detalle = '';
     try{ detalle = (await res.text()).slice(0, 300); }catch(e){}
@@ -163,7 +174,7 @@ async function llmChat(sistema, mensajes, opciones){
 const IDR_MOTIVO_KEYS = {
   'sin-clave':'idr.err.noKey', 'tope':'idr.err.limit', 'sin-conexion':'idr.err.offline',
   'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider', 'modelo':'idr.err.model',
-  'vacia':'idr.err.empty',
+  'vacia':'idr.err.empty', 'tardanza':'idr.err.timeout',
 };
 // El último fallo real, con su detalle técnico. En la cara del hostelero va
 // el mensaje en cristiano; el detalle se guarda para que se pueda ver desde
@@ -817,8 +828,19 @@ Responde SOLO con este JSON, sin texto alrededor:
 En "necesita" baja al detalle de verdad, como se lo dirías a tu jefe de partida: "unos 180 g de bacalao, garbanzos cocidos, un buen sofrito y media hora de guiso". Nada de generalidades. Es lo que convierte una idea en algo que se puede cocinar mañana.
 Si te falta información para proponer con criterio, deja "opciones" vacío y pregunta en "comentario".`;
 
-  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1200});
-  if(!r.ok){ showToast(idrMensajeError(r)); renderIdr(); return; }
+  // Si algo revienta aqui dentro, el boton se quedaba en "Pensando..." y no
+  // pasaba nada mas: ni aviso ni forma de reintentar. Pase lo que pase, se
+  // avisa y se repinta.
+  let r;
+  try{
+    r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1200});
+  }catch(e){
+    showToast(t('idr.err.provider'));
+    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && e.message || e), cuando: new Date().toISOString()};
+    renderIdr();
+    return;
+  }
+  if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
 
   const j = idrExtraerJson(r.texto);
   if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
