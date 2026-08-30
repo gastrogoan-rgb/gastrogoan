@@ -36,6 +36,10 @@ done
 
   # Inline JS
   echo "<script>"
+  # Sello de version: sin esto no habia forma de saber, mirando la app, si lo
+  # que se esta viendo es lo ultimo publicado o una copia guardada en el
+  # navegador. Se perdieron ratos enteros dudando de eso.
+  echo "const GG_BUILD = '$(date '+%d/%m/%Y %H:%M')';"
   echo "$JS"
   echo "</script>"
 

@@ -1104,6 +1104,7 @@ function idrConfigModal(){
       <button class="btn" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
       <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
     </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'))}</p>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.callsToday').replace('${n}', idrGastoHoy()).replace('${tope}', IDR_TOPE_DIA)}</p>
     ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
     <div class="modal-footer">

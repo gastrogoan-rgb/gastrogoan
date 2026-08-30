@@ -2772,6 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
+const GG_BUILD = '30/08/2026 21:24';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -9021,6 +9022,7 @@ const I18N = {
     'view.idr.title': 'I+D', 'view.idr.subtitle': 'Crear platos, menús y cartas para tu negocio',
     'mod.idr': 'I+D',
     'idr.assistant': 'Asistente', 'idr.provider': 'Proveedor', 'idr.model': 'Modelo', 'idr.key': 'Clave',
+    'idr.version': 'Versión de la app: ${v}',
     'idr.keyPh': 'Pega aquí tu clave', 'idr.keyWhere': 'La clave se saca en:',
     'idr.keyExplain': 'El asistente usa la clave de tu propio proveedor: el consumo es tuyo y no pasa por GastroGoan. Sin clave, el módulo sigue funcionando: los pasos se rellenan a mano.',
     'idr.keyWarning': 'La clave se guarda SOLO en este dispositivo. Si usas la app en la tablet y en el móvil, tendrás que ponerla en cada uno. Se hace así para que no viaje a la nube ni la vea tu personal.',
@@ -11002,6 +11004,7 @@ const I18N = {
     'view.idr.title': 'R+D', 'view.idr.subtitle': 'Crear plats, menús i cartes per al teu negoci',
     'mod.idr': 'R+D',
     'idr.assistant': 'Assistent', 'idr.provider': 'Proveïdor', 'idr.model': 'Model', 'idr.key': 'Clau',
+    'idr.version': 'Versió de l\'app: ${v}',
     'idr.keyPh': 'Enganxa aquí la teva clau', 'idr.keyWhere': 'La clau es treu a:',
     'idr.keyExplain': 'L\'assistent fa servir la clau del teu propi proveïdor: el consum és teu i no passa per GastroGoan. Sense clau, el mòdul continua funcionant: els passos s\'omplen a mà.',
     'idr.keyWarning': 'La clau es desa NOMÉS en aquest dispositiu. Si fas servir l\'app a la tauleta i al mòbil, l\'hauràs de posar a cadascun. Es fa així perquè no viatgi al núvol ni la vegi el teu personal.',
@@ -12987,6 +12990,7 @@ const I18N = {
     'view.idr.title': 'R&D', 'view.idr.subtitle': 'Create dishes, set menus and menus for your business',
     'mod.idr': 'R&D',
     'idr.assistant': 'Assistant', 'idr.provider': 'Provider', 'idr.model': 'Model', 'idr.key': 'Key',
+    'idr.version': 'App version: ${v}',
     'idr.keyPh': 'Paste your key here', 'idr.keyWhere': 'Get the key at:',
     'idr.keyExplain': 'The assistant uses your own provider key: the usage is yours and does not go through GastroGoan. Without a key the module still works: you fill in each step yourself.',
     'idr.keyWarning': 'The key is stored ONLY on this device. If you use the app on a tablet and a phone, you will need to enter it on each. This is deliberate: it never travels to the cloud and your staff cannot read it.',
@@ -34359,6 +34363,7 @@ function idrConfigModal(){
       <button class="btn" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
       <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
     </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'))}</p>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.callsToday').replace('${n}', idrGastoHoy()).replace('${tope}', IDR_TOPE_DIA)}</p>
     ${idrUltimoFallo ? `<details style="margin-top:8px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary><div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:140px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,400))}</div></details>` : ''}
     <div class="modal-footer">
