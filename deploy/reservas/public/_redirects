@@ -1,0 +1,7 @@
+# Enlaces cortos: reservas.gastrogoan.com/casapaco
+#
+# Cualquier direccion que no sea un archivo real sirve la pagina, y la
+# propia pagina saca el nombre del negocio de la ruta (getSlugFromUrl lee
+# el pathname). Sin regla para la raiz a proposito: el hosting ya sirve
+# index.html por su cuenta, y ponerla provoca un bucle.
+/*   /index.html   200
