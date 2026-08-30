@@ -964,6 +964,43 @@ await caso('En cada paso baja al detalle de lo que haría falta', async ()=>{
   return 'pide detalle, pregunta, y se ve en pantalla';
 });
 
+/* ─── Los modelos se retiran: la app tiene que sobrevivir a eso ─── */
+// Google retiró gemini-2.0-flash y devolvía un 404 que, sin diagnóstico, un
+// hostelero solo veía como "el asistente no ha podido responder".
+await caso('Un modelo retirado se explica y se puede cambiar sin tocar la app', async ()=>{
+  const r = await page.evaluate(()=>{
+    const msg = idrMensajeError({ok:false, motivo:'modelo', detalle:'HTTP 404 no longer available'});
+    return {
+      msg,
+      guardado: idrUltimoFallo.motivo,
+      hayLista: typeof idrCargarModelos === 'function',
+      // Cada proveedor debe saber preguntar por sus modelos
+      preguntan: Object.keys(IDR_PROVEEDORES).filter(k => typeof IDR_PROVEEDORES[k].listaModelos === 'function' && typeof IDR_PROVEEDORES[k].extraerModelos === 'function'),
+      proveedores: Object.keys(IDR_PROVEEDORES).length,
+    };
+  });
+  assert.ok(/modelo/i.test(r.msg) && /disponibles/i.test(r.msg), `el mensaje debe decir qué hacer: ${r.msg}`);
+  assert.equal(r.guardado, 'modelo');
+  assert.ok(r.hayLista, 'debe existir el botón que pregunta por los modelos');
+  assert.equal(r.preguntan.length, r.proveedores, 'los dos proveedores deben saber listar sus modelos');
+  return 'lo explica y ofrece elegir otro';
+});
+
+await caso('La lista de modelos se lee bien de lo que devuelve cada proveedor', async ()=>{
+  const r = await page.evaluate(()=>({
+    google: IDR_PROVEEDORES.google.extraerModelos({models:[
+      {name:'models/gemini-3.6-flash', supportedGenerationMethods:['generateContent']},
+      {name:'models/embedding-001', supportedGenerationMethods:['embedContent']},
+    ]}),
+    anthropic: IDR_PROVEEDORES.anthropic.extraerModelos({data:[{id:'claude-sonnet-4-5'},{id:'claude-opus-4-1'}]}),
+    vacio: IDR_PROVEEDORES.google.extraerModelos({}),
+  }));
+  assert.deepEqual(r.google, ['gemini-3.6-flash'], 'debe quitar el prefijo y filtrar los que no sirven para escribir');
+  assert.deepEqual(r.anthropic, ['claude-sonnet-4-5','claude-opus-4-1']);
+  assert.deepEqual(r.vacio, [], 'una respuesta vacía no puede reventar');
+  return 'filtra los que no valen y quita el prefijo';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

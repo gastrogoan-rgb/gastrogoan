@@ -27,7 +27,19 @@ const IDR_TOPE_DIA = 500;
 const IDR_PROVEEDORES = {
   google: {
     l:{es:'Google (Gemini)',ca:'Google (Gemini)',en:'Google (Gemini)'},
-    modeloPorDefecto: 'gemini-2.0-flash',
+    // ⚠️ Google RETIRA modelos cada pocos meses: gemini-2.0-flash dejó de
+    // existir y devolvía un 404 que, sin el botón de probar la conexión, un
+    // hostelero solo veía como "el asistente no ha podido responder". Por eso
+    // el modelo es un campo editable y hay un botón que le pregunta a Google
+    // qué modelos admite ESA clave: cuando vuelva a pasar, se arregla desde
+    // los ajustes sin tocar la app ni volver a subirla.
+    modeloPorDefecto: 'gemini-3.6-flash',
+    // Lista de modelos disponibles para la clave del negocio.
+    listaModelos: k => `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(k)}`,
+    extraerModelos: j => (j.models||[])
+      .filter(m => (m.supportedGenerationMethods||[]).includes('generateContent'))
+      .map(m => String(m.name||'').replace(/^models\//, ''))
+      .filter(Boolean),
     // Verificado: responde a la llamada directa desde el navegador.
     url: (m, k) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${encodeURIComponent(k)}`,
     cabeceras: () => ({'content-type':'application/json'}),
@@ -59,6 +71,9 @@ const IDR_PROVEEDORES = {
       messages: mensajes.map(m => ({role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content})),
     }),
     extraer: j => ((j && j.content) || []).map(p => p.text||'').join('').trim(),
+    listaModelos: () => 'https://api.anthropic.com/v1/models',
+    cabecerasLista: k => ({'x-api-key': k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}),
+    extraerModelos: j => (j.data||[]).map(m => m.id).filter(Boolean),
     ayuda: 'https://console.anthropic.com/settings/keys',
   },
 };
@@ -130,6 +145,9 @@ async function llmChat(sistema, mensajes, opciones){
     try{ detalle = (await res.text()).slice(0, 300); }catch(e){}
     if(res.status === 401 || res.status === 403) return {ok:false, motivo:'clave-mala', detalle};
     if(res.status === 429) return {ok:false, motivo:'cuota', detalle};
+    // 404 = el modelo ya no existe. Pasa cada pocos meses y no es culpa de
+    // nadie: se arregla eligiendo otro en los ajustes, sin tocar la app.
+    if(res.status === 404) return {ok:false, motivo:'modelo', detalle};
     return {ok:false, motivo:'proveedor', detalle: `HTTP ${res.status} ${detalle}`};
   }
   let j;
@@ -141,7 +159,7 @@ async function llmChat(sistema, mensajes, opciones){
 
 const IDR_MOTIVO_KEYS = {
   'sin-clave':'idr.err.noKey', 'tope':'idr.err.limit', 'sin-conexion':'idr.err.offline',
-  'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider',
+  'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider', 'modelo':'idr.err.model',
   'vacia':'idr.err.empty',
 };
 // El último fallo real, con su detalle técnico. En la cara del hostelero va
@@ -153,6 +171,41 @@ let idrUltimoFallo = null;
 function idrMensajeError(r){
   if(r && !r.ok) idrUltimoFallo = {motivo: r.motivo, detalle: r.detalle || '', cuando: new Date().toISOString()};
   return t(IDR_MOTIVO_KEYS[r && r.motivo] || 'idr.err.provider');
+}
+
+/* Le pregunta al proveedor qué modelos admite ESTA clave y los ofrece en una
+   lista. Es la respuesta al problema de fondo: los modelos se retiran cada
+   pocos meses, y sin esto un cliente se queda con el asistente muerto y un
+   error que no sabe interpretar. Con esto lo arregla él en dos toques. */
+async function idrCargarModelos(){
+  const btn = document.getElementById('idr-modelos');
+  const res = document.getElementById('idr-test-res');
+  const p = document.getElementById('idr-prov').value;
+  const k = (document.getElementById('idr-clave').value||'').trim();
+  const def = IDR_PROVEEDORES[p];
+  if(!k){ showToast(t('idr.keyRequired')); return; }
+  if(!def || !def.listaModelos){ showToast(t('idr.err.provider')); return; }
+  if(btn){ btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader"></i> ${t('idr.testing')}`; }
+  let modelos = [], fallo = null;
+  try{
+    const r = await fetch(def.listaModelos(k), {headers: def.cabecerasLista ? def.cabecerasLista(k) : {}});
+    if(!r.ok) fallo = `HTTP ${r.status} ${(await r.text()).slice(0,200)}`;
+    else modelos = def.extraerModelos(await r.json()) || [];
+  }catch(e){ fallo = e.message; }
+  if(btn){ btn.disabled = false; btn.innerHTML = `<i class="ti ti-list"></i> ${t('idr.listModels')}`; }
+  if(fallo || !modelos.length){
+    if(res) res.innerHTML = `<span style="color:var(--red)"><i class="ti ti-alert-triangle"></i> ${escapeHtml(t('idr.modelsFailed'))}</span>`
+      + (fallo ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-word">${escapeHtml(String(fallo).slice(0,300))}</div>` : '');
+    return;
+  }
+  // Se sustituye el campo de texto por una lista con lo que de verdad hay.
+  const actual = (document.getElementById('idr-modelo').value||'').trim();
+  const campo = document.getElementById('idr-modelo-campo');
+  if(campo){
+    campo.innerHTML = `<select id="idr-modelo">${modelos.map(m =>
+      `<option value="${escapeHtml(m)}"${m===actual?' selected':''}>${escapeHtml(m)}</option>`).join('')}</select>`;
+  }
+  if(res) res.innerHTML = `<span style="color:#1F8A4C"><i class="ti ti-check"></i> ${escapeHtml(t('idr.modelsOk').replace('${n}', modelos.length))}</span>`;
 }
 
 // Comprueba la clave de verdad, con la llamada más pequeña posible, y dice
@@ -988,7 +1041,7 @@ function idrConfigModal(){
       </div>
       <div class="field">
         <label>${t('idr.model')}</label>
-        <input type="text" id="idr-modelo" value="${escapeHtml(cfg.modelo||'')}" placeholder="${escapeHtml(IDR_PROVEEDORES[cfg.proveedor].modeloPorDefecto)}">
+        <div id="idr-modelo-campo"><input type="text" id="idr-modelo" value="${escapeHtml(cfg.modelo||'')}" placeholder="${escapeHtml(IDR_PROVEEDORES[cfg.proveedor].modeloPorDefecto)}"></div>
       </div>
     </div>
     <div class="field">
@@ -1001,6 +1054,7 @@ function idrConfigModal(){
     </div>
     <div style="margin-top:12px">
       <button class="btn" id="idr-probar" onclick="idrProbarConexion()"><i class="ti ti-plug-connected"></i> ${t('idr.test')}</button>
+      <button class="btn" id="idr-modelos" onclick="idrCargarModelos()"><i class="ti ti-list"></i> ${t('idr.listModels')}</button>
       <div id="idr-test-res" style="font-size:13px;margin-top:8px"></div>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-top:10px">${t('idr.callsToday').replace('${n}', idrGastoHoy()).replace('${tope}', IDR_TOPE_DIA)}</p>
