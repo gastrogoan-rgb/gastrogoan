@@ -2,5 +2,17 @@
   // Web publica de reservas y pedidos: reservas.gastrogoan.com
   "name": "gastrogoan-reservas",
   "compatibility_date": "2025-01-01",
-  "assets": { "directory": "./public" }
+  "assets": {
+    "directory": "./public",
+    // Sin fichero _redirects a proposito. Cloudflare rechazaba la regla de
+    // la raiz ("infinite loop": reescribir / a /index.html choca con su
+    // propia limpieza de /index.html a /).
+    //
+    // No hace falta: con esto, cualquier direccion que no sea un archivo
+    // sirve index.html, y la propia pagina saca el nombre del negocio de la
+    // ruta (getSlugFromUrl lee el pathname, no solo ?n=). Asi el enlace
+    // corto reservas.gastrogoan.com/casapaco funciona sin reglas de hosting
+    // y sin depender de que el proveedor las entienda.
+    "not_found_handling": "single-page-application"
+  }
 }
