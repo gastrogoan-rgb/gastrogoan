@@ -27,7 +27,7 @@ const IDR_TOPE_DIA = 500;
 // minima, pero la cuota es del cliente: con los primeros hay de sobra.
 const IDR_MAX_MODELOS_A_PROBAR = 10;
 // Lo que se espera a una respuesta antes de darla por perdida.
-const IDR_ESPERA_MAX_MS = 45000;
+const IDR_ESPERA_MAX_MS = 25000;
 
 const IDR_PROVEEDORES = {
   google: {
@@ -175,6 +175,7 @@ const IDR_MOTIVO_KEYS = {
   'sin-clave':'idr.err.noKey', 'tope':'idr.err.limit', 'sin-conexion':'idr.err.offline',
   'clave-mala':'idr.err.badKey', 'cuota':'idr.err.quota', 'proveedor':'idr.err.provider', 'modelo':'idr.err.model',
   'vacia':'idr.err.empty', 'tardanza':'idr.err.timeout',
+  'pantalla':'idr.err.render', 'avanzar':'idr.err.render', 'excepcion':'idr.err.provider',
 };
 // El último fallo real, con su detalle técnico. En la cara del hostelero va
 // el mensaje en cristiano; el detalle se guarda para que se pueda ver desde
@@ -585,7 +586,25 @@ function navIdr(vista, id){
   renderIdr();
 }
 
+/* Si el repintado revienta, la pantalla se queda EXACTAMENTE como estaba: el
+   botón sigue diciendo "Pensando...", el paso no avanza y no sale ningún
+   aviso. Desde fuera es indistinguible de "los botones no hacen nada" — que
+   es justo lo que reportó el dueño y lo que no había forma de diagnosticar.
+   Ahora cualquier fallo al pintar se ve en pantalla y queda guardado. */
 function renderIdr(){
+  try{ renderIdrInterno(); }
+  catch(e){
+    idrUltimoFallo = {motivo:'pantalla', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    const box = document.getElementById('view-idr');
+    if(box){
+      box.innerHTML = `<div class="card"><h3><i class="ti ti-alert-triangle"></i> ${t('idr.err.render')}</h3>`
+        + `<div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:200px;overflow:auto;margin:8px 0">${escapeHtml(idrUltimoFallo.detalle.slice(0,600))}</div>`
+        + `<button class="btn" onclick="navIdr('inicio')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button></div>`;
+    }
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+  }
+}
+function renderIdrInterno(){
   const box = document.getElementById('view-idr');
   if(!box) return;
   if(idrVista === 'creacion' && idrCreacion(idrCreacionActiva)){ renderIdrCreacion(box); return; }
@@ -786,6 +805,11 @@ function renderIdrCreacion(box){
           <span style="font-size:12px;color:var(--muted);margin-left:10px">${t('idr.callsLeft').replace('${n}', idrQuedanLlamadas())}</span>
         ` : ''}
         ${!iaOk ? `<p style="font-size:12.5px;color:var(--muted)">${t('idr.manualHint')}</p>` : ''}
+        ${idrUltimoFallo ? `<div style="margin-top:10px;padding:8px 10px;border-left:3px solid var(--red);font-size:12.5px">
+          <strong>${escapeHtml(t(IDR_MOTIVO_KEYS[idrUltimoFallo.motivo] || 'idr.err.provider'))}</strong>
+          <details style="margin-top:4px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">${t('idr.lastError')}</summary>
+          <div style="font-size:11px;color:var(--muted);word-break:break-word;max-height:160px;overflow:auto;margin-top:6px">${escapeHtml(idrUltimoFallo.motivo)} · ${escapeHtml(String(idrUltimoFallo.detalle).slice(0,600))}</div></details>
+        </div>` : ''}
 
         <div class="field" style="margin-top:12px">
           <label>${t('idr.orWriteYours')}</label>
@@ -842,6 +866,7 @@ Si te falta información para proponer con criterio, deja "opciones" vacío y pr
   }
   if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
 
+  idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
   if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
   const paso = c.pasos[c.pasoActual];
@@ -887,8 +912,16 @@ function idrElegirLibre(){
   idrAvanzar(v);
 }
 function idrAvanzar(elegido){
+  try{ idrAvanzarInterno(elegido); }
+  catch(e){
+    idrUltimoFallo = {motivo:'avanzar', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+  }
+}
+function idrAvanzarInterno(elegido){
   const c = idrCreacion(idrCreacionActiva);
   if(!c) return;
+  if(!c.pasos) c.pasos = [];
   if(!c.pasos[c.pasoActual]) c.pasos[c.pasoActual] = {};
   c.pasos[c.pasoActual].elegido = elegido;
   delete c.pasos[c.pasoActual].libre;
@@ -958,6 +991,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
+  idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
   if(!j || !j.nombre || !Array.isArray(j.ingredientes)){ showToast(t('idr.err.unreadable')); return; }
 
@@ -1208,6 +1242,7 @@ async function idrAdnBorrador(){
     {maxTokens: 900}
   );
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
+  idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
   if(!j){ showToast(t('idr.err.unreadable')); return; }
   const a = idrAdn();
@@ -1253,6 +1288,7 @@ Cada plato con su receta para 2 comensales. Aprovecha fondos y mise en place ent
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 4000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
+  idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
   if(!j || !Array.isArray(j.secciones)){ showToast(t('idr.err.unreadable')); return; }
 
