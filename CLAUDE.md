@@ -144,6 +144,26 @@ Luego commit + `git push -u origin <rama>`. Borrar siempre los scripts de prueba
 
 Trabajo en `claude/beautiful-dijkstra-58bru6`. No abrir PR salvo petición explícita.
 
+### Publicar: un cambio no está hecho hasta que se VE en el dominio
+
+**Render publica desde `main`, no desde la rama de trabajo.** Un arreglo que se
+queda en la rama no llega al dueño: parece que no se ha hecho nada, y se pierde
+la tarde diagnosticando un bug ya corregido (pasó el 30/08).
+
+Por eso, cada vez que se toque el código, la tanda entera es:
+
+```bash
+bash build.sh            # regenerar dist/
+bash deploy/actualizar.sh   # copiar dist/ dentro de deploy/  ← si no, Render publica lo viejo
+git commit && git push -u origin claude/beautiful-dijkstra-58bru6
+git checkout main && git merge --ff-only claude/beautiful-dijkstra-58bru6 && git push origin main
+git checkout claude/beautiful-dijkstra-58bru6
+```
+
+Y decirle al dueño **qué sello de versión tiene que ver** (`GG_BUILD`, abajo en
+la app, en hora de Madrid). Si ve otro, no está mirando el cambio: no tiene
+sentido pedirle que pruebe nada todavía.
+
 ---
 
 ## Pruebas (Puppeteer) — trampas ya conocidas
