@@ -520,6 +520,43 @@ await caso('El manual tiene índice arriba y marca dónde estás', async ()=>{
   return `${r.n} capítulos, y la marca sigue al que abres`;
 });
 
+/* ─── Los iconos de las pestañas compartidas ─── */
+// El texto de la pestaña ya cambiaba a "Bebidas" en Sala, pero el icono se
+// quedaba fijo en el HTML: un gorro de cocinero, un plato de sopa y una
+// zanahoria presidiendo la carta de vinos y el stock de la barra.
+await caso('Las pestañas de sala llevan iconos de bebida, no de cocina', async ()=>{
+  const r = await page.evaluate(()=>{
+    const icono = id => { const i = document.querySelector(`#${id} i.ti`); return i ? i.className.replace('ti ','') : null; };
+    const mira = () => ({
+      escPlatos: icono('escandallo-tab-platos'),
+      escElab:   icono('escandallo-tab-elaboraciones'),
+      fichPlatos:icono('fichas-tab-platos'),
+      fichElab:  icono('fichas-tab-elaboraciones'),
+      stockIng:  icono('stock-tab-btn-ing'),
+      stockElab: icono('stock-tab-btn-elab'),
+      etiqueta:  (document.querySelector('#fichas-tab-platos [data-i18n]')||{}).textContent,
+    });
+    currentArea = () => 'sala';
+    navigate('escandallo'); navigate('fichas'); navigate('stock');
+    const sala = mira();
+    currentArea = () => 'cocina';
+    navigate('escandallo'); navigate('fichas'); navigate('stock');
+    const cocina = mira();
+    return {sala, cocina};
+  });
+  const deCocina = ['ti-chef-hat','ti-soup','ti-carrot'];
+  const enSala = Object.entries(r.sala).filter(([k]) => k !== 'etiqueta');
+  const malos = enSala.filter(([,v]) => deCocina.includes(v)).map(([k,v]) => `${k}=${v}`);
+  assert.deepEqual(malos, [], 'iconos de cocina en sala: ' + malos.join(', '));
+  assert.ok(enSala.every(([,v]) => v), 'alguna pestaña se quedó sin icono');
+  // Y cocina debe conservar los suyos
+  assert.equal(r.cocina.escPlatos, 'ti-chef-hat', 'cocina pierde su gorro');
+  assert.equal(r.cocina.stockIng, 'ti-carrot', 'cocina pierde su zanahoria');
+  assert.equal(r.cocina.fichElab, 'ti-soup');
+  assert.ok(/bebida/i.test(r.sala.etiqueta||''), 'y el texto debe seguir diciendo Bebidas en sala');
+  return `sala: ${enSala.map(([,v])=>v).join(' ')} · cocina intacta`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   assert.deepEqual(errs, [], errs.join(' | '));
   return 'consola limpia';

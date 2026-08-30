@@ -1392,6 +1392,13 @@ function openStockValueModal(){
 
 function renderStock(){
   maybeShowCategoryIconHint();
+  // Mismo caso que las pestañas de Escandallo y Fichas: en Sala, una
+  // zanahoria y un plato de sopa presidiendo el stock de la barra.
+  if(typeof ajustaIconoPestana === 'function'){
+    const sala = currentArea() === 'sala';
+    ajustaIconoPestana('stock-tab-btn-ing', sala ? 'ti-bottle' : 'ti-carrot');
+    ajustaIconoPestana('stock-tab-btn-elab', sala ? 'ti-glass-cocktail' : 'ti-soup');
+  }
   const search = document.getElementById('stock-search').value.toLowerCase();
   const onlyAlerts = document.getElementById('stock-only-alerts').checked;
 

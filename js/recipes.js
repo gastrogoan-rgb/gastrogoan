@@ -129,6 +129,17 @@ function groupRecipesByCategory(recipes){
 }
 
 let escandalloTab = 'platos'; // 'platos' | 'elaboraciones'
+/* El texto de la pestaña ya cambiaba a "Bebidas" en Sala, pero el ICONO se
+   quedaba fijo en el HTML: un gorro de cocinero y un plato de sopa presidían
+   la carta de vinos. Los iconos van aquí por el mismo motivo que la etiqueta,
+   y con el mismo mecanismo. */
+function iconoPestanaPlatos(){ return currentArea()==='sala' ? 'ti-glass-cocktail' : 'ti-chef-hat'; }
+function iconoPestanaElaboraciones(){ return currentArea()==='sala' ? 'ti-bottle' : 'ti-soup'; }
+function ajustaIconoPestana(idBoton, icono){
+  const i = document.querySelector(`#${idBoton} i.ti`);
+  if(i) i.className = 'ti ' + icono;
+}
+
 function setEscandalloTab(tab){
   escandalloTab = tab;
   escandalloFolder = null;
@@ -209,6 +220,8 @@ function renderEscandallo(){
   // esta misma vista — antes se quedaba fija en "Platos" también en Sala.
   const platosTabLabel = document.querySelector('#escandallo-tab-platos [data-i18n]');
   if(platosTabLabel) platosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
+  ajustaIconoPestana('escandallo-tab-platos', iconoPestanaPlatos());
+  ajustaIconoPestana('escandallo-tab-elaboraciones', iconoPestanaElaboraciones());
 
   const newBtns = document.getElementById('escandallo-new-btns');
   if(newBtns){
@@ -1287,6 +1300,8 @@ function renderFichas(){
   document.getElementById('fichas-tab-elaboraciones').classList.toggle('active', isElab);
   const fichasPlatosTabLabel = document.querySelector('#fichas-tab-platos [data-i18n]');
   if(fichasPlatosTabLabel) fichasPlatosTabLabel.textContent = currentArea()==='sala' ? t('tab.drinks') : t('tab.dishes');
+  ajustaIconoPestana('fichas-tab-platos', iconoPestanaPlatos());
+  ajustaIconoPestana('fichas-tab-elaboraciones', iconoPestanaElaboraciones());
 
   document.getElementById('fichas-view-grid').classList.toggle('active', fichasView==='grid');
   document.getElementById('fichas-view-list').classList.toggle('active', fichasView==='list');
