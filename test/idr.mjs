@@ -1152,6 +1152,32 @@ await caso('Una creación que vuelve de la nube sin "pasos" no rompe nada', asyn
   return 'se repone la lista y el paso avanza';
 });
 
+await caso('Las cantidades se pasan a la unidad en que el negocio compra', async ()=>{
+  // El asistente contesta en gramos; si el queso está dado de alta en kg,
+  // meter el 120 tal cual daba 120 KG de queso en la ficha técnica.
+  const r = await page.evaluate(()=>({
+    quesoEnKg: idrConvertirCantidad(120, 'g', 'kg'),
+    aceiteEnL: idrConvertirCantidad(30, 'ml', 'L'),
+    alReves: idrConvertirCantidad(0.2, 'kg', 'g'),
+    mismaUnidad: idrConvertirCantidad(120, 'g', 'g'),
+    gramosSueltos: idrConvertirCantidad(200, 'gr', 'kg'),
+    litroMayus: idrConvertirCantidad(500, 'ml', 'l'),
+    sinUnidad: idrConvertirCantidad(2, '', 'ud'),
+    incompatible: idrConvertirCantidad(3, 'ud', 'kg'),
+    basura: idrConvertirCantidad('no', 'g', 'kg'),
+  }));
+  assert.equal(r.quesoEnKg, 0.12, '120 g de queso son 0,12 kg');
+  assert.equal(r.aceiteEnL, 0.03, '30 ml son 0,03 L');
+  assert.equal(r.alReves, 200, '0,2 kg son 200 g');
+  assert.equal(r.mismaUnidad, 120, 'misma unidad, mismo número');
+  assert.equal(r.gramosSueltos, 0.2, '"gr" también vale');
+  assert.equal(r.litroMayus, 0.5, 'la l minúscula es litro igual');
+  assert.equal(r.sinUnidad, 2, 'sin unidad, el número tal cual');
+  assert.equal(r.incompatible, 3, 'unidades incompatibles: no se inventa un factor');
+  assert.equal(r.basura, 0, 'lo que no es un número vale 0');
+  return 'g→kg, ml→L y los casos raros';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

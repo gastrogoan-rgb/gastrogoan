@@ -1002,6 +1002,39 @@ function idrVolverA(i){
 // Casa un nombre de ingrediente propuesto con uno real del negocio.
 // Primero exacto, luego por contención: "cebolla de Figueres" debe
 // encontrar "Cebolla" antes que rendirse.
+/* ── Unidades ──
+   El asistente contesta en gramos y mililitros, que es como se piensa una
+   receta. Pero cada negocio tiene sus ingredientes dados de alta en LA UNIDAD
+   EN QUE LOS COMPRA: el queso de cabra por kg, el aceite por litros. La línea
+   de escandallo va siempre en la unidad del ingrediente, así que meter el 120
+   tal cual convertía 120 g de queso en 120 kg — y el coste del plato con él.
+   Aquí se pasa la cantidad del modelo a la unidad real del ingrediente. Si no
+   se sabe convertir (unidades de familias distintas, o el modelo no dijo
+   ninguna), se deja el número tal cual: es lo que el cocinero verá y podrá
+   corregir, mejor que inventar un factor. */
+const IDR_A_BASE = {g:1, kg:1000, mg:0.001, ml:1, cl:10, dl:100, l:1000, L:1000, ud:1, u:1, unidad:1, unidades:1, pza:1};
+const IDR_FAMILIA = {g:'peso', kg:'peso', mg:'peso', ml:'vol', cl:'vol', dl:'vol', l:'vol', L:'vol', ud:'ud', u:'ud', unidad:'ud', unidades:'ud', pza:'ud'};
+function idrNormalizaUnidad(u){
+  const x = String(u||'').trim().toLowerCase().replace(/[.]/g,'');
+  if(x === 'l' || x === 'litro' || x === 'litros') return 'L';
+  if(x === 'gr' || x === 'gramo' || x === 'gramos') return 'g';
+  if(x === 'kilo' || x === 'kilos' || x === 'kgs') return 'kg';
+  if(x === 'mililitro' || x === 'mililitros') return 'ml';
+  if(x === 'uds' || x === 'unidades' || x === 'unidad' || x === 'u') return 'ud';
+  return x;
+}
+function idrConvertirCantidad(cantidad, unidadModelo, unidadIngrediente){
+  const q = parseFloat(cantidad);
+  if(!isFinite(q)) return 0;
+  const de = idrNormalizaUnidad(unidadModelo);
+  const a  = idrNormalizaUnidad(unidadIngrediente);
+  if(!de || !a || de === a) return q;
+  if(!IDR_FAMILIA[de] || !IDR_FAMILIA[a] || IDR_FAMILIA[de] !== IDR_FAMILIA[a]) return q;
+  const v = q * IDR_A_BASE[de] / IDR_A_BASE[a];
+  // Se redondea a 4 decimales: 120 g de queso son 0,12 kg, no 0,12000000000000001.
+  return Math.round(v * 10000) / 10000;
+}
+
 function idrBuscarIngrediente(nombre){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
@@ -1029,6 +1062,7 @@ ${resumen}
 Escribe la receta para 2 comensales. Responde SOLO con este JSON:
 {"nombre":"...","descripcion":"descripción corta de carta","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
 
+Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
   const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
@@ -1041,7 +1075,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const faltan = [];
   j.ingredientes.forEach(ing => {
     const real = idrBuscarIngrediente(ing.nombre);
-    const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
+    const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
     if(real && qty > 0) lineas.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
     else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
   });
@@ -1094,7 +1128,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
       const lineas2 = []; const faltan2 = [];
       j2.ingredientes.forEach(ing => {
         const real = idrBuscarIngrediente(ing.nombre);
-        const qty = Math.max(0, parseFloat(ing.cantidad) || 0);
+        const qty = real ? Math.max(0, idrConvertirCantidad(ing.cantidad, ing.unidad, real.unit)) : 0;
         if(real && qty > 0) lineas2.push({type:'ingredient', ingredientId: real.id, qty, merma: 0});
         else if(ing.nombre) faltan2.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
       });
