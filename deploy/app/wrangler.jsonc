@@ -1,6 +1,6 @@
 {
   // Sitio de gestion: app.gastrogoan.com
-  "name": "gastrogoan-app",
+  "name": "gastrogoanapp",
   "compatibility_date": "2025-01-01",
   "assets": { "directory": "./public" }
 }
