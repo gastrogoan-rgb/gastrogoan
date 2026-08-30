@@ -537,9 +537,24 @@ function idrSistema(extra){
 function idrCreaciones(){
   if(!DB.idr || typeof DB.idr !== 'object') DB.idr = {};
   if(!Array.isArray(DB.idr.creaciones)) DB.idr.creaciones = [];
+  // Ver idrCreacion: la nube devuelve las creaciones sin los campos que
+  // estaban vacíos. Se reponen aquí para que ninguna pantalla se encuentre
+  // con un `undefined` donde esperaba una lista.
+  DB.idr.creaciones.forEach(c => { if(c && !Array.isArray(c.pasos)) c.pasos = []; });
   return DB.idr.creaciones;
 }
-function idrCreacion(id){ return idrCreaciones().find(c => c.id === id) || null; }
+/* Devuelve la creación SIEMPRE con su lista de pasos puesta. Esto no es
+   pedantería defensiva: una creación recién empezada tiene `pasos: []`, y
+   **Firebase no guarda arrays ni objetos vacíos** — al volver de la nube el
+   campo sencillamente no está. A partir de ahí, `c.pasos[0]` reventaba y la
+   pantalla se quedaba con el botón en "Pensando..." para siempre, sin ningún
+   aviso. Es el mismo fallo de raíz que el de Distribución del Trabajo.
+   Se arregla aquí, en el único sitio por donde pasan todos. */
+function idrCreacion(id){
+  const c = idrCreaciones().find(x => x.id === id) || null;
+  if(c && !Array.isArray(c.pasos)) c.pasos = [];
+  return c;
+}
 
 // Los pasos de cada tipo. Añadir un paso es añadir una entrada: el guion
 // del asistente sale de aquí, no está escrito a mano en ningún sitio.

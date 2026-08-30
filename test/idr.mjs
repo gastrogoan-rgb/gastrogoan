@@ -1130,6 +1130,28 @@ await caso('Una respuesta que no llega nunca se corta y se avisa', async ()=>{
   return 'se corta y tiene mensaje propio';
 });
 
+await caso('Una creación que vuelve de la nube sin "pasos" no rompe nada', async ()=>{
+  // Firebase NO guarda arrays vacíos: una creación recién empezada vuelve
+  // de la nube sin el campo `pasos`. Antes, eso dejaba el botón de pedir
+  // ideas en "Pensando..." para siempre y sin ningún aviso.
+  const r = await page.evaluate(async ()=>{
+    DB.idr = DB.idr || {}; DB.idr.creaciones = DB.idr.creaciones || [];
+    const id = Date.now();
+    DB.idr.creaciones.push({id, tipo:'plato', titulo:'Prueba nube', pasoActual:0, createdAt:new Date().toISOString()});
+    delete DB.idr.creaciones[DB.idr.creaciones.length-1].pasos; // tal cual llega de la nube
+    const rec = idrCreacion(id);
+    let fallo = null;
+    try{ navIdr('creacion', id); idrGuardarLibre('bacalao'); idrAvanzar('bacalao'); }
+    catch(e){ fallo = String(e.message); }
+    const despues = idrCreacion(id);
+    return {hayPasos: Array.isArray(rec && rec.pasos), fallo, paso: despues && despues.pasoActual};
+  });
+  assert.ok(r.hayPasos, 'idrCreacion debe reponer la lista de pasos');
+  assert.equal(r.fallo, null, 'avanzar no debe reventar: ' + r.fallo);
+  assert.equal(r.paso, 1, 'y el paso debe avanzar de verdad');
+  return 'se repone la lista y el paso avanza';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
