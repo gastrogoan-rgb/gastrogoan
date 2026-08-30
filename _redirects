@@ -4,7 +4,7 @@
 # reservas.gastrogoan.com/?n=casapaco.
 #
 # Solo reescribe por dentro (código 200, no 301/302): la URL bonita se queda
-# en la barra del navegador. Los archivos reales (reservagastrogoan.html,
+# en la barra del navegador. Los archivos reales (index.html,
 # fonts/*, sw.js) se sirven tal cual porque Netlify prioriza un archivo
 # existente sobre esta regla — solo cae aquí lo que no coincide con nada.
 
@@ -14,5 +14,10 @@
 # incompleto — pide al restaurante que te envíe un enlace válido"), que es
 # mucho más útil para alguien que ha llegado ahí por error. Va antes que la
 # regla de abajo porque las reglas se aplican en orden.
-/       /reservagastrogoan.html         200
-/:slug  /reservagastrogoan.html?n=:slug  200
+# ⚠️ El destino es index.html, NO reservagastrogoan.html: el archivo se
+# entrega renombrado a index.html (así ningún hosting pregunta al subirlo).
+# Apuntar al nombre viejo dejaba estas dos reglas señalando a un archivo que
+# no existe — la raíz seguía saliendo porque el hosting sirve index.html por
+# su cuenta, pero los enlaces cortos (/casapaco) daban 404 sin que se notara.
+/       /index.html         200
+/:slug  /index.html?n=:slug  200
