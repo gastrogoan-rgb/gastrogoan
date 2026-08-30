@@ -1,0 +1,6 @@
+{
+  // Web publica de reservas y pedidos: reservas.gastrogoan.com
+  "name": "gastrogoan-reservas",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./public" }
+}
