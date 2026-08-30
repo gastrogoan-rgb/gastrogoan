@@ -1,0 +1,3019 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservas y Pedidos</title>
+<style>
+@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/schibsted-grotesk-400-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/schibsted-grotesk-500-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/schibsted-grotesk-600-normal.woff2") format("woff2");}@font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/schibsted-grotesk-700-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/ibm-plex-mono-400-normal.woff2") format("woff2");}@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/ibm-plex-mono-500-normal.woff2") format("woff2");}
+  :root{
+    --ink:#1C1A17; --olive:#4A5D4E; --olive-l:#7E9B84;
+    --paper:#FAF8F4; --surface:#FFFFFF; --border:#E7E2D9;
+    /* Mismo cambio que en la app: #8A857C se quedaba en 3,67:1 sobre
+       blanco, por debajo del 4,5:1 legible, y aquí lo llevan las etiquetas
+       del formulario de reserva ("Nombre *", "Teléfono *"). Este es el
+       formulario que rellena el cliente del restaurante: si no lo lee
+       bien, no reserva. */
+    --body:#3D3A34; --muted:#716C65;
+    --green:#4A5D4E; --green-l:#EDF1EC;
+    --red:#8A4A3B; --red-l:#F5EBE7;
+  }
+  *{box-sizing:border-box;}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--olive);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  body{
+    margin:0;font-family:'Schibsted Grotesk',system-ui,-apple-system,sans-serif;
+    background:var(--paper);color:var(--body);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+  ::selection{background:var(--ink);color:var(--paper)}
+  header{
+    background:var(--ink);color:#fff;padding:20px 16px;text-align:center;
+    border-bottom:1px solid var(--ink);
+  }
+  header img{max-height:56px;border-radius:0;margin-bottom:6px;}
+  header h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em;}
+  header .sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.06em;color:#C9C2B6;margin-top:6px;}
+  #lang-switcher{display:flex;justify-content:center;gap:6px;margin-top:10px;}
+  #lang-switcher button{
+    padding:4px 10px;border-radius:0;border:1px solid rgba(255,255,255,.3);
+    background:transparent;color:rgba(255,255,255,.7);font-size:11.5px;font-weight:600;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;transition:border-color .15s,color .15s,background-color .15s;
+  }
+  #lang-switcher button:hover{border-color:var(--olive-l);color:#fff;}
+  #lang-switcher button.active{background:var(--olive);color:#fff;border-color:var(--olive);}
+  .wrap{max-width:560px;margin:0 auto;padding:16px;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:0;
+    padding:18px;margin-bottom:14px;
+  }
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab-btn{
+    flex:1;min-width:100px;padding:13px 12px;min-height:48px;border-radius:0;border:1px solid var(--border);
+    background:var(--surface);font-weight:600;font-size:13.5px;cursor:pointer;text-align:center;color:var(--ink);
+    font-family:inherit;transition:border-color .15s,background-color .15s,color .15s,transform .1s;
+  }
+  .tab-btn:hover{border-color:var(--ink);}
+  .tab-btn:active{transform:translateY(1px);}
+  .tab-btn.active{border-color:var(--ink);background:var(--ink);color:#fff;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;margin-bottom:6px;color:var(--muted);}
+  .field input, .field select, .field textarea{
+    width:100%;padding:12px 14px;min-height:48px;border:1px solid var(--border);border-radius:0;
+    font-size:16px;font-family:inherit;background:var(--surface);color:var(--ink);
+    transition:border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:var(--ink);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:14px 18px;min-height:50px;border-radius:0;border:1px solid var(--ink);
+    background:var(--surface);color:var(--ink);font-weight:600;font-size:14.5px;
+    cursor:pointer;width:100%;font-family:inherit;
+    transition:background-color .15s,color .15s,transform .1s;
+  }
+  .btn:hover:not(:disabled){background:var(--paper);}
+  .btn:active:not(:disabled){transform:translateY(1px);}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover:not(:disabled){background:var(--olive);border-color:var(--olive);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  #inline-alert{
+    position:fixed;left:16px;right:16px;bottom:16px;z-index:999;
+    background:var(--red-l);color:var(--red);border:1px solid var(--red);
+    padding:14px 16px;font-size:14px;font-weight:600;display:flex;align-items:flex-start;gap:10px;
+    box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:480px;margin:0 auto;
+    animation:fade-up .25s ease;
+  }
+  #inline-alert button{background:none;border:none;color:var(--red);font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:6px;margin:-6px -6px -6px auto;min-width:32px;min-height:32px;}
+  /* Modal genérico (aviso de privacidad y cualquier otro texto largo): antes
+     solo existía un alert() nativo del navegador para esto, sin scroll
+     cómodo ni formato ni forma de estilizarlo con la marca del negocio. */
+  #modal-overlay{
+    position:fixed;inset:0;z-index:1000;background:rgba(28,26,23,.55);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #modal-overlay.active{opacity:1;pointer-events:auto}
+  #modal-box{
+    background:var(--surface);border:1px solid var(--border);max-width:480px;width:100%;
+    max-height:calc(100vh - 32px);overflow-y:auto;padding:22px;position:relative;
+  }
+  #modal-box h2{padding-right:28px}
+  #modal-box .modal-close{
+    position:absolute;top:14px;right:14px;background:none;border:none;font-size:20px;
+    font-weight:700;cursor:pointer;color:var(--muted);line-height:1;padding:6px;min-width:32px;min-height:32px;
+  }
+  #modal-box p{font-size:13.5px;line-height:1.65;color:var(--body)}
+  /* Campo marcado como inválido tras un intento de envío fallido — antes el
+     único indicio de qué campo fallaba era un alert() genérico sin decir
+     cuál; ahora el campo en sí se resalta y se hace scroll hasta él. */
+  .field.invalid input, .field.invalid select, .field.invalid textarea{
+    border-color:var(--red);background:var(--red-l);
+  }
+  .field.invalid label{color:var(--red)}
+  .btn .btn-spinner{
+    width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+    border-radius:50%;animation:spin .7s linear infinite;
+  }
+  .btn:not(.btn-primary) .btn-spinner{border-color:var(--border);border-top-color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){
+    #inline-alert{animation:none}
+    .btn-spinner{animation:none}
+  }
+  h2{font-size:17px;margin:0 0 10px;font-weight:700;letter-spacing:-.01em;}
+  h3{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;margin:16px 0 8px;}
+  .menu-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:13px 0;border-bottom:1px solid var(--border);transition:background-color .15s;
+  }
+  .menu-item:last-child{border-bottom:none;}
+  .menu-item .name{font-weight:600;font-size:15px;color:var(--ink);}
+  .menu-item .price{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--muted);}
+  .qty-ctl{display:flex;align-items:center;gap:10px;}
+  .qty-ctl button{
+    width:34px;height:34px;border-radius:0;border:1px solid var(--border);
+    background:var(--surface);font-size:17px;font-weight:600;cursor:pointer;color:var(--ink);
+    transition:border-color .15s,background-color .15s,transform .1s;
+  }
+  .qty-ctl button:hover{border-color:var(--ink);}
+  .qty-ctl button:active{transform:scale(.92);}
+  .qty-ctl span{min-width:20px;text-align:center;font-weight:600;font-size:15px;font-family:'IBM Plex Mono',monospace;transition:transform .15s;}
+  .qty-ctl span.bump{transform:scale(1.35);color:var(--olive);}
+  .cart-line{display:flex;justify-content:space-between;font-size:13.5px;padding:6px 0;font-family:'IBM Plex Mono',monospace;}
+  .cart-total{display:flex;justify-content:space-between;font-weight:700;font-size:18px;padding-top:10px;border-top:1px solid var(--ink);margin-top:8px;font-family:'IBM Plex Mono',monospace;}
+  .cart-total.bump{animation:total-bump .3s ease;}
+  @keyframes total-bump{0%{transform:scale(1)}40%{transform:scale(1.04)}100%{transform:scale(1)}}
+  .empty{text-align:center;color:var(--muted);padding:22px;font-size:13.5px;}
+  /* Carpetas de la carta: en vez de una lista larga con todo desplegado
+     (o un acordeón que sigue amontonando secciones en la misma pantalla),
+     se entra y se sale de cada sección como en el selector de carta del
+     TPV que usa el camarero — una pantalla a la vez, sin scroll interminable. */
+  /* Carpetas compactas a propósito: con la tarjeta grande y cuadrada, una
+     carta de seis secciones ocupaba dos pantallas de móvil y el cliente
+     tenía que bajar solo para ver qué apartados hay. Son botones
+     rectangulares con el emoji al lado del nombre, en dos columnas: la
+     carta entera se ve de un vistazo y siguen midiendo 48 px de alto, el
+     mínimo para poder pulsarlas con el dedo. */
+  /* La casilla de aceptar el tratamiento de datos salía a 13x13 px (el
+     tamaño por defecto del navegador, sin estilo) y es OBLIGATORIA para
+     enviar la reserva: un cliente que no acierta a marcarla no puede
+     reservar, y se va. El enlace "Ver más" tenía 15 px de alto. */
+  .consent-check{
+    width:24px;height:24px;min-width:24px;min-height:24px;
+    margin:0;flex:none;accent-color:var(--olive, #7E9B84);cursor:pointer;
+  }
+  label:has(> .consent-check){min-height:44px;align-items:center !important;gap:12px !important}
+  label:has(> .consent-check) a{
+    display:inline-block;padding:6px 2px;min-height:32px;line-height:20px;
+  }
+
+  .menu-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin-bottom:6px}
+  .menu-folder-card{
+    display:flex;flex-direction:row;align-items:center;gap:8px;
+    border:1px solid var(--border);background:var(--surface);padding:10px 12px;cursor:pointer;
+    text-align:left;font-family:inherit;transition:border-color .15s,transform .1s;min-height:48px;
+  }
+  .menu-folder-card:hover{border-color:var(--ink)}
+  .menu-folder-card:active{transform:translateY(1px)}
+  .menu-folder-card .icon{font-size:20px;color:var(--olive);line-height:1;flex:none}
+  .menu-folder-card .name{font-weight:700;font-size:13px;color:var(--ink);line-height:1.2;min-width:0;overflow-wrap:anywhere}
+  .menu-back-btn{
+    display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+    font-weight:600;color:var(--ink);padding:10px 2px;margin-bottom:4px;min-height:44px;
+  }
+  .menu-back-btn:hover{color:var(--olive)}
+  .success{
+    text-align:center;padding:44px 16px;animation:fade-up .35s ease;
+  }
+  .success .icon{font-size:48px;color:var(--green);}
+  .success h2{margin-top:12px;}
+  .error-box{
+    text-align:center;padding:40px 16px;color:var(--red);
+  }
+  .fade-in-play{animation:fade-up .25s ease;}
+  @keyframes fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){
+    .fade-in-play,.success{animation:none;}
+    .btn,.tab-btn,.qty-ctl button,#lang-switcher button{transition:none;}
+    .cart-total.bump{animation:none;}
+    .qty-ctl span.bump{transform:none;}
+  }
+
+  /* Responsive */
+  @media (max-width: 380px){
+    .wrap{padding:10px;}
+    .card{padding:12px;}
+    header{padding:14px 12px;}
+    header h1{font-size:18px;}
+    .field-row{flex-direction:column;gap:0;}
+    .tab-btn{min-width:80px;font-size:12px;padding:9px 8px;}
+    .menu-item .name{font-size:13.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="biz-logo"></div>
+  <h1 id="biz-name">Reservas y Pedidos</h1>
+  <div class="sub" id="biz-info"></div>
+  <div id="lang-switcher"></div>
+</header>
+
+<div class="wrap" id="app">
+  <div class="empty" id="app-loading"><div class="spinner"></div>Cargando…</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<script>
+/* ============================================================
+   NUBE — Configuración de Firebase (plataforma compartida GastroGoan)
+   Misma configuración que el kit de gestión: cada negocio tiene su
+   propio espacio público dentro de esta base de datos compartida,
+   identificado por el código "neg" del enlace/QR.
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwZDodF6zwN11slvqkZ_yy3IOn2iko_ws",
+  authDomain: "plataforma-gastrogoan.firebaseapp.com",
+  databaseURL: "https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plataforma-gastrogoan",
+  storageBucket: "plataforma-gastrogoan.firebasestorage.app",
+  messagingSenderId: "894218847556",
+  appId: "1:894218847556:web:2fa1f699489790bb5f8311"
+};
+
+let publicId = null;
+let tableIdFromUrl = null;
+let trackToken = null;
+let trackListenerAttached = false;
+let resToken = null;
+let resListenerAttached = false;
+let db = null;
+let DB = null; // { business, cartas, activeCartaId }
+let currentTab = null; // 'reserva' | 'takeaway' | 'delivery' | 'mesa'
+let cart = []; // [{key, recipeId(=platoId), sectionId, name, price, qty, modificadores:[{id,nombre,precio}]}]
+let cartTipPct = 0; // 0 | 5 | 10 | 15 | 'custom'
+let cartTipCustom = 0; // importe fijo cuando cartTipPct === 'custom'
+let submittingRequest = false; // evita duplicados por doble clic en pedidos/reservas
+let redsysConfigured = false;
+
+// Worker (Cloudflare) que firma los pagos del TPV virtual (Redsys) sin
+// exponer la clave secreta del restaurante en este navegador.
+const REDSYS_WORKER_URL = 'https://gastro.gastrogoan.workers.dev';
+
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+// Para insertar texto dentro de un literal JS '...' embebido en un atributo
+// onclick="...": el navegador decodifica las entidades HTML del atributo
+// ANTES de interpretarlo como JS, así que un nombre con apóstrofo (p.ej.
+// "Chef's special") escapado solo con escapeHtml (' -> &#39;) se decodifica
+// de vuelta a ' dentro del onclick y cierra la cadena JS a mitad, rompiendo
+// el botón sin ningún error visible (el "+" simplemente deja de añadir al
+// carrito). Escapa primero la barra invertida y la comilla simple para JS,
+// y luego para HTML.
+function escapeJsAttr(str){
+  return escapeHtml(String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+}
+
+/* ============ IDIOMA DE LA CARTA ============ */
+const LANGS = {es:'ES', en:'EN', ca:'CA'};
+let currentLang = localStorage.getItem('gastrogoan_lang') || 'es';
+let bizNameLoaded = false;
+
+const I18N = {
+  es: {
+    'tab.mesa':'📱 Pedir en mesa','tab.mesa.qr':'📱 Tu pedido','tab.reserva':'🍽️ Reservar mesa','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Reservar mesa','nombre':'Nombre *','telefono':'Teléfono *','fecha':'Fecha *','hora':'Hora *','personas':'Número de personas *',
+    'notas':'Notas (alergias, peticiones especiales...)','notas.placeholder':'Opcional','reserva.submit':'Enviar solicitud de reserva','reserva.submitWithDeposit':'Pagar señal y reservar',
+    'referral.label':'¿Cómo nos conociste? (opcional)','referral.placeholder':'Elige una opción',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Recomendación de un amigo','referral.returning':'Ya había venido antes','referral.other':'Otro',
+    'privacy.consentLabel':'Acepto que mis datos se usen para gestionar mi reserva/pedido.',
+    'privacy.linkText':'Ver más', 'common.close':'Cerrar', 'common.cancel':'Cancelar', 'common.confirm':'Confirmar', 'common.sending':'Enviando...', 'confirm.loseCart':'Si cambias de pestaña perderás lo que llevas añadido al pedido. ¿Continuar?', 'aria.removeItem':'Quitar %s', 'aria.addItem':'Añadir %s',
+    'privacy.mustAccept':'Tienes que aceptar el aviso de privacidad para continuar.',
+    'privacy.noticeText':'Aviso de privacidad\n\n${business} usa los datos que rellenas en este formulario (nombre, teléfono, y si los indicas, alergias u otras notas) únicamente para gestionar tu reserva o pedido, y para poder avisarte de novedades si marcas esa casilla.\n\nNo se comparten con terceros salvo lo necesario para prestar el servicio (por ejemplo, el propio restaurante).\n\nPuedes pedir en cualquier momento que se corrijan o se borren tus datos contactando directamente con el restaurante.',
+    'reserva.ok':'Solicitud de reserva enviada. El restaurante la confirmará lo antes posible.',
+    'reserva.ok.emailHint':' Te enviaremos la confirmación a tu email en cuanto quede lista.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'tucorreo@ejemplo.com','email.reserva.hint':'Te avisaremos por aquí en cuanto tu reserva quede confirmada.',
+    'email.pedido.label':'Email (opcional)','email.pedido.hint':'Solo lo usamos para avisarte por aquí si el negocio tuviera que cancelar tu pedido.',
+    'error.email.invalido':'Indica un email válido para que podamos avisarte cuando se confirme tu reserva.',
+    'deposit.notice.title':'Esta reserva requiere señal',
+    'deposit.notice.body':'Para confirmar tu reserva se requiere una señal de ${amount}€. Al enviar la solicitud, pagarás la señal con tarjeta de forma segura antes de que quede confirmada.', 'deposit.paymentDescription':'Señal de reserva',
+    'nps.title':'¿Qué tal tu experiencia en ${business}?', 'nps.subtitle':'Tu opinión es privada y solo la ve el restaurante — no se publica en ningún sitio.',
+    'nps.low':'Nada probable', 'nps.high':'Muy probable', 'nps.commentLabel':'¿Algo que quieras contarnos? (opcional)',
+    'nps.commentPlaceholder':'Cuéntanos qué tal fue todo...', 'nps.submit':'Enviar', 'nps.needScore':'Elige una puntuación del 0 al 10.',
+    'nps.thanks':'¡Gracias por tu opinión!',
+    'order.takeaway.title':'Pedido para recoger','order.delivery.title':'Pedido a domicilio','order.mesa.title':'Pedir desde tu mesa',
+    'order.mesa.info':'Tu mesa: <strong>%s</strong>. Tu pedido se enviará directamente a cocina.',
+    'order.mesa.unknown':'No se ha reconocido tu mesa. Indica el número a continuación.',
+    'order.mesa.select':'¿En qué mesa estás? *','order.mesa.select.placeholder':'Selecciona tu mesa…',
+    'order.nombre':'Nombre (opcional)','order.notas':'Notas (alergias, observaciones...)','order.notas.placeholder':'Opcional',
+    'order.submit.mesa':'Enviar pedido a cocina','order.submit':'Enviar pedido',
+    'order.mesa.payWhen':'¿Cuándo pagas?','order.mesa.payLater':'Añadir a la cuenta de la mesa','order.mesa.payLaterDesc':'Se paga al final, junto con el resto de la mesa','order.mesa.payNow':'Pagar ahora con tarjeta','order.mesa.payNowDesc':'Pagas solo lo tuyo ahora mismo, sin esperar al resto de la mesa',
+    'order.ok.mesa':'Pedido enviado a cocina. ¡Gracias!','order.ok':'Pedido enviado. El restaurante lo confirmará en breve.',
+    'cart.empty':'Tu carrito está vacío. Añade platos arriba.','cart.title':'Tu pedido','cart.shipping':'Coste de envío','cart.total':'Total',
+    'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Añade %s más y el envío te sale gratis',
+    'cart.tip.label':'¿Añadir propina?','cart.tip.none':'Sin propina','cart.tip.other':'Otro','cart.tip.otherPlaceholder':'Importe en €','cart.tip.line':'Propina',
+    'allergens.title':'Alérgenos','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustáceos','Huevos':'Huevos','Pescado':'Pescado','Cacahuetes':'Cacahuetes','Soja':'Soja','Lácteos':'Lácteos','Frutos de cáscara':'Frutos de cáscara','Apio':'Apio','Mostaza':'Mostaza','Sésamo':'Sésamo','Sulfitos':'Sulfitos','Altramuces':'Altramuces','Moluscos':'Moluscos'},
+    'modifiers.hint':'Elige los extras que quieras (opcional).','modifiers.add':'Añadir al pedido','modifiers.addBtn':'Añadir','modifiers.fromPrice':'desde',
+    'menus.title':'Menús','carta.sectionTitle':'Carta','common.unavailable':'Agotado',
+    'cart.min':'Pedido mínimo: %s. Añade %s más para poder continuar.', 'cart.etaTakeaway':'Tu pedido debería estar listo para recoger en unos %d min.', 'cart.etaDelivery':'Tu pedido debería estar listo para el reparto en unos %d min (más el tiempo de trayecto).',
+    'carta.empty':'La carta no está disponible para pedidos online en este momento. Puedes llamar al restaurante o reservar mesa.',
+    'carta.empty.mesa':'La carta no está disponible para pedir desde la mesa en este momento. Llama al camarero.',
+    'no.services':'Este negocio no tiene servicios disponibles online en este momento.',
+    'direccion':'Dirección de entrega *','cp':'Código postal *','pago':'Forma de pago','pago.local.delivery':'Pagar al recibir','pago.local.takeaway':'Pagar al recoger','pago.tarjeta':'Pagar ahora con tarjeta', 'pago.metodoLocal':'¿Cómo vas a pagar?','pago.efectivo':'Efectivo','pago.tarjetaLocal':'Tarjeta (al recibir)','pago.pagaConLabel':'¿Con qué billete vas a pagar?','pago.pagaConPlaceholder':'Ej: 20, 50...','pago.pagaConHint':'Para que llevemos el cambio justo.','error.pagaCon':'Indica un importe igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Este negocio solo acepta tarjeta al entregar/recoger.', 'pago.metodoFijado':'Pagarás con: %s',
+    'error.campos':'Por favor completa los campos obligatorios.','error.campos.reserva':'Por favor completa los campos obligatorios (nombre, teléfono, email, fecha y hora).',
+    'error.cerrado':'El restaurante está cerrado el %s. Por favor elige otra fecha.',
+    'error.horario':'El restaurante solo acepta %s el %s en este horario: %s. Por favor elige otra hora.',
+    'error.horario.reservas':'reservas','error.horario.pedidos':'pedidos',
+    'error.mesa.nodisponible':'Lo sentimos, no hay ninguna mesa disponible para ese número de personas a esa hora. Por favor elige otro horario, reduce el número de personas o llama al restaurante.',
+    'error.pedidos.completo':'Lo sentimos, ya no admitimos más pedidos para esa franja horaria. Por favor elige otra hora o llama al restaurante.',
+    'error.carrito.vacio':'Añade al menos un plato a tu pedido.','error.mesa.select':'Selecciona tu mesa.','error.mesa.manual':'Indica el número de tu mesa.',
+    'error.pedido.min':'El pedido mínimo es de %s. Añade más platos para continuar.',
+    'error.envio':'No se ha podido enviar. Comprueba tu conexión e inténtalo de nuevo.',
+    'error.zona':'Lo sentimos, tu dirección está fuera de la zona de entrega del restaurante.',
+    'error.pedidosPausados.title':'Cocina a tope ahora mismo 🙏','error.pedidosPausados.body':'De momento no podemos aceptar nuevos encargos para llevar ni a domicilio. Vuelve a intentarlo en unos minutos — ¡gracias por tu paciencia!',
+    'error.antelacion':'Con la antelación mínima de %d minutos, lo antes que puedes elegir hoy es a las %s.',
+    'error.conexion':'No se ha podido conectar con el restaurante','error.carga':'No se ha podido cargar la información del restaurante','error.enlace':'Enlace no válido o incompleto',
+    'error.enlace.sub':'Pide al restaurante que te envíe un enlace válido.',
+    'hint.horario':'Horario el %s: %s.','hint.cerrado':'El restaurante está cerrado el %s. Elige otra fecha.', 'hint.cierrePedidos':'Para esta franja, el último pedido posible es a las %s.', 'error.cierrePedidos':'Ya no se aceptan pedidos para esta franja (el último posible era a las %s). Por favor elige otra hora.',
+    'hint.antelacion':'Para hoy, lo antes que puedes elegir es a las %s (antelación mínima de %d min).',
+    'success.otra':'Hacer otra solicitud', 'success.otraPedido':'Hacer otro pedido', 'success.otraReserva':'Hacer otra reserva', 'success.callToChange':'¿Necesitas cambiar o cancelar? Llama al %s.',
+    'success.trackOrder':'Seguir mi pedido', 'success.manageReservation':'Gestionar mi reserva',
+    'resManage.loading':'Cargando tu reserva...','resManage.title':'Tu reserva','resManage.date':'Fecha y hora','resManage.people':'Personas',
+    'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendiente de confirmar',
+    'resManage.cancelBtn':'Cancelar mi reserva','resManage.cancelSending':'Cancelando...','resManage.confirmCancel':'¿Seguro que quieres cancelar esta reserva?',
+    'resManage.editBtn':'Cambiar fecha u hora','resManage.saveBtn':'Guardar cambios','resManage.savingChanges':'Guardando...',
+    'resManage.notFound.title':'No encontramos esa reserva','resManage.notFound.msg':'El enlace puede haber caducado.',
+    'resManage.cancelled.title':'Reserva cancelada','resManage.cancelled.msg':'Esta reserva ya está cancelada. Si quieres volver a reservar, hazlo desde la pestaña de reservas.',
+    'resManage.completed.title':'Ya has llegado','resManage.completed.msg':'Esta reserva ya se ha registrado como atendida, así que no se puede editar ni cancelar desde aquí. Si necesitas algo, habla directamente con el restaurante.',
+    'track.loading':'Cargando estado del pedido...','track.title':'Tu pedido','track.current':'Ahora',
+    'track.notFound.title':'No encontramos ese pedido','track.notFound.msg':'El enlace puede haber caducado o el pedido ya se completó hace tiempo.',
+    'track.rejected.title':'Pedido no aceptado','track.rejected.msg':'El restaurante no ha podido aceptar este pedido.',
+    'track.step.pendiente':'Recibido','track.step.aceptado':'Aceptado por el restaurante','track.step.preparando':'En preparación','track.step.listo':'Listo','track.step.entregado':'Entregado / recogido',
+    'error.pago':'No se ha podido iniciar el pago con tarjeta.','error.pago.conexion':'No se ha podido iniciar el pago con tarjeta. Comprueba tu conexión e inténtalo de nuevo.',
+    'pago.ok.title':'¡Pago realizado!','pago.ok.msg':'Tu pedido se ha pagado correctamente. El restaurante lo confirmará en breve.','pago.ok.btn':'Volver al inicio',
+    'pago.ko.title':'Pago no completado','pago.ko.msg':'El pago no se ha procesado. Si lo deseas, puedes volver a intentarlo.','pago.ko.btn':'Volver',
+    'branch.title':'¿En qué local quieres reservar o pedir?','branch.subtitle':'Este negocio tiene varios locales. Elige el tuyo:',
+    'app.title':'Reservas y Pedidos','app.loading':'Cargando…','common.back':'Volver','label.dishes':'Platos','label.oneDish':'1 plato','label.nDishes':'${n} platos'
+  },
+  en: {
+    'tab.mesa':'📱 Order at table','tab.mesa.qr':'📱 Your order','tab.reserva':'🍽️ Book a table','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Book a table','nombre':'Name *','telefono':'Phone *','fecha':'Date *','hora':'Time *','personas':'Number of people *',
+    'notas':'Notes (allergies, special requests...)','notas.placeholder':'Optional','reserva.submit':'Send booking request','reserva.submitWithDeposit':'Pay deposit and book',
+    'referral.label':'How did you hear about us? (optional)','referral.placeholder':'Choose an option',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Friend\'s recommendation','referral.returning':'I\'ve been before','referral.other':'Other',
+    'privacy.consentLabel':'I agree that my data will be used to manage my reservation/order.',
+    'privacy.linkText':'Read more', 'common.close':'Close', 'common.cancel':'Cancel', 'common.confirm':'Confirm', 'common.sending':'Sending...', 'confirm.loseCart':'Switching tabs will clear what you\'ve added to your order. Continue?', 'aria.removeItem':'Remove %s', 'aria.addItem':'Add %s',
+    'privacy.mustAccept':'You need to accept the privacy notice to continue.',
+    'privacy.noticeText':'Privacy notice\n\n${business} uses the data you fill in this form (name, phone, and if provided, allergies or other notes) only to manage your reservation or order, and to notify you of updates if you check that box.\n\nIt is not shared with third parties beyond what is needed to provide the service (i.e. the restaurant itself).\n\nYou can ask at any time to correct or delete your data by contacting the restaurant directly.',
+    'reserva.ok':'Booking request sent. The restaurant will confirm as soon as possible.',
+    'reserva.ok.emailHint':' We\'ll email you the confirmation as soon as it\'s ready.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'you@example.com','email.reserva.hint':'We\'ll let you know here as soon as your booking is confirmed.',
+    'email.pedido.label':'Email (optional)','email.pedido.hint':'We only use it to let you know here if the restaurant has to cancel your order.',
+    'error.email.invalido':'Enter a valid email so we can let you know when your booking is confirmed.',
+    'deposit.notice.title':'This booking requires a deposit',
+    'deposit.notice.body':'A ${amount}€ deposit is required to confirm your booking. When you submit the request, you\'ll securely pay the deposit by card before it\'s confirmed.', 'deposit.paymentDescription':'Reservation deposit',
+    'nps.title':'How was your experience at ${business}?', 'nps.subtitle':'Your answer is private and only seen by the restaurant — never published anywhere.',
+    'nps.low':'Not at all likely', 'nps.high':'Very likely', 'nps.commentLabel':'Anything you\'d like to tell us? (optional)',
+    'nps.commentPlaceholder':'Tell us how it went...', 'nps.submit':'Send', 'nps.needScore':'Pick a score from 0 to 10.',
+    'nps.thanks':'Thanks for your feedback!',
+    'order.takeaway.title':'Order for collection','order.delivery.title':'Delivery order','order.mesa.title':'Order from your table',
+    'order.mesa.info':'Your table: <strong>%s</strong>. Your order will be sent directly to the kitchen.',
+    'order.mesa.unknown':'Your table was not recognised. Please enter the number below.',
+    'order.mesa.select':'Which table are you at? *','order.mesa.select.placeholder':'Select your table…',
+    'order.nombre':'Name (optional)','order.notas':'Notes (allergies, comments...)','order.notas.placeholder':'Optional',
+    'order.submit.mesa':'Send order to kitchen','order.submit':'Send order',
+    'order.mesa.payWhen':'When do you pay?','order.mesa.payLater':'Add to the table bill','order.mesa.payLaterDesc':'Pay at the end, together with the rest of the table','order.mesa.payNow':'Pay now by card','order.mesa.payNowDesc':'Pay just your part right now, without waiting for the rest of the table',
+    'order.ok.mesa':'Order sent to the kitchen. Thank you!','order.ok':'Order sent. The restaurant will confirm shortly.',
+    'cart.empty':'Your cart is empty. Add dishes above.','cart.title':'Your order','cart.shipping':'Delivery fee','cart.total':'Total',
+    'cart.shipping.free':'Free','cart.shipping.freeHint':'Add %s more and delivery is free',
+    'cart.tip.label':'Add a tip?','cart.tip.none':'No tip','cart.tip.other':'Other','cart.tip.otherPlaceholder':'Amount in €','cart.tip.line':'Tip',
+    'allergens.title':'Allergens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustaceans','Huevos':'Eggs','Pescado':'Fish','Cacahuetes':'Peanuts','Soja':'Soy','Lácteos':'Milk/Dairy','Frutos de cáscara':'Tree nuts','Apio':'Celery','Mostaza':'Mustard','Sésamo':'Sesame','Sulfitos':'Sulphites','Altramuces':'Lupin','Moluscos':'Molluscs'},
+    'modifiers.hint':'Pick any extras you\'d like (optional).','modifiers.add':'Add to order','modifiers.addBtn':'Add','modifiers.fromPrice':'from',
+    'menus.title':'Set menus','carta.sectionTitle':'À la carte','common.unavailable':'Sold out',
+    'cart.min':'Minimum order: %s. Add %s more to continue.', 'cart.etaTakeaway':'Your order should be ready for pickup in about %d min.', 'cart.etaDelivery':'Your order should be ready for delivery in about %d min (plus travel time).',
+    'carta.empty':'The menu is not available for online orders right now. You can call the restaurant or book a table.',
+    'carta.empty.mesa':'The menu is not available for table ordering right now. Please call the waiter.',
+    'no.services':'This restaurant has no online services available at the moment.',
+    'direccion':'Delivery address *','cp':'Postcode *','pago':'Payment method','pago.local.delivery':'Pay on delivery','pago.local.takeaway':'Pay on collection','pago.tarjeta':'Pay now by card', 'pago.metodoLocal':'How will you pay?','pago.efectivo':'Cash','pago.tarjetaLocal':'Card (on arrival)','pago.pagaConLabel':'What bill will you pay with?','pago.pagaConPlaceholder':'E.g: 20, 50...','pago.pagaConHint':'So we bring the right change.','error.pagaCon':'Enter an amount equal to or greater than the total (%s).', 'pago.soloTarjetaLocal':'This business only accepts card on delivery/pickup.', 'pago.metodoFijado':'You will pay with: %s',
+    'error.campos':'Please fill in all required fields.','error.campos.reserva':'Please fill in all required fields (name, phone, email, date and time).',
+    'error.cerrado':'The restaurant is closed on %s. Please choose another date.',
+    'error.horario':'The restaurant only accepts %s on %s during these hours: %s. Please choose another time.',
+    'error.horario.reservas':'bookings','error.horario.pedidos':'orders',
+    'error.mesa.nodisponible':'Sorry, there is no table available for that many people at that time. Please choose another time, reduce the party size, or call the restaurant.',
+    'error.pedidos.completo':'Sorry, we are not accepting more orders for that time slot. Please choose another time or call the restaurant.',
+    'error.carrito.vacio':'Add at least one dish to your order.','error.mesa.select':'Select your table.','error.mesa.manual':'Enter your table number.',
+    'error.pedido.min':'Minimum order is %s. Add more dishes to continue.',
+    'error.envio':'Could not send. Check your connection and try again.',
+    'error.zona':'Sorry, your address is outside the delivery area.',
+    'error.pedidosPausados.title':'Kitchen is slammed right now 🙏','error.pedidosPausados.body':'We can\'t take new takeaway or delivery orders at the moment. Please try again in a few minutes — thanks for your patience!',
+    'error.antelacion':'With a minimum lead time of %d minutes, the earliest you can choose today is %s.',
+    'error.conexion':'Could not connect to the restaurant','error.carga':'Could not load restaurant information','error.enlace':'Invalid or incomplete link',
+    'error.enlace.sub':'Ask the restaurant for a valid link.',
+    'hint.horario':'Hours on %s: %s.','hint.cerrado':'The restaurant is closed on %s. Choose another date.', 'hint.cierrePedidos':'For this time slot, the last possible order is at %s.', 'error.cierrePedidos':'Orders are no longer accepted for this time slot (the last possible was at %s). Please choose another time.',
+    'hint.antelacion':'For today, the earliest you can choose is %s (minimum lead time %d min).',
+    'success.otra':'Make another request', 'success.otraPedido':'Place another order', 'success.otraReserva':'Make another reservation', 'success.callToChange':'Need to change or cancel? Call %s.',
+    'success.trackOrder':'Track my order', 'success.manageReservation':'Manage my reservation',
+    'resManage.loading':'Loading your reservation...','resManage.title':'Your reservation','resManage.date':'Date and time','resManage.people':'People',
+    'resManage.status.confirmada':'Confirmed','resManage.status.pendiente':'Pending confirmation',
+    'resManage.cancelBtn':'Cancel my reservation','resManage.cancelSending':'Cancelling...','resManage.confirmCancel':'Are you sure you want to cancel this reservation?',
+    'resManage.editBtn':'Change date or time','resManage.saveBtn':'Save changes','resManage.savingChanges':'Saving...',
+    'resManage.notFound.title':'We can\'t find that reservation','resManage.notFound.msg':'The link may have expired.',
+    'resManage.cancelled.title':'Reservation cancelled','resManage.cancelled.msg':'This reservation is already cancelled. If you\'d like to book again, use the reservation tab.',
+    'resManage.completed.title':'You\'ve already arrived','resManage.completed.msg':'This reservation is already marked as seated, so it can\'t be edited or cancelled from here. If you need anything, please contact the restaurant directly.',
+    'track.loading':'Loading order status...','track.title':'Your order','track.current':'Now',
+    'track.notFound.title':'We can\'t find that order','track.notFound.msg':'The link may have expired, or the order was already completed a while ago.',
+    'track.rejected.title':'Order not accepted','track.rejected.msg':'The restaurant couldn\'t accept this order.',
+    'track.step.pendiente':'Received','track.step.aceptado':'Accepted by the restaurant','track.step.preparando':'Being prepared','track.step.listo':'Ready','track.step.entregado':'Delivered / picked up',
+    'error.pago':'Could not start card payment.','error.pago.conexion':'Could not start card payment. Check your connection and try again.',
+    'pago.ok.title':'Payment successful!','pago.ok.msg':'Your order has been paid. The restaurant will confirm shortly.','pago.ok.btn':'Back to home',
+    'pago.ko.title':'Payment not completed','pago.ko.msg':'The payment was not processed. You can try again if you wish.','pago.ko.btn':'Go back',
+    'branch.title':'Which location would you like?','branch.subtitle':'This business has multiple locations. Choose yours:',
+    'app.title':'Reservations and Orders','app.loading':'Loading…','common.back':'Back','label.dishes':'Dishes','label.oneDish':'1 dish','label.nDishes':'${n} dishes'
+  },
+  ca: {
+    'tab.mesa':'📱 Demanar a taula','tab.mesa.qr':'📱 La teva comanda','tab.reserva':'🍽️ Reservar taula','tab.takeaway':'🥡 Take Away','tab.delivery':'🛵 Delivery',
+    'reserva.title':'Reservar taula','nombre':'Nom *','telefono':'Telèfon *','fecha':'Data *','hora':'Hora *','personas':'Nombre de persones *',
+    'notas':'Notes (al·lèrgies, peticions especials...)','notas.placeholder':'Opcional','reserva.submit':'Enviar sol·licitud de reserva','reserva.submitWithDeposit':'Pagar senyal i reservar',
+    'referral.label':'Com ens has conegut? (opcional)','referral.placeholder':'Tria una opció',
+    'referral.instagram':'Instagram','referral.facebook':'Facebook','referral.tiktok':'TikTok','referral.google':'Google',
+    'referral.friend':'Recomanació d\'un amic','referral.returning':'Ja havia vingut abans','referral.other':'Altre',
+    'privacy.consentLabel':'Accepto que les meves dades s\'usin per gestionar la meva reserva/comanda.',
+    'privacy.linkText':'Veure més', 'common.close':'Tancar', 'common.cancel':'Cancel·lar', 'common.confirm':'Confirmar', 'common.sending':'Enviant...', 'confirm.loseCart':'Si canvies de pestanya perdràs el que portes afegit a la comanda. Continuar?', 'aria.removeItem':'Treure %s', 'aria.addItem':'Afegir %s',
+    'privacy.mustAccept':'Has d\'acceptar l\'avís de privacitat per continuar.',
+    'privacy.noticeText':'Avís de privacitat\n\n${business} fa servir les dades que emplenes en aquest formulari (nom, telèfon, i si les indiques, al·lèrgies o altres notes) únicament per gestionar la teva reserva o comanda, i per poder avisar-te de novetats si marques aquesta casella.\n\nNo es comparteixen amb tercers excepte el necessari per prestar el servei (per exemple, el mateix restaurant).\n\nPots demanar en qualsevol moment que es corregeixin o s\'esborrin les teves dades contactant directament amb el restaurant.',
+    'reserva.ok':'Sol·licitud de reserva enviada. El restaurant la confirmarà el més aviat possible.',
+    'reserva.ok.emailHint':' T\'enviarem la confirmació al teu email en quant estigui llesta.',
+    'email.reserva.label':'Email *','email.reserva.placeholder':'elteucorreu@exemple.com','email.reserva.hint':'T\'avisarem aquí quan la teva reserva quedi confirmada.',
+    'email.pedido.label':'Email (opcional)','email.pedido.hint':'Només l\'usem per avisar-te aquí si el negoci hagués de cancel·lar la teva comanda.',
+    'error.email.invalido':'Indica un email vàlid perquè puguem avisar-te quan es confirmi la teva reserva.',
+    'deposit.notice.title':'Aquesta reserva requereix senyal',
+    'deposit.notice.body':'Per confirmar la teva reserva cal una senyal de ${amount}€. En enviar la sol·licitud, pagaràs la senyal amb targeta de forma segura abans que quedi confirmada.', 'deposit.paymentDescription':'Senyal de reserva',
+    'nps.title':'Què tal la teva experiència a ${business}?', 'nps.subtitle':'La teva opinió és privada i només la veu el restaurant — no es publica enlloc.',
+    'nps.low':'Gens probable', 'nps.high':'Molt probable', 'nps.commentLabel':'Alguna cosa que ens vulguis explicar? (opcional)',
+    'nps.commentPlaceholder':'Explica\'ns què tal va anar tot...', 'nps.submit':'Enviar', 'nps.needScore':'Tria una puntuació del 0 al 10.',
+    'nps.thanks':'Gràcies per la teva opinió!',
+    'order.takeaway.title':'Comanda per emportar','order.delivery.title':'Comanda a domicili','order.mesa.title':'Demanar des de la teva taula',
+    'order.mesa.info':'La teva taula: <strong>%s</strong>. La comanda s\'enviarà directament a cuina.',
+    'order.mesa.unknown':'No s\'ha reconegut la teva taula. Indica el número a continuació.',
+    'order.mesa.select':'A quina taula ets? *','order.mesa.select.placeholder':'Selecciona la teva taula…',
+    'order.nombre':'Nom (opcional)','order.notas':'Notes (al·lèrgies, observacions...)','order.notas.placeholder':'Opcional',
+    'order.submit.mesa':'Enviar comanda a cuina','order.submit':'Enviar comanda',
+    'order.mesa.payWhen':'Quan pagues?','order.mesa.payLater':'Afegir al compte de la taula','order.mesa.payLaterDesc':'Es paga al final, junt amb la resta de la taula','order.mesa.payNow':'Pagar ara amb targeta','order.mesa.payNowDesc':'Pagues només el teu ara mateix, sense esperar la resta de la taula',
+    'order.ok.mesa':'Comanda enviada a cuina. Gràcies!','order.ok':'Comanda enviada. El restaurant la confirmarà aviat.',
+    'cart.empty':'El teu carret és buit. Afegeix plats a dalt.','cart.title':'La teva comanda','cart.shipping':'Cost d\'enviament','cart.total':'Total',
+    'cart.shipping.free':'Gratis','cart.shipping.freeHint':'Afegeix %s més i l\'enviament et surt gratis',
+    'cart.tip.label':'Vols afegir propina?','cart.tip.none':'Sense propina','cart.tip.other':'Altre','cart.tip.otherPlaceholder':'Import en €','cart.tip.line':'Propina',
+    'allergens.title':'Al·lèrgens','allergens.map':{'Gluten':'Gluten','Crustáceos':'Crustacis','Huevos':'Ous','Pescado':'Peix','Cacahuetes':'Cacauets','Soja':'Soja','Lácteos':'Lactis','Frutos de cáscara':'Fruits de closca','Apio':'Api','Mostaza':'Mostassa','Sésamo':'Sèsam','Sulfitos':'Sulfits','Altramuces':'Tramussos','Moluscos':'Mol·luscos'},
+    'modifiers.hint':'Tria els extres que vulguis (opcional).','modifiers.add':'Afegir a la comanda','modifiers.addBtn':'Afegir','modifiers.fromPrice':'des de',
+    'menus.title':'Menús','carta.sectionTitle':'Carta','common.unavailable':'Exhaurit',
+    'cart.min':'Comanda mínima: %s. Afegeix %s més per continuar.', 'cart.etaTakeaway':'La teva comanda hauria d\'estar llesta per recollir en uns %d min.', 'cart.etaDelivery':'La teva comanda hauria d\'estar llesta per al repartiment en uns %d min (més el temps de trajecte).',
+    'carta.empty':'La carta no està disponible per a comandes online en aquest moment. Pots trucar al restaurant o reservar taula.',
+    'carta.empty.mesa':'La carta no està disponible per demanar des de la taula en aquest moment. Truca al cambrer.',
+    'no.services':'Aquest negoci no té serveis disponibles online en aquest moment.',
+    'direccion':'Adreça d\'entrega *','cp':'Codi postal *','pago':'Forma de pagament','pago.local.delivery':'Pagar en rebre','pago.local.takeaway':'Pagar en recollir','pago.tarjeta':'Pagar ara amb targeta', 'pago.metodoLocal':'Com pagaràs?','pago.efectivo':'Efectiu','pago.tarjetaLocal':'Targeta (en rebre)','pago.pagaConLabel':'Amb quin bitllet pagaràs?','pago.pagaConPlaceholder':'Ex: 20, 50...','pago.pagaConHint':'Perquè portem el canvi just.','error.pagaCon':'Indica un import igual o superior al total (%s).', 'pago.soloTarjetaLocal':'Aquest negoci només accepta targeta en entregar/recollir.', 'pago.metodoFijado':'Pagaràs amb: %s',
+    'error.campos':'Si us plau completa els camps obligatoris.','error.campos.reserva':'Si us plau completa els camps obligatoris (nom, telèfon, email, data i hora).',
+    'error.cerrado':'El restaurant està tancat el %s. Si us plau tria una altra data.',
+    'error.horario':'El restaurant només accepta %s el %s en aquest horari: %s. Si us plau tria una altra hora.',
+    'error.horario.reservas':'reserves','error.horario.pedidos':'comandes',
+    'error.mesa.nodisponible':'Ho sentim, no hi ha cap taula disponible per a aquest nombre de persones a aquesta hora. Si us plau tria un altre horari, redueix el nombre de persones o truca al restaurant.',
+    'error.pedidos.completo':'Ho sentim, ja no admetem més comandes per a aquesta franja horària. Si us plau tria una altra hora o truca al restaurant.',
+    'error.carrito.vacio':'Afegeix almenys un plat a la comanda.','error.mesa.select':'Selecciona la teva taula.','error.mesa.manual':'Indica el número de la teva taula.',
+    'error.pedido.min':'Comanda mínima de %s. Afegeix més plats per continuar.',
+    'error.envio':'No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar.',
+    'error.zona':'Ho sentim, la teva adreça està fora de la zona d\'entrega del restaurant.',
+    'error.pedidosPausados.title':'Cuina a tope ara mateix 🙏','error.pedidosPausados.body':'De moment no podem acceptar nous encàrrecs per emportar ni a domicili. Torna-ho a provar d\'aquí a uns minuts — gràcies per la paciència!',
+    'error.antelacion':'Amb una antelació mínima de %d minuts, el més aviat que pots triar avui és a les %s.',
+    'error.conexion':'No s\'ha pogut connectar amb el restaurant','error.carga':'No s\'ha pogut carregar la informació del restaurant','error.enlace':'Enllaç no vàlid o incomplet',
+    'error.enlace.sub':'Demana al restaurant que t\'enviï un enllaç vàlid.',
+    'hint.horario':'Horari el %s: %s.','hint.cerrado':'El restaurant està tancat el %s. Tria una altra data.', 'hint.cierrePedidos':'Per a aquesta franja, l\'última comanda possible és a les %s.', 'error.cierrePedidos':'Ja no s\'accepten comandes per a aquesta franja (l\'última possible era a les %s). Si us plau tria una altra hora.',
+    'hint.antelacion':'Per avui, el més aviat que pots triar és a les %s (antelació mínima de %d min).',
+    'success.otra':'Fer una altra sol·licitud', 'success.otraPedido':'Fer una altra comanda', 'success.otraReserva':'Fer una altra reserva', 'success.callToChange':'Necessites canviar o cancel·lar? Truca al %s.',
+    'success.trackOrder':'Seguir la meva comanda', 'success.manageReservation':'Gestionar la meva reserva',
+    'resManage.loading':'Carregant la teva reserva...','resManage.title':'La teva reserva','resManage.date':'Data i hora','resManage.people':'Persones',
+    'resManage.status.confirmada':'Confirmada','resManage.status.pendiente':'Pendent de confirmar',
+    'resManage.cancelBtn':'Cancel·lar la meva reserva','resManage.cancelSending':'Cancel·lant...','resManage.confirmCancel':'Segur que vols cancel·lar aquesta reserva?',
+    'resManage.editBtn':'Canviar data o hora','resManage.saveBtn':'Desar canvis','resManage.savingChanges':'Desant...',
+    'resManage.notFound.title':'No trobem aquesta reserva','resManage.notFound.msg':'L\'enllaç pot haver caducat.',
+    'resManage.cancelled.title':'Reserva cancel·lada','resManage.cancelled.msg':'Aquesta reserva ja està cancel·lada. Si vols tornar a reservar, fes-ho des de la pestanya de reserves.',
+    'resManage.completed.title':'Ja has arribat','resManage.completed.msg':'Aquesta reserva ja s\'ha registrat com atesa, així que no es pot editar ni cancel·lar des d\'aquí. Si necessites res, parla directament amb el restaurant.',
+    'track.loading':'Carregant l\'estat de la comanda...','track.title':'La teva comanda','track.current':'Ara',
+    'track.notFound.title':'No trobem aquesta comanda','track.notFound.msg':'L\'enllaç pot haver caducat o la comanda ja es va completar fa temps.',
+    'track.rejected.title':'Comanda no acceptada','track.rejected.msg':'El restaurant no ha pogut acceptar aquesta comanda.',
+    'track.step.pendiente':'Rebuda','track.step.aceptado':'Acceptada pel restaurant','track.step.preparando':'En preparació','track.step.listo':'Llesta','track.step.entregado':'Lliurada / recollida',
+    'error.pago':'No s\'ha pogut iniciar el pagament amb targeta.','error.pago.conexion':'No s\'ha pogut iniciar el pagament amb targeta. Comprova la connexió i torna-ho a provar.',
+    'pago.ok.title':'Pagament realitzat!','pago.ok.msg':'La comanda s\'ha pagat correctament. El restaurant la confirmarà aviat.','pago.ok.btn':'Tornar a l\'inici',
+    'pago.ko.title':'Pagament no completat','pago.ko.msg':'El pagament no s\'ha processat. Si ho desitges, pots tornar-ho a intentar.','pago.ko.btn':'Tornar',
+    'branch.title':'A quin local vols reservar o demanar?','branch.subtitle':'Aquest negoci té diversos locals. Tria el teu:',
+    'app.title':'Reserves i Comandes','app.loading':'Carregant…','common.back':'Enrere','label.dishes':'Plats','label.oneDish':'1 plat','label.nDishes':'${n} plats'
+  }
+};
+function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.es[key] || key; }
+
+function setLang(lang){
+  currentLang = lang;
+  localStorage.setItem('gastrogoan_lang', lang);
+  renderLangSwitcher();
+  if(!bizNameLoaded) document.getElementById('biz-name').textContent = t('app.title');
+  if(document.title === 'Reservas y Pedidos' || Object.values(I18N).some(d=>d['app.title']===document.title)) document.title = t('app.title');
+  const loadingEl = document.getElementById('app-loading');
+  if(loadingEl) loadingEl.textContent = t('app.loading');
+  if(currentTab){ renderTabBar(); renderTabContent(); }
+  else if(lastErrorKey) showError(lastErrorKey);
+}
+
+function renderLangSwitcher(){
+  const box = document.getElementById('lang-switcher');
+  if(!box) return;
+  box.innerHTML = Object.keys(LANGS).map(l =>
+    `<button class="${l===currentLang?'active':''}" onclick="setLang('${l}')">${LANGS[l]}</button>`
+  ).join('');
+}
+
+// Devuelve el nombre de una sección/plato de la carta traducido al idioma
+// elegido por el cliente, o el original (en el idioma en que se escribió) si
+// no hay traducción disponible para ese idioma.
+function trItem(item){
+  const srcLang = item.nombreLang || 'es';
+  if(currentLang === srcLang) return item.nombre;
+  return (item.i18n && item.i18n[currentLang]) || item.nombre;
+}
+function trSection(sec){ return trItem(sec); }
+function trPlato(p){ return trItem(p); }
+function fmtMoney(v){
+  return (Number(v)||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// Aviso de privacidad básico (RGPD): qué datos se piden, para qué se usan
+// y cómo ejercer los derechos de acceso/rectificación/supresión. El
+// negocio puede ampliarlo/personalizarlo más adelante; esto es la base
+// mínima para no pedir datos personales (incluida una alergia, que es un
+// dato de salud) sin informar de nada.
+function showPrivacyNotice(){
+  const bizName = (DB && DB.business && DB.business.name) || t('reserva.title');
+  const fullText = t('privacy.noticeText').replace('${business}', bizName);
+  const [title, ...rest] = fullText.split('\n\n');
+  openInfoModal(title, rest.join('\n\n'));
+}
+
+// Modal genérico para textos largos (antes solo había alert() nativo, sin
+// scroll cómodo ni estilo propio) — se crea una sola vez y se reutiliza.
+function ensureModalChrome(){
+  if(document.getElementById('modal-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-overlay';
+  overlay.innerHTML = `<div id="modal-box" role="dialog" aria-modal="true"></div>`;
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeInfoModal(); });
+  document.body.appendChild(overlay);
+}
+function openInfoModal(title, bodyText){
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(title)}</h2>
+    <p style="white-space:pre-line">${escapeHtml(bodyText)}</p>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeInfoModal(){
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay) overlay.classList.remove('active');
+}
+
+// Sustituto de confirm() con el mismo diseño que el resto de la app (antes
+// era el cuadro nativo del navegador, sin estilo propio). Misma forma de
+// uso: se espera la Promise y se sigue solo si resuelve a true.
+let pendingConfirmModalResolve = null;
+function confirmModal(message, opts){
+  opts = opts || {};
+  ensureModalChrome();
+  return new Promise(resolve => {
+    pendingConfirmModalResolve = resolve;
+    document.getElementById('modal-box').innerHTML = `
+      <button class="modal-close" onclick="resolveConfirmModal(false)" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+      <p style="font-size:14px;line-height:1.6;color:var(--body);margin:4px 0 18px">${escapeHtml(message)}</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="resolveConfirmModal(false)">${escapeHtml(t('common.cancel')||'Cancelar')}</button>
+        <button class="btn btn-primary" style="${opts.danger?'background:var(--red);border-color:var(--red)':''}" onclick="resolveConfirmModal(true)">${escapeHtml(opts.confirmLabel||t('common.confirm')||'Confirmar')}</button>
+      </div>
+    `;
+    document.getElementById('modal-overlay').classList.add('active');
+  });
+}
+function resolveConfirmModal(value){
+  closeInfoModal();
+  if(pendingConfirmModalResolve){ pendingConfirmModalResolve(value); pendingConfirmModalResolve = null; }
+}
+
+// Un único regex de email compartido por los dos formularios (reserva y
+// pedido) — antes estaba duplicado literalmente en los dos sitios.
+function isValidEmail(v){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+// Identificador único para poder seguir el estado del pedido después de
+// enviarlo (ver trackOrderStatus) — antes solo se generaba dentro de
+// payWithCard, así que un pedido pagado en efectivo nunca tenía uno.
+function genClientRef(){
+  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// Resalta un campo inválido tras un intento de envío fallido y hace scroll
+// hasta él — antes el único indicio de qué campo fallaba era un alert()
+// genérico ("completa los campos obligatorios") sin decir cuál.
+function markFieldInvalid(fieldId){
+  const input = document.getElementById(fieldId);
+  if(!input) return;
+  const field = input.closest('.field') || input;
+  field.classList.add('invalid');
+  if(!markFieldInvalid._scrolled){
+    field.scrollIntoView({behavior:'smooth', block:'center'});
+    input.focus({preventScroll:true});
+    markFieldInvalid._scrolled = true;
+  }
+}
+function setBtnLoading(btnId, loading){
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  if(loading){
+    if(!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+    btn.innerHTML = `<span class="btn-spinner"></span> ${escapeHtml(t('common.sending')||'')}`;
+    btn.disabled = true;
+  } else if(btn.dataset.origHtml){
+    btn.innerHTML = btn.dataset.origHtml;
+    btn.disabled = false;
+  }
+}
+function clearFieldInvalid(fieldIds){
+  markFieldInvalid._scrolled = false;
+  fieldIds.forEach(id => {
+    const input = document.getElementById(id);
+    if(!input) return;
+    (input.closest('.field') || input).classList.remove('invalid');
+  });
+}
+
+function getPublicIdFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('neg');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
+// Enlace "bonito" con el nombre elegido por el negocio (?n=mi-restaurante)
+// en vez del código automático (?neg=xxxxx) — ver savePublicSlug() en la
+// app principal. Hace falta resolverlo contra la plataforma antes de poder
+// cargar los datos del negocio (ver init()).
+function getSlugFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('n');
+    if(v) return v;
+  }catch(e){}
+  // Red de seguridad para la dirección corta (reservas.gastrogoan.com/casapaco):
+  // el hosting la reescribe por dentro añadiendo ?n=casapaco, pero si esa
+  // regla faltara o se cambiara de hosting, el cliente se encontraría un
+  // "enlace no válido" con un enlace que es perfectamente válido. Leyéndolo
+  // también de la ruta, la dirección corta funciona sola.
+  try{
+    const seg = location.pathname.split('/').filter(Boolean);
+    // Un solo tramo y sin extensión: es el nombre del negocio, no un archivo.
+    if(seg.length === 1 && !seg[0].includes('.')) return decodeURIComponent(seg[0]);
+  }catch(e){}
+  return null;
+}
+
+function getTableIdFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('mesa');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
+// Token de seguimiento de un pedido concreto (?track=xxx), generado por el
+// propio cliente al enviarlo (ver genClientRef) — con esto puede volver más
+// tarde a esta misma URL y ver en qué punto va su pedido, sin necesidad de
+// llamar al restaurante para preguntar.
+function getTrackTokenFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('track');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
+// Token de "Gestionar mi reserva" (?res=xxx) — mismo patrón que
+// getTrackTokenFromUrl, en su propio parámetro para no mezclarlo con el
+// seguimiento de pedidos.
+function getResTokenFromUrl(){
+  try{
+    const p = new URLSearchParams(location.search);
+    const v = p.get('res');
+    if(v) return v;
+  }catch(e){}
+  return null;
+}
+
+// Aviso no bloqueante (sustituye a alert() nativo) para errores que ocurren
+// tras una acción del cliente (p.ej. fallo de pago) sin perder lo que había
+// escrito en el formulario.
+function showInlineError(msg){
+  let box = document.getElementById('inline-alert');
+  if(box) box.remove();
+  box = document.createElement('div');
+  box.id = 'inline-alert';
+  box.setAttribute('role', 'alert');
+  box.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button onclick="this.parentElement.remove()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>`;
+  document.body.appendChild(box);
+  clearTimeout(showInlineError._t);
+  showInlineError._t = setTimeout(()=>{ box.remove(); }, 8000);
+}
+
+let lastErrorKey = null;
+function showError(key){
+  lastErrorKey = key;
+  document.getElementById('app').innerHTML = `
+    <div class="error-box">
+      <div class="icon">⚠️</div>
+      <h2>${escapeHtml(t(key))}</h2>
+      <p style="font-size:13px;color:var(--muted)">${t('error.enlace.sub')}</p>
+    </div>
+  `;
+}
+
+function init(){
+  publicId = getPublicIdFromUrl();
+  const slug = getSlugFromUrl();
+  tableIdFromUrl = getTableIdFromUrl();
+  trackToken = getTrackTokenFromUrl();
+  resToken = getResTokenFromUrl();
+  if(!publicId && !slug){ showError('error.enlace'); return; }
+
+  // Vuelta desde el TPV virtual (Redsys) tras pagar con tarjeta.
+  const pago = new URLSearchParams(location.search).get('pago');
+  // Tras el redirect de Redsys, la URL se queda con "?...&pago=ok/ko" — si el
+  // cliente no sabe que puede quitarlo a mano, esta pantalla era un callejón
+  // sin salida real (ni el botón atrás del navegador ayuda, porque la página
+  // anterior en el historial es el propio formulario ya enviado a Redsys).
+  // El botón vuelve a la MISMA página pero sin ese parámetro, para poder
+  // seguir navegando con normalidad.
+  const backToSiteUrl = location.href.split('?')[0] + (publicId ? `?neg=${encodeURIComponent(publicId)}` : (slug ? `?n=${encodeURIComponent(slug)}` : ''));
+  if(pago === 'ok'){
+    document.getElementById('app').innerHTML = `
+      <div class="success">
+        <div class="icon">✅</div>
+        <h2>${t('pago.ok.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('pago.ok.msg')}</p>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
+      </div>
+    `;
+    return;
+  }
+  if(pago === 'ko'){
+    document.getElementById('app').innerHTML = `
+      <div class="error-box">
+        <div class="icon">⚠️</div>
+        <h2>${t('pago.ko.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('pago.ko.msg')}</p>
+        <button class="btn" style="margin-top:16px" onclick="location.href='${escapeHtml(backToSiteUrl)}'">${t('success.otraPedido')}</button>
+      </div>
+    `;
+    return;
+  }
+
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    // Autenticación anónima: las reglas de la nube exigen auth != null
+    // para poder leer/escribir, así evitamos el acceso directo sin pasar
+    // por el SDK de Firebase.
+    firebase.auth().signInAnonymously().then(() => {
+      // Enlace con nombre elegido por el negocio (?n=...): primero hay que
+      // resolverlo contra la plataforma para saber su código real antes de
+      // poder cargar sus datos.
+      if(slug && !publicId){
+        return db.ref('gastrogoan/publicSlugs/' + slug).once('value').then(snap => {
+          const resolved = snap.val();
+          if(!resolved){ showError('error.enlace'); return; }
+          publicId = resolved;
+          loadBusinessInfo();
+        });
+      }
+      loadBusinessInfo();
+    }).catch(e => {
+      console.error(e);
+      showError('error.conexion');
+    });
+  }catch(e){
+    console.error(e);
+    showError('error.conexion');
+  }
+}
+
+let businessInfoLoadedOnce = false;
+let lastRenderSignature = null;
+// Guarda y restaura lo que el cliente ya había escrito (nombre, teléfono,
+// dirección, notas...) alrededor de un re-render forzado por el listener en
+// vivo, para no perder el formulario a medio rellenar.
+function renderTabContentPreservingForm(){
+  const box = document.getElementById('tab-content');
+  const saved = {};
+  if(box){
+    // En una casilla o un radio, .value es siempre "on" — lo que hay que
+    // conservar es .checked. Sin esto, una actualización en vivo de la carta
+    // (o la respuesta de la comprobación de Redsys) desmarcaba el
+    // consentimiento de privacidad que el cliente ya había marcado, y al
+    // enviar le saltaba "tienes que aceptar el aviso" sobre una casilla que
+    // él juraría haber marcado.
+    box.querySelectorAll('input[id], textarea[id], select[id]').forEach(el => {
+      saved[el.id] = (el.type === 'checkbox' || el.type === 'radio') ? {checked: el.checked} : {value: el.value};
+    });
+  }
+  renderTabContent();
+  Object.keys(saved).forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const s = saved[id];
+    if(s.checked !== undefined){ if(el.checked !== s.checked) el.checked = s.checked; }
+    else if(el.value !== s.value) el.value = s.value;
+  });
+}
+function loadBusinessInfo(){
+  // Antes esto era un once('value') de una sola vez: si el dueño cambiaba un
+  // precio o quitaba un plato de la carta mientras un cliente tenía la
+  // página abierta, el cliente seguía viendo datos obsoletos hasta recargar.
+  // Con on() los cambios de carta/precios/disponibilidad llegan en vivo. En
+  // las actualizaciones DESPUÉS de la primera no se llama a renderApp() (que
+  // vacía el carrito): solo se refresca el contenido de la pestaña actual, y
+  // solo si de verdad cambió algo relevante para lo que se ve — el nodo
+  // 'info' incluye reservasResumen (aforo), que se reescribe cada vez que
+  // CUALQUIER cliente reserva, y eso NO debe forzar un re-render (la
+  // disponibilidad ya se revalida en vivo al enviar, vía getAforoInfo /
+  // reserveAforoAtomic), o el formulario de otros clientes se vaciaría
+  // constantemente por reservas ajenas sin ningún cambio real de carta.
+  db.ref('gastrogoan/public/' + publicId + '/info').on('value', snap => {
+    const val = snap.val();
+    if(!val){ if(!businessInfoLoadedOnce) showError('error.carga'); return; }
+
+    if(val.sucursales && Array.isArray(val.sucursales) && val.sucursales.length > 1 && !new URLSearchParams(location.search).get('local')){
+      renderBranchSelector(val.business || {}, val.sucursales);
+      return;
+    }
+
+    DB = {
+      business: val.business || {},
+      cartas: val.cartas || [],
+      activeCartaIds: val.activeCartaIds || (val.activeCartaId ? [val.activeCartaId] : []),
+      menus: val.menus || [],
+      activeMenuIds: val.activeMenuIds || [],
+      reservasResumen: val.reservasResumen || {},
+      // Antes faltaba "pedidosResumen" aquí: el límite de pedidos por franja
+      // (submitOrder → reservePedidoSlotAtomic) siempre veía un baseline de 0
+      // aunque ya hubiera pedidos aceptados en esa franja, así que en la
+      // práctica solo detectaba choques entre pedidos casi simultáneos, no
+      // el límite acumulado real de la franja.
+      pedidosResumen: val.pedidosResumen || {},
+      cocinaCargaActiva: val.cocinaCargaActiva || 0,
+      tables: val.tables || [],
+      promos: val.promos || [],
+      allergens: val.allergens || {}
+    };
+    renderHeader();
+    if(!businessInfoLoadedOnce){
+      businessInfoLoadedOnce = true;
+      lastRenderSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
+      renderApp();
+      checkRedsysConfigured();
+    }else if(currentTab && document.getElementById('tab-content')){
+      const newSignature = JSON.stringify({business: DB.business, cartas: DB.cartas, activeCartaIds: DB.activeCartaIds, menus: DB.menus, activeMenuIds: DB.activeMenuIds, tables: DB.tables, promos: DB.promos, allergens: DB.allergens});
+      if(newSignature !== lastRenderSignature){
+        lastRenderSignature = newSignature;
+        renderTabContentPreservingForm();
+      }
+    }
+  }, e => {
+    console.error(e);
+    if(!businessInfoLoadedOnce) showError('error.conexion');
+  });
+}
+
+function renderBranchSelector(business, sucursales){
+  if(business.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(business.logo)}" alt="${escapeHtml(business.name||'Logo')}">`;
+  if(business.brandColor){
+    document.documentElement.style.setProperty('--olive', business.brandColor);
+    document.documentElement.style.setProperty('--olive-l', business.brandColor);
+  }
+  if(business.name){ document.getElementById('biz-name').textContent = business.name; bizNameLoaded = true; }
+  const base = location.href.split('?')[0];
+  document.getElementById('app').innerHTML = `
+    <div class="card" style="text-align:center">
+      <h2>${t('branch.title')}</h2>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">${t('branch.subtitle')}</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${sucursales.map(s => `
+          <a href="${escapeHtml(base)}?neg=${escapeHtml(s.publicId)}&local=1" class="btn btn-primary" style="text-decoration:none">
+            📍 ${escapeHtml(s.name)}
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Comprueba si el restaurante acepta pago con tarjeta online (TPV virtual).
+// Si la comprobación llega después del primer render, se vuelve a pintar el
+// formulario de pedido para mostrar la opción de pago.
+function checkRedsysConfigured(){
+  fetch(`${REDSYS_WORKER_URL}/config?publicId=${encodeURIComponent(publicId)}`)
+    .then(r => r.json())
+    .then(data => {
+      redsysConfigured = !!(data && data.configured);
+      // renderTabContentPreservingForm (no renderTabContent a secas): si el
+      // cliente ya había empezado a escribir su nombre/teléfono/dirección
+      // antes de que esta comprobación terminase (llega por red, puede
+      // tardar), un renderTabContent normal lo habría borrado todo de golpe
+      // justo cuando aparece la opción de pagar con tarjeta.
+      if(redsysConfigured && (currentTab === 'takeaway' || currentTab === 'delivery' || currentTab === 'mesa')) renderTabContentPreservingForm();
+    })
+    .catch(() => {});
+}
+
+function renderHeader(){
+  const b = DB.business || {};
+  if(b.logo) document.getElementById('biz-logo').innerHTML = `<img src="${escapeHtml(b.logo)}" alt="${escapeHtml(b.name||'Logo')}">`;
+  if(b.name){ document.getElementById('biz-name').textContent = b.name; bizNameLoaded = true; }
+  if(b.brandColor){
+    document.documentElement.style.setProperty('--olive', b.brandColor);
+    document.documentElement.style.setProperty('--olive-l', b.brandColor);
+  }
+  const parts = [];
+  if(b.address) parts.push('📍 ' + b.address);
+  if(b.schedule) parts.push('🕐 ' + b.schedule);
+  if(b.phone) parts.push('📞 ' + b.phone);
+  document.getElementById('biz-info').textContent = parts.join('  ·  ');
+  renderLangSwitcher();
+}
+
+// Mismo criterio que ya usa el TPV interno (isBebidaCarta, js/tpv.js): las
+// cartas de bebidas (área "sala") siempre se muestran antes que las de
+// comida, sea cual sea el orden en que se crearon.
+function isBebidaCarta(c){
+  if(c && c.area) return c.area === 'sala';
+  return /bebida/i.test(c.nombre||'');
+}
+function getActiveCartas(){
+  const ids = DB.activeCartaIds || [];
+  const active = (DB.cartas || []).filter(c => ids.includes(c.id));
+  const bebidaCartas = active.filter(isBebidaCarta);
+  const comidaCartas = active.filter(c => !isBebidaCarta(c));
+  return [...bebidaCartas, ...comidaCartas];
+}
+
+// Promo con descuento activa AHORA MISMO (día + franja horaria) para un
+// plato, si la hay — espejo simplificado de getActivePromoForDish/
+// promoTimeActiveNow (js/app.js): aquí no hace falta comprobar el límite de
+// usos porque el mirror público (getActivePromosForSync, js/core.js) ya
+// deja de publicar la promo en cuanto se agota el cupo del día.
+function getActivePromoForPlatoPublic(platoId){
+  const promo = (DB.promos||[]).find(p => p.menuItemPlatoId === platoId);
+  if(!promo) return null;
+  if(!promo.horaInicio || !promo.horaFin) return promo;
+  const toMin = hhmm => { const [h,m] = (hhmm||'').split(':').map(Number); return (h||0)*60+(m||0); };
+  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  const start = toMin(promo.horaInicio), end = toMin(promo.horaFin);
+  const active = end > start ? (nowMin >= start && nowMin < end) : (nowMin >= start || nowMin < end);
+  return active ? promo : null;
+}
+function promoDiscountedPrice(precio, promo){
+  return Math.round(precio * (1 - promo.discountPct/100) * 100) / 100;
+}
+
+function renderApp(){
+  // Encuesta de satisfacción privada (NPS): enlace aparte (?nps=1) que el
+  // negocio manda tras la visita, distinto del enlace de reseña pública de
+  // Google — sirve para detectar a alguien insatisfecho ANTES de que dejara
+  // una mala reseña pública, y solo el negocio ve la nota y el comentario.
+  if(new URLSearchParams(location.search).get('nps') === '1'){
+    renderNpsSurvey();
+    return;
+  }
+  // Seguimiento de un pedido ya enviado (?track=token): pantalla aparte,
+  // con su propio listener en vivo — no pasa por las pestañas normales.
+  if(trackToken){
+    renderOrderTrackingView();
+    return;
+  }
+  // Gestión de una reserva ya enviada (?res=token): misma idea, pantalla
+  // aparte con su propio listener.
+  if(resToken){
+    renderReservationManageView();
+    return;
+  }
+  const tabs = computeTabs();
+
+  if(!tabs.length){
+    document.getElementById('app').innerHTML = `<div class="empty">${t('no.services')}</div>`;
+    return;
+  }
+
+  if(!currentTab || !tabs.some(t=>t.id===currentTab)){
+    currentTab = (tableIdFromUrl && tabs.some(t=>t.id==='mesa')) ? 'mesa' : tabs[0].id;
+  }
+  cart = [];
+  cartTipPct = 0; cartTipCustom = 0;
+
+  document.getElementById('app').innerHTML = `
+    <div class="tabs" role="tablist">
+      ${renderTabButtonsHtml(tabs)}
+    </div>
+    <div id="tab-content" role="tabpanel"></div>
+  `;
+  renderTabContent();
+}
+
+// Pedido en mesa SOLO se ofrece llegando desde el QR de la mesa (que ya
+// trae el número de mesa en la URL) — antes también aparecía como pestaña
+// normal con un desplegable para elegir mesa a mano, redundante con lo que
+// ya hacen los QR de cada mesa y una vía más para que un pedido llegara sin
+// que quedara claro a qué mesa.
+function computeTabs(){
+  const tiposServicio = (DB.business && DB.business.tiposServicio) || {mesa:true, takeaway:true, delivery:true};
+  const tabs = [];
+  if(tiposServicio.mesa !== false) tabs.push({id:'reserva', label: t('tab.reserva')});
+  if(tiposServicio.mesa !== false && tableIdFromUrl && (DB.tables||[]).length) tabs.push({id:'mesa', label: t('tab.mesa.qr')});
+  if(tiposServicio.takeaway !== false) tabs.push({id:'takeaway', label: t('tab.takeaway')});
+  if(tiposServicio.delivery !== false) tabs.push({id:'delivery', label: t('tab.delivery')});
+  return tabs;
+}
+function renderTabButtonsHtml(tabs){
+  return tabs.map(t2 => `<button class="tab-btn ${currentTab===t2.id?'active':''}" role="tab" aria-selected="${currentTab===t2.id}" onclick="setTab('${t2.id}')">${t2.label}</button>`).join('');
+}
+// Cambiar de idioma repintaba el contenido de la pestaña activa pero no los
+// propios títulos de las pestañas — se quedaban congelados en el idioma
+// con el que se cargó la página la primera vez.
+function renderTabBar(){
+  const box = document.querySelector('.tabs');
+  if(!box) return;
+  box.innerHTML = renderTabButtonsHtml(computeTabs());
+}
+
+async function setTab(tab){
+  if(tab === currentTab) return;
+  // Cambiar de pestaña vacía el carrito (son pedidos distintos: para llevar,
+  // delivery, en mesa...) — antes se perdía sin más ni un aviso, así que un
+  // toque sin querer en otra pestaña tiraba todo lo que el cliente llevaba
+  // añadido sin poder deshacerlo.
+  if(cart.length && !(await confirmModal(t('confirm.loseCart')))) return;
+  currentTab = tab;
+  cart = [];
+  cartTipPct = 0; cartTipCustom = 0;
+  // Volver también al índice de carpetas de la carta: si no, al cambiar de
+  // Take Away a Delivery el cliente seguía "dentro" de la última familia que
+  // había abierto (p.ej. solo Entrantes), dando la impresión de que en esa
+  // otra pestaña hay muchos menos platos.
+  menuOpenSection = null;
+  renderApp();
+}
+
+function renderTabContent(){
+  if(currentTab === 'reserva') renderReservaForm();
+  else if(currentTab === 'mesa') renderMesaOrderForm();
+  else renderOrderForm();
+  const box = document.getElementById('tab-content');
+  if(box){ box.classList.remove('fade-in-play'); void box.offsetWidth; box.classList.add('fade-in-play'); }
+}
+
+/* ============ HORARIOS ============ */
+const DIAS_SEMANA_I18N = {
+  es:['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'],
+  en:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+  ca:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge']
+};
+function getDiasSemana(){ return DIAS_SEMANA_I18N[currentLang] || DIAS_SEMANA_I18N.es; }
+
+// Devuelve los turnos (franjas horarias) del día de la semana correspondiente
+// a dateStr, o null si el negocio no ha configurado horario (sin restricción).
+function getTurnosForDate(dateStr){
+  const horario = (DB.business || {}).horario;
+  if(!horario || horario.length !== 7) return null;
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay(); // 0=domingo..6=sábado
+  const d = horario[(jsDay + 6) % 7]; // 0=lunes..6=domingo
+  if(!d || d.abierto === false) return [];
+  const turnos = [];
+  const add = (ini, fin) => { if(ini && fin && fin > ini) turnos.push({abre:ini, cierra:fin}); };
+  // Formato nuevo: {modo:'seguido'|'turnos', seguido:{ini,fin}, turnos:[{ini,fin}]}
+  if(d.modo === 'seguido' && d.seguido){
+    add(d.seguido.ini, d.seguido.fin);
+  } else if(Array.isArray(d.turnos)){
+    d.turnos.forEach(t => t && add(t.ini, t.fin));
+  } else {
+    // Formato antiguo: {t1i,t1f,t2i,t2f}
+    add(d.t1i, d.t1f);
+    add(d.t2i, d.t2f);
+  }
+  // Un día marcado como abierto pero sin ninguna franja horaria rellenada
+  // (el estado de fábrica: defaultHorario() deja ini/fin en blanco) no
+  // significa "cerrado" — significa que el negocio aún no ha configurado
+  // Horario de apertura en Mi Negocio. Sin esto, esta página bloqueaba
+  // CUALQUIER reserva/pedido (isTimeAllowed devuelve false para un array
+  // vacío) hasta que alguien rellenara el horario — mismo fix que ya tenía
+  // el panel interno (js/menu.js), que aquí no se había aplicado.
+  if(!turnos.length && d.abierto !== false) return null;
+  return turnos;
+}
+
+function isTimeAllowed(dateStr, time){
+  const turnos = getTurnosForDate(dateStr);
+  if(turnos === null) return true;
+  return turnos.some(t => time >= t.abre && time <= t.cierra);
+}
+
+// Hora límite real para hacer un PEDIDO (no una reserva) dentro del turno al
+// que pertenece `time`: el cierre del turno menos los minutos que el
+// negocio haya configurado en "Dejar de aceptar pedidos X min antes del
+// cierre" (mn.pedidos.cierreAntes). Devuelve null si no hay cutoff
+// configurado o `time` no cae dentro de ningún turno (ese caso ya lo separa
+// isTimeAllowed).
+function pedidosCutoffTimeForTurno(dateStr, time, p){
+  const cutoffMin = parseInt(p.cierrePedidosAntesMin) || 0;
+  if(!cutoffMin) return null;
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos) return null;
+  const turno = turnos.find(t => time >= t.abre && time <= t.cierra);
+  if(!turno) return null;
+  const [ch, cm] = turno.cierra.split(':').map(Number);
+  let limiteMin = ch * 60 + cm - cutoffMin;
+  if(limiteMin < 0) limiteMin = 0; // cutoff mayor que la duración del turno: no se acepta ningún pedido en él
+  const limite = String(Math.floor(limiteMin/60)).padStart(2,'0') + ':' + String(limiteMin%60).padStart(2,'0');
+  return {limite, turno};
+}
+
+// Índice del turno al que pertenece `time` en `dateStr`, o null si no hay
+// horario configurado o la hora no encaja en ninguno. Cierre EXCLUSIVO salvo
+// en el último turno del día (inclusivo) — mismo criterio que
+// getTurnoIndexForTime() en el panel interno (js/menu.js): antes aquí todos
+// los cierres eran inclusivos, así que justo en el minuto de cambio de turno
+// (p.ej. las 16:00 entre un turno 13-16 y otro 16-19) esta página podía
+// calcular un turnoIdx distinto al que usa el panel interno.
+function getTurnoIndexForTime(dateStr, time){
+  const turnos = getTurnosForDate(dateStr);
+  if(!turnos || !turnos.length) return null;
+  const idx = turnos.findIndex((t, i) => time >= t.abre && (i === turnos.length - 1 ? time <= t.cierra : time < t.cierra));
+  return idx === -1 ? null : idx;
+}
+// Devuelve {aforo, turnoIdx, reservados, disponible} o null si no hay aforo
+// configurado o la hora no encaja en ningún turno. reservados es el último
+// recuento SINCRONIZADO desde el panel interno (puede llevar algo de retraso
+// respecto a reservas que otros clientes están completando ahora mismo) —
+// la comprobación final de verdad es la transacción atómica al enviar.
+function getAforoInfo(dateStr, time){
+  const aforo = parseInt((DB.business||{}).aforo) || 0;
+  if(!aforo) return null;
+  const turnoIdx = getTurnoIndexForTime(dateStr, time);
+  if(turnoIdx === null) return null;
+  const resumen = (DB.reservasResumen||{})[dateStr] || {};
+  const reservados = resumen[turnoIdx] || 0;
+  return {aforo, turnoIdx, reservados, disponible: Math.max(0, aforo - reservados)};
+}
+// Reserva de forma ATÓMICA `people` plazas del turno, usando una transacción
+// de Firebase sobre un contador de "holds" independiente del resumen ya
+// sincronizado. Esto evita que dos clientes reservando casi a la vez (antes
+// de que el panel interno vuelva a sincronizar el resumen) puedan juntos
+// superar el aforo sin que ninguno de los dos lo viera en su momento. Si la
+// transacción no se puede completar sin pasarse del aforo, se aborta
+// (result.committed === false) y no se ha reservado nada.
+function reserveAforoAtomic(dateStr, turnoIdx, people, aforo, baseline){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/aforoHold/' + dateStr + '/' + turnoIdx);
+  return ref.transaction(current => {
+    const held = current || 0;
+    if(baseline + held + people > aforo) return; // abort: se pasaría del aforo
+    return held + people;
+  });
+}
+// Margen de tolerancia: una mesa admite hasta 1 persona más de su capacidad
+// configurada (mesa de 2 acepta grupos de 3, de 4 acepta grupos de 5) — así
+// no se rechazan reservas que en la práctica caben perfectamente.
+const RESERVATION_TABLE_MARGIN = 1;
+
+// Cuánto tiempo ocupa una reserva la mesa antes de poder volver a
+// reservarse — configurable en Mi Negocio (mn-reserva-duracion), 90 min por
+// defecto. Mismo valor y mismo concepto que reservaVentanaMin() en el panel
+// interno (js/app.js), pero es un archivo aparte sin acceso a ese código.
+function getReservaDuracionMin(){
+  return parseInt((DB.business||{}).reservaDuracionMin) || 90;
+}
+// Franjas de 30 min que ocupa una reserva de `time` a `time + duración`
+// (p.ej. 14:00 con 90 min -> ["14:00","14:30","15:00"], libre desde las
+// 15:30). Misma rejilla de 30 min que ya usa getReservationTimeSlots() en
+// el panel interno.
+function slotsForReservation(time, durationMin){
+  const [h, m] = time.split(':').map(Number);
+  let cur = h * 60 + m;
+  const end = cur + durationMin;
+  const slots = [];
+  while(cur < end){
+    slots.push(String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0'));
+    cur += 30;
+  }
+  return slots;
+}
+// Mayor capacidad entre las mesas dadas de alta (con plazas configuradas).
+// Si un grupo no cabe ni en la mesa más grande ni con margen, es que hace
+// falta juntar mesas — algo que ya no puede decidir la web sola.
+function getMaxTableCapacity(){
+  return Math.max(0, ...(DB.tables || []).filter(tb => tb.plazas).map(tb => tb.plazas));
+}
+// Franjas ya ocupadas de una mesa concreta ese día, según el espejo
+// sincronizado (DB.mesasOcupadas, sin ningún dato de cliente — solo qué
+// mesa y qué franjas).
+function getOccupiedSlotsForTable(dateStr, tableId){
+  return ((DB.mesasOcupadas || {})[dateStr] || {})[tableId] || {};
+}
+function tableFreeForSlots(dateStr, tableId, slots){
+  const occupied = getOccupiedSlotsForTable(dateStr, tableId);
+  return slots.every(s => !occupied[s]);
+}
+// Mejor mesa libre para un grupo de `people` personas en esas franjas: la
+// más pequeña que cumple people <= plazas + margen y no choca con ninguna
+// reserva ya existente en esa mesa. Solo se consideran mesas con capacidad
+// configurada — una sin plazas no se puede juzgar.
+function getBestFitTable(dateStr, time, people, slots){
+  const candidates = (DB.tables || [])
+    .filter(tb => tb.plazas && tb.plazas + RESERVATION_TABLE_MARGIN >= people && tableFreeForSlots(dateStr, tb.id, slots))
+    .sort((a, b) => a.plazas - b.plazas);
+  return candidates[0] || null;
+}
+// Reserva de forma ATÓMICA una mesa concreta para esas franjas, usando una
+// transacción de Firebase sobre un "candado" independiente del resumen ya
+// sincronizado. Esto evita que dos clientes casi a la vez (antes de que el
+// panel interno vuelva a sincronizar mesasOcupadas) se lleven la misma
+// franja de la misma mesa sin que ninguno de los dos lo viera en su
+// momento. Si alguna franja ya estaba cogida, se aborta (result.committed
+// === false) y no se reserva nada — la transacción entera es sobre el
+// mismo nodo (todas las franjas de esa mesa ese día), así que dos
+// solicitudes que choquen SIEMPRE se serializan entre sí.
+function reserveTableAtomic(dateStr, tableId, slots){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/mesaHold/' + dateStr + '/' + tableId);
+  return ref.transaction(current => {
+    const held = current || {};
+    for(const s of slots){ if(held[s]) return; } // abort: alguna franja ya está cogida
+    const merged = Object.assign({}, held);
+    slots.forEach(s => { merged[s] = true; });
+    return merged;
+  });
+}
+// Deshace una reserva de aforo ya confirmada, si después la mesa no se pudo
+// reservar (dos pasos no atómicos entre sí: aforo primero, mesa después —
+// si el segundo falla, hay que devolver el hueco del primero). El resumen
+// sincronizado del panel interno recalcula este contador desde cero en
+// cada sync de todos modos, así que un desajuste puntual aquí se autocorrige.
+function releaseAforoHold(dateStr, turnoIdx, people){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/aforoHold/' + dateStr + '/' + turnoIdx);
+  return ref.transaction(current => Math.max(0, (current || 0) - people));
+}
+
+// Mismo mecanismo que reserveAforoAtomic pero para el límite de pedidos por
+// franja de 30 min (mn.pedidos.maxPorFranja): evita que dos pedidos casi
+// simultáneos para la misma franja superen juntos el límite que el negocio
+// ha configurado, antes de que el resumen sincronizado se actualice.
+function roundToPedidoSlot(time){
+  const parts = (time||'').split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return String(h).padStart(2,'0') + ':' + (m < 30 ? '00' : '30');
+}
+function reservePedidoSlotAtomic(dateStr, slot, max, baseline){
+  const ref = db.ref('gastrogoan/public/' + publicId + '/pedidosHold/' + dateStr + '/' + slot);
+  return ref.transaction(current => {
+    const held = current || 0;
+    if(baseline + held + 1 > max) return; // abort: se pasaría del límite
+    return held + 1;
+  });
+}
+
+function formatTurnos(turnos){
+  return turnos.map(t => `${t.abre}–${t.cierra}`).join(' y ');
+}
+
+function nombreDia(dateStr){
+  const jsDay = new Date(dateStr + 'T00:00:00').getDay();
+  return getDiasSemana()[(jsDay + 6) % 7];
+}
+
+function horarioHintHtml(dateStr){
+  const turnos = getTurnosForDate(dateStr);
+  if(turnos === null) return '';
+  if(!turnos.length) return `<p style="font-size:13px;color:var(--red);margin-top:-8px">${t('hint.cerrado').replace('%s', nombreDia(dateStr).toLowerCase())}</p>`;
+  return `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.horario').replace('%s', nombreDia(dateStr).toLowerCase()).replace('%s', formatTurnos(turnos))}</p>`;
+}
+
+function updateTimeInputRange(dateInputId, timeInputId, hintBoxId){
+  const date = document.getElementById(dateInputId).value;
+  const turnos = getTurnosForDate(date);
+  const timeInput = document.getElementById(timeInputId);
+  const hintBox = document.getElementById(hintBoxId);
+  hintBox.innerHTML = horarioHintHtml(date);
+  if(turnos && turnos.length){
+    timeInput.min = turnos[0].abre;
+    timeInput.max = turnos[turnos.length - 1].cierra;
+  }else{
+    timeInput.removeAttribute('min');
+    timeInput.removeAttribute('max');
+  }
+}
+
+/* ============ TIEMPO DE ANTELACIÓN / ZONA DE REPARTO ============ */
+// Si el pedido/reserva es para hoy, no se puede elegir una hora anterior a
+// "ahora + tiempo de antelación configurado por el restaurante". Reservas y
+// pedidos tienen cada uno su propio ajuste (Mi Negocio → Operativa); si un
+// negocio antiguo aún no tiene los campos nuevos, ambos caen al ajuste
+// único que había antes de separarlos.
+function getLeadTimeMin(kind){
+  const b = DB.business || {};
+  const specific = kind === 'reserva' ? b.leadTimeMinReservas : b.leadTimeMinPedidos;
+  if(specific != null) return parseInt(specific) || 0;
+  if(b.leadTimeMin != null) return parseInt(b.leadTimeMin) || 0;
+  return parseInt((b.pedidos||{}).leadTimeMin) || 0;
+}
+function applyLeadTime(dateInputId, timeInputId, hintBoxId, kind){
+  const leadTimeMin = getLeadTimeMin(kind);
+  const date = document.getElementById(dateInputId).value;
+  const timeInput = document.getElementById(timeInputId);
+  const hintBox = document.getElementById(hintBoxId);
+  if(!leadTimeMin || date !== todayStr()) return;
+
+  const now = new Date(Date.now() + leadTimeMin * 60000);
+  const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  if(!timeInput.min || minTime > timeInput.min) timeInput.min = minTime;
+  if(timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+
+  const hint = `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.antelacion').replace('%s', minTime).replace('%d', leadTimeMin)}</p>`;
+  hintBox.innerHTML = (hintBox.innerHTML || '') + hint;
+}
+
+// Distancia en km entre dos puntos (fórmula de Haversine).
+function haversineKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Comprueba si una dirección/código postal de entrega está dentro de la
+// zona de reparto configurada (código postal aceptado o dentro del radio).
+// Devuelve {ok, pendienteVerificar}: si el geocodificador falla dos veces
+// (red caída, timeout de Nominatim...) no bloqueamos un pedido potencialmente
+// válido; lo dejamos pasar marcado para que el negocio revise la dirección
+// manualmente antes de aceptarlo.
+async function checkDeliveryZone(p, codigoPostal, direccion){
+  const cpList = p.cpList || [];
+  if(cpList.length && cpList.includes(codigoPostal)) return {ok:true};
+
+  if(p.radiusKm > 0 && p.lat != null && p.lng != null){
+    const geocode = async () => {
+      const q = encodeURIComponent(direccion + ', ' + codigoPostal);
+      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
+      const data = await res.json();
+      return (data && data[0]) ? data[0] : null;
+    };
+    let point = null;
+    try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
+    if(!point){
+      // Un único reintento tras una breve espera antes de darnos por vencidos.
+      await new Promise(r => setTimeout(r, 1200));
+      try{ point = await geocode(); }catch(e){ console.error(e); point = null; }
+    }
+    if(point){
+      const dist = haversineKm(p.lat, p.lng, parseFloat(point.lat), parseFloat(point.lon));
+      return {ok: dist <= p.radiusKm};
+    }
+    if(!cpList.length) return {ok:true, pendienteVerificar:true};
+  }
+
+  // Si no hay ninguna zona configurada, no se restringe.
+  if(!cpList.length && !(p.radiusKm > 0)) return {ok:true};
+  return {ok:false};
+}
+
+/* ============ RESERVA ============ */
+function renderNpsSurvey(){
+  const bizName = (DB.business && DB.business.name) || t('reserva.title');
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <h2>${t('nps.title').replace('${business}', escapeHtml(bizName))}</h2>
+      <p style="font-size:13px;color:var(--muted)">${t('nps.subtitle')}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:16px 0" id="nps-scale">
+        ${Array.from({length:11},(_, n) => `<button type="button" class="btn" style="min-width:38px;padding:8px 0" data-score="${n}" onclick="selectNpsScore(${n})">${n}</button>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-10px;margin-bottom:14px">
+        <span>${t('nps.low')}</span><span>${t('nps.high')}</span>
+      </div>
+      <div class="field">
+        <label>${t('nps.commentLabel')}</label>
+        <textarea id="nps-comment" placeholder="${t('nps.commentPlaceholder')}"></textarea>
+      </div>
+      <button class="btn btn-primary" id="nps-submit" onclick="submitNps()">${t('nps.submit')}</button>
+    </div>
+  `;
+}
+let npsSelectedScore = null;
+function selectNpsScore(n){
+  npsSelectedScore = n;
+  document.querySelectorAll('#nps-scale button').forEach(b => {
+    b.classList.toggle('btn-primary', parseInt(b.dataset.score) === n);
+  });
+}
+function submitNps(){
+  if(npsSelectedScore === null){ showInlineError(t('nps.needScore')); return; }
+  const comment = document.getElementById('nps-comment').value.trim();
+  const req = {
+    type: 'nps_response', score: npsSelectedScore, comment,
+    createdAt: new Date().toISOString()
+  };
+  const btn = document.getElementById('nps-submit');
+  if(btn) btn.disabled = true;
+  sendRequest(req, t('nps.thanks'));
+}
+
+function renderReservaForm(){
+  const box = document.getElementById('tab-content');
+  box.innerHTML = `
+    <div class="card">
+      <h2>${t('reserva.title')}</h2>
+      <div class="field">
+        <label>${t('nombre')}</label>
+        <input type="text" id="r-name">
+      </div>
+      <div class="field">
+        <label>${t('telefono')}</label>
+        <input type="tel" id="r-phone" placeholder="600 000 000">
+      </div>
+      <div class="field">
+        <label>${t('email.reserva.label')}</label>
+        <input type="email" id="r-email" placeholder="${t('email.reserva.placeholder')}" required>
+        <small style="color:var(--muted)">${t('email.reserva.hint')}</small>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('fecha')}</label>
+          <input type="date" id="r-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('r-date','r-time','r-hour-hint'); applyLeadTime('r-date','r-time','r-hour-hint','reserva')">
+        </div>
+        <div class="field">
+          <label>${t('hora')}</label>
+          <input type="time" id="r-time" value="20:00">
+        </div>
+      </div>
+      <div id="r-hour-hint"></div>
+      <div class="field">
+        <label>${t('personas')}</label>
+        <input type="number" id="r-people" value="2" min="1" max="50">
+      </div>
+      <div class="field">
+        <label>${t('notas')}</label>
+        <textarea id="r-notes" placeholder="${t('notas.placeholder')}"></textarea>
+      </div>
+      <div class="field">
+        <label>${t('referral.label')}</label>
+        <select id="r-referral">
+          <option value="">${t('referral.placeholder')}</option>
+          <option value="instagram">${t('referral.instagram')}</option>
+          <option value="facebook">${t('referral.facebook')}</option>
+          <option value="tiktok">${t('referral.tiktok')}</option>
+          <option value="google">${t('referral.google')}</option>
+          <option value="friend">${t('referral.friend')}</option>
+          <option value="returning">${t('referral.returning')}</option>
+          <option value="other">${t('referral.other')}</option>
+        </select>
+      </div>
+      ${(DB.business||{}).requireDeposit ? `<div class="card" style="background:var(--bg-soft, #fff7ed);margin:10px 0;padding:10px 12px">
+        <div style="font-size:13px;font-weight:600">💳 ${t('deposit.notice.title')}</div>
+        <div style="font-size:12.5px;margin-top:4px">${t('deposit.notice.body').replace('${amount}', reservaDepositAmount())}</div>
+        ${(DB.business.depositInstructions||'').trim() ? `<div style="font-size:12.5px;margin-top:6px;color:var(--muted)">${escapeHtml(DB.business.depositInstructions)}</div>` : ''}
+      </div>` : ''}
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="r-privacy-consent" class="consent-check">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
+      <button class="btn btn-primary" id="r-submit" onclick="submitReserva()">${(DB.business||{}).requireDeposit ? t('reserva.submitWithDeposit') : t('reserva.submit')}</button>
+    </div>
+  `;
+  updateTimeInputRange('r-date','r-time','r-hour-hint');
+  applyLeadTime('r-date','r-time','r-hour-hint','reserva');
+}
+
+// Calcula el importe de la señal para la reserva actual (según el tipo
+// configurado: fijo, o por persona multiplicado por los comensales del
+// formulario en este momento).
+function reservaDepositAmount(){
+  const b = DB.business || {};
+  const amount = parseFloat(b.depositAmount) || 0;
+  if(b.depositType === 'perPerson'){
+    const people = parseInt(document.getElementById('r-people')?.value) || 1;
+    return (amount * people).toFixed(2);
+  }
+  return amount.toFixed(2);
+}
+
+// Punto único de envío de una reserva: si pide señal (y el TPV virtual está
+// disponible), va a pagar antes de crearse; si no, se manda tal cual, como
+// siempre. Reemplaza los 3 sendRequest(req, ...) que había sueltos en
+// submitReserva (uno por cada camino: sin mesas configuradas, éxito de la
+// reserva atómica, y fallback si la transacción atómica falla por red).
+function sendReservaRequest(req, successMsg){
+  if(req.depositRequired){
+    payWithCard(req, req.depositAmount, t('deposit.paymentDescription'), 'resToken', 'r-submit');
+    return;
+  }
+  sendRequest(req, successMsg);
+}
+
+function submitReserva(){
+  if(submittingRequest) return;
+  submittingRequest = true;
+  setBtnLoading('r-submit', true);
+  const clientName = document.getElementById('r-name').value.trim();
+  const clientPhone = document.getElementById('r-phone').value.trim();
+  const clientEmail = document.getElementById('r-email').value.trim();
+  const date = document.getElementById('r-date').value;
+  const time = document.getElementById('r-time').value;
+  // El "max" del input es solo una pista visual del navegador — se puede
+  // teclear/pegar cualquier número saltándosela, así que se acota aquí
+  // también (evita reservas de miles de comensales cuando el negocio aún
+  // no tiene aforo/mesas configurados, que es cuando no hay más validación).
+  const people = Math.min(50, Math.max(1, parseInt(document.getElementById('r-people').value) || 1));
+  const notes = document.getElementById('r-notes').value.trim();
+  const referral = document.getElementById('r-referral')?.value || '';
+
+  clearFieldInvalid(['r-name','r-phone','r-email','r-date','r-time']);
+  if(!clientName || !clientPhone || !clientEmail || !date || !time){
+    if(!clientName) markFieldInvalid('r-name');
+    if(!clientPhone) markFieldInvalid('r-phone');
+    if(!clientEmail) markFieldInvalid('r-email');
+    if(!date) markFieldInvalid('r-date');
+    if(!time) markFieldInvalid('r-time');
+    showInlineError(t('error.campos.reserva'));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+  // El "min" del &lt;input type=date&gt; también es solo una pista del navegador
+  // (editable a mano, o con el reloj del dispositivo cambiado) — se revalida
+  // aquí que no sea una fecha ya pasada respecto a "hoy" en el propio envío.
+  if(date < todayStr()){
+    markFieldInvalid('r-date');
+    showInlineError(t('error.campos.reserva'));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+  // Validación básica de formato: sin esto, un email mal escrito por prisa
+  // ("laura@gmial.con") pasaría como válido y la reserva se auto-confirmaría
+  // sin que el cliente llegase a enterarse nunca por ningún sitio.
+  if(!isValidEmail(clientEmail)){
+    markFieldInvalid('r-email');
+    showInlineError(t('error.email.invalido'));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+  if(!document.getElementById('r-privacy-consent').checked){
+    showInlineError(t('privacy.mustAccept'));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+
+  const turnos = getTurnosForDate(date);
+  if(turnos !== null && !turnos.length){
+    showInlineError(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+  if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
+    showInlineError(t('error.horario').replace('%s', t('error.horario.reservas')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    submittingRequest = false;
+    setBtnLoading('r-submit', false);
+    return;
+  }
+
+  const leadTimeMin = getLeadTimeMin('reserva');
+  if(leadTimeMin && date === todayStr()){
+    const now = new Date(Date.now() + leadTimeMin * 60000);
+    const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if(time < minTime){
+      showInlineError(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      submittingRequest = false;
+      setBtnLoading('r-submit', false);
+      return;
+    }
+  }
+
+  // Disponibilidad real: hace falta UNA mesa que le quepa al grupo (con
+  // margen) Y que no se pase del aforo total del turno — las dos cosas a
+  // la vez, igual que decidiría el negocio a mano.
+  const turnoIdx = getTurnoIndexForTime(date, time);
+  const hasConfiguredTables = (DB.tables||[]).some(tb => tb.plazas);
+  const maxCapacity = getMaxTableCapacity();
+  const aforoInfo = getAforoInfo(date, time);
+
+  let matchedTable = null, slots = null;
+  // Ninguna mesa individual (ni con margen) llegaría al tamaño del grupo:
+  // puede que el negocio sea capaz de juntar varias mesas, pero eso ya no
+  // lo puede decidir la web sola — queda pendiente de que lo revisen a mano,
+  // en vez de rechazar sin más una reserva que quizás sí se pueda hacer.
+  const needsManualReview = hasConfiguredTables && people > maxCapacity + RESERVATION_TABLE_MARGIN;
+
+  if(hasConfiguredTables && !needsManualReview){
+    slots = slotsForReservation(time, getReservaDuracionMin());
+    matchedTable = getBestFitTable(date, time, people, slots);
+    if(!matchedTable){
+      // Sí existe una mesa de ese tamaño, pero está ocupada a esa hora —
+      // esto sí es "no hay disponibilidad" de verdad, se dice en el momento.
+      showInlineError(t('error.mesa.nodisponible'));
+      submittingRequest = false;
+      setBtnLoading('r-submit', false);
+      return;
+    }
+    if(aforoInfo && people > aforoInfo.disponible){
+      showInlineError(t('error.mesa.nodisponible'));
+      submittingRequest = false;
+      setBtnLoading('r-submit', false);
+      return;
+    }
+  }
+
+  // Si el negocio pide señal Y tiene el TPV virtual conectado, enviar la
+  // reserva no la manda directa a la cola: primero lleva al cliente a pagar
+  // la señal con tarjeta (payWithCard), y la reserva solo se crea si la
+  // firma del pago tiene éxito (ver payWithCard más abajo). Si el negocio
+  // marcó "pedir señal" pero el TPV virtual no está disponible ahora mismo
+  // (mn.ops.requireDeposit ya lo impide al guardar, pero por si un negocio
+  // antiguo quedó con datos inconsistentes), se cae al envío normal sin
+  // señal en vez de dejar al cliente sin poder reservar.
+  const depositRequired = !!(DB.business||{}).requireDeposit && redsysConfigured;
+  const req = {
+    type:'reserva', clientName, clientPhone, clientEmail, date, time, people, notes, referral,
+    depositRequired, depositAmount: depositRequired ? reservaDepositAmount() : '',
+    createdAt: new Date().toISOString(),
+    // Token para poder volver más tarde a "Gestionar mi reserva" (ver
+    // renderReservationManageView) sin tener que llamar por teléfono.
+    resToken: genClientRef()
+  };
+  if(matchedTable) req.tableId = matchedTable.id;
+
+  const btn = document.getElementById('r-submit');
+  if(btn) btn.disabled = true;
+
+  if(!matchedTable){
+    // Sin mesas configuradas todavía, grupo que necesita juntar mesas, o sin
+    // horario para saber el turno: no hay nada que comprobar automáticamente,
+    // se manda tal cual y el negocio la revisa a mano.
+    sendReservaRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
+    return;
+  }
+
+  // Comprobación final ATÓMICA justo antes de enviar: cierra la ventana de
+  // carrera en la que dos clientes reservan casi a la vez y se llevarían
+  // entre los dos el mismo aforo o la misma mesa antes de que el resumen
+  // sincronizado reflejase la del otro. Primero el aforo (más barato de
+  // deshacer si falla lo segundo), luego la mesa; si la mesa falla, se
+  // devuelve el hueco de aforo ya reservado.
+  (async () => {
+    try{
+      if(aforoInfo){
+        const aforoResult = await reserveAforoAtomic(date, aforoInfo.turnoIdx, people, aforoInfo.aforo, aforoInfo.reservados);
+        if(!aforoResult.committed){
+          if(btn) btn.disabled = false;
+          submittingRequest = false;
+          setBtnLoading('r-submit', false);
+          showInlineError(t('error.mesa.nodisponible'));
+          return;
+        }
+      }
+      const tableResult = await reserveTableAtomic(date, matchedTable.id, slots);
+      if(!tableResult.committed){
+        if(aforoInfo) releaseAforoHold(date, aforoInfo.turnoIdx, people).catch(()=>{});
+        if(btn) btn.disabled = false;
+        submittingRequest = false;
+        setBtnLoading('r-submit', false);
+        showInlineError(t('error.mesa.nodisponible'));
+        return;
+      }
+      sendReservaRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
+    }catch(e){
+      console.error(e);
+      if(btn) btn.disabled = false;
+      // Si la transacción falla por un problema de conexión, dejamos seguir
+      // con el envío normal en vez de bloquear al cliente por completo: es
+      // preferible el pequeño riesgo de carrera a que no pueda reservar.
+      sendReservaRequest(req, t('reserva.ok') + (clientEmail ? t('reserva.ok.emailHint') : ''));
+    }
+  })();
+}
+
+/* ============ MENÚ (carrito compartido) ============ */
+function getActiveCartasConPlatos(){
+  return getActiveCartas().filter(c => (c.secciones||[]).some(sec => (sec.platos||[]).some(p=>p.disponible!==false)));
+}
+
+// Igual que allergenLabel() en la app principal: el valor guardado es
+// siempre el nombre en español (clave estable), se traduce solo al mostrar.
+function allergenLabel(name){
+  const dict = t('allergens.map');
+  return (dict && dict[name]) || name;
+}
+function dishAllergensHtml(platoId){
+  const list = (DB.allergens||{})[platoId];
+  if(!list || !list.length) return '';
+  return `<div style="font-size:11px;color:var(--muted);margin-top:2px" title="${escapeHtml(t('allergens.title'))}">⚠️ ${list.map(a=>escapeHtml(allergenLabel(a))).join(', ')}</div>`;
+}
+// Navegación de la carta por carpetas: se entra en una familia (Entrantes,
+// Principales...), se ve solo lo suyo, y "Volver" regresa al índice — como
+// el selector de carta del TPV que usa el camarero. Antes era un acordeón
+// que iba amontonando secciones abiertas en la misma pantalla larga; con
+// muchos platos, eso seguía siendo un scroll interminable en el móvil.
+let menuOpenSection = null; // null = índice de carpetas; si no, "cartaId:secId"
+let lastMenuCartas = null;
+// Emoji, no la fuente de iconos Tabler: esta página (a diferencia de la app
+// principal) nunca ha cargado esa fuente, así que un <i class="ti ..."> no
+// se vería (caja vacía). El resto de la web pública ya usa emoji (✅, ⚠️),
+// así que es lo consistente con su propio estilo.
+// El icono de cada carpeta lo elige el hostelero al montar la sección de su
+// carta (botón del emoji en Carta → sección), y viaja dentro de la propia
+// sección. Antes era MENU_FOLDER_ICONS[i % 11]: a "Postres" le podía tocar
+// un pescado, y el mismo apartado cambiaba de dibujo según cuántas carpetas
+// hubiera delante.
+// Si todavía no ha elegido ninguno se adivina por el nombre. Esta tabla es
+// GEMELA de CARTA_SECTION_ICON_WORDS (js/menu.js): si se toca una hay que
+// tocar la otra, para que lo que el dueño ve al editar su carta sea
+// exactamente lo que verá su cliente aquí.
+const MENU_FOLDER_ICON_WORDS = [
+  ['entrante','entrant','starter','aperitivo','aperitiu','tapa','pica','appetizer'], '🫒',
+  ['ensalada','amanida','salad','verdura','vegetal','hortaliza','huerta','veggie'], '🥗',
+  ['sopa','crema','caldo','soup','brou','potaje','guiso','cuchara','estofado'], '🍲',
+  ['arroz','arroces','arros','paella','risotto','rice','fideua'], '🍚',
+  ['pasta','macarron','espagueti','spaghetti','lasan'], '🍝',
+  ['carne','carn','meat','ternera','vedella','cordero','xai','cerdo','porc','pollo','pollastre','chicken','beef','pork','lamb','brasa','parrilla','graella','grill'], '🥩',
+  ['pescado','peix','fish','marisco','marisc','seafood','bacalao','bacalla','pulpo','gamba','calamar'], '🐟',
+  ['huevo','egg','tortilla','truita','revuelto','ou'], '🍳',
+  ['queso','formatge','cheese','embutido','embotit','curado','charcuter'], '🧀',
+  ['pan','bread','coca','tosta','torrada','pa'], '🥖',
+  ['postre','dessert','dolc','dulce','sweet','tarta','pastel','pastis','cake'], '🍰',
+  ['fruta','fruita','fruit'], '🍇',
+  ['tinto','negre','red wine','crianza','reserva','rioja','ribera'], '🍷',
+  ['blanco','blanc','white wine','albarino','verdejo','godello'], '🥂',
+  ['rosado','rosat','rose'], '🍷',
+  ['cava','champ','espumos','escumos','sparkling','prosecco','burbuja'], '🍾',
+  ['ginebra','gin','tonic'], '🍸',
+  ['ron','rum','whisky','whiskey','bourbon','vodka','tequila','mezcal','brandy','conyac','cognac','aguardiente','orujo','destilado','destil'], '🥃',
+  ['vermut','vermouth','aperitiu','aperitivo','spritz'], '🧉',
+  ['sidra','cider'], '🍺',
+  ['te ','tes','the','tea','infusio','infusion','tisana','rooibos','manzanilla','poleo'], '🍵',
+  ['zumo','suc','juice','smoothie','batido','batut'], '🧃',
+  ['agua','aigua','water','mineral'], '🥤',
+  ['sin alcohol','sense alcohol','alcohol free','mocktail','0.0','0,0'], '🍹',
+  ['hielo','gel','ice','granizado'], '🧊',
+  ['licor','crema','chupito','xopet','shot'], '🫙',
+  ['carta de vinos','bodega','celler','vinoteca'], '🍇',
+  ['vino','wine','bodega','celler','cava','champ','espumoso','vi'], '🍷',
+  ['cerveza','cervesa','beer','birra','caña'], '🍺',
+  ['cocktail','coctel','copa','combinado','licor','destilado','gin','whisky','vermut','vermouth','spirit'], '🍸',
+  ['cafe','cafeteria','coffee','infusion','infusio','tea','te'], '☕',
+  ['refresco','refresc','zumo','suc','juice','agua','aigua','water','bebida','beguda','drink','batido','batut','smoothie'], '🥤',
+  ['desayuno','esmorzar','breakfast','brunch'], '🥯',
+];
+// Sin acentos y en minúsculas: el hostelero escribe "Postres", "POSTRES" o
+// "Postres del día" indistintamente y todos tienen que caer en el mismo sitio.
+function normalizeFolderName(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+// Las palabras de tres letras o menos ('ou' huevo, 'pa' pan, 'vi' vino, 'te')
+// solo valen si son la palabra entera: buscandolas por dentro, "Pasta" y
+// "Paella" salian con un pan, y "Mousses" con un huevo.
+function folderNameMatches(n, w){
+  const k = normalizeFolderName(w);
+  if(k.length > 3) return n.includes(k);
+  return new RegExp('(^|[^a-z0-9])' + k + '([^a-z0-9]|$)').test(n);
+}
+function menuFolderIcon(sec, name){
+  if(sec && sec.icono) return sec.icono;
+  const n = normalizeFolderName(name);
+  for(let i=0; i<MENU_FOLDER_ICON_WORDS.length; i+=2){
+    if(MENU_FOLDER_ICON_WORDS[i].some(w => folderNameMatches(n, w))) return MENU_FOLDER_ICON_WORDS[i+1];
+  }
+  return '🍽️'; // nombre que no reconocemos: cubiertos, neutro y siempre correcto
+}
+// Repinta el bloque entero de la carta. Tiene que pasar SIEMPRE por aquí (y
+// no escribir buildMenuHtmlInner suelto) porque los menús combo del día se
+// pintan aparte, encima de las carpetas: al entrar en una carpeta se
+// reescribía el contenedor sin ellos y ya no volvían ni pulsando "Volver",
+// así que el cliente perdía de vista el menú del día en cuanto tocaba la
+// carta — y entrar en una carpeta es ahora la única forma de verla.
+// Dentro de una carpeta sí se ocultan a propósito: ahí se está mirando una
+// familia concreta, y el menú del día sería ruido.
+function repaintMenu(){
+  const box = document.getElementById('menu-folders');
+  if(!box || !lastMenuCartas) return;
+  box.innerHTML = (menuOpenSection ? '' : buildMenusHtml()) + buildMenuHtmlInner(lastMenuCartas);
+}
+function openMenuFolder(key){
+  menuOpenSection = key;
+  repaintMenu();
+  const box = document.getElementById('menu-folders');
+  box && box.scrollIntoView({block:'start', behavior:'smooth'});
+}
+function closeMenuFolder(){
+  menuOpenSection = null;
+  repaintMenu();
+}
+function buildMenuHtml(cartas){
+  lastMenuCartas = cartas;
+  return `<div id="menu-folders">${menuOpenSection ? '' : buildMenusHtml()}${buildMenuHtmlInner(cartas)}</div>`;
+}
+function renderMenuDishesHtml(sec){
+  return sec.platos.filter(p=>p.disponible!==false).map(p => {
+    const promo = getActivePromoForPlatoPublic(p.id);
+    const finalPrice = promo ? promoDiscountedPrice(p.precio, promo) : p.precio;
+    const hasMods = (p.modificadores||[]).length > 0;
+    // Cuántas unidades de este plato hay YA en el carrito, sumando TODAS
+    // sus variantes de extras (la línea sin extras + cada combinación
+    // elegida) — para que el cliente vea de un vistazo que ya tiene algo
+    // añadido aunque esté repartido en varias líneas.
+    const totalInCart = cart.filter(l => l.recipeId === p.id).reduce((s,l)=>s+l.qty, 0);
+    return `
+    <div class="menu-item">
+      <div>
+        <div class="name">${escapeHtml(trPlato(p))}${promo ? ` <span class="promo-badge" style="font-size:11px;color:#fff;background:var(--olive);border-radius:0;padding:1px 6px;margin-left:4px;font-family:'IBM Plex Mono',monospace">-${promo.discountPct}%</span>` : ''}</div>
+        <div class="price">${promo ? `<span style="text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px">${fmtMoney(p.precio)}</span>${fmtMoney(finalPrice)}` : fmtMoney(p.precio)}${hasMods ? ` <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span>` : ''}</div>
+        ${dishAllergensHtml(p.id)}
+      </div>
+      ${hasMods ? `
+      <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openModifierModal(${p.id})">
+        ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
+      </button>
+      ` : `
+      <div class="qty-ctl" role="group" aria-label="${escapeHtml(trPlato(p))}">
+        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', trPlato(p)))}">−</button>
+        <span id="qty-${p.id}" aria-live="polite">${getCartQty(p.id)}</span>
+        <button onclick="changeCartQty(${p.id}, '${escapeJsAttr(sec.id)}', 1, '${escapeJsAttr(p.nombre)}', ${finalPrice})" aria-label="${escapeHtml(t('aria.addItem').replace('%s', trPlato(p)))}">+</button>
+      </div>
+      `}
+    </div>
+  `;}).join('');
+}
+function buildMenuHtmlInner(cartas){
+  // Todas las secciones visibles de todas las cartas activas, en una sola
+  // lista de carpetas — si hay más de una carta (comida + bebidas, p.ej.)
+  // el nombre de la carta se antepone al de la sección para distinguirlas.
+  const allSections = [];
+  cartas.forEach(carta => {
+    (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false)).forEach(sec => {
+      allSections.push({carta, sec, key: String(carta.id)+':'+String(sec.id)});
+    });
+  });
+
+  if(menuOpenSection){
+    const found = allSections.find(x => x.key === menuOpenSection);
+    if(!found){ menuOpenSection = null; }
+    else{
+      const {sec} = found;
+      return `
+        <button type="button" class="menu-back-btn" onclick="closeMenuFolder()">← ${t('common.back')}</button>
+        <h2 style="margin-top:0">${escapeHtml(trSection(sec) || t('label.dishes'))}</h2>
+        ${renderMenuDishesHtml(sec)}
+      `;
+    }
+  }
+
+  // Solo una sección en total (o platos sueltos sin nombre de familia):
+  // no tiene sentido un índice de carpetas de una sola carpeta — se
+  // muestra directamente, como antes.
+  if(allSections.length <= 1){
+    return allSections.map(({sec}) => `
+      ${sec.nombre && sec.nombre !== 'OTROS PLATOS' ? `<h3>${escapeHtml(trSection(sec))}</h3>` : ''}
+      ${renderMenuDishesHtml(sec)}
+    `).join('');
+  }
+
+  // Una carta detrás de otra, cada una con su propio título y sus propias
+  // carpetas debajo. Antes iban todas las secciones de todas las cartas
+  // revueltas en una sola rejilla, distinguidas solo por un prefijo
+  // "Carta · Sección" dentro de cada botón: con dos o tres cartas activas
+  // (comida, bebidas, vinos) el cliente veía doce carpetas seguidas sin
+  // saber dónde acababa una carta y empezaba la siguiente.
+  return cartas.map(carta => {
+    const secciones = allSections.filter(x => x.carta === carta);
+    if(!secciones.length) return '';
+    // El nombre de la carta puede venir vacío; entonces se usa el título
+    // genérico ("Carta"), que es lo que hace falta para separarla de los
+    // menús de arriba.
+    const titulo = trItem(carta) || t('carta.sectionTitle');
+    return `
+      <h2 style="margin-top:22px">${escapeHtml(titulo)}</h2>
+      <div class="menu-folder-grid">
+        ${secciones.map(({sec, key}) => {
+          // El nombre de sección puede venir vacío (o ser "OTROS PLATOS").
+          const secName = trSection(sec) || t('label.dishes');
+          return `
+          <button type="button" class="menu-folder-card" onclick="openMenuFolder('${key}')">
+            <span class="icon">${menuFolderIcon(sec, secName)}</span>
+            <span class="name">${escapeHtml(secName)}</span>
+          </button>
+        `;}).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============ PEDIDOS (TAKEAWAY / DELIVERY) ============ */
+function renderOrderForm(){
+  const box = document.getElementById('tab-content');
+  const cartas = getActiveCartasConPlatos();
+
+  if(!cartas.length && !getActiveMenusPublic().length){
+    box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty')}</div></div>`;
+    return;
+  }
+  // Interruptor de emergencia del negocio (TPV → Pedidos): con la cocina
+  // desbordada, deja de admitirse Take Away/Delivery desde la web sin tener
+  // que tocar el horario de apertura ni la carta. Al venir de DB.business
+  // (que ya se sincroniza en vivo con el listener de loadBusinessInfo), si
+  // el negocio lo apaga con la página ya abierta el cliente lo ve al momento.
+  if((DB.business||{}).pedidosOnlineActivos === false){
+    box.innerHTML = `<div class="card" style="text-align:center">
+      <h2>${t('error.pedidosPausados.title')}</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:8px">${t('error.pedidosPausados.body')}</p>
+    </div>`;
+    return;
+  }
+
+  const isDelivery = currentTab === 'delivery';
+  const p = (DB.business||{}).pedidos || {};
+  const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
+
+  const menuHtml = buildMenuHtml(cartas);
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>${isDelivery ? t('order.delivery.title') : t('order.takeaway.title')}</h2>
+      ${menuHtml}
+    </div>
+    <div class="card" id="cart-summary"></div>
+    <div class="card">
+      <div class="field">
+        <label>${t('nombre')}</label>
+        <input type="text" id="o-name">
+      </div>
+      <div class="field">
+        <label>${t('telefono')}</label>
+        <input type="tel" id="o-phone" placeholder="600 000 000">
+      </div>
+      <div class="field">
+        <label>${t('email.pedido.label')}</label>
+        <input type="email" id="o-email" placeholder="${t('email.reserva.placeholder')}">
+        <small style="color:var(--muted)">${t('email.pedido.hint')}</small>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('fecha')}</label>
+          <input type="date" id="o-date" value="${todayStr()}" min="${todayStr()}" onchange="updateTimeInputRange('o-date','o-time','o-hour-hint'); applyLeadTime('o-date','o-time','o-hour-hint','pedido'); updateCierreHint(); renderCartSummary()">
+        </div>
+        <div class="field">
+          <label>${t('hora')}</label>
+          <input type="time" id="o-time" value="20:00" onchange="updateCierreHint()">
+        </div>
+      </div>
+      <div id="o-hour-hint"></div>
+      <div id="o-cierre-hint"></div>
+      ${isDelivery ? `
+      <div class="field">
+        <label>${t('direccion')}</label>
+        <input type="text" id="o-address">
+      </div>` : ''}
+      ${zoneRestricted ? `
+      <div class="field">
+        <label>${t('cp')}</label>
+        <input type="text" id="o-cp" placeholder="28001">
+      </div>` : ''}
+      <div class="field">
+        <label>${t('order.notas')}</label>
+        <textarea id="o-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
+      </div>
+      <div class="field">
+        ${renderPaymentMethodRadiosHtml(p)}
+        <div class="field" id="o-cash-amount-wrap" style="margin-top:8px">
+          <label>${t('pago.pagaConLabel')}</label>
+          <input type="number" id="o-paga-con" min="0" step="1" placeholder="${t('pago.pagaConPlaceholder')}">
+          <small style="color:var(--muted)">${t('pago.pagaConHint')}</small>
+        </div>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="o-privacy-consent" class="consent-check">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
+      <button class="btn btn-primary" id="o-submit" onclick="submitOrder()">${t('order.submit')}</button>
+    </div>
+  `;
+  renderCartSummary();
+  updateTimeInputRange('o-date','o-time','o-hour-hint');
+  applyLeadTime('o-date','o-time','o-hour-hint','pedido');
+  updateCierreHint();
+  updateCashAmountVisibility();
+}
+
+// Aviso de la hora límite real para pedir (cierre del turno menos el
+// margen configurado), independiente del aviso general de horario — solo
+// aplica a pedidos, así que va en su propio hint en vez de reutilizar
+// horarioHintHtml (compartido con el formulario de reservas).
+function updateCierreHint(){
+  const box = document.getElementById('o-cierre-hint');
+  if(!box) return;
+  const dateEl = document.getElementById('o-date');
+  const timeEl = document.getElementById('o-time');
+  if(!dateEl || !timeEl){ box.innerHTML = ''; return; }
+  const p = (DB.business||{}).pedidos || {};
+  const info = pedidosCutoffTimeForTurno(dateEl.value, timeEl.value, p);
+  box.innerHTML = info ? `<p style="font-size:13px;color:var(--muted);margin-top:-8px">${t('hint.cierrePedidos').replace('%s', info.limite)}</p>` : '';
+}
+
+// Un único grupo de opciones con las 3 formas de pago posibles (en vez del
+// antiguo esquema de dos niveles "online vs en persona" + "efectivo vs
+// tarjeta"): efectivo, tarjeta al entregar/recoger, y TPV virtual (pagar ya
+// online con tarjeta, si el negocio lo tiene configurado). Respeta lo que
+// el negocio haya marcado en Mi Negocio → Pedidos; si solo hay una
+// disponible, se fija sin preguntar.
+function renderPaymentMethodRadiosHtml(p){
+  // Compatibilidad con negocios que ya tenían el antiguo interruptor
+  // "permitirPagoLocal: false" (pago online obligatorio) puesto de antes de
+  // que existieran estas 3 casillas independientes: si nunca han tocado el
+  // nuevo ajuste (aceptaEfectivo/aceptaTarjetaLocal siguen "undefined", no
+  // "false" explícito), se respeta la preferencia antigua. En cuanto el
+  // dueño guarda el nuevo ajuste una vez, savePedidosConfig fija
+  // permitirPagoLocal=true y ya no vuelve a aplicar este fallback.
+  const legacyForceOnline = p.permitirPagoLocal === false && p.aceptaEfectivo === undefined && p.aceptaTarjetaLocal === undefined;
+  const opts = [];
+  if(redsysConfigured && p.aceptaTpvVirtual !== false) opts.push({value:'tpv', label:t('pago.tarjeta')});
+  if(!legacyForceOnline && p.aceptaEfectivo !== false) opts.push({value:'efectivo', label: t('pago.efectivo')});
+  if(!legacyForceOnline && p.aceptaTarjetaLocal !== false) opts.push({value:'tarjeta_local', label: t('pago.tarjetaLocal')});
+  if(!opts.length) opts.push({value:'efectivo', label: t('pago.efectivo')}); // salvaguarda: nunca dejar el formulario sin ninguna opción
+  if(opts.length === 1){
+    return `<input type="radio" name="o-pago-metodo" value="${opts[0].value}" checked style="display:none"><p style="font-size:13px;color:var(--muted)">${t('pago.metodoFijado').replace('%s', opts[0].label)}</p>`;
+  }
+  return `
+    <label>${t('pago')}</label>
+    ${opts.map((o,i) => `<label style="display:flex;align-items:center;gap:10px;font-weight:400;margin-bottom:6px;padding:6px 0"><input type="radio" name="o-pago-metodo" value="${o.value}" ${i===0?'checked':''} onchange="updateCashAmountVisibility()" style="width:20px;height:20px;flex-shrink:0"> ${o.label}</label>`).join('')}
+  `;
+}
+// El importe del billete con el que se va a pagar solo tiene sentido si
+// eligen efectivo Y es un pedido a domicilio (para recoger en el local no
+// hace falta preparar cambio, el cliente paga en persona en el mostrador).
+function updateCashAmountVisibility(){
+  const sel = document.querySelector('input[name="o-pago-metodo"]:checked');
+  const wrap = document.getElementById('o-cash-amount-wrap');
+  if(wrap) wrap.style.display = (currentTab === 'delivery' && sel && sel.value === 'efectivo') ? '' : 'none';
+}
+
+// Identificador único de una línea del carrito: por plato solo para los
+// platos SIN extras (se pueden agrupar en un único contador +/-), y por
+// plato+combinación exacta de extras elegidos para los que sí tienen —
+// así "1 pizza con extra queso" y "1 pizza sin nada" son líneas distintas
+// del carrito, cada una con su propia cantidad, en vez de mezclarse en un
+// solo contador que no podría representar la diferencia.
+function cartLineKey(platoId, modIds){
+  return (modIds && modIds.length) ? (platoId + ':' + [...modIds].sort((a,b)=>a-b).join(',')) : String(platoId);
+}
+// Busca el plato (con su lista de extras) dentro de las cartas activas —
+// hace falta al confirmar el modal de extras, donde solo tenemos el id.
+function findPlatoById(platoId){
+  for(const c of (DB.cartas||[])){
+    for(const sec of (c.secciones||[])){
+      const p = (sec.platos||[]).find(x => x.id === platoId);
+      if(p) return {plato: p, sectionId: sec.id};
+    }
+  }
+  return null;
+}
+
+function getCartQty(recipeId){
+  // Solo cuenta la línea SIN extras (la del contador +/- de la lista) —
+  // las líneas con extras elegidos tienen su propio contador en el
+  // resumen del carrito, ver renderCartSummary/tipSelectorHtml.
+  const line = cart.find(l => l.recipeId === recipeId && (!l.modificadores || !l.modificadores.length));
+  return line ? line.qty : 0;
+}
+
+function changeCartQty(recipeId, sectionId, delta, name, price){
+  let line = cart.find(l => l.recipeId === recipeId && (!l.modificadores || !l.modificadores.length));
+  if(!line){
+    if(delta <= 0) return;
+    line = {key: cartLineKey(recipeId, []), recipeId, sectionId, name, price, qty:0, modificadores:[]};
+    cart.push(line);
+  }
+  line.qty += delta;
+  if(line.qty <= 0) cart = cart.filter(l => l !== line);
+
+  const span = document.getElementById('qty-'+recipeId);
+  if(span){
+    span.textContent = getCartQty(recipeId);
+    span.classList.remove('bump'); void span.offsetWidth; span.classList.add('bump');
+  }
+  renderCartSummary();
+}
+
+// Ajusta la cantidad de una línea YA en el carrito por su clave exacta —
+// se usa desde el resumen del carrito para las líneas con extras (que no
+// tienen un contador +/- propio en el listado de la carta, porque ahí solo
+// cabe "Añadir", ver openModifierModal).
+function changeCartLineQty(key, delta){
+  const line = cart.find(l => l.key === key);
+  if(!line) return;
+  line.qty += delta;
+  if(line.qty <= 0) cart = cart.filter(l => l !== line);
+  renderCartSummary();
+}
+
+/* ============ EXTRAS / MODIFICADORES por plato ============
+   Un plato con extras configurados (p.modificadores, cada uno {id,nombre,
+   precio}) no usa el contador +/- directo: se abre un modal para elegir
+   cuáles quiere (checkboxes, sin restricción de cardinalidad — así está
+   modelado en la app principal, ver js/menu.js) y SOLO entonces se añade
+   al carrito, con el precio final ya calculado. */
+let modModalContext = null;
+function openModifierModal(platoId){
+  const found = findPlatoById(platoId);
+  if(!found) return;
+  const { plato } = found;
+  const promo = getActivePromoForPlatoPublic(platoId);
+  const basePrice = promo ? promoDiscountedPrice(plato.precio, promo) : plato.precio;
+  modModalContext = { platoId, basePrice };
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(trPlato(plato))}</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:-4px">${t('modifiers.hint')}</p>
+    <div style="margin:14px 0">
+      ${(plato.modificadores||[]).map(m => `
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+          <input type="checkbox" class="mod-check" value="${m.id}" style="width:20px;height:20px;flex:none">
+          <span style="flex:1;font-size:14px">${escapeHtml(trItem(m))}</span>
+          ${m.precio ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(m.precio)}</span>` : ''}
+        </label>
+      `).join('')}
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="confirmAddWithModifiers()">${t('modifiers.add')}</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function confirmAddWithModifiers(){
+  if(!modModalContext) return;
+  const found = findPlatoById(modModalContext.platoId);
+  if(!found){ closeInfoModal(); return; }
+  const { plato, sectionId } = found;
+  const checkedIds = [...document.querySelectorAll('.mod-check:checked')].map(el => parseInt(el.value));
+  const selected = (plato.modificadores||[]).filter(m => checkedIds.includes(m.id));
+  const finalPrice = modModalContext.basePrice + selected.reduce((s,m)=>s+(m.precio||0),0);
+  const key = cartLineKey(plato.id, selected.map(m=>m.id));
+  let line = cart.find(l => l.key === key);
+  if(!line){
+    line = {key, recipeId: plato.id, sectionId, name: plato.nombre, price: finalPrice, qty:0, modificadores: selected};
+    cart.push(line);
+  }
+  line.qty += 1;
+  modModalContext = null;
+  closeInfoModal();
+  renderCartSummary();
+}
+
+// Menús combo (ej. "Menú del día"): antes no se publicaban al espejo
+// público en absoluto (ver syncPublicMirror, js/core.js), así que un
+// cliente nunca podía pedir un menú desde el móvil, solo platos sueltos.
+function getActiveMenusPublic(){
+  const ids = DB.activeMenuIds || [];
+  return (DB.menus||[]).filter(m => ids.includes(m.id) && m.disponible !== false && (m.grupos||[]).length);
+}
+let menuModalContext = null;
+function openMenuModal(menuId){
+  const m = (DB.menus||[]).find(x=>x.id===menuId);
+  if(!m) return;
+  menuModalContext = { menuId };
+  ensureModalChrome();
+  document.getElementById('modal-box').innerHTML = `
+    <button class="modal-close" onclick="closeInfoModal()" aria-label="${escapeHtml(t('common.close')||'Cerrar')}">&times;</button>
+    <h2>${escapeHtml(trItem(m))} · ${fmtMoney(m.precio)}</h2>
+    ${(m.grupos||[]).map(g => `
+      <div class="field">
+        <label>${escapeHtml(trItem(g))}</label>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${(()=>{
+            const opcionesDisponibles = (g.opciones||[]);
+            const primeraLibre = opcionesDisponibles.findIndex(o => o.disponible !== false);
+            return opcionesDisponibles.map((o,i) => `
+              <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);${o.disponible===false?'opacity:.5;cursor:not-allowed':'cursor:pointer'}">
+                <input type="radio" name="menu-grupo-${g.id}" value="${o.id}" ${i===primeraLibre?'checked':''} ${o.disponible===false?'disabled':''} style="width:20px;height:20px;flex:none">
+                <span style="flex:1;font-size:14px">${escapeHtml(trItem(o))}</span>
+                ${o.suplemento ? `<span class="mono" style="font-size:12.5px;color:var(--muted)">+${fmtMoney(o.suplemento)}</span>` : ''}
+                ${o.disponible===false ? `<span style="font-size:11px;color:var(--red)">${t('common.unavailable')}</span>` : ''}
+              </label>
+            `).join('');
+          })()}
+        </div>
+      </div>
+    `).join('')}
+    <button class="btn btn-primary" style="width:100%" onclick="confirmAddMenuFromModal()">${t('modifiers.add')}</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function confirmAddMenuFromModal(){
+  if(!menuModalContext) return;
+  const m = (DB.menus||[]).find(x=>x.id===menuModalContext.menuId);
+  if(!m){ closeInfoModal(); return; }
+  let extra = 0;
+  const selections = (m.grupos||[]).map(g => {
+    const selId = parseInt(document.querySelector(`input[name="menu-grupo-${g.id}"]:checked`)?.value);
+    const o = (g.opciones||[]).find(x=>x.id===selId) || (g.opciones||[]).find(x=>x.disponible!==false);
+    if(!o) return null;
+    extra += o.suplemento||0;
+    return { nombre: `${trItem(g)}: ${trItem(o)}`, precio: o.suplemento||0 };
+  }).filter(Boolean);
+  const finalPrice = (m.precio||0) + extra;
+  const key = 'menu:' + m.id + ':' + selections.map(s=>s.nombre).join('|');
+  let line = cart.find(l => l.key === key);
+  if(!line){
+    line = { key, recipeId: null, sectionId: null, name: m.nombre, price: finalPrice, qty: 0, modificadores: selections };
+    cart.push(line);
+  }
+  line.qty += 1;
+  menuModalContext = null;
+  closeInfoModal();
+  renderCartSummary();
+}
+function buildMenusHtml(){
+  const menus = getActiveMenusPublic();
+  if(!menus.length) return '';
+  return `
+    <h2>${escapeHtml(t('menus.title'))}</h2>
+    ${menus.map(m => {
+      const totalInCart = cart.filter(l => l.key.startsWith('menu:'+m.id+':')).reduce((s,l)=>s+l.qty,0);
+      return `
+      <div class="menu-item">
+        <div>
+          <div class="name">${escapeHtml(trItem(m))}</div>
+          <div class="price">${fmtMoney(m.precio)} <span style="color:var(--muted)">${t('modifiers.fromPrice')}</span></div>
+        </div>
+        <button class="btn btn-sm" style="width:auto;min-height:38px;padding:8px 14px;white-space:nowrap;position:relative" onclick="openMenuModal(${m.id})">
+          ${t('modifiers.addBtn')}${totalInCart ? ` <span class="mono" style="margin-left:4px">(${totalInCart})</span>` : ''}
+        </button>
+      </div>
+    `;}).join('')}
+  `;
+}
+
+// Coste de envío a domicilio, con posibilidad de que el negocio lo haga
+// gratis a partir de un importe mínimo de pedido (p.freeDeliveryFrom, 0 o
+// sin definir = no hay umbral, siempre se cobra el envío fijo).
+function getDeliveryFee(p, subtotal, isDelivery){
+  if(!isDelivery) return 0;
+  const fee = p.deliveryFee || 0;
+  const freeFrom = p.freeDeliveryFrom || 0;
+  if(freeFrom > 0 && subtotal >= freeFrom) return 0;
+  return fee;
+}
+
+// Importe de propina a partir del % elegido (o el importe fijo si se
+// escribió uno "otro importe") sobre el subtotal de platos — nunca sobre
+// el gasto de envío, igual que se calcularía a mano.
+function computeTipAmount(subtotal){
+  if(cartTipPct === 'custom') return Math.max(0, cartTipCustom || 0);
+  return Math.round(subtotal * (cartTipPct||0) / 100 * 100) / 100;
+}
+function setTip(pct){
+  cartTipPct = pct;
+  cartTipCustom = 0;
+  renderCartSummary();
+}
+function setTipCustom(val){
+  cartTipPct = 'custom';
+  cartTipCustom = Math.max(0, parseFloat(val) || 0);
+  renderCartSummary();
+}
+function tipSelectorHtml(){
+  const opts = [0, 5, 10, 15];
+  return `
+    <div class="field" style="margin-top:14px;margin-bottom:0">
+      <label>${t('cart.tip.label')}</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${opts.map(pct => `<button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct===pct?'background:var(--ink);color:#fff':''}" onclick="setTip(${pct})">${pct===0?t('cart.tip.none'):pct+'%'}</button>`).join('')}
+        <button type="button" class="btn btn-sm" style="flex:1;min-width:56px;padding:9px 6px;min-height:38px;font-size:13px;${cartTipPct==='custom'?'background:var(--ink);color:#fff':''}" onclick="document.getElementById('tip-custom-input').focus()">${t('cart.tip.other')}</button>
+      </div>
+      ${cartTipPct==='custom' ? `<input type="number" id="tip-custom-input" min="0" step="0.5" value="${cartTipCustom||''}" placeholder="${t('cart.tip.otherPlaceholder')}" style="margin-top:8px" oninput="setTipCustom(this.value)">` : ''}
+    </div>
+  `;
+}
+function renderCartSummary(){
+  const box = document.getElementById('cart-summary');
+  if(!box) return;
+  const submitBtn = document.getElementById('o-submit');
+  if(!cart.length){
+    box.innerHTML = `<div class="empty">${t('cart.empty')}</div>`;
+    if(submitBtn) submitBtn.disabled = true;
+    return;
+  }
+  const p = (DB.business||{}).pedidos || {};
+  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const deliveryFee = getDeliveryFee(p, subtotal, currentTab === 'delivery');
+  const freeFrom = p.freeDeliveryFrom || 0;
+  const missingForFreeDelivery = currentTab === 'delivery' && freeFrom > 0 && subtotal < freeFrom ? freeFrom - subtotal : 0;
+  const tip = computeTipAmount(subtotal);
+  const total = subtotal + deliveryFee + tip;
+  const pedidoMinimo = currentTab !== 'mesa' ? (p.pedidoMinimo || 0) : 0;
+  const bajoMinimo = pedidoMinimo > 0 && subtotal < pedidoMinimo;
+  if(submitBtn) submitBtn.disabled = bajoMinimo;
+  box.innerHTML = `
+    <h2>${t('cart.title')}</h2>
+    ${cart.map(l => {
+      const modsText = (l.modificadores||[]).length ? `<div style="font-size:11.5px;color:var(--muted);margin-top:1px">${l.modificadores.map(m=>escapeHtml(trItem(m))).join(', ')}</div>` : '';
+      // Las líneas con extras llevan su propio +/- aquí (en el listado de la
+      // carta solo tienen el botón "Añadir", ver buildMenuHtml) — así se
+      // puede ajustar la cantidad de "pizza con extra queso" sin afectar a
+      // "pizza sin nada", que es una línea distinta del carrito.
+      // También los menús combo (recipeId null): no se pueden ajustar desde
+      // el listado de la carta, así que sin sus propios +/- aquí una línea
+      // de menú cuyos grupos se quedaran sin opciones disponibles (y por
+      // tanto sin extras) no había forma humana de quitarla del carrito.
+      const hasMods = (l.modificadores||[]).length > 0 || l.recipeId == null;
+      return `
+      <div class="cart-line" style="align-items:flex-start;padding:8px 0">
+        <div style="flex:1">
+          <div>${hasMods ? '' : (l.qty+'× ')}${escapeHtml(l.name)}</div>
+          ${modsText}
+        </div>
+        ${hasMods
+          ? `<div class="qty-ctl" style="gap:6px">
+               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', -1)" aria-label="${escapeHtml(t('aria.removeItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">−</button>
+               <span class="mono" style="min-width:14px;text-align:center">${l.qty}</span>
+               <button onclick="changeCartLineQty('${escapeJsAttr(l.key)}', 1)" aria-label="${escapeHtml(t('aria.addItem').replace('%s', l.name))}" style="width:26px;height:26px;font-size:14px">+</button>
+             </div>`
+          : ''}
+        <span style="white-space:nowrap;margin-left:8px">${fmtMoney(l.price*l.qty)}</span>
+      </div>`;
+    }).join('')}
+    ${currentTab === 'delivery' && freeFrom > 0 && deliveryFee === 0 && subtotal > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span style="color:var(--olive);font-weight:600">${t('cart.shipping.free')}</span></div>` : (deliveryFee > 0 ? `<div class="cart-line"><span>${t('cart.shipping')}</span><span>${fmtMoney(deliveryFee)}</span></div>` : '')}
+    ${tip > 0 ? `<div class="cart-line"><span>${t('cart.tip.line')}</span><span>${fmtMoney(tip)}</span></div>` : ''}
+    ${missingForFreeDelivery > 0 ? `<p style="font-size:12.5px;color:var(--muted);margin:4px 0 0">🚚 ${t('cart.shipping.freeHint').replace('%s', fmtMoney(missingForFreeDelivery))}</p>` : ''}
+    <div class="cart-total bump" aria-live="polite"><span>${t('cart.total')}</span><span>${fmtMoney(total)}</span></div>
+    ${bajoMinimo ? `<p style="font-size:13px;color:var(--red);margin-top:8px">${t('cart.min').replace('%s', fmtMoney(pedidoMinimo)).replace('%s', fmtMoney(pedidoMinimo - subtotal))}</p>` : ''}
+    ${currentTab !== 'mesa' && (document.getElementById('o-date')?.value||todayStr()) === todayStr() ? etaHintHtml() : ''}
+    ${tipSelectorHtml()}
+  `;
+}
+
+// Estimación de "tu pedido debería estar listo en X min" a partir de la
+// carga real de cocina ahora mismo (cocinaCargaActiva, sincronizado en
+// vivo) — no un tiempo fijo que sea mentira en hora punta o exagerado en
+// horas tranquilas. Formula configurable desde Mi Negocio → Pedidos:
+// tiempo base + minutos extra por cada pedido que cocina tiene aún sin
+// terminar, con un tope máximo para no anunciar esperas disparatadas.
+function etaHintHtml(){
+  const p = (DB.business||{}).pedidos || {};
+  const base = p.tiempoBasePrep != null ? p.tiempoBasePrep : 15;
+  const extra = p.extraPorPedidoEnCola != null ? p.extraPorPedidoEnCola : 3;
+  const max = p.tiempoMaxEstimado != null ? p.tiempoMaxEstimado : 60;
+  const carga = DB.cocinaCargaActiva || 0;
+  const eta = Math.min(base + carga * extra, max || (base + carga * extra));
+  const label = currentTab === 'delivery' ? t('cart.etaDelivery') : t('cart.etaTakeaway');
+  return `<p style="font-size:13px;color:var(--muted);margin-top:8px">🕐 ${label.replace('%d', eta)}</p>`;
+}
+
+async function submitOrder(){
+  if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
+  if((DB.business||{}).pedidosOnlineActivos === false){ showInlineError(t('error.pedidosPausados.body')); return; }
+  if(submittingRequest) return;
+  submittingRequest = true;
+  setBtnLoading('o-submit', true);
+  const clienteNombre = document.getElementById('o-name').value.trim();
+  const clienteTelefono = document.getElementById('o-phone').value.trim();
+  const clienteEmail = document.getElementById('o-email').value.trim();
+  const date = document.getElementById('o-date').value;
+  const time = document.getElementById('o-time').value;
+  const isDelivery = currentTab === 'delivery';
+  const clienteDireccion = isDelivery ? document.getElementById('o-address').value.trim() : '';
+  const notas = document.getElementById('o-notes').value.trim();
+  const p = (DB.business||{}).pedidos || {};
+  const zoneRestricted = isDelivery && ((p.cpList||[]).length || p.radiusKm > 0);
+  const codigoPostal = zoneRestricted ? document.getElementById('o-cp').value.trim() : '';
+
+  clearFieldInvalid(['o-name','o-phone','o-date','o-time','o-address','o-cp','o-email']);
+  if(!clienteNombre || !clienteTelefono || !date || !time || (isDelivery && !clienteDireccion) || (zoneRestricted && !codigoPostal)){
+    if(!clienteNombre) markFieldInvalid('o-name');
+    if(!clienteTelefono) markFieldInvalid('o-phone');
+    if(!date) markFieldInvalid('o-date');
+    if(!time) markFieldInvalid('o-time');
+    if(isDelivery && !clienteDireccion) markFieldInvalid('o-address');
+    if(zoneRestricted && !codigoPostal) markFieldInvalid('o-cp');
+    showInlineError(t('error.campos'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+  if(clienteEmail && !isValidEmail(clienteEmail)){
+    markFieldInvalid('o-email');
+    showInlineError(t('error.email.invalido'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+  if(!document.getElementById('o-privacy-consent').checked){
+    showInlineError(t('privacy.mustAccept'));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+
+  const subtotal = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const pedidoMinimo = p.pedidoMinimo || 0;
+  if(pedidoMinimo > 0 && subtotal < pedidoMinimo){
+    showInlineError(t('error.pedido.min').replace('%s', fmtMoney(pedidoMinimo)));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+
+  const turnos = getTurnosForDate(date);
+  if(turnos !== null && !turnos.length){
+    showInlineError(t('error.cerrado').replace('%s', nombreDia(date).toLowerCase()));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+  if(turnos !== null && turnos.length && !isTimeAllowed(date, time)){
+    showInlineError(t('error.horario').replace('%s', t('error.horario.pedidos')).replace('%s', nombreDia(date).toLowerCase()).replace('%s', formatTurnos(turnos)));
+    submittingRequest = false;
+    setBtnLoading('o-submit', false);
+    return;
+  }
+  // Además de estar dentro del horario de apertura, la cocina puede
+  // necesitar dejar de aceptar pedidos un rato antes del cierre real (para
+  // dar tiempo a prepararlos y no quedarse con un pedido a medias a la hora
+  // de cerrar). Se aplica solo a pedidos, no a reservas de mesa.
+  if(turnos !== null && turnos.length){
+    const cutoffTime = pedidosCutoffTimeForTurno(date, time, p);
+    if(cutoffTime && time > cutoffTime.limite){
+      showInlineError(t('error.cierrePedidos').replace('%s', cutoffTime.limite));
+      submittingRequest = false;
+      setBtnLoading('o-submit', false);
+      return;
+    }
+  }
+
+  const leadTimeMin = getLeadTimeMin('pedido');
+  if(leadTimeMin && date === todayStr()){
+    const now = new Date(Date.now() + leadTimeMin * 60000);
+    const minTime = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if(time < minTime){
+      showInlineError(t('error.antelacion').replace('%d', leadTimeMin).replace('%s', minTime));
+      submittingRequest = false;
+      setBtnLoading('o-submit', false);
+      return;
+    }
+  }
+
+  const maxPorFranja = p.maxPorFranja || 0;
+  if(maxPorFranja > 0){
+    const slot = roundToPedidoSlot(time);
+    const baseline = ((DB.pedidosResumen||{})[date]||{})[slot] || 0;
+    // Comprobación final ATÓMICA justo antes de enviar, igual que con el
+    // aforo de reservas: cierra la ventana de carrera entre dos pedidos
+    // casi simultáneos para la misma franja.
+    const result = await reservePedidoSlotAtomic(date, slot, maxPorFranja, baseline);
+    if(!result.committed){
+      showInlineError(t('error.pedidos.completo'));
+      submittingRequest = false;
+      setBtnLoading('o-submit', false);
+      return;
+    }
+  }
+
+  let pendienteVerificarZona = false;
+  if(zoneRestricted){
+    const zoneCheck = await checkDeliveryZone(p, codigoPostal, clienteDireccion);
+    if(!zoneCheck.ok){
+      showInlineError(t('error.zona'));
+      submittingRequest = false;
+      setBtnLoading('o-submit', false);
+      return;
+    }
+    pendienteVerificarZona = !!zoneCheck.pendienteVerificar;
+  }
+
+  const deliveryFee = getDeliveryFee(p, subtotal, isDelivery);
+  const tip = computeTipAmount(subtotal);
+  const total = subtotal + deliveryFee + tip;
+
+  // Método de pago elegido entre las opciones que el negocio acepta
+  // (efectivo / tarjeta al recibir / TPV virtual). Si es DOMICILIO y elige
+  // efectivo, pedimos con qué billete va a pagar — así el repartidor sabe
+  // de antemano cuánto cambio llevar, en vez de descubrirlo al llegar.
+  // Para recoger en el local no se pregunta: el cliente paga en persona en
+  // el mostrador, no hace falta que nadie lleve cambio a ningún sitio.
+  const metodoPago = document.querySelector('input[name="o-pago-metodo"]:checked')?.value || 'efectivo';
+  let metodoPagoLocal = null, pagaCon = null;
+  if(metodoPago !== 'tpv'){
+    metodoPagoLocal = metodoPago === 'tarjeta_local' ? 'tarjeta' : 'efectivo';
+    if(isDelivery && metodoPagoLocal === 'efectivo'){
+      const pagaConEl = document.getElementById('o-paga-con');
+      pagaCon = pagaConEl ? parseFloat(pagaConEl.value) : NaN;
+      if(isNaN(pagaCon) || pagaCon < total){
+        showInlineError(t('error.pagaCon').replace('%s', fmtMoney(total)));
+        submittingRequest = false;
+        setBtnLoading('o-submit', false);
+        return;
+      }
+    }
+  }
+
+  const req = {
+    type:'pedido', tipo: isDelivery ? 'delivery' : 'takeaway',
+    clienteNombre, clienteTelefono, clienteEmail, clienteDireccion, codigoPostal, notas, date, time,
+    costeEnvio: deliveryFee, propina: tip,
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
+    createdAt: new Date().toISOString(),
+    // Token para poder seguir el estado del pedido después de enviarlo (ver
+    // trackOrderStatus más abajo) — antes solo se generaba si se pagaba con
+    // tarjeta (dentro de payWithCard), así que un pedido pagado en efectivo
+    // no tenía ninguna forma de que el cliente comprobara su estado.
+    clientRef: genClientRef()
+  };
+  if(pendienteVerificarZona) req.pendienteVerificarZona = true;
+  if(metodoPagoLocal) req.metodoPagoLocal = metodoPagoLocal;
+  if(pagaCon != null) req.pagaCon = pagaCon;
+
+  req.total = total;
+
+  const submitBtn = document.getElementById('o-submit');
+  if(submitBtn) submitBtn.disabled = true;
+
+  if(metodoPago === 'tpv'){
+    setPaySubmitEnabled(false);
+    payWithCard(req, total, isDelivery ? t('order.delivery.title') : t('order.takeaway.title'));
+    return;
+  }
+
+  sendRequest(req, t('order.ok'));
+}
+
+/* ============ PAGO CON TARJETA (TPV virtual / Redsys) ============
+   1) Firmamos el pago con el Worker ANTES de registrar el pedido en el
+      negocio (antes se hacía al revés: se registraba el pedido en Firebase
+      y LUEGO se pedía la firma — si el Worker fallaba o el fetch se caía a
+      medio camino, quedaba un pedido huérfano en el TPV sin ningún estado
+      de pago, indistinguible de uno a pagar en el local). Así, si la firma
+      falla, no llega a crearse ningún pedido en el negocio.
+   2) Solo si la firma tiene éxito, registramos el pedido (con su
+      clientRef) y redirigimos al cliente al TPV de Redsys.
+   3) Cuando el banco confirme el pago, el Worker avisará automáticamente
+      al restaurante (evento pago_confirmado). */
+// refField: qué campo de `req` identifica el pago al volver del banco
+// (clientRef para pedidos, resToken para la señal de una reserva — ver
+// pago_confirmado en initPublicRequestsListener, js/core.js, que busca por
+// ambos). submitBtnId: qué botón reactivar si algo falla.
+function payWithCard(req, amount, description, refField, submitBtnId){
+  refField = refField || 'clientRef';
+  submitBtnId = submitBtnId || 'o-submit';
+  const ref = req[refField] || genClientRef();
+  req[refField] = ref;
+
+  const base = location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId);
+  fetch(`${REDSYS_WORKER_URL}/sign`, {
+    method: 'POST',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({
+      publicId, orderRef: ref, amount, description,
+      urlOk: base + '&pago=ok',
+      urlKo: base + '&pago=ko'
+    })
+  }).then(r => r.json()).then(data => {
+    if(!data || !data.url || data.error){
+      showInlineError(t('error.pago') + (data && data.error ? ' ' + data.error : ''));
+      setPaySubmitEnabled(true, submitBtnId);
+      return;
+    }
+    return db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = data.url;
+      Object.entries(data.fields).forEach(([k,v]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden'; input.name = k; input.value = v;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    });
+  }).catch(e => {
+    console.error(e);
+    showInlineError(t('error.pago.conexion'));
+    setPaySubmitEnabled(true, submitBtnId);
+  });
+}
+function setPaySubmitEnabled(enabled, submitBtnId){
+  submitBtnId = submitBtnId || 'o-submit';
+  if(enabled){
+    submittingRequest = false;
+    setBtnLoading(submitBtnId, false);
+  }else{
+    const btn = document.getElementById(submitBtnId);
+    if(btn) btn.disabled = true;
+  }
+}
+
+/* ============ PEDIDO EN MESA (auto-pedido) ============ */
+function renderMesaOrderForm(){
+  const box = document.getElementById('tab-content');
+  const cartas = getActiveCartasConPlatos();
+
+  if(!cartas.length && !getActiveMenusPublic().length){
+    box.innerHTML = `<div class="card"><div class="empty">${t('carta.empty.mesa')}</div></div>`;
+    return;
+  }
+
+  const tables = DB.tables || [];
+  const currentTable = tableIdFromUrl ? tables.find(tb => String(tb.id) === String(tableIdFromUrl)) : null;
+
+  const menuHtml = buildMenuHtml(cartas);
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>${t('order.mesa.title')}</h2>
+      ${currentTable
+        ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">${t('order.mesa.info').replace('%s', escapeHtml(currentTable.name))}</p>`
+        : tableIdFromUrl
+          ? `<p style="font-size:13px;color:var(--red);margin-top:-6px">${t('order.mesa.unknown')}</p>
+             <div class="field"><label>${t('order.mesa.select')}</label><input type="text" id="m-table-manual"></div>`
+          : `<div class="field">
+               <label>${t('order.mesa.select')}</label>
+               <select id="m-table">
+                 <option value="">${t('order.mesa.select.placeholder')}</option>
+                 ${tables.map(tb => `<option value="${tb.id}">${escapeHtml(tb.name)}</option>`).join('')}
+               </select>
+             </div>`}
+      ${menuHtml}
+    </div>
+    <div class="card" id="cart-summary"></div>
+    <div class="card">
+      <div class="field">
+        <label>${t('order.nombre')}</label>
+        <input type="text" id="m-name">
+      </div>
+      <div class="field">
+        <label>${t('order.notas')}</label>
+        <textarea id="m-notes" placeholder="${t('order.notas.placeholder')}"></textarea>
+      </div>
+      ${redsysConfigured ? `
+      <div class="field">
+        <label>${t('order.mesa.payWhen')}</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;margin-bottom:6px;cursor:pointer">
+          <input type="radio" name="m-pago-cuando" value="despues" checked style="width:auto;margin-top:3px">
+          <span><strong>${t('order.mesa.payLater')}</strong><br><small style="color:var(--muted)">${t('order.mesa.payLaterDesc')}</small></span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;cursor:pointer">
+          <input type="radio" name="m-pago-cuando" value="ahora" style="width:auto;margin-top:3px">
+          <span><strong>${t('order.mesa.payNow')}</strong><br><small style="color:var(--muted)">${t('order.mesa.payNowDesc')}</small></span>
+        </label>
+      </div>
+      ` : ''}
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="o-privacy-consent" class="consent-check">
+        <span>${t('privacy.consentLabel')} <a href="#" onclick="showPrivacyNotice();return false">${t('privacy.linkText')}</a></span>
+      </label>
+      <button class="btn btn-primary" id="o-submit" onclick="submitMesaOrder()">${t('order.submit.mesa')}</button>
+    </div>
+  `;
+  renderCartSummary();
+}
+
+function submitMesaOrder(){
+  if(!cart.length){ showInlineError(t('error.carrito.vacio')); return; }
+  if(submittingRequest) return;
+  if(!document.getElementById('o-privacy-consent').checked){ showInlineError(t('privacy.mustAccept')); return; }
+  submittingRequest = true;
+  setBtnLoading('o-submit', true);
+
+  const tables = DB.tables || [];
+  let tableId = null;
+  if(tableIdFromUrl){
+    const currentTable = tables.find(tb => String(tb.id) === String(tableIdFromUrl));
+    if(currentTable){
+      tableId = currentTable.id;
+    }else{
+      const manual = document.getElementById('m-table-manual');
+      if(!manual || !manual.value.trim()){ showInlineError(t('error.mesa.manual')); submittingRequest = false; setBtnLoading('o-submit', false); return; }
+      tableId = manual.value.trim();
+    }
+  }else{
+    const sel = document.getElementById('m-table');
+    if(!sel || !sel.value){ showInlineError(t('error.mesa.select')); submittingRequest = false; setBtnLoading('o-submit', false); return; }
+    tableId = tables.find(tb => String(tb.id) === sel.value).id;
+  }
+
+  const clienteNombre = document.getElementById('m-name').value.trim();
+  const notas = document.getElementById('m-notes').value.trim();
+  const subtotalMesa = cart.reduce((s,l)=>s+l.price*l.qty,0);
+  const tipMesa = computeTipAmount(subtotalMesa);
+  // Solo se pregunta si se ofrece pagar ahora (redsysConfigured); si no
+  // existe el radio, es que la opción no está disponible y se añade a la
+  // cuenta de la mesa como siempre.
+  const pagarAhora = redsysConfigured && document.querySelector('input[name="m-pago-cuando"]:checked')?.value === 'ahora';
+
+  const req = {
+    type:'pedido', tipo:'mesa', tableId,
+    clienteNombre, notas, propina: tipMesa,
+    items: cart.map(l => ({name:l.name, price:l.price, qty:l.qty, modificadores:l.modificadores||undefined})),
+    total: subtotalMesa + tipMesa,
+    createdAt: new Date().toISOString()
+  };
+  if(pagarAhora) req.pagarAhora = true;
+  const submitBtn = document.getElementById('o-submit');
+  if(submitBtn) submitBtn.disabled = true;
+  if(pagarAhora){
+    // A diferencia del pedido normal, este SÍ se fusiona con la comanda
+    // abierta de la mesa (ver initPublicRequestsListener, js/core.js) — solo
+    // que sus líneas quedan marcadas como ya pagadas por este cliente, para
+    // que al cobrar la mesa se descuenten del importe pendiente.
+    payWithCard(req, req.total, t('order.mesa.title'), 'clientRef', 'o-submit');
+    return;
+  }
+  sendRequest(req, t('order.ok.mesa'));
+}
+
+/* ============ ENVÍO ============ */
+function sendRequest(req, successMsg){
+  db.ref('gastrogoan/public/' + publicId + '/requests').push(req).then(() => {
+    const phone = (DB.business||{}).phone;
+    // Pedidos: enlace de seguimiento en vivo (ver renderOrderTrackingView).
+    // Reservas: enlace para poder cancelarla más adelante sin llamar (ver
+    // renderReservationManageView) — los dos usan el mismo patrón de token,
+    // cada uno en su propia ruta (orderStatus / reservationStatus).
+    const trackUrl = (req.type === 'pedido' && req.clientRef)
+      ? location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&track=' + encodeURIComponent(req.clientRef)
+      : (req.type === 'reserva' && req.resToken)
+      ? location.href.split('?')[0] + '?neg=' + encodeURIComponent(publicId) + '&res=' + encodeURIComponent(req.resToken)
+      : null;
+    document.getElementById('app').innerHTML = `
+      <div class="success">
+        <div class="icon">✅</div>
+        <h2>${escapeHtml(successMsg)}</h2>
+        ${phone ? `<p style="font-size:13px;color:var(--muted);margin-top:8px">${t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`)}</p>` : ''}
+        ${trackUrl ? `<a class="btn btn-primary" style="margin-top:16px;text-decoration:none" href="${escapeHtml(trackUrl)}">${t(req.type === 'reserva' ? 'success.manageReservation' : 'success.trackOrder')}</a>` : ''}
+        <button class="btn" style="margin-top:${trackUrl?'8':'16'}px" onclick="location.reload()">${t(req.type === 'reserva' ? 'success.otraReserva' : 'success.otraPedido')}</button>
+      </div>
+    `;
+  }).catch(e => {
+    console.error(e);
+    showInlineError(t('error.envio'));
+    submittingRequest = false;
+    setBtnLoading(req.type === 'reserva' ? 'r-submit' : 'o-submit', false);
+  });
+}
+
+/* ============ SEGUIMIENTO DE PEDIDO (?track=token) ============
+   Pantalla aparte con su propio listener en vivo sobre
+   orderStatus/{token} (ver syncOrderStatusForPublic en la app principal):
+   el cliente puede volver a este enlace en cualquier momento y ver en qué
+   punto va su pedido sin tener que llamar a preguntar. */
+const TRACK_STEPS = ['pendiente','aceptado','preparando','listo','entregado'];
+function renderOrderTrackingView(){
+  const app = document.getElementById('app');
+  if(trackListenerAttached) return;
+  trackListenerAttached = true;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('track.loading')}</div>`;
+  db.ref('gastrogoan/public/' + publicId + '/orderStatus/' + trackToken).on('value', snap => {
+    renderTrackStatus(snap.val());
+  }, () => {
+    renderTrackStatus(null);
+  });
+}
+function renderTrackStatus(data){
+  const app = document.getElementById('app');
+  if(!data){
+    app.innerHTML = `
+      <div class="error-box">
+        <div class="icon">🔎</div>
+        <h2>${t('track.notFound.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('track.notFound.msg')}</p>
+      </div>`;
+    return;
+  }
+  const status = data.status || 'pendiente';
+  if(status === 'rechazado'){
+    const phone = (DB.business||{}).phone;
+    app.innerHTML = `
+      <div class="error-box">
+        <div class="icon">⚠️</div>
+        <h2>${t('track.rejected.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('track.rejected.msg')}${phone ? ' ' + t('success.callToChange').replace('%s', `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>`) : ''}</p>
+      </div>`;
+    return;
+  }
+  const idx = Math.max(0, TRACK_STEPS.indexOf(status));
+  const steps = [
+    {key:'pendiente', icon:'📥', label:t('track.step.pendiente')},
+    {key:'aceptado', icon:'✅', label:t('track.step.aceptado')},
+    {key:'preparando', icon:'👨‍🍳', label:t('track.step.preparando')},
+    {key:'listo', icon:'🍽️', label:t('track.step.listo')},
+    {key:'entregado', icon:'🎉', label:t('track.step.entregado')},
+  ];
+  app.innerHTML = `
+    <div class="card fade-in-play">
+      <h2>${t('track.title')}</h2>
+      <div style="margin-top:14px">
+        ${steps.map((s,i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);${i<=idx?'':'opacity:.35'}">
+            <div style="font-size:22px;line-height:1">${s.icon}</div>
+            <div style="font-weight:${i===idx?'700':'500'};font-size:14px;flex:1">${s.label}</div>
+            ${i===idx ? `<div class="mono" style="font-size:10.5px;color:var(--olive);text-transform:uppercase;letter-spacing:.06em">${t('track.current')}</div>` : (i<idx ? `<div style="color:var(--olive)">✓</div>` : '')}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* ============ GESTIONAR MI RESERVA (?res=token) ============
+   Mismo patrón que el seguimiento de pedido, pero además de leer permite
+   una acción: cancelar. La cancelación NUNCA toca la reserva directamente
+   desde aquí (el cliente no tiene ni debería tener escritura sobre
+   DB.reservations) — se manda como una solicitud más a la cola de
+   "requests" (tipo 'reserva_cancelar', con el token) y es la app del
+   negocio quien la aplica de verdad al procesarla, igual que ya hace con
+   una reserva nueva. */
+let cancellingReservation = false;
+function renderReservationManageView(){
+  const app = document.getElementById('app');
+  if(resListenerAttached) return;
+  resListenerAttached = true;
+  app.innerHTML = `<div class="empty"><div class="spinner"></div>${t('resManage.loading')}</div>`;
+  db.ref('gastrogoan/public/' + publicId + '/reservationStatus/' + resToken).on('value', snap => {
+    renderReservationStatus(snap.val());
+  }, () => {
+    renderReservationStatus(null);
+  });
+}
+function renderReservationStatus(data){
+  lastResStatusData = data;
+  const app = document.getElementById('app');
+  if(!data){
+    app.innerHTML = `
+      <div class="error-box">
+        <div class="icon">🔎</div>
+        <h2>${t('resManage.notFound.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('resManage.notFound.msg')}</p>
+      </div>`;
+    return;
+  }
+  const phone = (DB.business||{}).phone;
+  const phoneLink = phone ? `<a href="tel:${escapeHtml(phone.replace(/\s+/g,''))}" style="color:var(--ink);font-weight:600">${escapeHtml(phone)}</a>` : '';
+  if(data.status === 'cancelada'){
+    app.innerHTML = `
+      <div class="card fade-in-play" style="text-align:center;padding:32px 18px">
+        <div style="font-size:40px">🚫</div>
+        <h2 style="margin-top:10px">${t('resManage.cancelled.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('resManage.cancelled.msg')}</p>
+      </div>`;
+    return;
+  }
+  // 'completada' = el cliente ya llegó y está sentado. Antes esta ruta no
+  // se distinguía de una reserva normal, así que el enlace seguía
+  // ofreciendo Editar/Cancelar sobre una visita que ya ha pasado.
+  if(data.status === 'completada'){
+    app.innerHTML = `
+      <div class="card fade-in-play" style="text-align:center;padding:32px 18px">
+        <div style="font-size:40px">✅</div>
+        <h2 style="margin-top:10px">${t('resManage.completed.title')}</h2>
+        <p style="font-size:13px;color:var(--muted)">${t('resManage.completed.msg')}</p>
+      </div>`;
+    return;
+  }
+  const statusLabel = data.status === 'confirmada' ? t('resManage.status.confirmada') : t('resManage.status.pendiente');
+  const statusClass = data.status === 'confirmada' ? 'var(--olive)' : 'var(--muted)';
+  app.innerHTML = `
+    <div class="card fade-in-play">
+      <h2>${t('resManage.title')}</h2>
+      <div style="margin-top:6px;font-size:13px;font-weight:700;color:${statusClass}">${statusLabel}</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.date')}</span><strong>${escapeHtml(data.date||'')} · ${escapeHtml(data.time||'')}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--muted)">${t('resManage.people')}</span><strong>${escapeHtml(data.people||'')}</strong></div>
+      </div>
+      ${resEditing ? `
+        <div class="field-row" style="margin-top:16px">
+          <div class="field">
+            <label>${t('fecha')}</label>
+            <input type="date" id="res-edit-date" value="${escapeHtml(data.date||'')}" min="${todayStr()}" onchange="updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint'); applyLeadTime('res-edit-date','res-edit-time','res-edit-hint','reserva')">
+          </div>
+          <div class="field">
+            <label>${t('hora')}</label>
+            <input type="time" id="res-edit-time" value="${escapeHtml(data.time||'')}">
+          </div>
+        </div>
+        <div id="res-edit-hint"></div>
+        <div class="field">
+          <label>${t('personas')}</label>
+          <input type="number" id="res-edit-people" value="${escapeHtml(data.people||1)}" min="1" max="50">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn" id="res-edit-cancel-btn" onclick="toggleResEdit(false)">${t('common.close')}</button>
+          <button class="btn btn-primary" id="res-edit-save-btn" onclick="submitReservationChange()" style="flex:1">${t('resManage.saveBtn')}</button>
+        </div>
+      ` : `
+        ${phoneLink ? `<p style="font-size:12.5px;color:var(--muted);margin-top:14px">${t('success.callToChange').replace('%s', phoneLink)}</p>` : ''}
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn" id="res-edit-btn" onclick="toggleResEdit(true)" style="flex:1">${t('resManage.editBtn')}</button>
+          <button class="btn" style="flex:1;color:var(--red);border-color:var(--red)" id="res-cancel-btn" onclick="cancelMyReservation()">${t('resManage.cancelBtn')}</button>
+        </div>
+      `}
+    </div>
+  `;
+  if(resEditing){
+    updateTimeInputRange('res-edit-date','res-edit-time','res-edit-hint');
+    applyLeadTime('res-edit-date','res-edit-time','res-edit-hint','reserva');
+  }
+}
+let resEditing = false;
+let lastResStatusData = null;
+function toggleResEdit(on){
+  resEditing = on;
+  renderReservationStatus(lastResStatusData);
+}
+let submittingReservationChange = false;
+function submitReservationChange(){
+  if(submittingReservationChange) return;
+  const date = document.getElementById('res-edit-date')?.value;
+  const time = document.getElementById('res-edit-time')?.value;
+  const people = parseInt(document.getElementById('res-edit-people')?.value) || 0;
+  if(!date || !time || !people){
+    showInlineError(t('error.campos'));
+    return;
+  }
+  submittingReservationChange = true;
+  const btn = document.getElementById('res-edit-save-btn');
+  if(btn){ btn.disabled = true; btn.textContent = t('resManage.savingChanges'); }
+  db.ref('gastrogoan/public/' + publicId + '/requests').push({
+    type: 'reserva_modificar', token: resToken, date, time, people, createdAt: new Date().toISOString()
+  }).then(() => {
+    submittingReservationChange = false;
+    resEditing = false;
+  }).catch(e => {
+    console.error(e);
+    submittingReservationChange = false;
+    if(btn){ btn.disabled = false; btn.textContent = t('resManage.saveBtn'); }
+    showInlineError(t('error.envio'));
+  });
+}
+async function cancelMyReservation(){
+  if(cancellingReservation) return;
+  if(!(await confirmModal(t('resManage.confirmCancel'), {danger:true}))) return;
+  cancellingReservation = true;
+  const btn = document.getElementById('res-cancel-btn');
+  // No hace falta un mensaje de éxito aparte: el propio listener en vivo de
+  // reservationStatus (renderReservationManageView) repinta la pantalla
+  // sola en cuanto el negocio procese la cancelación — normalmente
+  // al instante si tiene la app abierta, como con cualquier solicitud
+  // nueva. Mientras tanto, el botón deja claro que ya se ha enviado.
+  if(btn){ btn.disabled = true; btn.textContent = t('resManage.cancelSending'); }
+  db.ref('gastrogoan/public/' + publicId + '/requests').push({
+    type: 'reserva_cancelar', token: resToken, createdAt: new Date().toISOString()
+  }).then(() => {
+    cancellingReservation = false;
+  }).catch(e => {
+    console.error(e);
+    cancellingReservation = false;
+    if(btn){ btn.disabled = false; btn.textContent = t('resManage.cancelBtn'); }
+    showInlineError(t('error.envio'));
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
