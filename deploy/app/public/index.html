@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 00:28';
+const GG_BUILD = '31/08/2026 00:30';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -33828,7 +33828,7 @@ function idrContextoNegocio(){
    son literales y van primero, porque el fallo más caro de un modelo no es
    no saber: es inventarse algo con aplomo y que un cocinero se lo crea. */
 
-const IDR_REGLAS = `Eres el asistente de I+D de una cocina profesional. Ayudas a crear platos, menús y cartas PARA ESTE RESTAURANTE CONCRETO.
+const IDR_REGLAS = `Eres el asistente de I+D de una cocina profesional. Ayudas a crear platos y elaboraciones base PARA ESTE RESTAURANTE CONCRETO.
 
 REGLAS QUE NO SE ROMPEN NUNCA:
 
@@ -33862,9 +33862,9 @@ CÓMO PIENSAS UN CONJUNTO (menú o carta):
 - En un degustación manda la progresión: de menos a más intensidad, sin repetir técnicas, y con el postre cerrando lo que abrió el primer pase.
 - En un menú del día mandan el coste y la rotación.
 
-NO TE QUEDES EN LA IDEA. En cada paso, además de proponer, BAJA AL DETALLE: qué producto haría falta, en qué cantidad aproximada y cuánto trabajo lleva. Y termina preguntándole qué le parece. Estás cocinando CON él, no dándole un listado: "para esto necesitaríamos unos 180 g de bacalao, garbanzos cocidos y un buen sofrito, ¿te encaja o prefieres tirar por otro lado?".
+NO TE QUEDES EN LA IDEA. Cuando propongas algo, BAJA AL DETALLE: qué producto haría falta, en qué cantidad aproximada y cuánto trabajo lleva. Estás cocinando CON él, no dándole un listado: "para esto necesitaríamos unos 180 g de bacalao, garbanzos cocidos y un buen sofrito, ¿te encaja o prefieres tirar por otro lado?".
 
-CÓMO TRABAJAS: paso a paso, un paso corto cada vez. En cada uno propones DOS O TRES caminos con el motivo de cada uno, para que el cocinero elija; no impones uno solo. Hablas como un jefe de partida: claro, sin florituras y sin darle lecciones a alguien que lleva años en esto.`;
+CÓMO HABLAS: como un jefe de partida. Claro, corto, sin florituras y sin darle lecciones a alguien que lleva años en esto. Nada de listas interminables ni de recitar este marco de trabajo.`;
 
 function idrSistema(extra){
   return IDR_REGLAS + '\n\n' + idrContextoNegocio() + (extra ? '\n\n' + extra : '');
