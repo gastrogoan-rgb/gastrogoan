@@ -1190,6 +1190,11 @@ function renderBusinessSelectScreenHtml(){
         <p style="text-align:center;color:var(--muted);font-size:14px;line-height:1.5;margin:4px 0 16px">${t('bs.emptyDesc')}</p>
         <button class="btn btn-primary" style="width:100%" onclick="redeemFirstBusiness()"><i class="ti ti-ticket"></i> ${t('bs.redeemFirst')}</button>
         <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
+        <!-- Sin esto, una cuenta recién creada se quedaba ATRAPADA aquí: la
+             lista de negocios está vacía, así que no hay ninguna a la que ir,
+             y la pantalla no tiene aspa ni botón de volver. Quien entraba con
+             la cuenta equivocada solo podía salir recargando la página. -->
+        <button class="btn" style="width:100%;margin-top:14px;background:none;border:none;color:var(--muted);min-height:44px;padding:12px;flex:0 0 auto" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
       </div>
     `;
   }
@@ -1954,7 +1959,8 @@ function showActivationGate(){
   const g = document.createElement('div');
   g.id = 'license-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
-  const showBackBtn = getBusinessSlots().length > 1;
+  const showBackBtn = (typeof slotsOfCurrentOwner === 'function' ? slotsOfCurrentOwner() : getBusinessSlots())
+    .filter(x => x.code).length > 0;
   g.innerHTML = `
     <div style="max-width:480px;width:100%;background:#fff;border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:28px;text-align:center;position:relative">
       <button onclick="${showBackBtn ? 'backToBusinessSelectorFromGate()' : 'exitSetupGateToLogin()'}" style="position:absolute;top:8px;left:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:10px;min-height:44px"><i class="ti ti-arrow-left"></i> ${showBackBtn ? t('gate.businesses') : t('gate.exitSetup')}</button>
@@ -1992,6 +1998,14 @@ function backToBusinessSelectorFromGate(){
 // ningún dato (nada de lo escrito en el gate se había guardado todavía).
 function exitSetupGateToLogin(){
   ['license-gate','firebase-gate','netlify-gate'].forEach(id => document.getElementById(id)?.remove());
+  exitToAccessScreen();
+}
+
+// Volver a la pantalla de "Acceso Empleados / Acceso Propietarios" desde
+// cualquier sitio donde el usuario pueda quedarse sin salida. No borra nada:
+// lo único que se cierra es la sesión de acceso.
+function exitToAccessScreen(){
+  hideBusinessSelectScreen();
   clearAccessSession();
   showAccessSelectScreen();
 }
