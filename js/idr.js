@@ -1036,6 +1036,7 @@ function renderIdrCreacion(box){
             <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
           </div>` : `<p style="font-size:12.5px;color:#1F8A4C"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${c.recipeId ? `<button class="btn btn-primary" onclick="idrVerLaFicha(${c.id})"><i class="ti ti-file-text"></i> ${t('idr.seeSheet')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrVariante(${c.id})"><i class="ti ti-git-branch"></i> ${t('idr.makeVariant')}</button>` : ''}
           <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
@@ -1183,19 +1184,28 @@ async function idrEnviarInterno(){
    ponerle salsa a una ensalada. */
 function idrGuionConversacion(tipo){
   const queEs = tipo === 'base'
-    ? `Estás ayudando a crear una ELABORACIÓN BASE (un fondo, una salsa madre, una crema, un escabeche): algo que se produce de antemano y luego se usa en varios platos.
-Antes de darlo por cerrado tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro.`
-    : `Estás ayudando a crear UN PLATO para la carta.`;
+    ? `Estás creando una ELABORACIÓN BASE: algo que se produce de antemano y se usa después en varios platos (un fondo, una salsa madre, una crema, un escabeche, una picada).
+Antes de darla por cerrada tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro, y todos los platos que la lleven saldrán mal costeados.`
+    : `Estás creando UN PLATO ENTERO para la carta: producto principal, cómo se trata, con qué se acompaña y cómo se acaba. Si el cocinero te pregunta solo por una parte (una salsa, una guarnición), respóndele a eso y ADEMÁS ayúdale a cerrar el plato alrededor, que es lo que va a acabar en la carta y en el escandallo.`;
   return `${queEs}
 
 TU TRABAJO ES AYUDARLE A CREAR, NO INTERROGARLE.
 
-Si te pide algo concreto — "una salsa para un salmón", "un entrante de otoño", "algo con calabaza" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos entre sí, y de cada uno:
+Si te pide algo concreto — "un entrante de otoño", "una salsa para un salmón", "algo con calabaza" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos entre sí, y de cada uno:
 - qué es, en una línea,
 - POR QUÉ funciona con ese producto (qué corta la grasa, qué aporta acidez, qué textura hace contraste),
 - y qué lleva, con cantidades aproximadas, para que se pueda cocinar mañana.
 
 Caminos DISTINTOS de verdad, no tres versiones de lo mismo: si una es una emulsión, que otra sea una vinagreta y otra un jugo o un fondo reducido. Y di cuál es un clásico y cuál es una vuelta tuya.
+
+APORTA CRITERIO, NO SOLO OPCIONES. En cada respuesta, además de proponer, MÓJATE:
+- di cuál elegirías tú y por qué, aunque le dejes decidir a él;
+- avisa de lo que puede salir mal (una emulsión que se corta con el calor del pase, una fritura que se ablanda si espera, una acidez que se come al producto);
+- señala lo que se puede dejar hecho en mise en place y lo que hay que hacer al momento;
+- si algo choca con su ADN, con su equipamiento o con lo que ya tiene en carta, dilo ANTES de que se enamore de la idea.
+Y cuenta lo que sabes del producto cuando venga a cuento: de dónde es el plato, qué temporada tiene, qué corte o qué punto pide. Un cocinero no quiere una lista: quiere hablar con alguien que sabe.
+
+NO DEJES LA CONVERSACIÓN MUERTA. Termina SIEMPRE con un paso concreto: una pregunta que haga avanzar, o lo que harías a continuación. Nada de "avísame si necesitas algo".
 
 Pregunta SOLO cuando la respuesta cambie de verdad lo que vas a proponer (el punto del pescado, si va frío o caliente, si es para carta o para menú del día). Una o dos preguntas como mucho, y NUNCA antes de haber dado algo con lo que trabajar. Un cocinero que viene a por ideas y se encuentra un cuestionario, se va.
 
@@ -1203,7 +1213,7 @@ No hay guion fijo: una ensalada no lleva salsa, un helado no lleva guarnición y
 
 No te limites a lo que ya compra: si un producto que no tiene mejora el plato, propónlo y di que habría que darlo de alta. Y no des por sabido lo que no te han dicho: si no conoces bien algo, dilo y pide una receta de referencia.
 
-Cuando ya tengáis decidido el plato y sepas qué lleva, cómo se hace y para cuántos, dilo y pon "listo": true.
+CUANDO YA ESTÉ DECIDIDO: en cuanto sepas qué lleva, cómo se hace y para cuántos, pon "listo": true y DILE EXPRESAMENTE que le dé al botón "${tipo === 'base' ? 'Crear la elaboración' : 'Crear el plato'}" para que la aplicación escriba la ficha y la cueste con sus precios. No sigas alargando la conversación por tu cuenta.
 
 Responde SIEMPRE con este JSON, sin nada alrededor:
 {"respuesta":"lo que le dices al cocinero","listo":false,"falta":["lo que todavía necesitas saber"]}`;
@@ -1445,6 +1455,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   saveDB();
 
   // El coste lo calcula la app con SUS precios, nunca el modelo.
+  idrCerrarConLaFicha(c, receta);
+  saveDB();
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const aviso = faltan.length
     ? t('idr.dishCreatedMissing').replace('${n}', faltan.length).replace('${coste}', fmtMoney(coste))
@@ -1568,6 +1580,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   c.updatedAt = new Date().toISOString();
   saveDB();
 
+  idrCerrarConLaFicha(c, receta);
+  saveDB();
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const porUnidad = rend.qty > 0 ? coste / rend.qty : 0;
   const aviso = faltan.length
@@ -1612,6 +1626,46 @@ async function idrVariante(id){
   saveDB();
   navIdr('creacion', nueva.id);
   showToast(t('idr.variantReady'), 4000);
+}
+/* Abre la ficha recién creada donde vive de verdad: Escandallo, en su
+   pestaña, con su ventana abierta. Crear un plato y no saber dónde ha ido a
+   parar deja el trabajo a medias — el dueño creó una receta y se quedó sin
+   saber cómo seguir. */
+function idrVerLaFicha(id){
+  const c = idrCreacion(id);
+  const receta = c && c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  if(!receta){ showToast(t('idr.nothingToBuild')); return; }
+  navigate('escandallo');
+  if(typeof setEscandalloTab === 'function') setEscandalloTab(receta.isBase ? 'elaboraciones' : 'platos');
+  if(typeof openRecipeModal === 'function') openRecipeModal(receta.id);
+}
+
+/* Lo que el asistente dice DESPUÉS de crear. Antes la conversación terminaba
+   en seco: la ficha existía, pero nadie te decía dónde estaba ni qué hacer
+   con ella. Ahora cierra el círculo con los números reales y con el siguiente
+   paso, que es lo que convierte una idea en un plato que se vende. */
+function idrCerrarConLaFicha(c, receta){
+  if(!c || !receta) return;
+  const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+  const partes = [];
+  if(receta.isBase){
+    const y = parseFloat(receta.baseYield) || 1;
+    partes.push(t('idr.doneBaseWhere')
+      .replace('${n}', receta.name)
+      .replace('${coste}', fmtMoney(coste))
+      .replace('${unidad}', `${fmtMoney(coste / y)}/${receta.baseUnit || 'L'}`));
+  } else {
+    const pvp = parseFloat(receta.price) || 0;
+    partes.push(t('idr.doneDishWhere')
+      .replace('${n}', receta.name)
+      .replace('${comensales}', receta.comensales || 2)
+      .replace('${coste}', fmtMoney(coste))
+      .replace('${pvp}', fmtMoney(pvp)));
+  }
+  if((c.faltan||[]).length) partes.push(t('idr.doneMissing').replace('${n}', c.faltan.length).replace('${lista}', c.faltan.join(', ')));
+  if((c.avisos||[]).length) partes.push(t('idr.doneWarnings') + '\n· ' + c.avisos.join('\n· '));
+  partes.push(t('idr.doneNext'));
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: partes.join('\n\n')});
 }
 
 function idrHablarDelCoste(id){

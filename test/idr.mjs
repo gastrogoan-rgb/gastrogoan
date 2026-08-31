@@ -1864,6 +1864,81 @@ await caso('Dos dispositivos hablando en la misma prueba no se pisan', async ()=
   return 'se quedan los cuatro mensajes y el borrador local';
 });
 
+await caso('Al crear, te dice dónde ha ido la ficha y qué hacer ahora', async ()=>{
+  // El dueño creó una receta y se quedó sin saber cómo seguir: la
+  // conversación terminaba en seco. Ahora cierra el círculo.
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio', foodCostObjetivo:30});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => ({ok:true, texto: JSON.stringify({nombre:'Bacalao al pilpil', descripcion:'x', comensales:4,
+      pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:180, unidad:'g'},{nombre:'Pimentón', cantidad:3, unidad:'g'}]})});
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{mid:'m1', r:'yo', t:'Un bacalao'}]; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const cc = idrCreacion(c.id);
+    const ultimo = cc.mensajes[cc.mensajes.length-1];
+    const html = document.getElementById('view-idr').innerHTML;
+    return {
+      esDelAsistente: ultimo.r === 'ia',
+      diceDonde: /Escandallo y Fichas Técnicas/.test(ultimo.t) && /Platos/.test(ultimo.t),
+      diceNombre: /Bacalao al pilpil/.test(ultimo.t),
+      diceComensales: /4 comensales/.test(ultimo.t),
+      diceCoste: /coste/.test(ultimo.t),
+      avisaDeLoQueFalta: /Pimentón/.test(ultimo.t) && /Ingredientes/.test(ultimo.t),
+      proponeSiguientePaso: /Qué hacemos ahora/.test(ultimo.t),
+      hayBotonFicha: /idrVerLaFicha/.test(html),
+      hayFuncion: typeof idrVerLaFicha === 'function',
+    };
+  });
+  Object.keys(r).forEach(k => assert.ok(r[k], `falta: ${k}`));
+  return 'dice dónde está, cuánto cuesta, qué falta y qué hacer';
+});
+
+await caso('Una elaboración dice que va a Elaboraciones, no a Platos', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => ({ok:true, texto: JSON.stringify({nombre:'Alioli de ajo negro', descripcion:'x',
+      pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:100, unidad:'g'}]})});
+    idrEmpezar('base');
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{mid:'m1', r:'yo', t:'Un alioli de ajo negro, que salga 1 L'}]; saveDB();
+    await idrCrearBaseReal(c.id);
+    const cc = idrCreacion(c.id);
+    const ultimo = cc.mensajes[cc.mensajes.length-1];
+    return {
+      diceElaboraciones: /Elaboraciones/.test(ultimo.t),
+      diceStock: /stock de elaboraciones/.test(ultimo.t),
+      noDicePlatos: !/pestaña de Platos/.test(ultimo.t),
+    };
+  });
+  Object.keys(r).forEach(k => assert.ok(r[k], `falta: ${k}`));
+  return 'la elaboración sabe a qué pestaña va';
+});
+
+await caso('El guion exige criterio y no dejar la conversación muerta', async ()=>{
+  const r = await page.evaluate(()=>{
+    const plato = idrGuionConversacion('plato');
+    const base = idrGuionConversacion('base');
+    return {
+      platoEsEntero: /UN PLATO ENTERO/.test(plato),
+      // Si le preguntan solo por una salsa, contesta y además cierra el plato
+      cierraElPlato: /ayúdale a cerrar el plato alrededor/.test(plato),
+      seMoja: /MÓJATE/.test(plato) && /cuál elegirías tú/.test(plato),
+      avisaDeRiesgos: /puede salir mal/.test(plato),
+      aportaSaber: /quiere hablar con alguien que sabe/.test(plato),
+      noDejaMuerta: /NO DEJES LA CONVERSACIÓN MUERTA/.test(plato) && /paso concreto/.test(plato),
+      diceQueBotonPulsar: /Crear el plato/.test(plato) && /Crear la elaboración/.test(base),
+    };
+  });
+  Object.keys(r).forEach(k => assert.ok(r[k], `falta en el guion: ${k}`));
+  return 'se moja, avisa de riesgos y siempre deja un paso siguiente';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

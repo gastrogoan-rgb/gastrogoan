@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 16:37';
+const GG_BUILD = '31/08/2026 16:51';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -9182,6 +9182,12 @@ const I18N = {
     'idr.newBase': 'Nueva elaboración base',
     'idr.conversation': 'La conversación',
     'idr.adjustCost': 'Hablar del coste',
+    'idr.seeSheet': 'Ver la ficha',
+    'idr.doneDishWhere': 'Listo: he escrito la ficha de "${n}" para ${comensales} comensales. Ya está en Escandallo y Fichas Técnicas, en la pestaña de Platos. Te sale a ${coste} de coste, con un PVP sugerido de ${pvp}.',
+    'idr.doneBaseWhere': 'Listo: he escrito la ficha de "${n}". Ya está en Escandallo y Fichas Técnicas, en la pestaña de Elaboraciones, y también en el stock de elaboraciones para que tu equipo la produzca. La producción entera te sale a ${coste} (${unidad}).',
+    'idr.doneMissing': 'Ojo: ${n} ingredientes no los tienes dados de alta y no cuentan en el coste todavía → ${lista}. Dalos de alta en Ingredientes y el escandallo se recalcula solo.',
+    'idr.doneWarnings': 'He comprobado la ficha contra tus datos y esto no me cuadra:',
+    'idr.doneNext': '¿Qué hacemos ahora? Puedo ajustar el coste si te parece caro, sacarte una variante (sin gluten, para el menú del día), o lo dejamos aquí y le echas un ojo a la ficha.',
     'idr.makeVariant': 'Hacer una variante',
     'idr.variantOf': 'Variante de ${n}',
     'idr.variantIntro': 'Quiero una variante de este plato que ya tengo: ${n}.',
@@ -9194,9 +9200,9 @@ const I18N = {
     'idr.costTalkBase': 'He hecho el escandallo con tus precios: la producción entera te sale a ${coste} (${unidad}).',
     'idr.costTalkAsk': '¿Lo ajustamos? Dime por dónde: bajar la ración, cambiar algún producto, o dejarlo así y subir el precio.',
     'idr.recipeUpdated': 'Ficha actualizada, sin duplicarla.',
-    'idr.chatHelloDish': 'Dime qué necesitas y te doy opciones. Puede ser un plato entero ("un entrante de otoño") o solo una parte ("una salsa para un salmón", "algo que acompañe a un arroz negro"). Te propongo varios caminos distintos, con el porqué de cada uno.',
+    'idr.chatHelloDish': 'Dime qué plato quieres crear y te doy opciones: "un entrante de otoño", "algo con calabaza para el menú", "un pescado a la brasa". Te propongo varios caminos distintos, con el porqué de cada uno, y lo cerramos hasta tener la receta entera.',
     'idr.chatHelloBase': 'Dime qué quieres tener hecho de antemano — un fondo, una salsa madre, una crema — y para qué lo vas a usar. Te doy opciones. Solo necesito que acabemos sabiendo cuánto sale (por ejemplo 3 L) para poder costearlo bien.',
-    'idr.chatPlaceholder': 'Ej. una salsa para un salmón a la plancha',
+    'idr.chatPlaceholder': 'Ej. un entrante de otoño con calabaza',
     'idr.send': 'Enviar',
     'idr.readyToCreate': 'Ya tengo lo que necesito. Cuando quieras, dale a crear.',
     'idr.keepTalking': 'Sigue la conversación hasta que el asistente tenga lo que necesita. Puedes crear antes si lo ves claro.',
@@ -11201,6 +11207,12 @@ const I18N = {
     'idr.newBase': 'Nova elaboració base',
     'idr.conversation': 'La conversa',
     'idr.adjustCost': 'Parlar del cost',
+    'idr.seeSheet': 'Veure la fitxa',
+    'idr.doneDishWhere': 'Fet: he escrit la fitxa de "${n}" per a ${comensales} comensals. Ja és a Escandall i Fitxes Tècniques, a la pestanya de Plats. Et surt a ${coste} de cost, amb un PVP suggerit de ${pvp}.',
+    'idr.doneBaseWhere': 'Fet: he escrit la fitxa de "${n}". Ja és a Escandall i Fitxes Tècniques, a la pestanya d\'Elaboracions, i també a l\'estoc d\'elaboracions perquè el teu equip la produeixi. La producció sencera et surt a ${coste} (${unidad}).',
+    'idr.doneMissing': 'Compte: ${n} ingredients no els tens donats d\'alta i encara no compten al cost → ${lista}. Dona\'ls d\'alta a Ingredients i l\'escandall es recalcula sol.',
+    'idr.doneWarnings': 'He comprovat la fitxa amb les teves dades i això no em quadra:',
+    'idr.doneNext': 'Què fem ara? Puc ajustar el cost si et sembla car, treure\'t una variant (sense gluten, per al menú del dia), o ho deixem aquí i li fas un cop d\'ull a la fitxa.',
     'idr.makeVariant': 'Fer una variant',
     'idr.variantOf': 'Variant de ${n}',
     'idr.variantIntro': 'Vull una variant d\'aquest plat que ja tinc: ${n}.',
@@ -11213,9 +11225,9 @@ const I18N = {
     'idr.costTalkBase': 'He fet l\'escandall amb els teus preus: la producció sencera et surt a ${coste} (${unidad}).',
     'idr.costTalkAsk': 'L\'ajustem? Digues per on: baixar la ració, canviar algun producte, o deixar-ho així i pujar el preu.',
     'idr.recipeUpdated': 'Fitxa actualitzada, sense duplicar-la.',
-    'idr.chatHelloDish': 'Digues què necessites i et dono opcions. Pot ser un plat sencer ("un entrant de tardor") o només una part ("una salsa per a un salmó", "alguna cosa que acompanyi un arròs negre"). Et proposo camins diferents, amb el perquè de cadascun.',
+    'idr.chatHelloDish': 'Digues quin plat vols crear i et dono opcions: "un entrant de tardor", "alguna cosa amb carbassa per al menú", "un peix a la brasa". Et proposo camins diferents, amb el perquè de cadascun, i el tanquem fins a tenir la recepta sencera.',
     'idr.chatHelloBase': "Digues què vols tenir fet per endavant — un fons, una salsa mare, una crema — i per a què el faràs servir. Et dono opcions. Només necessito que acabem sabent quant en surt (per exemple 3 L) per poder costejar-ho bé.",
-    'idr.chatPlaceholder': 'Ex. una salsa per a un salmó a la planxa',
+    'idr.chatPlaceholder': 'Ex. un entrant de tardor amb carbassa',
     'idr.send': 'Enviar',
     'idr.readyToCreate': 'Ja tinc el que necessito. Quan vulguis, dona-li a crear.',
     'idr.keepTalking': 'Segueix la conversa fins que l\'assistent tingui el que necessita. Pots crear abans si ho veus clar.',
@@ -13224,6 +13236,12 @@ const I18N = {
     'idr.newBase': 'New base prep',
     'idr.conversation': 'The conversation',
     'idr.adjustCost': 'Talk about the cost',
+    'idr.seeSheet': 'Open the sheet',
+    'idr.doneDishWhere': 'Done: I wrote the sheet for "${n}", for ${comensales} covers. It is now in Costing and Tech Sheets, under Dishes. It comes to ${coste}, with a suggested price of ${pvp}.',
+    'idr.doneBaseWhere': 'Done: I wrote the sheet for "${n}". It is now in Costing and Tech Sheets under Preps, and in the prep stock so your team can produce it. The whole batch comes to ${coste} (${unidad}).',
+    'idr.doneMissing': 'Careful: ${n} ingredients are not registered yet and do not count towards the cost → ${lista}. Add them under Ingredients and the costing updates itself.',
+    'idr.doneWarnings': 'I checked the sheet against your data and this does not add up:',
+    'idr.doneNext': 'What next? I can adjust the cost if it looks expensive, make you a variant (gluten free, for the set lunch), or we leave it here and you look over the sheet.',
     'idr.makeVariant': 'Make a variant',
     'idr.variantOf': 'Variant of ${n}',
     'idr.variantIntro': 'I want a variant of this dish I already have: ${n}.',
@@ -13236,9 +13254,9 @@ const I18N = {
     'idr.costTalkBase': 'I costed it with your prices: the whole batch comes to ${coste} (${unidad}).',
     'idr.costTalkAsk': 'Shall we adjust it? Tell me how: smaller portion, swap a product, or leave it and raise the price.',
     'idr.recipeUpdated': 'Sheet updated, not duplicated.',
-    'idr.chatHelloDish': 'Tell me what you need and I will give you options. A whole dish ("an autumn starter") or just one part ("a sauce for salmon", "something to go with a black rice"). I will offer distinct routes, each with its reasoning.',
+    'idr.chatHelloDish': 'Tell me what dish you want to create and I will give you options: "an autumn starter", "something with pumpkin for the set menu", "a grilled fish". I will offer distinct routes, each with its reasoning, and we will close it into a full recipe.',
     'idr.chatHelloBase': 'Tell me what you want ready in advance — a stock, a mother sauce, a purée — and what you will use it for. I will give you options. I only need us to end up knowing the yield (say 3 L) to cost it properly.',
-    'idr.chatPlaceholder': 'e.g. a sauce for pan-seared salmon',
+    'idr.chatPlaceholder': 'e.g. an autumn starter with pumpkin',
     'idr.send': 'Send',
     'idr.readyToCreate': 'I have what I need. Create it whenever you like.',
     'idr.keepTalking': 'Keep talking until the assistant has what it needs. You can create earlier if you are sure.',
@@ -34489,6 +34507,7 @@ function renderIdrCreacion(box){
             <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">${c.avisos.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>
           </div>` : `<p style="font-size:12.5px;color:#1F8A4C"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${c.recipeId ? `<button class="btn btn-primary" onclick="idrVerLaFicha(${c.id})"><i class="ti ti-file-text"></i> ${t('idr.seeSheet')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrVariante(${c.id})"><i class="ti ti-git-branch"></i> ${t('idr.makeVariant')}</button>` : ''}
           <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
@@ -34636,19 +34655,28 @@ async function idrEnviarInterno(){
    ponerle salsa a una ensalada. */
 function idrGuionConversacion(tipo){
   const queEs = tipo === 'base'
-    ? `Estás ayudando a crear una ELABORACIÓN BASE (un fondo, una salsa madre, una crema, un escabeche): algo que se produce de antemano y luego se usa en varios platos.
-Antes de darlo por cerrado tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro.`
-    : `Estás ayudando a crear UN PLATO para la carta.`;
+    ? `Estás creando una ELABORACIÓN BASE: algo que se produce de antemano y se usa después en varios platos (un fondo, una salsa madre, una crema, un escabeche, una picada).
+Antes de darla por cerrada tienes que saber SIEMPRE cuánto sale (rendimiento con su unidad, por ejemplo "3 L"): sin eso no se puede costear por litro, y todos los platos que la lleven saldrán mal costeados.`
+    : `Estás creando UN PLATO ENTERO para la carta: producto principal, cómo se trata, con qué se acompaña y cómo se acaba. Si el cocinero te pregunta solo por una parte (una salsa, una guarnición), respóndele a eso y ADEMÁS ayúdale a cerrar el plato alrededor, que es lo que va a acabar en la carta y en el escandallo.`;
   return `${queEs}
 
 TU TRABAJO ES AYUDARLE A CREAR, NO INTERROGARLE.
 
-Si te pide algo concreto — "una salsa para un salmón", "un entrante de otoño", "algo con calabaza" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos entre sí, y de cada uno:
+Si te pide algo concreto — "un entrante de otoño", "una salsa para un salmón", "algo con calabaza" — CONTESTA CON PROPUESTAS DE VERDAD, ahí mismo, sin pedirle antes una lista de datos. Dale DOS O TRES caminos distintos entre sí, y de cada uno:
 - qué es, en una línea,
 - POR QUÉ funciona con ese producto (qué corta la grasa, qué aporta acidez, qué textura hace contraste),
 - y qué lleva, con cantidades aproximadas, para que se pueda cocinar mañana.
 
 Caminos DISTINTOS de verdad, no tres versiones de lo mismo: si una es una emulsión, que otra sea una vinagreta y otra un jugo o un fondo reducido. Y di cuál es un clásico y cuál es una vuelta tuya.
+
+APORTA CRITERIO, NO SOLO OPCIONES. En cada respuesta, además de proponer, MÓJATE:
+- di cuál elegirías tú y por qué, aunque le dejes decidir a él;
+- avisa de lo que puede salir mal (una emulsión que se corta con el calor del pase, una fritura que se ablanda si espera, una acidez que se come al producto);
+- señala lo que se puede dejar hecho en mise en place y lo que hay que hacer al momento;
+- si algo choca con su ADN, con su equipamiento o con lo que ya tiene en carta, dilo ANTES de que se enamore de la idea.
+Y cuenta lo que sabes del producto cuando venga a cuento: de dónde es el plato, qué temporada tiene, qué corte o qué punto pide. Un cocinero no quiere una lista: quiere hablar con alguien que sabe.
+
+NO DEJES LA CONVERSACIÓN MUERTA. Termina SIEMPRE con un paso concreto: una pregunta que haga avanzar, o lo que harías a continuación. Nada de "avísame si necesitas algo".
 
 Pregunta SOLO cuando la respuesta cambie de verdad lo que vas a proponer (el punto del pescado, si va frío o caliente, si es para carta o para menú del día). Una o dos preguntas como mucho, y NUNCA antes de haber dado algo con lo que trabajar. Un cocinero que viene a por ideas y se encuentra un cuestionario, se va.
 
@@ -34656,7 +34684,7 @@ No hay guion fijo: una ensalada no lleva salsa, un helado no lleva guarnición y
 
 No te limites a lo que ya compra: si un producto que no tiene mejora el plato, propónlo y di que habría que darlo de alta. Y no des por sabido lo que no te han dicho: si no conoces bien algo, dilo y pide una receta de referencia.
 
-Cuando ya tengáis decidido el plato y sepas qué lleva, cómo se hace y para cuántos, dilo y pon "listo": true.
+CUANDO YA ESTÉ DECIDIDO: en cuanto sepas qué lleva, cómo se hace y para cuántos, pon "listo": true y DILE EXPRESAMENTE que le dé al botón "${tipo === 'base' ? 'Crear la elaboración' : 'Crear el plato'}" para que la aplicación escriba la ficha y la cueste con sus precios. No sigas alargando la conversación por tu cuenta.
 
 Responde SIEMPRE con este JSON, sin nada alrededor:
 {"respuesta":"lo que le dices al cocinero","listo":false,"falta":["lo que todavía necesitas saber"]}`;
@@ -34898,6 +34926,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   saveDB();
 
   // El coste lo calcula la app con SUS precios, nunca el modelo.
+  idrCerrarConLaFicha(c, receta);
+  saveDB();
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const aviso = faltan.length
     ? t('idr.dishCreatedMissing').replace('${n}', faltan.length).replace('${coste}', fmtMoney(coste))
@@ -35021,6 +35051,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   c.updatedAt = new Date().toISOString();
   saveDB();
 
+  idrCerrarConLaFicha(c, receta);
+  saveDB();
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const porUnidad = rend.qty > 0 ? coste / rend.qty : 0;
   const aviso = faltan.length
@@ -35065,6 +35097,46 @@ async function idrVariante(id){
   saveDB();
   navIdr('creacion', nueva.id);
   showToast(t('idr.variantReady'), 4000);
+}
+/* Abre la ficha recién creada donde vive de verdad: Escandallo, en su
+   pestaña, con su ventana abierta. Crear un plato y no saber dónde ha ido a
+   parar deja el trabajo a medias — el dueño creó una receta y se quedó sin
+   saber cómo seguir. */
+function idrVerLaFicha(id){
+  const c = idrCreacion(id);
+  const receta = c && c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  if(!receta){ showToast(t('idr.nothingToBuild')); return; }
+  navigate('escandallo');
+  if(typeof setEscandalloTab === 'function') setEscandalloTab(receta.isBase ? 'elaboraciones' : 'platos');
+  if(typeof openRecipeModal === 'function') openRecipeModal(receta.id);
+}
+
+/* Lo que el asistente dice DESPUÉS de crear. Antes la conversación terminaba
+   en seco: la ficha existía, pero nadie te decía dónde estaba ni qué hacer
+   con ella. Ahora cierra el círculo con los números reales y con el siguiente
+   paso, que es lo que convierte una idea en un plato que se vende. */
+function idrCerrarConLaFicha(c, receta){
+  if(!c || !receta) return;
+  const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+  const partes = [];
+  if(receta.isBase){
+    const y = parseFloat(receta.baseYield) || 1;
+    partes.push(t('idr.doneBaseWhere')
+      .replace('${n}', receta.name)
+      .replace('${coste}', fmtMoney(coste))
+      .replace('${unidad}', `${fmtMoney(coste / y)}/${receta.baseUnit || 'L'}`));
+  } else {
+    const pvp = parseFloat(receta.price) || 0;
+    partes.push(t('idr.doneDishWhere')
+      .replace('${n}', receta.name)
+      .replace('${comensales}', receta.comensales || 2)
+      .replace('${coste}', fmtMoney(coste))
+      .replace('${pvp}', fmtMoney(pvp)));
+  }
+  if((c.faltan||[]).length) partes.push(t('idr.doneMissing').replace('${n}', c.faltan.length).replace('${lista}', c.faltan.join(', ')));
+  if((c.avisos||[]).length) partes.push(t('idr.doneWarnings') + '\n· ' + c.avisos.join('\n· '));
+  partes.push(t('idr.doneNext'));
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: partes.join('\n\n')});
 }
 
 function idrHablarDelCoste(id){
