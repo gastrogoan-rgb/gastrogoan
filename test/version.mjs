@@ -149,6 +149,38 @@ await caso('El sello de versión se ve en la pantalla de inicio', async ()=>{
   return `"${r.texto}"`;
 });
 
+await caso('El botón "Actualizar" fuerza la comprobación, sin esperar 6 horas', async ()=>{
+  /* Sin esto no había forma de forzarlo: un dispositivo que ya había mirado
+     se quedaba con la versión vieja hasta seis horas después, y nadie podía
+     hacer nada. Justo lo que pasó al probar en Cloudflare. */
+  const r = await page.evaluate(async ()=>{
+    window.GG_BUILD = '01/01/2026 00:00';
+    let llamadas = 0;
+    const originalFetch = window.fetch;
+    window.fetch = async (u) => {
+      if(String(u).includes('version.json')){ llamadas++; return {ok:true, json: async () => ({build:'VERSION NUEVA'})}; }
+      return originalFetch(u);
+    };
+    // Se marca como "ya comprobado hace un momento": el ciclo normal callaría
+    localStorage.setItem('gastrogoan_version_comprobada', String(Date.now()));
+    const barraAntes = !!document.getElementById('gg-version-nueva');
+    await comprobarVersionPublicada();          // el ciclo normal: no debe preguntar
+    const trasCiclo = llamadas;
+    await manualRefresh();                      // el botón: sí debe
+    await new Promise(r2=>setTimeout(r2, 80));
+    const barra = document.getElementById('gg-version-nueva');
+    const texto = barra ? barra.textContent : '';
+    if(barra) barra.remove();
+    window.fetch = originalFetch;
+    return {barraAntes, trasCiclo, llamadas, hayBarra: !!barra, texto};
+  });
+  assert.ok(!r.barraAntes, 'no debía haber aviso de partida');
+  assert.equal(r.trasCiclo, 0, 'el ciclo normal respeta las 6 horas');
+  assert.equal(r.llamadas, 1, 'pero el botón Actualizar comprueba igualmente');
+  assert.ok(r.hayBarra && /VERSION NUEVA/.test(r.texto), 'y avisa de la versión nueva');
+  return 'el botón manda sobre el temporizador';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|sin red/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

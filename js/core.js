@@ -2840,6 +2840,14 @@ function refreshAfterRemoteChange(){
 async function manualRefresh(){
   DB = await loadDB();
   refreshAfterRemoteChange();
+  /* Y de paso, comprobar si hay una versión nueva publicada — SIN esperar a
+     las 6 horas del ciclo normal. Este botón se llama "Actualizar": si el
+     hostelero lo pulsa es justamente porque quiere lo último, y no tendría
+     ningún sentido que la app le dijera "ya miré hace un rato".
+     Sin esto no había ninguna manera de forzar la comprobación: al publicar
+     una versión, un dispositivo que ya había mirado se quedaba con la vieja
+     hasta seis horas después, sin que nadie pudiera hacer nada. */
+  if(typeof comprobarVersionPublicada === 'function') comprobarVersionPublicada(true).catch(()=>{});
   const icon = document.getElementById('refresh-icon');
   if(icon){
     icon.classList.remove('spin');
