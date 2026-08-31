@@ -26,9 +26,11 @@ function appDeCadaUso(fuente, ruta){
   const usos = [];
   let ultima = null;
   lineas.forEach((l, i) => {
-    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)/);
+    // Solo cuenta la app que se RECIBE en el then: `firebase.app()` es la
+    // del propio negocio y no pasa por aquí.
+    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)\.then\(app/);
     if(m) ultima = m[0];
-    if(l.includes(ruta)) usos.push({linea: i+1, app: ultima, texto: l.trim().slice(0,60)});
+    if(l.includes(ruta) && /\bapp\.database\(\)/.test(l)) usos.push({linea: i+1, app: ultima, texto: l.trim().slice(0,60)});
   });
   return usos;
 }
@@ -53,7 +55,7 @@ caso('La app de gestión no abre ninguna escucha permanente en la plataforma', (
   let ultima = null, desdeLinea = -99;
   const permanentes = [];
   lineas.forEach((l, i) => {
-    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)/);
+    const m = l.match(/get(PublicMirror|Platform[A-Za-z]*)App\(\)\.then\(app/);
     if(m){ ultima = m[0]; desdeLinea = i; }
     const esDelBloque = (i - desdeLinea) < 20;
     if(/app\.database\(\)[\s\S]*\.on\(['"]/.test(l) && esDelBloque && ultima && /Platform/.test(ultima)){
@@ -116,6 +118,26 @@ caso('Y la guía no expone ningún secreto', ()=>{
   const campos = [...bloque.matchAll(/(\w+):\s*config\.(\w+)/g)].map(m => m[2]);
   assert.deepEqual(campos.sort(), ['apiKey','databaseURL'], 'y NADA más: ' + campos.join(', '));
   return 'solo apiKey y databaseURL, que no son secretos';
+});
+
+caso('La mudanza se comprueba sola: nadie se muda con las reglas viejas', ()=>{
+  /* Un negocio dado de alta antes del cambio tiene las reglas antiguas, que
+     solo contemplaban info y requests. Mudarle el espejo sin comprobarlo le
+     rompería las reservas a medias, y se enteraría cuando un cliente no
+     pudiera reservar un sábado. */
+  assert.ok(/async function comprobarEspejoEnNubePropia/.test(core),
+    'debe existir la comprobación antes de mudar a nadie');
+  const fn = core.slice(core.indexOf('async function comprobarEspejoEnNubePropia'));
+  const cuerpo = fn.slice(0, fn.indexOf('\n}\n')+3);
+  assert.ok(/aforoHold/.test(cuerpo) && /orderStatus/.test(cuerpo),
+    'tiene que probar justo los nodos que las reglas viejas NO tenían');
+  assert.ok(/\.remove\(\)/.test(cuerpo), 'y limpiar lo que escribe para probar');
+  assert.ok(/espejoEnNubePropia = false/.test(cuerpo), 'si falla, se queda donde estaba');
+  assert.ok(/publishPublicLookup/.test(cuerpo), 'y solo si funciona, se publica dónde buscarlo');
+  // La guía NO puede publicarse en ningún otro sitio sin comprobar antes
+  const publicaciones = (core.match(/publishPublicLookup\(/g)||[]).length;
+  assert.equal(publicaciones, 2, 'la guía se define y se publica en un solo sitio: tras la comprobación');
+  return 'se muda solo el que puede, y el resto sigue funcionando';
 });
 
 console.log('\n' + '═'.repeat(64));

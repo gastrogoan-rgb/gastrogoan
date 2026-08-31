@@ -2995,8 +2995,21 @@ function getPlatformFirebaseApp(){
 
    El `else` es la red de seguridad para un negocio que todavía no tenga su
    nube configurada: sigue usando la compartida, como hasta ahora. */
+/* ⚠️ LA MIGRACIÓN TIENE QUE SER SEGURA PARA QUIEN YA ESTÁ DENTRO.
+   Un negocio dado de alta antes de este cambio tiene en su Firebase las
+   reglas VIEJAS, que solo contemplaban `public/info` y `public/requests`.
+   Si le mudáramos el espejo sin más, sus reservas online se romperían a
+   medias —el aforo, los estados de pedido— y no se enteraría hasta que un
+   cliente no pudiera reservar.
+
+   Así que el negocio NO se muda hasta que su nube demuestra que acepta el
+   espejo entero. Mientras tanto sigue en la compartida, exactamente como
+   hasta ahora. Y en cuanto el hostelero pegue las reglas nuevas, se muda
+   solo, sin que nadie tenga que hacer nada. */
+let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprobado
 function getPublicMirrorApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
+  if(espejoEnNubePropia === false) return getPlatformFirebaseApp();
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   if(cfg && cfg.apiKey && cfg.databaseURL){
     try{
@@ -3005,6 +3018,37 @@ function getPublicMirrorApp(){
     }catch(e){ /* todavía no está inicializada: se cae a la compartida */ }
   }
   return getPlatformFirebaseApp();
+}
+
+/* Comprueba de verdad —escribiendo— si la nube del negocio acepta el espejo
+   completo. Solo entonces se publica la guía que manda ahí a la web pública.
+   Es la diferencia entre una migración que se verifica sola y una que se
+   descubre rota cuando un cliente no puede reservar un sábado. */
+async function comprobarEspejoEnNubePropia(){
+  const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
+  const publicId = getPublicId();
+  if(!cfg || !cfg.apiKey || !cfg.databaseURL || !publicId) return false;
+  let app;
+  try{ app = firebase.app(); }catch(e){ return false; }
+  if(!app) return false;
+  try{
+    // Se prueban los nodos que las reglas VIEJAS no contemplaban: si estos
+    // pasan, el resto también.
+    const base = app.database().ref('gastrogoan/public/' + publicId);
+    await base.child('aforoHold/_prueba/_prueba').set(0);
+    await base.child('aforoHold/_prueba').remove();
+    await base.child('orderStatus/_prueba').set({ts: Date.now()});
+    await base.child('orderStatus/_prueba').remove();
+    espejoEnNubePropia = true;
+    publishPublicLookup(publicId, cfg);
+    return true;
+  }catch(e){
+    // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
+    // siguiente arranque, por si el hostelero ya las ha actualizado.
+    console.warn('La nube del negocio todavía no acepta el espejo público completo; se sigue usando la compartida', e && e.message);
+    espejoEnNubePropia = false;
+    return false;
+  }
 }
 
 /* La página pública solo conoce el `publicId` (va en el QR y en el enlace),
@@ -3823,8 +3867,6 @@ function initCloud(){
   const tenantId = getTenantId();
   if(!tenantId){ updateSyncBadge('local'); return; } // aún sin licencia activada
   publishTenantLookup(tenantId, cloudConfig);
-  // Y dónde encontrar su espejo público, para que el QR siga funcionando.
-  try{ const pid = getPublicId(); if(pid) publishPublicLookup(pid, cloudConfig); }catch(e){}
   if(cloudRef) return; // ya conectado
   try{
     // OJO: antes esto comprobaba "firebase.apps.length" (el total global de
@@ -3839,10 +3881,16 @@ function initCloud(){
     // Autenticación anónima: las reglas de la nube exigen auth != null
     // para poder leer/escribir, así evitamos el acceso directo sin pasar
     // por el SDK de Firebase.
-    if(firebase.auth().currentUser){
+    const trasEntrar = () => {
       startCloudSync(tenantId);
+      // Sin bloquear nada: decide dónde vive el espejo público de este
+      // negocio, comprobándolo contra su propia nube.
+      if(espejoEnNubePropia === null) comprobarEspejoEnNubePropia().catch(()=>{});
+    };
+    if(firebase.auth().currentUser){
+      trasEntrar();
     } else {
-      firebase.auth().signInAnonymously().then(() => startCloudSync(tenantId)).catch(err => recordSyncError(err));
+      firebase.auth().signInAnonymously().then(trasEntrar).catch(err => recordSyncError(err));
     }
   }catch(e){
     recordSyncError(e);
