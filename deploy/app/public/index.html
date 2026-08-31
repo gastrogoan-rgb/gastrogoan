@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 16:14';
+const GG_BUILD = '31/08/2026 16:20';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -34535,7 +34535,21 @@ async function idrEnviarInterno(){
   const historial = idrMensajes(c).map(m => ({role: m.r === 'yo' ? 'user' : 'assistant', content: m.t}));
   const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 2500});
   idrPensando = false;
-  if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
+  if(!r || !r.ok){
+    /* El fallo entra EN EL HILO, no solo en un aviso que se va en dos
+       segundos. Un cocinero que pregunta y no ve nada concluye que la
+       herramienta no funciona y no vuelve; y desde el otro lado del
+       teléfono no hay forma de saber qué pasó. Aquí queda escrito, con su
+       motivo técnico, y se puede leer o copiar cuando sea. */
+    const msg = idrMensajeError(r || {});
+    const detalle = (r && r.detalle) ? `\n\n(${String(r.detalle).slice(0, 300)})` : '';
+    idrMensajes(c).push({r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
+    c.updatedAt = new Date().toISOString();
+    saveDB();
+    showToast(msg);
+    renderIdr();
+    return;
+  }
   idrUltimoFallo = null;
 
   const j = idrExtraerJson(r.texto);

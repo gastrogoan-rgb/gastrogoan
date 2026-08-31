@@ -1724,6 +1724,35 @@ await caso('Si el modelo se queda sin espacio para contestar, se reintenta con m
   return 'reintenta una vez y, si no, lo explica';
 });
 
+await caso('Un fallo del asistente queda escrito en la conversación', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => ({ok:false, motivo:'proveedor', detalle:'HTTP 400 API_KEY_INVALID'});
+    idrEmpezar('plato');
+    navIdr('creacion', idrCreacionActiva);
+    idrGuardarLibre('una salsa para un salmón');
+    await idrEnviar();
+    const c = idrCreacion(idrCreacionActiva);
+    const ultimo = (c.mensajes||[])[c.mensajes.length-1];
+    const html = document.getElementById('view-idr').innerHTML;
+    return {
+      esDelAsistente: ultimo.r === 'ia', marcadoComoFallo: !!ultimo.fallo,
+      llevaDetalle: /API_KEY_INVALID/.test(ultimo.t),
+      seVe: /API_KEY_INVALID/.test(html),
+      miPreguntaSigue: (c.mensajes||[]).some(m => m.r === 'yo' && /salm/.test(m.t)),
+      sePuedeSeguir: !idrPensando,
+    };
+  });
+  assert.ok(r.esDelAsistente && r.marcadoComoFallo, 'el fallo entra en el hilo');
+  assert.ok(r.llevaDetalle, 'con el motivo técnico dentro');
+  assert.ok(r.seVe, 'y se ve en pantalla, no solo en un aviso que desaparece');
+  assert.ok(r.miPreguntaSigue, 'sin perder lo que había preguntado');
+  assert.ok(r.sePuedeSeguir, 'y se puede volver a intentar');
+  return 'el fallo se lee en el hilo, con su detalle';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
