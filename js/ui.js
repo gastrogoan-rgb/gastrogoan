@@ -1829,6 +1829,8 @@ function renderHome(){
   document.querySelector('#view-home .hero-badge').innerHTML = `<i class="ti ti-star"></i> ${escapeHtml(t('home.heroBadge'))}`;
   document.querySelector('#view-home .home-hero h1').textContent = t('home.title');
   document.querySelector('#view-home .home-hero p').textContent = t('home.subtitle');
+  const sello = document.getElementById('home-version');
+  if(sello) sello.textContent = t('idr.version').replace('${v}', (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '—'));
   document.getElementById('home-folders').innerHTML = Object.entries(FOLDERS).map(([key, f]) => `
     <div class="folder-card folder-${key}" style="--folder-color:${f.color}" onclick="openFolder('${key}')">
       <span class="folder-icon"><i class="ti ${f.icon}"></i></span>

@@ -132,6 +132,23 @@ await caso('No pregunta en cada apertura: como mucho, cada 6 horas', async ()=>{
   return 'una comprobación cada 6 h';
 });
 
+await caso('El sello de versión se ve en la pantalla de inicio', async ()=>{
+  // Estaba escondido dentro de los ajustes del asistente de I+D, y es el dato
+  // que hay que mirar cada vez que se publica algo. El dueño no lo encontró.
+  const r = await page.evaluate(()=>{
+    window.GG_BUILD = '01/09/2026 01:17';
+    navigate('home');
+    renderHome();
+    const el = document.getElementById('home-version');
+    return {existe: !!el, texto: el ? el.textContent.trim() : '',
+            visible: el ? el.getBoundingClientRect().height > 0 : false};
+  });
+  assert.ok(r.existe, 'debe haber un sitio para el sello en el inicio');
+  assert.ok(/01\/09\/2026 01:17/.test(r.texto), 'con la fecha de la versión: ' + r.texto);
+  assert.ok(r.visible, 'y verse');
+  return `"${r.texto}"`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|sin red/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
