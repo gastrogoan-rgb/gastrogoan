@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 13:37';
+const GG_BUILD = '31/08/2026 15:45';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -33572,15 +33572,36 @@ if(typeof window !== 'undefined'){
   });
 }
 
+/* Leer un campo de la ventana de ajustes sin dar por hecho que sigue ahí.
+   Probar los modelos tarda (una llamada por modelo), y en ese rato el
+   hostelero puede cerrar la ventana o cambiar de proveedor: al volver, los
+   campos ya no existen y la app reventaba con "no puedo leer 'value' de
+   null". Con esto, si la ventana ya no está, se sale sin ruido. */
+function idrValorCampo(id){
+  const el = document.getElementById(id);
+  return el ? (el.value || '') : null;
+}
+
 /* Le pregunta al proveedor qué modelos admite ESTA clave y los ofrece en una
    lista. Es la respuesta al problema de fondo: los modelos se retiran cada
    pocos meses, y sin esto un cliente se queda con el asistente muerto y un
    error que no sabe interpretar. Con esto lo arregla él en dos toques. */
 async function idrCargarModelos(){
+  try{ await idrCargarModelosInterno(); }
+  catch(e){
+    idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
+    const b = document.getElementById('idr-modelos');
+    if(b){ b.disabled = false; b.innerHTML = `<i class="ti ti-list"></i> ${t('idr.listModels')}`; }
+    if(typeof showToast === 'function') showToast(t('idr.err.render'));
+  }
+}
+async function idrCargarModelosInterno(){
   const btn = document.getElementById('idr-modelos');
   const res = document.getElementById('idr-test-res');
-  const p = document.getElementById('idr-prov').value;
-  const k = (document.getElementById('idr-clave').value||'').trim();
+  const p = idrValorCampo('idr-prov');
+  const kRaw = idrValorCampo('idr-clave');
+  if(p === null || kRaw === null) return;   // la ventana ya no está abierta
+  const k = kRaw.trim();
   const def = IDR_PROVEEDORES[p];
   if(!k){ showToast(t('idr.keyRequired')); return; }
   if(!def || !def.listaModelos){ showToast(t('idr.err.provider')); return; }
@@ -33606,13 +33627,23 @@ async function idrCargarModelos(){
      posible, y solo se ofrecen los que contestan. */
   const candidatos = modelos.slice(0, IDR_MAX_MODELOS_A_PROBAR);
   const buenos = [];
-  for(let i = 0; i < candidatos.length; i++){
-    if(res) res.innerHTML = `<span style="color:var(--muted)"><i class="ti ti-loader"></i> ${escapeHtml(t('idr.testingModels').replace('${i}', i+1).replace('${n}', candidatos.length))}</span>`;
-    const antes = idrConfig();
-    idrGuardarConfig(p, k, candidatos[i]);
-    const prueba = await llmChat('Responde solo OK.', [{role:'user', content:'Di OK'}], {maxTokens: 12});
-    if(prueba.ok) buenos.push(candidatos[i]);
-    if(antes) idrGuardarConfig(antes.proveedor, antes.clave, antes.modelo);
+  /* Para probar un modelo hay que guardarlo antes, así que durante este rato
+     la configuración del asistente está prestada. Si algo revienta a mitad
+     (o el hostelero cierra la ventana), ANTES se quedaba apuntando a un
+     modelo cualquiera de la lista, elegido por nadie: el asistente dejaba de
+     funcionar y no había forma de saber por qué. El `finally` garantiza que
+     se devuelve siempre lo que había. */
+  const configPrevia = idrConfig();
+  try{
+    for(let i = 0; i < candidatos.length; i++){
+      if(res) res.innerHTML = `<span style="color:var(--muted)"><i class="ti ti-loader"></i> ${escapeHtml(t('idr.testingModels').replace('${i}', i+1).replace('${n}', candidatos.length))}</span>`;
+      idrGuardarConfig(p, k, candidatos[i]);
+      const prueba = await llmChat('Responde solo OK.', [{role:'user', content:'Di OK'}], {maxTokens: 12});
+      if(prueba.ok) buenos.push(candidatos[i]);
+    }
+  } finally {
+    if(configPrevia) idrGuardarConfig(configPrevia.proveedor, configPrevia.clave, configPrevia.modelo);
+    else idrBorrarConfig();
   }
   modelos = buenos;
   if(!modelos.length){
@@ -33620,7 +33651,7 @@ async function idrCargarModelos(){
     return;
   }
   // Se sustituye el campo de texto por una lista con lo que de verdad hay.
-  const actual = (document.getElementById('idr-modelo').value||'').trim();
+  const actual = (idrValorCampo('idr-modelo') || '').trim();
   const campo = document.getElementById('idr-modelo-campo');
   if(campo){
     campo.innerHTML = `<select id="idr-modelo">${modelos.map(m =>
@@ -33634,9 +33665,10 @@ async function idrCargarModelos(){
 async function idrProbarConexion(){
   const btn = document.getElementById('idr-probar');
   if(btn){ btn.disabled = true; btn.innerHTML = `<i class="ti ti-loader"></i> ${t('idr.testing')}`; }
-  const p = document.getElementById('idr-prov').value;
-  const k = document.getElementById('idr-clave').value;
-  const m = document.getElementById('idr-modelo').value;
+  const p = idrValorCampo('idr-prov');
+  const k = idrValorCampo('idr-clave');
+  const m = idrValorCampo('idr-modelo');
+  if(p === null || k === null){ if(btn){ btn.disabled = false; } return; }
   if(!(k||'').trim()){ showToast(t('idr.keyRequired')); idrConfigModal(); return; }
   // Se guarda antes de probar: si funciona, ya queda puesta.
   idrGuardarConfig(p, k, m);
@@ -34981,7 +35013,8 @@ function idrConfigModal(){
   `);
 }
 function idrConfigModalRefrescar(){
-  const p = document.getElementById('idr-prov').value;
+  const p = idrValorCampo('idr-prov');
+  if(p === null) return;
   const def = IDR_PROVEEDORES[p];
   if(!def) return;
   // Al cambiar de proveedor hay que soltar el modelo Y la clave: son de
@@ -34998,9 +35031,10 @@ function idrConfigModalRefrescar(){
   if(a) a.innerHTML = `${t('idr.keyWhere')} <strong>${escapeHtml(def.ayuda)}</strong>`;
 }
 function idrGuardarDesdeModal(){
-  const p = document.getElementById('idr-prov').value;
-  const k = document.getElementById('idr-clave').value;
-  const m = document.getElementById('idr-modelo').value;
+  const p = idrValorCampo('idr-prov');
+  const k = idrValorCampo('idr-clave');
+  const m = idrValorCampo('idr-modelo');
+  if(p === null || k === null) return;
   if(!(k||'').trim()){ showToast(t('idr.keyRequired')); return; }
   idrGuardarConfig(p, k, m);
   closeModal();

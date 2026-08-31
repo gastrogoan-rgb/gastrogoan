@@ -1616,6 +1616,70 @@ await caso('Una variante nace del plato entero y no pisa el original', async ()=
   return 'plato entero en el hilo, prueba aparte y original intacto';
 });
 
+await caso('Cerrar los ajustes a mitad de probar modelos no rompe nada', async ()=>{
+  // Probar los modelos tarda una llamada por modelo. Si en ese rato se cierra
+  // la ventana, los campos desaparecen: antes reventaba con "no puedo leer
+  // 'value' de null" y, peor, dejaba la configuración apuntando a un modelo
+  // cualquiera de la lista.
+  const r = await page.evaluate(async ()=>{
+    const errores = [];
+    const antesOnError = window.onerror;
+    window.onerror = (m) => { errores.push(String(m)); return true; };
+    idrGuardarConfig('google', 'clave-buena', 'modelo-bueno');
+    const configAntes = JSON.stringify(idrConfig());
+    idrConfigModal();
+    document.getElementById('idr-clave').value = 'clave-buena';
+    const originalFetch = window.fetch;
+    window.fetch = async () => ({ok:true, status:200, json: async () => ({models:[
+      {name:'models/uno', supportedGenerationMethods:['generateContent']},
+      {name:'models/dos', supportedGenerationMethods:['generateContent']},
+    ]})});
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    let probados = 0;
+    window.llmChat = async () => {
+      probados++;
+      // A mitad de la prueba, la ventana se cierra
+      if(probados === 1) closeModal();
+      return {ok:false, motivo:'modelo'};
+    };
+    let roto = null;
+    try{ await idrCargarModelos(); }catch(e){ roto = String(e.message); }
+    window.fetch = originalFetch;
+    window.onerror = antesOnError;
+    return {roto, errores, probados, configDespues: JSON.stringify(idrConfig()), configAntes};
+  });
+  assert.equal(r.roto, null, 'no debe reventar: ' + r.roto);
+  assert.deepEqual(r.errores, [], 'ni dejar un error suelto: ' + r.errores.join(' | '));
+  assert.equal(r.configDespues, r.configAntes, 'la configuración del asistente debe quedar como estaba');
+  return 'ni revienta ni se queda con un modelo que no eligió nadie';
+});
+
+await caso('Si la prueba de modelos falla a mitad, se devuelve la configuración', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    idrGuardarConfig('google', 'la-buena', 'el-que-funciona');
+    const antes = JSON.stringify(idrConfig());
+    idrConfigModal();
+    document.getElementById('idr-clave').value = 'la-buena';
+    const originalFetch = window.fetch;
+    window.fetch = async () => ({ok:true, status:200, json: async () => ({models:[
+      {name:'models/uno', supportedGenerationMethods:['generateContent']},
+      {name:'models/dos', supportedGenerationMethods:['generateContent']},
+    ]})});
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => { throw new Error('se cayó la red a mitad'); };
+    let aviso = null; const o = window.showToast; window.showToast = m => { aviso = m; };
+    await idrCargarModelos();
+    window.showToast = o;
+    window.fetch = originalFetch;
+    closeModal();
+    return {antes, despues: JSON.stringify(idrConfig()), aviso, fallo: idrUltimoFallo && idrUltimoFallo.motivo};
+  });
+  assert.equal(r.despues, r.antes, 'la clave y el modelo que funcionaban deben seguir puestos');
+  assert.ok(r.aviso, 'y el hostelero debe enterarse de que ha fallado');
+  assert.equal(r.fallo, 'excepcion', 'con su detalle técnico guardado');
+  return 'la configuración que funcionaba no se pierde';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
