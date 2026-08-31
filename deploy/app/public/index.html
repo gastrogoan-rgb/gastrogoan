@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 15:56';
+const GG_BUILD = '31/08/2026 16:06';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -2838,13 +2838,36 @@ function currentOwnerId(){
 // ese momento solo había una cuenta en el aparato —canjear exige estar
 // dentro— así que son de quien tiene la sesión guardada: se le adjudican al
 // arrancar, y así ningún cliente ve desaparecer sus negocios al actualizar.
+/* Esta adjudicación es para UN caso y solo uno: un cliente que ya tenía sus
+   negocios aquí antes de que existiera el `ownerId`, y que al actualizar se
+   los encontraría sin dueño y, por tanto, invisibles.
+
+   Pero es peligrosa, porque adjudica al que esté delante. Si el primero en
+   entrar tras la actualización es una cuenta RECIÉN CREADA (justo lo que
+   pasa cuando se da de alta a un cliente en un aparato que ya se usó), esa
+   cuenta se quedaba con el negocio del anterior: sus ventas, sus
+   proveedores y sus nóminas, a la vista de otra persona.
+
+   Por eso ocurre UNA sola vez por dispositivo, y solo desde el arranque —
+   es decir, para la cuenta que YA estaba usando este aparato. En cuanto
+   alguien se identifica, la puerta se cierra para siempre. Un dueño que
+   quede fuera por este cierre recupera lo suyo en cuanto entre con
+   internet: syncOwnerBusinessList reclama sus negocios por el código. */
+const SLOTS_MIGRATED_LS = 'gastrogoan_slots_owner_migrated';
 function migrateSlotOwners(){
+  if(localStorage.getItem(SLOTS_MIGRATED_LS)) return;
   const me = currentOwnerId();
   if(!me) return;
   const slots = getBusinessSlots();
   let changed = false;
   slots.forEach(s => { if(s.code && !s.ownerId){ s.ownerId = me; changed = true; } });
   if(changed) saveBusinessSlots(slots);
+  localStorage.setItem(SLOTS_MIGRATED_LS, me);
+}
+// Cierra la puerta de la adjudicación: a partir de que alguien se
+// identifica en este aparato, ninguna cuenta puede heredar ya nada.
+function cerrarAdjudicacionDeNegocios(){
+  if(!localStorage.getItem(SLOTS_MIGRATED_LS)) localStorage.setItem(SLOTS_MIGRATED_LS, 'cerrado');
 }
 function slotsOfCurrentOwner(){
   const me = currentOwnerId();
@@ -2903,6 +2926,7 @@ function setOwnerLogin(user, authKey, pinPlain){
   // regalaba a la cuenta nueva los negocios de la anterior — que es
   // exactamente lo que se quería evitar.
   migrateSlotOwners();
+  cerrarAdjudicacionDeNegocios();
   localStorage.setItem(OWNER_LOGIN_LS, JSON.stringify({user: u, authKey, pinHash: hashPin(pinPlain, u)}));
 }
 // Comprobación puramente local: una vez la cuenta se validó online al
@@ -3998,7 +4022,17 @@ function renderBusinessSelectScreenHtml(){
     </div>` : '';
   return `
     <div class="bs-box">
-      <button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>
+      ${(() => {
+        /* El aspa cierra el selector y te deja DENTRO del negocio que
+           estuviera abierto. Si ese negocio es de otra cuenta (dos socios,
+           un aparato prestado, un comercial dando de alta a un cliente
+           detrás de otro), cerrar era colarse en él. Solo hay aspa si el
+           negocio abierto detrás es tuyo. */
+        const activoEsMio = slotsOfCurrentOwner().some(x => x.id === ACTIVE_SLOT && x.code);
+        return activoEsMio
+          ? `<button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>`
+          : `<button class="btn" style="position:absolute;top:10px;left:10px;background:none;border:none;color:var(--muted);min-height:44px;padding:10px;flex:0 0 auto" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>`;
+      })()}
       <div class="bs-title">
         <div class="splash-icon" style="position:static"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain;border-radius:14px"></div>
         ${t('bs.title')}

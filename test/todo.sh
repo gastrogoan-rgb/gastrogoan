@@ -48,8 +48,9 @@ node test/estatico.mjs            > "$SALIDA/estatico.txt"    2>&1 & P23=$!
 node test/modales-todas.mjs        > "$SALIDA/modtodas.txt"    2>&1 & P24=$!
 node test/dinero.mjs               > "$SALIDA/dinero.txt"      2>&1 & P25=$!
 node test/sin-salida.mjs           > "$SALIDA/sinsalida.txt"   2>&1 & P26=$!
+node test/cuentas.mjs              > "$SALIDA/cuentas.txt"     2>&1 & P27=$!
 
-echo "→ 26 pruebas corriendo a la vez…"
+echo "→ 27 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -82,5 +83,6 @@ espera $P23 "auditoría en frío del código"              "$SALIDA/estatico.txt
 espera $P24 "las 73 ventanas emergentes, una a una"     "$SALIDA/modtodas.txt"    "se comportan bien"
 espera $P25 "el dinero, función por función"           "$SALIDA/dinero.txt"      "casos pasaron"
 espera $P26 "callejones sin salida del alta"          "$SALIDA/sinsalida.txt"   "casos pasaron"
+espera $P27 "aislamiento entre cuentas"                "$SALIDA/cuentas.txt"     "casos pasaron"
 
 exit $FALLOS
