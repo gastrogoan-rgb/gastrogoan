@@ -1753,6 +1753,39 @@ await caso('Un fallo del asistente queda escrito en la conversación', async ()=
   return 'el fallo se lee en el hilo, con su detalle';
 });
 
+await caso('Un turno NUNCA puede terminar sin respuesta en el hilo', async ()=>{
+  // La garantía de último recurso: da igual por dónde se escape el fallo,
+  // el cocinero no puede quedarse mirando su pregunta y nada debajo.
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    const casos = [];
+    // 1) Devuelve algo que no es ni ok ni un error bien formado
+    window.llmChat = async () => undefined;
+    idrEmpezar('plato'); navIdr('creacion', idrCreacionActiva);
+    idrGuardarLibre('una salsa para una ostra frita');
+    await idrEnviar();
+    let c = idrCreacion(idrCreacionActiva);
+    casos.push({ultimo: c.mensajes[c.mensajes.length-1].r, texto: c.mensajes[c.mensajes.length-1].t});
+    // 2) Revienta de una forma inesperada
+    window.llmChat = async () => { throw new Error('algo muy raro'); };
+    idrEmpezar('plato'); navIdr('creacion', idrCreacionActiva);
+    idrGuardarLibre('otra cosa');
+    await idrEnviar();
+    c = idrCreacion(idrCreacionActiva);
+    casos.push({ultimo: c.mensajes[c.mensajes.length-1].r, texto: c.mensajes[c.mensajes.length-1].t});
+    // 3) Se cuelga y nunca resuelve: el botón no puede quedarse pensando
+    return {casos, pensando: idrPensando};
+  });
+  r.casos.forEach((c, i) => {
+    assert.equal(c.ultimo, 'ia', `caso ${i+1}: debe haber respuesta del asistente`);
+    assert.ok(/⚠/.test(c.texto), `caso ${i+1}: y debe decir que ha fallado`);
+  });
+  assert.ok(!r.pensando, 'y no puede quedarse pensando');
+  return 'ni con una respuesta rara ni con una excepción se queda mudo';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

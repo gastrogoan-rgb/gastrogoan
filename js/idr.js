@@ -1087,13 +1087,34 @@ let idrPensando = false;
    asistente revienta, se avisa y se puede reintentar — el fallo que dejaba el
    botón muerto costó una noche entera de diagnóstico. */
 async function idrEnviar(){
+  const cAntes = idrCreacion(idrCreacionActiva);
+  const antes = cAntes ? idrMensajes(cAntes).length : 0;
   try{ await idrEnviarInterno(); }
   catch(e){
-    idrPensando = false;
     idrUltimoFallo = {motivo:'excepcion', detalle: String(e && (e.stack || e.message) || e), cuando: new Date().toISOString()};
     if(typeof showToast === 'function') showToast(t('idr.err.render'));
-    renderIdr();
   }
+  /* GARANTÍA: un turno no puede terminar sin respuesta. Da igual por dónde se
+     haya escapado —una rama que no contemplamos, un error dentro de un error,
+     un proveedor que devuelve algo raro—: si el hilo se queda con la pregunta
+     del cocinero y nada debajo, se escribe aquí qué ha pasado. Mirar una
+     pantalla muda y no saber si el botón funciona o el asistente te ignora es
+     lo peor que puede hacer esta herramienta, y ya ha pasado dos veces. */
+  idrPensando = false;
+  const c = idrCreacion(idrCreacionActiva);
+  if(c){
+    const hilo = idrMensajes(c);
+    const ultimo = hilo[hilo.length - 1];
+    if(hilo.length > antes && ultimo && ultimo.r === 'yo'){
+      const f = idrUltimoFallo;
+      const msg = f ? t(IDR_MOTIVO_KEYS[f.motivo] || 'idr.err.provider') : t('idr.err.provider');
+      const detalle = f && f.detalle ? `\n\n(${f.motivo}: ${String(f.detalle).slice(0, 300)})` : '\n\n(sin detalle: el asistente no devolvió nada)';
+      hilo.push({r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
+      c.updatedAt = new Date().toISOString();
+      saveDB();
+    }
+  }
+  renderIdr();
 }
 async function idrEnviarInterno(){
   const c = idrCreacion(idrCreacionActiva);
