@@ -1250,12 +1250,15 @@ function renderBusinessSelectScreenHtml(){
         /* El aspa cierra el selector y te deja DENTRO del negocio que
            estuviera abierto. Si ese negocio es de otra cuenta (dos socios,
            un aparato prestado, un comercial dando de alta a un cliente
-           detrás de otro), cerrar era colarse en él. Solo hay aspa si el
-           negocio abierto detrás es tuyo. */
+           detrás de otro), cerrar era colarse en él. Así que solo hay aspa
+           si el negocio abierto detrás es tuyo.
+           Y cuando no la hay, NO se pone nada en su lugar: la salida ya está
+           abajo, junto a "Cambiar mi contraseña". Ponerla también aquí
+           arriba la duplicaba y, encima, se montaba sobre el logo. */
         const activoEsMio = slotsOfCurrentOwner().some(x => x.id === ACTIVE_SLOT && x.code);
         return activoEsMio
           ? `<button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>`
-          : `<button class="btn" style="position:absolute;top:10px;left:10px;background:none;border:none;color:var(--muted);min-height:44px;padding:10px;flex:0 0 auto" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>`;
+          : '';
       })()}
       <div class="bs-title">
         <div class="splash-icon" style="position:static"><img src="${GASTROGOAN_LOGO_URI}" alt="GastroGoan" style="width:100%;height:100%;object-fit:contain;border-radius:14px"></div>
@@ -1352,19 +1355,19 @@ function renderBsGroups(allSlots){
       // Negocio independiente — muestra "(independiente)" como badge
       // Mientras el negocio siga con el nombre de relleno (aún no se ha
       // guardado nada en Mi Negocio), se muestra su código debajo para
-      // poder distinguirlo de otro negocio recién dado de alta igual de
-      // "sin nombre" — si no, dos altas seguidas serían indistinguibles
-      // en el selector hasta entrar a configurar cada una.
-      const showCode = !root.name || root.name === t('gate.newBusinessDefaultName') || root.name === t('bs.defaultBusinessName');
+      // El código de licencia YA NO se enseña aquí. Se puso para distinguir
+      // dos altas seguidas todavía sin nombre, pero en la práctica salía en
+      // unos negocios sí y en otros no —según cómo se hubieran llamado— y
+      // eso confunde más de lo que aclara. Lo que identifica un negocio para
+      // su dueño es el nombre que él le puso en "Mi Negocio".
       return `
         <div class="bs-item ${isRootActive?'active':''}" onclick="enterBusiness('${escapeHtml(root.id)}')">
           <div style="display:flex;align-items:center;gap:8px;overflow:hidden">
             <i class="ti ti-building-store" style="flex-shrink:0"></i>
-            <div style="overflow:hidden">
+            <div class="bs-item-name-wrap">
               <span class="bs-item-name">${escapeHtml(root.name||t('bs.defaultBusinessName'))}</span>
-              ${showCode && root.code ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${escapeHtml(root.code)}</div>` : ''}
             </div>
-            <span style="font-size:11px;color:var(--muted);font-weight:400;flex-shrink:0">(${t('bs.independentTag')})</span>
+            <span class="bs-item-tag" style="font-size:11px;color:var(--muted);font-weight:400">(${t('bs.independentTag')})</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             ${isRootActive ? `<span class="badge badge-amber">${t('bs.current')}</span>` : '<i class="ti ti-chevron-right" style="color:var(--muted)"></i>'}

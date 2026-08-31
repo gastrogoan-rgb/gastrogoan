@@ -267,6 +267,41 @@ await caso('Desde el selector, con negocios, también se puede cerrar sesión', 
   return `"${r.texto[0]}"`;
 });
 
+await caso('El selector: un solo botón de salir, el nombre entero y sin códigos', async ()=>{
+  const r = await page.evaluate((eA)=>{
+    eval(eA);
+    const idA = ggOwnerId('casapaco');
+    saveBusinessSlots([
+      {id:'bA', name:'Restaurante de Prueba de Nombre Muy Largo', code:'AAAAAAAA', ownerId: idA},
+      {id:'bA2', name:'Casa Paco Playa', code:'DDDDDDDD', ownerId: idA},
+    ]);
+    localStorage.setItem('gastrogoan_active_slot', 'otro-que-no-es-mio');
+    showBusinessSelectScreen();
+    const sel = document.getElementById('business-select-screen');
+    const html = sel.innerHTML;
+    const salidas = [...sel.querySelectorAll('button')].filter(b => /exitToAccessScreen/.test(b.getAttribute('onclick')||''));
+    const nombre = sel.querySelector('.bs-item-name');
+    const caja = nombre ? nombre.getBoundingClientRect() : null;
+    return {
+      cuantasSalidas: salidas.length,
+      // El botón de arriba se montaba encima del logo
+      arriba: salidas.some(b => /position:absolute/.test(b.getAttribute('style')||'')),
+      // El código de licencia ya no pinta nada aquí
+      llevaCodigo: /AAAAAAAA|DDDDDDDD/.test(html),
+      nombreEntero: nombre ? nombre.textContent.trim() : '',
+      // El nombre no puede quedarse en una franja de nada
+      anchoNombre: caja ? Math.round(caja.width) : 0,
+      anchoCaja: sel.querySelector('.bs-item') ? Math.round(sel.querySelector('.bs-item').getBoundingClientRect().width) : 0,
+    };
+  }, entrar('casapaco'));
+  assert.equal(r.cuantasSalidas, 1, 'el botón de salir no puede salir dos veces');
+  assert.ok(!r.arriba, 'y no puede ir flotando encima del logo');
+  assert.ok(!r.llevaCodigo, 'el código de licencia no se enseña en el selector');
+  assert.equal(r.nombreEntero, 'Restaurante de Prueba de Nombre Muy Largo', 'el nombre, entero');
+  assert.ok(r.anchoNombre > r.anchoCaja * 0.4, `el nombre debe llevarse el ancho: ${r.anchoNombre} de ${r.anchoCaja}`);
+  return `una salida, nombre de ${r.anchoNombre}px y sin códigos`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
