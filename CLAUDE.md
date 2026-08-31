@@ -19,7 +19,7 @@ Se entrega como **dos archivos HTML sueltos** que el cliente abre desde `gastrog
 
 ```
 js/core.js  i18n.js  ui.js  finance.js  recipes.js  menu.js
-   tpv.js  operations.js  hr.js  polish.js  app.js      ← en este orden
+   tpv.js  operations.js  hr.js  idr.js  polish.js  app.js   ← en este orden
 ```
 
 **Nunca editar `dist/` a mano** — se regenera. Editar `js/*.js` y `css/styles.css`, luego `bash build.sh`.
@@ -120,20 +120,82 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
   toca, comprobar contra los cuatro fondos de la app (blanco, `#FAF8F4`,
   `#F1EFE9`, `#F4F4F4`). Lo verifica `test/contraste.mjs`.
 
+---
+
+## El módulo de I+D (`js/idr.js`)
+
+Un asistente de cocina que crea **elaboraciones base, platos, menús y cartas**
+con los ingredientes, los precios y el criterio de ESE negocio. Es la última
+capa de la app y se trata igual de bien que el resto.
+
+### Cómo funciona por dentro
+
+- **La clave del proveedor de IA la pone cada negocio** y vive en
+  `localStorage` (`gastrogoan_idr_key`), **nunca en `DB.business`**: ese bloque
+  se sincroniza con la nube del negocio y cualquier empleado podría leerla.
+  Google (Gemini) y Anthropic (Claude), llamados directamente desde el
+  navegador. A GastroGoan no le cuesta nada.
+- **Tope de 500 consultas al día por dispositivo**, para que nada se desboque.
+- **El ADN gastronómico es REQUISITO**: sin cocina, nivel y público no se
+  empieza nada. Sin eso el asistente propone cocina de folleto, y una
+  propuesta genérica no solo no sirve: quema la confianza en la herramienta.
+- **El encargo va antes que la conversación**: precio sin IVA, food cost
+  objetivo y —en menú y carta— la estructura (cuántos bloques, cómo se llaman
+  y cuántos platos lleva cada uno). Nada viene por defecto: la estructura de
+  su carta la decide el hostelero, no nosotros. Ese encargo viaja en TODAS las
+  consultas marcado como intocable.
+- **No hay guion de pasos.** Lo hubo, y se cayó en cuanto el dueño probó a
+  hacer una ensalada (no lleva salsa) y un helado (no lleva guarnición). Ahora
+  lleva la conversación el asistente, con el marco de oficio de `IDR_REGLAS`.
+- **Las recetas se escriben para UNA ración**, que es como se escandalla un
+  plato de carta.
+- **Los números los pone la app, no el modelo**: casa los ingredientes con los
+  suyos, convierte las unidades y calcula el coste con sus precios. Un plato
+  puede engancharse a una elaboración base suya (`{type:'base'}`) y el coste
+  se encadena solo.
+- **La app juzga lo que propone** (`idrValidarPlato` / `idrRevisarConjunto`) y
+  lo que falla vuelve al modelo para que lo corrija antes de que el cocinero
+  lo vea.
+
+### Trampas ya pisadas aquí (no repetirlas)
+
+| Síntoma | Causa real |
+|---|---|
+| "Pregunto y no contesta nunca", sin ningún error | La nube devolvía el bloque `idr` mientras el asistente pensaba y **sustituía la creación entera**, conversación incluida. La respuesta llegaba a un objeto que ya no estaba en `DB`. Solo pasa con la nube conectada: ninguna prueba local lo veía. Ver `fusionarCreacionIdr` y el `cVivo` de `idrEnviarInterno`. |
+| El botón se queda en "Pensando…" para siempre | Un fallo al repintar dejaba la pantalla igual, sin aviso. Todo lo que espera está envuelto, y **un turno no puede terminar sin respuesta en el hilo**. |
+| Respuesta vacía del modelo | Los modelos que razonan (gemini-3.6-flash) gastan el presupuesto de tokens pensando y devuelven un candidato SIN TEXTO. Se reintenta una vez con el triple de margen. |
+| 120 kg de queso en una ficha | El modelo contesta en gramos y el negocio compra en kg. `idrConvertirCantidad`. |
+| Avisos de equipamiento falsos | El campo del ADN es una descripción, no un inventario: **solo se puede afirmar lo que NIEGA** ("sin Roner"). Avisar de que no tiene plancha porque no la escribió enseña a ignorar todos los avisos. |
+| El food cost solo se miraba por exceso | Un plato al 5% con objetivo del 30% es dinero sobre la mesa o media receta que falta. Y **un menú se cuesta ENTERO por comensal**, no pase a pase. |
+
+### La simulación
+
+`test/simulacion/` corre los cuatro flujos con un bistró catalán completo (28
+ingredientes con precios, ADN entero) **sin necesitar ninguna clave**: las
+respuestas del asistente están escritas a mano en `respuestas.json`. De ahí
+salieron tres fallos que ninguna prueba unitaria veía. Al tocar el módulo,
+correrla y comparar `salida/estado.json`.
+
+---
+
 ### Antes de dar algo por terminado
 
 ```bash
 node -c js/<fichero>.js       # sintaxis
 node test/smoke.test.mjs      # cálculos de dinero/IVA, stock, recetas
 node test/audit-active.mjs    # regresiones de sincronización
-python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 24 vistas
-python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 248 botones visibles de las 30 pantallas
+node test/cuentas.mjs         # aislamiento entre cuentas — lo que NO puede fallar nunca
+node test/sin-salida.mjs      # que ninguna pantalla del alta sea un callejón sin salida
+node test/idr.mjs             # el módulo de I+D, 81 casos
+python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 25 vistas
+python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 274 botones visibles de las 31 pantallas
+node test/simulacion/correr.mjs  # el I+D entero con un negocio real (ver su README)
 bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (emulador oficial)
 bash build.sh                 # regenerar dist/
 ```
 
-O de una vez, con las cuatro grandes en paralelo (son independientes;
-encadenarlas solo servía para esperar):
+O las 27 de una vez, en paralelo (son independientes; encadenarlas solo
+servía para esperar):
 
 ```bash
 bash test/todo.sh
@@ -222,7 +284,7 @@ la raíz del bug de Distribución del Trabajo. Ver `test/emulador/README.md`.
 
 ---
 
-## Estado actual (24 ago 2026)
+## Estado actual (31 ago 2026)
 
 **Veredicto: PUBLICADO Y VENDIBLE.** Circuito completo verificado en producción (ver más abajo). Análisis completo en `ANALISIS_GENERAL.md` (8 bloques).
 
@@ -272,15 +334,48 @@ Verificado de punta a punta el 24 de agosto, por el dueño, sobre el dominio rea
 Con esto, todo el circuito de venta está probado: cuenta → código →
 alta → nube → panel → web pública → reserva → cobro.
 
+### Hecho el 31 de agosto de 2026
+
+Un día entero de fallos encontrados **por el dueño usando la app**, no por las
+pruebas. Merece la pena leerlo antes de tocar nada de esto:
+
+- **Una cuenta nueva podía heredar el negocio del cliente anterior.** Los
+  negocios dados de alta antes de que existiera el `ownerId` se adjudicaban
+  *a quien estuviera delante* al arrancar. Si el primero en entrar tras
+  actualizar era una cuenta recién creada — justo lo que pasa dando de alta a
+  un cliente en un aparato que ya se usó — esa cuenta se quedaba con sus
+  ventas, sus proveedores y sus nóminas. Ahora la adjudicación ocurre **una
+  sola vez por dispositivo** y solo desde el arranque (`SLOTS_MIGRATED_LS`).
+- **El aspa del selector de negocios metía dentro del negocio ajeno.** Solo
+  hay aspa si el negocio abierto detrás es tuyo.
+- **El selector vacío no tenía ninguna salida**: una cuenta nueva se quedaba
+  atrapada y solo salía recargando la página. Ahora hay "Salir y entrar con
+  otra cuenta", también junto a "Cambiar mi contraseña".
+- **El indicador de nube se quedaba clavado en "Guardando…"** — y lo hacía
+  precisamente cuando ya estaba todo guardado: si al ir a subir no había
+  ningún bloque distinto, la app se iba sin devolverlo a "conectada".
+- Todo el módulo de I+D, reescrito (ver su sección).
+
+Pruebas nuevas permanentes: `test/cuentas.mjs` (13 casos de aislamiento entre
+cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
+`test/simulacion/` y `test/idr.mjs` (81 casos). La batería pasa de 25 a 27.
+
 ### Pendiente
 
+0. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
+   circuitos: en la simulación el asistente lo escribía una IA haciendo de
+   modelo, no el proveedor del cliente. Que Gemini conteste con ese criterio
+   está sin comprobar, y es lo que decide si el módulo vale.
+0bis. **El aislamiento entre cuentas EN LA NUBE.** Lo del dispositivo está
+   verificado (13 casos). Que la lista que devuelve la plataforma sea la de
+   cada cuenta necesita dos cuentas reales y dos dispositivos.
 1. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
    antes de manejar pagos de forma continuada.
 2. iPhone/iPad: todo se ha probado en Chromium y Android.
 3. La impresora térmica y el cajón con el hardware delante.
 4. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
    verdad encuentra fallos: de los cinco del 24 de agosto, cuatro los encontró
-   el dueño usando la app, no las pruebas.
+   el dueño usando la app; y los cuatro del 31 de agosto, todos.
 
 > La cuenta de prueba `pruebamia` **se deja a propósito**: sirve para verificar el alta completa tras cualquier cambio en el acceso, sin gastar un código real ni tocar datos de un cliente. Conviene marcarla como prueba en el registro de ventas del generador para no contarla como venta al revisar el CSV.
 
