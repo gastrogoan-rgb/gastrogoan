@@ -955,6 +955,14 @@ function idrEmpezar(tipo){
    que la app sepa si ya se puede escribir la receta. Si contesta en prosa
    suelta, se enseña igual: es información útil aunque no se pueda medir. */
 
+// Identidad de cada mensaje del hilo. Sin ella, fusionar la conversación con
+// la de la nube obligaría a comparar textos, y dos "vale" seguidos se
+// confundirían entre sí.
+let idrMidSeguido = 0;
+function idrNuevoMid(){
+  idrMidSeguido += 1;
+  return Date.now().toString(36) + '-' + idrMidSeguido.toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+}
 function idrMensajes(c){
   // Firebase no guarda arrays vacíos: puede volver sin el hilo.
   if(!Array.isArray(c.mensajes)) c.mensajes = [];
@@ -1109,7 +1117,7 @@ async function idrEnviar(){
       const f = idrUltimoFallo;
       const msg = f ? t(IDR_MOTIVO_KEYS[f.motivo] || 'idr.err.provider') : t('idr.err.provider');
       const detalle = f && f.detalle ? `\n\n(${f.motivo}: ${String(f.detalle).slice(0, 300)})` : '\n\n(sin detalle: el asistente no devolvió nada)';
-      hilo.push({r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
+      hilo.push({mid: idrNuevoMid(), r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
       c.updatedAt = new Date().toISOString();
       saveDB();
     }
@@ -1123,7 +1131,9 @@ async function idrEnviarInterno(){
   const texto = ((el ? el.value : '') || c.borrador || '').trim();
   if(!texto){ showToast(t('idr.writeSomething')); return; }
 
-  idrMensajes(c).push({r:'yo', t: texto.slice(0, 2000)});
+  // Con `mid` propio: es lo que permite fusionar el hilo con el de la nube sin
+  // duplicar mensajes ni perder ninguno (ver fusionarCreacionIdr).
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'yo', t: texto.slice(0, 2000)});
   c.borrador = '';
   // El primer mensaje bautiza la prueba mientras no haya un nombre mejor.
   if(!c.titulo) c.titulo = texto.slice(0, 60);
@@ -1135,6 +1145,12 @@ async function idrEnviarInterno(){
   const historial = idrMensajes(c).map(m => ({role: m.r === 'yo' ? 'user' : 'assistant', content: m.t}));
   const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 2500});
   idrPensando = false;
+  /* Mientras el asistente pensaba, la nube ha podido devolver este bloque y
+     SUSTITUIR el objeto de la creación dentro de DB. Escribir la respuesta en
+     la referencia vieja es escribirla en un objeto que ya no está en ninguna
+     parte: se guarda, se pinta... y no aparece nada. Hay que volver a
+     buscarla siempre después de esperar. */
+  const cVivo = idrCreacion(c.id) || c;
   if(!r || !r.ok){
     /* El fallo entra EN EL HILO, no solo en un aviso que se va en dos
        segundos. Un cocinero que pregunta y no ve nada concluye que la
@@ -1143,8 +1159,8 @@ async function idrEnviarInterno(){
        motivo técnico, y se puede leer o copiar cuando sea. */
     const msg = idrMensajeError(r || {});
     const detalle = (r && r.detalle) ? `\n\n(${String(r.detalle).slice(0, 300)})` : '';
-    idrMensajes(c).push({r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
-    c.updatedAt = new Date().toISOString();
+    idrMensajes(cVivo).push({mid: idrNuevoMid(), r:'ia', t: `⚠ ${msg}${detalle}`, fallo: true});
+    cVivo.updatedAt = new Date().toISOString();
     saveDB();
     showToast(msg);
     renderIdr();
@@ -1154,9 +1170,9 @@ async function idrEnviarInterno(){
 
   const j = idrExtraerJson(r.texto);
   const respuesta = (j && j.respuesta) ? String(j.respuesta) : r.texto;
-  idrMensajes(c).push({r:'ia', t: respuesta.slice(0, 4000)});
-  c.listo = !!(j && j.listo);
-  c.updatedAt = new Date().toISOString();
+  idrMensajes(cVivo).push({mid: idrNuevoMid(), r:'ia', t: respuesta.slice(0, 4000)});
+  cVivo.listo = !!(j && j.listo);
+  cVivo.updatedAt = new Date().toISOString();
   saveDB();
   renderIdr();
 }
@@ -1588,7 +1604,7 @@ async function idrVariante(id){
   if(c.carpetaId) nueva.carpetaId = c.carpetaId;
   nueva.titulo = t('idr.variantOf').replace('${n}', receta.name).slice(0, 60);
   nueva.origenRecipeId = receta.id;
-  idrMensajes(nueva).push({r:'yo', t:
+  idrMensajes(nueva).push({mid: idrNuevoMid(), r:'yo', t:
     `${t('idr.variantIntro').replace('${n}', receta.name)}\n\n` +
     `${t('idr.variantFor').replace('${n}', receta.comensales || 2)}\n${lineas}\n\n` +
     (receta.steps ? `${t('idr.variantSteps')}\n${receta.steps}\n\n` : '') +
@@ -1622,7 +1638,7 @@ function idrHablarDelCoste(id){
   }
   (c.avisos||[]).forEach(a => partes.push('· ' + a));
   partes.push(t('idr.costTalkAsk'));
-  idrMensajes(c).push({r:'ia', t: partes.join('\n')});
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: partes.join('\n')});
   c.listo = false;
   c.updatedAt = new Date().toISOString();
   saveDB();

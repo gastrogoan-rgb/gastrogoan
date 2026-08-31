@@ -1786,6 +1786,84 @@ await caso('Un turno NUNCA puede terminar sin respuesta en el hilo', async ()=>{
   return 'ni con una respuesta rara ni con una excepción se queda mudo';
 });
 
+await caso('LA NUBE CONTESTANDO A MITAD NO SE LLEVA LA RESPUESTA', async ()=>{
+  /* El fallo que el dueño veía en producción y que ninguna prueba local
+     cazaba: mientras el asistente piensa (segundos), la nube devuelve el
+     bloque `idr` y SUSTITUYE la creación entera, conversación incluida. La
+     respuesta llegaba a un objeto que ya no estaba en DB y no aparecía nunca.
+     Es la misma familia que el fallo de Distribución del Trabajo. */
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    localStorage.setItem('gastrogoan_idr_key', JSON.stringify({proveedor:'google', clave:'k', modelo:'m'}));
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+
+    idrEmpezar('plato');
+    navIdr('creacion', idrCreacionActiva);
+    const id = idrCreacionActiva;
+
+    window.llmChat = async () => {
+      // Justo mientras "piensa", llega el bloque de la nube: una copia de la
+      // creación tal y como estaba ANTES de escribir el mensaje.
+      const copiaVieja = JSON.parse(JSON.stringify(DB.idr));
+      copiaVieja.creaciones = copiaVieja.creaciones.map(c =>
+        c.id === id ? {...c, mensajes: []} : c);
+      applyRemoteBlock('idr', copiaVieja);
+      return {ok:true, texto: JSON.stringify({respuesta:'Te propongo tres alioli distintos.', listo:false})};
+    };
+
+    idrGuardarLibre('Necesito que me ayudes con un alioli de ajo negro');
+    await idrEnviar();
+
+    const c = idrCreacion(id);
+    const hilo = (c.mensajes||[]).map(m => ({r:m.r, t:m.t.slice(0,40)}));
+    return {
+      hilo,
+      hayRespuesta: (c.mensajes||[]).some(m => m.r === 'ia' && /tres alioli/.test(m.t)),
+      miPregunta: (c.mensajes||[]).some(m => m.r === 'yo' && /ajo negro/.test(m.t)),
+      sinAvisoFalso: !(c.mensajes||[]).some(m => m.fallo),
+      seVe: /tres alioli/.test(document.getElementById('view-idr').innerHTML),
+      todosConMid: (c.mensajes||[]).every(m => !!m.mid),
+    };
+  });
+  assert.ok(r.miPregunta, 'la pregunta del cocinero no se pierde: ' + JSON.stringify(r.hilo));
+  assert.ok(r.hayRespuesta, 'Y LA RESPUESTA TAMPOCO: ' + JSON.stringify(r.hilo));
+  assert.ok(r.sinAvisoFalso, 'no puede salir un "no ha podido responder" cuando sí respondió');
+  assert.ok(r.seVe, 'y tiene que verse en pantalla');
+  assert.ok(r.todosConMid, 'cada mensaje con su identidad, para poder fusionarlo');
+  return 'la conversación sobrevive a la nube';
+});
+
+await caso('Dos dispositivos hablando en la misma prueba no se pisan', async ()=>{
+  const r = await page.evaluate(()=>{
+    const id = idrNuevaCreacion('plato').id;
+    const c = idrCreacion(id);
+    c.mensajes = [
+      {mid:'m1', r:'yo', t:'Un alioli de ajo negro'},
+      {mid:'m2', r:'ia', t:'¿Para carne o para pescado?'},
+    ];
+    c.borrador = 'lo que estoy escribiendo ahora';
+    saveDB();
+    // El otro dispositivo mandó otro mensaje y lo subió a la nube
+    const remoto = JSON.parse(JSON.stringify(DB.idr));
+    remoto.creaciones = remoto.creaciones.map(x => x.id === id ? {...x, borrador: '', mensajes: [
+      {mid:'m1', r:'yo', t:'Un alioli de ajo negro'},
+      {mid:'m2', r:'ia', t:'¿Para carne o para pescado?'},
+      {mid:'m3', r:'yo', t:'Para pescado'},
+    ]} : x);
+    // Y aquí, a la vez, se ha escrito uno más
+    c.mensajes.push({mid:'m4', r:'yo', t:'De hecho para las dos cosas'});
+    applyRemoteBlock('idr', remoto);
+    const fin = idrCreacion(id);
+    return {
+      mids: (fin.mensajes||[]).map(m=>m.mid),
+      borrador: fin.borrador,
+    };
+  });
+  assert.deepEqual(r.mids, ['m1','m2','m3','m4'], 'deben quedar los mensajes de los dos, sin repetir');
+  assert.equal(r.borrador, 'lo que estoy escribiendo ahora', 'lo que se está escribiendo aquí no lo pisa la nube');
+  return 'se quedan los cuatro mensajes y el borrador local';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

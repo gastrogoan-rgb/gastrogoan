@@ -2609,6 +2609,22 @@ function mergeStockField(localStock, remoteStock, lastSyncedStockJson){
 // nivel superior, MERGEABLE_ARRAYS no los toca y el objeto entero se
 // sustituye sin más — dos encargados dando de alta un gasto o una lectura
 // de temperatura distintos, offline a la vez, podían perder uno de los dos.
+/* Fusiona las dos versiones de una MISMA prueba de I+D. La conversación es
+   un hilo que solo crece, así que se quedan los mensajes de los dos lados sin
+   repetir ninguno; y lo que se está escribiendo en el cuadro (`borrador`) es
+   de este dispositivo y no puede pisarlo la nube. */
+function fusionarCreacionIdr(local, remoto){
+  const out = {...remoto};
+  const msLocal = Array.isArray(local.mensajes) ? local.mensajes : [];
+  const msRemoto = Array.isArray(remoto.mensajes) ? remoto.mensajes : [];
+  const clave = m => (m && (m.mid != null ? 'id:' + m.mid : (m.r || '') + '|' + (m.t || '')));
+  const vistos = new Set(msRemoto.map(clave));
+  const extra = msLocal.filter(m => !vistos.has(clave(m)));
+  out.mensajes = extra.length ? msRemoto.concat(extra) : msRemoto;
+  if(local.borrador) out.borrador = local.borrador;
+  return out;
+}
+
 function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
   if(!localObj || typeof localObj !== 'object') return remoteObj;
   if(!remoteObj || typeof remoteObj !== 'object') return localObj;
@@ -3875,6 +3891,22 @@ function applyRemoteBlock(key, remoteValue){
   // una de las dos. Es la misma familia de fallo que ya se coló dos veces.
   if(key === 'idr' && DB[key] && typeof merged === 'object'){
     merged = mergeNestedArraysByKey(DB[key], merged, ['creaciones','carpetas']);
+    /* Y una vuelta más: fusionar las creaciones POR ID no basta, porque para
+       una creación que existe en los dos lados gana entera la de la nube —
+       con su conversación. Si la nube contesta mientras el cocinero está
+       hablando con el asistente (que es lo normal: la respuesta tarda
+       segundos y el guardado sube en menos de uno), el hilo se sustituye por
+       la versión de antes y la respuesta desaparece por el camino.
+       Desde fuera: "pregunto y no me contesta nunca". Exactamente lo que
+       reportó el dueño, y solo pasa con la nube conectada — por eso ninguna
+       prueba local lo veía. */
+    if(Array.isArray(merged.creaciones) && Array.isArray(DB[key].creaciones)){
+      const locales = new Map(DB[key].creaciones.map(c => [c && c.id, c]));
+      merged.creaciones = merged.creaciones.map(c => {
+        const local = c && locales.get(c.id);
+        return local ? fusionarCreacionIdr(local, c) : c;
+      });
+    }
   }
   // Mismo problema que DB.stock (mapas planos {clave: valor}, sin id ni
   // array): shifts (cuadrante por empleado), workDistribution (reparto de
