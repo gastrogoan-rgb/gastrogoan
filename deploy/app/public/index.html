@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 00:42';
+const GG_BUILD = '31/08/2026 13:37';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -9099,6 +9099,13 @@ const I18N = {
     'idr.newBase': 'Nueva elaboración base',
     'idr.conversation': 'La conversación',
     'idr.adjustCost': 'Hablar del coste',
+    'idr.makeVariant': 'Hacer una variante',
+    'idr.variantOf': 'Variante de ${n}',
+    'idr.variantIntro': 'Quiero una variante de este plato que ya tengo: ${n}.',
+    'idr.variantFor': 'Lleva esto, para ${n} comensales:',
+    'idr.variantSteps': 'Y se hace así:',
+    'idr.variantAsk': '¿Qué versión quieres? Dime tú por dónde: sin gluten, sin lactosa, vegetariana, para el menú del día, para más raciones, de otra temporada… o lo que se te ocurra.',
+    'idr.variantReady': 'Te he traído el plato entero a la conversación. Dime qué versión quieres.',
     'idr.costTalkDish': 'He hecho el escandallo con tus precios: te sale a ${coste} de coste, con un PVP de ${pvp}.',
     'idr.costTalkTarget': 'Eso es un food cost del ${pct}%, y tu objetivo es el ${obj}%.',
     'idr.costTalkBase': 'He hecho el escandallo con tus precios: la producción entera te sale a ${coste} (${unidad}).',
@@ -11111,6 +11118,13 @@ const I18N = {
     'idr.newBase': 'Nova elaboració base',
     'idr.conversation': 'La conversa',
     'idr.adjustCost': 'Parlar del cost',
+    'idr.makeVariant': 'Fer una variant',
+    'idr.variantOf': 'Variant de ${n}',
+    'idr.variantIntro': 'Vull una variant d\'aquest plat que ja tinc: ${n}.',
+    'idr.variantFor': 'Porta això, per a ${n} comensals:',
+    'idr.variantSteps': 'I es fa així:',
+    'idr.variantAsk': 'Quina versió vols? Digues tu per on: sense gluten, sense lactosa, vegetariana, per al menú del dia, per a més racions, d\'una altra temporada… o el que se t\'acudeixi.',
+    'idr.variantReady': 'T\'he portat el plat sencer a la conversa. Digues quina versió vols.',
     'idr.costTalkDish': 'He fet l\'escandall amb els teus preus: et surt a ${coste} de cost, amb un PVP de ${pvp}.',
     'idr.costTalkTarget': 'Això és un food cost del ${pct}%, i el teu objectiu és el ${obj}%.',
     'idr.costTalkBase': 'He fet l\'escandall amb els teus preus: la producció sencera et surt a ${coste} (${unidad}).',
@@ -13127,6 +13141,13 @@ const I18N = {
     'idr.newBase': 'New base prep',
     'idr.conversation': 'The conversation',
     'idr.adjustCost': 'Talk about the cost',
+    'idr.makeVariant': 'Make a variant',
+    'idr.variantOf': 'Variant of ${n}',
+    'idr.variantIntro': 'I want a variant of this dish I already have: ${n}.',
+    'idr.variantFor': 'It contains this, for ${n} covers:',
+    'idr.variantSteps': 'And it is made like this:',
+    'idr.variantAsk': 'Which version do you want? You tell me: gluten free, dairy free, vegetarian, for the set lunch, for more covers, for another season… or anything else.',
+    'idr.variantReady': 'I brought the whole dish into the conversation. Tell me which version you want.',
     'idr.costTalkDish': 'I costed it with your prices: it comes to ${coste}, at a selling price of ${pvp}.',
     'idr.costTalkTarget': 'That is a ${pct}% food cost, and your target is ${obj}%.',
     'idr.costTalkBase': 'I costed it with your prices: the whole batch comes to ${coste} (${unidad}).',
@@ -33923,12 +33944,51 @@ REGLAS QUE NO SE ROMPEN NUNCA:
 
 8. CONSERVACIÓN FUERA. No des tiempos ni temperaturas de conservación, fermentación, envasado al vacío, curados ni conservas: es seguridad alimentaria y no es tu terreno. Si sale el tema, dilo y remite al APPCC del negocio.
 
-CÓMO PIENSAS UN PLATO (marco de trabajo, no lo recites: úsalo):
-- Un plato se sostiene sobre UN producto principal. Todo lo demás está para que ese producto se entienda mejor, no para competir con él.
-- Busca contraste en tres ejes: temperatura, textura y acidez o grasa. Un plato donde todo está templado, blando y graso aburre al tercer bocado.
-- La salsa liga el plato; la guarnición le da contexto. Si la guarnición no aporta nada, sobra.
-- El punto de sal y la acidez los ajusta el cocinero probando: tú no puedes probar, así que no des el sazonado por cerrado.
-- Emplatado: un punto focal, altura solo si aporta, y nada en el plato que no se coma.
+EL MARCO DE OFICIO (úsalo para pensar; NO lo recites ni lo cites):
+
+1. LOS CINCO EJES DE UN SABOR. Todo plato se ajusta con sal, ácido, grasa, dulce y amargo, más el fondo umami.
+- La SAL no "sala": abre el resto de sabores y quita amargor. Es lo último que se cierra y solo probando.
+- El ÁCIDO (vinagre, cítrico, vino, encurtido, láctico) levanta un plato plano y corta la grasa. Cuando algo "no sabe a nada" y ya lleva sal, casi siempre le falta acidez.
+- La GRASA transporta el aroma y da largura en boca. Sin ella el sabor se va rápido; de más, empasta y necesita ácido enfrente.
+- El DULCE redondea aristas y equilibra el amargo y el ácido. En salado, en gotas.
+- El AMARGO (brasa, tostado, hoja verde, cítrico rallado) da carácter y evita el empalago.
+- El UMAMI (fondos, tomate concentrado, hongos, curados, quesos viejos, algas, fermentados) da profundidad. Es lo que separa un plato "correcto" de uno con fondo.
+Si un plato no funciona, no añadas cosas: mira qué eje falta. Casi siempre es acidez o sal.
+
+2. CÓMO SE MARIDAN LOS SABORES. Tres caminos, y conviene decir cuál usas:
+- POR TRADICIÓN: lo que lleva siglos junto en una cocina funciona. Cordero y romero, bacalao y garbanzos, cerdo y manzana, tomate y albahaca. Es el camino más seguro y el que un cliente reconoce.
+- POR AFINIDAD AROMÁTICA: productos que comparten familia de aromas ligan solos. Marisco con cerdo curado; fresa con tomate; chocolate con café, frutos secos y frutos rojos; queso azul con pera, miel y nuez; zanahoria con comino y naranja; cerdo con hinojo; pescado azul con cítrico y anís.
+- POR CONTRASTE: lo que se enfrenta y se equilibra. Graso con ácido (foie y vinagre; sardina y encurtido), dulce con salado (melón y jamón), untuoso con crujiente.
+Si tienes dudas entre una idea rara y una tradicional, propón la tradicional bien ejecutada y la otra como alternativa: en un servicio real gana la que sale bien 60 veces seguidas.
+
+3. LA ESTRUCTURA DE UN PLATO. Un plato se sostiene sobre UN producto principal; todo lo demás está para que se entienda mejor.
+Antes de darlo por cerrado, comprueba que hay:
+- algo que dé JUGOSIDAD (una salsa, un jugo, un aceite, una emulsión),
+- algo CRUJIENTE o con mordida, si el producto es blando,
+- algo ÁCIDO o fresco, si el conjunto es graso,
+- y un AROMÁTICO que lo identifique (una hierba, una especia, una piel de cítrico).
+Si le sobra un elemento, quítalo. Un plato con cuatro cosas bien hechas gana a uno con siete.
+
+4. LAS SALSAS, POR FAMILIAS. Cuando te pidan una salsa, no des tres versiones de lo mismo: elige familias distintas.
+- JUGOS Y FONDOS REDUCIDOS: profundidad y brillo. Para carnes asadas y a la brasa.
+- EMULSIONES FRÍAS (mayonesas, alioli, tártara): untuosas, para fritos, hervidos y pescado blanco.
+- EMULSIONES CALIENTES (holandesa, beurre blanc, pilpil): delicadas y ácidas, para pescado y verdura.
+- VINAGRETAS: la más ligera; ácido + grasa + un tercer elemento (mostaza, miel, hierba, fruto seco). Para pescado a la plancha, verduras y ahumados.
+- PURÉS Y CREMAS DE VEGETAL: hacen de cama y aportan dulzor natural.
+- LÁCTEAS Y FERMENTADAS (yogur, labneh, nata ácida, mantequilla tostada): frescor y acidez con cuerpo.
+- PICADAS, PESTOS, SALSAS VERDES, ROMESCOS: aroma y textura sin cocción larga.
+Di siempre cómo LIGA la salsa (reducción, emulsión, almidón, fruto seco, pan) y si aguanta el servicio o hay que hacerla al momento.
+
+5. LAS TÉCNICAS Y LO QUE APORTAN. Elige por lo que le hace al producto, no por moda:
+brasa y parrilla, amargor tostado y humo; horno seco, corteza y concentración; plancha, costra rápida en piezas finas; confitado, grasa y jugosidad en piezas duras; guiso y estofado, colágeno convertido en untuosidad; vapor y escalfado, respetan el producto delicado; frito, contraste de textura; escabeche y marinada, acidez que además conserva; crudo y curado en sal, textura y sabor limpio.
+Piezas duras con colágeno piden calor bajo y largo. Piezas magras y delicadas piden calor corto o suave; pasarse las seca y no hay salsa que lo arregle.
+
+6. LOS PUNTOS Y LO QUE NO SE NEGOCIA. Un pescado seco, una verdura sin color y una carne pasada no se corrigen con salsa. Si un plato depende de un punto justo, dilo claro: es lo que decide si sale bien en un servicio lleno.
+El sazonado no lo puedes cerrar tú, porque no pruebas. Dilo así, sin fingir precisión.
+
+7. ESCALAR NO ES MULTIPLICAR. Al subir raciones: la sal, el picante, las especias y los aromáticos suben MENOS que en proporción; las reducciones tardan más pero no el doble; las frituras y salteados no admiten tandas grandes sin perder la costra; y una salsa ligada a última hora no aguanta multiplicada. Di qué se puede dejar hecho y qué hay que hacer al momento.
+
+8. QUE SE PUEDA COCINAR MAÑANA. Una idea sin cantidades ni orden de trabajo no vale para nada. Cuando el plato esté decidido, deja claro qué se adelanta en mise en place, qué se hace al pase y cuánto se tarda en sacarlo. Si un plato pide más de tres o cuatro minutos al pase, avísalo: en un servicio lleno es lo que revienta la partida.
 
 CÓMO PIENSAS UN CONJUNTO (menú o carta):
 - Que no se repitan la base ni la técnica principal entre platos. Tres cremas o todo al horno es una carta pobre aunque cada plato sea bueno.
@@ -34288,6 +34348,7 @@ function renderIdrCreacion(box){
           </div>` : `<p style="font-size:12.5px;color:#1F8A4C"><i class="ti ti-check"></i> ${t('idr.checksPassed')}</p>`}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           ${c.recipeId ? `<button class="owner-only btn" onclick="idrHablarDelCoste(${c.id})"><i class="ti ti-coin"></i> ${t('idr.adjustCost')}</button>` : ''}
+          ${c.recipeId ? `<button class="owner-only btn" onclick="idrVariante(${c.id})"><i class="ti ti-git-branch"></i> ${t('idr.makeVariant')}</button>` : ''}
           <button class="btn" onclick="idrImprimir(${c.id})"><i class="ti ti-printer"></i> ${t('common.print')}</button>
         </div>
       </div>` : ''}
@@ -34511,6 +34572,17 @@ function idrBuscarElaboracion(nombre){
       || null;
 }
 
+/* Para cuántos son las cantidades. Sale de la conversación, no de una
+   constante: un plato de carta se piensa por ración y un menú del día se
+   piensa para cuarenta, y el escandallo por comensal solo sale bien si el
+   número es el de verdad. Se acota para que una cifra disparatada del modelo
+   no deje el coste por comensal en algo sin sentido. */
+function idrLeerComensales(v){
+  const n = Math.round(parseFloat(v));
+  if(!isFinite(n) || n < 1) return 2;
+  return Math.min(n, 200);
+}
+
 async function idrCrearPlatoReal(id){
   try{ await idrCrearPlatoRealInterno(id); }
   catch(e){
@@ -34533,8 +34605,11 @@ async function idrCrearPlatoRealInterno(id){
 
 ${resumen}
 
-Escribe la receta para 2 comensales. Responde SOLO con este JSON:
-{"nombre":"...","descripcion":"descripción corta de carta","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
+Escribe la receta. Responde SOLO con este JSON:
+{"nombre":"...","descripcion":"descripción corta de carta","comensales":2,"pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
+
+En "comensales" pon PARA CUÁNTOS son las cantidades que das. Si en la conversación se ha dicho un número (una ración, cuatro, cuarenta del menú del día), respétalo. Si no se ha dicho nada, 2.
+Y ojo al escalar: la sal, el picante y las especias NO suben en proporción, y una reducción no tarda el doble por doblar el volumen. Ajusta con criterio, no multiplicando.
 
 Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más con su nombre exacto y su cantidad en la unidad de la elaboración (por ejemplo {"nombre":"Fondo oscuro de ternera","cantidad":0.15,"unidad":"L"}). La aplicación le encadenará el coste real.
 
@@ -34564,7 +34639,8 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const receta = existente || {
     id: genId(), name: nombre, price: 0, priceBase: 0,
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
-    comensales: 2, consumiblesPct: 5,
+    comensales: idrLeerComensales(j.comensales),
+    consumiblesPct: 5,
     category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
     ingredients: lineas, allergens: [], area: 'cocina',
     isBase: false, baseYield: 1, baseUnit: 'L',
@@ -34575,6 +34651,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     // Se reescribe lo que ha cambiado y se respeta lo que el cocinero haya
     // tocado a mano (categoría, IVA, alérgenos marcados).
     Object.assign(receta, {name: nombre, ingredients: lineas,
+      comensales: idrLeerComensales(j.comensales),
       steps: Array.isArray(j.pasos) ? j.pasos.join('\n') : receta.steps,
       presentation: String(j.descripcion || receta.presentation || '')});
   } else {
@@ -34771,7 +34848,40 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
    conversación. Antes la app calculaba el coste, lo enseñaba y ahí moría: si
    salía caro, el cocinero tenía que empezar de cero. Ahora los números reales
    entran en el hilo y se puede seguir hablando — "bájalo sin tocar el
-   producto principal" — y al volver a crear se reescribe la MISMA ficha. */
+   producto principal" — y al volver a crear se reescribe la MISMA ficha. *//* Una variante parte de la ficha que ya existe, con sus ingredientes y sus
+   pasos dentro de la conversación. Es lo que se hace de verdad en una cocina:
+   el plato bueno no se tira, se adapta — la versión sin gluten, la del menú
+   del día, la de temporada. Nace como prueba NUEVA para no pisar la original:
+   las dos tienen que poder convivir en la carta. */
+async function idrVariante(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const receta = c.recipeId && typeof getRecipe === 'function' ? getRecipe(c.recipeId) : null;
+  if(!receta){ showToast(t('idr.nothingToBuild')); return; }
+
+  const lineas = (receta.ingredients||[]).map(l => {
+    if(l.type === 'base'){
+      const b = getRecipe(l.baseRecipeId);
+      return b ? `- ${fmtNum(l.qty)} ${b.baseUnit||'L'} de ${b.name} (elaboración propia)` : null;
+    }
+    const ing = getIngredient(l.ingredientId);
+    return ing ? `- ${fmtNum(l.qty)} ${ing.unit} de ${ing.name}` : null;
+  }).filter(Boolean).join('\n');
+
+  const nueva = idrNuevaCreacion(c.tipo);
+  if(c.carpetaId) nueva.carpetaId = c.carpetaId;
+  nueva.titulo = t('idr.variantOf').replace('${n}', receta.name).slice(0, 60);
+  nueva.origenRecipeId = receta.id;
+  idrMensajes(nueva).push({r:'yo', t:
+    `${t('idr.variantIntro').replace('${n}', receta.name)}\n\n` +
+    `${t('idr.variantFor').replace('${n}', receta.comensales || 2)}\n${lineas}\n\n` +
+    (receta.steps ? `${t('idr.variantSteps')}\n${receta.steps}\n\n` : '') +
+    t('idr.variantAsk')});
+  saveDB();
+  navIdr('creacion', nueva.id);
+  showToast(t('idr.variantReady'), 4000);
+}
+
 function idrHablarDelCoste(id){
   const c = idrCreacion(id);
   if(!c) return;

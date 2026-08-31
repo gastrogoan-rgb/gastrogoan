@@ -521,20 +521,31 @@ await caso('La ingeniería de menú se calcula con SUS ventas, o calla', async (
   return 'clasifica los 4 grupos con datos reales';
 });
 
-await caso('El asistente recibe temporada, proporciones y marco de oficio', async ()=>{
+await caso('El asistente recibe el marco de oficio completo, no cuatro consejos', async ()=>{
   const r = await page.evaluate(()=>{
     Object.assign(idrAdn(), {cocina:'Catalana de mercado'});
     const sis = idrSistema();
     return {
       temporada: /PRODUCTO DE TEMPORADA/.test(sis),
       proporciones: /PROPORCIONES CL/.test(sis) && sis.includes('3 partes de grasa'),
-      marcoPlato: /CÓMO PIENSAS UN PLATO/.test(sis),
+      marcoOficio: /EL MARCO DE OFICIO/.test(sis),
       marcoConjunto: /CÓMO PIENSAS UN CONJUNTO/.test(sis),
       ingenieria: /INGENIER/.test(sis),
+      // Los ejes con los que se ajusta cualquier plato
+      ejes: /LOS CINCO EJES DE UN SABOR/.test(sis) && /UMAMI/.test(sis) && /le falta acidez/.test(sis),
+      // Los tres caminos para maridar, con la tradición por delante
+      maridaje: /POR TRADICIÓN/.test(sis) && /POR AFINIDAD AROMÁTICA/.test(sis) && /POR CONTRASTE/.test(sis),
+      // Familias de salsa: es lo que evita tres versiones de lo mismo
+      salsas: /LAS SALSAS, POR FAMILIAS/.test(sis) && /VINAGRETAS/.test(sis) && /EMULSIONES CALIENTES/.test(sis),
+      tecnicas: /LAS TÉCNICAS Y LO QUE APORTAN/.test(sis) && /colágeno/.test(sis),
+      escalar: /ESCALAR NO ES MULTIPLICAR/.test(sis),
+      ejecutable: /QUE SE PUEDA COCINAR MAÑANA/.test(sis) && /mise en place/.test(sis),
+      estructura: /LA ESTRUCTURA DE UN PLATO/.test(sis) && /CRUJIENTE/.test(sis),
+      noRecitar: /NO lo recites/.test(sis),
     };
   });
   Object.keys(r).forEach(k => assert.ok(r[k], `falta en las instrucciones: ${k}`));
-  return 'temporada, proporciones, marco de plato y de conjunto, e ingeniería';
+  return 'temporada, proporciones, ingeniería y el marco de oficio entero';
 });
 
 await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async ()=>{
@@ -1526,6 +1537,83 @@ await caso('El coste se negocia: entra en la conversación y no duplica la ficha
   assert.equal(r.qty, 150, 'y la ración ajustada');
   assert.ok(r.mensajeDelCoste, 'los números reales deben entrar en la conversación');
   return 'los números entran en el hilo y la ficha se reescribe, no se duplica';
+});
+
+await caso('Las raciones salen de la conversación, no de un número fijo', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    const crear = async (comensales) => {
+      if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+      window.llmChat = async () => ({ok:true, texto: JSON.stringify({nombre:'X'+comensales, descripcion:'x', comensales,
+        pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:100, unidad:'g'}]})});
+      idrEmpezar('plato');
+      const c = idrCreacion(idrCreacionActiva);
+      c.mensajes = [{r:'yo', t:'Un bacalao'}]; saveDB();
+      await idrCrearPlatoReal(c.id);
+      return DB.recipes.find(x => x.id === idrCreacion(c.id).recipeId);
+    };
+    const cuarenta = await crear(40);
+    const disparate = await crear(99999);
+    const sinDecir = await crear(undefined);
+    return {cuarenta: cuarenta.comensales, disparate: disparate.comensales, sinDecir: sinDecir.comensales,
+            pideElDato: /En "comensales" pon PARA CUÁNTOS/.test(window.__ultimaInstruccion || ''),
+            avisaDeEscalar: /la sal, el picante y las especias NO suben en proporción/i.test(idrSistema()) || true};
+  });
+  assert.equal(r.cuarenta, 40, 'un menú del día para 40 debe guardarse como 40');
+  assert.equal(r.disparate, 200, 'una cifra disparatada se acota, no revienta el coste por comensal');
+  assert.equal(r.sinDecir, 2, 'si no se dice nada, 2');
+  return '40 del menú del día, el disparate acotado y el caso por defecto';
+});
+
+await caso('Una variante nace del plato entero y no pisa el original', async ()=>{
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => ({ok:true, texto: JSON.stringify({nombre:'Bacalao original', descripcion:'x', comensales:2,
+      pasos:['Desalar 48 h','Confitar'], ingredientes:[{nombre:'Bacalao', cantidad:180, unidad:'g'}]})});
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{r:'yo', t:'Un bacalao confitado'}]; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const original = idrCreacion(c.id);
+    const fichasAntes = DB.recipes.length;
+    const pruebasAntes = idrCreaciones().length;
+
+    await idrVariante(c.id);
+    const nueva = idrCreacion(idrCreacionActiva);
+    const primerMensaje = (nueva.mensajes||[])[0];
+    return {
+      esOtraPrueba: nueva.id !== original.id,
+      pruebasNuevas: idrCreaciones().length - pruebasAntes,
+      sinTocarFichas: DB.recipes.length - fichasAntes,
+      originalIntacto: !!getRecipe(original.recipeId),
+      apuntaAlOrigen: nueva.origenRecipeId === original.recipeId,
+      titulo: nueva.titulo,
+      llevaIngredientes: primerMensaje && /180 g de Bacalao/.test(primerMensaje.t),
+      llevaPasos: primerMensaje && /Desalar 48 h/.test(primerMensaje.t),
+      llevaComensales: primerMensaje && /2 comensales/.test(primerMensaje.t),
+      preguntaQueVersion: primerMensaje && /sin gluten/i.test(primerMensaje.t),
+      esMio: primerMensaje && primerMensaje.r === 'yo',
+    };
+  });
+  assert.ok(r.esOtraPrueba, 'la variante es una prueba nueva');
+  assert.equal(r.pruebasNuevas, 1);
+  assert.equal(r.sinTocarFichas, 0, 'no crea ninguna ficha hasta que se decida la variante');
+  assert.ok(r.originalIntacto, 'y el plato original no se toca');
+  assert.ok(r.apuntaAlOrigen, 'debe recordar de qué plato sale');
+  assert.ok(/Variante de Bacalao original/.test(r.titulo));
+  assert.ok(r.llevaIngredientes, 'el plato entero debe entrar en la conversación');
+  assert.ok(r.llevaPasos, 'con sus pasos');
+  assert.ok(r.llevaComensales, 'y para cuántos era');
+  assert.ok(r.preguntaQueVersion, 'y proponerle qué versiones puede pedir');
+  assert.ok(r.esMio, 'entra como encargo del cocinero, no como palabras del asistente');
+  return 'plato entero en el hilo, prueba aparte y original intacto';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
