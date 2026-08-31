@@ -247,6 +247,26 @@ await caso('RECARGA REAL: al volver a la app, la otra cuenta sigue sin ver nada'
   return 'dos recargas completas y sigue aislado';
 });
 
+await caso('Desde el selector, con negocios, también se puede cerrar sesión', async ()=>{
+  const r = await page.evaluate((eA)=>{
+    eval(eA);
+    const idA = ggOwnerId('casapaco');
+    saveBusinessSlots([
+      {id:'bA', name:'Casa Paco', code:'AAAAAAAA', ownerId: idA},
+      {id:'bA2', name:'Casa Paco Playa', code:'DDDDDDDD', ownerId: idA},
+    ]);
+    localStorage.setItem('gastrogoan_active_slot', 'bA');
+    showBusinessSelectScreen();
+    const sel = document.getElementById('business-select-screen');
+    const salir = [...sel.querySelectorAll('button')].filter(b => /exitToAccessScreen/.test(b.getAttribute('onclick')||''));
+    return {hay: salir.length > 0, alto: salir.map(b=>b.getBoundingClientRect().height),
+            texto: salir.map(b=>(b.textContent||'').trim())};
+  }, entrar('casapaco'));
+  assert.ok(r.hay, 'debe haber botón de cerrar sesión');
+  assert.ok(r.alto.every(h => h >= 44), `objetivo táctil: ${r.alto.join(', ')}`);
+  return `"${r.texto[0]}"`;
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

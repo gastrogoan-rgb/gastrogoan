@@ -1680,6 +1680,50 @@ await caso('Si la prueba de modelos falla a mitad, se devuelve la configuración
   return 'la configuración que funcionaba no se pierde';
 });
 
+await caso('Si el modelo se queda sin espacio para contestar, se reintenta con más', async ()=>{
+  // Los modelos que razonan antes de escribir (gemini-3.6-flash) gastan el
+  // presupuesto pensando y devuelven un candidato VACÍO. Desde fuera es "el
+  // asistente no contesta nunca" — el fallo que reportó el dueño.
+  const r = await page.evaluate(async ()=>{
+    window.llmChat = window.__llmChatReal || window.llmChat;
+    idrGuardarConfig('google', 'clave', 'gemini-3.6-flash');
+    const pedidos = [];
+    const originalFetch = window.fetch;
+    window.fetch = async (url, opts) => {
+      const body = JSON.parse(opts.body);
+      pedidos.push(body.generationConfig.maxOutputTokens);
+      // La primera vez: se lo come el razonamiento y no queda texto
+      if(pedidos.length === 1) return {ok:true, status:200, json: async () => ({
+        candidates:[{finishReason:'MAX_TOKENS', content:{parts:[]}}]})};
+      return {ok:true, status:200, json: async () => ({
+        candidates:[{finishReason:'STOP', content:{parts:[{text:'Aquí van tres salsas.'}]}}]})};
+    };
+    const res1 = await llmChat('sis', [{role:'user', content:'una salsa para un salmón'}], {maxTokens: 2500});
+
+    // Y si vuelve vacía otra vez, NO se queda en bucle: avisa y dice por qué
+    pedidos.length = 0;
+    window.fetch = async (url, opts) => {
+      pedidos.push(JSON.parse(opts.body).generationConfig.maxOutputTokens);
+      return {ok:true, status:200, json: async () => ({candidates:[{finishReason:'MAX_TOKENS', content:{parts:[]}}]})};
+    };
+    const res2 = await llmChat('sis', [{role:'user', content:'x'}], {maxTokens: 2500});
+    window.fetch = originalFetch;
+    return {
+      ok: res1.ok, texto: res1.texto,
+      intentosBucle: pedidos.length, res2ok: res2.ok, motivo2: res2.motivo, detalle2: res2.detalle,
+      mensaje: idrMensajeError({ok:false, motivo:'vacia'}),
+    };
+  });
+  assert.ok(r.ok, 'tras reintentar debe contestar');
+  assert.ok(/tres salsas/.test(r.texto));
+  assert.equal(r.intentosBucle, 2, 'reintenta UNA vez, no entra en bucle');
+  assert.ok(!r.res2ok, 'si sigue vacía, se rinde');
+  assert.equal(r.motivo2, 'vacia');
+  assert.ok(/MAX_TOKENS/.test(r.detalle2), 'y guarda por qué se cortó: ' + r.detalle2);
+  assert.ok(/sin espacio/i.test(r.mensaje), 'el aviso debe explicarlo en cristiano');
+  return 'reintenta una vez y, si no, lo explica';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 16:06';
+const GG_BUILD = '31/08/2026 16:14';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -4047,7 +4047,10 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
       <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
-      <button class="btn btn-sm" style="width:100%;margin-top:8px;background:none;border:none;color:var(--muted)" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
+        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+      </div>
     </div>
   `;
 }
@@ -9142,7 +9145,7 @@ const I18N = {
     'idr.err.badKey': 'La clave no es válida. Revísala en los ajustes del asistente',
     'idr.err.quota': 'Tu proveedor ha cortado por consumo. Prueba más tarde',
     'idr.err.provider': 'El asistente no ha podido responder. Inténtalo de nuevo',
-    'idr.err.empty': 'El asistente ha devuelto una respuesta vacía',
+    'idr.err.empty': 'El asistente se ha quedado sin espacio para contestar. Prueba a preguntarle algo más corto, o cambia de modelo en los ajustes.',
     'idr.err.timeout': 'El asistente ha tardado demasiado. Inténtalo otra vez.',
     'idr.newBase': 'Nueva elaboración base',
     'idr.conversation': 'La conversación',
@@ -11161,7 +11164,7 @@ const I18N = {
     'idr.err.badKey': 'La clau no és vàlida. Revisa-la als ajustos de l\'assistent',
     'idr.err.quota': 'El teu proveïdor ha tallat per consum. Prova-ho més tard',
     'idr.err.provider': 'L\'assistent no ha pogut respondre. Torna-ho a provar',
-    'idr.err.empty': 'L\'assistent ha tornat una resposta buida',
+    'idr.err.empty': 'L\'assistent s\'ha quedat sense espai per contestar. Prova a preguntar-li alguna cosa més curta, o canvia de model als ajustos.',
     'idr.err.timeout': 'L\'assistent ha trigat massa. Torna-ho a provar.',
     'idr.newBase': 'Nova elaboració base',
     'idr.conversation': 'La conversa',
@@ -13184,7 +13187,7 @@ const I18N = {
     'idr.err.badKey': 'The key is not valid. Check it in the assistant settings',
     'idr.err.quota': 'Your provider has cut you off for usage. Try again later',
     'idr.err.provider': 'The assistant could not answer. Try again',
-    'idr.err.empty': 'The assistant returned an empty response',
+    'idr.err.empty': 'The assistant ran out of room to answer. Try a shorter question, or switch model in the settings.',
     'idr.err.timeout': 'The assistant took too long. Try again.',
     'idr.newBase': 'New base prep',
     'idr.conversation': 'The conversation',
@@ -33476,6 +33479,7 @@ const IDR_PROVEEDORES = {
       const partes = c && c.content && c.content.parts;
       return (partes||[]).map(p => p.text||'').join('').trim();
     },
+    motivoCorte: j => (j && j.candidates && j.candidates[0] && j.candidates[0].finishReason) || '',
     ayuda: 'https://aistudio.google.com/apikey',
   },
   anthropic: {
@@ -33494,6 +33498,7 @@ const IDR_PROVEEDORES = {
       messages: mensajes.map(m => ({role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content})),
     }),
     extraer: j => ((j && j.content) || []).map(p => p.text||'').join('').trim(),
+    motivoCorte: j => (j && j.stop_reason) || '',
     listaModelos: () => 'https://api.anthropic.com/v1/models',
     cabecerasLista: k => ({'x-api-key': k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}),
     extraerModelos: j => (j.data||[]).map(m => m.id).filter(Boolean),
@@ -33585,7 +33590,24 @@ async function llmChat(sistema, mensajes, opciones){
   let j;
   try{ j = await res.json(); }catch(e){ return {ok:false, motivo:'proveedor', detalle:'respuesta ilegible'}; }
   const texto = def.extraer(j);
-  if(!texto) return {ok:false, motivo:'vacia'};
+  if(!texto){
+    /* Los modelos "que piensan" (gemini-3.6-flash, entre otros) gastan parte
+       del presupuesto de tokens razonando ANTES de escribir. Con unas
+       instrucciones largas —y las de oficio lo son— se quedan sin margen y
+       devuelven un candidato VACÍO, sin una sola palabra. Desde fuera es
+       "el asistente no contesta nunca", que es justo lo que reportó el dueño.
+       No se puede desactivar el razonamiento sin arriesgarse a que el modelo
+       rechace la petición, así que se reintenta UNA vez con el triple de
+       margen. Una sola vez: si vuelve vacía, es otra cosa y hay que verla. */
+    const corte = def.motivoCorte ? def.motivoCorte(j) : '';
+    const sinSitio = /MAX_TOKENS|max_tokens|length/i.test(String(corte));
+    if(sinSitio && !o.reintento){
+      return llmChat(sistema, mensajes, Object.assign({}, o, {
+        maxTokens: Math.min(maxTokens * 3, 8000), reintento: true,
+      }));
+    }
+    return {ok:false, motivo:'vacia', detalle: corte ? `motivo de corte: ${corte}` : 'sin texto en la respuesta'};
+  }
   return {ok:true, texto};
 }
 
@@ -34511,7 +34533,7 @@ async function idrEnviarInterno(){
   renderIdr();
 
   const historial = idrMensajes(c).map(m => ({role: m.r === 'yo' ? 'user' : 'assistant', content: m.t}));
-  const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 900});
+  const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 2500});
   idrPensando = false;
   if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
   idrUltimoFallo = null;
@@ -34696,7 +34718,7 @@ Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más co
 Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
-  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
   idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
@@ -34767,7 +34789,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
       {role:'user', content: instruccion},
       {role:'assistant', content: r.texto},
       {role:'user', content: `He comprobado tu propuesta contra los datos reales del negocio y falla en esto:\n- ${problemas.join('\n- ')}\n\nCorrígelo y devuelve el MISMO JSON con la receta arreglada. Si algo no se puede arreglar sin traicionar el plato, déjalo y explica por qué en "nota".`}
-    ], {maxTokens: 1500});
+    ], {maxTokens: 3000});
     const j2 = arreglo.ok ? idrExtraerJson(arreglo.texto) : null;
     if(j2 && Array.isArray(j2.ingredientes)){
       const lineas2 = []; const faltan2 = [];
@@ -34873,7 +34895,7 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") —
 Las cantidades tienen que dar ese rendimiento de verdad, contando lo que se reduce o se pierde al colar.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Si hace falta alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
-  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
   idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);

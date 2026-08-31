@@ -58,6 +58,7 @@ const IDR_PROVEEDORES = {
       const partes = c && c.content && c.content.parts;
       return (partes||[]).map(p => p.text||'').join('').trim();
     },
+    motivoCorte: j => (j && j.candidates && j.candidates[0] && j.candidates[0].finishReason) || '',
     ayuda: 'https://aistudio.google.com/apikey',
   },
   anthropic: {
@@ -76,6 +77,7 @@ const IDR_PROVEEDORES = {
       messages: mensajes.map(m => ({role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content})),
     }),
     extraer: j => ((j && j.content) || []).map(p => p.text||'').join('').trim(),
+    motivoCorte: j => (j && j.stop_reason) || '',
     listaModelos: () => 'https://api.anthropic.com/v1/models',
     cabecerasLista: k => ({'x-api-key': k, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}),
     extraerModelos: j => (j.data||[]).map(m => m.id).filter(Boolean),
@@ -167,7 +169,24 @@ async function llmChat(sistema, mensajes, opciones){
   let j;
   try{ j = await res.json(); }catch(e){ return {ok:false, motivo:'proveedor', detalle:'respuesta ilegible'}; }
   const texto = def.extraer(j);
-  if(!texto) return {ok:false, motivo:'vacia'};
+  if(!texto){
+    /* Los modelos "que piensan" (gemini-3.6-flash, entre otros) gastan parte
+       del presupuesto de tokens razonando ANTES de escribir. Con unas
+       instrucciones largas —y las de oficio lo son— se quedan sin margen y
+       devuelven un candidato VACÍO, sin una sola palabra. Desde fuera es
+       "el asistente no contesta nunca", que es justo lo que reportó el dueño.
+       No se puede desactivar el razonamiento sin arriesgarse a que el modelo
+       rechace la petición, así que se reintenta UNA vez con el triple de
+       margen. Una sola vez: si vuelve vacía, es otra cosa y hay que verla. */
+    const corte = def.motivoCorte ? def.motivoCorte(j) : '';
+    const sinSitio = /MAX_TOKENS|max_tokens|length/i.test(String(corte));
+    if(sinSitio && !o.reintento){
+      return llmChat(sistema, mensajes, Object.assign({}, o, {
+        maxTokens: Math.min(maxTokens * 3, 8000), reintento: true,
+      }));
+    }
+    return {ok:false, motivo:'vacia', detalle: corte ? `motivo de corte: ${corte}` : 'sin texto en la respuesta'};
+  }
   return {ok:true, texto};
 }
 
@@ -1093,7 +1112,7 @@ async function idrEnviarInterno(){
   renderIdr();
 
   const historial = idrMensajes(c).map(m => ({role: m.r === 'yo' ? 'user' : 'assistant', content: m.t}));
-  const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 900});
+  const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), historial, {maxTokens: 2500});
   idrPensando = false;
   if(!r || !r.ok){ showToast(idrMensajeError(r || {})); renderIdr(); return; }
   idrUltimoFallo = null;
@@ -1278,7 +1297,7 @@ Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más co
 Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") — nunca en kilos ni litros. La aplicación ya las convierte a la unidad en que el negocio compra cada cosa.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Y si el plato pide alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
-  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
   idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);
@@ -1349,7 +1368,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
       {role:'user', content: instruccion},
       {role:'assistant', content: r.texto},
       {role:'user', content: `He comprobado tu propuesta contra los datos reales del negocio y falla en esto:\n- ${problemas.join('\n- ')}\n\nCorrígelo y devuelve el MISMO JSON con la receta arreglada. Si algo no se puede arreglar sin traicionar el plato, déjalo y explica por qué en "nota".`}
-    ], {maxTokens: 1500});
+    ], {maxTokens: 3000});
     const j2 = arreglo.ok ? idrExtraerJson(arreglo.texto) : null;
     if(j2 && Array.isArray(j2.ingredientes)){
       const lineas2 = []; const faltan2 = [];
@@ -1455,7 +1474,7 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud") —
 Las cantidades tienen que dar ese rendimiento de verdad, contando lo que se reduce o se pierde al colar.
 Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con el que los tiene. Si hace falta alguno que no tiene, INCLÚYELO igual: la aplicación lo marcará como pendiente de dar de alta. No pongas precios ni costes.`;
 
-  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 1500});
+  const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 3000});
   if(!r.ok){ showToast(idrMensajeError(r)); return; }
   idrUltimoFallo = null;
   const j = idrExtraerJson(r.texto);

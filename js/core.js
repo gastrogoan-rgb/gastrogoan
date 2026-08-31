@@ -1271,7 +1271,10 @@ function renderBusinessSelectScreenHtml(){
         <button class="btn" style="flex:1;border:1px solid var(--brand-orange);color:var(--brand-orange)" onclick="pickParentForSucursal()"><i class="ti ti-copy"></i> ${t('btn.openBranch')}</button>
       </div>
       <a href="https://buy.stripe.com/aFa6oGeSK44jaFw1mvdwc01" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;background:var(--olive);color:#FAF8F4;padding:12px;font-weight:700;font-size:14px;text-decoration:none"><i class="ti ti-shopping-cart"></i> ${t('bs.buyLicense')}</a>
-      <button class="btn btn-sm" style="width:100%;margin-top:8px;background:none;border:none;color:var(--muted)" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="promptChangeOwnerPassword()"><i class="ti ti-key"></i> ${t('bs.changePassword')}</button>
+        <button class="btn" style="flex:1;min-width:150px;min-height:44px;background:none;border:none;color:var(--muted)" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+      </div>
     </div>
   `;
 }
