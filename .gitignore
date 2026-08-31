@@ -8,3 +8,4 @@ node_modules/
 
 # SDK de Firebase servido en local durante las pruebas del emulador
 __sdk/
+test/simulacion/salida/

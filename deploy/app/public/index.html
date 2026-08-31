@@ -2772,7 +2772,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 18:03';
+const GG_BUILD = '31/08/2026 18:16';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -9163,6 +9163,10 @@ const I18N = {
     'idr.checksPassed': 'Comprobado con tus datos: todo cuadra',
     'idr.autoFixed': 'El asistente corrigió su propuesta tras comprobarla con tus datos.',
     'idr.check.foodCost': 'El food cost sale al ${pct}% y tu objetivo es el ${obj}%.',
+    'idr.check.foodCostLow': 'El food cost sale solo al ${pct}%, muy por debajo de tu objetivo del ${obj}%. Repasa la ración: o se ha quedado corta, o falta algo en la receta, o ese precio no lo sostiene el plato.',
+    'idr.check.menuCost': 'El menú entero sale a ${coste} de materia prima por comensal: un ${pct}% sobre el precio, y tu objetivo es el ${obj}%.',
+    'idr.check.menuCostLow': 'El menú entero sale a ${coste} por comensal, solo un ${pct}% del precio, con un objetivo del ${obj}%. Para lo que cobras, los pases se han quedado cortos.',
+    'idr.check.fewDishes': 'Han salido ${n} platos y habías pedido ${pedidos}.',
     'idr.check.equipment': 'Usa "${tecnica}" y tu equipamiento no lo permite.',
     'idr.check.gluten': 'Lleva gluten y tu negocio exige tener siempre opción sin gluten.',
     'idr.check.vegetarian': 'Lleva producto animal y aquí se pedía opción vegetariana.',
@@ -11232,6 +11236,10 @@ const I18N = {
     'idr.checksPassed': 'Comprovat amb les teves dades: tot quadra',
     'idr.autoFixed': 'L\'assistent va corregir la seva proposta després de comprovar-la amb les teves dades.',
     'idr.check.foodCost': 'El food cost surt al ${pct}% i el teu objectiu és el ${obj}%.',
+    'idr.check.foodCostLow': 'El food cost surt només al ${pct}%, molt per sota del teu objectiu del ${obj}%. Repassa la ració: o s\'ha quedat curta, o falta alguna cosa a la recepta, o aquest preu el plat no el sosté.',
+    'idr.check.menuCost': 'El menú sencer surt a ${coste} de matèria primera per comensal: un ${pct}% sobre el preu, i el teu objectiu és el ${obj}%.',
+    'idr.check.menuCostLow': 'El menú sencer surt a ${coste} per comensal, només un ${pct}% del preu, amb un objectiu del ${obj}%. Per al que cobres, els passis s\'han quedat curts.',
+    'idr.check.fewDishes': 'Han sortit ${n} plats i n\'havies demanat ${pedidos}.',
     'idr.check.equipment': 'Fa servir "${tecnica}" i el teu equipament no ho permet.',
     'idr.check.gluten': 'Porta gluten i el teu negoci exigeix tenir sempre opció sense gluten.',
     'idr.check.vegetarian': 'Porta producte animal i aquí es demanava opció vegetariana.',
@@ -13305,6 +13313,10 @@ const I18N = {
     'idr.checksPassed': 'Checked against your data: it all adds up',
     'idr.autoFixed': 'The assistant corrected its proposal after it was checked against your data.',
     'idr.check.foodCost': 'Food cost comes to ${pct}% and your target is ${obj}%.',
+    'idr.check.foodCostLow': 'Food cost comes to just ${pct}%, well below your ${obj}% target. Check the portion: either it is too small, something is missing from the recipe, or the dish does not justify that price.',
+    'idr.check.menuCost': 'The whole menu comes to ${coste} of raw material per cover: ${pct}% of the price, against your ${obj}% target.',
+    'idr.check.menuCostLow': 'The whole menu comes to ${coste} per cover, only ${pct}% of the price, against a ${obj}% target. For what you charge, the courses fall short.',
+    'idr.check.fewDishes': '${n} dishes came out and you asked for ${pedidos}.',
     'idr.check.equipment': 'It uses "${tecnica}" and your equipment does not allow it.',
     'idr.check.gluten': 'It contains gluten and your business always requires a gluten-free option.',
     'idr.check.vegetarian': 'It contains animal produce and a vegetarian option was required here.',
@@ -35736,6 +35748,11 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si
 
   if(!creados.length){ showToast(t('idr.err.unreadable')); return; }
   c.faltan = faltan;
+  /* El food cost de un MENÚ es el del menú entero, no el de cada pase por
+     separado: un aperitivo al 4% y un segundo al 45% pueden dar un menú
+     perfecto. La app comprobaba plato a plato y nunca sumaba, así que el
+     número que de verdad decide si el menú es rentable no se miraba. */
+  c.avisos = idrRevisarConjunto(c, creados);
   idrGuardarConjunto(c, secciones, creados.map(x => x.id), c.propuesta.logica);
   c.propuesta = null;
   saveDB();
@@ -36196,24 +36213,43 @@ function idrIngenieriaTexto(){
 
 // Técnicas que necesitan un equipo concreto. Si el ADN dice que no lo
 // tiene, proponerla es perder el tiempo del cocinero.
+/* Solo se avisa de técnicas que piden un aparato ESPECIAL. Antes también
+   estaban la plancha, la fritura y la brasa, y saltaba el aviso en cuanto el
+   hostelero no las había escrito una por una en su ADN: "usa plancha y tu
+   equipamiento no lo permite" en una cocina que evidentemente tiene plancha.
+   Un aviso falso es peor que ninguno — enseña a ignorarlos, y el día que
+   salte uno de verdad tampoco se leerá. El campo del ADN es una descripción,
+   no un inventario cerrado: lo único que se puede afirmar de él es lo que
+   NIEGA expresamente ("sin Roner"). */
 const IDR_TECNICAS_EQUIPO = [
   {tecnica:'baja temperatura', equipos:['roner','sous','vacío','circulador','termocirculador']},
   {tecnica:'sous-vide', equipos:['roner','sous','vacío','circulador']},
-  {tecnica:'deshidratad', equipos:['deshidratador','horno']},
+  {tecnica:'deshidratad', equipos:['deshidratador']},
   {tecnica:'esferificación', equipos:['esferific','alginato','jeringa']},
   {tecnica:'nitrógeno', equipos:['nitrógeno']},
-  {tecnica:'ahumad', equipos:['ahumador','pistola','brasa']},
-  {tecnica:'brasa', equipos:['brasa','parrilla','josper','carbón']},
-  {tecnica:'plancha', equipos:['plancha','fry']},
-  {tecnica:'fritura', equipos:['freidora','sartén']},
+  {tecnica:'ahumad', equipos:['ahumador','pistola']},
   {tecnica:'abatid', equipos:['abatidor']},
   {tecnica:'sifón', equipos:['sifón','isi']},
+  {tecnica:'pacojet', equipos:['pacojet']},
+  {tecnica:'liofiliz', equipos:['liofiliz']},
 ];
 
 /* ⚠️ "Horno y brasa. SIN Roner ni deshidratador" CONTIENE la palabra
    "Roner", así que buscarla a secas daba por bueno justo lo contrario de lo
    que dice el ADN. Se parte el texto en trozos y los que van detrás de un
    "sin" cuentan como lo que NO se tiene. */
+// ¿El ADN dice EXPRESAMENTE que no tiene este aparato? ("Sin Roner ni
+// deshidratador"). Es lo único que se puede dar por cierto de un campo que
+// es una descripción libre, no un inventario.
+function idrEquipoNegado(equipamiento, equipos){
+  const trozos = String(equipamiento||'').split(/[.,;\n]/);
+  return trozos.some(trozo => {
+    const tn = idrNormalizar(trozo);
+    if(!/(^|\s)(sin|no)\s/.test(' ' + tn)) return false;
+    return equipos.some(e => tn.includes(idrNormalizar(e)));
+  });
+}
+
 function idrTieneEquipo(equipamiento, equipos){
   const trozos = String(equipamiento||'').split(/[.,;\n]|\by\b/i);
   let tiene = false, negado = false;
@@ -36247,6 +36283,26 @@ function idrObjetivoFoodCost(c){
   return parseFloat(idrAdn().foodCostObjetivo);
 }
 
+/* Revisa el conjunto como conjunto. Un menú se cuesta entero por comensal;
+   una carta, plato a plato contra su precio medio. */
+function idrRevisarConjunto(c, recetas){
+  const avisos = [];
+  const e = idrEncargo(c);
+  const objetivo = idrObjetivoFoodCost(c);
+  if(!(e.pvp > 0) || !isFinite(objetivo) || objetivo <= 0) return avisos;
+  const coste = recetas.reduce((sum, r) => sum + ((typeof recipeCost === 'function') ? recipeCost(r) : 0), 0);
+  if(c.tipo === 'menu'){
+    const pct = (coste / e.pvp) * 100;
+    if(pct > objetivo + 2) avisos.push(t('idr.check.menuCost').replace('${coste}', fmtMoney(coste)).replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+    else if(pct < objetivo / 2) avisos.push(t('idr.check.menuCostLow').replace('${coste}', fmtMoney(coste)).replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+  }
+  // Falten los platos que falten respecto a lo pedido, hay que decirlo: la
+  // estructura la fijó el negocio y una carta a medias no se puede publicar.
+  const pedidos = idrTotalPlatos(c);
+  if(pedidos && recetas.length < pedidos) avisos.push(t('idr.check.fewDishes').replace('${n}', recetas.length).replace('${pedidos}', pedidos));
+  return avisos;
+}
+
 function idrValidarPlato(receta, opciones){
   const o = opciones || {};
   const a = idrAdn();
@@ -36261,6 +36317,12 @@ function idrValidarPlato(receta, opciones){
   if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
     const pct = (coste / pvp) * 100;
     if(pct > objetivo + 2) problemas.push(t('idr.check.foodCost').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+    /* Y también MUY por debajo. Un plato al 5% cuando el objetivo es el 30%
+       no es una buena noticia: o la ración se ha quedado corta, o falta media
+       receta, o se está cobrando un precio que el plato no sostiene. La app
+       solo miraba el exceso, así que este caso pasaba callado — y en la
+       simulación salieron cuatro platos así seguidos. */
+    else if(pct > 0 && pct < objetivo / 2) problemas.push(t('idr.check.foodCostLow').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
   }
 
   // 2) Técnicas que su cocina no puede hacer.
@@ -36268,7 +36330,10 @@ function idrValidarPlato(receta, opciones){
     const texto = idrNormalizar((o.textoLibre||'') + ' ' + (receta.steps||'') + ' ' + (receta.presentation||''));
     IDR_TECNICAS_EQUIPO.forEach(({tecnica, equipos}) => {
       if(!texto.includes(idrNormalizar(tecnica))) return;
-      if(!idrTieneEquipo(a.equipamiento, equipos)) problemas.push(t('idr.check.equipment').replace('${tecnica}', tecnica));
+      // Solo se avisa si el ADN lo NIEGA expresamente. No tenerlo escrito no
+      // significa no tenerlo, y suponer lo contrario llena la ficha de avisos
+      // falsos que acaban ignorándose todos.
+      if(idrEquipoNegado(a.equipamiento, equipos)) problemas.push(t('idr.check.equipment').replace('${tecnica}', tecnica));
     });
   }
 

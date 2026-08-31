@@ -2180,6 +2180,91 @@ await caso('El objetivo del encargo manda sobre el del ADN', async ()=>{
   return 'el encargo manda; el ADN es el respaldo';
 });
 
+await caso('No avisa de equipamiento que el ADN no niega expresamente', async ()=>{
+  /* Salió en la simulación con un negocio realista: "usa plancha y tu
+     equipamiento no lo permite" en una cocina que evidentemente tiene
+     plancha, solo porque no la había escrito en el ADN. Un aviso falso enseña
+     a ignorarlos todos. */
+  const r = await page.evaluate(()=>{
+    Object.assign(idrAdn(), {equipamiento: 'Horno mixto, brasa de carbón, abatidor. Sin Roner ni deshidratador.'});
+    const receta = {ingredients:[], consumiblesPct:0, price:0, steps:'', presentation:''};
+    const con = (txt) => idrValidarPlato(receta, {textoLibre: txt, creacion:{encargo:{}}})
+      .filter(a => /equipamiento/i.test(a));
+    return {
+      plancha: con('Marcar en la plancha').length,
+      fritura: con('Fritura suave en la sartén').length,
+      brasa: con('Terminar a la brasa').length,
+      // Lo que el ADN niega expresamente SÍ tiene que avisar
+      roner: con('Cocinar a baja temperatura 6 horas').length,
+      deshidratador: con('Deshidratado de la piel').length,
+      // Y lo que ni se menciona ni se niega, no se supone
+      ahumador: con('Ahumado en frío').length,
+    };
+  });
+  assert.equal(r.plancha, 0, 'la plancha no puede dar aviso');
+  assert.equal(r.fritura, 0, 'ni la fritura');
+  assert.equal(r.brasa, 0, 'ni la brasa');
+  assert.equal(r.roner, 1, 'pero "Sin Roner" sí debe avisar');
+  assert.equal(r.deshidratador, 1, 'y "ni deshidratador" también');
+  assert.equal(r.ahumador, 0, 'lo que no se niega, no se supone');
+  return 'solo avisa de lo que el ADN niega';
+});
+
+await caso('Un food cost ridículamente bajo también se avisa', async ()=>{
+  // Solo se miraba el exceso. Un plato al 5% con objetivo 30% es dinero
+  // sobre la mesa o media receta que falta, y pasaba callado.
+  const r = await page.evaluate(()=>{
+    if(!(DB.ingredients||[]).some(i=>i.id===1)){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    const c = {encargo:{foodCost: 30}};
+    const barato = {ingredients:[{type:'ingredient', ingredientId:1, qty:20, merma:0}], consumiblesPct:0, price:16, steps:'', presentation:''};
+    const justo  = {ingredients:[{type:'ingredient', ingredientId:1, qty:200, merma:0}], consumiblesPct:0, price:16, steps:'', presentation:''};
+    const caro   = {ingredients:[{type:'ingredient', ingredientId:1, qty:400, merma:0}], consumiblesPct:0, price:16, steps:'', presentation:''};
+    const av = r2 => idrValidarPlato(r2, {creacion: c});
+    return {
+      barato: av(barato).filter(a=>/muy por debajo/.test(a)).length,
+      justo: av(justo).filter(a=>/food cost/i.test(a)).length,
+      caro: av(caro).filter(a=>/objetivo/.test(a)).length,
+    };
+  });
+  assert.equal(r.barato, 1, '0,44 € a 16 € es un 2,8%: hay que decirlo');
+  assert.equal(r.justo, 0, 'un 27,5% está bien: ningún aviso de food cost');
+  assert.equal(r.caro, 1, 'y el exceso sigue avisando');
+  return 'avisa por arriba y por abajo, y calla cuando está bien';
+});
+
+await caso('El menú se cuesta ENTERO, no pase a pase', async ()=>{
+  // Un aperitivo al 4% y un segundo al 45% pueden dar un menú perfecto. Lo
+  // que decide es la suma por comensal, y no se miraba.
+  const r = await page.evaluate(()=>{
+    if(!(DB.ingredients||[]).some(i=>i.id===1)){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    const receta = q => ({ingredients:[{type:'ingredient', ingredientId:1, qty:q, merma:0}], consumiblesPct:0, price:0, steps:'', presentation:''});
+    const menu = {tipo:'menu', encargo:{pvp:32, foodCost:28, hecho:true, bloques:[{nombre:'A',n:1},{nombre:'B',n:1},{nombre:'C',n:1},{nombre:'D',n:1}]}};
+    // 4 pases baratos: 4 x 0,44 = 1,76 sobre 32 € = 5,5%
+    const corto = idrRevisarConjunto(menu, [receta(20), receta(20), receta(20), receta(20)]);
+    // 4 pases caros: 4 x 3,30 = 13,20 sobre 32 € = 41%
+    const pasado = idrRevisarConjunto(menu, [receta(150), receta(150), receta(150), receta(150)]);
+    // Un menú en su sitio: 4 x 2,20 = 8,80 → 27,5%
+    const bien = idrRevisarConjunto(menu, [receta(100), receta(100), receta(100), receta(100)]);
+    // Y si salen menos platos de los pedidos, se dice
+    const pocos = idrRevisarConjunto(menu, [receta(100), receta(100)]);
+    return {
+      corto: corto.some(a=>/se han quedado cortos/.test(a)),
+      pasado: pasado.some(a=>/menú entero sale a/.test(a)),
+      bien: bien.length,
+      pocos: pocos.some(a=>/habías pedido 4/.test(a)),
+    };
+  });
+  assert.ok(r.corto, 'un menú muy por debajo de su precio debe avisarse');
+  assert.ok(r.pasado, 'y uno pasado de coste, también');
+  assert.equal(r.bien, 0, 'y uno en su sitio no debe avisar de nada');
+  assert.ok(r.pocos, 'y si faltan platos respecto a lo pedido, se dice');
+  return 'la suma por comensal, que es lo que decide';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

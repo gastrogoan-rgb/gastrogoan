@@ -2133,6 +2133,11 @@ Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si
 
   if(!creados.length){ showToast(t('idr.err.unreadable')); return; }
   c.faltan = faltan;
+  /* El food cost de un MENÚ es el del menú entero, no el de cada pase por
+     separado: un aperitivo al 4% y un segundo al 45% pueden dar un menú
+     perfecto. La app comprobaba plato a plato y nunca sumaba, así que el
+     número que de verdad decide si el menú es rentable no se miraba. */
+  c.avisos = idrRevisarConjunto(c, creados);
   idrGuardarConjunto(c, secciones, creados.map(x => x.id), c.propuesta.logica);
   c.propuesta = null;
   saveDB();
@@ -2593,24 +2598,43 @@ function idrIngenieriaTexto(){
 
 // Técnicas que necesitan un equipo concreto. Si el ADN dice que no lo
 // tiene, proponerla es perder el tiempo del cocinero.
+/* Solo se avisa de técnicas que piden un aparato ESPECIAL. Antes también
+   estaban la plancha, la fritura y la brasa, y saltaba el aviso en cuanto el
+   hostelero no las había escrito una por una en su ADN: "usa plancha y tu
+   equipamiento no lo permite" en una cocina que evidentemente tiene plancha.
+   Un aviso falso es peor que ninguno — enseña a ignorarlos, y el día que
+   salte uno de verdad tampoco se leerá. El campo del ADN es una descripción,
+   no un inventario cerrado: lo único que se puede afirmar de él es lo que
+   NIEGA expresamente ("sin Roner"). */
 const IDR_TECNICAS_EQUIPO = [
   {tecnica:'baja temperatura', equipos:['roner','sous','vacío','circulador','termocirculador']},
   {tecnica:'sous-vide', equipos:['roner','sous','vacío','circulador']},
-  {tecnica:'deshidratad', equipos:['deshidratador','horno']},
+  {tecnica:'deshidratad', equipos:['deshidratador']},
   {tecnica:'esferificación', equipos:['esferific','alginato','jeringa']},
   {tecnica:'nitrógeno', equipos:['nitrógeno']},
-  {tecnica:'ahumad', equipos:['ahumador','pistola','brasa']},
-  {tecnica:'brasa', equipos:['brasa','parrilla','josper','carbón']},
-  {tecnica:'plancha', equipos:['plancha','fry']},
-  {tecnica:'fritura', equipos:['freidora','sartén']},
+  {tecnica:'ahumad', equipos:['ahumador','pistola']},
   {tecnica:'abatid', equipos:['abatidor']},
   {tecnica:'sifón', equipos:['sifón','isi']},
+  {tecnica:'pacojet', equipos:['pacojet']},
+  {tecnica:'liofiliz', equipos:['liofiliz']},
 ];
 
 /* ⚠️ "Horno y brasa. SIN Roner ni deshidratador" CONTIENE la palabra
    "Roner", así que buscarla a secas daba por bueno justo lo contrario de lo
    que dice el ADN. Se parte el texto en trozos y los que van detrás de un
    "sin" cuentan como lo que NO se tiene. */
+// ¿El ADN dice EXPRESAMENTE que no tiene este aparato? ("Sin Roner ni
+// deshidratador"). Es lo único que se puede dar por cierto de un campo que
+// es una descripción libre, no un inventario.
+function idrEquipoNegado(equipamiento, equipos){
+  const trozos = String(equipamiento||'').split(/[.,;\n]/);
+  return trozos.some(trozo => {
+    const tn = idrNormalizar(trozo);
+    if(!/(^|\s)(sin|no)\s/.test(' ' + tn)) return false;
+    return equipos.some(e => tn.includes(idrNormalizar(e)));
+  });
+}
+
 function idrTieneEquipo(equipamiento, equipos){
   const trozos = String(equipamiento||'').split(/[.,;\n]|\by\b/i);
   let tiene = false, negado = false;
@@ -2644,6 +2668,26 @@ function idrObjetivoFoodCost(c){
   return parseFloat(idrAdn().foodCostObjetivo);
 }
 
+/* Revisa el conjunto como conjunto. Un menú se cuesta entero por comensal;
+   una carta, plato a plato contra su precio medio. */
+function idrRevisarConjunto(c, recetas){
+  const avisos = [];
+  const e = idrEncargo(c);
+  const objetivo = idrObjetivoFoodCost(c);
+  if(!(e.pvp > 0) || !isFinite(objetivo) || objetivo <= 0) return avisos;
+  const coste = recetas.reduce((sum, r) => sum + ((typeof recipeCost === 'function') ? recipeCost(r) : 0), 0);
+  if(c.tipo === 'menu'){
+    const pct = (coste / e.pvp) * 100;
+    if(pct > objetivo + 2) avisos.push(t('idr.check.menuCost').replace('${coste}', fmtMoney(coste)).replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+    else if(pct < objetivo / 2) avisos.push(t('idr.check.menuCostLow').replace('${coste}', fmtMoney(coste)).replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+  }
+  // Falten los platos que falten respecto a lo pedido, hay que decirlo: la
+  // estructura la fijó el negocio y una carta a medias no se puede publicar.
+  const pedidos = idrTotalPlatos(c);
+  if(pedidos && recetas.length < pedidos) avisos.push(t('idr.check.fewDishes').replace('${n}', recetas.length).replace('${pedidos}', pedidos));
+  return avisos;
+}
+
 function idrValidarPlato(receta, opciones){
   const o = opciones || {};
   const a = idrAdn();
@@ -2658,6 +2702,12 @@ function idrValidarPlato(receta, opciones){
   if(isFinite(objetivo) && objetivo > 0 && pvp > 0){
     const pct = (coste / pvp) * 100;
     if(pct > objetivo + 2) problemas.push(t('idr.check.foodCost').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
+    /* Y también MUY por debajo. Un plato al 5% cuando el objetivo es el 30%
+       no es una buena noticia: o la ración se ha quedado corta, o falta media
+       receta, o se está cobrando un precio que el plato no sostiene. La app
+       solo miraba el exceso, así que este caso pasaba callado — y en la
+       simulación salieron cuatro platos así seguidos. */
+    else if(pct > 0 && pct < objetivo / 2) problemas.push(t('idr.check.foodCostLow').replace('${pct}', pct.toFixed(1)).replace('${obj}', objetivo));
   }
 
   // 2) Técnicas que su cocina no puede hacer.
@@ -2665,7 +2715,10 @@ function idrValidarPlato(receta, opciones){
     const texto = idrNormalizar((o.textoLibre||'') + ' ' + (receta.steps||'') + ' ' + (receta.presentation||''));
     IDR_TECNICAS_EQUIPO.forEach(({tecnica, equipos}) => {
       if(!texto.includes(idrNormalizar(tecnica))) return;
-      if(!idrTieneEquipo(a.equipamiento, equipos)) problemas.push(t('idr.check.equipment').replace('${tecnica}', tecnica));
+      // Solo se avisa si el ADN lo NIEGA expresamente. No tenerlo escrito no
+      // significa no tenerlo, y suponer lo contrario llena la ficha de avisos
+      // falsos que acaban ignorándose todos.
+      if(idrEquipoNegado(a.equipamiento, equipos)) problemas.push(t('idr.check.equipment').replace('${tecnica}', tecnica));
     });
   }
 
