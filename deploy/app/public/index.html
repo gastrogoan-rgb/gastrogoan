@@ -2779,7 +2779,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '31/08/2026 23:30';
+const GG_BUILD = '01/09/2026 00:12';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -4855,7 +4855,55 @@ const FIREBASE_RULES_JSON = `{
           },
           "requests": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
-            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            "$requestId": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              "_claimedAt": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
+                ".validate": "newData.isNumber()"
+              }
+            }
+          },
+          "aforoHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$turnoIdx": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "pedidosHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$slot": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "mesaHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$tableId": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                "$slot": {
+                  ".validate": "newData.isBoolean() && newData.val() === true"
+                }
+              }
+            }
+          },
+          "orderStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            }
+          },
+          "reservationStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            }
           }
         }
       }
@@ -5705,6 +5753,65 @@ function getPlatformFirebaseApp(){
   }
 }
 
+/* ============================================================
+   DÓNDE VIVE EL ESPEJO PÚBLICO
+   ============================================================
+   El espejo público (lo que lee reservagastrogoan.html: la carta, el aforo,
+   las reservas que entran) vivía en la Firebase COMPARTIDA de la plataforma.
+   Funcionaba, pero no escala y el techo está mucho más bajo de lo que parece:
+   el plan gratuito de Firebase permite 100 CONEXIONES SIMULTÁNEAS, y una
+   conexión es una pestaña abierta. Con el espejo compartido, cada app de
+   gestión abierta y cada cliente mirando la carta ocupaban una conexión de
+   ESE MISMO proyecto. Cuentas: a partir de unos 50-100 negocios, la página
+   de reservas empieza a fallar A LA VEZ para todos los clientes, un viernes
+   por la noche, que es cuando más se usa.
+
+   Ahora el espejo vive en la nube DE CADA NEGOCIO — que es donde estaba
+   pensado desde el principio (sus reglas ya contemplaban el nodo `public`).
+   Así las conexiones se reparten entre tantos proyectos como negocios haya,
+   cada uno con su propio cupo gratuito, y a GastroGoan no le cuesta nada por
+   muchas licencias que venda.
+
+   Y no abre ninguna conexión nueva: la app de gestión YA está conectada a la
+   nube del negocio (initCloud la registra como app por defecto), así que se
+   reutiliza esa misma.
+
+   El `else` es la red de seguridad para un negocio que todavía no tenga su
+   nube configurada: sigue usando la compartida, como hasta ahora. */
+function getPublicMirrorApp(){
+  if(typeof firebase === 'undefined') return Promise.resolve(null);
+  const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
+  if(cfg && cfg.apiKey && cfg.databaseURL){
+    try{
+      const app = firebase.app();   // la del negocio, ya autenticada
+      if(app) return Promise.resolve(app);
+    }catch(e){ /* todavía no está inicializada: se cae a la compartida */ }
+  }
+  return getPlatformFirebaseApp();
+}
+
+/* La página pública solo conoce el `publicId` (va en el QR y en el enlace),
+   y de ahí no se puede deducir a qué proyecto de Firebase conectarse: el
+   publicId se deriva del tenantId con un hash de un solo sentido. Así que se
+   publica esta guía mínima en la plataforma compartida: publicId → en qué
+   nube está ese negocio.
+
+   Se lee SIN autenticar y por REST a propósito (ver reservagastrogoan.html):
+   una petición HTTP no abre socket, así que no consume ninguna de las 100
+   conexiones simultáneas del plan gratuito. Y no expone nada: el apiKey y la
+   databaseURL de Firebase no son secretos —viajan en el JavaScript de
+   cualquier web que use Firebase— y lo que protege los datos son las reglas,
+   no esconderlos. */
+function publishPublicLookup(publicId, config){
+  if(!publicId || !config || !config.apiKey || !config.databaseURL) return;
+  getPlatformFirebaseApp().then(app => {
+    if(!app) return;
+    app.database().ref('gastrogoan/publicLookup/' + publicId).set({
+      apiKey: config.apiKey, databaseURL: config.databaseURL,
+    }).catch(e => console.error('Error publicando dónde vive el espejo público', e));
+  }).catch(()=>{});
+}
+
 /* Escucha las reservas/pedidos que el cliente envía desde la página pública
    (reservagastrogoan.html). Esa página siempre escribe en el proyecto
    COMPARTIDO de la plataforma (no en el Firebase propio del negocio), así
@@ -5790,7 +5897,7 @@ function initPublicRequestsListener(){
   if(!getLicense()) return;
   const publicId = getPublicId();
   if(!publicId) return;
-  getPlatformFirebaseApp().then(app => {
+  getPublicMirrorApp().then(app => {
     if(!app || publicRequestsListenerAttached) return;
     publicRequestsListenerAttached = true;
     app.database().ref('gastrogoan/public/' + publicId + '/requests').on('child_added', snap => {
@@ -6188,7 +6295,7 @@ function syncOrderStatusForPublic(order, forcedStatus){
   const publicId = getPublicId();
   if(!publicId) return;
   const status = forcedStatus || computePublicOrderStatus(order);
-  getPlatformFirebaseApp().then(app => {
+  getPublicMirrorApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/public/' + publicId + '/orderStatus/' + order.clientRef).set({
       status, updatedAt: new Date().toISOString()
@@ -6208,7 +6315,7 @@ function syncReservationStatusForPublic(reservation){
   if(typeof firebase === 'undefined') return;
   const publicId = getPublicId();
   if(!publicId) return;
-  getPlatformFirebaseApp().then(app => {
+  getPublicMirrorApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/public/' + publicId + '/reservationStatus/' + reservation.publicToken).set({
       status: reservation.status, date: reservation.date, time: reservation.time, people: reservation.people,
@@ -6260,7 +6367,7 @@ function syncPublicMirror(){
   if(!publicId) return;
   try{
     const sucursales = buildSucursalesList();
-    getPlatformFirebaseApp().then(app => {
+    getPublicMirrorApp().then(app => {
       if(!app) return;
       const data = {
         business: DB.business,
@@ -6499,6 +6606,8 @@ function initCloud(){
   const tenantId = getTenantId();
   if(!tenantId){ updateSyncBadge('local'); return; } // aún sin licencia activada
   publishTenantLookup(tenantId, cloudConfig);
+  // Y dónde encontrar su espejo público, para que el QR siga funcionando.
+  try{ const pid = getPublicId(); if(pid) publishPublicLookup(pid, cloudConfig); }catch(e){}
   if(cloudRef) return; // ya conectado
   try{
     // OJO: antes esto comprobaba "firebase.apps.length" (el total global de

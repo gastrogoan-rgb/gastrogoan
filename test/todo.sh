@@ -50,8 +50,9 @@ node test/dinero.mjs               > "$SALIDA/dinero.txt"      2>&1 & P25=$!
 node test/sin-salida.mjs           > "$SALIDA/sinsalida.txt"   2>&1 & P26=$!
 node test/cuentas.mjs              > "$SALIDA/cuentas.txt"     2>&1 & P27=$!
 node test/version.mjs              > "$SALIDA/version.txt"     2>&1 & P28=$!
+node test/escala.mjs               > "$SALIDA/escala.txt"      2>&1 & P29=$!
 
-echo "→ 28 pruebas corriendo a la vez…"
+echo "→ 29 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -86,5 +87,6 @@ espera $P25 "el dinero, función por función"           "$SALIDA/dinero.txt"   
 espera $P26 "callejones sin salida del alta"          "$SALIDA/sinsalida.txt"   "casos pasaron"
 espera $P27 "aislamiento entre cuentas"                "$SALIDA/cuentas.txt"     "casos pasaron"
 espera $P28 "aviso de version nueva y ahorro de trafico"  "$SALIDA/version.txt"     "casos pasaron"
+espera $P29 "escala: nada crece con el numero de clientes" "$SALIDA/escala.txt"      "casos pasaron"
 
 exit $FALLOS

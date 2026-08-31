@@ -799,29 +799,61 @@ function init(){
     return;
   }
 
+  arrancarConLaNubeDelNegocio();
+}
+
+/* ── Dónde se conecta esta página ──
+   Cada negocio tiene SU propio proyecto de Firebase, y ahí es donde vive su
+   espejo público. Esta página no lo sabe de antemano —del enlace solo saca
+   el publicId o el nombre corto—, así que primero pregunta a la plataforma
+   compartida dónde está ese negocio, y luego se conecta allí.
+
+   Esa primera pregunta se hace por REST (un simple fetch), NO con el SDK, y
+   eso es lo importante: una petición HTTP no abre socket, así que no consume
+   ninguna de las 100 conexiones simultáneas que da el plan gratuito de
+   Firebase, ni crea una cuenta anónima. Si esta página se conectara con el
+   SDK a la plataforma —como hacía antes—, cada cliente mirando la carta
+   ocuparía una conexión DEL MISMO proyecto para todos los negocios: a partir
+   de unos 50-100 restaurantes, la web de reservas empezaría a fallar para
+   todos a la vez, un viernes por la noche.
+
+   Si el negocio todavía no tiene su nube publicada (uno dado de alta antes
+   de este cambio), se cae a la plataforma compartida como hasta ahora: nadie
+   se queda sin servicio por una migración. */
+const PLATAFORMA_REST = FIREBASE_CONFIG.databaseURL.replace(/\/$/, '');
+
+async function consultarPlataforma(ruta){
   try{
-    firebase.initializeApp(FIREBASE_CONFIG);
+    const r = await fetch(`${PLATAFORMA_REST}/${ruta}.json`, {cache: 'no-store'});
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+async function arrancarConLaNubeDelNegocio(){
+  try{
+    // 1) El nombre corto (?n=...) se resuelve antes: da el publicId.
+    if(slug && !publicId){
+      const resuelto = await consultarPlataforma('gastrogoan/publicSlugs/' + slug);
+      // Compatibilidad: antes se guardaba el publicId a pelo; ahora puede
+      // venir como objeto con más datos dentro.
+      publicId = (resuelto && typeof resuelto === 'object') ? resuelto.publicId : resuelto;
+      if(!publicId){ showError('error.enlace'); return; }
+    }
+    if(!publicId){ showError('error.enlace'); return; }
+
+    // 2) ¿En qué nube está este negocio?
+    const donde = await consultarPlataforma('gastrogoan/publicLookup/' + publicId);
+    const config = (donde && donde.apiKey && donde.databaseURL)
+      ? {apiKey: donde.apiKey, databaseURL: donde.databaseURL}
+      : FIREBASE_CONFIG;   // negocio anterior a la migración
+
+    firebase.initializeApp(config);
     db = firebase.database();
-    // Autenticación anónima: las reglas de la nube exigen auth != null
-    // para poder leer/escribir, así evitamos el acceso directo sin pasar
-    // por el SDK de Firebase.
-    firebase.auth().signInAnonymously().then(() => {
-      // Enlace con nombre elegido por el negocio (?n=...): primero hay que
-      // resolverlo contra la plataforma para saber su código real antes de
-      // poder cargar sus datos.
-      if(slug && !publicId){
-        return db.ref('gastrogoan/publicSlugs/' + slug).once('value').then(snap => {
-          const resolved = snap.val();
-          if(!resolved){ showError('error.enlace'); return; }
-          publicId = resolved;
-          loadBusinessInfo();
-        });
-      }
-      loadBusinessInfo();
-    }).catch(e => {
-      console.error(e);
-      showError('error.conexion');
-    });
+    // Autenticación anónima: las reglas exigen auth != null para leer y
+    // escribir, así que no se puede tocar la base sin pasar por el SDK.
+    await firebase.auth().signInAnonymously();
+    loadBusinessInfo();
   }catch(e){
     console.error(e);
     showError('error.conexion');

@@ -9,7 +9,15 @@
           ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60"
         }
       },
-      "public": {
+      "publicLookup": {
+      "$publicId": {
+        "//": "Guía mínima: en qué proyecto de Firebase está el espejo público de este negocio. Se lee SIN autenticar y por REST a propósito: una petición HTTP no abre socket, así que no gasta ninguna de las 100 conexiones simultáneas del plan gratuito. No expone nada: apiKey y databaseURL no son secretos (viajan en el JS de cualquier web con Firebase); lo que protege los datos son las reglas del proyecto del negocio.",
+        ".read": true,
+        ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+        ".validate": "newData.hasChildren(['apiKey','databaseURL'])"
+      }
+    },
+    "public": {
         "$publicId": {
           "info": {
             ".read": "auth != null",
@@ -73,7 +81,8 @@
       },
       "publicSlugs": {
         "$slug": {
-          ".read": "auth != null && $slug.length >= 2 && $slug.length <= 40",
+          "//": "Lectura abierta: la resuelve la web publica de reservas por REST, sin abrir socket, para no gastar conexiones simultaneas del plan gratuito. Solo devuelve el publicId, que ya va en el QR y en el enlace que el negocio reparte.",
+          ".read": true,
           ".write": "auth != null && $slug.length >= 2 && $slug.length <= 40 && (!data.exists() || data.val() === newData.val() || auth.token.email === 'gastrogoan@gmail.com')",
           ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 30"
         }
