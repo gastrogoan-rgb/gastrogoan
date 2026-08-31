@@ -1257,7 +1257,15 @@ function renderBusinessSelectScreenHtml(){
            arriba la duplicaba y, encima, se montaba sobre el logo. */
         const activoEsMio = slotsOfCurrentOwner().some(x => x.id === ACTIVE_SLOT && x.code);
         return activoEsMio
-          ? `<button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="hideBusinessSelectScreen()" title="${t('common.close')}">&times;</button>`
+          /* El aspa entra en el negocio activo, NO se limita a esconder la
+             pantalla. Esconderla sin más era una puerta trasera al alta:
+             desde el asistente de nube se pulsaba "volver", se llegaba aquí,
+             se cerraba con el aspa... y se acababa dentro de la app SIN la
+             nube configurada. Un negocio así no sincroniza y sus empleados no
+             pueden entrar desde otro dispositivo, y nadie se entera hasta que
+             hace falta. Con enterBusiness se vuelven a comprobar los pasos
+             que falten y el asistente reaparece. */
+          ? `<button class="modal-close" style="position:absolute;top:16px;right:16px" onclick="enterBusiness(ACTIVE_SLOT)" title="${t('common.close')}">&times;</button>`
           : '';
       })()}
       <div class="bs-title">
@@ -2558,7 +2566,13 @@ async function saveOwnFirebaseConfig(){
   const apiKey = document.getElementById('own-fb-apikey').value.trim();
   const databaseURL = document.getElementById('own-fb-dburl').value.trim();
   if(!apiKey && !databaseURL){
-    if(!DB.business.ownFirebase) return;
+    /* Con los dos campos vacíos y sin nada guardado todavía, esto se iba con
+       un `return` MUDO: ni guardaba ni avisaba. El hostelero pulsaba "Guardar
+       y conectar", no pasaba nada, y se quedaba con la sensación de haber
+       terminado el paso — cuando en realidad su negocio se estaba quedando
+       sin nube, que es lo único que no puede faltar: sin ella no sincroniza
+       nada y sus empleados no pueden entrar desde otro dispositivo. */
+    if(!DB.business.ownFirebase){ await alertModal(t('msg.fillBothFields')); return; }
     if(!(await confirmModal(t('msg.confirmRemoveFirebase')))) return;
     delete DB.business.ownFirebase;
     // Se espera al guardado: recargar sin esperarlo cortaba la escritura y

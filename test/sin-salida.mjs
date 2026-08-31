@@ -94,6 +94,63 @@ await caso('La pantalla de canjear el código tiene salida', async ()=>{
   return `salida: "${r.encontradas[0].t}"`;
 });
 
+await caso('La nube es OBLIGATORIA: no se puede pasar sin configurarla', async ()=>{
+  /* Dos puertas traseras que encontró el dueño dando de alta un negocio:
+     1) "Guardar y conectar" con los campos vacíos no hacía NADA — ni guardaba
+        ni avisaba —, así que parecía que el paso estaba superado.
+     2) Desde el asistente: volver → selector de negocios → cerrar con el aspa
+        → dentro de la app SIN nube. El aspa solo escondía la pantalla.
+     Un negocio sin nube no sincroniza y sus empleados no pueden entrar desde
+     otro dispositivo, y nadie se entera hasta que hace falta. */
+  const r = await page.evaluate(async ()=>{
+    const out = {};
+    localStorage.setItem('gastrogoan_owner_login', JSON.stringify({user:'casapaco', authKey:'x', pinHash:'H2:x'}));
+    localStorage.setItem('gastrogoan_access_session', JSON.stringify({type:'owner', ts:Date.now()}));
+    delete DB.business.ownFirebase;                       // sin nube configurada
+    saveBusinessSlots([{id: ACTIVE_SLOT, name:'Casa Paco', code:'AAAAAAAA', ownerId: ggOwnerId('casapaco')}]);
+    localStorage.setItem(slotLicenseKey(ACTIVE_SLOT), JSON.stringify({code:'AAAAAAAA', tenantId: ggBizTenantId('AAAAAAAA')}));
+
+    // 1) El botón con los campos vacíos tiene que AVISAR, no callarse
+    let aviso = null;
+    const alertReal = window.alertModal;
+    window.alertModal = async (m) => { aviso = m; };
+    showFirebaseSetupGate();
+    document.getElementById('own-fb-apikey').value = '';
+    document.getElementById('own-fb-dburl').value = '';
+    await saveOwnFirebaseConfig();
+    out.avisaConVacios = !!aviso;
+    out.textoAviso = String(aviso||'').slice(0,60);
+    out.sigueElAsistente = !!document.getElementById('firebase-gate');
+    out.noGuardoNada = !DB.business.ownFirebase;
+    window.alertModal = alertReal;
+
+    // 2) La vuelta al selector NO puede ser una puerta de salida a la app
+    hideFirebaseSetupGate();
+    showBusinessSelectScreen();
+    const sel = document.getElementById('business-select-screen');
+    const aspa = [...sel.querySelectorAll('button')].find(b => /modal-close/.test(b.className));
+    out.hayAspa = !!aspa;
+    if(aspa){
+      aspa.click();
+      // Vale cualquiera de los asistentes del alta: lo que NO puede pasar es
+      // aterrizar en la app con pasos sin terminar.
+      out.vuelveElAsistente = ['firebase-gate','netlify-gate','license-gate']
+        .some(id => !!document.getElementById(id));
+      out.cualAsistente = ['firebase-gate','netlify-gate','license-gate']
+        .find(id => !!document.getElementById(id)) || 'ninguno';
+    }
+    ['firebase-gate','netlify-gate','license-gate'].forEach(id => document.getElementById(id)?.remove());
+    return out;
+  });
+  assert.ok(r.avisaConVacios, 'con los campos vacíos tiene que decir algo, no callarse');
+  assert.ok(/rellena|fill|omple/i.test(r.textoAviso), 'y pedir los dos datos: ' + r.textoAviso);
+  assert.ok(r.sigueElAsistente, 'el asistente no puede desaparecer sin haber configurado nada');
+  assert.ok(r.noGuardoNada, 'ni guardar una nube a medias');
+  if(r.hayAspa) assert.ok(r.vuelveElAsistente,
+    'cerrar el selector con el aspa no puede meter en la app con pasos del alta sin terminar (salió: ' + r.cualAsistente + ')');
+  return 'avisa, no guarda nada y no deja colarse por el selector';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
