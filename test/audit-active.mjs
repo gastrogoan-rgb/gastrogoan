@@ -560,5 +560,39 @@ await testAsync('FIX H4: el indicador de nube ya NO se queda clavado en "Guardan
   assert.equal(sandbox.__getSyncBadgeState(), 'pending', 'sin red, se queda pendiente');
 });
 
+await testAsync('FIX H5: el indicador ROJO vuelve a verde cuando la nube funciona otra vez', async () => {
+  /* En el móvil el rojo salía constantemente: cambia de wifi a datos, se
+     suspende al apagar la pantalla, y cada corte deja un envío fallido. Eso
+     es normal y pasajero — lo que NO puede ser es que se quede rojo para
+     siempre. Al arreglar el "Guardando…" clavado dejé que solo se saliera de
+     'pending', así que del rojo ya no se volvía. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setSocketConnected(true);
+  sandbox.__setDB({ingredients: ['a']});
+  sandbox.__setLastSyncedSnapshot({ingredients: sandbox.canonicalStringify([])});
+
+  // Se cae la red a mitad de un envío: rojo, como debe ser.
+  sandbox.__setCloudRef({update: async () => { throw new Error('wifi caída'); }});
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sandbox.__getSyncBadgeState(), 'error', 'un envío fallido tiene que verse');
+  sandbox.__clearCloudSyncRetryTimer();
+
+  // Un rato en rojo SIN nada que subir no lo borra: el problema sigue ahí.
+  sandbox.__setLastSyncedSnapshot({ingredients: sandbox.canonicalStringify(['a'])});
+  sandbox.flushCloudSync();
+  assert.equal(sandbox.__getSyncBadgeState(), 'error',
+    'el rojo no se borra solo porque no haya nada que enviar: eso sería tapar el fallo');
+
+  // Vuelve la red y el envío sale bien: AHORA sí, verde.
+  sandbox.__setDB({ingredients: ['a', 'b']});
+  sandbox.__setCloudRef({update: async () => {}});
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sandbox.__getSyncBadgeState(), 'online',
+    'tras una subida correcta, el indicador tiene que volver a verde');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

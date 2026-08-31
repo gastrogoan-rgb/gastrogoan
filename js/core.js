@@ -5587,8 +5587,26 @@ function scheduleCloudSyncRetry(){
    mirando "Guardando…" indefinidamente y creyendo que algo iba mal.
    Ahora, cuando no queda nada por subir, se dice: es la verdad, y es
    justamente la buena noticia. */
-function marcarNubeAlDia(){
-  if(socketConnected && lastSyncBadgeState === 'pending') updateSyncBadge('online');
+/* Volver a verde. Se distingue A PROPÓSITO de dónde se viene:
+
+   - Desde 'pending' (había algo que subir, o ni eso): basta con que no quede
+     nada pendiente.
+   - Desde 'error' (rojo): SOLO cuando una subida ha terminado bien de verdad.
+     Un fallo real no se borra porque de pronto no haya nada que enviar; eso
+     sería tapar el problema justo cuando hay que verlo.
+
+   Este segundo caso se me escapó al arreglar el "Guardando…" clavado: dejé
+   que solo se saliera de 'pending', así que un corte de red en el móvil
+   pintaba el indicador de ROJO y ya no se volvía verde ni cuando la
+   sincronización volvía a funcionar. En un móvil, que cambia de wifi a datos
+   y se suspende al apagar la pantalla, eso pasa constantemente. */
+function marcarNubeAlDia(opciones){
+  if(!socketConnected) return;
+  const trasSubirBien = opciones && opciones.trasSubirBien;
+  if(lastSyncBadgeState === 'pending' || (trasSubirBien && lastSyncBadgeState === 'error')){
+    lastSyncErrorCode = null;
+    updateSyncBadge('online');
+  }
 }
 function flushCloudSync(){
   cloudSyncTimer = null;
@@ -5616,7 +5634,7 @@ function flushCloudSync(){
       // local (o el reintento de otro bloque sigue en curso), se queda en
       // "pending" hasta que de verdad no falte nada por confirmar.
       const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== canonicalStringify(DB[key]));
-      if(!stillPending) marcarNubeAlDia();
+      if(!stillPending) marcarNubeAlDia({trasSubirBien: true});
     }).catch(onFail);
   }catch(e){
     onFail(e);
