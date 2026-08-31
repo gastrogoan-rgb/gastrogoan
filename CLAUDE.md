@@ -5,6 +5,36 @@ Se entrega como **dos archivos HTML sueltos** que el cliente abre desde `gastrog
 
 ---
 
+## La meta, y lo que obliga
+
+**5.000 licencias vendidas.** No es una cifra decorativa: es el criterio con el
+que se decide cualquier duda de arquitectura.
+
+De ahí sale una regla que no se negocia:
+
+> **Nada puede costarle dinero al dueño de GastroGoan por cada cliente que
+> vende.** Ni tráfico, ni conexiones, ni base de datos, ni llamadas a ninguna
+> IA. Si un recurso crece con el número de licencias, tiene que pagarlo el
+> negocio que lo usa, desde su propia cuenta.
+
+Es lo que ya hace la nube (cada negocio, su Firebase) y la clave de I+D (cada
+negocio, la suya). Cualquier cosa nueva se mide contra esto **antes** de
+construirla: a 5.000 clientes, un céntimo por cliente y mes son 50 € al mes que
+no estaban en el plan.
+
+⚠️ **Sin pagos recurrentes.** Es una decisión del dueño, no una preferencia:
+las soluciones que empiezan por "sube al plan de pago" están descartadas
+mientras haya alternativa técnica.
+
+### Dónde se publica
+
+Hoy en **Render** (dos sitios estáticos). **La intención es volver a Netlify.**
+Al hacerlo hay que tener presente lo que ya pasó una vez: el plan gratuito de
+Netlify limita las PUBLICACIONES, y se agotaron dejando la app congelada dos
+semanas. Publicar en tandas, no cada arreglo suelto.
+
+---
+
 ## Arquitectura
 
 **No hay backend propio.** Todo corre en el navegador:
