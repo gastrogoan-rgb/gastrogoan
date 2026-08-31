@@ -53,27 +53,49 @@ DNS.** Así el sitio que está en producción no se cae en ningún momento.
   single-page-application` en `wrangler.jsonc` hace lo mismo, y la página saca
   el nombre del negocio del pathname (`getSlugFromUrl`), no solo de `?n=`.
 
-## Ojo: esto son Workers, no Pages
+## ⚠️ Tienen que ser PAGES, no Workers
 
-Cloudflare ha ido juntando los dos productos en el panel. Estos sitios están
-dados de alta como **Workers con recursos estáticos**, no como Pages, así que
-en la configuración **no existe "Build output directory"**: la carpeta se
-declara en `wrangler.jsonc` (`assets.directory`) y el panel solo necesita
-saber en qué carpeta del repositorio está ese fichero.
+Cloudflare junta los dos productos en el panel y es fácil crear el que no es,
+pero para esto **no valen igual**:
 
-Configuración de cada uno, en **Settings → Build**:
+- **Workers**: para asignarle un dominio propio, ese dominio tiene que estar
+  entero en Cloudflare, **nameservers incluidos**. El registrador de
+  gastrogoan.com (Canva) no permite cambiarlos. Callejón sin salida — y es
+  exactamente el muro del primer intento con Cloudflare.
+- **Pages**: para un **subdominio** basta con darlo de alta en el panel y
+  crear un CNAME donde esté el DNS. Ni nameservers ni tocar el registrador.
 
-| | `gastrogoanapp` | `gastrogoan-reservas` |
+Como `app.` y `reservas.` son subdominios, **Pages funciona y Workers no**.
+
+### Crear cada sitio
+
+Cloudflare → **Workers & Pages** → **Create** → pestaña **Pages** →
+**Connect to Git** → este repositorio.
+
+| | app | reservas |
 |---|---|---|
-| Root directory | `deploy/app` | `deploy/reservas` |
+| Framework preset | **None** | **None** |
 | Build command | *(vacío)* | *(vacío)* |
-| Deploy command | `npx wrangler deploy` | `npx wrangler deploy` |
+| Build output directory | `deploy/app/public` | `deploy/reservas/public` |
 | Production branch | `main` | `main` |
 
-El nombre del Worker tiene que coincidir con el `name` de su `wrangler.jsonc`,
-o Cloudflare publicará en un Worker distinto del que tiene el dominio.
+⚠️ Con un *framework preset* distinto de None, Cloudflare esconde el campo de
+la carpeta de salida y decide él: por ahí se pierde un rato.
 
-**Y lo que de verdad importa para la escala**: como estos Workers no tienen
-script (`main`), solo recursos estáticos, sus peticiones son **gratuitas e
-ilimitadas** y NO cuentan contra el tope de 100.000 peticiones al día del plan
-gratuito. Ese tope solo aplica a Workers que ejecutan código.
+Los enlaces cortos de reservas (`reservas.gastrogoan.com/casapaco`) funcionan
+gracias a `404.html`, que es una copia de la propia página: cualquier ruta que
+no sea un fichero cae ahí, y la página saca el nombre del negocio del pathname
+(`getSlugFromUrl`). **No se pone `_redirects`**: Cloudflare rechaza el fichero
+entero con *"Infinite loop detected"* por la regla de la raíz.
+
+### Mover el dominio (sin cortar el servicio)
+
+1. Comprobar primero en la dirección `*.pages.dev` que da Cloudflare.
+2. En el proyecto → **Custom domains** → añadir el subdominio. Cloudflare dirá
+   a qué destino apuntar (algo como `<proyecto>.pages.dev`).
+3. En el DNS actual, cambiar el CNAME de ese subdominio a ese destino.
+
+**Primero se comprueba, después se mueve el DNS.** Así producción no se cae.
+
+Los `wrangler.jsonc` se conservan solo por si algún día se publica desde la
+línea de comandos; con Pages no se usan.
