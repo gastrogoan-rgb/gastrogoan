@@ -970,13 +970,21 @@ const IDR_BLOQUES_CARTA = [
   {es:'Postres', ca:'Postres', en:'Desserts'},
 ];
 
-function idrBloquesPorDefecto(tipo, cuantos){
-  const base = tipo === 'menu' ? IDR_BLOQUES_MENU : IDR_BLOQUES_CARTA;
+/* Los bloques NACEN VACÍOS. Traerlos puestos ("Entrantes, Segundos,
+   Postres...") parece una comodidad, pero decide por el hostelero la
+   estructura de su carta, que es justo lo que él tiene que decidir: unos
+   trabajan con entrantes fríos y calientes, otros con tapas y raciones, otros
+   con un apartado de arroces que se lleva media carta. Lo que sí se hace es
+   SUGERIR, en el texto gris del campo, para que no se quede mirando un hueco
+   en blanco sin saber qué se espera de él. */
+function idrBloquesVacios(tipo, cuantos){
   const out = [];
-  for(let i = 0; i < cuantos; i++){
-    out.push({nombre: base[i] ? gl(base[i]) : `${t('idr.block')} ${i+1}`, n: tipo === 'menu' ? 1 : 4});
-  }
+  for(let i = 0; i < cuantos; i++) out.push({nombre: '', n: ''});
   return out;
+}
+function idrSugerenciaBloque(tipo, i){
+  const base = tipo === 'menu' ? IDR_BLOQUES_MENU : IDR_BLOQUES_CARTA;
+  return base[i] ? gl(base[i]) : (tipo === 'menu' ? t('idr.briefPass') : t('idr.briefBlock'));
 }
 
 function idrEncargo(c){
@@ -999,6 +1007,15 @@ function idrEncargoTexto(c){
       ? `Precio del menú completo (SIN IVA): ${fmtMoney(e.pvp)} por comensal`
       : `Precio medio por plato (SIN IVA): ${fmtMoney(e.pvp)}`);
     if(e.foodCost) l.push(`Food cost objetivo: ${e.foodCost}%`);
+    if(e.pvp && e.foodCost){
+      const tope = e.pvp * e.foodCost / 100;
+      l.push(c.tipo === 'menu'
+        // En un menú el food cost es del MENÚ ENTERO: repartirlo plato a plato
+        // es cosa suya (un aperitivo no cuesta lo que un segundo), pero la
+        // suma no puede pasar de aquí.
+        ? `Es decir, la suma de materia prima de TODOS los pases no puede pasar de ${fmtMoney(tope)} por comensal. Repártelo con criterio: un aperitivo no cuesta lo que un segundo.`
+        : `Es decir, cada plato debería moverse alrededor de ${fmtMoney(tope)} de materia prima por ración.`);
+    }
     l.push(`ESTRUCTURA FIJADA POR EL NEGOCIO (no la cambies, ni añadas ni quites bloques):`);
     (e.bloques||[]).forEach(b => l.push(`- ${b.nombre}: ${b.n} ${b.n === 1 ? 'plato' : 'platos'}`));
     l.push(`Total: ${idrTotalPlatos(c)} platos. Tu trabajo es llenar ESA estructura de forma equilibrada, no proponer otra.`);
@@ -1012,9 +1029,7 @@ function idrTotalPlatos(c){
 function renderIdrEncargo(box, c){
   const e = idrEncargo(c);
   const esConjunto = c.tipo === 'menu' || c.tipo === 'carta';
-  const bloques = Array.isArray(e.bloques) && e.bloques.length
-    ? e.bloques
-    : idrBloquesPorDefecto(c.tipo, c.tipo === 'menu' ? 4 : 5);
+  const bloques = Array.isArray(e.bloques) ? e.bloques : [];
 
   box.innerHTML = `
     <div class="view-header">
@@ -1032,7 +1047,7 @@ function renderIdrEncargo(box, c){
         </div>
         <div class="field">
           <label>${t('idr.briefFoodCost')}</label>
-          <input type="number" id="enc-fc" step="1" min="1" max="90" value="${e.foodCost || idrAdn().foodCostObjetivo || 30}">
+          <input type="number" id="enc-fc" step="1" min="1" max="90" value="${e.foodCost || idrAdn().foodCostObjetivo || ''}" placeholder="30">
         </div>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin:0">${t('idr.briefPerPerson')}</p>
@@ -1041,23 +1056,26 @@ function renderIdrEncargo(box, c){
     ${esConjunto ? `
       <div class="card">
         <h3><i class="ti ti-layout-list"></i> ${c.tipo === 'menu' ? t('idr.briefPasses') : t('idr.briefBlocks')}</h3>
-        <div class="field" style="max-width:220px">
+        <div class="field" style="max-width:260px">
           <label>${c.tipo === 'menu' ? t('idr.briefHowManyPasses') : t('idr.briefHowManyBlocks')}</label>
           <select id="enc-nbloques" onchange="idrCambiarNumBloques(${c.id}, this.value)">
+            <option value="">${t('idr.briefChoose')}</option>
             ${[2,3,4,5,6,7,8].map(n => `<option value="${n}"${n===bloques.length?' selected':''}>${n}</option>`).join('')}
           </select>
         </div>
-        <table class="table">
-          <thead><tr><th>${c.tipo === 'menu' ? t('idr.briefPass') : t('idr.briefBlock')}</th><th style="width:130px">${t('idr.briefHowMany')}</th></tr></thead>
-          <tbody>
-            ${bloques.map((b, i) => `
-              <tr>
-                <td><input type="text" id="enc-b-${i}" value="${escapeHtml(b.nombre||'')}" placeholder="${t('idr.briefBlockPh')}"></td>
-                <td><input type="number" id="enc-n-${i}" min="1" max="20" step="1" value="${b.n || 1}"></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-        <p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${t('idr.briefBlocksHint')}</p>
+        ${bloques.length ? `
+          <table class="table">
+            <thead><tr><th>${c.tipo === 'menu' ? t('idr.briefPass') : t('idr.briefBlock')}</th><th style="width:140px">${t('idr.briefHowMany')}</th></tr></thead>
+            <tbody>
+              ${bloques.map((b, i) => `
+                <tr>
+                  <td><input type="text" id="enc-b-${i}" value="${escapeHtml(b.nombre||'')}" placeholder="${escapeHtml(t('idr.briefBlockPh').replace('${ej}', idrSugerenciaBloque(c.tipo, i)))}"></td>
+                  <td><input type="number" id="enc-n-${i}" min="1" max="20" step="1" value="${b.n || ''}" placeholder="0"></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+          <p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${t('idr.briefBlocksHint')}</p>
+        ` : `<p style="font-size:13px;color:var(--muted);margin:0">${c.tipo === 'menu' ? t('idr.briefPassesFirst') : t('idr.briefBlocksFirst')}</p>`}
       </div>` : ''}
 
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1071,12 +1089,17 @@ function renderIdrEncargo(box, c){
 function idrCambiarNumBloques(id, cuantos){
   const c = idrCreacion(id);
   if(!c) return;
-  const n = Math.max(1, Math.min(12, parseInt(cuantos, 10) || 1));
+  const pedido = parseInt(cuantos, 10);
+  if(!isFinite(pedido) || pedido < 1){
+    idrEncargo(c).bloques = [];
+    saveDB(); renderIdr(); return;
+  }
+  const n = Math.min(12, pedido);
   const e = idrEncargo(c);
   const actuales = idrLeerBloquesDelFormulario(e.bloques ? e.bloques.length : 0);
   const previos = actuales.length ? actuales : (e.bloques || []);
-  const porDefecto = idrBloquesPorDefecto(c.tipo, n);
-  e.bloques = porDefecto.map((b, i) => previos[i] || b);
+  const vacios = idrBloquesVacios(c.tipo, n);
+  e.bloques = vacios.map((b, i) => previos[i] || b);
   e.pvp = parseFloat((document.getElementById('enc-pvp')||{}).value) || e.pvp;
   e.foodCost = parseFloat((document.getElementById('enc-fc')||{}).value) || e.foodCost;
   saveDB();
@@ -1088,7 +1111,8 @@ function idrLeerBloquesDelFormulario(cuantos){
     const nom = document.getElementById('enc-b-' + i);
     const num = document.getElementById('enc-n-' + i);
     if(!nom) break;
-    out.push({nombre: (nom.value||'').trim(), n: Math.max(1, parseInt((num||{}).value, 10) || 1)});
+    const cuantos = parseInt((num||{}).value, 10);
+    out.push({nombre: (nom.value||'').trim(), n: isFinite(cuantos) && cuantos > 0 ? Math.min(20, cuantos) : 0});
   }
   return out;
 }
@@ -1102,10 +1126,11 @@ function idrGuardarEncargo(id){
   if(!e.pvp){ showToast(t('idr.briefNeedPrice')); return; }
   if(c.tipo === 'menu' || c.tipo === 'carta'){
     const cuantos = parseInt((document.getElementById('enc-nbloques')||{}).value, 10) || 0;
+    if(!cuantos){ showToast(c.tipo === 'menu' ? t('idr.briefNeedPasses') : t('idr.briefNeedBlocks')); return; }
     const leidos = idrLeerBloquesDelFormulario(cuantos);
-    if(leidos.some(b => !b.nombre)){ showToast(t('idr.briefNeedBlockName')); return; }
+    if(!leidos.length || leidos.some(b => !b.nombre)){ showToast(t('idr.briefNeedBlockName')); return; }
+    if(leidos.some(b => !b.n)){ showToast(t('idr.briefNeedHowMany')); return; }
     e.bloques = leidos;
-    if(!e.bloques.length){ showToast(t('idr.briefNeedBlockName')); return; }
   }
   e.hecho = true;
   // El asistente abre con el encargo entendido y la pregunta que de verdad
@@ -1603,15 +1628,21 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     DB.recipes.push(receta);
   }
 
-  // Un plato recién creado no tiene precio de venta, así que el food cost no
-  // se podía comprobar contra nada. Se propone el PVP que CUMPLE su objetivo
-  // (coste ÷ objetivo), redondeado a los 10 céntimos de arriba. Es una
-  // sugerencia con la que empezar, no una imposición: el hostelero la cambia
-  // en el escandallo cuando quiera.
-  const objetivoFC = parseFloat(idrAdn().foodCostObjetivo);
-  if(isFinite(objetivoFC) && objetivoFC > 0){
-    const costeIni = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
-    if(costeIni > 0){
+  /* El precio de venta.
+     Si el hostelero lo fijó en el encargo, ESE es el precio y no se toca: se
+     lo hemos preguntado expresamente, y calcularle otro por detrás sería
+     ignorarle y, peor, hacerle creer que el plato cumple cuando no lo hemos
+     medido contra lo que él quiere cobrar.
+     Solo cuando no hay precio fijado se propone uno (coste ÷ objetivo,
+     redondeado a los 10 céntimos de arriba), como punto de partida. */
+  const enc = idrEncargo(c);
+  const costeIni = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
+  if(enc.pvp > 0){
+    receta.price = enc.pvp;
+    receta.priceBase = enc.pvp;
+  } else {
+    const objetivoFC = idrObjetivoFoodCost(c);
+    if(isFinite(objetivoFC) && objetivoFC > 0 && costeIni > 0){
       receta.price = Math.ceil((costeIni / (objetivoFC/100)) * 10) / 10;
       receta.priceBase = receta.price;
       c.precioSugerido = receta.price;
@@ -1625,7 +1656,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   // falla vuelve al modelo para que lo corrija ANTES de que el cocinero lo
   // vea. Cuesta una consulta más y es lo que separa "opina" de "rinde
   // cuentas".
-  const problemas = idrValidarPlato(receta, {textoLibre: resumen});
+  const problemas = idrValidarPlato(receta, {textoLibre: resumen, creacion: c});
   c.avisos = problemas;
   if(problemas.length){
     const arreglo = await llmChat(idrSistema(), [
@@ -1649,7 +1680,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
         c.faltan = faltan2;
         c.nota = String(j2.nota||'');
         // Se vuelve a medir: si sigue fallando, el cocinero lo sabrá.
-        c.avisos = idrValidarPlato(receta, {textoLibre: resumen});
+        c.avisos = idrValidarPlato(receta, {textoLibre: resumen, creacion: c});
         c.corregido = true;
       }
     }
@@ -2602,6 +2633,17 @@ function idrNormalizar(s){
 
 /* Comprueba UN plato contra el ADN y los datos del negocio.
    Devuelve una lista de problemas en cristiano, vacía si todo cuadra. */
+/* El objetivo de food cost tiene dos fuentes y un orden claro: el del ENCARGO
+   manda sobre el del ADN. El ADN es lo que la casa busca en general; el
+   encargo es lo que se busca en ESTE plato o en ESTA carta, y es más
+   reciente y más concreto. Sin este orden, el hostelero pedía un 28% y la
+   app le decía que iba bien porque su ADN dice 35%. */
+function idrObjetivoFoodCost(c){
+  const delEncargo = c ? parseFloat(idrEncargo(c).foodCost) : NaN;
+  if(isFinite(delEncargo) && delEncargo > 0) return delEncargo;
+  return parseFloat(idrAdn().foodCostObjetivo);
+}
+
 function idrValidarPlato(receta, opciones){
   const o = opciones || {};
   const a = idrAdn();
@@ -2610,7 +2652,7 @@ function idrValidarPlato(receta, opciones){
 
   // 1) Food cost contra el objetivo del ADN. El coste sale del escandallo,
   //    con sus precios: es el número real, no una estimación del modelo.
-  const objetivo = parseFloat(a.foodCostObjetivo);
+  const objetivo = idrObjetivoFoodCost(o.creacion || idrCreacion(idrCreacionActiva));
   const coste = (typeof recipeCost === 'function') ? recipeCost(receta) : 0;
   const pvp = parseFloat(receta.price) || 0;
   if(isFinite(objetivo) && objetivo > 0 && pvp > 0){

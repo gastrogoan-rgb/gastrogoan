@@ -257,7 +257,7 @@ await caso('El coste lo pone la app aunque el modelo diga otra cosa', async ()=>
   });
   // 100*0,022 = 2,20 · +5% = 2,31 — y NO el 0,5 que decía el modelo
   assert.ok(Math.abs(r.coste - 2.31) < 0.001, `debería mandar el escandallo, salió ${r.coste}`);
-  assert.equal(r.precio, 0, 'el precio de venta lo pone el hostelero, no el modelo');
+  assert.equal(r.precio, 18, 'el precio de venta es el que fijó el hostelero en el encargo, no el del modelo');
   return 'manda el escandallo, no el modelo';
 });
 
@@ -613,7 +613,7 @@ await caso('Tras comprobar, el asistente corrige y la app vuelve a medir', async
   return `2 pasadas, corrigió la técnica y bajó 400 g → 120 g`;
 });
 
-await caso('Propone el PVP que cumple el objetivo de food cost', async ()=>{
+await caso('Sin precio en el encargo, propone el PVP que cumple el objetivo', async ()=>{
   await fingir(JSON.stringify({nombre:'Con precio', descripcion:'x', pasos:['x'],
     ingredientes:[{nombre:'Bacalao', cantidad:200, unidad:'g'}]}));
   const r = await page.evaluate(async ()=>{
@@ -622,6 +622,8 @@ await caso('Propone el PVP que cumple el objetivo de food cost', async ()=>{
     idrEmpezar('plato');
     encargoHecho();
     const c = idrCreacion(idrCreacionActiva);
+    // Sin precio fijado: es cuando la app propone uno
+    idrEncargo(c).pvp = 0; idrEncargo(c).foodCost = 0;
     c.mensajes = [{r:'yo', t:'Un plato con bacalao'}]; saveDB();
     await idrCrearPlatoReal(c.id);
     const receta = DB.recipes.find(x=>x.id===idrCreacion(c.id).recipeId);
@@ -1992,6 +1994,7 @@ await caso('El encargo manda: precio, food cost y estructura, y la IA los recibe
     // Se rellena el formulario como lo haría el hostelero
     document.getElementById('enc-pvp').value = '32';
     document.getElementById('enc-fc').value = '28';
+    const sinElegir = !document.getElementById('enc-b-0');
     idrCambiarNumBloques(c.id, 4);
     ['Aperitivos','Entrantes','Segundos','Postres'].forEach((n, i) => {
       document.getElementById('enc-b-' + i).value = n;
@@ -2004,7 +2007,7 @@ await caso('El encargo manda: precio, food cost y estructura, y la IA los recibe
     const sis = idrSistema();
     const primerMensaje = (cc.mensajes||[])[0];
     return {
-      hecho: idrEncargoHecho(cc), pvp: cc.encargo.pvp, fc: cc.encargo.foodCost,
+      sinElegir, hecho: idrEncargoHecho(cc), pvp: cc.encargo.pvp, fc: cc.encargo.foodCost,
       bloques: cc.encargo.bloques.map(b => b.nombre + ':' + b.n),
       total: idrTotalPlatos(cc),
       viajaElPrecio: /32,00/.test(sis) || /32.00/.test(sis),
@@ -2014,6 +2017,7 @@ await caso('El encargo manda: precio, food cost y estructura, y la IA los recibe
       yaNoPideEncargo: !document.getElementById('enc-pvp'),
     };
   });
+  assert.ok(r.sinElegir, 'los bloques NO vienen puestos: se pregunta cuántos');
   assert.ok(r.hecho); assert.equal(r.pvp, 32); assert.equal(r.fc, 28);
   assert.deepEqual(r.bloques, ['Aperitivos:1','Entrantes:1','Segundos:1','Postres:2']);
   assert.equal(r.total, 5, 'el total de platos sale de la estructura');
@@ -2144,6 +2148,36 @@ await caso('Camino 2: la IA propone, PARA, y no crea nada hasta que apruebas', a
   assert.ok(r.propuestaLimpia, 'y la propuesta se cierra');
   assert.ok(/Escandallo y Fichas Técnicas/.test(r.ultimo), 'y te dice dónde está todo');
   return 'propone, para, y solo crea cuando das el visto bueno';
+});
+
+await caso('El objetivo del encargo manda sobre el del ADN', async ()=>{
+  // Sin este orden, el hostelero pedía un 28% y la app le decía que iba bien
+  // porque su ADN dice 35%.
+  const r = await page.evaluate(async ()=>{
+    Object.assign(idrAdn(), {cocina:'X', nivel:'Y', publico:'Z', foodCostObjetivo: 45});
+    if(!(DB.ingredients||[]).some(i=>i.name==='Bacalao')){
+      DB.ingredients.push({id:1, name:'Bacalao', unit:'g', price:0.022, category:'Pescado', supplier:'x', allergens:[], area:'cocina'});
+    }
+    if(!window.__llmChatReal) window.__llmChatReal = window.llmChat;
+    window.llmChat = async () => ({ok:true, texto: JSON.stringify({nombre:'Caro', descripcion:'x', comensales:1,
+      pasos:['x'], ingredientes:[{nombre:'Bacalao', cantidad:300, unidad:'g'}]})});
+    idrEmpezar('plato');
+    const c = idrCreacion(idrCreacionActiva);
+    // 300 g = 6,60 · +5% = 6,93. A 20 € eso es un 34,6%: bien para un ADN del
+    // 45%, MAL para el 25% que pide este encargo.
+    Object.assign(idrEncargo(c), {pvp: 20, foodCost: 25, hecho: true});
+    c.mensajes = [{r:'yo', t:'Un bacalao'}]; saveDB();
+    const objetivo = idrObjetivoFoodCost(c);
+    const receta = {ingredients:[{type:'ingredient', ingredientId:1, qty:300, merma:0}], consumiblesPct:5, price:20, steps:'', presentation:''};
+    const avisos = idrValidarPlato(receta, {creacion: c});
+    // Y sin encargo, manda el ADN
+    const sinEncargo = idrObjetivoFoodCost({encargo:{}});
+    return {objetivo, avisa: avisos.some(a => /food cost/i.test(a)), sinEncargo};
+  });
+  assert.equal(r.objetivo, 25, 'manda el objetivo del encargo');
+  assert.ok(r.avisa, 'y con él, la app avisa de que ese plato no cumple');
+  assert.equal(r.sinEncargo, 45, 'sin encargo, manda el del ADN');
+  return 'el encargo manda; el ADN es el respaldo';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
