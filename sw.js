@@ -24,19 +24,53 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if(req.method !== 'GET') return;
+  const url = new URL(req.url);
 
-  // El documento principal: red primero, para tener siempre la última
-  // versión publicada; si no hay red, se sirve la copia guardada para que
-  // la app arranque igualmente sin conexión.
+  /* El documento principal: CACHÉ PRIMERO.
+
+     Antes era al revés —red primero— y era lo correcto sobre el papel: así
+     siempre se veía la última versión. El problema es que la app pesa 4 MB y
+     eso significaba descargarlos ENTEROS cada vez que alguien la abre. Un
+     solo negocio abriéndola veinte veces al día son 2,4 GB al mes; el plan
+     gratuito de Render trae 5 GB. Con dos clientes se acababa el cupo, y al
+     tercero la app deja de cargar para todos.
+
+     Ahora se sirve la copia guardada (arranque instantáneo y cero tráfico) y
+     quien comprueba si hay versión nueva es la propia app, preguntando por
+     `version.json`: 50 bytes en vez de 4 MB. Cuando la hay, avisa al
+     hostelero y él decide cuándo actualizar (ver comprobarVersionPublicada
+     en js/polish.js). */
   if(req.mode === 'navigate'){
     event.respondWith(
-      fetch(req)
-        .then(res => {
+      caches.match(SHELL_URL).then(cached => cached || fetch(req).then(res => {
+        // Primera visita en este dispositivo: se guarda para las siguientes.
+        if(res && res.ok){
           const copy = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(SHELL_URL, copy));
-          return res;
-        })
-        .catch(() => caches.match(SHELL_URL).then(cached => cached || caches.match(req)))
+        }
+        return res;
+      }))
+    );
+    return;
+  }
+
+  // El sello de versión NUNCA se sirve de caché: es justo lo que se pregunta
+  // para saber si la copia guardada se ha quedado vieja.
+  if(url.pathname.endsWith('/version.json')){
+    event.respondWith(fetch(req, {cache: 'no-store'}).catch(() => new Response('{}', {headers:{'content-type':'application/json'}})));
+    return;
+  }
+
+  // Traerse la versión nueva y guardarla, a petición de la app.
+  if(url.searchParams.has('gg-actualizar')){
+    event.respondWith(
+      fetch(SHELL_URL, {cache: 'reload'}).then(res => {
+        if(res && res.ok){
+          const copy = res.clone();
+          return caches.open(CACHE_NAME).then(cache => cache.put(SHELL_URL, copy)).then(() => res);
+        }
+        return res;
+      })
     );
     return;
   }

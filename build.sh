@@ -3,6 +3,13 @@
 # Uso: ./build.sh → crea carpeta dist/ con los 2 archivos
 
 set -e
+# El sello de versión se calcula UNA sola vez y se usa en dos sitios: dentro
+# del HTML (lo que ve el hostelero abajo) y en version.json, un fichero de 50
+# bytes que la app consulta al abrirse para saber si hay algo nuevo SIN
+# descargarse los 4 MB de la app entera. Es lo que hace que el plan gratuito
+# de Render (5 GB de tráfico al mes) dé de sobra.
+GG_SELLO="$(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M')"
+
 mkdir -p dist
 
 echo "🔧 Construyendo index.html..."
@@ -43,7 +50,7 @@ done
   # sello es para que el hostelero compare con SU reloj y sepa si está viendo
   # la versión nueva. Dos horas de desfase convertían esa comprobación en otra
   # duda más.
-  echo "const GG_BUILD = '$(TZ=Europe/Madrid date '+%d/%m/%Y %H:%M')';"
+  echo "const GG_BUILD = '$GG_SELLO';"
   echo "$JS"
   echo "</script>"
 
@@ -52,6 +59,9 @@ done
   echo "</body>"
   echo "</html>"
 } > dist/index.html
+
+# El sello, suelto y minúsculo, para poder preguntarlo sin bajarse la app.
+echo "{\"build\":\"$GG_SELLO\"}" > dist/version.json
 
 # Copy reservas page (referencia fuentes externas en fonts/, ver más abajo —
 # ya no va todo en un solo archivo: al servirse por HTTP, esto cachea mejor

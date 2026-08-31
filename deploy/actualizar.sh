@@ -3,7 +3,7 @@
 set -e
 cd "$(dirname "$0")/.."
 bash build.sh
-cp dist/index.html dist/sw.js deploy/app/public/
+cp dist/index.html dist/sw.js dist/version.json deploy/app/public/
 cp dist/reservagastrogoan.html deploy/reservas/public/index.html
 # La misma pagina como 404: el hosting la sirve cuando la direccion no es un
 # archivo, y asi el enlace corto (reservas.gastrogoan.com/casapaco) funciona
