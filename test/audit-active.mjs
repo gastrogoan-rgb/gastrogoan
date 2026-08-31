@@ -134,7 +134,8 @@ function __setDB(d){ DB = d; }
 function __getDB(){ return DB; }
 function __setSocketConnected(v){ socketConnected = v; }
 function __getDbReadyPromise(){ return dbReadyPromise; }
-function __clearCloudSyncRetryTimer(){ clearTimeout(cloudSyncRetryTimer); cloudSyncRetryTimer = null; }`,
+function __clearCloudSyncRetryTimer(){ clearTimeout(cloudSyncRetryTimer); cloudSyncRetryTimer = null; }
+function __getSyncBadgeState(){ return lastSyncBadgeState; }`,
     sandbox,
     { filename: 'js/core.js' }
   );
@@ -523,6 +524,40 @@ await testAsync('Los avisos push de un dispositivo no borran los de los demás',
   const tablet = sandbox.__getDB().pushSubscriptions.find(s=>s.deviceId==='tablet-cocina');
   assert.equal(tablet.subscription.a, 2, 'de cada aparato debe quedar su suscripción más reciente');
   console.log('   → cada aparato conserva la suya, y gana la más reciente de cada uno');
+});
+
+await testAsync('FIX H4: el indicador de nube ya NO se queda clavado en "Guardando…"', async () => {
+  /* Lo vio el dueño en dos capturas: la cabecera con "Guardando…" fijo.
+     scheduleCloudSync pone ese estado en CADA saveDB, aunque el guardado no
+     cambie nada — y muchísimos guardados no cambian nada (repintar una
+     pantalla, guardar dos veces lo mismo, tocar y deshacer). Cuando 800 ms
+     después no había ningún bloque distinto, la app se iba con un `return`
+     sin devolver el indicador a "Nube conectada", y ahí se quedaba. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setSocketConnected(true);
+  sandbox.__setCloudRef({update: async () => {}});
+  sandbox.__setDB({ingredients: ['a']});
+  // La nube ya tiene exactamente esto: no hay nada que subir.
+  sandbox.__setLastSyncedSnapshot({ingredients: sandbox.canonicalStringify(['a'])});
+  sandbox.updateSyncBadge('pending');
+  sandbox.flushCloudSync();
+  assert.equal(sandbox.__getSyncBadgeState(), 'online',
+    'sin nada que subir, el indicador tiene que decir que está al día (antes se quedaba en "pending" para siempre)');
+
+  // Con un cambio de verdad: pasa por pendiente y vuelve solo.
+  sandbox.__setDB({ingredients: ['a', 'b']});
+  sandbox.updateSyncBadge('pending');
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sandbox.__getSyncBadgeState(), 'online', 'tras subir un cambio real, también');
+
+  // Sin conexión NO puede cantar victoria: eso sería mentirle al hostelero.
+  sandbox.__setSocketConnected(false);
+  sandbox.__setDB({ingredients: ['a', 'b']});
+  sandbox.updateSyncBadge('pending');
+  sandbox.flushCloudSync();
+  assert.equal(sandbox.__getSyncBadgeState(), 'pending', 'sin red, se queda pendiente');
 });
 
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);

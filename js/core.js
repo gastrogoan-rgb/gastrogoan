@@ -5575,6 +5575,18 @@ function scheduleCloudSyncRetry(){
   clearTimeout(cloudSyncRetryTimer);
   cloudSyncRetryTimer = setTimeout(flushCloudSync, CLOUD_SYNC_RETRY_MS);
 }
+/* ⚠️ El indicador se quedaba clavado en "Guardando…" para siempre.
+   scheduleCloudSync lo pone en ese estado en CADA saveDB, aunque el guardado
+   no cambie nada — y muchos guardados no cambian nada (repintar una pantalla,
+   guardar lo mismo dos veces, tocar y deshacer). Cuando 800 ms después esta
+   función veía que no había ningún bloque distinto, se iba con un `return`
+   sin devolver el indicador a "Nube conectada": el hostelero se quedaba
+   mirando "Guardando…" indefinidamente y creyendo que algo iba mal.
+   Ahora, cuando no queda nada por subir, se dice: es la verdad, y es
+   justamente la buena noticia. */
+function marcarNubeAlDia(){
+  if(socketConnected && lastSyncBadgeState === 'pending') updateSyncBadge('online');
+}
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
@@ -5588,7 +5600,7 @@ function flushCloudSync(){
     }
   });
   const keys = Object.keys(updates);
-  if(keys.length === 0) return;
+  if(keys.length === 0){ marcarNubeAlDia(); return; }
   const onFail = (e) => {
     recordSyncError(e);
     scheduleCloudSyncRetry();
@@ -5601,7 +5613,7 @@ function flushCloudSync(){
       // local (o el reintento de otro bloque sigue en curso), se queda en
       // "pending" hasta que de verdad no falte nada por confirmar.
       const stillPending = Object.keys(DB).some(key => lastSyncedSnapshot[key] !== canonicalStringify(DB[key]));
-      if(!stillPending && socketConnected) updateSyncBadge('online');
+      if(!stillPending) marcarNubeAlDia();
     }).catch(onFail);
   }catch(e){
     onFail(e);
