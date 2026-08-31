@@ -683,7 +683,11 @@ NO TE QUEDES EN LA IDEA. Cuando propongas algo, BAJA AL DETALLE: qué producto h
 CÓMO HABLAS: como un jefe de partida. Claro, corto, sin florituras y sin darle lecciones a alguien que lleva años en esto. Nada de listas interminables ni de recitar este marco de trabajo.`;
 
 function idrSistema(extra){
-  return IDR_REGLAS + '\n\n' + idrContextoNegocio() + (extra ? '\n\n' + extra : '');
+  // El encargo del negocio (precio, food cost, estructura) manda sobre
+  // cualquier idea del asistente, así que va en TODAS las consultas.
+  const c = idrCreacion(idrCreacionActiva);
+  const enc = c ? idrEncargoTexto(c) : '';
+  return IDR_REGLAS + '\n\n' + idrContextoNegocio() + (enc ? '\n\n' + enc : '') + (extra ? '\n\n' + extra : '');
 }
 
 /* ============================================================
@@ -745,7 +749,7 @@ const IDR_PASOS = {
   ],
 };
 // Solo se pueden EMPEZAR estos dos. Los otros siguen abriéndose si ya existen.
-const IDR_TIPOS_NUEVOS = ['plato', 'base'];
+const IDR_TIPOS_NUEVOS = ['base', 'plato', 'menu', 'carta'];
 
 function idrNuevaCreacion(tipo){
   const c = {
@@ -849,8 +853,10 @@ function renderIdrInterno(){
     </div>
 
     <div class="grid grid-2" style="margin-top:14px">
-      ${burbuja('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
       ${burbuja('base','ti-soup', t('idr.newBase'), t('idr.newBaseDesc'))}
+      ${burbuja('plato','ti-tools-kitchen-2', t('idr.newDish'), t('idr.newDishDesc'))}
+      ${burbuja('menu','ti-list-numbers', t('idr.newMenu'), t('idr.newMenuDesc'))}
+      ${burbuja('carta','ti-book', t('idr.newCarta'), t('idr.newCartaDesc'))}
     </div>
 
     <h3 class="cat-heading">${t('idr.myWork')}</h3>
@@ -869,9 +875,6 @@ function renderIdrInterno(){
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       ${[['', t('idr.allTypes')], ['plato', t('idr.newDish')], ['base', t('idr.newBase')], ['menu', t('idr.newMenu')], ['carta', t('idr.newCarta')]]
-        // Menú y carta ya no se pueden empezar: su filtro solo se enseña si
-        // queda trabajo de antes, para no ofrecer un cajón siempre vacío.
-        .filter(([v]) => !['menu','carta'].includes(v) || todas.some(x => x.tipo === v))
         .map(([v, l]) =>
         `<button class="btn btn-sm ${idrFiltroTipo===v?'btn-primary':''}" onclick="idrFiltrar('${v}')">${escapeHtml(l)}</button>`).join('')}
     </div>
@@ -938,6 +941,195 @@ function idrEmpezar(tipo){
 }
 
 /* ============================================================
+   EL ENCARGO — lo que se decide ANTES de hablar con nadie
+   ============================================================
+   La estructura y el precio no son cosa del asistente: son decisiones del
+   negocio. Un menú de 38 € a cuatro pases no es lo mismo que uno de 18, y
+   una carta de cinco bloques no se llena igual que una de tres. Si esto se
+   deja a la conversación, la IA improvisa un formato y el hostelero acaba
+   discutiendo con ella en vez de cocinando.
+
+   Así que se pregunta primero, en un formulario corto, y ese encargo entra
+   en TODAS las peticiones. La IA no elige la estructura: la rellena, y su
+   trabajo es que quede equilibrada dentro de ella.
+
+   Las recetas se escriben SIEMPRE para UNA persona: es como se escandalla
+   un plato de carta, y así el coste por ración es el coste, sin dividir. */
+
+const IDR_BLOQUES_MENU = [
+  {es:'Aperitivos', ca:'Aperitius', en:'Snacks'},
+  {es:'Entrantes', ca:'Entrants', en:'Starters'},
+  {es:'Segundos', ca:'Segons', en:'Mains'},
+  {es:'Postres', ca:'Postres', en:'Desserts'},
+];
+const IDR_BLOQUES_CARTA = [
+  {es:'Entrantes fríos', ca:'Entrants freds', en:'Cold starters'},
+  {es:'Entrantes calientes', ca:'Entrants calents', en:'Hot starters'},
+  {es:'Carnes', ca:'Carns', en:'Meat'},
+  {es:'Pescados', ca:'Peixos', en:'Fish'},
+  {es:'Postres', ca:'Postres', en:'Desserts'},
+];
+
+function idrBloquesPorDefecto(tipo, cuantos){
+  const base = tipo === 'menu' ? IDR_BLOQUES_MENU : IDR_BLOQUES_CARTA;
+  const out = [];
+  for(let i = 0; i < cuantos; i++){
+    out.push({nombre: base[i] ? gl(base[i]) : `${t('idr.block')} ${i+1}`, n: tipo === 'menu' ? 1 : 4});
+  }
+  return out;
+}
+
+function idrEncargo(c){
+  if(!c.encargo || typeof c.encargo !== 'object') c.encargo = {};
+  return c.encargo;
+}
+function idrEncargoHecho(c){ return !!(c && c.encargo && c.encargo.hecho); }
+
+// El encargo, en texto, para que viaje en cada consulta.
+function idrEncargoTexto(c){
+  const e = idrEncargo(c);
+  if(!e.hecho) return '';
+  const l = [];
+  if(c.tipo === 'plato'){
+    if(e.pvp) l.push(`Precio de venta objetivo (SIN IVA): ${fmtMoney(e.pvp)} por ración`);
+    if(e.foodCost) l.push(`Food cost objetivo: ${e.foodCost}%`);
+    if(e.pvp && e.foodCost) l.push(`Es decir, el plato NO puede costar más de ${fmtMoney(e.pvp * e.foodCost / 100)} de materia prima por ración`);
+  } else if(c.tipo === 'menu' || c.tipo === 'carta'){
+    if(e.pvp) l.push(c.tipo === 'menu'
+      ? `Precio del menú completo (SIN IVA): ${fmtMoney(e.pvp)} por comensal`
+      : `Precio medio por plato (SIN IVA): ${fmtMoney(e.pvp)}`);
+    if(e.foodCost) l.push(`Food cost objetivo: ${e.foodCost}%`);
+    l.push(`ESTRUCTURA FIJADA POR EL NEGOCIO (no la cambies, ni añadas ni quites bloques):`);
+    (e.bloques||[]).forEach(b => l.push(`- ${b.nombre}: ${b.n} ${b.n === 1 ? 'plato' : 'platos'}`));
+    l.push(`Total: ${idrTotalPlatos(c)} platos. Tu trabajo es llenar ESA estructura de forma equilibrada, no proponer otra.`);
+  }
+  return l.length ? 'EL ENCARGO:\n' + l.join('\n') : '';
+}
+function idrTotalPlatos(c){
+  return ((idrEncargo(c).bloques)||[]).reduce((s, b) => s + (parseInt(b.n, 10) || 0), 0);
+}
+
+function renderIdrEncargo(box, c){
+  const e = idrEncargo(c);
+  const esConjunto = c.tipo === 'menu' || c.tipo === 'carta';
+  const bloques = Array.isArray(e.bloques) && e.bloques.length
+    ? e.bloques
+    : idrBloquesPorDefecto(c.tipo, c.tipo === 'menu' ? 4 : 5);
+
+  box.innerHTML = `
+    <div class="view-header">
+      <div>
+        <button class="btn btn-sm btn-back" onclick="navIdr('inicio')"><i class="ti ti-arrow-left"></i> ${t('common.back')}</button>
+        <h2>${t('idr.briefTitle')}</h2>
+        <p class="view-sub">${t('idr.briefSub')}</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="grid grid-2">
+        <div class="field">
+          <label>${c.tipo === 'menu' ? t('idr.briefPriceMenu') : c.tipo === 'carta' ? t('idr.briefPriceCarta') : t('idr.briefPriceDish')}</label>
+          <input type="number" id="enc-pvp" step="0.01" min="0" value="${e.pvp || ''}" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>${t('idr.briefFoodCost')}</label>
+          <input type="number" id="enc-fc" step="1" min="1" max="90" value="${e.foodCost || idrAdn().foodCostObjetivo || 30}">
+        </div>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:0">${t('idr.briefPerPerson')}</p>
+    </div>
+
+    ${esConjunto ? `
+      <div class="card">
+        <h3><i class="ti ti-layout-list"></i> ${c.tipo === 'menu' ? t('idr.briefPasses') : t('idr.briefBlocks')}</h3>
+        <div class="field" style="max-width:220px">
+          <label>${c.tipo === 'menu' ? t('idr.briefHowManyPasses') : t('idr.briefHowManyBlocks')}</label>
+          <select id="enc-nbloques" onchange="idrCambiarNumBloques(${c.id}, this.value)">
+            ${[2,3,4,5,6,7,8].map(n => `<option value="${n}"${n===bloques.length?' selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <table class="table">
+          <thead><tr><th>${c.tipo === 'menu' ? t('idr.briefPass') : t('idr.briefBlock')}</th><th style="width:130px">${t('idr.briefHowMany')}</th></tr></thead>
+          <tbody>
+            ${bloques.map((b, i) => `
+              <tr>
+                <td><input type="text" id="enc-b-${i}" value="${escapeHtml(b.nombre||'')}" placeholder="${t('idr.briefBlockPh')}"></td>
+                <td><input type="number" id="enc-n-${i}" min="1" max="20" step="1" value="${b.n || 1}"></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <p style="font-size:12.5px;color:var(--muted);margin:8px 0 0">${t('idr.briefBlocksHint')}</p>
+      </div>` : ''}
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="idrGuardarEncargo(${c.id})"><i class="ti ti-arrow-right"></i> ${t('idr.briefStart')}</button>
+    </div>
+  `;
+}
+
+// Cambiar el número de bloques conserva lo ya escrito en los que siguen
+// existiendo: rehacer la tabla entera cada vez sería tirar el trabajo.
+function idrCambiarNumBloques(id, cuantos){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const n = Math.max(1, Math.min(12, parseInt(cuantos, 10) || 1));
+  const e = idrEncargo(c);
+  const actuales = idrLeerBloquesDelFormulario(e.bloques ? e.bloques.length : 0);
+  const previos = actuales.length ? actuales : (e.bloques || []);
+  const porDefecto = idrBloquesPorDefecto(c.tipo, n);
+  e.bloques = porDefecto.map((b, i) => previos[i] || b);
+  e.pvp = parseFloat((document.getElementById('enc-pvp')||{}).value) || e.pvp;
+  e.foodCost = parseFloat((document.getElementById('enc-fc')||{}).value) || e.foodCost;
+  saveDB();
+  renderIdr();
+}
+function idrLeerBloquesDelFormulario(cuantos){
+  const out = [];
+  for(let i = 0; i < cuantos; i++){
+    const nom = document.getElementById('enc-b-' + i);
+    const num = document.getElementById('enc-n-' + i);
+    if(!nom) break;
+    out.push({nombre: (nom.value||'').trim(), n: Math.max(1, parseInt((num||{}).value, 10) || 1)});
+  }
+  return out;
+}
+
+function idrGuardarEncargo(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const e = idrEncargo(c);
+  e.pvp = parseFloat((document.getElementById('enc-pvp')||{}).value) || 0;
+  e.foodCost = parseFloat((document.getElementById('enc-fc')||{}).value) || 0;
+  if(!e.pvp){ showToast(t('idr.briefNeedPrice')); return; }
+  if(c.tipo === 'menu' || c.tipo === 'carta'){
+    const cuantos = parseInt((document.getElementById('enc-nbloques')||{}).value, 10) || 0;
+    const leidos = idrLeerBloquesDelFormulario(cuantos);
+    if(leidos.some(b => !b.nombre)){ showToast(t('idr.briefNeedBlockName')); return; }
+    e.bloques = leidos;
+    if(!e.bloques.length){ showToast(t('idr.briefNeedBlockName')); return; }
+  }
+  e.hecho = true;
+  // El asistente abre con el encargo entendido y la pregunta que de verdad
+  // decide el camino: ¿tiramos de lo que ya tienes o creamos platos nuevos?
+  if(c.tipo === 'menu' || c.tipo === 'carta'){
+    idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: idrResumenDelEncargo(c)});
+  }
+  c.updatedAt = new Date().toISOString();
+  saveDB();
+  renderIdr();
+}
+
+function idrResumenDelEncargo(c){
+  const e = idrEncargo(c);
+  const lista = (e.bloques||[]).map(b => `· ${b.nombre}: ${b.n}`).join('\n');
+  return t('idr.briefRecap')
+    .replace('${que}', c.tipo === 'menu' ? t('idr.newMenu') : t('idr.newCarta'))
+    .replace('${precio}', fmtMoney(e.pvp))
+    .replace('${fc}', e.foodCost || '—')
+    .replace('${lista}', lista)
+    .replace('${total}', idrTotalPlatos(c));
+}
+
+/* ============================================================
    LA CONVERSACIÓN
    ============================================================
    Antes esto era un guion de pasos fijos: producto → técnica → salsa →
@@ -992,8 +1184,12 @@ function idrConversacionTexto(c){
 function renderIdrCreacion(box){
   const c = idrCreacion(idrCreacionActiva);
   if(!c){ navIdr('inicio'); return; }
+  // Primero el encargo: precio, food cost y estructura. Sin eso no hay
+  // conversación que valga, porque la IA no sabría qué está llenando.
+  if(!idrEncargoHecho(c) && !(c.pasos||[]).length){ renderIdrEncargo(box, c); return; }
   const iaOk = idrHayIA();
-  const legado = c.tipo === 'menu' || c.tipo === 'carta';
+  const conjunto = c.tipo === 'menu' || c.tipo === 'carta';
+  const legado = conjunto && !idrEncargoHecho(c);
   const hilo = idrMensajes(c);
   const hecho = !!(c.recipeId || (c.recipeIds||[]).length);
 
@@ -1075,7 +1271,13 @@ function renderIdrCreacion(box){
             <button class="btn btn-primary" id="idr-enviar" onclick="idrEnviar()"${idrPensando?' disabled':''}><i class="ti ti-send"></i> ${t('idr.send')}</button>
             ${c.tipo === 'plato'
               ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearPlatoReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createDish')}</button>`
-              : `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearBaseReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createBase')}</button>`}
+              : c.tipo === 'base'
+              ? `<button class="owner-only btn ${c.listo?'btn-primary':''}" onclick="idrCrearBaseReal(${c.id})"><i class="ti ti-plus"></i> ${t('idr.createBase')}</button>`
+              : c.propuesta
+              ? `<button class="owner-only btn btn-primary" onclick="idrCrearLosPlatosPropuestos(${c.id})"><i class="ti ti-check"></i> ${t('idr.approveProposal')}</button>
+                 <button class="owner-only btn" onclick="idrProponerPlatos(${c.id})"><i class="ti ti-refresh"></i> ${t('idr.proposeAgain')}</button>`
+              : `<button class="owner-only btn" onclick="idrElegirExistentes(${c.id})"><i class="ti ti-checkbox"></i> ${t('idr.useExisting')}</button>
+                 <button class="owner-only btn btn-primary" onclick="idrProponerPlatos(${c.id})"><i class="ti ti-sparkles"></i> ${t('idr.proposeNew')}</button>`}
             <span style="font-size:12px;color:var(--muted)">${t('idr.callsLeft').replace('${n}', idrQuedanLlamadas())}</span>
           </div>
           ${c.listo ? `<p style="font-size:12.5px;color:#1F8A4C;margin:8px 0 0"><i class="ti ti-check"></i> ${t('idr.readyToCreate')}</p>`
@@ -1321,7 +1523,7 @@ function idrBuscarElaboracion(nombre){
    no deje el coste por comensal en algo sin sentido. */
 function idrLeerComensales(v){
   const n = Math.round(parseFloat(v));
-  if(!isFinite(n) || n < 1) return 2;
+  if(!isFinite(n) || n < 1) return 1;
   return Math.min(n, 200);
 }
 
@@ -1350,7 +1552,7 @@ ${resumen}
 Escribe la receta. Responde SOLO con este JSON:
 {"nombre":"...","descripcion":"descripción corta de carta","comensales":2,"pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
 
-En "comensales" pon PARA CUÁNTOS son las cantidades que das. Si en la conversación se ha dicho un número (una ración, cuatro, cuarenta del menú del día), respétalo. Si no se ha dicho nada, 2.
+Escríbela para UNA RACIÓN (un comensal), que es como se escandalla un plato de carta, y pon 1 en "comensales". Solo pon otro número si el cocinero ha pedido expresamente una producción para varios (por ejemplo cuarenta del menú del día).
 Y ojo al escalar: la sal, el picante y las especias NO suben en proporción, y una reducción no tarda el doble por doblar el volumen. Ajusta con criterio, no multiplicando.
 
 Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más con su nombre exacto y su cantidad en la unidad de la elaboración (por ejemplo {"nombre":"Fondo oscuro de ternera","cantidad":0.15,"unidad":"L"}). La aplicación le encadenará el coste real.
@@ -1381,6 +1583,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const receta = existente || {
     id: genId(), name: nombre, price: 0, priceBase: 0,
     ivaPct: (DB.business && DB.business.ivaPct) || 10,
+    // Una ración: es como se escandalla un plato de carta.
     comensales: idrLeerComensales(j.comensales),
     consumiblesPct: 5,
     category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
@@ -1666,6 +1869,244 @@ function idrCerrarConLaFicha(c, receta){
   if((c.avisos||[]).length) partes.push(t('idr.doneWarnings') + '\n· ' + c.avisos.join('\n· '));
   partes.push(t('idr.doneNext'));
   idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: partes.join('\n\n')});
+}
+/* ============================================================
+   MENÚ Y CARTA — los dos caminos
+   ============================================================
+   Una vez fijada la estructura, hay dos formas de llenarla, y son las dos
+   que se usan en una cocina de verdad:
+
+   1) CON LO QUE YA TIENES. Los platos escandallados se eligen a mano. No
+      hace falta ninguna consulta al asistente ni se crea nada nuevo: el
+      trabajo ya está hecho y solo hay que colocarlo.
+   2) CON PLATOS NUEVOS. El asistente propone la lista entera —nombre y una
+      línea de cada uno— y AHÍ SE PARA. Nada se crea hasta que la persona lo
+      aprueba: escribir treinta fichas que no gustan es peor que no escribir
+      ninguna, y cuesta dinero en consultas. Aprobado, se escriben las fichas
+      con su escandallo y se monta la carta o el menú.
+   ============================================================ */
+
+// ── Camino 1: los que ya tienes ──
+let idrSeleccionPlatos = {};   // {indiceDeBloque: [recipeId, ...]}
+
+function idrPlatosEscandallados(){
+  return (DB.recipes||[])
+    .filter(r => !r.isBase && (r.area||'cocina') === 'cocina')
+    .slice()
+    .sort((a,b) => (a.name||'').localeCompare(b.name||''));
+}
+
+function idrElegirExistentes(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const platos = idrPlatosEscandallados();
+  if(!platos.length){ showToast(t('idr.noDishesYet'), 4000); return; }
+  idrSeleccionPlatos = {};
+  (idrEncargo(c).bloques||[]).forEach((b, i) => { idrSeleccionPlatos[i] = []; });
+  idrPintarSelectorPlatos(id);
+}
+
+function idrPintarSelectorPlatos(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const bloques = idrEncargo(c).bloques || [];
+  const platos = idrPlatosEscandallados();
+  const filas = bloques.map((b, i) => {
+    const elegidos = idrSeleccionPlatos[i] || [];
+    return `
+      <div class="card card-compact">
+        <h3 style="font-size:14px;justify-content:space-between">
+          <span>${escapeHtml(b.nombre)}</span>
+          <span style="font-size:12px;color:${elegidos.length === b.n ? '#1F8A4C' : 'var(--muted)'}">${elegidos.length}/${b.n}</span>
+        </h3>
+        <div style="max-height:150px;overflow:auto">
+          ${platos.map(p => `
+            <label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;cursor:pointer">
+              <input type="checkbox" ${elegidos.includes(p.id) ? 'checked' : ''} onchange="idrMarcarPlato(${id}, ${i}, ${p.id}, this.checked)">
+              <span>${escapeHtml(p.name)} <span style="color:var(--muted)">· ${fmtMoney(recipeCost(p))}</span></span>
+            </label>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+  openModal(`
+    <div class="modal-head"><h3><i class="ti ti-checkbox"></i> ${t('idr.pickExisting')}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted)">${t('idr.pickExistingHint')}</p>
+      <div class="grid grid-2">${filas}</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">${t('common.cancel')}</button>
+      <button class="btn btn-primary" onclick="idrMontarConLosElegidos(${id})"><i class="ti ti-check"></i> ${t('idr.pickDone')}</button>
+    </div>`);
+}
+
+function idrMarcarPlato(id, bloque, recipeId, marcado){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const b = (idrEncargo(c).bloques||[])[bloque];
+  const lista = idrSeleccionPlatos[bloque] || (idrSeleccionPlatos[bloque] = []);
+  if(marcado){
+    // El tope del bloque lo puso el negocio: no se pasa de ahí sin decirlo.
+    if(b && lista.length >= b.n){ showToast(t('idr.pickFull').replace('${n}', b.n).replace('${bloque}', b.nombre), 3500); idrPintarSelectorPlatos(id); return; }
+    if(!lista.includes(recipeId)) lista.push(recipeId);
+  } else {
+    idrSeleccionPlatos[bloque] = lista.filter(x => x !== recipeId);
+  }
+  idrPintarSelectorPlatos(id);
+}
+
+function idrMontarConLosElegidos(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  const bloques = idrEncargo(c).bloques || [];
+  const secciones = [];
+  const usados = [];
+  bloques.forEach((b, i) => {
+    const platos = (idrSeleccionPlatos[i] || []).map(rid => getRecipe(rid)).filter(Boolean);
+    platos.forEach(p => usados.push(p.id));
+    if(platos.length) secciones.push({
+      id: genId(), nombre: String(b.nombre).slice(0,60),
+      platos: platos.map(p => ({id: genId(), recipeId: p.id, nombre: p.name,
+        precio: p.price || 0, precioBase: p.priceBase || 0, ivaPct: p.ivaPct || 10,
+        disponible: true, modificadores: []})),
+    });
+  });
+  if(!usados.length){ showToast(t('idr.pickNone')); return; }
+  closeModal();
+  idrGuardarConjunto(c, secciones, usados, '');
+  showToast(t('idr.setBuilt').replace('${n}', usados.length), 5000);
+  renderIdr();
+}
+
+/* Guardar el conjunto: una carta se crea de verdad; un menú se queda con sus
+   platos en el cuaderno, porque un menú del día CONVIVE con la carta y no la
+   sustituye — montarlo como carta es decisión del negocio, no nuestra. */
+function idrGuardarConjunto(c, secciones, recipeIds, logica){
+  c.recipeIds = recipeIds;
+  if(logica) c.logica = logica;
+  if(c.tipo === 'carta'){
+    if(!Array.isArray(DB.cartas)) DB.cartas = [];
+    const carta = {id: genId(), nombre: (c.titulo || t('idr.newCarta')).toUpperCase(), tipo:'GENERAL',
+      desde:'', hasta:'', dias:[0,1,2,3,4,5,6], secciones};
+    DB.cartas.push(carta);
+    c.cartaId = carta.id;
+  } else {
+    c.secciones = secciones.map(sec => ({nombre: sec.nombre, platos: sec.platos.map(p => p.nombre)}));
+  }
+  c.updatedAt = new Date().toISOString();
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: t('idr.setDoneWhere')
+    .replace('${n}', recipeIds.length)
+    .replace('${donde}', c.tipo === 'carta' ? t('idr.setDoneCarta') : t('idr.setDoneMenu'))});
+  saveDB();
+}
+
+// ── Camino 2: platos nuevos, con parada obligatoria antes de crear nada ──
+async function idrProponerPlatos(id){
+  const c = idrCreacion(id);
+  if(!c) return;
+  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+  const e = idrEncargo(c);
+  showToast(t('idr.proposing'), 4000);
+  const estructura = (e.bloques||[]).map(b => `- ${b.nombre}: ${b.n}`).join('\n');
+  const conversacion = idrConversacionTexto(c);
+  const instruccion = `Propón los platos que llenan esta estructura, y NADA MÁS todavía: solo el nombre y una línea de cada uno. No escribas recetas ni ingredientes.
+
+${estructura}
+
+${conversacion ? 'Lo que hemos hablado:\n' + conversacion + '\n' : ''}
+Que el conjunto quede EQUILIBRADO: sin repetir base ni técnica principal entre platos, alternando temperaturas y texturas, aprovechando fondos y mise en place entre unos y otros, y sin que todos exijan trabajo al momento.
+
+Responde SOLO con este JSON:
+{"nombre":"nombre del conjunto","logica":"en dos o tres frases: qué lo hace coherente, cómo se reparten técnicas y bases, y qué se aprovecha entre platos","bloques":[{"nombre":"exactamente el nombre del bloque","platos":[{"nombre":"...","descripcion":"una línea"}]}]}`;
+
+  const r = await llmChat(idrSistema(idrGuionConversacion(c.tipo)), [{role:'user', content: instruccion}], {maxTokens: 3000});
+  if(!r || !r.ok){
+    idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: `⚠ ${idrMensajeError(r||{})}`, fallo: true});
+    saveDB(); renderIdr(); return;
+  }
+  idrUltimoFallo = null;
+  const j = idrExtraerJson(r.texto);
+  if(!j || !Array.isArray(j.bloques)){ showToast(t('idr.err.unreadable')); return; }
+  c.propuesta = {nombre: String(j.nombre||''), logica: String(j.logica||''), bloques: j.bloques};
+  if(j.nombre && !c.titulo) c.titulo = String(j.nombre).slice(0,60);
+  const resumen = (j.bloques||[]).map(b =>
+    `${b.nombre}\n` + (b.platos||[]).map(p => `  · ${p.nombre} — ${p.descripcion||''}`).join('\n')
+  ).join('\n\n');
+  idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t:
+    `${j.logica ? j.logica + '\n\n' : ''}${resumen}\n\n${t('idr.proposalAsk')}`});
+  c.updatedAt = new Date().toISOString();
+  saveDB();
+  renderIdr();
+}
+
+/* Aprobada la lista, se escriben las fichas. Una llamada por bloque y no una
+   por plato: treinta llamadas serían treinta esperas y treinta cargos. */
+async function idrCrearLosPlatosPropuestos(id){
+  const c = idrCreacion(id);
+  if(!c || !c.propuesta) return;
+  if(!idrHayIA()){ showToast(t('idr.err.noKey')); return; }
+  const e = idrEncargo(c);
+  const secciones = [];
+  const creados = [];
+  const faltan = [];
+
+  for(const bloque of (c.propuesta.bloques||[])){
+    showToast(t('idr.writingBlock').replace('${n}', bloque.nombre), 4000);
+    const lista = (bloque.platos||[]).map(p => `- ${p.nombre}: ${p.descripcion||''}`).join('\n');
+    const instruccion = `Escribe la receta COMPLETA de cada uno de estos platos, ya aprobados:
+
+${lista}
+
+Cada receta para UNA persona (una ración de carta). Responde SOLO con este JSON:
+{"platos":[{"nombre":"...","descripcion":"corta, de carta","pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"...","cantidad":120,"unidad":"g"}]}]}
+
+Las cantidades, SIEMPRE en gramos ("g"), mililitros ("ml") o unidades ("ud"). Si el plato usa una de SUS elaboraciones base, ponla como un ingrediente más con su nombre exacto. Los ingredientes que no tenga, inclúyelos igual: se marcarán como pendientes de dar de alta.`;
+    const r = await llmChat(idrSistema(), [{role:'user', content: instruccion}], {maxTokens: 4000});
+    if(!r || !r.ok){
+      idrMensajes(c).push({mid: idrNuevoMid(), r:'ia', t: `⚠ ${idrMensajeError(r||{})}`, fallo: true});
+      saveDB(); renderIdr(); return;
+    }
+    const j = idrExtraerJson(r.texto);
+    if(!j || !Array.isArray(j.platos)) continue;
+    const platosSec = [];
+    j.platos.forEach(pl => {
+      if(!pl || !pl.nombre) return;
+      const lineas = [];
+      (pl.ingredientes||[]).forEach(ing => {
+        const linea = idrCasarLinea(ing);
+        if(linea) lineas.push(linea);
+        else if(ing.nombre) faltan.push(`${ing.nombre} — ${pl.nombre}`);
+      });
+      const receta = {
+        id: genId(), name: String(pl.nombre).slice(0,80), price: 0, priceBase: 0,
+        ivaPct: (DB.business && DB.business.ivaPct) || 10,
+        comensales: 1, consumiblesPct: 5,
+        category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
+        ingredients: lineas, allergens: [], area: 'cocina',
+        isBase: false, baseYield: 1, baseUnit: 'L',
+        steps: Array.isArray(pl.pasos) ? pl.pasos.join('\n') : '',
+        presentation: String(pl.descripcion || ''),
+      };
+      // El PVP sale del encargo, no del modelo: en una carta es el precio
+      // medio que fijó el negocio; el escandallo dirá si sale o no.
+      if(e.pvp && c.tipo === 'carta'){ receta.price = e.pvp; receta.priceBase = e.pvp; }
+      DB.recipes.push(receta);
+      creados.push(receta);
+      platosSec.push({id: genId(), recipeId: receta.id, nombre: receta.name,
+        precio: receta.price, precioBase: receta.priceBase, ivaPct: receta.ivaPct,
+        disponible: true, modificadores: []});
+    });
+    if(platosSec.length) secciones.push({id: genId(), nombre: String(bloque.nombre||'').slice(0,60), platos: platosSec});
+  }
+
+  if(!creados.length){ showToast(t('idr.err.unreadable')); return; }
+  c.faltan = faltan;
+  idrGuardarConjunto(c, secciones, creados.map(x => x.id), c.propuesta.logica);
+  c.propuesta = null;
+  saveDB();
+  showToast(t('idr.setBuilt').replace('${n}', creados.length), 5000);
+  renderIdr();
 }
 
 function idrHablarDelCoste(id){
