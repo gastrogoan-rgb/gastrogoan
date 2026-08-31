@@ -46,6 +46,34 @@ DNS.** Así el sitio que está en producción no se cae en ningún momento.
 - `wrangler.jsonc` (en cada sitio): solo hace falta si se publica con la
   herramienta de línea de comandos de Cloudflare. Con el panel no se usa, pero
   se conserva porque documenta la configuración correcta.
-- `deploy/reservas/public/_redirects`: los enlaces cortos
-  (`reservas.gastrogoan.com/casapaco`). Ver el comentario de dentro: la regla
-  de la raíz NO se puede poner, Cloudflare la rechaza por bucle infinito.
+- **NO hay `_redirects` en reservas, y es a propósito.** Cloudflare rechaza el
+  fichero entero con *"Infinite loop detected"* por la regla de la raíz
+  (`/ → /index.html`), porque choca con su propia limpieza de `/index.html`.
+  Ya costó un rato la primera vez. No hace falta: `not_found_handling:
+  single-page-application` en `wrangler.jsonc` hace lo mismo, y la página saca
+  el nombre del negocio del pathname (`getSlugFromUrl`), no solo de `?n=`.
+
+## Ojo: esto son Workers, no Pages
+
+Cloudflare ha ido juntando los dos productos en el panel. Estos sitios están
+dados de alta como **Workers con recursos estáticos**, no como Pages, así que
+en la configuración **no existe "Build output directory"**: la carpeta se
+declara en `wrangler.jsonc` (`assets.directory`) y el panel solo necesita
+saber en qué carpeta del repositorio está ese fichero.
+
+Configuración de cada uno, en **Settings → Build**:
+
+| | `gastrogoanapp` | `gastrogoan-reservas` |
+|---|---|---|
+| Root directory | `deploy/app` | `deploy/reservas` |
+| Build command | *(vacío)* | *(vacío)* |
+| Deploy command | `npx wrangler deploy` | `npx wrangler deploy` |
+| Production branch | `main` | `main` |
+
+El nombre del Worker tiene que coincidir con el `name` de su `wrangler.jsonc`,
+o Cloudflare publicará en un Worker distinto del que tiene el dominio.
+
+**Y lo que de verdad importa para la escala**: como estos Workers no tienen
+script (`main`), solo recursos estáticos, sus peticiones son **gratuitas e
+ilimitadas** y NO cuentan contra el tope de 100.000 peticiones al día del plan
+gratuito. Ese tope solo aplica a Workers que ejecutan código.
