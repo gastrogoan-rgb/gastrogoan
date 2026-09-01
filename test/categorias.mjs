@@ -210,6 +210,84 @@ await caso('Renombrar en Cocina no toca la carpeta del mismo nombre de Sala', as
   return 'cada área, la suya';
 });
 
+/* ─── Y lo que de verdad se rompe: la nube ─── */
+await caso('Borrar una carpeta NO la resucita cuando contesta la nube', async ()=>{
+  /* mergeArraysById fusiona por `id`, y las carpetas no lo tienen: al no
+     encontrarlo hacía `return remote` y mandaba la nube entera. Borrabas una
+     carpeta, la nube contestaba con su copia de hace un segundo, y la carpeta
+     volvía sola. Es la familia del idioma que no cambiaba y de Distribución
+     del Trabajo congelada: solo se ve con la nube conectada, así que ninguna
+     prueba local lo habría cazado. */
+  await sembrar();
+  const r = await page.evaluate(async ()=>{
+    /* El escenario de verdad, con dos aparatos:
+       - lo último que ESTE mandó a la nube incluía la carpeta,
+       - aquí se borra (todavía sin subir),
+       - y llega un bloque de la nube que todavía la lleva, porque el OTRO
+         aparato acaba de guardar algo sin haberse enterado del borrado.
+       Hay que meter además una carpeta del otro aparato: si el bloque que
+       llega fuera idéntico a la última foto enviada, applyRemoteBlock corta
+       antes de fusionar y la prueba pasaría sin probar nada. */
+    const ultimoEnvio = [...DB.ingredientCategories];
+    lastSyncedSnapshot = lastSyncedSnapshot || {};
+    lastSyncedSnapshot.ingredientCategories = JSON.stringify(ultimoEnvio);
+    await window.__conRespuestas(() => deleteIngredientCategory('VaciaIng'), {confirma:true});
+    const trasBorrar = [...DB.ingredientCategories];
+    applyRemoteBlock('ingredientCategories', [...ultimoEnvio, 'DesdeElMovil']);
+    return {trasBorrar, trasLaNube: [...DB.ingredientCategories]};
+  });
+  assert.ok(!r.trasBorrar.includes('VaciaIng'), 'no llegó ni a borrarse');
+  assert.ok(!r.trasLaNube.includes('VaciaIng'),
+    `la nube la resucitó: ${r.trasLaNube.join(', ')}`);
+  assert.ok(r.trasLaNube.includes('DesdeElMovil'),
+    'y lo que hizo el otro aparato tiene que llegar igualmente');
+  return 'borrada se queda borrada, y lo del otro aparato llega';
+});
+
+await caso('Renombrar una carpeta tampoco se deshace al sincronizar', async ()=>{
+  await sembrar();
+  const r = await page.evaluate(async ()=>{
+    const enLaNube = DB.recipeCategories.map(c => ({...c}));
+    lastSyncedSnapshot = lastSyncedSnapshot || {};
+    lastSyncedSnapshot.recipeCategories = JSON.stringify(enLaNube);
+    await window.__conRespuestas(() => renameRecipeCategory('Principales'), {texto:'Platos principales'});
+    applyRemoteBlock('recipeCategories', enLaNube);
+    const n = DB.recipeCategories.map(c => c.name || c);
+    return {tieneNueva: n.includes('Platos principales'), tieneVieja: n.includes('Principales')};
+  });
+  assert.ok(r.tieneNueva, 'el nombre nuevo tiene que sobrevivir a la nube');
+  assert.ok(!r.tieneVieja, 'y el viejo no puede volver');
+  return 'el nombre nuevo aguanta';
+});
+
+await caso('Una carpeta creada en OTRO dispositivo sí llega', async ()=>{
+  /* El otro lado de la moneda: no resucitar lo borrado aquí no puede
+     convertirse en ignorar lo que hicieron allí. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    lastSyncedSnapshot = lastSyncedSnapshot || {};
+    lastSyncedSnapshot.ingredientCategories = JSON.stringify([...DB.ingredientCategories]);
+    applyRemoteBlock('ingredientCategories', [...DB.ingredientCategories, 'DesdeElMovil']);
+    return [...DB.ingredientCategories];
+  });
+  assert.ok(r.includes('DesdeElMovil'), 'lo que se crea en otro aparato tiene que llegar');
+  assert.ok(r.includes('Pescados'), 'y sin perder las de aquí');
+  return 'llega lo de fuera y se queda lo de aquí';
+});
+
+await caso('Sin foto anterior, manda la nube (que es lo seguro)', async ()=>{
+  /* Primera sincronización del dispositivo: no hay forma de distinguir
+     "borrado aquí" de "todavía no ha llegado". Ante la duda, la nube. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    lastSyncedSnapshot = {};
+    applyRemoteBlock('ingredientCategories', ['SoloLaNube']);
+    return [...DB.ingredientCategories];
+  });
+  assert.deepEqual(r, ['SoloLaNube'], 'sin referencia previa tiene que ganar la nube');
+  return 'ante la duda, la nube';
+});
+
 await caso('Ningún error de JavaScript', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales.slice(0,4), [], reales.slice(0,2).join(' | '));

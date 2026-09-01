@@ -2741,6 +2741,38 @@ function mergeArraysById(local, remote){
   return merged;
 }
 
+/* Listas de NOMBRES sin id: las carpetas de ingredientes (texto suelto) y las
+   de recetas ({name, area}).
+   mergeArraysById fusiona por `id`, y al no encontrarlo hace `return remote`:
+   manda la nube entera. Mientras solo se podían AÑADIR carpetas casi no se
+   notaba; desde que se pueden borrar y renombrar es un desastre visible —
+   borras una carpeta, la nube contesta con su copia de hace un segundo, y la
+   carpeta reaparece sola. Es la misma familia del idioma que no cambiaba y de
+   Distribución del Trabajo congelada.
+   Se resuelve como el stock: con la foto de lo último que se envió. Lo que se
+   quitó aquí desde entonces NO se resucita, lo que se añadió aquí no se
+   pierde, y en todo lo demás manda la nube. */
+function mergeListaDeNombres(local, remote, lastSyncedJson){
+  if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  let antes = null;
+  if(lastSyncedJson){ try{ antes = JSON.parse(lastSyncedJson); }catch(e){} }
+  // Sin foto anterior no hay forma de distinguir "borrado aquí" de "todavía
+  // no llegó": se hace lo de siempre y manda la nube, que es lo seguro.
+  if(!Array.isArray(antes)) return remote;
+  const clave = x => (x && typeof x === 'object') ? `${x.name}\u0000${x.area || ''}` : String(x);
+  const enAntes = new Set(antes.map(clave));
+  const enLocal = new Set(local.map(clave));
+  const enRemoto = new Set(remote.map(clave));
+  const out = [];
+  remote.forEach(x => {
+    const k = clave(x);
+    const borradoAqui = enAntes.has(k) && !enLocal.has(k);
+    if(!borradoAqui) out.push(x);
+  });
+  local.forEach(x => { if(!enRemoto.has(clave(x))) out.push(x); });
+  return out;
+}
+
 // DB.stock no es un array (es un mapa {ingredientId: {qty, min}}), así que
 // no lo cubre mergeArraysById/MERGEABLE_ARRAYS: sin esto, dos dispositivos
 // offline ajustando stock de DOS ingredientes distintos a la vez (uno
@@ -2811,6 +2843,11 @@ function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
   });
   return merged;
 }
+
+/* Las dos listas cuyos elementos NO tienen id: son nombres, y se fusionan
+   por el nombre (ver mergeListaDeNombres). Van aparte de MERGEABLE_ARRAYS
+   porque ahí acabarían en `return remote` y un borrado local se desharía. */
+const LISTAS_DE_NOMBRES = new Set(['ingredientCategories', 'recipeCategories']);
 
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
@@ -4163,7 +4200,9 @@ function applyRemoteBlock(key, remoteValue){
   // local — se necesita para saber, después, si el resultado fusionado
   // lleva algo que la nube todavía no tiene (ver mergedFromLocal más abajo).
   const remoteOnlyJson = canonicalStringify(merged);
-  if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
+  if(LISTAS_DE_NOMBRES.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
+    merged = mergeListaDeNombres(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
+  } else if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(merged)){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
   }
