@@ -181,6 +181,43 @@ await caso('El botón "Actualizar" fuerza la comprobación, sin esperar 6 horas'
   return 'el botón manda sobre el temporizador';
 });
 
+await caso('El aviso se ve bien y no se pega al borde de la pantalla', async ()=>{
+  // Pegado abajo del todo se mezclaba con la barra del navegador de la
+  // tablet y quedaba aplastado.
+  const tamanos = [[390,844,'móvil'], [820,1180,'tablet'], [1280,900,'escritorio']];
+  const medidas = [];
+  for(const [w,h,nombre] of tamanos){
+    await page.setViewport({width:w, height:h});
+    await page.evaluate((b)=>{
+      document.getElementById('gg-version-nueva')?.remove();
+      window.GG_BUILD = '01/01/2026 00:00';
+      mostrarAvisoVersionNueva(b);
+    }, '01/09/2026 02:23');
+    await new Promise(r=>setTimeout(r, 120));
+    const m = await page.evaluate(()=>{
+      const b = document.getElementById('gg-version-nueva');
+      const r = b.getBoundingClientRect();
+      const botones = [...b.querySelectorAll('button')].map(x => x.getBoundingClientRect());
+      return {
+        alto: Math.round(r.height),
+        huecoAbajo: Math.round(window.innerHeight - r.bottom),
+        sobresale: r.right > window.innerWidth + 1 || r.left < -1,
+        botonesOk: botones.every(x => x.height >= 44 && x.width > 60),
+        botonesDentro: botones.every(x => x.right <= window.innerWidth + 1),
+      };
+    });
+    medidas.push([nombre, m]);
+  }
+  await page.evaluate(()=>document.getElementById('gg-version-nueva')?.remove());
+  medidas.forEach(([nombre, m]) => {
+    assert.ok(m.huecoAbajo >= 8, `en ${nombre} debe quedar hueco bajo el aviso, hay ${m.huecoAbajo}px`);
+    assert.ok(!m.sobresale, `en ${nombre} no puede salirse de la pantalla`);
+    assert.ok(m.botonesOk, `en ${nombre} los botones deben cumplir el objetivo táctil`);
+    assert.ok(m.botonesDentro, `en ${nombre} los botones deben caber`);
+  });
+  return medidas.map(([n,m]) => `${n} ${m.alto}px`).join(' · ');
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError|sin red/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

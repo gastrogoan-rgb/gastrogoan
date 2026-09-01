@@ -2784,7 +2784,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 02:23';
+const GG_BUILD = '01/09/2026 02:28';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -36769,11 +36769,25 @@ function mostrarAvisoVersionNueva(build){
   if(document.getElementById('gg-version-nueva')) return;
   const barra = document.createElement('div');
   barra.id = 'gg-version-nueva';
-  barra.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:var(--brand-orange,#D97C3F);color:#fff;'
-    + 'padding:12px 16px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:14px;font-weight:600';
-  barra.innerHTML = `<span><i class="ti ti-download"></i> ${t('app.newVersion').replace('${fecha}', escapeHtml(build))}</span>`
-    + `<button class="btn" style="background:#fff;color:var(--brand-orange,#D97C3F);border:none;min-height:44px;padding:10px 18px;font-weight:700" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
-    + `<button class="btn" style="background:none;border:1px solid rgba(255,255,255,.6);color:#fff;min-height:44px;padding:10px 14px" onclick="document.getElementById('gg-version-nueva').remove()">${t('app.newVersionLater')}</button>`;
+  /* Separada del borde y con hueco por debajo: pegada abajo del todo se
+     mezclaba con la barra del navegador de la tablet y quedaba aplastada.
+     `env(safe-area-inset-bottom)` es para los móviles con barra de gestos,
+     donde el borde inferior no es el borde de la pantalla. */
+  barra.style.cssText = [
+    'position:fixed', 'left:12px', 'right:12px',
+    'bottom:calc(12px + env(safe-area-inset-bottom, 0px))',
+    'z-index:99998', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
+    'padding:14px 18px', 'border-radius:12px',
+    'box-shadow:0 6px 24px rgba(0,0,0,.28)',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'gap:10px 14px', 'flex-wrap:wrap', 'font-size:14px', 'font-weight:600',
+    'max-width:760px', 'margin:0 auto',
+  ].join(';');
+  barra.innerHTML = `<span style="flex:1 1 240px;min-width:0"><i class="ti ti-download"></i> ${t('app.newVersion').replace('${fecha}', escapeHtml(build))}</span>`
+    + `<span style="display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto">`
+    + `<button class="btn" style="background:#fff;color:var(--brand-orange,#D97C3F);border:none;min-height:44px;padding:10px 18px;font-weight:700;white-space:nowrap" onclick="aplicarVersionNueva()">${t('app.newVersionBtn')}</button>`
+    + `<button class="btn" style="background:none;border:1px solid rgba(255,255,255,.6);color:#fff;min-height:44px;padding:10px 14px;white-space:nowrap" onclick="document.getElementById('gg-version-nueva').remove()">${t('app.newVersionLater')}</button>`
+    + `</span>`;
   document.body.appendChild(barra);
 }
 
