@@ -98,6 +98,12 @@ async function conectado(d){
     tenant: typeof getTenantId === 'function' ? getTenantId() : '(sin tenant)',
     firebase: typeof firebase !== 'undefined' ? (firebase.apps||[]).map(a=>a.name).join('+') : 'NO CARGÓ',
     ultimoError: (typeof ultimoErrorNube !== 'undefined' && ultimoErrorNube) ? String(ultimoErrorNube).slice(0,90) : null,
+    // Lo que de verdad hace falta saber: ¿sobrevivió la nube del negocio a la
+    // recarga, o se perdió por el camino? Si se pierde, no es la red: es que
+    // la configuración no llega a guardarse — y eso le pasaría igual a un
+    // cliente en su primer arranque.
+    ownFirebase: (DB.business && DB.business.ownFirebase) ? DB.business.ownFirebase.databaseURL : '(NO ESTÁ en DB.business)',
+    negocio: DB.business ? Object.keys(DB.business).length + ' campos' : 'sin business',
   }));
 }
 
@@ -127,7 +133,7 @@ async function conectado(d){
   await new Promise(r=>setTimeout(r,2500));
   const diag = await conectado(A);
   ok('3. El primer dispositivo conecta', diag.ok,
-     diag.ok ? '' : `badge=${diag.badge} · apps=${diag.firebase} · tenant=${diag.tenant} · cfg=${diag.cfg}` +
+     diag.ok ? '' : `badge=${diag.badge} · apps=${diag.firebase} · cfg=${diag.cfg} · ownFirebase=${diag.ownFirebase} · ${diag.negocio}` +
        (diag.ultimoError ? ' · error='+diag.ultimoError : ''));
   const B = await nuevoDispositivo(); await arrancar(B, CODE, {sinNube:true});  // móvil nuevo
   await new Promise(r=>setTimeout(r,5000));
