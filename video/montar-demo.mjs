@@ -45,21 +45,23 @@ const RECORTE = 'crop=1920:950:0:85';
 /* Cada trozo: dónde empieza, cuánto dura y qué se lee debajo.
    Los tiempos están comprobados fotograma a fotograma sobre la grabación: la
    primera tanda se eligió a ojo y la mitad caían en la pantalla equivocada o
-   en una vacía (Pedidos sin pedidos, el Escandallo dando 0,00 €). Y ninguno
-   pasa del segundo 243, que es cuando la cabecera se pone en rojo con "Error
-   de nube" y ya no se va. */
+   en una vacía (Pedidos sin pedidos, el Escandallo dando 0,00 €). Ni de 5 en
+   5 bastó: el trozo del catálogo pillaba el modal de "Nuevo Proveedor" y el de
+   turnos, la carpeta de Cocina. Hubo que bajar a 2 segundos.
+   Y ninguno pasa del segundo 243, que es cuando la cabecera se pone en rojo
+   con "Error de nube" y ya no se va. */
 const TROZOS = [
-  {t: 24.0, d: 5.0, txt: 'Tres áreas: Cocina, Sala y Gestión'},
-  {t: 39.0, d: 6.0, txt: 'Tu carta, por secciones y con sus precios'},
-  {t: 50.0, d: 7.0, txt: 'I+D: crea platos y menús con TUS ingredientes'},
-  {t: 63.0, d: 7.0, txt: 'El catálogo de materia prima ya viene hecho'},
-  {t: 99.0, d: 6.0, txt: 'Fichas técnicas: la receta que ejecuta tu equipo'},
+  {t: 23.5, d: 5.0, txt: 'Tres áreas: Cocina, Sala y Gestión'},
+  {t: 39.0, d: 5.0, txt: 'Tu carta, por secciones y con sus precios'},
+  {t: 49.0, d: 7.0, txt: 'I+D: crea platos y menús con TUS ingredientes'},
+  {t: 74.0, d: 7.0, txt: 'El catálogo de materia prima ya viene hecho'},
+  {t: 99.0, d: 5.0, txt: 'Fichas técnicas: la receta que ejecuta tu equipo'},
   {t:134.0, d: 7.0, txt: 'Stock con alertas de mínimos'},
-  {t:150.0, d: 7.0, txt: 'Turnos, fichajes y horas de tu equipo'},
+  {t:154.0, d: 7.0, txt: 'Turnos, fichajes y horas de tu equipo'},
   {t:179.0, d: 7.0, txt: 'Y quién hace qué en cada turno'},
   {t:195.0, d: 7.0, txt: 'Los papeles de sanidad, hechos'},
   {t:219.0, d: 7.0, txt: 'Sala: TPV, reservas y clientes'},
-  {t:228.0, d: 7.0, txt: 'Abrir mesa en dos toques'},
+  {t:228.0, d: 6.0, txt: 'Abrir mesa en dos toques'},
   {t:237.0, d: 6.0, txt: 'De la comanda al cobro, sin salir de la app'},
 ];
 
