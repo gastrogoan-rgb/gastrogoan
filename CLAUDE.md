@@ -156,6 +156,39 @@ Los dos pasos del generador son **independientes**: a un cliente que ya tiene cu
 - **Gestión (Gestión Económica y Mi Negocio) es exclusiva del propietario.** No hay PIN alternativo — se eliminó a propósito. Un empleado ve `denyGestionAccess()`.
 - `requestBusinessPinAction(...)` es un mecanismo **distinto y vigente** para confirmar acciones sensibles (anular venta, borrar empleado…). No confundir con el PIN de Gestión eliminado.
 
+#### Los seis modos de estar dentro
+
+Propietario, empleado de cocina, empleado de cocina CON edición, y los mismos
+tres de sala. **"Es repartidor" NO es un séptimo modo**: es una casilla de la
+ficha que mete al empleado en el reparto automático de pedidos a domicilio, y
+ve exactamente lo mismo que cualquier otro de sala.
+
+Dos clases de CSS, y ahí está casi todo el lío:
+
+| Clase | Quién la ve | Para qué |
+|---|---|---|
+| `.owner-only` | propietario **o** empleado con `canUnlockEdit` | turnos y stock **de su área** |
+| `.owner-strict` | **solo** propietario de verdad | todo lo que toca a OTRO compañero: su ficha, su PIN, sus vacaciones |
+
+⚠️ **Decisión tomada (1/09), no volver a replantearla:** un jefe de cocina o
+de sala con edición **gestiona turnos, no personal**. En Personal solo ve su
+propia tarjeta (ahí están el teléfono, el email y el PIN de los compañeros);
+en Día y Semana ve al equipo entero y sí puede tocar sus turnos. Visto desde
+fuera parece incoherente —y por eso hay una nota en Personal que lo explica—,
+pero es lo que el dueño quiere.
+
+⚠️ **Un permiso que se niega EN SILENCIO se lee como una app rota.**
+`saveEmployee` hacía `return` a secas: se rellenaba el formulario, se pulsaba
+Guardar y no pasaba nada. El dueño lo contó como "no me deja editar los
+empleados" — no era que no le dejara, era que no se lo explicaba. Cualquier
+guard nuevo que pueda alcanzarse desde algo VISIBLE tiene que avisar y decir
+qué sí se puede hacer. Los guards de segunda barrera (botón ya oculto, solo
+alcanzables desde la consola) sí pueden callar.
+
+Todo esto lo fija `test/permisos.mjs`, que recorre los seis modos. Las otras
+34 pruebas corren como propietario, o sea en el único modo donde ningún
+permiso puede fallar.
+
 ### Varios negocios en un dispositivo (slots)
 
 - Cada negocio = un *slot* con su propia IndexedDB (`slotIdbName(id)`) y su propia licencia (`slotLicenseKey(id)`).
@@ -290,7 +323,8 @@ node test/smoke.test.mjs      # cálculos de dinero/IVA, stock, recetas
 node test/audit-active.mjs    # regresiones de sincronización
 node test/cuentas.mjs         # aislamiento entre cuentas — lo que NO puede fallar nunca
 node test/sin-salida.mjs      # que ninguna pantalla del alta sea un callejón sin salida
-node test/idr.mjs             # el módulo de I+D, 81 casos
+node test/idr.mjs             # el módulo de I+D, 85 casos
+node test/permisos.mjs        # los 6 modos de sesión (empleado, edición, reparto)
 python3 -m http.server 8950 & node test/traducciones.mjs  # la app entera en es/ca/en, 41 pantallas
 python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 25 vistas
 python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 274 botones visibles de las 31 pantallas
@@ -299,7 +333,7 @@ bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (e
 bash build.sh                 # regenerar dist/
 ```
 
-O las 34 de una vez, en paralelo (son independientes; encadenarlas solo
+O las 35 de una vez, en paralelo (son independientes; encadenarlas solo
 servía para esperar):
 
 ```bash
