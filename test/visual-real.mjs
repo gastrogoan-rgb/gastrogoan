@@ -21,23 +21,35 @@ const TAMANOS = [
   {nombre: 'escritorio', w: 1440, h: 900,  tactil: false},
 ];
 
+/* Los nombres REALES de las vistas (los ids de index.html). Poner
+   'empleados' o 'ingredientes' no da error: navega a una vista que no existe
+   y deja la pantalla en blanco, así que la auditoría cree haber revisado algo
+   que nunca se pintó. Se comprueban con:
+     grep -o 'id="view-[a-z-]*"' index.html */
 const VISTAS = [
-  ['inicio',       "navigate('home')"],
-  ['cocina',       "currentFolder='cocina'; navigate('folder')"],
-  ['ingredientes', "navigate('ingredientes')"],
-  ['escandallo',   "navigate('escandallo')"],
-  ['fichas',       "navigate('fichas')"],
-  ['idr',          "navigate('idr')"],
-  ['stock',        "navigate('stock')"],
-  ['proveedores',  "navigate('proveedores')"],
-  ['tpv',          "navigate('tpv')"],
-  ['carta',        "navigate('carta')"],
-  ['reservas',     "navigate('reservas')"],
-  ['clientes',     "navigate('clientes')"],
-  ['panel',        "navigate('dashboard')"],
-  ['empleados',    "navigate('empleados')"],
-  ['ge',           "navigate('ge')"],
+  ['inicio',        "navigate('home')"],
+  ['cocina',        "currentFolder='cocina'; navigate('folder')"],
+  ['megalista',     "navigate('megalista')"],
+  ['escandallo',    "navigate('escandallo')"],
+  ['fichas',        "navigate('fichas')"],
+  ['idr',           "navigate('idr')"],
+  ['stock',         "navigate('stock')"],
+  ['proveedores',   "navigate('proveedores')"],
+  ['pedidos',       "navigate('pedidos')"],
+  ['comandascocina',"navigate('comandascocina')"],
+  ['tpv',           "navigate('tpv')"],
+  ['carta',         "navigate('carta')"],
+  ['reservas',      "navigate('reservas')"],
+  ['clientes',      "navigate('clientes')"],
+  ['panel',         "navigate('dashboard')"],
+  ['horarios',      "navigate('horarios')"],
+  ['distribucion',  "navigate('distribucion')"],
+  ['limpieza',      "navigate('limpieza')"],
+  ['economia',      "navigate('economia')"],
+  ['promocion',     "navigate('promocion')"],
+  ['minegocio',     "navigate('minegocio')"],
 ];
+
 
 const REVISION = (tactil) => `(() => {
   const TACTIL = ${tactil};
@@ -64,16 +76,22 @@ const REVISION = (tactil) => `(() => {
   vista.querySelectorAll('*').forEach(el => {
     if(!visible(el)) return;
     const r = el.getBoundingClientRect();
+    const cs0 = getComputedStyle(el);
     // 1) Se sale por la derecha de la pantalla
     if(r.right > W + 2 && r.width < W * 1.6 && !enContenedorConScroll(el)) fuera.push(nombre(el) + ' (' + Math.round(r.right - W) + 'px fuera)');
     /* 2) Objetivo táctil. Solo se exige en móvil y tablet: en escritorio se
           usa ratón, y un botón de 36 px es lo normal y no molesta a nadie.
           Aplicarlo también ahí llenaba el informe de ruido y tapaba lo real. */
-    if(TACTIL && /^(BUTTON|A)$/.test(el.tagName) && (r.height < 40 || r.width < 24)){
+    /* Solo lo que ES un botón. Un teléfono o un "WhatsApp" dentro de un
+       párrafo son enlaces de texto: no se pulsan con el pulgar buscando un
+       objetivo, se leen. Exigirles 44 px llenaba el informe de ruido. */
+    const esBoton = el.tagName === 'BUTTON' ||
+      (el.tagName === 'A' && (/\bbtn\b/.test(el.className||'') || ['block','flex','inline-flex','inline-block'].includes(cs0.display)));
+    if(TACTIL && esBoton && (r.height < 40 || r.width < 24)){
       pequenos.push(nombre(el) + ' (' + Math.round(r.width) + '×' + Math.round(r.height) + ')');
     }
     // 3) Texto recortado sin posibilidad de leerlo
-    const cs = getComputedStyle(el);
+    const cs = cs0;
     if(el.children.length === 0 && (el.textContent||'').trim().length > 3 &&
        cs.overflow !== 'visible' && cs.textOverflow !== 'ellipsis' &&
        el.scrollWidth > el.clientWidth + 4 && cs.overflowX !== 'auto' && cs.overflowX !== 'scroll'){
@@ -88,6 +106,7 @@ const REVISION = (tactil) => `(() => {
     scrollHorizontal: document.documentElement.scrollWidth > W + 2,
     // Una pantalla que no pinta nada es tan defecto como una rota
     elementos: vista.querySelectorAll('*').length,
+    tieneTitulo: !!(vista.querySelector('h1, h2, .view-title, .folder-top-title, .home-hero') || {}).textContent,
     alto: Math.round(vista.getBoundingClientRect().height),
   };
 })()`;
@@ -106,6 +125,18 @@ const informe = [];
 
 for(const t of TAMANOS){
   await page.setViewport({width: t.w, height: t.h, isMobile: t.tactil, hasTouch: t.tactil});
+  /* ⚠️ `hasTouch` NO cambia lo que el CSS ve como tipo de puntero: la
+     consulta `pointer: coarse` seguía dando "ratón" y las reglas pensadas
+     para el dedo no se aplicaban. Medíamos botones de escritorio creyendo que
+     eran de tablet. Hay que emularlo explícitamente. */
+  // Puppeteer no admite 'pointer' en emulateMediaFeatures, así que se manda
+  // por el protocolo del navegador directamente.
+  const cdp = await page.createCDPSession();
+  await cdp.send('Emulation.setEmulatedMedia', {features: [
+    {name: 'pointer', value: t.tactil ? 'coarse' : 'fine'},
+    {name: 'any-pointer', value: t.tactil ? 'coarse' : 'fine'},
+  ]});
+  await cdp.detach();
   // El cambio de viewport recarga y borra el estado: se abre de nuevo.
   await page.goto('http://localhost:8950/dist/kit-gastrogoan-DEMO.html', {waitUntil:'domcontentloaded'});
   await new Promise(r => setTimeout(r, 3200));
@@ -122,7 +153,7 @@ for(const t of TAMANOS){
       if(r.fuera.length) problemas.push('se salen de la pantalla: ' + r.fuera.join(' · '));
       if(r.pequenos.length) problemas.push('botones por debajo del objetivo táctil: ' + r.pequenos.join(' · '));
       if(r.cortados.length) problemas.push('texto recortado: ' + r.cortados.join(' · '));
-      if(r.elementos < 12) problemas.push('la pantalla se ve vacía (' + r.elementos + ' elementos)');
+      if(!r.tieneTitulo) problemas.push('LA PANTALLA NO SE PINTÓ: sin título (' + r.elementos + ' elementos). ¿Existe esa vista?');
 
       if(problemas.length){
         hallazgos += problemas.length;

@@ -134,6 +134,19 @@ await caso('Las pantallas de datos salen LLENAS, no con guiones', async ()=>{
   return `${r.clientes} clientes · ${r.ventasConCliente} ventas con cliente · ${r.ventasHoy} de hoy`;
 });
 
+await caso('El guion del vídeo no apunta a ninguna pantalla inexistente', async ()=>{
+  /* `navigate('empleados')` no da error: deja la pantalla EN BLANCO. En el
+     vídeo salía el rótulo "Personal — turnos, fichajes y nóminas" sobre un
+     fondo vacío, y así se grabó una vez entera. */
+  const {GUION} = await import('../video/guion.js');
+  const reales = fs.readFileSync('index.html','utf8').match(/id="view-[a-z-]*"/g).map(s => s.slice(9,-1));
+  const usadas = [...new Set(GUION.map(p => String(p.ir).match(/navigate\('(\w+)'\)/)).filter(Boolean).map(m => m[1]))];
+  const inexistentes = usadas.filter(v => !reales.includes(v));
+  assert.deepEqual(inexistentes, [], 'vistas que no existen: ' + inexistentes.join(', '));
+  assert.ok(usadas.length >= 12, 'el tour tiene que recorrer la app, no cuatro pantallas');
+  return `${usadas.length} vistas, todas reales`;
+});
+
 console.log('\n' + '═'.repeat(64));
 const fallos = res.filter(x=>!x).length;
 console.log(fallos ? `❌ ${fallos} de ${res.length} fallaron` : `✅ los ${res.length} casos pasaron`);

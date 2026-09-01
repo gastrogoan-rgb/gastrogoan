@@ -1887,7 +1887,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
    Excepción a propósito: los +/- de la comanda del TPV, que son una rejilla
    densa de 40 px pensada para el pase y funcionan bien así. */
 @media (pointer: coarse){
-  .btn, .btn-sm, .ge-tab, .tab-btn{min-height:44px}
+  .btn, .btn-sm, .ge-tab, .tab-btn, .month-pill{min-height:44px}
+  /* ⚠️ Estos tres hay que nombrarlos uno a uno. Llevan DOS clases, así que
+     pesan más que un `.btn` a secas y ganaban aunque esta regla venga
+     después: la de la barra de herramientas dejaba los botones en 36 px en
+     todas las pantallas de trabajo. En CSS no manda solo el orden. */
+  .toolbar .btn, .actions-cell .btn, .app-header .btn{min-height:44px}
+  .app-header .btn{min-width:44px}
   .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
   .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
 }

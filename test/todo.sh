@@ -6,6 +6,15 @@ set -uo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RAIZ"
 SALIDA="${TMPDIR:-/tmp}/gg_bateria"
+
+# Cuántas pruebas a la vez. Cada una levanta un Chromium con la app entera
+# dentro, así que pasarse no acelera nada: hace que se peleen por la memoria y
+# empiecen a caducar navegaciones. Se puede subir en una máquina más grande:
+#   GG_TANDA=12 bash test/todo.sh
+TANDA="${GG_TANDA:-6}"
+lanzar(){  # espera a que haya hueco antes de arrancar la siguiente
+  while [ "$(jobs -rp | wc -l)" -ge "$TANDA" ]; do sleep 1; done
+}
 rm -rf "$SALIDA"; mkdir -p "$SALIDA"
 
 limpiar(){ [ -n "${PID_WEB:-}" ] && kill "$PID_WEB" 2>/dev/null; }
@@ -22,39 +31,41 @@ echo "✅ sintaxis (todos los ficheros)"
 sleep 2
 
 # 3. Las cuatro grandes, a la vez
-node test/smoke.test.mjs           > "$SALIDA/smoke.txt"   2>&1 & P1=$!
-node test/audit-active.mjs         > "$SALIDA/sync.txt"    2>&1 & P2=$!
-node test/click-audit.mjs          > "$SALIDA/botones.txt" 2>&1 & P3=$!
-node test/visual-audit.mjs         > "$SALIDA/visual.txt"  2>&1 & P4=$!
-node test/visual-defectos.mjs      > "$SALIDA/defectos.txt" 2>&1 & P5=$!
-node test/contraste.mjs            > "$SALIDA/contraste.txt" 2>&1 & P6=$!
-node test/publica-visual.mjs       > "$SALIDA/publica.txt"  2>&1 & P7=$!
-node test/extremos.mjs             > "$SALIDA/extremos.txt" 2>&1 & P8=$!
-node test/recorridos.mjs           > "$SALIDA/recorridos.txt" 2>&1 & P9=$!
-node test/pestanas.mjs             > "$SALIDA/pestanas.txt"  2>&1 & P10=$!
-node test/acceso-alta.mjs          > "$SALIDA/acceso.txt"    2>&1 & P11=$!
-node test/idiomas.mjs              > "$SALIDA/idiomas.txt"   2>&1 & P12=$!
-node test/transversales.mjs        > "$SALIDA/transv.txt"    2>&1 & P13=$!
-node test/modales.mjs              > "$SALIDA/modales.txt"   2>&1 & P14=$!
-node test/pantallas-vacias.mjs     > "$SALIDA/vacias.txt"    2>&1 & P15=$!
-node test/publica-volumen.mjs      > "$SALIDA/volumen.txt"   2>&1 & P16=$!
-node test/formularios.mjs          > "$SALIDA/formularios.txt" 2>&1 & P17=$!
-node test/errores.mjs             > "$SALIDA/errores.txt"     2>&1 & P18=$!
-node test/bebidas.mjs             > "$SALIDA/bebidas.txt"     2>&1 & P19=$!
-node test/idr.mjs                 > "$SALIDA/idr.txt"         2>&1 & P20=$!
-node test/alergenos.mjs           > "$SALIDA/alergenos.txt"   2>&1 & P21=$!
-node test/i18n-paridad.mjs        > "$SALIDA/i18n.txt"        2>&1 & P22=$!
-node test/estatico.mjs            > "$SALIDA/estatico.txt"    2>&1 & P23=$!
-node test/modales-todas.mjs        > "$SALIDA/modtodas.txt"    2>&1 & P24=$!
-node test/dinero.mjs               > "$SALIDA/dinero.txt"      2>&1 & P25=$!
-node test/sin-salida.mjs           > "$SALIDA/sinsalida.txt"   2>&1 & P26=$!
-node test/cuentas.mjs              > "$SALIDA/cuentas.txt"     2>&1 & P27=$!
-node test/version.mjs              > "$SALIDA/version.txt"     2>&1 & P28=$!
-node test/escala.mjs               > "$SALIDA/escala.txt"      2>&1 & P29=$!
-node test/enlaces-publicos.mjs     > "$SALIDA/enlaces.txt"     2>&1 & P30=$!
-node test/generador.mjs            > "$SALIDA/generador.txt"   2>&1 & P31=$!
+lanzar; node test/smoke.test.mjs           > "$SALIDA/smoke.txt"   2>&1 & P1=$!
+lanzar; node test/audit-active.mjs         > "$SALIDA/sync.txt"    2>&1 & P2=$!
+lanzar; node test/click-audit.mjs          > "$SALIDA/botones.txt" 2>&1 & P3=$!
+lanzar; node test/visual-audit.mjs         > "$SALIDA/visual.txt"  2>&1 & P4=$!
+lanzar; node test/visual-defectos.mjs      > "$SALIDA/defectos.txt" 2>&1 & P5=$!
+lanzar; node test/contraste.mjs            > "$SALIDA/contraste.txt" 2>&1 & P6=$!
+lanzar; node test/publica-visual.mjs       > "$SALIDA/publica.txt"  2>&1 & P7=$!
+lanzar; node test/extremos.mjs             > "$SALIDA/extremos.txt" 2>&1 & P8=$!
+lanzar; node test/recorridos.mjs           > "$SALIDA/recorridos.txt" 2>&1 & P9=$!
+lanzar; node test/pestanas.mjs             > "$SALIDA/pestanas.txt"  2>&1 & P10=$!
+lanzar; node test/acceso-alta.mjs          > "$SALIDA/acceso.txt"    2>&1 & P11=$!
+lanzar; node test/idiomas.mjs              > "$SALIDA/idiomas.txt"   2>&1 & P12=$!
+lanzar; node test/transversales.mjs        > "$SALIDA/transv.txt"    2>&1 & P13=$!
+lanzar; node test/modales.mjs              > "$SALIDA/modales.txt"   2>&1 & P14=$!
+lanzar; node test/pantallas-vacias.mjs     > "$SALIDA/vacias.txt"    2>&1 & P15=$!
+lanzar; node test/publica-volumen.mjs      > "$SALIDA/volumen.txt"   2>&1 & P16=$!
+lanzar; node test/formularios.mjs          > "$SALIDA/formularios.txt" 2>&1 & P17=$!
+lanzar; node test/errores.mjs             > "$SALIDA/errores.txt"     2>&1 & P18=$!
+lanzar; node test/bebidas.mjs             > "$SALIDA/bebidas.txt"     2>&1 & P19=$!
+lanzar; node test/idr.mjs                 > "$SALIDA/idr.txt"         2>&1 & P20=$!
+lanzar; node test/alergenos.mjs           > "$SALIDA/alergenos.txt"   2>&1 & P21=$!
+lanzar; node test/i18n-paridad.mjs        > "$SALIDA/i18n.txt"        2>&1 & P22=$!
+lanzar; node test/estatico.mjs            > "$SALIDA/estatico.txt"    2>&1 & P23=$!
+lanzar; node test/modales-todas.mjs        > "$SALIDA/modtodas.txt"    2>&1 & P24=$!
+lanzar; node test/dinero.mjs               > "$SALIDA/dinero.txt"      2>&1 & P25=$!
+lanzar; node test/sin-salida.mjs           > "$SALIDA/sinsalida.txt"   2>&1 & P26=$!
+lanzar; node test/cuentas.mjs              > "$SALIDA/cuentas.txt"     2>&1 & P27=$!
+lanzar; node test/version.mjs              > "$SALIDA/version.txt"     2>&1 & P28=$!
+lanzar; node test/escala.mjs               > "$SALIDA/escala.txt"      2>&1 & P29=$!
+lanzar; node test/enlaces-publicos.mjs     > "$SALIDA/enlaces.txt"     2>&1 & P30=$!
+lanzar; node test/generador.mjs            > "$SALIDA/generador.txt"   2>&1 & P31=$!
+lanzar; node test/demo.mjs                 > "$SALIDA/demo.txt"       2>&1 & P32=$!
+lanzar; node test/visual-real.mjs          > "$SALIDA/visualreal.txt" 2>&1 & P33=$!
 
-echo "→ 31 pruebas corriendo a la vez…"
+echo "→ 33 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -92,5 +103,7 @@ espera $P28 "aviso de version nueva y ahorro de trafico"  "$SALIDA/version.txt" 
 espera $P29 "escala: nada crece con el numero de clientes" "$SALIDA/escala.txt"      "casos pasaron"
 espera $P30 "los enlaces de la web publica (QR y nombre corto)" "$SALIDA/enlaces.txt"     "casos pasaron"
 espera $P31 "el generador: emitir y ANULAR licencias"     "$SALIDA/generador.txt"   "casos pasaron"
+espera $P32 "la demo (datos creibles y sin asistentes)"    "$SALIDA/demo.txt"       "casos pasaron"
+espera $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar"
 
 exit $FALLOS
