@@ -8,6 +8,19 @@
   const D = window.GG_DEMO_DATOS;
   const dia = D.dias.dia;
 
+  /* Los datos se sorteaban con azar() AL ABRIR la demo, así que cada
+     vez enseñaba un negocio distinto: dos lecturas del mismo archivo daban
+     14.326 € y 14.223 € de resultado. Eso hacía inestable la prueba que
+     comprueba que las cuentas son las de un bistró que va bien (roza el
+     límite y unas veces pasa y otras no) y, peor, que el vídeo no se pudiera
+     regrabar igual. Con una semilla fija el azar sigue dando variedad, pero
+     siempre la misma. */
+  let semilla = 20260901;
+  const azar = () => {
+    semilla = (semilla * 1664525 + 1013904223) % 4294967296;
+    return semilla / 4294967296;
+  };
+
   // Licencia y sesión de propietario, sin pasar por el alta.
   const code = 'DEMO2026';
   localStorage.setItem('gastrogoan_license_v1', JSON.stringify({code, tenantId: ggBizTenantId(code)}));
@@ -48,20 +61,26 @@
   ];
   DB.clients = clientes;
 
-  // Un trimestre de ventas, para que los paneles tengan de dónde tirar.
+  /* UN AÑO de ventas, no un trimestre.
+     Con tres meses, la Cuenta de Resultados y el Resultado del año salían en
+     PÉRDIDAS y no era un fallo de cálculo: los costes fijos se cobran los doce
+     meses, así que enero a mayo tenían 7.435 € de alquiler y nóminas contra
+     cero ventas. El año entero se iba a −7.377 €, y una demo que enseña un
+     restaurante que pierde dinero no vende nada. Un bistró de verdad lleva
+     abierto todo el año: eso es lo que tiene que enseñar. */
   const platos = DB.recipes.filter(r => !r.isBase);
   const ventas = [];
-  for(let d = -90; d <= 0; d++){
+  for(let d = -364; d <= 0; d++){
     const date = dia(d);
     const finde = [0,6].includes(new Date(date).getDay());
     // El día de hoy va a medias, como estaría un servicio de verdad en curso.
-    const llenos = finde ? 22 + Math.floor(Math.random()*10) : 11 + Math.floor(Math.random()*8);
+    const llenos = finde ? 22 + Math.floor(azar()*10) : 11 + Math.floor(azar()*8);
     const tickets = d === 0 ? Math.max(4, Math.round(llenos * 0.45)) : llenos;
     for(let t = 0; t < tickets; t++){
       const items = [];
-      const cuantos = 1 + Math.floor(Math.random()*3);
+      const cuantos = 1 + Math.floor(azar()*3);
       for(let k = 0; k < cuantos; k++){
-        const p = platos[Math.floor(Math.random()*platos.length)];
+        const p = platos[Math.floor(azar()*platos.length)];
         items.push({name: p.name, qty: 1, price: p.price, recipeId: p.id, ivaPct: 10,
                     bebida: false, costeUnitario: recipeCost(p)});
       }
@@ -70,7 +89,7 @@
       // Uno de cada tres tickets va a nombre de un cliente: así la ficha de
       // fidelidad tiene visitas, ticket medio y gasto de verdad.
       const cli = (t % 3 === 0) ? clientes[t % clientes.length] : null;
-      const metodoPago = Math.random() < 0.65 ? 'Tarjeta' : 'Efectivo';
+      const metodoPago = azar() < 0.65 ? 'Tarjeta' : 'Efectivo';
       ventas.push({
         id: 'v' + d + '_' + t, date, createdAt: date + 'T' + hora + ':00.000Z',
         total, subtotal: total, descuentoPct: 0, descuentoImporte: 0, propina: 0,
@@ -116,7 +135,9 @@
     {id: 9406, nombre:'Internet y telefonía', importe: 65, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
   ];
   DB.ge.variables = [];
-  for(let m = 0; m < 3; m++){
+  // Doce meses de compras, los mismos que de ventas: si no, los meses con
+  // facturación y sin materia prima saldrían con un margen imposible.
+  for(let m = 0; m < 12; m++){
     const f = new Date(hoyD); f.setMonth(f.getMonth() - m);
     /* ⚠️ La app guarda el mes en BASE 0 (enero = 0), igual que
        Date.getMonth() — ver operations.js, donde se crean los gastos
@@ -136,7 +157,7 @@
       if(m === 0 && diaCompra > hoyD.getDate()) return;
       const fecha = `${año}-${String(mes+1).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
       DB.ge.variables.push({id: 9500 + m*10 + i, concepto: 'Compras ' + prov, proveedor: prov,
-        importe: Math.round(base * (0.9 + Math.random()*0.2)), iva: 10,
+        importe: Math.round(base * (0.9 + azar()*0.2)), iva: 10,
         fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});
     });
   }
