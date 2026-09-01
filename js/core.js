@@ -777,12 +777,17 @@ function botonesDeCarpeta(clave, tipo){
   const c = String(clave).replace(/'/g, "\\'");
   const renombrar = tipo === 'recipe' ? 'renameRecipeCategory' : 'renameIngredientCategory';
   const borrar    = tipo === 'recipe' ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
+  /* Discretos a propósito: son una opción por si acaso, no lo que se viene a
+     hacer a esta pantalla. Van sin fondo ni borde, en gris, en un ladito.
+     ⚠️ Pero el ÁREA DE TOQUE sigue siendo de 44 px (ver .folder-act en el
+     CSS): en una tablet, un icono de 15 px es imposible de acertar con el
+     dedo. Pequeño a la vista, grande al tocar — que no es lo mismo. */
   return `
-    <span style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
-      <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameCategory')}"
-        onclick="event.stopPropagation();${renombrar}('${c}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
-      <button class="owner-only btn btn-sm btn-icon btn-danger" title="${t('title.deleteCategory')}"
-        onclick="event.stopPropagation();${borrar}('${c}')"><i class="ti ti-trash" style="font-size:13px"></i></button>
+    <span class="folder-acts">
+      <button class="owner-only folder-act" title="${t('title.renameCategory')}"
+        onclick="event.stopPropagation();${renombrar}('${c}')"><i class="ti ti-pencil"></i></button>
+      <button class="owner-only folder-act folder-act-del" title="${t('title.deleteCategory')}"
+        onclick="event.stopPropagation();${borrar}('${c}')"><i class="ti ti-trash"></i></button>
     </span>`;
 }
 
