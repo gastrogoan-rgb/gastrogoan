@@ -1838,6 +1838,9 @@ function renderHome(){
       <div class="folder-btn"><i class="ti ti-arrow-right"></i> ${escapeHtml(t('common.enter'))}</div>
     </div>
   `).join('');
+  // Se pinta DESPUÉS de las carpetas: si algo fallara aquí, el inicio ya está
+  // dibujado y el cliente puede seguir trabajando igual.
+  if(typeof renderPuestaAPunto === 'function') renderPuestaAPunto();
 }
 
 function renderFolder(){

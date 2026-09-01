@@ -190,3 +190,171 @@ async function aplicarVersionNueva(silencioso){
 if(typeof window !== 'undefined'){
   window.addEventListener('load', () => setTimeout(() => comprobarVersionPublicada(), 4000));
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+   LA PUESTA A PUNTO
+
+   Un cliente termina de configurar la nube —el único paso obligatorio— y se
+   queda mirando la app sin saber qué le toca. La configuración completa son
+   veinte minutos bien llevados, pero solo si alguien te va diciendo lo que
+   falta; si no, se abandona a medias y el escandallo sale a cero, que es la
+   peor primera impresión posible de la herramienta que le has vendido.
+
+   Tres decisiones de diseño, y las tres importan:
+
+   · NO HAY CRUCES. Una cruz roja se lee como "algo ha ido mal", y esto es lo
+     primero que ve alguien que acaba de pagar. Lo pendiente es un círculo
+     vacío que se convierte en tick.
+
+   · LO IMPRESCINDIBLE VA APARTE DE LO OPCIONAL. El cobro con tarjeta o los
+     correos de confirmación no los quiere todo el mundo: si contaran para el
+     progreso, un restaurante que no los usa nunca llegaría al 100% y el panel
+     se convertiría en ruido que se aprende a ignorar. Solo cuenta lo que hace
+     falta para trabajar.
+
+   · SE CALCULA, NO SE GUARDA. Nada de marcar "personal: hecho" en un campo:
+     si el cliente borra a todos sus empleados, el panel le estaría mintiendo.
+     Se mira el dato de verdad cada vez que se pinta.
+   ──────────────────────────────────────────────────────────────────────── */
+const PUESTA_OCULTA_LS = 'gastrogoan_puesta_oculta';
+
+/* Ojo: todo negocio NACE con un horario por defecto, así que "tiene horario"
+   sale que sí desde el minuto uno y la tarea aparecería hecha sin que nadie
+   la haya tocado. Lo que hay que detectar es si lo ha REVISADO — o sea, si
+   sigue siendo exactamente el de fábrica. */
+function ppHorarioRevisado(b){
+  try{
+    if(typeof defaultHorario !== 'function') return true;
+    return JSON.stringify((b && b.horario) || null) !== JSON.stringify(defaultHorario());
+  }catch(e){ return true; }
+}
+// Los 275 artículos del catálogo se siembran a precio CERO. Así que la tarea
+// no es "dar de alta ingredientes" —ya los tiene— sino ponerles el precio al
+// que los compra él, que es lo que hace que el escandallo deje de salir a 0.
+function ppIngredientesConPrecio(){
+  return (DB.ingredients || []).filter(i => parseFloat(i.packPrice) > 0 || parseFloat(i.price) > 0).length;
+}
+function ppPlatosEnCarta(){
+  return (DB.cartas || []).reduce((n, c) =>
+    n + (c.secciones || []).reduce((m, s) => m + (s.platos || []).length, 0), 0);
+}
+
+function puestaAPuntoTareas(){
+  const b = DB.business || {};
+  const conPrecio = ppIngredientesConPrecio();
+  const platos = ppPlatosEnCarta();
+  const empleados = (DB.employees || []).length;
+  const mesas = (DB.tables || []).length;
+  const recetas = (DB.recipes || []).filter(r => !r.isBase).length;
+
+  const esencial = [
+    {id:'negocio', hecho: !!(b.name || '').trim(), icono:'ti-building-store',
+     ir: "currentFolder='gestion'; navigate('minegocio')"},
+    {id:'horario', hecho: ppHorarioRevisado(b), icono:'ti-clock-hour-4',
+     ir: "currentFolder='gestion'; navigate('minegocio')"},
+    {id:'precios', hecho: conPrecio >= 5, icono:'ti-tag', dato: conPrecio,
+     ir: "currentFolder='cocina'; navigate('megalista')"},
+    {id:'recetas', hecho: recetas > 0, icono:'ti-calculator', dato: recetas,
+     ir: "currentFolder='cocina'; navigate('escandallo')"},
+    {id:'carta', hecho: platos > 0, icono:'ti-book-2', dato: platos,
+     ir: "currentFolder='cocina'; navigate('carta')"},
+    {id:'personal', hecho: empleados > 0, icono:'ti-users', dato: empleados,
+     ir: "currentFolder='cocina'; navigate('horarios')"},
+    {id:'mesas', hecho: mesas > 0, icono:'ti-layout-grid', dato: mesas,
+     ir: "currentFolder='sala'; navigate('tpv')"},
+  ];
+
+  /* Lo opcional no lleva tick ni cuenta para el progreso: no es que falte, es
+     que puede que este negocio no lo quiera. Se enseña para que sepa que
+     existe, con una sola línea de para qué sirve. */
+  const opcional = [
+    {id:'tarjeta', icono:'ti-credit-card', ir: "currentFolder='gestion'; navigate('minegocio')"},
+    {id:'email',   icono:'ti-mail',        ir: "currentFolder='gestion'; navigate('minegocio')"},
+    {id:'online',  icono:'ti-world',       ir: "currentFolder='gestion'; navigate('minegocio')"},
+    {id:'gastos',  icono:'ti-coin',        ir: "currentFolder='gestion'; navigate('economia')"},
+  ];
+
+  const hechas = esencial.filter(x => x.hecho).length;
+  return {esencial, opcional, hechas, total: esencial.length,
+          completa: hechas === esencial.length};
+}
+
+// Solo el propietario, y solo mientras quede algo por hacer. Un empleado no
+// tiene que ver la puesta a punto del negocio, y un panel que no se va nunca
+// deja de leerse.
+function puestaAPuntoVisible(){
+  const s = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  if(!s || s.type !== 'owner') return false;
+  try{ if(localStorage.getItem(PUESTA_OCULTA_LS) === '1') return false; }catch(e){}
+  return !puestaAPuntoTareas().completa;
+}
+
+function renderPuestaAPunto(){
+  const caja = document.getElementById('home-puesta');
+  if(!caja) return;
+  if(!puestaAPuntoVisible()){ caja.innerHTML = ''; caja.style.display = 'none'; return; }
+  caja.style.display = 'block';
+
+  const {esencial, opcional, hechas, total} = puestaAPuntoTareas();
+  const pct = Math.round(hechas / total * 100);
+
+  const linea = tarea => {
+    // El contador va DENTRO de la línea de la descripción: en un renglón
+    // aparte partía la tarjeta en tiras y se leía peor que sin él.
+    const cuantos = (tarea.dato != null && !tarea.hecho)
+      ? `<span class="pp-dato">${escapeHtml(t('pp.' + tarea.id + '.dato').replace('${n}', tarea.dato))}</span> · ` : '';
+    return `
+      <li class="pp-item${tarea.hecho ? ' pp-hecho' : ''}">
+        <span class="pp-marca">${tarea.hecho
+          ? '<i class="ti ti-circle-check"></i>'
+          : '<i class="ti ti-circle"></i>'}</span>
+        <span class="pp-texto">
+          <strong>${escapeHtml(t('pp.' + tarea.id + '.titulo'))}</strong>
+          <small>${cuantos}${escapeHtml(t('pp.' + tarea.id + '.desc'))}</small>
+        </span>
+        ${tarea.hecho ? '' : `<button class="btn btn-sm" onclick="${tarea.ir}">${escapeHtml(t('pp.go'))}</button>`}
+      </li>`;
+  };
+
+  const lineaOpcional = tarea => `
+      <li class="pp-item pp-opcional">
+        <span class="pp-marca"><i class="ti ${tarea.icono}"></i></span>
+        <span class="pp-texto">
+          <strong>${escapeHtml(t('pp.' + tarea.id + '.titulo'))}</strong>
+          <small>${escapeHtml(t('pp.' + tarea.id + '.desc'))}</small>
+        </span>
+        <button class="btn btn-sm" onclick="${tarea.ir}">${escapeHtml(t('pp.activate'))}</button>
+      </li>`;
+
+  caja.innerHTML = `
+    <div class="pp-card">
+      <div class="pp-cab">
+        <div>
+          <h2>${escapeHtml(t('pp.title'))}</h2>
+          <p>${escapeHtml(t('pp.subtitle'))}</p>
+        </div>
+        <button class="pp-cerrar" onclick="ocultarPuestaAPunto()" title="${escapeHtml(t('pp.hide'))}">&times;</button>
+      </div>
+      <div class="pp-barra"><span style="width:${pct}%"></span></div>
+      <div class="pp-progreso">${escapeHtml(t('pp.progress').replace('${h}', hechas).replace('${t}', total))}</div>
+      <ul class="pp-lista">${esencial.map(linea).join('')}</ul>
+      <details class="pp-mas">
+        <summary>${escapeHtml(t('pp.optionalTitle'))}</summary>
+        <ul class="pp-lista">${opcional.map(lineaOpcional).join('')}</ul>
+      </details>
+    </div>`;
+}
+
+/* Esconderla es del cliente, no nuestro: si le estorba, se quita y no vuelve.
+   Se avisa de dónde encontrarla, porque un panel que desaparece para siempre
+   sin decir dónde estaba es peor que no tenerlo. */
+function ocultarPuestaAPunto(){
+  try{ localStorage.setItem(PUESTA_OCULTA_LS, '1'); }catch(e){}
+  renderPuestaAPunto();
+  if(typeof showToast === 'function') showToast(t('pp.hidden'), 6000);
+}
+function mostrarPuestaAPunto(){
+  try{ localStorage.removeItem(PUESTA_OCULTA_LS); }catch(e){}
+  if(typeof navigate === 'function') navigate('home');
+  renderPuestaAPunto();
+}

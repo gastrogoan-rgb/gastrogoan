@@ -4897,6 +4897,12 @@ function renderExternalConnectionsCard(){
       ${fbConnected ? `<p style="font-size:12px;color:var(--muted);margin:8px 0 8px 28px;padding-bottom:8px;line-height:1.5;border-bottom:1px solid var(--border)"><i class="ti ti-cloud"></i> ${t('mn.externalConn.firebaseBackupNote')}</p>` : ''}
       ${row('ti-credit-card', t('mn.externalConn.redsys'), redsysConnected, "scrollToMnCard('mn-card-redsys')", true)}
       ${row('ti-mail-check', t('mn.externalConn.email'), emailConnected, "scrollToMnCard('mn-card-email')", true)}
+      ${(typeof puestaAPuntoTareas === 'function' && !puestaAPuntoTareas().completa) ? `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:6px">
+        <i class="ti ti-list-check" style="font-size:18px;color:var(--muted);flex-shrink:0"></i>
+        <span style="flex:1;font-size:13.5px">${t('pp.title')}</span>
+        <button class="btn btn-sm" onclick="mostrarPuestaAPunto()">${t('pp.reopen')}</button>
+      </div>` : ''}
     </div>
   `;
 }
