@@ -111,15 +111,47 @@ export const GUION = [
     await a.recorrer(1.4);
   },
   modulo(`navigate('dashboard')`, 'Panel — ventas, márgenes y lo que pide atención hoy'),
-  modulo(`navigate('economia')`, 'Gestión económica — de la venta al beneficio', [
-    {txt: 'Fijos',       rot: 'Costes fijos: alquiler, nóminas, suministros'},
-    {txt: 'Variables',   rot: 'Costes variables: la compra de cada semana'},
-    {txt: 'Cuenta de Resultados', rot: 'Cuenta de resultados, mes a mes'},
-    {txt: 'Resultado',   rot: 'El resultado del año, cerrado'},
-    {txt: 'Tesorería',   rot: 'Tesorería: cuándo entra y cuándo sale el dinero'},
-    {txt: 'Punto',       rot: 'Punto de equilibrio: cuánto tienes que vender para no perder'},
-    {txt: 'CAPEX',       rot: 'Inversiones, con su financiación y sus cuotas'},
-  ]),
+  /* Gestión económica va a mano y no con modulo(): hay que ELEGIR EL MES
+     antes de enseñar nada. Las pestañas abren por el mes en curso y, grabando
+     un día 1, salía "Resultado de SEP: −7.348 €" en rojo — un mes entero de
+     alquiler y nóminas contra un solo día de ventas. No es un fallo de
+     cálculo, es lo que enseña cualquier contabilidad el día 1; pero lo que
+     hay que ver en el vídeo es un mes CERRADO. El mes se comparte entre
+     pestañas (activeMonth), así que se elige una vez. */
+  async a => {
+    await a.ir(`navigate('economia')`, {rotulo: 'Gestión económica — de la venta al beneficio', tras: 1.4});
+    await a.pasear();
+    await a.recorrer(1.8);
+  },
+  async a => {
+    await a.pulsar('Gastos Variables', {tras: .5, rotulo: 'Costes variables: la compra de cada semana'});
+    await a.pulsar('Ago', {tras: .8, rotulo: 'Mes a mes, con el mes cerrado delante'});
+    await a.recorrer(1.8);
+  },
+  async a => {
+    await a.pulsar('Gastos Fijos', {tras: .5, rotulo: 'Costes fijos: alquiler, nóminas, suministros'});
+    await a.recorrer(1.6);
+  },
+  async a => {
+    await a.pulsar('Cuenta de Resultados', {tras: .6, rotulo: 'Cuenta de resultados, trimestre a trimestre'});
+    await a.recorrer(2.4);
+  },
+  async a => {
+    await a.pulsar('Resultado', {tras: .6, rotulo: 'El resultado del año, con su impuesto de sociedades'});
+    await a.recorrer(2.4);
+  },
+  async a => {
+    await a.pulsar('Tesorería', {tras: .6, rotulo: 'Tesorería: cuándo entra y cuándo sale el dinero'});
+    await a.recorrer(2);
+  },
+  async a => {
+    await a.pulsar('Punto de equilibrio', {tras: .6, rotulo: 'Cuánto tienes que vender para no perder'});
+    await a.recorrer(2);
+  },
+  async a => {
+    await a.pulsar('CAPEX', {tras: .6, rotulo: 'Inversiones, con su financiación y sus cuotas'});
+    await a.recorrer(1.8);
+  },
   modulo(`navigate('minegocio')`, 'Mi Negocio — datos, equipo, nube y copias'),
   modulo(`navigate('manual')`, 'Manual — la app explicada dentro de la app'),
 

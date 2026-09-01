@@ -150,14 +150,19 @@
       ['Cárnicas Pérez', 1680], ['Forn Vell', 300], ['Distribucions Camp', 500],
     ];
     compras.forEach(([prov, base], i) => {
-      const diaCompra = 5 + i*4;
-      /* Del mes en curso solo entran las compras que ya habrían ocurrido. Si
-         no, el día 1 el resultado del mes salía con un mes entero de compras
-         contra un día de ventas: una pérdida enorme que no es real. */
-      if(m === 0 && diaCompra > hoyD.getDate()) return;
+      /* Del mes EN CURSO solo ha pasado una parte, así que solo entra esa
+         parte de la compra. Antes se descartaba la compra entera si su día
+         aún no había llegado: el día 1 la pantalla de Gastos Variables salía
+         VACÍA ("sin gastos, añade el primero"), y el mes se comparaba con un
+         mes entero de fijos. Ahora se prorratea por los días transcurridos,
+         que es lo que de verdad lleva gastado un negocio a mitad de mes. */
+      const diasDelMes = new Date(año, mes + 1, 0).getDate();
+      const transcurridos = (m === 0) ? hoyD.getDate() : diasDelMes;
+      const parte = transcurridos / diasDelMes;
+      const diaCompra = Math.max(1, Math.min(5 + i*4, transcurridos));
       const fecha = `${año}-${String(mes+1).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
       DB.ge.variables.push({id: 9500 + m*10 + i, concepto: 'Compras ' + prov, proveedor: prov,
-        importe: Math.round(base * (0.9 + azar()*0.2)), iva: 10,
+        importe: Math.round(base * (0.9 + azar()*0.2) * parte), iva: 10,
         fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});
     });
   }
