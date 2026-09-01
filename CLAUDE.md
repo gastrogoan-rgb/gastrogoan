@@ -510,15 +510,37 @@ cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
 
 ### Pendiente
 
-0. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
+0. **REGRABAR EL VÍDEO DE VENTA, con la nube en verde.** Lo pidió el dueño el
+   1/09 para el día siguiente. La grabación que hay (`video/montar-demo.mjs`
+   monta la de ese día) sirve a medias: a partir del minuto 4 la cabecera se
+   queda en **"Error de nube" en rojo**, el negocio `Pruebaapp` está casi
+   vacío —reservas, clientes, promoción y la economía con guiones— y el
+   escandallo, que es la herramienta estrella, sale dando **0,00 €**. Con eso
+   fuera solo queda 1m16s aprovechable.
+   Cómo hacerlo bien:
+   - Grabar sobre **`dist/kit-gastrogoan-DEMO.html`**: abre directo, sin login,
+     con un año de ventas, todas las pantallas llenas y la nube en verde.
+   - **Pantalla completa** (F11): quita la barra de Chrome y no hay que
+     recortar 85 px de arriba.
+   - **No entrar en Mi Negocio**: ahí se ven el código de negocio y el PIN.
+   - Empezar YA dentro de la app. El login no vende.
+   - Lo que más vende y falta en la toma actual: el escandallo con números de
+     verdad, el resultado del mes en verde, una reserva entrando sola.
+   - Luego: `node video/montar-demo.mjs <grabacion.mp4>` y ajustar `TROZOS`.
+     ⚠️ Los tiempos se sacan con `-ss` a un segundo exacto: el filtro `fps` de
+     ffmpeg coge el fotograma del CENTRO del intervalo, así que una hoja de
+     contactos hecha con `fps=1/5` viene desplazada 2,5 s y los cortes caen
+     donde no es.
+1. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
    circuitos: en la simulación el asistente lo escribía una IA haciendo de
    modelo, no el proveedor del cliente. Que Gemini conteste con ese criterio
    está sin comprobar, y es lo que decide si el módulo vale.
-1. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
+2. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
    antes de manejar pagos de forma continuada.
-2. iPhone/iPad: todo se ha probado en Chromium y Android.
-3. La impresora térmica y el cajón con el hardware delante.
-4. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
+3. iPhone/iPad: las trampas conocidas de Safari están cerradas y hay prueba
+   (`test/apple.mjs`), pero **sigue sin probarse en un aparato de verdad**.
+4. La impresora térmica y el cajón con el hardware delante.
+5. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
    verdad encuentra fallos: de los cinco del 24 de agosto, cuatro los encontró
    el dueño usando la app; y los cuatro del 31 de agosto, todos.
 
