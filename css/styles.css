@@ -1872,3 +1872,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .mesa-card:hover,.kpi:hover,.ge-kpi:hover,.kpi-mini:hover,.module-card:hover,.folder-card:hover{transform:none}
   .mesa-card .badge-amber .ti-bell-ringing{animation:none}
 }
+
+/* ── Objetivo táctil: 44 px de verdad ──
+   El proyecto se fijó 44 px como mínimo para poder pulsar con el dedo, pero
+   las reglas responsive iban por ANCHO de pantalla y hacían justo lo
+   contrario: a partir de 1024 px los .btn-sm bajaban a 34 px. Una tablet de
+   820 px se maneja con el dedo, no con ratón, así que ahí es donde MÁS falta
+   hace — y era donde más pequeños quedaban.
+
+   Se resuelve preguntando por el tipo de puntero en vez de por el ancho:
+   `pointer: coarse` es dedo (móvil, tablet) y `fine` es ratón. Así el
+   escritorio conserva su densidad y ningún aparato táctil baja de 44.
+
+   Excepción a propósito: los +/- de la comanda del TPV, que son una rejilla
+   densa de 40 px pensada para el pase y funcionan bien así. */
+@media (pointer: coarse){
+  .btn, .btn-sm, .ge-tab, .tab-btn{min-height:44px}
+  .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
+  .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
+}
