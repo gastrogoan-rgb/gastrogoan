@@ -748,13 +748,33 @@ function showInlineError(msg){
 }
 
 let lastErrorKey = null;
-function showError(key){
+/* El detalle técnico va DENTRO de la pantalla de error, plegado.
+   Al cliente del restaurante no le estorba —solo ve el aviso de siempre—,
+   pero cuando algo falla y hay que diagnosticarlo por teléfono, es la
+   diferencia entre resolverlo en cinco minutos o pasarse la noche adivinando.
+   Lo aprendimos con el asistente de I+D. */
+let detalleTecnico = [];
+function apuntarDetalle(txt){
+  detalleTecnico.push(new Date().toISOString().slice(11,19) + ' · ' + txt);
+  if(detalleTecnico.length > 12) detalleTecnico.shift();
+}
+function showError(key, detalle){
   lastErrorKey = key;
+  if(detalle) apuntarDetalle(detalle);
+  const traza = detalleTecnico.length
+    ? `<details style="margin-top:14px;text-align:left">
+         <summary style="font-size:12px;color:var(--muted);cursor:pointer">Detalle técnico</summary>
+         <div style="font-size:11px;color:var(--muted);word-break:break-word;margin-top:6px;line-height:1.5">
+           ${detalleTecnico.map(x => escapeHtml(x)).join('<br>')}
+           <br>${escapeHtml(location.href)}
+         </div>
+       </details>` : '';
   document.getElementById('app').innerHTML = `
     <div class="error-box">
       <div class="icon">⚠️</div>
       <h2>${escapeHtml(t(key))}</h2>
       <p style="font-size:13px;color:var(--muted)">${t('error.enlace.sub')}</p>
+      ${traza}
     </div>
   `;
 }
@@ -834,9 +854,12 @@ async function consultarPlataforma(ruta){
     const r = await fetch(`${PLATAFORMA_REST}/${ruta}.json`, {cache: 'no-store'});
     if(r.ok){
       const v = await r.json();
-      if(v !== null) return v;
+      if(v !== null){ apuntarDetalle('REST ' + ruta + ' → ok'); return v; }
+      apuntarDetalle('REST ' + ruta + ' → vacío');
+    } else {
+      apuntarDetalle('REST ' + ruta + ' → HTTP ' + r.status);
     }
-  }catch(e){ /* sin red o lectura no permitida: se prueba por el otro camino */ }
+  }catch(e){ apuntarDetalle('REST ' + ruta + ' → ' + (e && e.message)); }
   return await consultarPlataformaConSdk(ruta);
 }
 
@@ -847,8 +870,9 @@ async function consultarPlataformaConSdk(ruta){
       await appPlataforma.auth().signInAnonymously();
     }
     const snap = await appPlataforma.database().ref(ruta).once('value');
+    apuntarDetalle('SDK ' + ruta + ' → ' + (snap.val() ? 'ok' : 'vacío'));
     return snap.val();
-  }catch(e){ return null; }
+  }catch(e){ apuntarDetalle('SDK ' + ruta + ' → ' + (e && (e.code || e.message))); return null; }
 }
 
 async function arrancarConLaNubeDelNegocio(){
@@ -859,9 +883,9 @@ async function arrancarConLaNubeDelNegocio(){
       // Compatibilidad: antes se guardaba el publicId a pelo; ahora puede
       // venir como objeto con más datos dentro.
       publicId = (resuelto && typeof resuelto === 'object') ? resuelto.publicId : resuelto;
-      if(!publicId){ showError('error.enlace'); return; }
+      if(!publicId){ showError('error.enlace', 'no se pudo resolver el nombre corto "' + slug + '"'); return; }
     }
-    if(!publicId){ showError('error.enlace'); return; }
+    if(!publicId){ showError('error.enlace', 'el enlace no trae ni negocio ni nombre corto'); return; }
 
     // 2) ¿En qué nube está este negocio?
     const donde = await consultarPlataforma('gastrogoan/publicLookup/' + publicId);
@@ -869,15 +893,17 @@ async function arrancarConLaNubeDelNegocio(){
       ? {apiKey: donde.apiKey, databaseURL: donde.databaseURL}
       : FIREBASE_CONFIG;   // negocio anterior a la migración
 
+    apuntarDetalle('nube del negocio: ' + (config === FIREBASE_CONFIG ? 'la compartida (sin migrar)' : config.databaseURL));
     firebase.initializeApp(config);
     db = firebase.database();
     // Autenticación anónima: las reglas exigen auth != null para leer y
     // escribir, así que no se puede tocar la base sin pasar por el SDK.
     await firebase.auth().signInAnonymously();
+    apuntarDetalle('sesión anónima ok');
     loadBusinessInfo();
   }catch(e){
     console.error(e);
-    showError('error.conexion');
+    showError('error.conexion', (e && (e.code || e.message)) || String(e));
   }
 }
 
