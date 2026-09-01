@@ -73,6 +73,10 @@ lanzar; node test/categorias.mjs           > "$SALIDA/categorias.txt" 2>&1 & P38
 echo "→ 38 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
+  # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
+  #    pasaron"): añadir un caso a una prueba hacía que la batería cantara
+  #    fallo aunque los hubiera pasado TODOS. Un banco que se queja porque
+  #    escribes más pruebas es un banco que enseña a ignorarlo.
   wait "$1"
   if grep -qE "$4" "$3" 2>/dev/null; then echo "✅ $2"
   else echo "❌ $2 — ver $3"; tail -6 "$3"; FALLOS=1; fi
@@ -111,9 +115,9 @@ espera $P31 "el generador: emitir y ANULAR licencias"     "$SALIDA/generador.txt
 espera $P32 "la demo (datos creibles y sin asistentes)"    "$SALIDA/demo.txt"       "casos pasaron"
 espera $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar"
 espera $P34 "traducciones (es/ca/en, 41 pantallas)"    "$SALIDA/traduce.txt"    "se puede usar en los tres idiomas"
-espera $P35 "los 6 modos de sesion (empleado, edicion, reparto)" "$SALIDA/permisos.txt" "los 10 casos pasaron"
-espera $P36 "iPhone y iPad (trampas de Safari)"        "$SALIDA/apple.txt"     "los 7 casos pasaron"
-espera $P37 "la puesta a punto del negocio"            "$SALIDA/puesta.txt"    "los 11 casos pasaron"
-espera $P38 "renombrar y borrar carpetas"              "$SALIDA/categorias.txt" "los 10 casos pasaron"
+espera $P35 "los 6 modos de sesion (empleado, edicion, reparto)" "$SALIDA/permisos.txt" "los [0-9]+ casos pasaron"
+espera $P36 "iPhone y iPad (trampas de Safari)"        "$SALIDA/apple.txt"     "los [0-9]+ casos pasaron"
+espera $P37 "la puesta a punto del negocio"            "$SALIDA/puesta.txt"    "los [0-9]+ casos pasaron"
+espera $P38 "renombrar y borrar carpetas"              "$SALIDA/categorias.txt" "los [0-9]+ casos pasaron"
 
 exit $FALLOS

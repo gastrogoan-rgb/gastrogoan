@@ -86,7 +86,20 @@ async function arrancar(d, code, opts={}){
   await new Promise(r=>setTimeout(r,3200));
   await d.page.evaluate(()=>{ ['netlify-gate','license-gate','extconn-gate','firebase-gate','revoked-gate'].forEach(id=>document.getElementById(id)?.remove()); });
 }
-const conectado = d => d.page.evaluate(()=> typeof cloudRef !== 'undefined' && !!cloudRef);
+/* No basta con un sí/no: cuando esto falla, TODOS los escenarios de dos
+   dispositivos fallan detrás y sin decir por qué. Devuelve además en qué
+   estado quedó el indicador de nube y el último error registrado, que es lo
+   que de verdad explica qué pasó. */
+async function conectado(d){
+  return await d.page.evaluate(()=>({
+    ok: typeof cloudRef !== 'undefined' && !!cloudRef,
+    badge: typeof lastSyncBadgeState !== 'undefined' ? lastSyncBadgeState : '(sin badge)',
+    cfg: (typeof getCloudConfig === 'function' && getCloudConfig()) ? getCloudConfig().databaseURL : '(sin config)',
+    tenant: typeof getTenantId === 'function' ? getTenantId() : '(sin tenant)',
+    firebase: typeof firebase !== 'undefined' ? (firebase.apps||[]).map(a=>a.name).join('+') : 'NO CARGÓ',
+    ultimoError: (typeof ultimoErrorNube !== 'undefined' && ultimoErrorNube) ? String(ultimoErrorNube).slice(0,90) : null,
+  }));
+}
 
 /* ═══ 1. IDIOMA: ¿la nube lo pisa al recargar? ═══════════════════════ */
 {
@@ -112,7 +125,10 @@ const conectado = d => d.page.evaluate(()=> typeof cloudRef !== 'undefined' && !
   const CODE='ESCEN002';
   const A = await nuevoDispositivo(); await arrancar(A, CODE);          // configura la nube
   await new Promise(r=>setTimeout(r,2500));
-  ok('3. El primer dispositivo conecta', await conectado(A));
+  const diag = await conectado(A);
+  ok('3. El primer dispositivo conecta', diag.ok,
+     diag.ok ? '' : `badge=${diag.badge} · apps=${diag.firebase} · tenant=${diag.tenant} · cfg=${diag.cfg}` +
+       (diag.ultimoError ? ' · error='+diag.ultimoError : ''));
   const B = await nuevoDispositivo(); await arrancar(B, CODE, {sinNube:true});  // móvil nuevo
   await new Promise(r=>setTimeout(r,5000));
   const cfgB = await B.page.evaluate(()=> getCloudConfig());
