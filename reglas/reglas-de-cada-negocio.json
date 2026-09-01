@@ -1,0 +1,74 @@
+{
+  "rules": {
+    "gastrogoan": {
+      ".read": false,
+      ".write": false,
+      "tenants": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60"
+        }
+      },
+      "public": {
+        "$publicId": {
+          "info": {
+            ".read": "auth != null",
+            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+          },
+          "requests": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$requestId": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              "_claimedAt": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
+                ".validate": "newData.isNumber()"
+              }
+            }
+          },
+          "aforoHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$turnoIdx": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "pedidosHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$slot": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "mesaHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$tableId": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                "$slot": {
+                  ".validate": "newData.isBoolean() && newData.val() === true"
+                }
+              }
+            }
+          },
+          "orderStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            }
+          },
+          "reservationStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+            }
+          }
+        }
+      }
+    }
+  }
+}

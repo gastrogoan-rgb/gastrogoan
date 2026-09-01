@@ -253,6 +253,8 @@ await caso('Al abrir, si hay versión nueva se actualiza SOLA', async ()=>{
 });
 
 await caso('Pero NUNCA a media faena: ahí pregunta', async ()=>{
+  /* El orden importa: la marca de "el usuario ya ha tocado algo" se pone con
+     un evento REAL y no tiene vuelta atrás, así que ese caso va el último. */
   const casos = await page.evaluate(async ()=>{
     const out = {};
     const originalFetch = window.fetch;
@@ -260,43 +262,43 @@ await caso('Pero NUNCA a media faena: ahí pregunta', async ()=>{
     const probar = async (preparar, limpiar) => {
       document.getElementById('gg-version-nueva')?.remove();
       window.GG_BUILD = '01/01/2026 00:00';
-      window.ggHuboInteraccion = false;
-      let aplicado = false;
-      window.aplicarVersionNueva = () => { aplicado = true; };
+      let recargado = false;
       window.fetch = async (u) => {
         if(String(u).includes('version.json')) return {ok:true, json: async () => ({build:'VERSION NUEVA'})};
+        if(String(u).includes('gg-actualizar')) return {ok:true};
         return originalFetch(u);
       };
+      window.aplicarVersionNueva = async () => { recargado = true; };
       preparar();
       localStorage.removeItem('gastrogoan_version_comprobada');
       await comprobarVersionPublicada(true);
-      const res = {aplicado, barra: !!document.getElementById('gg-version-nueva')};
+      await new Promise(r=>setTimeout(r, 120));
+      const res = {recargado, barra: !!document.getElementById('gg-version-nueva')};
       limpiar();
       document.getElementById('gg-version-nueva')?.remove();
       return res;
     };
-    out.trasTocar = await probar(()=>{ window.ggHuboInteraccion = true; }, ()=>{});
+    // 1) Una ventana abierta
     out.conModal = await probar(
       ()=>{ document.getElementById('modal-overlay').classList.add('active'); },
       ()=>{ document.getElementById('modal-overlay').classList.remove('active'); });
+    // 2) Algo escrito sin guardar
     out.conTexto = await probar(()=>{
-      const i = document.createElement('input');
-      i.id = '__prueba'; i.value = 'a medio escribir';
-      i.style.cssText = 'position:fixed;top:0;left:0';
+      const i = document.createElement('input'); i.id='__prueba'; i.value='a medio escribir';
       document.body.appendChild(i);
     }, ()=>{ document.getElementById('__prueba')?.remove(); });
-    out.enAlta = await probar(
-      ()=>{ document.getElementById('business-select-screen').classList.remove('hide'); },
-      ()=>{ document.getElementById('business-select-screen').classList.add('hide'); });
+    // 3) El usuario ya ha tocado la pantalla — evento real, y ya no se deshace
+    out.trasTocar = await probar(
+      ()=>{ window.dispatchEvent(new Event('pointerdown')); }, ()=>{});
     window.aplicarVersionNueva = aplicarReal;
     window.fetch = originalFetch;
     return out;
   });
   Object.entries(casos).forEach(([nombre, c]) => {
-    assert.ok(!c.aplicado, `${nombre}: NO puede recargar por su cuenta`);
+    assert.ok(!c.recargado, `${nombre}: NO puede recargar por su cuenta ` + JSON.stringify(c));
     assert.ok(c.barra, `${nombre}: debe preguntar con la barra`);
   });
-  return 'con algo tocado, un modal, texto sin guardar o el alta a medias: pregunta';
+  return 'con un modal abierto, texto sin guardar o la pantalla ya tocada: pregunta';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{

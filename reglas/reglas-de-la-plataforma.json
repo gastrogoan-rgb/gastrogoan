@@ -1,0 +1,132 @@
+{
+  "rules": {
+    "gastrogoan": {
+      ".read": false,
+      ".write": false,
+      "tenants": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60"
+        }
+      },
+      "publicLookup": {
+        "$publicId": {
+          ".read": true,
+          ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+          ".validate": "newData.hasChildren(['apiKey','databaseURL'])"
+        }
+      },
+      "public": {
+        "$publicId": {
+          "info": {
+            ".read": "auth != null",
+            ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30"
+          },
+          "requests": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$requestId": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              "_claimedAt": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
+                ".validate": "newData.isNumber()"
+              }
+            }
+          },
+          "aforoHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$turnoIdx": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "pedidosHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$slot": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500"
+              }
+            }
+          },
+          "mesaHold": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$dateStr": {
+              "$tableId": {
+                ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+                "$slot": {
+                  ".validate": "newData.isBoolean() && newData.val() === true"
+                }
+              }
+            }
+          },
+          "orderStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          },
+          "reservationStatus": {
+            ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+            "$token": {
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
+              ".validate": "newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().length <= 20"
+            }
+          }
+        }
+      },
+      "publicSlugs": {
+        "$slug": {
+          ".read": true,
+          ".write": "auth != null && $slug.length >= 2 && $slug.length <= 40 && (!data.exists() || data.val() === newData.val() || auth.token.email === 'gastrogoan@gmail.com')",
+          ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 30"
+        }
+      },
+      "tenantLookup": {
+        "$tenantId": {
+          ".read": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".write": "auth != null && $tenantId.length >= 4 && $tenantId.length <= 60",
+          ".validate": "newData.hasChildren(['apiKey', 'databaseURL']) && newData.child('apiKey').isString() && newData.child('databaseURL').isString() && newData.child('databaseURL').val().length <= 300"
+        }
+      },
+      "issuedCodes": {
+        "$code": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && !data.exists()"
+        }
+      },
+      "ownerNames": {
+        "$user": {
+          ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $user.length <= 40"
+        }
+      },
+      "ownerAuth": {
+        "$authKey": {
+          ".read": "auth != null && $authKey.length >= 16",
+          ".write": "auth != null && $authKey.length >= 16 && (auth.token.email === 'gastrogoan@gmail.com' || !newData.exists() || (!data.exists() && newData.hasChild('user') && root.child('gastrogoan/ownerNames').child(newData.child('user').val()).exists()))",
+          "businesses": {
+            "$tenantId": {
+              ".write": "auth != null && $authKey.length >= 16 && $tenantId.length >= 4 && $tenantId.length <= 60",
+              ".validate": "newData.hasChild('code') && newData.child('code').isString() && newData.child('code').val().length <= 16"
+            }
+          }
+        }
+      },
+      "codeClaims": {
+        "$code": {
+          ".read": "auth != null && $code.length == 8",
+          ".write": "auth != null && $code.length == 8 && (!data.exists() || auth.token.email === 'gastrogoan@gmail.com')",
+          ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 40"
+        }
+      },
+      "adminSalesLog": {
+        ".read": "auth != null && auth.token.email === 'gastrogoan@gmail.com'",
+        ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com'"
+      }
+    }
+  }
+}
