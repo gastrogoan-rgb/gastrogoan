@@ -819,7 +819,7 @@ function init(){
     return;
   }
 
-  arrancarConLaNubeDelNegocio();
+  arrancarConLaNubeDelNegocio(slug);
 }
 
 /* ── Dónde se conecta esta página ──
@@ -875,7 +875,12 @@ async function consultarPlataformaConSdk(ruta){
   }catch(e){ apuntarDetalle('SDK ' + ruta + ' → ' + (e && (e.code || e.message))); return null; }
 }
 
-async function arrancarConLaNubeDelNegocio(){
+// ⚠️ El nombre corto se RECIBE por parámetro. `publicId` es global pero
+// `slug` es local de init(), y al sacar este arranque a su propia función se
+// quedó fuera de alcance: "slug is not defined". Solo fallaba con enlaces
+// cortos —los que reparte el negocio en su QR—, así que el enlace largo
+// seguía funcionando y no se notaba.
+async function arrancarConLaNubeDelNegocio(slug){
   try{
     // 1) El nombre corto (?n=...) se resuelve antes: da el publicId.
     if(slug && !publicId){
