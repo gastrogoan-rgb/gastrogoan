@@ -69,12 +69,24 @@ caso('La app de gestión no abre ninguna escucha permanente en la plataforma', (
 caso('La web pública consulta la plataforma por REST, sin abrir socket', ()=>{
   assert.ok(/consultarPlataforma/.test(publica), 'debe existir la consulta por REST');
   assert.ok(/fetch\(`\$\{PLATAFORMA_REST\}/.test(publica), 'y hacerse con fetch, no con el SDK');
-  // El SDK solo puede inicializarse con la nube DEL NEGOCIO
-  const init = publica.match(/firebase\.initializeApp\(([^)]*)\)/g) || [];
-  assert.deepEqual(init, ['firebase.initializeApp(config)'],
-    'solo puede inicializarse una app, y con la config resuelta: ' + JSON.stringify(init));
   assert.ok(/publicLookup/.test(publica), 'debe preguntar en qué nube está el negocio');
-  return 'una petición HTTP, cero conexiones simultáneas';
+
+  /* REST tiene que ser el camino PRIMERO. Hay un respaldo con el SDK para
+     cuando las reglas de la plataforma aún no permiten la lectura abierta
+     —si no, un cliente no podría reservar solo porque nos falte publicar unas
+     reglas—, pero es el plan B: el fetch va antes, y al SDK solo se llega si
+     aquel no devuelve nada. */
+  const fn = publica.slice(publica.indexOf('async function consultarPlataforma('));
+  const cuerpo = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.ok(cuerpo.indexOf('fetch(') < cuerpo.indexOf('ConSdk'),
+    'el fetch tiene que ir ANTES del respaldo con SDK');
+  assert.ok(/consultarPlataformaConSdk/.test(publica), 'y existir el respaldo');
+  // La nube del NEGOCIO sigue siendo la app por defecto: es donde vive todo
+  assert.ok(/firebase\.initializeApp\(config\)/.test(publica),
+    'la app por defecto tiene que ser la del negocio');
+  assert.ok(/initializeApp\(FIREBASE_CONFIG, 'plataforma'\)/.test(publica),
+    'y la de la plataforma, con nombre aparte, para no pisarla');
+  return 'REST primero, SDK solo como respaldo';
 });
 
 caso('Un negocio sin nube propia sigue funcionando (nadie se queda fuera)', ()=>{

@@ -822,11 +822,32 @@ function init(){
    se queda sin servicio por una migración. */
 const PLATAFORMA_REST = FIREBASE_CONFIG.databaseURL.replace(/\/$/, '');
 
+/* Primero por REST, sin autenticar: es lo que no gasta conexiones. Si las
+   reglas de la plataforma todavía no permiten esa lectura abierta —el caso
+   mientras no se hayan actualizado en la consola de Firebase—, se cae al
+   camino de siempre: SDK con sesión anónima. Más caro en conexiones, pero
+   FUNCIONA, y un cliente intentando reservar no puede quedarse mirando un
+   error porque a nosotros nos falte publicar unas reglas. */
+let appPlataforma = null;
 async function consultarPlataforma(ruta){
   try{
     const r = await fetch(`${PLATAFORMA_REST}/${ruta}.json`, {cache: 'no-store'});
-    if(!r.ok) return null;
-    return await r.json();
+    if(r.ok){
+      const v = await r.json();
+      if(v !== null) return v;
+    }
+  }catch(e){ /* sin red o lectura no permitida: se prueba por el otro camino */ }
+  return await consultarPlataformaConSdk(ruta);
+}
+
+async function consultarPlataformaConSdk(ruta){
+  try{
+    if(!appPlataforma){
+      appPlataforma = firebase.initializeApp(FIREBASE_CONFIG, 'plataforma');
+      await appPlataforma.auth().signInAnonymously();
+    }
+    const snap = await appPlataforma.database().ref(ruta).once('value');
+    return snap.val();
   }catch(e){ return null; }
 }
 
