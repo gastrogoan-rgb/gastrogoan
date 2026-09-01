@@ -6285,7 +6285,7 @@ function openTrashModal(){
             <td>${t(TRASH_TYPE_LABEL_KEY[x.type]||'common.unknown')}</td>
             <td>${escapeHtml(x.item[TRASH_TYPE_NAME_FIELD[x.type]] || '—')}</td>
             <td>${escapeHtml(x.deletedBy||'—')}</td>
-            <td>${escapeHtml(new Date(x.deletedAt).toLocaleString('es-ES'))}</td>
+            <td>${escapeHtml(new Date(x.deletedAt).toLocaleString(localeActual()))}</td>
             <td class="actions-cell">
               <button class="btn btn-sm" onclick="restoreTrashItem(${x.id})"><i class="ti ti-arrow-back-up"></i> ${t('trash.restore')}</button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="purgeTrashItem(${x.id})" title="${t('trash.purgeOne')}"><i class="ti ti-x"></i></button>
@@ -6363,7 +6363,7 @@ function renderAuditLogModal(){
         <thead><tr><th>${t('common.date')}</th><th>${t('trash.deletedBy')}</th><th>${t('audit.action')}</th></tr></thead>
         <tbody>${items.map(x => `
           <tr ${x.severity==='critical'?'style="background:var(--red-l)"':''}>
-            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString('es-ES'))}</td>
+            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString(localeActual()))}</td>
             <td>${escapeHtml(x.actor)}</td>
             <td style="${x.severity==='critical'?'color:var(--red);font-weight:700':''}">${x.severity==='critical'?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(x.summary)}</td>
           </tr>`).join('')}</tbody>

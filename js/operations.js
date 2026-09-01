@@ -2,7 +2,7 @@
    ARQUEO DE CAJA — Cierre de turno/día
    ============================================================ */
 function fmtDateTime(d){
-  return d.toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleString(localeActual(), {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 
 // ¿Ya pasó hoy la hora de cierre configurada del negocio? Sirve para avisar

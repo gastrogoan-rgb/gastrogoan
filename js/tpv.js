@@ -228,8 +228,8 @@ function renderRepartosControlModalBody(){
           ${delivered.map(o => `<tr>
             <td>${escapeHtml(o.clienteNombre||'—')}</td>
             <td>${escapeHtml(repartidorNombre(o))}</td>
-            <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-            <td>${new Date(o.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td>${new Date(o.entregadoAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'})}</td>
             <td>${escapeHtml(o.repartoNotas||'—')}</td>
           </tr>`).join('')}
         </tbody>
@@ -291,7 +291,7 @@ function renderRepartoControlCardHtml(order){
             ${cambio != null ? `<div style="font-size:14px;margin-top:4px"><strong style="color:var(--red)"><i class="ti ti-cash-banknote"></i> ${t('reparto.change')}: ${fmtMoney(cambio)}</strong></div>` : ''}
             ${order.pagaCon != null && order.pagaCon < total ? `<div style="font-size:12px;margin-top:4px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${t('reparto.pagaConInsuficiente')}</div>` : ''}
           ` : ''}
-          ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted);margin-top:8px"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+          ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted);margin-top:8px"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         </div>
         <div style="flex:1;min-width:200px">
           ${repartidorSelectHtml}

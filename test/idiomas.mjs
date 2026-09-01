@@ -45,7 +45,7 @@ const SEMILLA = `(function(){
   DB.sales.push({id:genId(),date:hoy,createdAt:new Date().toISOString(),total:22,subtotal:20,propina:0,tipo:'mesa',metodoPago:'Efectivo',items:[{name:'Solomillo al PX',price:22,qty:1,ivaPct:10}]});
   DB.reservations.push({id:genId(),clientName:'Familia Rodríguez',date:hoy,time:'21:30',people:6,status:'confirmada',tableId:1});
   DB.clients.push({id:genId(),name:'Familia Rodríguez',phone:'600111222'});
-  DB.turnos.push({id:genId(),employeeId:eid,fecha:hoy,tipo:'M',desde:'09:00',hasta:'17:00'});
+  DB.turnos.push({id:genId(),employeeId:eid,fecha:hoy,tipo:'M',entrada:'09:00',salida:'17:00'});
   DB.purchaseOrders.push({id:genId(),supplier:'Distribuciones del Norte',date:hoy,estado:'ENVIADO',items:[{ingredientId:ing,name:'Solomillo',cantidad:5,precio:24}],notas:'',recepcion:null,comprobacion:'',area:'cocina'});
   DB.limpieza.tareas.push({id:genId(),area:'Campana',producto:'Desengrasante',tipo:'mensual',diaMes:new Date().getDate(),responsableId:eid,zona:'cocina'});
   DB.limpieza.temperaturas=(DB.limpieza.temperaturas||[]).concat([{id:genId(),equipo:'Cámara 1',fecha:hoy,valor:4,responsableId:eid}]);
@@ -55,7 +55,7 @@ const SEMILLA = `(function(){
   DB.ge.fijos.push({id:genId(),concepto:'Cuota autónomos',importe:320,iva:0,categoria:'SS AUTÓNOMOS'});
   DB.ge.fijos.push({id:genId(),concepto:'Seguros sociales',importe:1240,iva:0,categoria:'SS EMPRESA'});
   DB.ge.variables.push({id:genId(),concepto:'Compra semanal',importe:640,iva:10,fecha:hoy,categoria:'MATERIA PRIMA'});
-  DB.ge.capex=(DB.ge.capex||[]).concat([{id:genId(),concepto:'Horno nuevo',importe:4200,fecha:hoy,anios:5}]);
+  DB.ge.capex=(DB.ge.capex||[]).concat([{id:genId(),descripcion:'Horno nuevo',importe:4200,iva:21,fecha:hoy,estadoPago:'PENDIENTE'}]);
   saveDB();
 })`;
 

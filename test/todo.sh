@@ -64,8 +64,9 @@ lanzar; node test/enlaces-publicos.mjs     > "$SALIDA/enlaces.txt"     2>&1 & P3
 lanzar; node test/generador.mjs            > "$SALIDA/generador.txt"   2>&1 & P31=$!
 lanzar; node test/demo.mjs                 > "$SALIDA/demo.txt"       2>&1 & P32=$!
 lanzar; node test/visual-real.mjs          > "$SALIDA/visualreal.txt" 2>&1 & P33=$!
+lanzar; node test/traducciones.mjs         > "$SALIDA/traduce.txt"    2>&1 & P34=$!
 
-echo "→ 33 pruebas, de $TANDA en $TANDA…"
+echo "→ 34 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -105,5 +106,6 @@ espera $P30 "los enlaces de la web publica (QR y nombre corto)" "$SALIDA/enlaces
 espera $P31 "el generador: emitir y ANULAR licencias"     "$SALIDA/generador.txt"   "casos pasaron"
 espera $P32 "la demo (datos creibles y sin asistentes)"    "$SALIDA/demo.txt"       "casos pasaron"
 espera $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar"
+espera $P34 "traducciones (es/ca/en, 41 pantallas)"    "$SALIDA/traduce.txt"    "se puede usar en los tres idiomas"
 
 exit $FALLOS

@@ -196,6 +196,24 @@ Publicadas y verificadas con una reserva real. Copia de referencia en `database.
 - **Idioma**: todo en español — mensajes de commit, comentarios de código, conversación.
 - **Comentarios**: explican **por qué**, no qué. Suelen documentar el bug que motivó el código.
 - **i18n**: 3 idiomas (`es`, `ca`, `en`) en `js/i18n.js`. Toda cadena nueva va en los tres. `t('clave')` para UI, `gl({es,ca,en})` para prosa larga.
+  Tres cosas que la auditoría del 1/09 dejó claras y conviene no volver a
+  descubrir:
+  - **Un dato guardado no se traduce; se traduce al mostrarlo.** El valor
+    que va a la base es SIEMPRE el nombre en castellano (clave estable con
+    la que se agrupa y se ordena) y se pinta con un `…Label()`:
+    `allergenLabel`, `ingredientCategoryLabel`, `businessTypeLabel`.
+  - **La excepción son los 275 artículos del catálogo de materia prima.**
+    Ahí se traduce en la SIEMBRA (`buildBaseIngredientsSeed`), no al pintar,
+    porque el nombre del ingrediente es dato editable del negocio: en cuanto
+    lo renombran es suyo, y el albarán del proveedor tiene que salir en el
+    idioma en que el hostelero lo lee. Efecto conocido: un negocio creado en
+    castellano que después cambia a inglés conserva su catálogo en
+    castellano — que es lo correcto, porque a esas alturas ya lo ha tocado.
+  - **Las fechas no se escriben a mano.** `localeActual()` (js/i18n.js) da el
+    locale del idioma activo. Había quince `toLocaleDateString('es-ES')`
+    sueltos, y por eso la semana de Horarios decía "31 ago – 6 sept" con la
+    app en inglés. Ninguna prueba lo veía: `idiomas.mjs` mide la CAJA (que el
+    texto no se desborde), no el IDIOMA.
 - **Escapado**: `escapeHtml()` en **todo** dato de usuario que entre en HTML. Verificado sin huecos.
 - **Objetivo táctil mínimo**: 44×44 px. Ojo con dos trampas ya pisadas:
   las reglas de pantallas MÁS pequeñas encogían los botones aún más
@@ -273,6 +291,7 @@ node test/audit-active.mjs    # regresiones de sincronización
 node test/cuentas.mjs         # aislamiento entre cuentas — lo que NO puede fallar nunca
 node test/sin-salida.mjs      # que ninguna pantalla del alta sea un callejón sin salida
 node test/idr.mjs             # el módulo de I+D, 81 casos
+python3 -m http.server 8950 & node test/traducciones.mjs  # la app entera en es/ca/en, 41 pantallas
 python3 -m http.server 8950 & node test/visual-audit.mjs   # nada se desborda en 6 tamaños × 25 vistas
 python3 -m http.server 8950 & node test/click-audit.mjs    # pulsa los 274 botones visibles de las 31 pantallas
 node test/simulacion/correr.mjs  # el I+D entero con un negocio real (ver su README)
@@ -280,7 +299,7 @@ bash test/emulador/run.sh     # DOS dispositivos contra un Firebase de verdad (e
 bash build.sh                 # regenerar dist/
 ```
 
-O las 27 de una vez, en paralelo (son independientes; encadenarlas solo
+O las 34 de una vez, en paralelo (son independientes; encadenarlas solo
 servía para esperar):
 
 ```bash

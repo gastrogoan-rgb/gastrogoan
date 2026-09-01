@@ -2062,7 +2062,7 @@ function printGiftVoucher(id){
   const accent = (DB.business && DB.business.brandColor) || '#B8804B';
   const logo = DB.business && DB.business.logo;
   const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
-  const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+  const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'});
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -3721,7 +3721,7 @@ function renderPromoDia(){
               ${p.maxUses ? `<span class="badge" style="font-size:10.5px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
+            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
             <div class="actions-cell owner-strict" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -6126,7 +6126,7 @@ function renderTicketConfigCard(){
 // teléfono, web, NIF, pie e IVA) sin tener que hacer una venta de prueba.
 function previewTicketConfig(){
   const sampleSale = {
-    date: new Date().toLocaleString('es-ES'),
+    date: new Date().toLocaleString(localeActual()),
     tipo: 'mesa',
     items: [
       {qty:2, name:'Ejemplo de plato', price:9.5},
@@ -6423,7 +6423,7 @@ async function deleteComandaPrinter(id){
 // ticket de cliente para 58/80mm (ver buildTicketText).
 function buildComandaText(destino, titulo, lineas, alergenos, anchoTicket){
   const width = anchoTicket == 58 ? 32 : 42;
-  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
   const center = s => { const pad = Math.max(0, Math.floor((width - s.length) / 2)); return ' '.repeat(pad) + s; };
   const lines = [];
   lines.push(center(destino.toUpperCase()));
@@ -6449,7 +6449,7 @@ function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, pri
   }
   const ancho = anchoTicket || 80;
   const widthPx = ancho == 58 ? 200 : 280;
-  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
   const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
   // Alérgenos de la mesa (independiente de cualquier cliente vinculado): se
   // imprime destacado arriba del todo, en grande, para que no pase

@@ -1005,11 +1005,24 @@ function buildBaseIngredientsSeed(area, idStart){
   const stock = {};
   const categoryIcons = {};
   let nextId = idStart;
+  // Los 275 artículos del catálogo están escritos en castellano. Un negocio
+  // catalán o inglés se los encontraba así, y no había forma de traducirlos:
+  // no pasan por t(), son datos que se guardan en su base.
+  //
+  // Se traducen AQUÍ, al nacer el negocio, y no al pintarlos, por dos
+  // razones: el nombre del ingrediente es dato editable del negocio (en
+  // cuanto lo renombran es suyo, y traducirlo por encima sería mentirle), y
+  // así el albarán que le llega al proveedor sale en el mismo idioma en que
+  // el hostelero lo lee. La CATEGORÍA sí se queda en castellano a propósito:
+  // es la clave estable con la que se agrupa y ordena, y ya se traduce al
+  // mostrarla (ingredientCategoryLabel).
+  const nombres = t('ingredientNames.map') || {};
   Object.keys(catalog).forEach(cat => {
     const {icon, items} = catalog[cat];
     categoryIcons[cat] = icon;
-    items.forEach(([name, unit, allergens]) => {
+    items.forEach(([nombreEs, unit, allergens]) => {
       const id = nextId++;
+      const name = nombres[nombreEs] || nombreEs;
       ingredients.push({
         id, name, category: cat, unit, supplier: '', price: 0, packQty: 1, packPrice: 0,
         allergens: [...allergens], area, activo: true,

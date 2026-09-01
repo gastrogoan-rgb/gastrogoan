@@ -77,7 +77,12 @@ caso('Ninguna clave está repetida dentro del mismo idioma', ()=>{
     const cab = linea.match(/^\s{0,4}(es|ca|en)\s*:\s*\{\s*$/);
     if(cab){ idioma = cab[1]; return; }
     if(!idioma) return;
-    const claves = [...linea.matchAll(/'([a-zA-Z][\w.]*)'\s*:/g)].map(m => m[1]);
+    // Los mapas anidados (allergens.map, ingredientNames.map…) llevan dentro
+    // sus propias claves: 'Huevos' es un alérgeno Y una categoría, y son
+    // cosas distintas que no se pisan. Se quita el contenido de las llaves
+    // antes de contar, para no denunciar como repetido lo que no lo es.
+    const sinAnidados = linea.replace(/\{[^{}]*\}/g, '{}');
+    const claves = [...sinAnidados.matchAll(/'([a-zA-Z][\w.]*)'\s*:/g)].map(m => m[1]);
     claves.forEach(k => {
       const m = vistas[idioma];
       if(m.has(k)) repes.push(`${idioma}: '${k}' (líneas ${m.get(k)} y ${i+1})`);

@@ -1097,7 +1097,10 @@ const GE = (function(){
     document.getElementById('capex-total').textContent = fmtMoney(base+ivaT);
   }
   const ESTADO_PAGO_KEYS = {PAGADO:'hr.capex.paid', PENDIENTE:'hr.capex.pending', PARCIAL:'hr.capex.partial'};
-  function estadoPagoLabel(code){ return t(ESTADO_PAGO_KEYS[code]||code); }
+  // Una inversión guardada antes de que existiera el estado de pago no tiene
+  // el campo. Sin esta guarda, t(undefined) pinta literalmente "undefined"
+  // dentro de una etiqueta roja, como si fuera un estado.
+  function estadoPagoLabel(code){ return code ? t(ESTADO_PAGO_KEYS[code]||code) : '—'; }
   function newCapex(){
     editingCX = null;
     openCapexModal(t('hr.capex.newInvestment'), {descripcion:'', importe:'', iva:null, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
@@ -1753,7 +1756,7 @@ const GE = (function(){
     const isoEnd = `${mesStr}-${String(new Date(año, mes+1, 0).getDate()).padStart(2,'0')}`;
     rows.push([t('hr.csv.periodStart'), isoStart]);
     rows.push([t('hr.csv.periodEnd'), isoEnd]);
-    rows.push([t('hr.csv.generatedOn'), new Date().toLocaleString('es-ES')]);
+    rows.push([t('hr.csv.generatedOn'), new Date().toLocaleString(localeActual())]);
     rows.push([]);
 
     rows.push([t('hr.csv.salesLedger')]);
@@ -2262,7 +2265,7 @@ function renderHorariosSemana(){
 
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
-  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
   const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
   const rows = emps.map(emp => {
@@ -2326,7 +2329,7 @@ function printWeeklySchedule(){
   const emps = areaEmployees();
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
-  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
   const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)} ${d.getDate()}/${d.getMonth()+1}</th>`).join('');
   const rows = emps.map(emp => {
     const cells = dateStrs.map(ds => {

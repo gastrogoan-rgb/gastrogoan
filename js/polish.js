@@ -36,7 +36,7 @@ function animateKpiNumbers(root){
       const cur = target * eased;
       if(parsed.isMoney && typeof fmtMoney === 'function') el.textContent = fmtMoney(cur);
       else if(parsed.isPercent) el.textContent = (cur<0?'':'')+cur.toFixed(1)+'%';
-      else el.textContent = Math.round(cur).toLocaleString('es-ES');
+      else el.textContent = Math.round(cur).toLocaleString(localeActual());
       if(p<1) requestAnimationFrame(step);
       else el.textContent = startText; // asegura el formato exacto original al terminar
     }
