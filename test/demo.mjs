@@ -173,13 +173,29 @@ await caso('El guion del vídeo no apunta a ninguna pantalla inexistente', async
   /* `navigate('empleados')` no da error: deja la pantalla EN BLANCO. En el
      vídeo salía el rótulo "Personal — turnos, fichajes y nóminas" sobre un
      fondo vacío, y así se grabó una vez entera. */
-  const {GUION} = await import('../video/guion.js');
+  /* Ahora las escenas son funciones, no objetos: se mira el código fuente del
+     guion, que es donde están los navigate(). Y se comprueban LOS DOS
+     guiones, porque son dos vídeos distintos y cada uno puede equivocarse por
+     su cuenta. */
   const reales = fs.readFileSync('index.html','utf8').match(/id="view-[a-z-]*"/g).map(s => s.slice(9,-1));
-  const usadas = [...new Set(GUION.map(p => String(p.ir).match(/navigate\('(\w+)'\)/)).filter(Boolean).map(m => m[1]))];
-  const inexistentes = usadas.filter(v => !reales.includes(v));
-  assert.deepEqual(inexistentes, [], 'vistas que no existen: ' + inexistentes.join(', '));
-  assert.ok(usadas.length >= 12, 'el tour tiene que recorrer la app, no cuatro pantallas');
-  return `${usadas.length} vistas, todas reales`;
+  const detalle = [];
+  for(const [fichero, minimo] of [['guion-completo.js', 18], ['guion-venta.js', 6]]){
+    const src = fs.readFileSync('video/' + fichero, 'utf8');
+    const usadas = [...new Set([...src.matchAll(/navigate\('(\w+)'\)/g)].map(m => m[1]))];
+    const inexistentes = usadas.filter(v => !reales.includes(v));
+    assert.deepEqual(inexistentes, [], `${fichero}: vistas que no existen — ${inexistentes.join(', ')}`);
+    assert.ok(usadas.length >= minimo,
+      `${fichero}: solo recorre ${usadas.length} vistas, se esperaban ${minimo} o más`);
+    detalle.push(`${fichero.replace('guion-','').replace('.js','')} ${usadas.length}`);
+  }
+  // El completo tiene que entrar en las carpetas COMPARTIDAS una sola vez:
+  // repetirlas en Sala alargaba el vídeo sin enseñar nada nuevo.
+  const comp = fs.readFileSync('video/guion-completo.js', 'utf8');
+  ['megalista','escandallo','fichas','proveedores','limpieza'].forEach(v => {
+    const veces = [...comp.matchAll(new RegExp(`navigate\\('${v}'\\)`, 'g'))].length;
+    assert.equal(veces, 1, `${v} sale ${veces} veces en el recorrido completo, tiene que salir 1`);
+  });
+  return `vistas reales: ${detalle.join(' · ')}, y ninguna carpeta compartida repetida`;
 });
 
 console.log('\n' + '═'.repeat(64));
