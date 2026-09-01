@@ -145,11 +145,17 @@
        contaban como de septiembre: el panel enseñaba 4.926 € de gastos contra
        181 € de facturación y un resultado de −13.371 € en rojo. */
     const año = f.getFullYear(), mes = f.getMonth();
+    /* La categoría es obligatoria: sin ella, la gráfica "Gasto por categoría"
+       pintaba una barra negra rotulada "undefined" y las compras salían
+       listadas bajo un epígrafe "UNDEFINED". Y no vale cualquier texto —
+       tienen que ser las de VARIABLE_CATEGORIES (js/hr.js). */
     const compras = [
-      ['Hortalisses Vic', 970], ['Peix del Port', 1450],
-      ['Cárnicas Pérez', 1680], ['Forn Vell', 300], ['Distribucions Camp', 500],
+      ['Hortalisses Vic', 810, 'MATERIA PRIMA'], ['Peix del Port', 1180, 'MATERIA PRIMA'],
+      ['Cárnicas Pérez', 1390, 'MATERIA PRIMA'], ['Forn Vell', 260, 'MATERIA PRIMA'],
+      ['Distribucions Camp', 430, 'BEBIDAS'], ['Neteja Osona', 170, 'LIMPIEZA'],
+      ['Envasos Plana', 210, 'PACKAGING'],
     ];
-    compras.forEach(([prov, base], i) => {
+    compras.forEach(([prov, base, categoria], i) => {
       /* Del mes EN CURSO solo ha pasado una parte, así que solo entra esa
          parte de la compra. Antes se descartaba la compra entera si su día
          aún no había llegado: el día 1 la pantalla de Gastos Variables salía
@@ -162,7 +168,7 @@
       const diaCompra = Math.max(1, Math.min(5 + i*4, transcurridos));
       const fecha = `${año}-${String(mes+1).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
       DB.ge.variables.push({id: 9500 + m*10 + i, concepto: 'Compras ' + prov, proveedor: prov,
-        importe: Math.round(base * (0.9 + azar()*0.2) * parte), iva: 10,
+        categoria, importe: Math.round(base * (0.9 + azar()*0.2) * parte), iva: 10,
         fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});
     });
   }
@@ -178,6 +184,28 @@
      los meses cerrados— y otra el día 1 de este mes con la parte
      transcurrida. Es lo que de verdad lleva devengado un negocio a mitad de
      mes, no una rebaja de cara a la galería. */
+  /* Inversiones. Sin ellas la pestaña CAPEX salía con "sin inversiones
+     registradas" y una deuda de 0 €, que es justo lo que no hay que enseñar:
+     el valor de esa pantalla está en ver una compra financiada con sus cuotas
+     y cuántas quedan. Un bistró que lleva un año abierto tiene horno y
+     cámara. Los campos son los que lee la app (descripcion, estadoPago,
+     financiado, cuotas, cuotaMensual): con otros nombres la fila sale, pero
+     con guiones y un estado "undefined". */
+  const añoC = hoyD.getFullYear(), mesC = hoyD.getMonth();
+  const haceMeses = n => {
+    const f = new Date(añoC, mesC - n, 12);
+    return `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-12`;
+  };
+  DB.ge.capex = [
+    {id: 9601, descripcion: 'Horno de convección', importe: 6400, iva: 21,
+     fecha: haceMeses(10), estadoPago: 'PAGADO', financiado: true,
+     cuotas: 24, cuotaMensual: 290, anios: 8},
+    {id: 9602, descripcion: 'Cámara frigorífica', importe: 3200, iva: 21,
+     fecha: haceMeses(7), estadoPago: 'PAGADO', financiado: false, anios: 10},
+    {id: 9603, descripcion: 'Terraza: mesas y sombrillas', importe: 2100, iva: 21,
+     fecha: haceMeses(3), estadoPago: 'PARCIAL', financiado: false, anios: 5},
+  ];
+
   if(typeof geTotalFijosNeto === 'function'){
     const mesActual = hoyD.getMonth(), añoActual = hoyD.getFullYear();
     const diasMes = new Date(añoActual, mesActual + 1, 0).getDate();
