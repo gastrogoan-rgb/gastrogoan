@@ -763,32 +763,49 @@ function confirmTextPrompt(){
   closeModal();
   if(resolve) resolve(val);
 }
-/* Los dos botones de una tarjeta de carpeta: renombrar y borrar.
-   Están aquí y no copiados cinco veces porque son CINCO las pantallas que
+/* El botón de opciones de una tarjeta de carpeta.
+   Está aquí y no copiado cinco veces porque son CINCO las pantallas que
    pintan carpetas —Mega Lista, Stock (ingredientes y elaboraciones),
    Escandallo y Fichas Técnicas— y hasta ahora cada una hacía una cosa
    distinta: en Mega Lista se podía renombrar y en las demás no, y borrar no
-   se podía en ninguna. Es la MISMA carpeta vista desde otro sitio; que la app
-   se comporte distinto según por dónde entres se lee como un fallo.
-   "Sin categoría" no lleva botones: no es una carpeta de verdad, es el hueco
+   se podía en ninguna. Es la MISMA carpeta vista desde otro sitio.
+
+   Es UN botón, no dos, y por una razón medida: dos botones de 44 px (el
+   mínimo táctil) son 88 px que le robaba al nombre de la carpeta, y en una
+   tablet en vertical "Embutidos y Fiambres" se quedaba en 16 px de ancho,
+   ilegible. Con un solo punto de entrada cabe, es más discreto —que es lo
+   que se pedía— y de paso las dos acciones se leen con su nombre entero en
+   vez de adivinarse por un icono.
+
+   "Sin categoría" no lo lleva: no es una carpeta de verdad, es el hueco
    donde cae lo que no tiene ninguna. */
 function botonesDeCarpeta(clave, tipo){
   if(!clave || clave === '__none__') return '';
   const c = String(clave).replace(/'/g, "\\'");
-  const renombrar = tipo === 'recipe' ? 'renameRecipeCategory' : 'renameIngredientCategory';
-  const borrar    = tipo === 'recipe' ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
-  /* Discretos a propósito: son una opción por si acaso, no lo que se viene a
-     hacer a esta pantalla. Van sin fondo ni borde, en gris, en un ladito.
-     ⚠️ Pero el ÁREA DE TOQUE sigue siendo de 44 px (ver .folder-act en el
-     CSS): en una tablet, un icono de 15 px es imposible de acertar con el
-     dedo. Pequeño a la vista, grande al tocar — que no es lo mismo. */
-  return `
-    <span class="folder-acts">
-      <button class="owner-only folder-act" title="${t('title.renameCategory')}"
-        onclick="event.stopPropagation();${renombrar}('${c}')"><i class="ti ti-pencil"></i></button>
-      <button class="owner-only folder-act folder-act-del" title="${t('title.deleteCategory')}"
-        onclick="event.stopPropagation();${borrar}('${c}')"><i class="ti ti-trash"></i></button>
-    </span>`;
+  return `<button class="owner-only folder-act" title="${t('title.folderOptions')}"
+    onclick="event.stopPropagation();menuDeCarpeta('${c}','${tipo}')"><i class="ti ti-dots-vertical"></i></button>`;
+}
+
+function menuDeCarpeta(clave, tipo){
+  if(!clave) return;
+  const esReceta = tipo === 'recipe';
+  const nombre = esReceta ? clave
+    : (typeof ingredientCategoryLabel === 'function' ? ingredientCategoryLabel(clave) : clave);
+  const c = String(clave).replace(/'/g, "\\'");
+  const renombrar = esReceta ? 'renameRecipeCategory' : 'renameIngredientCategory';
+  const borrar    = esReceta ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-folder"></i> ${escapeHtml(nombre)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" style="justify-content:flex-start" onclick="closeModal();${renombrar}('${c}')">
+        <i class="ti ti-pencil"></i> ${t('title.renameCategory')}</button>
+      <button class="btn btn-danger" style="justify-content:flex-start" onclick="closeModal();${borrar}('${c}')">
+        <i class="ti ti-trash"></i> ${t('title.deleteCategory')}</button>
+    </div>
+  `);
 }
 
 /* Borrar una carpeta que TIENE cosas dentro no puede ser un sí o no.
@@ -802,6 +819,10 @@ function botonesDeCarpeta(clave, tipo){
 let pendingPickResolve = null;
 function pickOption(titulo, texto, opciones, opts){
   opts = opts || {};
+  // Sin opciones no hay nada que elegir. Sale así por la prueba que abre
+  // TODAS las ventanas sin argumentos, pero también protege de una carpeta
+  // que se quedara sin destinos posibles.
+  opciones = Array.isArray(opciones) ? opciones : [];
   if(pendingPickResolve){ const r = pendingPickResolve; pendingPickResolve = null; r(null); }
   return new Promise(resolve => {
     pendingPickResolve = resolve;

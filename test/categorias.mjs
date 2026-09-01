@@ -78,7 +78,7 @@ await caso('Las cinco pantallas que pintan carpetas ofrecen los MISMOS botones',
     return {
       sitios: (fuente.match(/botonesDeCarpeta/g) || []).length,
       // Y que nadie se haya dejado el botón suelto de antes por ahí.
-      sueltoViejo: /title\.renameCategory[^]{0,120}renameIngredientCategory\('\$\{safeCat\}'\)/.test(fuente),
+      sueltoViejo: /renameIngredientCategory\('\$\{safeCat\}'\)/.test(fuente),
     };
   });
   assert.ok(r.sitios >= 5, `solo ${r.sitios} pantallas con botones, deberían ser 5`);
@@ -89,11 +89,11 @@ await caso('Las cinco pantallas que pintan carpetas ofrecen los MISMOS botones',
 await caso('"Sin categoría" no lleva botones — no es una carpeta de verdad', async ()=>{
   const r = await page.evaluate(()=>({
     ninguno: botonesDeCarpeta('__none__', 'recipe') === '' && botonesDeCarpeta('', 'ingredient') === '',
-    normal: /renameRecipeCategory|deleteRecipeCategory/.test(botonesDeCarpeta('Postres','recipe')),
+    normal: /menuDeCarpeta/.test(botonesDeCarpeta('Postres','recipe')),
   }));
   assert.ok(r.ninguno, '"sin categoría" no puede renombrarse ni borrarse: es el hueco, no una carpeta');
-  assert.ok(r.normal, 'y una carpeta normal sí tiene sus dos botones');
-  return 'el hueco sin botones, la carpeta con los dos';
+  assert.ok(r.normal, 'y una carpeta normal sí tiene su botón de opciones');
+  return 'el hueco sin botón, la carpeta con el suyo';
 });
 
 await caso('Una carpeta de Escandallo se puede renombrar (antes, no)', async ()=>{

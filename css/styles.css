@@ -1960,23 +1960,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .pp-item .btn{margin-left:38px}
 }
 
-/* Los dos botones de una tarjeta de carpeta (renombrar / borrar).
-   Son una opción por si acaso, no lo que se viene a hacer a esta pantalla:
-   sin fondo, sin borde, en gris y en un lado. Solo se tiñen al pasar por
-   encima o al pulsar.
-   ⚠️ El TAMAÑO VISIBLE es pequeño, pero el área de toque se mantiene en
-   44×44 en cualquier aparato táctil — en una tablet, un icono de 15 px es
-   imposible de acertar con el dedo, y encogerlo de verdad rompería el mínimo
-   táctil que vigila test/visual-audit.mjs. Pequeño a la vista, grande al
-   tocar, que no es lo mismo. */
-.folder-acts{margin-left:auto;display:flex;gap:0;flex-shrink:0;align-self:flex-start}
-.folder-act{background:none;border:none;padding:0;cursor:pointer;color:var(--muted);
-  opacity:.55;font-size:15px;line-height:1;display:inline-flex;align-items:center;
-  justify-content:center;width:26px;height:26px;border-radius:6px;flex:none;
-  transition:opacity .12s ease,color .12s ease,background .12s ease}
-.folder-act:hover{opacity:1;background:rgba(28,26,23,.06)}
-.folder-act-del:hover{color:var(--red)}
+/* El botón de opciones de una tarjeta de carpeta.
+   Es una opción por si acaso, no lo que se viene a hacer a esta pantalla:
+   sin fondo, sin borde, en gris y en un lado. Solo se tiñe al pasar por
+   encima.
+   ⚠️ Dos cosas que costaron y no se ven en el diseño:
+   · 32 px de alto en escritorio, no 26. Por debajo de 32 la app entera lo
+     considera un objetivo demasiado pequeño y la prueba de pestañas lo canta.
+   · 44 px en táctil, PERO con margen negativo para que el área pulsable
+     sobresalga de la tarjeta en vez de robarle ancho al nombre — el mismo
+     truco que ya usaba el lápiz suelto de Mega Lista. Sin eso, en una tablet
+     en vertical "Embutidos y Fiambres" se quedaba en 16 px de ancho. */
+.folder-act{margin-left:auto;background:none;border:none;padding:0;cursor:pointer;
+  color:var(--muted);opacity:.5;font-size:17px;line-height:1;display:inline-flex;
+  align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;
+  flex:none;align-self:flex-start;margin-top:-4px;margin-right:-4px;
+  transition:opacity .12s ease,background .12s ease}
+.folder-act:hover{opacity:1;background:rgba(28,26,23,.07)}
 @media (pointer: coarse){
-  /* El dedo necesita 44 px aunque el icono siga midiendo 15. */
-  .folder-act{width:44px;height:44px;opacity:.7}
+  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:-8px;margin-bottom:-8px}
 }
