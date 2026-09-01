@@ -119,9 +119,11 @@ export const GUION = [
      hay que ver en el vídeo es un mes CERRADO. El mes se comparte entre
      pestañas (activeMonth), así que se elige una vez. */
   async a => {
-    await a.ir(`navigate('economia')`, {rotulo: 'Gestión económica — de la venta al beneficio', tras: 1.4});
-    await a.pasear();
-    await a.recorrer(1.8);
+    await a.ir(`navigate('economia')`, {rotulo: 'Gestión económica — de la venta al beneficio', tras: 1.2});
+    // Ventas lleva su propio mes (ventasMonth), aparte del de las demás
+    // pestañas: hay que elegirlo también aquí o se ve el mes en curso a medias.
+    await a.pulsar('Ago', {tras: .8, rotulo: 'Las ventas, día a día, del mes cerrado'});
+    await a.recorrer(2);
   },
   async a => {
     await a.pulsar('Gastos Variables', {tras: .5, rotulo: 'Costes variables: la compra de cada semana'});

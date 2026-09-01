@@ -127,12 +127,12 @@
      15%. Con las cifras infladas el mes pasado salía en PÉRDIDAS, y una demo
      que enseña un restaurante que pierde dinero no vende nada. */
   DB.ge.fijos = [
-    {id: 9401, nombre:'Alquiler del local', importe: 1350, periodicidadMeses: 1, iva: 21, categoria:'LOCAL'},
+    {id: 9401, nombre:'Alquiler del local', importe: 1350, periodicidadMeses: 1, iva: 21, categoria:'FIJOS'},
     {id: 9402, nombre:'Nóminas y seguros sociales', importe: 5300, periodicidadMeses: 1, iva: 0, categoria:'PERSONAL'},
-    {id: 9403, nombre:'Luz, agua y gas', importe: 540, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
-    {id: 9404, nombre:'Gestoría', importe: 180, periodicidadMeses: 1, iva: 21, categoria:'SERVICIOS'},
-    {id: 9405, nombre:'Seguro del negocio', importe: 780, periodicidadMeses: 12, iva: 0, categoria:'SEGUROS'},
-    {id: 9406, nombre:'Internet y telefonía', importe: 65, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
+    {id: 9403, nombre:'Luz, agua y gas', importe: 540, periodicidadMeses: 1, iva: 21, categoria:'FIJOS'},
+    {id: 9404, nombre:'Gestoría', importe: 180, periodicidadMeses: 1, iva: 21, categoria:'FIJOS'},
+    {id: 9405, nombre:'Seguro del negocio', importe: 780, periodicidadMeses: 12, iva: 0, categoria:'FIJOS'},
+    {id: 9406, nombre:'Internet y telefonía', importe: 65, periodicidadMeses: 1, iva: 21, categoria:'FIJOS'},
   ];
   DB.ge.variables = [];
   // Doce meses de compras, los mismos que de ventas: si no, los meses con
@@ -165,6 +165,34 @@
         importe: Math.round(base * (0.9 + azar()*0.2) * parte), iva: 10,
         fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});
     });
+  }
+
+  /* Los costes fijos del mes EN CURSO, prorrateados por los días que llevamos.
+     Sin esto, el día 1 la tarjeta "Resultado de SEP" enseñaba −7.514 €: un mes
+     entero de alquiler y nóminas contra un solo día de ventas. Y esa tarjeta
+     va atada al mes real, sin selector, así que no hay forma de esquivarla
+     desde fuera.
+     La app ya guarda un histórico de fijos por fecha (geFijosLogValueForMonth
+     coge la última anotación anterior al fin de ese mes), así que basta con
+     dejar dos: una vieja con el importe completo —que es la que usan todos
+     los meses cerrados— y otra el día 1 de este mes con la parte
+     transcurrida. Es lo que de verdad lleva devengado un negocio a mitad de
+     mes, no una rebaja de cara a la galería. */
+  if(typeof geTotalFijosNeto === 'function'){
+    const mesActual = hoyD.getMonth(), añoActual = hoyD.getFullYear();
+    const diasMes = new Date(añoActual, mesActual + 1, 0).getDate();
+    const parteMes = hoyD.getDate() / diasMes;
+    const neto = geTotalFijosNeto(), bruto = geTotalFijos();
+    const personal = geTotalPersonalNeto();
+    const dosDigitos = n => String(n).padStart(2, '0');
+    const primeroDeMes = `${añoActual}-${dosDigitos(mesActual+1)}-01`;
+    const haceUnAño = `${añoActual-1}-${dosDigitos(mesActual+1)}-01`;
+    DB.ge.fijosLog = [
+      {fecha: haceUnAño,   totalNeto: neto, totalGross: bruto,
+       personalNeto: personal, gfNeto: neto - personal},
+      {fecha: primeroDeMes, totalNeto: neto*parteMes, totalGross: bruto*parteMes,
+       personalNeto: personal*parteMes, gfNeto: (neto - personal)*parteMes},
+    ];
   }
 
   DB.promos = [
