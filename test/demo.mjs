@@ -102,6 +102,54 @@ await caso('No escribe en ninguna nube de verdad', async ()=>{
   return 'nube falsa y licencia DEMO2026';
 });
 
+await caso('Ninguna pantalla del recorrido sale vacía', async ()=>{
+  /* Esto salió mirando el vídeo fotograma a fotograma: Comandas de Cocina,
+     el historial de pedidos, Distribución del Trabajo, Control de Plagas y
+     CAPEX aparecían con un "todavía no hay nada", cada uno debajo de un
+     rótulo prometiendo justo lo contrario. Una demo con la mitad de las
+     pantallas en blanco no enseña la app, enseña un esqueleto — y encontrarlo
+     revisando capturas a mano es insostenible. */
+  const PARADAS = [
+    ['comandascocina','cocina', null], ['comandascocina','cocina', "setComandasCocinaTab('cerradas')"],
+    ['carta','cocina', null], ['megalista','cocina', null], ['escandallo','cocina', null],
+    ['fichas','cocina', null], ['proveedores','cocina', null],
+    ['pedidos','cocina', "setPedidosTab('historial')"],
+    ['stock','cocina', null], ['horarios','cocina', "setHorariosTab('semana')"],
+    ['distribucion','cocina', null],
+    ['limpieza','cocina', "setLimpiezaTab('temperaturas')"],
+    ['limpieza','cocina', "setLimpiezaTab('alergenos')"],
+    ['limpieza','cocina', "setLimpiezaTab('plagas')"],
+    ['tpv','sala', null], ['reservas','sala', null], ['clientes','sala', null],
+    ['promocion','sala', null],
+    ['dashboard','gestion', null],
+    ['economia','gestion', "GE.tab('capex')"],
+    ['economia','gestion', "GE.tab('cdr')"],
+  ];
+  const vacias = await page.evaluate((paradas)=>{
+    const out = [];
+    for(const [vista, carpeta, codigo] of paradas){
+      currentFolder = carpeta; navigate(vista);
+      if(codigo){ try{ eval(codigo); }catch(e){ out.push(`${vista}: ${e.message}`); continue; } }
+      const c = document.getElementById('content');
+      const visible = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      /* No todo lo que usa la clase .empty es un hueco: el panel felicita con
+         "todos los platos se han vendido" usando el mismo estilo. Se filtran
+         por texto los que son BUENAS noticias. */
+      const BUENAS = [/se han vendido/i, /sin incidencias/i, /todo al día/i];
+      const huecos = [...c.querySelectorAll('.empty')].filter(visible)
+        .map(e => (e.textContent||'').replace(/\s+/g,' ').trim().slice(0, 46))
+        .filter(txt => !BUENAS.some(re => re.test(txt)));
+      // También cuenta como vacío el "undefined" que deja un campo que falta.
+      const indefinidos = /\bundefined\b/i.test(c.innerText||'');
+      if(huecos.length) out.push(`${vista}${codigo?' → '+codigo:''}: "${huecos[0]}"`);
+      else if(indefinidos) out.push(`${vista}${codigo?' → '+codigo:''}: sale "undefined" en pantalla`);
+    }
+    return out;
+  }, PARADAS);
+  assert.deepEqual(vacias, [], vacias.length + ' pantallas vacías → ' + vacias.join(' · '));
+  return `${PARADAS.length} paradas, todas con datos`;
+});
+
 await caso('Las pantallas de datos salen LLENAS, no con guiones', async ()=>{
   /* La demo tenía clientes y reservas con nombres de campo inventados: la app
      no reventaba, pero pintaba una tabla de "—" y ceros. En un vídeo de venta

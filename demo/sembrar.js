@@ -224,8 +224,113 @@
   }
 
   DB.promos = [
-    {id: 9301, fecha: dia(3), titulo:'Menú de setas', descripcion:'Semana de la seta: tres platos fuera de carta.'},
-    {id: 9302, fecha: dia(12), titulo:'Cena de bodega', descripcion:'Maridaje con el Celler Roure, 24 plazas.'},
+    {id: 9301, fecha: dia(0), titulo:'Menú de setas', descripcion:'Semana de la seta: tres platos fuera de carta.'},
+    {id: 9302, fecha: dia(3), titulo:'Reseñas de Google', descripcion:'Pedir reseña a los clientes del fin de semana.'},
+    {id: 9303, fecha: dia(12), titulo:'Cena de bodega', descripcion:'Maridaje con el Celler Roure, 24 plazas.'},
+  ];
+
+  /* Las pantallas que se quedaban VACÍAS. Se vieron mirando el vídeo fotograma
+     a fotograma: rótulos prometiendo comandas, pedidos o control de plagas
+     sobre un "no hay nada todavía". Una demo con la mitad de las pantallas en
+     blanco no enseña la app, enseña un esqueleto. */
+
+  // Comandas de cocina: dos mesas abiertas y una ya servida. El estado de cada
+  // línea ('cocina' | 'preparando' | 'entregado') es lo que mueve la pantalla.
+  const ahora = new Date();
+  const haceMin = n => new Date(ahora.getTime() - n*60000).toISOString();
+  const linea = (p, estado, min) => ({name: p.name, qty: 1, price: p.price, recipeId: p.id,
+    ivaPct: 10, bebida: false, estado, costeUnitario: recipeCost(p),
+    pedidoAt: haceMin(min), entregadoAt: estado === 'entregado' ? haceMin(min - 8) : null});
+  DB.tpvOrders = [
+    {id: 9701, tableId: DB.tables[1].id, tipo:'mesa', pax: 4, status:'abierta', cerrada: false,
+     clienteNombre:'', camareroId: DB.employees[1] ? DB.employees[1].id : null,
+     createdAt: haceMin(22), tandas: [], recibidoEnCocinaAt: haceMin(21),
+     items: [linea(platos[0], 'entregado', 20), linea(platos[1], 'preparando', 12),
+             linea(platos[2], 'cocina', 6)]},
+    {id: 9702, tableId: DB.tables[3].id, tipo:'mesa', pax: 2, status:'abierta', cerrada: false,
+     clienteNombre:'', camareroId: DB.employees[1] ? DB.employees[1].id : null,
+     createdAt: haceMin(14), tandas: [], recibidoEnCocinaAt: haceMin(13),
+     items: [linea(platos[3], 'cocina', 10), linea(platos[4], 'cocina', 10)]},
+    // Un pedido para llevar abierto: el TPV tiene su propia sección de Take
+    // Away / Delivery y sin nada ahí decía "no hay pedidos para llevar ni
+    // delivery abierto" justo donde se enseña esa función.
+    {id: 9704, tipo:'takeaway', status:'abierta', cerrada: false, pagado: false,
+     /* Sin hora programada: un pedido "para ya". Con hora, la app lo aparta a
+        "programados para más tarde" si falta más de una hora, y la pantalla
+        volvía a quedarse vacía a según qué hora se abriera la demo. */
+     clienteNombre:'Marta Puig', clienteTelefono:'600 111 222',
+     date: dia(0), createdAt: haceMin(9), tandas: [],
+     items: [linea(platos[0], 'preparando', 8), linea(platos[2], 'cocina', 8)]},
+    {id: 9703, tableId: DB.tables[0].id, tipo:'mesa', pax: 3, status:'abierta', cerrada: true,
+     clienteNombre:'', camareroId: DB.employees[1] ? DB.employees[1].id : null,
+     createdAt: haceMin(75), tandas: [], recibidoEnCocinaAt: haceMin(74),
+     items: [linea(platos[1], 'entregado', 70), linea(platos[5] || platos[0], 'entregado', 62)]},
+  ];
+
+  /* Historial de pedidos a proveedor. El estado es una clave fija en
+     español (BORRADOR | ENVIADO | RECIBIDO): con cualquier otra cosa la
+     etiqueta sale en gris y sin traducir. */
+  const ing = DB.ingredients;
+  const lineaPedido = (n, cantidad, precio) => ({ingredientId: ing[n] ? ing[n].id : 1,
+    name: ing[n] ? ing[n].name : 'Producto', cantidad, precio, recibida: true});
+  DB.purchaseOrders = [
+    {id: 9801, supplier:'Hortalisses Vic', date: dia(-2), estado:'RECIBIDO', area:'cocina',
+     items:[lineaPedido(0, 12, 1.9), lineaPedido(1, 8, 2.4), lineaPedido(2, 5, 3.1)],
+     notas:'', recepcion: dia(-1), recibidoPor:'Nuria', comprobacion:''},
+    {id: 9802, supplier:'Peix del Port', date: dia(-1), estado:'ENVIADO', area:'cocina',
+     items:[lineaPedido(3, 6, 14.5), lineaPedido(4, 4, 18.2)],
+     notas:'Entrega antes de las 9h', recepcion: null, comprobacion:''},
+    {id: 9803, supplier:'Cárnicas Pérez', date: dia(0), estado:'BORRADOR', area:'cocina',
+     items:[lineaPedido(5, 10, 9.4)], notas:'', recepcion: null, comprobacion:''},
+    {id: 9804, supplier:'Forn Vell', date: dia(-6), estado:'RECIBIDO', area:'cocina',
+     items:[lineaPedido(6, 20, 1.1)], notas:'', recepcion: dia(-6), recibidoPor:'Marc', comprobacion:''},
+  ];
+
+  // Distribución del trabajo: sin esto, la pantalla salía con todos los
+  // empleados a cero y parecía que los botones no hacían nada.
+  const tareas = [
+    ['Fondo oscuro: colar y enfriar', 'Escalivada del servicio', 'Repasar cámara de pescado'],
+    ['Mise en place de entrantes', 'Pan y mantequilla', 'Montar postres del día'],
+    ['Salsas de la semana', 'Control de temperaturas', 'Pedido a Peix del Port'],
+  ];
+  DB.workDistribution = {};
+  DB.employees.forEach((e, i) => {
+    const suyas = tareas[i % tareas.length];
+    DB.workDistribution[e.id] = {
+      platos: DB.recipes.filter(r => !r.isBase).slice(i, i + 2).map(r => r.id),
+      produccion: {0: suyas.map((txt, k) => ({id: 9900 + i*10 + k, text: txt}))},
+      doneDates: {},
+    };
+  });
+
+  // Control de plagas: es un registro trimestral, así que con dos revisiones
+  // y la próxima fecha ya se entiende para qué sirve.
+  DB.limpieza = DB.limpieza || {};
+  /* Temperaturas de cámara: dos tomas al día, mañana y tarde, como se lleva
+     de verdad un registro de APPCC. El estado lo calcula la app a partir del
+     tipo y el valor, así que aquí solo se apunta lo que se midió. */
+  DB.limpieza.temperaturas = [];
+  [['Cámara de pescado','nevera',[2.0,2.4]], ['Cámara de carne','nevera',[3.1,3.4]],
+   ['Congelador','congelador',[-19,-18.4]]].forEach(([equipo, tipo, temps], k) => {
+    for(let d = 0; d < 6; d++){
+      temps.forEach((base, j) => {
+        const temp = Math.round((base + azar()*0.4 - 0.2) * 10) / 10;
+        DB.limpieza.temperaturas.push({
+          id: 9960 + k*100 + d*10 + j, fecha: dia(-d), hora: j ? '18:30' : '09:15',
+          equipo, tipo, temp,
+          estado: (typeof computeTempEstado === 'function') ? computeTempEstado(tipo, temp) : 'OK',
+          responsable: DB.employees[k % DB.employees.length].name, zona:'cocina',
+        });
+      });
+    }
+  });
+  DB.limpieza.plagas = [
+    {id: 9951, fecha: dia(-95), area:'Cocina y almacén', hallazgos:'Sin hallazgos',
+     accion:'Revisión trimestral, cebos repuestos', proxima: dia(-5),
+     responsable:'Control Plagues Osona', zona:'cocina'},
+    {id: 9952, fecha: dia(-5), area:'Cocina, almacén y terraza', hallazgos:'Sin hallazgos',
+     accion:'Revisión trimestral, cebos repuestos', proxima: dia(85),
+     responsable:'Control Plagues Osona', zona:'cocina'},
   ];
 
   /* El indicador de nube, en verde. La demo no se conecta a ninguna nube de

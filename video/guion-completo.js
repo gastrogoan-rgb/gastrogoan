@@ -127,7 +127,11 @@ export const GUION = [
   },
   async a => {
     await a.pulsar('Gastos Variables', {tras: .5, rotulo: 'Costes variables: la compra de cada semana'});
-    await a.pulsar('Ago', {tras: .8, rotulo: 'Mes a mes, con el mes cerrado delante'});
+    // Hay DOS tiras de meses en Gestión Económica, la de Ventas
+    // (#ventas-months) y la de esta pestaña (#gv-months). Sin decir en cuál,
+    // el clic se lo llevaba la de Ventas y aquí seguía saliendo el mes en
+    // curso, con un food cost del 100%.
+    await a.pulsar('Ago', {dentro: '#gv-months', tras: .8, rotulo: 'Mes a mes, con el mes cerrado delante'});
     await a.recorrer(1.8);
   },
   async a => {
