@@ -2761,6 +2761,10 @@ function renderHorariosPersonal(){
       </div>
     </div>
     ` : ''}
+    ${myEmployeeId != null ? `
+    <div class="manual-warning" style="margin-bottom:12px">
+      <i class="ti ti-info-circle"></i> ${t('hr.personal.employeeScopeNote')}
+    </div>` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
@@ -3021,7 +3025,14 @@ function saveEmployee(id){
   // comprobación es la que de verdad impide dar de alta un empleado o
   // tocar canUnlockEdit (acceso a costes/márgenes) llamando a la función
   // directamente sin ser el propietario.
-  if(!isOwnerSession()) return;
+  //
+  // ⚠️ Y tiene que DECIRLO. Hacía `return` a secas: el jefe de cocina, que
+  // sí tiene permiso de edición de su área, llegaba al formulario, rellenaba,
+  // pulsaba Guardar y no pasaba nada — ni se cerraba la ventana ni le decían
+  // por qué. Lo contó el dueño como "entro como cocinero con edición y no me
+  // deja editar los empleados": no era que no le dejara, era que no se lo
+  // explicaba. Un permiso que se niega en silencio se lee como una app rota.
+  if(!isOwnerSession()){ showToast(t('msg.staffOwnerOnly'), 5000); return; }
   const name = document.getElementById('emp-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const rol = document.getElementById('emp-rol').value.trim();
