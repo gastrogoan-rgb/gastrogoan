@@ -42,19 +42,25 @@ const FONDO = '0x16150F';                  // el verde casi negro de la cabecera
    45 de barra de Android abajo. Lo de en medio es la app. */
 const RECORTE = 'crop=1920:950:0:85';
 
-// Cada trozo: dónde empieza, cuánto dura y qué se lee debajo.
+/* Cada trozo: dónde empieza, cuánto dura y qué se lee debajo.
+   Los tiempos están comprobados fotograma a fotograma sobre la grabación: la
+   primera tanda se eligió a ojo y la mitad caían en la pantalla equivocada o
+   en una vacía (Pedidos sin pedidos, el Escandallo dando 0,00 €). Y ninguno
+   pasa del segundo 243, que es cuando la cabecera se pone en rojo con "Error
+   de nube" y ya no se va. */
 const TROZOS = [
-  {t: 19.0, d: 6.0, txt: 'Tres áreas: Cocina, Sala y Gestión'},
-  {t: 52.0, d: 7.0, txt: 'Todo lo de cocina, en un solo sitio'},
-  {t: 42.0, d: 6.0, txt: 'Tu carta, con sus precios y su disponibilidad'},
-  {t:120.0, d: 8.0, txt: 'El catálogo de materia prima ya viene hecho'},
-  {t:133.0, d: 8.0, txt: 'Stock con alertas de mínimos'},
-  {t:102.0, d: 8.0, txt: 'Fichas técnicas: la receta que ejecuta tu equipo'},
+  {t: 24.0, d: 5.0, txt: 'Tres áreas: Cocina, Sala y Gestión'},
+  {t: 39.0, d: 6.0, txt: 'Tu carta, por secciones y con sus precios'},
+  {t: 50.0, d: 7.0, txt: 'I+D: crea platos y menús con TUS ingredientes'},
+  {t: 63.0, d: 7.0, txt: 'El catálogo de materia prima ya viene hecho'},
+  {t: 99.0, d: 6.0, txt: 'Fichas técnicas: la receta que ejecuta tu equipo'},
+  {t:134.0, d: 7.0, txt: 'Stock con alertas de mínimos'},
   {t:150.0, d: 7.0, txt: 'Turnos, fichajes y horas de tu equipo'},
-  {t:182.0, d: 7.0, txt: 'Y quién hace qué en cada turno'},
-  {t:203.0, d: 8.0, txt: 'Los papeles de sanidad, hechos'},
-  {t:224.0, d: 8.0, txt: 'El TPV: mesas, comandas y cobro'},
-  {t:236.0, d: 9.0, txt: 'De la comanda al cobro, sin salir de la app'},
+  {t:179.0, d: 7.0, txt: 'Y quién hace qué en cada turno'},
+  {t:195.0, d: 7.0, txt: 'Los papeles de sanidad, hechos'},
+  {t:219.0, d: 7.0, txt: 'Sala: TPV, reservas y clientes'},
+  {t:228.0, d: 7.0, txt: 'Abrir mesa en dos toques'},
+  {t:237.0, d: 6.0, txt: 'De la comanda al cobro, sin salir de la app'},
 ];
 
 const TMP = '/tmp/gg-montaje';
@@ -92,7 +98,11 @@ TROZOS.forEach((tr, i) => {
   process.stdout.write(`  trozo ${i+1}/${TROZOS.length} · ${tr.txt}\n`);
   execFileSync(ffmpeg, ['-y','-v','error',
     '-ss', String(tr.t), '-t', String(tr.d), '-i', FUENTE,
-    '-i', path.join(ROT, `b${i}.png`),
+    /* ⚠️ El rótulo entra EN BUCLE, no como imagen suelta. Con una sola imagen,
+       el fundido de alfa la deja transparente en el instante 0 y overlay
+       repite ESE fotograma para siempre: el rótulo no aparecía nunca, y sin
+       dar ningún error. */
+    '-loop','1','-framerate',String(FPS),'-t',String(tr.d), '-i', path.join(ROT, `b${i}.png`),
     '-filter_complex',
       `[0:v]${RECORTE},pad=${W}:${H}:0:0:color=${FONDO},fps=${FPS}[v];` +
       // El rótulo entra a los 0,25 s, no de golpe con el corte: aparecer a la
