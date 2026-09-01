@@ -28,6 +28,14 @@ async function nuevoDispositivo(nombre){
 
 async function arrancar(d, {employeeId} = {}){
   await d.page.goto('http://localhost:8951/index.html',{waitUntil:'domcontentloaded'});
+  /* ⚠️ Hay que ESPERAR a que la app termine de cargar su base de datos antes
+     de tocarla. loadDB() es asíncrona: escribiendo aquí a pelo se rellena el
+     DB por defecto, se guarda, y un instante después loadDB() resuelve y
+     REEMPLAZA DB entero con lo que había en IndexedDB — que no tiene nada.
+     La nube del negocio desaparecía así, y el aparato se quedaba en local:
+     seis de los ocho escenarios fallaban por esto, y el síntoma que se veía
+     ("no conecta") apuntaba a la red, que no tenía nada que ver. */
+  await d.page.evaluate(() => (typeof dbReadyPromise !== 'undefined') ? dbReadyPromise : null).catch(()=>{});
   await d.page.evaluate(async ({code, dburl, employeeId})=>{
     localStorage.setItem('gastrogoan_license_v1',JSON.stringify({code, tenantId: ggBizTenantId(code)}));
     localStorage.setItem('gastrogoan_owner_pass_prompted','1');
