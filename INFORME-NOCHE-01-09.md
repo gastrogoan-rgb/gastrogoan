@@ -53,6 +53,14 @@ Tres fallos que salieron al hacerlo, y que se habrían visto en el vídeo:
 | Un plato al **3,5% de food cost** | El bacalao se compra por gramos y puse la cantidad como si fueran kilos |
 | **"Error de nube"** en rojo en la cabecera | La demo no tiene nube real y el indicador lo cantaba. Lo peor que puede salir en un vídeo de venta |
 | **Clientes con guiones y ceros**, y "Personal" en blanco | Nombres de campo y de pantalla inventados: `nombre` en vez de `name`, `empleados` en vez de `horarios` |
+| **El resultado del mes igual que la facturación** | La demo no tenía ni un gasto. Un P&L con costes a cero es lo primero que delata una demo |
+| Y al meterlos, **el mes pasado en pérdidas** | Cifras infladas. Un restaurante que pierde dinero no vende la app |
+
+Ahora las cuentas son las de un bistró que va bien: **~15.500 € de
+facturación, 31% de food cost, 13% de margen**, con nóminas, alquiler,
+suministros y las compras a proveedores mes a mes. Y del mes en curso solo
+entran las compras que ya habrían ocurrido: si no, el día 1 salía un mes
+entero de gastos contra un día de ventas.
 
 El último es el importante: **`navigate('empleados')` no da error, deja la
 pantalla en blanco.** Se grabó un vídeo entero con el rótulo "Personal —
@@ -78,13 +86,20 @@ y deja **63 capturas** en `test/capturas/` para poder mirarlas a ojo.
 **El hallazgo real: los botones encogían justo donde más falta hace el dedo.**
 El proyecto se fijó 44 px como mínimo táctil, pero las reglas responsive iban
 por **ancho de pantalla** y hacían lo contrario: a partir de 1024 px los
-botones pequeños bajaban a **34 px**. Una tablet de 820 px se maneja con el
-dedo, no con ratón.
+botones bajaban a **34-36 px** en las pantallas de trabajo (barra de
+herramientas, cabecera, acciones de cada fila). Una tablet de 820 px se maneja
+con el dedo, no con ratón.
 
 Arreglado preguntando por el **tipo de puntero** en vez de por el ancho
 (`pointer: coarse` = dedo). El escritorio conserva su densidad y ningún
 aparato táctil baja de 44. Excepción a propósito: los +/− de la comanda del
 TPV, que son una rejilla densa de 40 px pensada para el pase.
+
+Y una lección por el camino: el primer intento **no funcionó y parecía que
+sí**. Las reglas de `.toolbar .btn` llevan dos clases y pesan más que un
+`.btn` a secas, así que ganaban aunque la mía fuera después. En CSS no manda
+solo el orden. Verificado quitando el arreglo: la auditoría pasa de 3
+hallazgos a 34.
 
 También corregido un texto desfasado en I+D que hablaba de "en cada paso",
 cuando los pasos ya no existen.

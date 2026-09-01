@@ -97,6 +97,45 @@
     }
   });
   DB.turnos = turnos;
+  /* Gastos: sin ellos, el resultado del mes salía igual que la facturación —
+     un P&L con costes a cero es lo primero que delata una demo. Los fijos son
+     mensuales; los variables, las compras a proveedores de cada mes. */
+  const hoyD = new Date();
+  DB.ge = DB.ge || {};
+  /* Las proporciones son las de un bistró que va bien, no las de un ejemplo
+     cualquiera: sobre ~15.900 € de facturación, un 31% de materia prima, un
+     39% de personal y un resto de estructura, para un resultado alrededor del
+     15%. Con las cifras infladas el mes pasado salía en PÉRDIDAS, y una demo
+     que enseña un restaurante que pierde dinero no vende nada. */
+  DB.ge.fijos = [
+    {id: 9401, nombre:'Alquiler del local', importe: 1500, periodicidadMeses: 1, iva: 21, categoria:'LOCAL'},
+    {id: 9402, nombre:'Nóminas y seguros sociales', importe: 6200, periodicidadMeses: 1, iva: 0, categoria:'PERSONAL'},
+    {id: 9403, nombre:'Luz, agua y gas', importe: 600, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
+    {id: 9404, nombre:'Gestoría', importe: 180, periodicidadMeses: 1, iva: 21, categoria:'SERVICIOS'},
+    {id: 9405, nombre:'Seguro del negocio', importe: 780, periodicidadMeses: 12, iva: 0, categoria:'SEGUROS'},
+    {id: 9406, nombre:'Internet y telefonía', importe: 65, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
+  ];
+  DB.ge.variables = [];
+  for(let m = 0; m < 3; m++){
+    const f = new Date(hoyD); f.setMonth(f.getMonth() - m);
+    const año = f.getFullYear(), mes = f.getMonth() + 1;
+    const compras = [
+      ['Hortalisses Vic', 970], ['Peix del Port', 1450],
+      ['Cárnicas Pérez', 1680], ['Forn Vell', 300], ['Distribucions Camp', 500],
+    ];
+    compras.forEach(([prov, base], i) => {
+      const diaCompra = 5 + i*4;
+      /* Del mes en curso solo entran las compras que ya habrían ocurrido. Si
+         no, el día 1 el resultado del mes salía con un mes entero de compras
+         contra un día de ventas: una pérdida enorme que no es real. */
+      if(m === 0 && diaCompra > hoyD.getDate()) return;
+      const fecha = `${año}-${String(mes).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
+      DB.ge.variables.push({id: 9500 + m*10 + i, concepto: 'Compras ' + prov, proveedor: prov,
+        importe: Math.round(base * (0.9 + Math.random()*0.2)), iva: 10,
+        fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});
+    });
+  }
+
   DB.promos = [
     {id: 9301, fecha: dia(3), titulo:'Menú de setas', descripcion:'Semana de la seta: tres platos fuera de carta.'},
     {id: 9302, fecha: dia(12), titulo:'Cena de bodega', descripcion:'Maridaje con el Celler Roure, 24 plazas.'},

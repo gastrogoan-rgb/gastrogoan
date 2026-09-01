@@ -134,6 +134,31 @@ await caso('Las pantallas de datos salen LLENAS, no con guiones', async ()=>{
   return `${r.clientes} clientes · ${r.ventasConCliente} ventas con cliente · ${r.ventasHoy} de hoy`;
 });
 
+await caso('Las cuentas del negocio son las de un bistró que va bien', async ()=>{
+  /* El resultado del mes salía igual que la facturación porque no había NI UN
+     gasto: un P&L con costes a cero es lo primero que delata una demo. Y con
+     las primeras cifras que puse, el mes pasado salía en pérdidas — que no
+     vende mucho mejor. */
+  const r = await page.evaluate(()=>{
+    const hoy = new Date();
+    const f = new Date(hoy); f.setMonth(f.getMonth() - 1);
+    const mp = f.toISOString().slice(0,7);
+    const ventas = (DB.sales||[]).filter(v => String(v.date).slice(0,7) === mp).reduce((s,v) => s+v.total, 0);
+    const compras = geTotalVariablesNetoMes(f.getFullYear(), f.getMonth()+1);
+    const fijos = geTotalFijosNeto();
+    return {ventas, compras, fijos, resultado: ventas - compras - fijos,
+            personal: typeof geTotalPersonalNeto === 'function' ? geTotalPersonalNeto() : 0};
+  });
+  assert.ok(r.ventas > 10000, 'un mes cerrado tiene que tener facturación de verdad');
+  assert.ok(r.compras > 0 && r.fijos > 0, 'y gastos: sin ellos el P&L es de mentira');
+  const fc = r.compras / r.ventas * 100;
+  const margen = r.resultado / r.ventas * 100;
+  assert.ok(fc > 22 && fc < 38, `el food cost del mes tiene que ser creíble, es ${fc.toFixed(1)}%`);
+  assert.ok(margen > 5 && margen < 25, `y el margen también: ${margen.toFixed(1)}%`);
+  assert.ok(r.resultado > 0, 'una demo que enseña un restaurante en pérdidas no vende nada');
+  return `${Math.round(r.ventas)} € · food cost ${fc.toFixed(1)}% · margen ${margen.toFixed(1)}%`;
+});
+
 await caso('El guion del vídeo no apunta a ninguna pantalla inexistente', async ()=>{
   /* `navigate('empleados')` no da error: deja la pantalla EN BLANCO. En el
      vídeo salía el rótulo "Personal — turnos, fichajes y nóminas" sobre un
