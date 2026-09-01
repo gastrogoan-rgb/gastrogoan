@@ -151,6 +151,48 @@ const conectado = d => d.page.evaluate(()=> typeof cloudRef !== 'undefined' && !
   await A.page.close(); await B.page.close();
 }
 
+/* ═══ 5. BORRAR UNA CARPETA: ¿la resucita el otro dispositivo? ═══════
+   Las carpetas (ingredientCategories / recipeCategories) son NOMBRES: no
+   tienen id, así que mergeArraysById las dejaba pasar de largo y mandaba la
+   lista de la nube entera. Con dos aparatos, el que no se había enterado del
+   borrado devolvía la carpeta y reaparecía sola.
+   Este es el único sitio donde se puede comprobar de verdad: hace falta
+   Firebase escribiendo y dos navegadores que no comparten nada. */
+{
+  const CODE='ESCEN005';
+  const A = await nuevoDispositivo(); await arrancar(A, CODE);
+  const B = await nuevoDispositivo(); await arrancar(B, CODE);
+  await new Promise(r=>setTimeout(r,2500));
+
+  // Los dos parten de las mismas cuatro carpetas.
+  await A.page.evaluate(()=>{
+    DB.ingredientCategories = ['Pescados','Verduras','Salsas','Congelados'];
+    saveDB();
+  });
+  await new Promise(r=>setTimeout(r,4000));
+  const arrancaIgual = await B.page.evaluate(()=> (DB.ingredientCategories||[]).length);
+
+  // A borra una carpeta. B, que todavía no lo sabe, crea otra.
+  await A.page.evaluate(()=>{
+    DB.ingredientCategories = DB.ingredientCategories.filter(c => c !== 'Salsas');
+    saveDB();
+  });
+  await B.page.evaluate(()=>{
+    DB.ingredientCategories = [...DB.ingredientCategories, 'DesdeElMovil'];
+    saveDB();
+  });
+  await new Promise(r=>setTimeout(r,6000));
+
+  const final = await A.page.evaluate(()=> [...(DB.ingredientCategories||[])].sort());
+  const finalB = await B.page.evaluate(()=> [...(DB.ingredientCategories||[])].sort());
+  ok('7. Una carpeta borrada no vuelve cuando sincroniza el otro aparato',
+     arrancaIgual === 4 && !final.includes('Salsas') && !finalB.includes('Salsas'),
+     'tablet: '+JSON.stringify(final)+' · móvil: '+JSON.stringify(finalB));
+  ok('8. Y la que creó el otro aparato sí llega',
+     final.includes('DesdeElMovil'), 'tablet: '+JSON.stringify(final));
+  await A.page.close(); await B.page.close();
+}
+
 for(const c of contextos){ try{ await c.close(); }catch(e){} }
 await browser.close();
 console.log('\n'+'─'.repeat(60));

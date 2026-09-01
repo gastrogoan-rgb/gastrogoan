@@ -2759,7 +2759,13 @@ function mergeListaDeNombres(local, remote, lastSyncedJson){
   // Sin foto anterior no hay forma de distinguir "borrado aquí" de "todavía
   // no llegó": se hace lo de siempre y manda la nube, que es lo seguro.
   if(!Array.isArray(antes)) return remote;
-  const clave = x => (x && typeof x === 'object') ? `${x.name}\u0000${x.area || ''}` : String(x);
+  /* La misma carpeta puede estar guardada de dos formas: las de siempre son
+     texto suelto ("Postres") y las que se crean al renombrar llevan área
+     ({name:'Postres', area:'cocina'}). Si la clave incluyera el área, la
+     versión de la nube y la de aquí se leerían como carpetas DISTINTAS y se
+     acabarían duplicando en la lista. Se compara solo por el nombre, que es
+     lo que ve el hostelero. */
+  const clave = x => String((x && typeof x === 'object') ? x.name : x);
   const enAntes = new Set(antes.map(clave));
   const enLocal = new Set(local.map(clave));
   const enRemoto = new Set(remote.map(clave));

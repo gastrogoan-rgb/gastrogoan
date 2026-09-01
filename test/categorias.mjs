@@ -288,6 +288,27 @@ await caso('Sin foto anterior, manda la nube (que es lo seguro)', async ()=>{
   return 'ante la duda, la nube';
 });
 
+await caso('Una carpeta guardada como texto y como objeto es la MISMA', async ()=>{
+  /* Las carpetas de receta de siempre son texto suelto ("Postres"); las que
+     se crean al renombrar llevan área ({name, area}). Si la fusión las
+     tratara como distintas, la lista acabaría con la misma carpeta dos
+     veces — una por cada forma. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    DB.recipeCategories = ['Postres', {name:'Entrantes', area:'cocina'}];
+    saveDB();
+    lastSyncedSnapshot = lastSyncedSnapshot || {};
+    lastSyncedSnapshot.recipeCategories = JSON.stringify(DB.recipeCategories);
+    // La nube las tiene las dos, pero al revés: la de objeto como texto.
+    applyRemoteBlock('recipeCategories', ['Postres', 'Entrantes', 'Nueva']);
+    const nombres = DB.recipeCategories.map(c => (c && c.name) || c);
+    return {nombres, repetidas: nombres.length !== new Set(nombres).size};
+  });
+  assert.equal(r.repetidas, false, 'salieron duplicadas: ' + r.nombres.join(', '));
+  assert.ok(r.nombres.includes('Nueva'), 'y la nueva de la nube tiene que llegar');
+  return r.nombres.join(', ');
+});
+
 await caso('Ningún error de JavaScript', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales.slice(0,4), [], reales.slice(0,2).join(' | '));
