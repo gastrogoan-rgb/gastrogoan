@@ -804,7 +804,10 @@ td.wrap{white-space:normal}
   width:min(400px, calc(100% - 32px));
   background:#fff;border-radius:18px;
   box-shadow:0 18px 50px rgba(28,26,23,.32);padding:18px 20px 16px;
-  max-height:calc(100vh - 40px);overflow-y:auto;
+  /* El 100dvh de después es para iOS: allí 100vh no cuenta la barra de
+     direcciones, así que la ventana queda más alta que el hueco real y el
+     último botón se va debajo de la barra, donde no se puede pulsar. */
+  max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;
   transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1);
 }
 .tour-bubble-centered{
@@ -890,7 +893,8 @@ td.wrap{white-space:normal}
    debajo de la cabecera en vez de debajo de un botón flotante. */
 .help-panel{
   display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:340px;max-width:calc(100vw - 32px);
-  height:480px;max-height:calc(100vh - var(--header-h) - 30px);background:var(--surface);border-radius:var(--radius);
+  height:480px;max-height:calc(100vh - var(--header-h) - 30px);
+  max-height:calc(100dvh - var(--header-h) - 30px);background:var(--surface);border-radius:var(--radius);
   box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden;
   border:1px solid var(--border);
 }
@@ -1309,7 +1313,7 @@ td.wrap{white-space:normal}
   /* Toast — ensure visible */
   .toast{bottom:calc(24px + env(safe-area-inset-bottom));max-width:90%;font-size:13px}
 
-  .help-panel{max-height:calc(100vh - var(--header-h) - 20px)}
+  .help-panel{max-height:calc(100vh - var(--header-h) - 20px);max-height:calc(100dvh - var(--header-h) - 20px)}
 
   /* Modals — ensure content visible */
   .modal{max-height:85vh;max-height:85dvh}
@@ -1915,6 +1919,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .app-header .btn{min-width:44px}
   .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
   .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
+
+  /* iPhone y iPad: Safari hace ZOOM solo al tocar un campo cuya letra mida
+     menos de 16 px, y después deja la pantalla desencuadrada — el hostelero
+     tiene que volver a alejar a pellizcos cada vez que escribe algo. No hay
+     forma de desactivarlo (bloquear el zoom con user-scalable=no rompería la
+     accesibilidad y iOS lo ignora desde hace años); la única cura es que
+     ningún campo baje de 16 px en un aparato táctil.
+     Va con !important porque las reglas que lo bajan a 13-14 px son más
+     específicas (`.filter-compact .field input`, `.dist-field input`…) y si
+     no, ganan ellas. Solo afecta al tamaño de la letra: el alto, el ancho y
+     el relleno de cada campo se quedan como están. */
+  input, select, textarea,
+  .filter-compact .field input, .filter-compact .field select,
+  .help-chat-input-row input, .chat-author-row select,
+  .ge-input-row input, .dist-field input, #reservas-search-input,
+  /* Estos dos hay que nombrarlos: fijan 12 y 14 px con !important y una
+     CLASE, que pesa más que un `input` a secas — con !important en los dos
+     lados gana el más específico, no el que va después. Es la misma trampa
+     que ya se pisó con los botones de la barra de herramientas. */
+  .carta-schedule-time, .mn-horario-time{
+    font-size:16px !important;
+  }
 }
 </style>
 </head>
@@ -2809,7 +2835,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 17:22';
+const GG_BUILD = '01/09/2026 18:05';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -8771,6 +8797,13 @@ function sendPushToAll(title, body){
 // a uno anterior sobre lo mismo (p. ej. no hay ningún caso así hoy).
 function notifyDesktop(title, body, tag){
   if(!desktopNotificationsEnabled()) return;
+  /* Safari de iPhone y iPad no tiene Notification: allí `new Notification`
+     es un ReferenceError. desktopNotificationsEnabled() ya lo comprueba, pero
+     esa comprobación está en OTRA función y aquí abajo hay tres sitios que
+     construyen la notificación — uno dentro de un .then(), donde el error se
+     traga la promesa y no lo ve nadie. Se repite la comprobación aquí, que es
+     donde de verdad se usa. */
+  if(typeof Notification === 'undefined') return;
   const notifTag = tag || (title + '-' + genId());
   try{
     if(navigator.serviceWorker && navigator.serviceWorker.ready){
@@ -10124,6 +10157,7 @@ const I18N = {
     'title.editModeDesc': 'Introduce el PIN de acceso para activar la edición en esta sección.',
     'msg.staffOwnerOnly': 'Las fichas del personal (alta, datos y PIN) las lleva solo el propietario. Tú sí puedes organizar los turnos de tu equipo desde Día y Semana.',
     'hr.personal.employeeScopeNote': 'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.',
+    'msg.iosSaveHint': 'Se ha abierto en una pestaña nueva: pulsa el botón de Compartir y elige "Guardar en Archivos".',
     'msg.gestionOwnerOnly': 'Gestión es solo para el propietario del negocio.',
     'msg.needsEditPermission': 'Necesitas permiso de edición para entrar aquí. Pídeselo al propietario.',
     'title.bossAccess': 'Acceso como Jefe/a',
@@ -12209,6 +12243,7 @@ const I18N = {
     'title.editModeDesc': 'Introdueix el PIN d\'accés per activar l\'edició en aquesta secció.',
     'msg.staffOwnerOnly': 'Les fitxes del personal (alta, dades i PIN) les porta només el propietari. Tu sí que pots organitzar els torns del teu equip des de Dia i Setmana.',
     'hr.personal.employeeScopeNote': 'Aquí veus només la teva fitxa: les dades de contacte i el PIN dels teus companys són cosa del propietari. Per organitzar els torns de l\'equip, fes servir les pestanyes Dia i Setmana.',
+    'msg.iosSaveHint': 'S\'ha obert en una pestanya nova: prem el botó de Compartir i tria "Desa a Fitxers".',
     'msg.gestionOwnerOnly': 'Gestió és només per al propietari del negoci.',
     'msg.needsEditPermission': 'Necessites permís d\'edició per entrar aquí. Demana-l\'hi al propietari.',
     'title.bossAccess': 'Accés com a Cap',
@@ -14297,6 +14332,7 @@ const I18N = {
     'title.editModeDesc': 'Enter the access PIN to enable editing in this section.',
     'msg.staffOwnerOnly': 'Staff records (adding people, their details and PINs) are the owner\'s job. You can still organise your team\'s shifts from Day and Week.',
     'hr.personal.employeeScopeNote': 'You only see your own card here: your colleagues\' contact details and PINs are the owner\'s business. To organise the team\'s shifts, use the Day and Week tabs.',
+    'msg.iosSaveHint': 'It opened in a new tab: tap the Share button and choose "Save to Files".',
     'msg.gestionOwnerOnly': 'Management is for the business owner only.',
     'msg.needsEditPermission': 'You need edit permission to enter here. Ask the owner for it.',
     'title.bossAccess': 'Manager access',
@@ -42552,27 +42588,49 @@ function downloadCSV(rows, filename){
     return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
   const csv = rows.map(r => r.map(csvCell).join(';')).join('\r\n');
-  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  guardarArchivo(new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'}), filename);
 }
 
 function downloadJSON(obj, filename){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  guardarArchivo(new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'}), filename);
+}
+
+/* Guardar un archivo, también en iPhone y iPad.
+   El `<a download>` de toda la vida funciona en Chrome y en Android, pero en
+   Safari de iOS el atributo `download` sobre un blob se ignora: en vez de
+   guardarlo, ABRE el archivo en la misma pestaña. Y eso no es "no descarga":
+   es que al hostelero se le va la app de delante, con lo que estuviera
+   haciendo. Justo en la copia de seguridad, que es lo último que puede
+   fallar.
+   En iOS se usa la hoja de compartir del sistema (Web Share con archivos),
+   que es de donde se guarda en Archivos, se manda por correo o va a Drive —
+   el gesto que un usuario de iPad ya conoce. Si tampoco estuviera, se abre en
+   una pestaña NUEVA para no perder la app, y se le dice qué hacer. */
+function guardarArchivo(blob, filename){
+  const esApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS se hace pasar por Mac
+  if(esApple && typeof File === 'function' && navigator.canShare){
+    try{
+      const archivo = new File([blob], filename, {type: blob.type});
+      if(navigator.canShare({files: [archivo]})){
+        navigator.share({files: [archivo], title: filename})
+          .catch(() => {});   // si cancela la hoja de compartir, no es un error
+        return;
+      }
+    }catch(e){ /* sigue por el camino de abajo */ }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  if(esApple){ a.target = '_blank'; a.rel = 'noopener'; }
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  if(esApple && typeof showToast === 'function') showToast(t('msg.iosSaveHint'), 6000);
+  // En iOS la pestaña nueva todavía está leyendo el blob cuando esto corre:
+  // revocarlo al instante deja la descarga a medias.
+  setTimeout(() => URL.revokeObjectURL(url), esApple ? 20000 : 0);
 }
 
 function downloadFullBackup(){
