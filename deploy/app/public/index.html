@@ -1891,6 +1891,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .mesa-card:hover,.kpi:hover,.ge-kpi:hover,.kpi-mini:hover,.module-card:hover,.folder-card:hover{transform:none}
   .mesa-card .badge-amber .ti-bell-ringing{animation:none}
 }
+
+/* ── Objetivo táctil: 44 px de verdad ──
+   El proyecto se fijó 44 px como mínimo para poder pulsar con el dedo, pero
+   las reglas responsive iban por ANCHO de pantalla y hacían justo lo
+   contrario: a partir de 1024 px los .btn-sm bajaban a 34 px. Una tablet de
+   820 px se maneja con el dedo, no con ratón, así que ahí es donde MÁS falta
+   hace — y era donde más pequeños quedaban.
+
+   Se resuelve preguntando por el tipo de puntero en vez de por el ancho:
+   `pointer: coarse` es dedo (móvil, tablet) y `fine` es ratón. Así el
+   escritorio conserva su densidad y ningún aparato táctil baja de 44.
+
+   Excepción a propósito: los +/- de la comanda del TPV, que son una rejilla
+   densa de 40 px pensada para el pase y funcionan bien así. */
+@media (pointer: coarse){
+  .btn, .btn-sm, .ge-tab, .tab-btn, .month-pill{min-height:44px}
+  /* ⚠️ Estos tres hay que nombrarlos uno a uno. Llevan DOS clases, así que
+     pesan más que un `.btn` a secas y ganaban aunque esta regla venga
+     después: la de la barra de herramientas dejaba los botones en 36 px en
+     todas las pantallas de trabajo. En CSS no manda solo el orden. */
+  .toolbar .btn, .actions-cell .btn, .app-header .btn{min-height:44px}
+  .app-header .btn{min-width:44px}
+  .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
+  .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
+}
 </style>
 </head>
 <body>
@@ -2784,7 +2809,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 03:36';
+const GG_BUILD = '01/09/2026 12:00';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -9073,7 +9098,7 @@ function openTrashModal(){
             <td>${t(TRASH_TYPE_LABEL_KEY[x.type]||'common.unknown')}</td>
             <td>${escapeHtml(x.item[TRASH_TYPE_NAME_FIELD[x.type]] || '—')}</td>
             <td>${escapeHtml(x.deletedBy||'—')}</td>
-            <td>${escapeHtml(new Date(x.deletedAt).toLocaleString('es-ES'))}</td>
+            <td>${escapeHtml(new Date(x.deletedAt).toLocaleString(localeActual()))}</td>
             <td class="actions-cell">
               <button class="btn btn-sm" onclick="restoreTrashItem(${x.id})"><i class="ti ti-arrow-back-up"></i> ${t('trash.restore')}</button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="purgeTrashItem(${x.id})" title="${t('trash.purgeOne')}"><i class="ti ti-x"></i></button>
@@ -9151,7 +9176,7 @@ function renderAuditLogModal(){
         <thead><tr><th>${t('common.date')}</th><th>${t('trash.deletedBy')}</th><th>${t('audit.action')}</th></tr></thead>
         <tbody>${items.map(x => `
           <tr ${x.severity==='critical'?'style="background:var(--red-l)"':''}>
-            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString('es-ES'))}</td>
+            <td style="white-space:nowrap">${escapeHtml(new Date(x.ts).toLocaleString(localeActual()))}</td>
             <td>${escapeHtml(x.actor)}</td>
             <td style="${x.severity==='critical'?'color:var(--red);font-weight:700':''}">${x.severity==='critical'?'<i class="ti ti-alert-triangle"></i> ':''}${escapeHtml(x.summary)}</td>
           </tr>`).join('')}</tbody>
@@ -9353,7 +9378,7 @@ const I18N = {
     'idr.callsToday': 'Hoy llevas ${n} consultas de un máximo de ${tope} por dispositivo.',
     'idr.callsLeft': 'Te quedan ${n} consultas hoy',
     'idr.noAssistantTitle': 'El asistente todavía no está activado',
-    'idr.noAssistantBody': 'Puedes crear platos, menús y cartas a mano desde ya. Si activas el asistente, te irá proponiendo opciones en cada paso con tus ingredientes y tus precios.',
+    'idr.noAssistantBody': 'Para crear con el asistente necesitas activar tu clave. Él te propone platos y elaboraciones con criterio de cocina, y la aplicación los escandalla con TUS ingredientes y TUS precios.',
     'idr.setUpAssistant': 'Activar el asistente',
     'idr.dna': 'ADN gastronómico', 'idr.fillDna': 'Definir el ADN',
     'idr.dnaEmpty': 'Sin definir. Es lo que hace que las propuestas sean de TU negocio y no de un restaurante cualquiera.',
@@ -11205,7 +11230,8 @@ const I18N = {
     'title.prevWeek': 'Semana anterior', 'title.nextWeek': 'Semana siguiente',
     'title.moveUp': 'Subir', 'title.moveDown': 'Bajar',
     'businessTypes.map': {'Restaurante':'Restaurante','Bar':'Bar','Cafetería':'Cafetería','Brasería':'Brasería','Cervecería':'Cervecería','Gastrobar':'Gastrobar','Catering':'Catering','Food truck':'Food truck','Otro':'Otro'},
-    'ingredientCategories.map': {'Carnes':'Carnes','Pescados':'Pescados','Lácteos':'Lácteos','Verduras':'Verduras','Frutas':'Frutas','Cereales y Panadería':'Cereales y Panadería','Bebidas':'Bebidas','Condimentos y Especias':'Condimentos y Especias','Congelados':'Congelados','Otros':'Otros','Cervezas':'Cervezas','Vinos y Cavas':'Vinos y Cavas','Licores y Destilados':'Licores y Destilados','Refrescos y Mixers':'Refrescos y Mixers','Café e Infusiones':'Café e Infusiones','Hielo y Guarniciones':'Hielo y Guarniciones'},
+    'ingredientCategories.map': {'Verduras':'Verduras','Frutas':'Frutas','Carnes':'Carnes','Pescados y Marisco':'Pescados y Marisco','Huevos':'Huevos','Lácteos':'Lácteos','Panes y Bollería':'Panes y Bollería','Pastas':'Pastas','Arroces':'Arroces','Legumbres':'Legumbres','Aceites y Vinagres':'Aceites y Vinagres','Condimentos y Especias':'Condimentos y Especias','Despensa':'Despensa','Conservas':'Conservas','Embutidos y Fiambres':'Embutidos y Fiambres','Congelados':'Congelados','Bebidas':'Bebidas','Vinos Blancos':'Vinos Blancos','Vinos Tintos':'Vinos Tintos','Vinos Rosados':'Vinos Rosados','Cavas y Espumosos':'Cavas y Espumosos','Vermús y Aperitivos':'Vermús y Aperitivos','Cervezas':'Cervezas','Licores y Destilados':'Licores y Destilados','Refrescos':'Refrescos','Zumos':'Zumos','Aguas':'Aguas','Café e Infusiones':'Café e Infusiones','Leches y Batidos':'Leches y Batidos','Hielo y Guarniciones':'Hielo y Guarniciones','Despensa Sala':'Despensa Sala','Pescados':'Pescados','Cereales y Panadería':'Cereales y Panadería','Otros':'Otros','Vinos y Cavas':'Vinos y Cavas','Refrescos y Mixers':'Refrescos y Mixers'},
+    'ingredientNames.map': {},
     'loyaltyRewards.map': {'Postre gratis':'Postre gratis','Café o infusión gratis':'Café o infusión gratis','Chupito o bebida gratis':'Chupito o bebida gratis','Entrante gratis':'Entrante gratis','10% de descuento en la cuenta':'10% de descuento en la cuenta'},
     'hr.gfConceptLabels': {'RETRIBUCIÓN EMPRESARIO':'RETRIBUCIÓN EMPRESARIO','CUOTA AUTÓNOMOS (RETA)':'CUOTA AUTÓNOMOS (RETA)','SS AUTÓNOMOS':'SS AUTÓNOMOS','SUELDO BRUTO PERSONAL':'SUELDO BRUTO PERSONAL','SS EMPRESA':'SS EMPRESA','ALQUILER':'ALQUILER','SEGURO DEL LOCAL':'SEGURO DEL LOCAL','TASAS MUNICIPALES':'TASAS MUNICIPALES','ELECTRICIDAD':'ELECTRICIDAD','GAS':'GAS','AGUA':'AGUA','INTERNET/TELEFONÍA':'INTERNET/TELEFONÍA','GESTORÍA':'GESTORÍA','SOFTWARE/TPV':'SOFTWARE/TPV','COMISIONES BANCARIAS':'COMISIONES BANCARIAS','PRÉSTAMOS':'PRÉSTAMOS','MANTENIMIENTO':'MANTENIMIENTO','PUBLICIDAD':'PUBLICIDAD','OTROS GASTOS FIJOS':'OTROS GASTOS FIJOS'},
     'hr.variableCategoryLabels': {'MATERIA PRIMA':'MATERIA PRIMA','BEBIDAS':'BEBIDAS','CAFÉ/INFUSIONES':'CAFÉ/INFUSIONES','PACKAGING':'PACKAGING','CONSUMIBLES':'CONSUMIBLES','LIMPIEZA':'LIMPIEZA','COMISIONES VENTA':'COMISIONES VENTA','MANO DE OBRA EXTRA':'MANO DE OBRA EXTRA','OTROS':'OTROS'},
@@ -11430,7 +11456,7 @@ const I18N = {
     'idr.callsToday': 'Avui portes ${n} consultes d\'un màxim de ${tope} per dispositiu.',
     'idr.callsLeft': 'Et queden ${n} consultes avui',
     'idr.noAssistantTitle': 'L\'assistent encara no està activat',
-    'idr.noAssistantBody': 'Ja pots crear plats, menús i cartes a mà. Si actives l\'assistent, t\'anirà proposant opcions a cada pas amb els teus ingredients i els teus preus.',
+    'idr.noAssistantBody': 'Per crear amb l\'assistent has d\'activar la teva clau. Ell et proposa plats i elaboracions amb criteri de cuina, i l\'aplicació els escandalla amb ELS TEUS ingredients i ELS TEUS preus.',
     'idr.setUpAssistant': 'Activar l\'assistent',
     'idr.dna': 'ADN gastronòmic', 'idr.fillDna': 'Definir l\'ADN',
     'idr.dnaEmpty': 'Sense definir. És el que fa que les propostes siguin del TEU negoci i no d\'un restaurant qualsevol.',
@@ -13283,7 +13309,8 @@ const I18N = {
     'title.prevWeek': 'Setmana anterior', 'title.nextWeek': 'Setmana següent',
     'title.moveUp': 'Pujar', 'title.moveDown': 'Baixar',
     'businessTypes.map': {'Restaurante':'Restaurant','Bar':'Bar','Cafetería':'Cafeteria','Brasería':'Brasseria','Cervecería':'Cerveseria','Gastrobar':'Gastrobar','Catering':'Càtering','Food truck':'Food truck','Otro':'Altre'},
-    'ingredientCategories.map': {'Carnes':'Carns','Pescados':'Peixos','Lácteos':'Lactis','Verduras':'Verdures','Frutas':'Fruites','Cereales y Panadería':'Cereals i Fleca','Bebidas':'Begudes','Condimentos y Especias':'Condiments i Espècies','Congelados':'Congelats','Otros':'Altres','Cervezas':'Cerveses','Vinos y Cavas':'Vins i Caves','Licores y Destilados':'Licors i Destil·lats','Refrescos y Mixers':'Refrescos i Mixers','Café e Infusiones':'Cafè i Infusions','Hielo y Guarniciones':'Gel i Guarnicions'},
+    'ingredientCategories.map': {'Verduras':'Verdures','Frutas':'Fruites','Carnes':'Carns','Pescados y Marisco':'Peix i Marisc','Huevos':'Ous','Lácteos':'Lactis','Panes y Bollería':'Pans i Brioixeria','Pastas':'Pastes','Arroces':'Arrossos','Legumbres':'Llegums','Aceites y Vinagres':'Olis i Vinagres','Condimentos y Especias':'Condiments i Espècies','Despensa':'Rebost','Conservas':'Conserves','Embutidos y Fiambres':'Embotits i Fiambres','Congelados':'Congelats','Bebidas':'Begudes','Vinos Blancos':'Vins Blancs','Vinos Tintos':'Vins Negres','Vinos Rosados':'Vins Rosats','Cavas y Espumosos':'Caves i Escumosos','Vermús y Aperitivos':'Vermuts i Aperitius','Cervezas':'Cerveses','Licores y Destilados':'Licors i Destil·lats','Refrescos':'Refrescos','Zumos':'Sucs','Aguas':'Aigües','Café e Infusiones':'Cafè i Infusions','Leches y Batidos':'Llets i Batuts','Hielo y Guarniciones':'Gel i Guarnicions','Despensa Sala':'Rebost de Sala','Pescados':'Peixos','Cereales y Panadería':'Cereals i Fleca','Otros':'Altres','Vinos y Cavas':'Vins i Caves','Refrescos y Mixers':'Refrescos i Mixers'},
+    'ingredientNames.map': {'Tomate':'Tomàquet','Cebolla':'Ceba','Ajo':'All','Pimiento rojo':'Pebrot vermell','Pimiento verde':'Pebrot verd','Calabacín':'Carbassó','Berenjena':'Albergínia','Patata':'Patata','Zanahoria':'Pastanaga','Lechuga':'Enciam','Espinaca':'Espinac','Champiñón':'Xampinyó','Puerro':'Porro','Pepino':'Cogombre','Col':'Col','Brócoli':'Bròquil','Calabaza':'Carbassa','Apio':'Api','Espárrago verde':'Espàrrec verd','Alcachofa':'Carxofa','Limón':'Llimona','Naranja':'Taronja','Manzana':'Poma','Plátano':'Plàtan','Fresa':'Maduixa','Aguacate':'Alvocat','Uva':'Raïm','Pera':'Pera','Melón':'Meló','Sandía':'Síndria','Piña':'Pinya','Kiwi':'Kiwi','Mango':'Mango','Melocotón':'Préssec','Frutos rojos (mix)':'Fruits vermells (mix)','Solomillo de ternera':'Filet de vedella','Entrecot de ternera':'Entrecot de vedella','Carne picada de ternera':'Carn picada de vedella','Pechuga de pollo':'Pit de pollastre','Muslo de pollo':'Cuixa de pollastre','Pollo entero':'Pollastre sencer','Secreto ibérico':'Secret ibèric','Solomillo de cerdo':'Filet de porc','Costilla de cerdo':'Costella de porc','Panceta':'Cansalada','Cordero (paletilla)':'Xai (espatlla)','Chuletas de cordero':'Costelles de xai','Carne picada mixta':'Carn picada mixta','Conejo':'Conill','Pato (magret)':'Ànec (magret)','Merluza':'Lluç','Salmón':'Salmó','Atún fresco':'Tonyina fresca','Bacalao':'Bacallà','Lubina':'Llobarro','Dorada':'Orada','Boquerón':'Seitó','Sardina':'Sardina','Rape':'Rap','Pulpo':'Pop','Calamar':'Calamar','Sepia':'Sípia','Gamba':'Gamba','Langostino':'Llagostí','Mejillón':'Musclo','Almeja':'Cloïssa','Cigala':'Escamarlà','Marisco mixto (cocido)':'Marisc mixt (cuit)','Huevo de gallina (docena)':'Ou de gallina (dotzena)','Huevo de codorniz (docena)':'Ou de guatlla (dotzena)','Clara de huevo pasteurizada':'Clara d\'ou pasteuritzada','Leche entera':'Llet sencera','Nata para cocinar':'Nata per cuinar','Nata para montar':'Nata per muntar','Mantequilla':'Mantega','Queso mozzarella':'Formatge mozzarella','Queso parmesano':'Formatge parmesà','Queso manchego':'Formatge manxego','Queso de cabra':'Formatge de cabra','Queso crema':'Formatge cremós','Yogur natural':'Iogurt natural','Leche condensada':'Llet condensada','Requesón':'Mató','Pan de barra':'Barra de pa','Pan de hamburguesa':'Pa d\'hamburguesa','Pan de perrito':'Pa de frankfurt','Pan rallado':'Pa ratllat','Pan de molde':'Pa de motlle','Baguette':'Baguet','Masa de pizza':'Massa de pizza','Croissant':'Croissant','Bollería mixta':'Brioixeria variada','Picos / colines':'Bastonets de pa','Espagueti':'Espagueti','Macarrón':'Macarró','Tallarín':'Tallarina','Lasaña (placas)':'Lasanya (plaques)','Canelón (placas)':'Caneló (plaques)','Ravioli fresco':'Ravioli fresc','Ñoquis':'Nyoquis','Pasta fresca al huevo':'Pasta fresca a l\'ou','Fideos':'Fideus','Arroz bomba':'Arròs bomba','Arroz redondo':'Arròs rodó','Arroz basmati':'Arròs basmati','Arroz largo':'Arròs llarg','Arroz integral':'Arròs integral','Arroz para sushi':'Arròs per a sushi','Garbanzo seco':'Cigró sec','Lenteja':'Llentia','Alubia blanca':'Mongeta blanca','Alubia roja':'Mongeta vermella','Garbanzo cocido (bote)':'Cigró cuit (pot)','Lenteja cocida (bote)':'Llentia cuita (pot)','Guisante congelado':'Pèsol congelat','Haba':'Fava','Soja (grano)':'Soja (gra)','Aceite de oliva virgen extra':'Oli d\'oliva verge extra','Aceite de oliva suave':'Oli d\'oliva suau','Aceite de girasol':'Oli de gira-sol','Vinagre de vino':'Vinagre de vi','Vinagre de Módena':'Vinagre de Mòdena','Vinagre de manzana':'Vinagre de poma','Aceite de sésamo':'Oli de sèsam','Sal fina':'Sal fina','Sal gruesa':'Sal gruixuda','Pimienta negra molida':'Pebre negre mòlt','Pimentón dulce':'Pebre vermell dolç','Pimentón picante':'Pebre vermell picant','Orégano':'Orenga','Perejil seco':'Julivert sec','Tomillo':'Farigola','Romero':'Romaní','Laurel':'Llorer','Comino':'Comí','Curry':'Curri','Azafrán':'Safrà','Ajo en polvo':'All en pols','Canela molida':'Canyella mòlta','Mostaza':'Mostassa','Salsa de soja':'Salsa de soja','Caldo concentrado (bote)':'Brou concentrat (pot)','Levadura fresca':'Llevat fresc','Levadura química':'Llevat químic','Harina de trigo':'Farina de blat','Harina de maíz':'Farina de blat de moro','Harina de repostería':'Farina de rebosteria','Azúcar blanco':'Sucre blanc','Azúcar moreno':'Sucre morè','Miel':'Mel','Tomate triturado (bote)':'Tomàquet triturat (pot)','Tomate frito (bote)':'Tomàquet fregit (pot)','Puré de patata (copos)':'Puré de patata (flocs)','Maicena':'Maicena','Chocolate de cobertura':'Xocolata de cobertura','Frutos secos variados':'Fruits secs variats','Almendra':'Ametlla','Piñón':'Pinyó','Aceituna (bote)':'Oliva (pot)','Alcaparra (bote)':'Tàpera (pot)','Pepinillo (bote)':'Cogombret (pot)','Atún en aceite (lata)':'Tonyina en oli (llauna)','Anchoa en aceite (lata)':'Anxova en oli (llauna)','Mejillón en escabeche (lata)':'Musclo en escabetx (llauna)','Berberecho (lata)':'Escopinya (llauna)','Pimiento del piquillo (bote)':'Pebrot del piquillo (pot)','Espárrago blanco (bote)':'Espàrrec blanc (pot)','Maíz dulce (lata)':'Blat de moro dolç (llauna)','Champiñón en conserva (bote)':'Xampinyó en conserva (pot)','Jamón ibérico':'Pernil ibèric','Jamón serrano':'Pernil serrà','Jamón cocido':'Pernil dolç','Chorizo':'Xoriço','Salchichón':'Llonganissa','Lomo embuchado':'Llom embotit','Bacon / panceta curada':'Bacó / cansalada curada','Mortadela':'Mortadel·la','Salchicha fresca':'Salsitxa fresca','Morcilla':'Botifarra negra','Patata prefrita congelada':'Patata prefregida congelada','Verdura congelada (mix)':'Verdura congelada (mix)','Pescado congelado (surtido)':'Peix congelat (assortit)','Marisco congelado (surtido)':'Marisc congelat (assortit)','Masa de hojaldre congelada':'Massa de full congelada','Helado (tarrina)':'Gelat (terrina)','Agua mineral':'Aigua mineral','Refresco de cola':'Refresc de cola','Refresco de naranja':'Refresc de taronja','Zumo de naranja':'Suc de taronja','Café en grano':'Cafè en gra','Té / infusiones':'Te / infusions','Cerveza':'Cervesa','Vino tinto':'Vi negre','Vino blanco':'Vi blanc','Vino blanco verdejo':'Vi blanc verdejo','Vino blanco albariño':'Vi blanc albariño','Vino blanco viura':'Vi blanc viura','Vino blanco copa (genérico)':'Vi blanc copa (genèric)','Vino tinto joven':'Vi negre jove','Vino tinto crianza':'Vi negre criança','Vino tinto reserva':'Vi negre reserva','Vino tinto copa (genérico)':'Vi negre copa (genèric)','Vino rosado':'Vi rosat','Vino rosado copa (genérico)':'Vi rosat copa (genèric)','Cava brut':'Cava brut','Cava brut nature':'Cava brut nature','Champagne':'Xampany','Vino espumoso dulce':'Vi escumós dolç','Vermut rojo':'Vermut vermell','Vermut blanco':'Vermut blanc','Jerez fino':'Xerès fi','Jerez oloroso':'Xerès oloroso','Cerveza lager (barril)':'Cervesa lager (barril)','Cerveza lager (botellín)':'Cervesa lager (ampolla)','Cerveza sin alcohol':'Cervesa sense alcohol','Cerveza tostada/rubia especial':'Cervesa torrada/rossa especial','Sidra':'Sidra','Ginebra':'Ginebra','Vodka':'Vodka','Ron blanco':'Rom blanc','Ron añejo':'Rom envellit','Whisky':'Whisky','Brandy / Coñac':'Brandi / Conyac','Tequila':'Tequila','Orujo':'Aiguardent','Licor de hierbas':'Licor d\'herbes','Amaretto':'Amaretto','Baileys / licor de crema':'Baileys / licor de crema','Triple seco / Cointreau':'Triple sec / Cointreau','Pacharán':'Patxaran','Cola':'Cola','Cola sin cafeína/zero':'Cola sense cafeïna/zero','Naranja gaseosa':'Taronja amb gas','Limón gaseosa':'Llimona amb gas','Tónica':'Tònica','Ginger ale / Ginger beer':'Ginger ale / Ginger beer','Bitter (sin alcohol)':'Bitter (sense alcohol)','Soda':'Soda','Bebida energética':'Beguda energètica','Zumo de piña':'Suc de pinya','Zumo de tomate':'Suc de tomàquet','Zumo de melocotón':'Suc de préssec','Zumo de manzana':'Suc de poma','Mosto':'Most','Granadina':'Granadina','Agua mineral con gas':'Aigua mineral amb gas','Agua mineral sin gas':'Aigua mineral sense gas','Café molido':'Cafè mòlt','Café descafeinado':'Cafè descafeïnat','Té negro':'Te negre','Té verde':'Te verd','Manzanilla':'Camamilla','Poleo menta':'Poliol menta','Cacao en polvo':'Cacau en pols','Leche desnatada':'Llet desnatada','Leche de avena':'Llet de civada','Leche de soja':'Llet de soja','Leche de almendra':'Llet d\'ametlla','Nata para café':'Nata per al cafè','Horchata':'Orxata','Hielo':'Gel','Aceituna para cóctel':'Oliva per a còctel','Guinda para cóctel':'Guinda per a còctel','Sal para rimmer':'Sal per a rimmer','Azúcar para rimmer':'Sucre per a rimmer','Azúcar (sobres)':'Sucre (sobres)','Sacarina/edulcorante (sobres)':'Sacarina/edulcorant (sobres)','Sirope de vainilla':'Xarop de vainilla','Sirope de caramelo':'Xarop de caramel','Angostura / bitter de cóctel':'Angostura / bitter de còctel','Frutos secos para aperitivo':'Fruits secs per a aperitiu','Patatas fritas (bolsa)':'Patates fregides (bossa)','Servilletas de barra':'Tovallons de barra','Palillos de cóctel':'Escuradents de còctel','Pajitas':'Canyetes'},
     'loyaltyRewards.map': {'Postre gratis':'Postres gratis','Café o infusión gratis':'Cafè o infusió gratis','Chupito o bebida gratis':'Xopet o beguda gratis','Entrante gratis':'Entrant gratis','10% de descuento en la cuenta':'10% de descompte al compte'},
     'hr.gfConceptLabels': {'RETRIBUCIÓN EMPRESARIO':'RETRIBUCIÓ EMPRESARI','CUOTA AUTÓNOMOS (RETA)':'QUOTA AUTÒNOMS (RETA)','SS AUTÓNOMOS':'SS AUTÒNOMS','SUELDO BRUTO PERSONAL':'SOU BRUT PERSONAL','SS EMPRESA':'SS EMPRESA','ALQUILER':'LLOGUER','SEGURO DEL LOCAL':'ASSEGURANÇA DEL LOCAL','TASAS MUNICIPALES':'TAXES MUNICIPALS','ELECTRICIDAD':'ELECTRICITAT','GAS':'GAS','AGUA':'AIGUA','INTERNET/TELEFONÍA':'INTERNET/TELEFONIA','GESTORÍA':'GESTORIA','SOFTWARE/TPV':'SOFTWARE/TPV','COMISIONES BANCARIAS':'COMISSIONS BANCÀRIES','PRÉSTAMOS':'PRÉSTECS','MANTENIMIENTO':'MANTENIMENT','PUBLICIDAD':'PUBLICITAT','OTROS GASTOS FIJOS':'ALTRES DESPESES FIXES'},
     'hr.variableCategoryLabels': {'MATERIA PRIMA':'MATÈRIA PRIMERA','BEBIDAS':'BEGUDES','CAFÉ/INFUSIONES':'CAFÈ/INFUSIONS','PACKAGING':'PACKAGING','CONSUMIBLES':'CONSUMIBLES','LIMPIEZA':'NETEJA','COMISIONES VENTA':'COMISSIONS VENDA','MANO DE OBRA EXTRA':'MÀ D\'OBRA EXTRA','OTROS':'ALTRES'},
@@ -13511,7 +13538,7 @@ const I18N = {
     'idr.callsToday': 'Today you have used ${n} of a maximum ${tope} queries per device.',
     'idr.callsLeft': '${n} queries left today',
     'idr.noAssistantTitle': 'The assistant is not switched on yet',
-    'idr.noAssistantBody': 'You can already create dishes, set menus and menus by hand. Switch the assistant on and it will suggest options at every step, using your ingredients and your prices.',
+    'idr.noAssistantBody': 'To create with the assistant you need to activate your key. It proposes dishes and preps with real kitchen judgement, and the app costs them with YOUR ingredients and YOUR prices.',
     'idr.setUpAssistant': 'Switch the assistant on',
     'idr.dna': 'Culinary DNA', 'idr.fillDna': 'Define the DNA',
     'idr.dnaEmpty': 'Not defined. It is what makes the suggestions YOURS and not any restaurant\'s.',
@@ -14111,7 +14138,7 @@ const I18N = {
     'shift.morning': 'Morning', 'shift.afternoon': 'Afternoon', 'shift.split': 'Split', 'shift.rest': 'Rest',
     'shift.vacation': 'Vacation', 'shift.leave': 'Leave', 'shift.other': 'Other',
     'label.noShiftAssigned': 'No shift assigned', 'btn.assign': 'Assign', 'btn.newShift': 'New Shift',
-    'th.employee': 'Employee', 'th.shift': 'Shift', 'th.hours': 'Hours', 'label.totalHoursAbbrev': 'Total h.',
+    'th.employee': 'Employee', 'th.shift': 'Shift', 'th.hours': 'Hours', 'label.totalHoursAbbrev': 'Total hrs',
     'btn.addEmployee': 'Add Employee', 'title.assignShiftsByPeriod': 'Assign shifts by period',
     'label.scheduleForEachDay': 'Schedule for each day of the period', 'label.notesAppliedToAllDays': 'Notes (optional, applies to all days)',
     'ph.notesForAllShifts': 'Notes for all these shifts...', 'msg.existingShiftReplaced': 'If a shift was already assigned to this employee that day, it will be replaced.',
@@ -15365,7 +15392,8 @@ const I18N = {
     'title.prevWeek': 'Previous week', 'title.nextWeek': 'Next week',
     'title.moveUp': 'Move up', 'title.moveDown': 'Move down',
     'businessTypes.map': {'Restaurante':'Restaurant','Bar':'Bar','Cafetería':'Cafe','Brasería':'Grill house','Cervecería':'Beer hall','Gastrobar':'Gastropub','Catering':'Catering','Food truck':'Food truck','Otro':'Other'},
-    'ingredientCategories.map': {'Carnes':'Meats','Pescados':'Fish','Lácteos':'Dairy','Verduras':'Vegetables','Frutas':'Fruits','Cereales y Panadería':'Grains & Bakery','Bebidas':'Drinks','Condimentos y Especias':'Condiments & Spices','Congelados':'Frozen','Otros':'Other','Cervezas':'Beers','Vinos y Cavas':'Wines & Cavas','Licores y Destilados':'Spirits','Refrescos y Mixers':'Soft Drinks & Mixers','Café e Infusiones':'Coffee & Tea','Hielo y Guarniciones':'Ice & Garnishes'},
+    'ingredientCategories.map': {'Verduras':'Vegetables','Frutas':'Fruits','Carnes':'Meats','Pescados y Marisco':'Fish & Seafood','Huevos':'Eggs','Lácteos':'Dairy','Panes y Bollería':'Breads & Pastries','Pastas':'Pasta','Arroces':'Rice','Legumbres':'Pulses','Aceites y Vinagres':'Oils & Vinegars','Condimentos y Especias':'Condiments & Spices','Despensa':'Pantry','Conservas':'Preserves','Embutidos y Fiambres':'Cured & Cold Meats','Congelados':'Frozen','Bebidas':'Drinks','Vinos Blancos':'White Wines','Vinos Tintos':'Red Wines','Vinos Rosados':'Rosé Wines','Cavas y Espumosos':'Cava & Sparkling','Vermús y Aperitivos':'Vermouth & Aperitifs','Cervezas':'Beers','Licores y Destilados':'Spirits','Refrescos':'Soft Drinks','Zumos':'Juices','Aguas':'Waters','Café e Infusiones':'Coffee & Tea','Leches y Batidos':'Milk & Shakes','Hielo y Guarniciones':'Ice & Garnishes','Despensa Sala':'Bar Pantry','Pescados':'Fish','Cereales y Panadería':'Grains & Bakery','Otros':'Other','Vinos y Cavas':'Wines & Cavas','Refrescos y Mixers':'Soft Drinks & Mixers'},
+    'ingredientNames.map': {'Tomate':'Tomato','Cebolla':'Onion','Ajo':'Garlic','Pimiento rojo':'Red pepper','Pimiento verde':'Green pepper','Calabacín':'Courgette','Berenjena':'Aubergine','Patata':'Potato','Zanahoria':'Carrot','Lechuga':'Lettuce','Espinaca':'Spinach','Champiñón':'Mushroom','Puerro':'Leek','Pepino':'Cucumber','Col':'Cabbage','Brócoli':'Broccoli','Calabaza':'Pumpkin','Apio':'Celery','Espárrago verde':'Green asparagus','Alcachofa':'Artichoke','Limón':'Lemon','Naranja':'Orange','Manzana':'Apple','Plátano':'Banana','Fresa':'Strawberry','Aguacate':'Avocado','Uva':'Grapes','Pera':'Pear','Melón':'Melon','Sandía':'Watermelon','Piña':'Pineapple','Kiwi':'Kiwi','Mango':'Mango','Melocotón':'Peach','Frutos rojos (mix)':'Mixed berries','Solomillo de ternera':'Beef tenderloin','Entrecot de ternera':'Beef entrecôte','Carne picada de ternera':'Minced beef','Pechuga de pollo':'Chicken breast','Muslo de pollo':'Chicken thigh','Pollo entero':'Whole chicken','Secreto ibérico':'Iberian pork secreto','Solomillo de cerdo':'Pork tenderloin','Costilla de cerdo':'Pork ribs','Panceta':'Pork belly','Cordero (paletilla)':'Lamb shoulder','Chuletas de cordero':'Lamb chops','Carne picada mixta':'Mixed minced meat','Conejo':'Rabbit','Pato (magret)':'Duck magret','Merluza':'Hake','Salmón':'Salmon','Atún fresco':'Fresh tuna','Bacalao':'Cod','Lubina':'Sea bass','Dorada':'Sea bream','Boquerón':'Fresh anchovy','Sardina':'Sardine','Rape':'Monkfish','Pulpo':'Octopus','Calamar':'Squid','Sepia':'Cuttlefish','Gamba':'Prawn','Langostino':'King prawn','Mejillón':'Mussel','Almeja':'Clam','Cigala':'Langoustine','Marisco mixto (cocido)':'Mixed cooked seafood','Huevo de gallina (docena)':'Hen eggs (dozen)','Huevo de codorniz (docena)':'Quail eggs (dozen)','Clara de huevo pasteurizada':'Pasteurised egg white','Leche entera':'Whole milk','Nata para cocinar':'Cooking cream','Nata para montar':'Whipping cream','Mantequilla':'Butter','Queso mozzarella':'Mozzarella','Queso parmesano':'Parmesan','Queso manchego':'Manchego cheese','Queso de cabra':'Goat cheese','Queso crema':'Cream cheese','Yogur natural':'Plain yoghurt','Leche condensada':'Condensed milk','Requesón':'Curd cheese','Pan de barra':'Baguette loaf','Pan de hamburguesa':'Burger bun','Pan de perrito':'Hot dog bun','Pan rallado':'Breadcrumbs','Pan de molde':'Sliced bread','Baguette':'Baguette','Masa de pizza':'Pizza dough','Croissant':'Croissant','Bollería mixta':'Assorted pastries','Picos / colines':'Breadsticks','Espagueti':'Spaghetti','Macarrón':'Macaroni','Tallarín':'Tagliatelle','Lasaña (placas)':'Lasagne sheets','Canelón (placas)':'Cannelloni sheets','Ravioli fresco':'Fresh ravioli','Ñoquis':'Gnocchi','Pasta fresca al huevo':'Fresh egg pasta','Fideos':'Noodles','Arroz bomba':'Bomba rice','Arroz redondo':'Short grain rice','Arroz basmati':'Basmati rice','Arroz largo':'Long grain rice','Arroz integral':'Brown rice','Arroz para sushi':'Sushi rice','Garbanzo seco':'Dried chickpeas','Lenteja':'Lentils','Alubia blanca':'White beans','Alubia roja':'Red beans','Garbanzo cocido (bote)':'Cooked chickpeas (jar)','Lenteja cocida (bote)':'Cooked lentils (jar)','Guisante congelado':'Frozen peas','Haba':'Broad beans','Soja (grano)':'Soya beans','Aceite de oliva virgen extra':'Extra virgin olive oil','Aceite de oliva suave':'Mild olive oil','Aceite de girasol':'Sunflower oil','Vinagre de vino':'Wine vinegar','Vinagre de Módena':'Balsamic vinegar','Vinagre de manzana':'Cider vinegar','Aceite de sésamo':'Sesame oil','Sal fina':'Fine salt','Sal gruesa':'Coarse salt','Pimienta negra molida':'Ground black pepper','Pimentón dulce':'Sweet paprika','Pimentón picante':'Hot paprika','Orégano':'Oregano','Perejil seco':'Dried parsley','Tomillo':'Thyme','Romero':'Rosemary','Laurel':'Bay leaf','Comino':'Cumin','Curry':'Curry','Azafrán':'Saffron','Ajo en polvo':'Garlic powder','Canela molida':'Ground cinnamon','Mostaza':'Mustard','Salsa de soja':'Soy sauce','Caldo concentrado (bote)':'Stock concentrate (jar)','Levadura fresca':'Fresh yeast','Levadura química':'Baking powder','Harina de trigo':'Wheat flour','Harina de maíz':'Corn flour','Harina de repostería':'Pastry flour','Azúcar blanco':'White sugar','Azúcar moreno':'Brown sugar','Miel':'Honey','Tomate triturado (bote)':'Crushed tomato (jar)','Tomate frito (bote)':'Tomato sauce (jar)','Puré de patata (copos)':'Potato flakes','Maicena':'Cornstarch','Chocolate de cobertura':'Couverture chocolate','Frutos secos variados':'Assorted nuts','Almendra':'Almond','Piñón':'Pine nuts','Aceituna (bote)':'Olives (jar)','Alcaparra (bote)':'Capers (jar)','Pepinillo (bote)':'Gherkins (jar)','Atún en aceite (lata)':'Tuna in oil (tin)','Anchoa en aceite (lata)':'Anchovies in oil (tin)','Mejillón en escabeche (lata)':'Pickled mussels (tin)','Berberecho (lata)':'Cockles (tin)','Pimiento del piquillo (bote)':'Piquillo peppers (jar)','Espárrago blanco (bote)':'White asparagus (jar)','Maíz dulce (lata)':'Sweetcorn (tin)','Champiñón en conserva (bote)':'Preserved mushrooms (jar)','Jamón ibérico':'Iberian ham','Jamón serrano':'Serrano ham','Jamón cocido':'Cooked ham','Chorizo':'Chorizo','Salchichón':'Salchichón','Lomo embuchado':'Cured pork loin','Bacon / panceta curada':'Bacon','Mortadela':'Mortadella','Salchicha fresca':'Fresh sausage','Morcilla':'Blood sausage','Patata prefrita congelada':'Frozen chips','Verdura congelada (mix)':'Frozen vegetables (mix)','Pescado congelado (surtido)':'Frozen fish (assorted)','Marisco congelado (surtido)':'Frozen seafood (assorted)','Masa de hojaldre congelada':'Frozen puff pastry','Helado (tarrina)':'Ice cream (tub)','Agua mineral':'Mineral water','Refresco de cola':'Cola','Refresco de naranja':'Orange soda','Zumo de naranja':'Orange juice','Café en grano':'Coffee beans','Té / infusiones':'Tea & infusions','Cerveza':'Beer','Vino tinto':'Red wine','Vino blanco':'White wine','Vino blanco verdejo':'Verdejo white wine','Vino blanco albariño':'Albariño white wine','Vino blanco viura':'Viura white wine','Vino blanco copa (genérico)':'White wine by the glass','Vino tinto joven':'Young red wine','Vino tinto crianza':'Crianza red wine','Vino tinto reserva':'Reserva red wine','Vino tinto copa (genérico)':'Red wine by the glass','Vino rosado':'Rosé wine','Vino rosado copa (genérico)':'Rosé by the glass','Cava brut':'Brut cava','Cava brut nature':'Brut nature cava','Champagne':'Champagne','Vino espumoso dulce':'Sweet sparkling wine','Vermut rojo':'Red vermouth','Vermut blanco':'White vermouth','Jerez fino':'Fino sherry','Jerez oloroso':'Oloroso sherry','Cerveza lager (barril)':'Lager (keg)','Cerveza lager (botellín)':'Lager (bottle)','Cerveza sin alcohol':'Alcohol-free beer','Cerveza tostada/rubia especial':'Amber & specialty beer','Sidra':'Cider','Ginebra':'Gin','Vodka':'Vodka','Ron blanco':'White rum','Ron añejo':'Aged rum','Whisky':'Whisky','Brandy / Coñac':'Brandy / Cognac','Tequila':'Tequila','Orujo':'Grape marc spirit','Licor de hierbas':'Herbal liqueur','Amaretto':'Amaretto','Baileys / licor de crema':'Baileys / cream liqueur','Triple seco / Cointreau':'Triple sec / Cointreau','Pacharán':'Pacharán','Cola':'Cola','Cola sin cafeína/zero':'Caffeine-free / zero cola','Naranja gaseosa':'Orange soda','Limón gaseosa':'Lemon soda','Tónica':'Tonic water','Ginger ale / Ginger beer':'Ginger ale / Ginger beer','Bitter (sin alcohol)':'Bitter (alcohol-free)','Soda':'Soda water','Bebida energética':'Energy drink','Zumo de piña':'Pineapple juice','Zumo de tomate':'Tomato juice','Zumo de melocotón':'Peach juice','Zumo de manzana':'Apple juice','Mosto':'Grape must','Granadina':'Grenadine','Agua mineral con gas':'Sparkling water','Agua mineral sin gas':'Still water','Café molido':'Ground coffee','Café descafeinado':'Decaf coffee','Té negro':'Black tea','Té verde':'Green tea','Manzanilla':'Chamomile','Poleo menta':'Peppermint tea','Cacao en polvo':'Cocoa powder','Leche desnatada':'Skimmed milk','Leche de avena':'Oat milk','Leche de soja':'Soy milk','Leche de almendra':'Almond milk','Nata para café':'Coffee cream','Horchata':'Horchata','Hielo':'Ice','Aceituna para cóctel':'Cocktail olives','Guinda para cóctel':'Cocktail cherries','Sal para rimmer':'Rimming salt','Azúcar para rimmer':'Rimming sugar','Azúcar (sobres)':'Sugar sachets','Sacarina/edulcorante (sobres)':'Sweetener sachets','Sirope de vainilla':'Vanilla syrup','Sirope de caramelo':'Caramel syrup','Angostura / bitter de cóctel':'Angostura / cocktail bitters','Frutos secos para aperitivo':'Bar nuts','Patatas fritas (bolsa)':'Crisps (bag)','Servilletas de barra':'Bar napkins','Palillos de cóctel':'Cocktail sticks','Pajitas':'Straws'},
     'loyaltyRewards.map': {'Postre gratis':'Free dessert','Café o infusión gratis':'Free coffee or tea','Chupito o bebida gratis':'Free shot or drink','Entrante gratis':'Free starter','10% de descuento en la cuenta':'10% off the bill'},
     'hr.gfConceptLabels': {'RETRIBUCIÓN EMPRESARIO':'OWNER PAY','CUOTA AUTÓNOMOS (RETA)':'SELF-EMPLOYED FEE (RETA)','SS AUTÓNOMOS':'SELF-EMPLOYED SOCIAL SECURITY','SUELDO BRUTO PERSONAL':'STAFF GROSS SALARY','SS EMPRESA':'EMPLOYER SOCIAL SECURITY','ALQUILER':'RENT','SEGURO DEL LOCAL':'PREMISES INSURANCE','TASAS MUNICIPALES':'MUNICIPAL FEES','ELECTRICIDAD':'ELECTRICITY','GAS':'GAS','AGUA':'WATER','INTERNET/TELEFONÍA':'INTERNET/PHONE','GESTORÍA':'ACCOUNTANT','SOFTWARE/TPV':'SOFTWARE/POS','COMISIONES BANCARIAS':'BANK FEES','PRÉSTAMOS':'LOANS','MANTENIMIENTO':'MAINTENANCE','PUBLICIDAD':'ADVERTISING','OTROS GASTOS FIJOS':'OTHER FIXED EXPENSES'},
     'hr.variableCategoryLabels': {'MATERIA PRIMA':'RAW MATERIALS','BEBIDAS':'DRINKS','CAFÉ/INFUSIONES':'COFFEE/TEA','PACKAGING':'PACKAGING','CONSUMIBLES':'SUPPLIES','LIMPIEZA':'CLEANING','COMISIONES VENTA':'SALES COMMISSIONS','MANO DE OBRA EXTRA':'EXTRA LABOR','OTROS':'OTHER'},
@@ -15596,6 +15624,14 @@ const I18N = {
 // localStorage es síncrono (está escrito antes de que la recarga empiece)
 // y no se sincroniza, así que resuelve las dos cosas.
 const LANG_LS = 'gastrogoan_lang';
+// Fechas y horas: el navegador ya sabe escribirlas en cada idioma, pero hay
+// que decirle en cuál. Había quince sitios con 'es-ES' escrito a mano, así
+// que la semana de Horarios seguía diciendo "31 ago – 6 sept" con la app en
+// inglés. El formato en sí (día, mes corto…) lo elige cada llamada; esto
+// solo dice el idioma.
+const LOCALES = {es:'es-ES', ca:'ca-ES', en:'en-GB'};
+function localeActual(){ return LOCALES[getLang()] || 'es-ES'; }
+
 function getLang(){
   try{
     const stored = localStorage.getItem(LANG_LS);
@@ -18622,11 +18658,24 @@ function buildBaseIngredientsSeed(area, idStart){
   const stock = {};
   const categoryIcons = {};
   let nextId = idStart;
+  // Los 275 artículos del catálogo están escritos en castellano. Un negocio
+  // catalán o inglés se los encontraba así, y no había forma de traducirlos:
+  // no pasan por t(), son datos que se guardan en su base.
+  //
+  // Se traducen AQUÍ, al nacer el negocio, y no al pintarlos, por dos
+  // razones: el nombre del ingrediente es dato editable del negocio (en
+  // cuanto lo renombran es suyo, y traducirlo por encima sería mentirle), y
+  // así el albarán que le llega al proveedor sale en el mismo idioma en que
+  // el hostelero lo lee. La CATEGORÍA sí se queda en castellano a propósito:
+  // es la clave estable con la que se agrupa y ordena, y ya se traduce al
+  // mostrarla (ingredientCategoryLabel).
+  const nombres = t('ingredientNames.map') || {};
   Object.keys(catalog).forEach(cat => {
     const {icon, items} = catalog[cat];
     categoryIcons[cat] = icon;
-    items.forEach(([name, unit, allergens]) => {
+    items.forEach(([nombreEs, unit, allergens]) => {
       const id = nextId++;
+      const name = nombres[nombreEs] || nombreEs;
       ingredients.push({
         id, name, category: cat, unit, supplier: '', price: 0, packQty: 1, packPrice: 0,
         allergens: [...allergens], area, activo: true,
@@ -23048,8 +23097,8 @@ function renderRepartosControlModalBody(){
           ${delivered.map(o => `<tr>
             <td>${escapeHtml(o.clienteNombre||'—')}</td>
             <td>${escapeHtml(repartidorNombre(o))}</td>
-            <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
-            <td>${new Date(o.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</td>
+            <td>${o.entregaSalidaAt ? new Date(o.entregaSalidaAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+            <td>${new Date(o.entregadoAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'})}</td>
             <td>${escapeHtml(o.repartoNotas||'—')}</td>
           </tr>`).join('')}
         </tbody>
@@ -23111,7 +23160,7 @@ function renderRepartoControlCardHtml(order){
             ${cambio != null ? `<div style="font-size:14px;margin-top:4px"><strong style="color:var(--red)"><i class="ti ti-cash-banknote"></i> ${t('reparto.change')}: ${fmtMoney(cambio)}</strong></div>` : ''}
             ${order.pagaCon != null && order.pagaCon < total ? `<div style="font-size:12px;margin-top:4px;color:var(--red)"><i class="ti ti-alert-triangle"></i> ${t('reparto.pagaConInsuficiente')}</div>` : ''}
           ` : ''}
-          ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted);margin-top:8px"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+          ${order.entregadoAt ? `<div style="font-size:12px;color:var(--muted);margin-top:8px"><i class="ti ti-flag-check"></i> ${t('reparto.deliveredAt')} ${new Date(order.entregadoAt).toLocaleTimeString(localeActual(),{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
         </div>
         <div style="flex:1;min-width:200px">
           ${repartidorSelectHtml}
@@ -27915,7 +27964,7 @@ function openTicketDeliveryModal(saleId){
    ARQUEO DE CAJA — Cierre de turno/día
    ============================================================ */
 function fmtDateTime(d){
-  return d.toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleString(localeActual(), {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
 }
 
 // ¿Ya pasó hoy la hora de cierre configurada del negocio? Sirve para avisar
@@ -31085,7 +31134,10 @@ const GE = (function(){
     document.getElementById('capex-total').textContent = fmtMoney(base+ivaT);
   }
   const ESTADO_PAGO_KEYS = {PAGADO:'hr.capex.paid', PENDIENTE:'hr.capex.pending', PARCIAL:'hr.capex.partial'};
-  function estadoPagoLabel(code){ return t(ESTADO_PAGO_KEYS[code]||code); }
+  // Una inversión guardada antes de que existiera el estado de pago no tiene
+  // el campo. Sin esta guarda, t(undefined) pinta literalmente "undefined"
+  // dentro de una etiqueta roja, como si fuera un estado.
+  function estadoPagoLabel(code){ return code ? t(ESTADO_PAGO_KEYS[code]||code) : '—'; }
   function newCapex(){
     editingCX = null;
     openCapexModal(t('hr.capex.newInvestment'), {descripcion:'', importe:'', iva:null, fecha:todayStr(), estadoPago:'PENDIENTE', financiado:false, cuotaMensual:'', cuotas:''});
@@ -31741,7 +31793,7 @@ const GE = (function(){
     const isoEnd = `${mesStr}-${String(new Date(año, mes+1, 0).getDate()).padStart(2,'0')}`;
     rows.push([t('hr.csv.periodStart'), isoStart]);
     rows.push([t('hr.csv.periodEnd'), isoEnd]);
-    rows.push([t('hr.csv.generatedOn'), new Date().toLocaleString('es-ES')]);
+    rows.push([t('hr.csv.generatedOn'), new Date().toLocaleString(localeActual())]);
     rows.push([]);
 
     rows.push([t('hr.csv.salesLedger')]);
@@ -32250,7 +32302,7 @@ function renderHorariosSemana(){
 
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
-  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
   const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)}<br><span style="font-size:10.5px;font-weight:400">${d.getDate()}/${d.getMonth()+1}</span></th>`).join('');
 
   const rows = emps.map(emp => {
@@ -32314,7 +32366,7 @@ function printWeeklySchedule(){
   const emps = areaEmployees();
   const dates = getWeekDates(horariosWeekOffset);
   const dateStrs = dates.map(dateStr);
-  const label = `${dates[0].toLocaleDateString('es-ES',{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}`;
+  const label = `${dates[0].toLocaleDateString(localeActual(),{day:'numeric',month:'short'})} – ${dates[6].toLocaleDateString(localeActual(),{day:'numeric',month:'short',year:'numeric'})}`;
   const headerCells = dates.map((d,i) => `<th>${weekDayShort(i)} ${d.getDate()}/${d.getMonth()+1}</th>`).join('');
   const rows = emps.map(emp => {
     const cells = dateStrs.map(ds => {
@@ -36720,7 +36772,7 @@ function animateKpiNumbers(root){
       const cur = target * eased;
       if(parsed.isMoney && typeof fmtMoney === 'function') el.textContent = fmtMoney(cur);
       else if(parsed.isPercent) el.textContent = (cur<0?'':'')+cur.toFixed(1)+'%';
-      else el.textContent = Math.round(cur).toLocaleString('es-ES');
+      else el.textContent = Math.round(cur).toLocaleString(localeActual());
       if(p<1) requestAnimationFrame(step);
       else el.textContent = startText; // asegura el formato exacto original al terminar
     }
@@ -38938,7 +38990,7 @@ function printGiftVoucher(id){
   const accent = (DB.business && DB.business.brandColor) || '#B8804B';
   const logo = DB.business && DB.business.logo;
   const mainLabel = v.tipo === 'experiencia' ? escapeHtml(v.descripcion) : fmtMoney(v.importe);
-  const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+  const dateStr = new Date(v.createdAt || Date.now()).toLocaleDateString(localeActual(), {day:'numeric', month:'long', year:'numeric'});
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('title.giftVouchers')} — ${escapeHtml(v.code)}</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -40597,7 +40649,7 @@ function renderPromoDia(){
               ${p.maxUses ? `<span class="badge" style="font-size:10.5px" title="${t('promo.modal.maxUsesHint')}"><i class="ti ti-ticket"></i> ${promoUsesToday(p)}/${p.maxUses}</span>` : ''}
             </div>` : ''}
             ${p.responsableId ? `<div style="font-size:12px;color:var(--brand-orange);margin-top:4px"><i class="ti ti-user"></i> ${escapeHtml((DB.employees.find(e=>e.id===p.responsableId)||{}).name||'')}</div>` : ''}
-            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString('es-ES')))}</div>` : ''}
+            ${done && info.doneAt ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t('promo.day.doneOn').replace('${date}', escapeHtml(new Date(info.doneAt).toLocaleString(localeActual())))}</div>` : ''}
             <div class="actions-cell owner-strict" style="margin-top:10px">
               <button class="btn btn-sm btn-icon" onclick="openPromoModal(${p.id})"><i class="ti ti-edit"></i></button>
               <button class="btn btn-sm btn-icon btn-danger" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button>
@@ -43002,7 +43054,7 @@ function renderTicketConfigCard(){
 // teléfono, web, NIF, pie e IVA) sin tener que hacer una venta de prueba.
 function previewTicketConfig(){
   const sampleSale = {
-    date: new Date().toLocaleString('es-ES'),
+    date: new Date().toLocaleString(localeActual()),
     tipo: 'mesa',
     items: [
       {qty:2, name:'Ejemplo de plato', price:9.5},
@@ -43299,7 +43351,7 @@ async function deleteComandaPrinter(id){
 // ticket de cliente para 58/80mm (ver buildTicketText).
 function buildComandaText(destino, titulo, lineas, alergenos, anchoTicket){
   const width = anchoTicket == 58 ? 32 : 42;
-  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
   const center = s => { const pad = Math.max(0, Math.floor((width - s.length) / 2)); return ' '.repeat(pad) + s; };
   const lines = [];
   lines.push(center(destino.toUpperCase()));
@@ -43325,7 +43377,7 @@ function printComandaTicket(destino, titulo, lineas, anchoTicket, alergenos, pri
   }
   const ancho = anchoTicket || 80;
   const widthPx = ancho == 58 ? 200 : 280;
-  const hora = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  const hora = new Date().toLocaleTimeString(localeActual(), {hour:'2-digit', minute:'2-digit'});
   const filas = lineas.map(l => `<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-bottom:3px"><span>${escapeHtml(l.qty)}× ${escapeHtml(l.name)}</span></div>${l.notas?`<div style="font-size:12px;margin:0 0 4px 10px">▸ ${escapeHtml(l.notas)}</div>`:''}`).join('');
   // Alérgenos de la mesa (independiente de cualquier cliente vinculado): se
   // imprime destacado arriba del todo, en grande, para que no pase
