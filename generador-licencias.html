@@ -33,6 +33,28 @@ td.key{font-family:monospace;font-size:11px}
 .muted{color:var(--muted);font-size:12px;line-height:1.5}
 .warn{background:#FFF3E0;border-left:4px solid var(--brand-orange);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5}
 .del{background:none;border:none;color:#C0392B;cursor:pointer;font-size:12px;padding:2px 6px;flex:none}
+
+/* Registro de ventas agrupado por cuenta. La tabla plana anterior ponía en
+   la misma columna ("Dato") el usuario de una cuenta y el código de un
+   negocio, y repetía el usuario en la de al lado: era imposible ver de un
+   vistazo con qué entra el cliente y con qué añade el local. */
+.cuenta{border:1.5px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.cuenta-cab{background:var(--brand-cream);padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.cuenta-nom{font-weight:700;font-size:14px;flex:1;min-width:180px}
+.cred{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 14px;border-bottom:1px solid var(--border);align-items:center}
+.cred-et{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.cred-val{font-family:monospace;font-weight:700;font-size:14px}
+.locales{padding:4px 14px 12px}
+.local{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.local:last-child{border-bottom:none}
+.local-cod{font-family:monospace;font-weight:700;font-size:14px}
+.local-nom{flex:1;min-width:120px;font-size:13px}
+.pastilla{font-size:11px;padding:2px 8px;border-radius:99px;background:#EEE;color:#555;white-space:nowrap}
+.acc{border:1.5px solid var(--border);background:#fff;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;
+     cursor:pointer;flex:none;font-family:inherit;color:#444}
+.acc-rojo{border-color:#E5B4AC;color:#C0392B}
+.anulada{opacity:.5}
+.anulada .local-cod{text-decoration:line-through}
 </style>
 </head>
 <body>
@@ -112,11 +134,9 @@ td.key{font-family:monospace;font-size:11px}
 
   <div class="card">
     <h2>4 · Registro de ventas <span class="muted" id="count"></span></h2>
-    <p class="muted" style="margin-bottom:10px">Cada cuenta y cada código generado se apuntan aquí automáticamente. Con la sesión de administrador iniciada (botón de arriba), se sincroniza también con tus otros dispositivos.</p>
-    <table id="log-table" style="display:none">
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Dato</th><th>Cuenta</th><th>PIN</th><th></th></tr></thead>
-      <tbody id="log"></tbody>
-    </table>
+    <p class="muted" style="margin-bottom:4px">Cada cuenta y cada código generado se apuntan aquí automáticamente. Con la sesión de administrador iniciada (botón de arriba), se sincroniza también con tus otros dispositivos.</p>
+    <p class="muted" style="margin-bottom:12px"><strong>Un cliente = una cuenta</strong> (con la que entra en la app) <strong>+ un código por cada local</strong> que te compre. Aquí van agrupados así.</p>
+    <div id="log"></div>
     <p class="muted" id="empty">Aún no has generado nada.</p>
     <div class="btns" id="export-row" style="display:none">
       <button class="copy" onclick="exportCSV()">⬇ Descargar registro (CSV)</button>
@@ -771,30 +791,90 @@ async function borrarCuenta(i){
   }
 }
 
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function copiar(txt){
+  navigator.clipboard.writeText(txt).then(() => alert('Copiado: ' + txt));
+}
+
+/* El registro se pinta AGRUPADO POR CUENTA, no como una lista plana.
+   Antes había una columna "Dato" que contenía el usuario en las filas de
+   cuenta y el código en las de negocio, y otra columna "Cuenta" que repetía
+   el usuario: mirando una venta no se sabía qué se le manda al cliente para
+   ENTRAR y qué para AÑADIR el local. Ahora cada cuenta es una tarjeta con
+   sus credenciales arriba y sus locales colgando debajo. */
 function renderLog(){
   const has = sales.length > 0;
-  document.getElementById('log-table').style.display = has ? 'table' : 'none';
   document.getElementById('empty').style.display = has ? 'none' : 'block';
   document.getElementById('export-row').style.display = has ? 'flex' : 'none';
-  document.getElementById('count').textContent = has ? '· ' + sales.length + ' entrada' + (sales.length === 1 ? '' : 's') : '';
-  document.getElementById('log').innerHTML = sales.map((s, i) => {
-    const anulada = !!s.anulada;
-    // Una licencia anulada se sigue viendo, tachada y con su fecha: es parte
-    // del historial de ventas y hace falta para cuadrar el CSV.
-    const acciones = s.kind === 'negocio'
-      ? (anulada
-          ? `<button class="del" style="background:#1F8A4C" title="Reactivar este código" onclick="reactivarCodigo(${i})">↺</button>`
-          : `<button class="del" title="ANULAR la licencia: deja de funcionar" onclick="anularCodigo(${i})">⊘</button>`)
-      : (anulada ? '' : `<button class="del" title="Borrar la cuenta y liberar el nombre" onclick="borrarCuenta(${i})">⊘</button>`);
-    return `<tr${anulada ? ' style="opacity:.55"' : ''}>
-      <td>${s.date}</td>
-      <td>${s.name}${anulada ? ` <span style="color:#8A4A3B;font-size:11px">· anulada ${s.anulada}${s.motivo ? ' (' + s.motivo + ')' : ''}</span>` : ''}</td>
-      <td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td>
-      <td class="key"${anulada ? ' style="text-decoration:line-through"' : ''}>${s.value}</td>
-      <td class="key">${s.owner || '—'}</td>
-      <td class="key">${s.pin || '—'}</td>
-      <td style="white-space:nowrap">${acciones}<button class="del" style="background:#777" title="Quitar del registro (NO anula la licencia)" onclick="delSale(${i})">✕</button></td>
-    </tr>`;
+
+  // Cada entrada guarda su posición original: los botones siguen operando
+  // sobre sales[i], así que agrupar no puede perder el índice.
+  const conIdx = sales.map((s, i) => ({...s, i}));
+  const cuentas = conIdx.filter(s => s.kind === 'cuenta');
+  const locales = conIdx.filter(s => s.kind !== 'cuenta');
+
+  const nCuentas = new Set(cuentas.map(c => c.value)).size;
+  const nLocales = locales.length;
+  document.getElementById('count').textContent = has
+    ? `· ${nCuentas} cuenta${nCuentas === 1 ? '' : 's'} · ${nLocales} local${nLocales === 1 ? '' : 'es'}`
+    : '';
+
+  // Un local cuyo dueño no está en el registro (venta antigua, o apuntada a
+  // mano) no puede desaparecer de la vista: se agrupa aparte y se avisa.
+  const usuarios = new Set(cuentas.map(c => c.value));
+  const grupos = [];
+  cuentas.forEach(c => {
+    if(grupos.some(g => g.user === c.value)) return;   // PIN restablecido: una sola tarjeta
+    grupos.push({user: c.value, cuentas: cuentas.filter(x => x.value === c.value),
+                 locales: locales.filter(l => l.owner === c.value)});
+  });
+  const huerfanos = locales.filter(l => !usuarios.has(l.owner));
+  if(huerfanos.length) grupos.push({user: null, cuentas: [], locales: huerfanos});
+
+  document.getElementById('log').innerHTML = grupos.map(g => {
+    // Si se le ha restablecido el PIN, el que vale es el último emitido.
+    const ultima = g.cuentas[0];
+    const titulo = g.user
+      ? `👤 ${esc(g.user)}`
+      : '⚠️ Locales sin cuenta en este registro';
+    const nombreCliente = ultima && ultima.name && ultima.name !== g.user
+      ? `<span class="pastilla">${esc(ultima.name)}</span>` : '';
+
+    const credenciales = g.user ? `
+      <div class="cred">
+        <span class="cred-et">Para ENTRAR en la app</span>
+        <span class="cred-val">${esc(g.user)}</span>
+        <span class="cred-et">PIN</span>
+        <span class="cred-val">${esc(ultima && ultima.pin || '—')}</span>
+        <button class="acc" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${esc(ultima && ultima.pin || '')}')">Copiar</button>
+        ${ultima ? `<button class="acc acc-rojo" title="Borra la cuenta y libera el nombre. El cliente deja de poder entrar." onclick="borrarCuenta(${ultima.i})">Borrar cuenta</button>` : ''}
+        ${g.cuentas.length > 1 ? `<span class="pastilla">PIN restablecido ${g.cuentas.length - 1} vez/veces — vale el de arriba</span>` : ''}
+      </div>` : '';
+
+    const filas = g.locales.length ? g.locales.map(l => {
+      const anulada = !!l.anulada;
+      return `<div class="local${anulada ? ' anulada' : ''}">
+        <span class="local-cod">${esc(l.value)}</span>
+        <span class="local-nom">${esc(l.name)}${anulada
+          ? ` <span style="color:#8A4A3B">· anulada ${esc(l.anulada)}${l.motivo ? ' (' + esc(l.motivo) + ')' : ''}</span>` : ''}</span>
+        <span class="pastilla">${esc(l.date)}</span>
+        ${anulada
+          ? `<button class="acc" onclick="reactivarCodigo(${l.i})">Reactivar</button>`
+          : `<button class="acc acc-rojo" title="El código deja de funcionar y la app de ese cliente se bloquea" onclick="anularCodigo(${l.i})">Anular licencia</button>`}
+        <button class="acc" title="Solo quita la anotación de tu lista. NO anula la licencia." onclick="delSale(${l.i})">Quitar del registro</button>
+      </div>`;
+    }).join('') : `<div class="local"><span class="muted">Todavía no le has vendido ningún local.</span></div>`;
+
+    return `<div class="cuenta">
+      <div class="cuenta-cab"><span class="cuenta-nom">${titulo}</span>${nombreCliente}</div>
+      ${credenciales}
+      <div class="locales">
+        <div class="cred-et" style="padding:8px 0 2px">Códigos de local — cada uno se canjea dentro de la app (uno por local)</div>
+        ${filas}
+      </div>
+    </div>`;
   }).join('');
 }
 
