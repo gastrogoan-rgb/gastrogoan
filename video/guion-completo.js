@@ -73,8 +73,8 @@ export const GUION = [
   modulo(`navigate('fichas')`, 'Fichas técnicas — la receta que ejecuta tu equipo'),
   modulo(`navigate('proveedores')`, 'Proveedores — con quién compras y qué te cobra cada uno'),
   modulo(`navigate('pedidos')`, 'Pedidos — se generan solos con lo que falta', [
-    {txt: 'Crear',     rot: 'Crear el pedido, proveedor a proveedor'},
-    {txt: 'Historial', rot: 'Historial: qué pediste, qué llegó y a qué precio'},
+    {txt: 'Realizar Pedido',     rot: 'Crear el pedido, proveedor a proveedor'},
+    {txt: 'Historial de Pedidos', rot: 'Historial: qué pediste, qué llegó y a qué precio'},
   ]),
   modulo(`navigate('stock')`, 'Stock — existencias y mínimos', [
     {txt: 'Elaboraciones', rot: 'También el stock de tus elaboraciones base'},
@@ -114,7 +114,7 @@ export const GUION = [
   modulo(`navigate('economia')`, 'Gestión económica — de la venta al beneficio', [
     {txt: 'Fijos',       rot: 'Costes fijos: alquiler, nóminas, suministros'},
     {txt: 'Variables',   rot: 'Costes variables: la compra de cada semana'},
-    {txt: 'CDR',         rot: 'Cuenta de resultados, mes a mes'},
+    {txt: 'Cuenta de Resultados', rot: 'Cuenta de resultados, mes a mes'},
     {txt: 'Resultado',   rot: 'El resultado del año, cerrado'},
     {txt: 'Tesorería',   rot: 'Tesorería: cuándo entra y cuándo sale el dinero'},
     {txt: 'Punto',       rot: 'Punto de equilibrio: cuánto tienes que vender para no perder'},
@@ -140,11 +140,11 @@ export const GUION = [
     await a.pasear();
   },
   async a => {
-    await a.pulsar('Para llevar', {tras: .8, rotulo: 'Pedidos para llevar, con sus horarios y su aforo'});
+    await a.pulsar('Take Away', {tras: .8, rotulo: 'Pedidos para llevar, con tu carta y tus precios'});
     await a.recorrer(2.2);
   },
   async a => {
-    await a.pulsar('A domicilio', {tras: .8, rotulo: 'Y a domicilio, si el negocio lo tiene activado'});
+    await a.pulsar('Delivery', {tras: .8, rotulo: 'Y a domicilio, si el negocio lo tiene activado'});
     await a.recorrer(2.2);
   },
 

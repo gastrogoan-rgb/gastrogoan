@@ -53,7 +53,11 @@ export async function grabar({guion, salida, titulo}){
     if(!cocina.stdin.write(buf)) await new Promise(r => cocina.stdin.once('drain', r));
   };
 
-  const api = crearApi(page, fotograma);
+  /* Un clic que no encuentra su botón NO puede pasar desapercibido: la
+     primera versión se comió cuatro pestañas y el aviso se perdió en medio
+     del registro. Se acumulan y se cantan al final, con el vídeo delante. */
+  const perdidos = [];
+  const api = crearApi(page, fotograma, perdidos);
   console.log(`Grabando «${titulo}» — ${guion.length} escenas…`);
   for(const [i, escena] of guion.entries()){
     // Si algo se ha llevado por delante el rótulo o el cursor (una recarga,
@@ -73,7 +77,14 @@ export async function grabar({guion, salida, titulo}){
   const seg = Math.round(n / FPS);
   console.log(`\n✅ ${salida} · ${Math.floor(seg/60)}m${String(seg%60).padStart(2,'0')}s · ${mb} MB`);
   if(errores.length) console.log(`⚠️  ${errores.length} errores en la página: ${[...new Set(errores)].slice(0,3).join(' · ')}`);
-  return {segundos: seg, errores};
+  if(perdidos.length){
+    console.log(`\n❌ ${perdidos.length} PULSACIONES SIN DESTINO — esas pantallas NO salen en el vídeo:`);
+    perdidos.forEach(p => console.log(`     · "${p}"`));
+    console.log('   Comprueba cómo se llama de verdad ese botón y corrige el guion.');
+  } else {
+    console.log('✅ Todas las pulsaciones encontraron su botón');
+  }
+  return {segundos: seg, errores, perdidos};
 }
 
 /* La app comprueba si hay versión nueva y, si acaba de abrirse sin que nadie
@@ -166,7 +177,7 @@ function inyectar(){
 }
 
 // ── Las piezas con las que se escribe un guion ────────────────────────────
-function crearApi(page, fotograma){
+function crearApi(page, fotograma, perdidos){
   let cx = ANCHO/2, cy = ALTO/2;   // dónde está el cursor ahora mismo
   const suave = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
 
@@ -198,7 +209,7 @@ function crearApi(page, fotograma){
        que es justo lo que le faltaba al vídeo anterior. */
     async pulsar(texto, {dentro, tras = .8, rotulo} = {}){
       const punto = await page.evaluate(([t,d]) => window.__buscar(t,d), [texto, dentro]);
-      if(!punto){ console.log(`     ⚠ no encuentro "${texto}" — sigo`); return false; }
+      if(!punto){ perdidos.push(texto); console.log(`     ⚠ no encuentro "${texto}" — sigo`); return false; }
       await api.moverA(punto.x, punto.y);
       for(let i = 1; i <= 6; i++){
         await page.evaluate(([x,y,p]) => window.__onda(x,y,p), [punto.x, punto.y, i/6]);

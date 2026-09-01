@@ -26,4 +26,11 @@ if(!cual || cual === 'venta'){
                  titulo: 'vídeo de venta'});
 }
 
-for(const t of trabajos) await grabar(t);
+let fallos = 0;
+for(const t of trabajos){
+  const r = await grabar(t);
+  fallos += r.perdidos.length;
+}
+// Salir con error si alguna pulsación se quedó sin destino: si no, un vídeo
+// al que le faltan pantallas se da por bueno y se manda al cliente.
+process.exit(fallos ? 1 : 0);
