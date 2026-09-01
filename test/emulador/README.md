@@ -65,3 +65,24 @@ SDK se sirve desde `__sdk/`, sacado del paquete npm `firebase` (mismo
 código que el de la CDN). Al fichero de Auth se le añade un trozo que
 manda la autenticación al emulador: **eso solo existe en pruebas, nunca en
 lo que se entrega al cliente**.
+
+
+## Dos trampas del propio banco (1/09/2026)
+
+**El banco estuvo roto y no se notaba.** Seis de los ocho escenarios fallaban
+con el síntoma "el primer dispositivo no conecta", que apunta a la red. No era
+la red: `arrancar()` escribía `DB.business.ownFirebase` justo después del
+`goto`, y `loadDB()` es asíncrona — se rellenaba el DB por defecto, se
+guardaba, y un instante después `loadDB()` resolvía y REEMPLAZABA `DB` entero
+con lo de IndexedDB, que no tenía nada. La nube desaparecía y el aparato se
+quedaba en local. Ahora se espera a `dbReadyPromise` antes de tocar nada.
+
+⚠️ **Un escenario que lanza una excepción tumbaba el proceso entero**, así que
+los de después ni se ejecutaban: un problema de entorno escondía todo lo demás.
+Los accesos a datos que puedan no haber llegado van con guarda.
+
+Y una lección de método: cuando un escenario falla, que diga POR QUÉ. `ok('El
+primer dispositivo conecta', false)` no lleva a ninguna parte; con el estado
+del indicador de nube, las apps de Firebase creadas y si `ownFirebase` está en
+`DB.business`, la causa aparece en la primera pasada. Se perdieron dos
+intentos persiguiendo la hipótesis equivocada por no tener eso.
