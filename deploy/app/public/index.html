@@ -2784,7 +2784,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 02:28';
+const GG_BUILD = '01/09/2026 02:55';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -36760,9 +36760,60 @@ async function comprobarVersionPublicada(forzar){
     if(!r.ok) return null;
     const j = await r.json();
     localStorage.setItem(GG_ULTIMA_COMPROBACION_LS, String(Date.now()));
-    if(j && j.build && j.build !== GG_BUILD){ mostrarAvisoVersionNueva(j.build); return j.build; }
+    if(j && j.build && j.build !== GG_BUILD){
+      /* Si es seguro, se actualiza SOLA y ya está: nadie tiene por qué
+         pulsar nada para tener la última versión. Solo se pregunta cuando
+         interrumpir sería peor que esperar (ver esSeguroActualizarSolo). */
+      if(esSeguroActualizarSolo()) aplicarVersionNueva(true);
+      else mostrarAvisoVersionNueva(j.build);
+      return j.build;
+    }
   }catch(e){ /* sin conexión: se mira otro día, no es un error que contar */ }
   return null;
+}
+
+/* ¿Se puede recargar sin fastidiar a nadie?
+
+   Recargar por las buenas a media comanda, con un modal abierto o mientras
+   alguien escribe una ficha, es peor que la propia versión vieja: se pierde
+   lo que estuviera a medias y el cocinero no entiende qué ha pasado. Los
+   datos guardados no corren peligro —viven en IndexedDB y en la nube—, pero
+   lo que está a medio escribir en pantalla, sí.
+
+   Se considera seguro solo en el momento en que la app se acaba de abrir y
+   nadie ha tocado nada todavía: es cuando no hay nada que perder. En
+   cualquier otro caso se pregunta con la barra, como hasta ahora. */
+// En `window` y no como variable suelta: así se puede consultar y forzar
+// desde fuera (las pruebas necesitan simular las dos situaciones).
+if(typeof window !== 'undefined'){
+  window.ggHuboInteraccion = false;
+  ['pointerdown','keydown','touchstart'].forEach(ev =>
+    window.addEventListener(ev, () => { window.ggHuboInteraccion = true; }, {once: true, passive: true}));
+}
+function esSeguroActualizarSolo(){
+  if(typeof window !== 'undefined' && window.ggHuboInteraccion) return false;
+  const overlay = document.getElementById('modal-overlay');
+  if(overlay && overlay.classList.contains('active')) return false;
+  /* El alta a medias sí bloquea (selector de negocios, asistentes). La
+     pantalla de identificarse NO: es el mejor momento posible para
+     actualizar, antes de que nadie empiece a trabajar. Y si alguien está
+     tecleando su PIN, ya lo para la comprobación de interacción. */
+  const selector = document.getElementById('business-select-screen');
+  if(selector && !selector.classList.contains('hide')) return false;
+  if(['license-gate','firebase-gate','netlify-gate'].some(id => document.getElementById(id))) return false;
+  /* Ni nada escrito sin guardar. Solo cuentan los campos que se están
+     VIENDO: la app tiene decenas de formularios en pantallas ocultas con
+     valores dentro, y mirarlos todos hacía que nunca fuera "seguro". */
+  const escrito = [...document.querySelectorAll('input, textarea')].some(el => {
+    if(el.type === 'hidden' || el.readOnly || el.disabled) return false;
+    // getClientRects es la comprobación fiable de "se está viendo":
+    // offsetParent devuelve null para los elementos de posición fija, que sí
+    // se ven, y dejaba pasar como seguro algo escrito a la vista.
+    if(!el.getClientRects().length) return false;
+    return (el.value || '').trim() !== '';
+  });
+  if(escrito) return false;
+  return true;
 }
 
 function mostrarAvisoVersionNueva(build){
@@ -36793,9 +36844,10 @@ function mostrarAvisoVersionNueva(build){
 
 // Trae la versión nueva y recarga. Los datos no se tocan: viven en IndexedDB
 // y en la nube, no en la copia del programa.
-async function aplicarVersionNueva(){
+async function aplicarVersionNueva(silencioso){
   const btn = document.querySelector('#gg-version-nueva button');
   if(btn){ btn.disabled = true; btn.textContent = t('app.newVersionWorking'); }
+  if(silencioso) console.info('GastroGoan: actualizando a la versión nueva');
   try{
     await fetch('./?gg-actualizar=1', {cache: 'reload'});
   }catch(e){ /* si falla, la recarga de abajo lo intenta igualmente */ }

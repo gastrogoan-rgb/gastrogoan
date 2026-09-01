@@ -51,8 +51,9 @@ await new Promise(r=>setTimeout(r,2200));
 // que sirve esta prueba no lo trae. Se pone a mano para poder comparar.
 await page.evaluate(()=>{ window.GG_BUILD = '01/01/2026 00:00'; });
 
-await caso('Si hay versión nueva, avisa — y no recarga por su cuenta', async ()=>{
+await caso('Si hay versión nueva a media faena, avisa y no recarga', async ()=>{
   const r = await page.evaluate(async ()=>{
+    window.ggHuboInteraccion = true;   // ya está trabajando: no se le interrumpe
     let recargado = false;
     const originalFetch = window.fetch;
     window.fetch = async (u) => {
@@ -100,6 +101,7 @@ await caso('Si la versión es la misma, no molesta con nada', async ()=>{
 await caso('Sin conexión no da la lata ni cuenta un error', async ()=>{
   const r = await page.evaluate(async ()=>{
     const originalFetch = window.fetch;
+    window.ggHuboInteraccion = true;
     window.fetch = async () => { throw new Error('sin red'); };
     localStorage.removeItem('gastrogoan_version_comprobada');
     let roto = null;
@@ -120,6 +122,7 @@ await caso('No pregunta en cada apertura: como mucho, cada 6 horas', async ()=>{
       if(String(u).includes('version.json')){ llamadas++; return {ok:true, json: async () => ({build: window.GG_BUILD})}; }
       return originalFetch(u);
     };
+    window.ggHuboInteraccion = true;
     localStorage.removeItem('gastrogoan_version_comprobada');
     await comprobarVersionPublicada();   // primera: pregunta
     await comprobarVersionPublicada();   // segunda seguida: no
@@ -162,6 +165,7 @@ await caso('El botón "Actualizar" fuerza la comprobación, sin esperar 6 horas'
       return originalFetch(u);
     };
     // Se marca como "ya comprobado hace un momento": el ciclo normal callaría
+    window.ggHuboInteraccion = true;   // a media faena: debe preguntar, no recargar
     localStorage.setItem('gastrogoan_version_comprobada', String(Date.now()));
     const barraAntes = !!document.getElementById('gg-version-nueva');
     await comprobarVersionPublicada();          // el ciclo normal: no debe preguntar
@@ -216,6 +220,83 @@ await caso('El aviso se ve bien y no se pega al borde de la pantalla', async ()=
     assert.ok(m.botonesDentro, `en ${nombre} los botones deben caber`);
   });
   return medidas.map(([n,m]) => `${n} ${m.alto}px`).join(' · ');
+});
+
+await caso('Al abrir, si hay versión nueva se actualiza SOLA', async ()=>{
+  /* No se deja recargar de verdad (el navegador no permite falsear
+     location.reload y se llevaría por delante el resto de pruebas): se
+     comprueba que DECIDE actualizar, que es lo mismo. */
+  const r = await page.evaluate(async ()=>{
+    document.getElementById('gg-version-nueva')?.remove();
+    window.GG_BUILD = '01/01/2026 00:00';
+    window.ggHuboInteraccion = false;
+    let aplicado = null;
+    const aplicarReal = window.aplicarVersionNueva;
+    window.aplicarVersionNueva = (silencioso) => { aplicado = {silencioso}; };
+    const originalFetch = window.fetch;
+    window.fetch = async (u) => {
+      if(String(u).includes('version.json')) return {ok:true, json: async () => ({build:'VERSION NUEVA'})};
+      return originalFetch(u);
+    };
+    localStorage.removeItem('gastrogoan_version_comprobada');
+    await comprobarVersionPublicada(true);
+    const hayBarra = !!document.getElementById('gg-version-nueva');
+    window.aplicarVersionNueva = aplicarReal;
+    window.fetch = originalFetch;
+    return {aplicado, hayBarra, seguro: esSeguroActualizarSolo()};
+  });
+  assert.ok(r.seguro, 'con la app recién abierta y nada tocado, debe considerarse seguro');
+  assert.ok(r.aplicado, 'y actualizarse sola');
+  assert.equal(r.aplicado.silencioso, true, 'en silencio, sin dar la lata');
+  assert.ok(!r.hayBarra, 'sin sacar ninguna barra');
+  return 'se actualiza sin que nadie pulse nada';
+});
+
+await caso('Pero NUNCA a media faena: ahí pregunta', async ()=>{
+  const casos = await page.evaluate(async ()=>{
+    const out = {};
+    const originalFetch = window.fetch;
+    const aplicarReal = window.aplicarVersionNueva;
+    const probar = async (preparar, limpiar) => {
+      document.getElementById('gg-version-nueva')?.remove();
+      window.GG_BUILD = '01/01/2026 00:00';
+      window.ggHuboInteraccion = false;
+      let aplicado = false;
+      window.aplicarVersionNueva = () => { aplicado = true; };
+      window.fetch = async (u) => {
+        if(String(u).includes('version.json')) return {ok:true, json: async () => ({build:'VERSION NUEVA'})};
+        return originalFetch(u);
+      };
+      preparar();
+      localStorage.removeItem('gastrogoan_version_comprobada');
+      await comprobarVersionPublicada(true);
+      const res = {aplicado, barra: !!document.getElementById('gg-version-nueva')};
+      limpiar();
+      document.getElementById('gg-version-nueva')?.remove();
+      return res;
+    };
+    out.trasTocar = await probar(()=>{ window.ggHuboInteraccion = true; }, ()=>{});
+    out.conModal = await probar(
+      ()=>{ document.getElementById('modal-overlay').classList.add('active'); },
+      ()=>{ document.getElementById('modal-overlay').classList.remove('active'); });
+    out.conTexto = await probar(()=>{
+      const i = document.createElement('input');
+      i.id = '__prueba'; i.value = 'a medio escribir';
+      i.style.cssText = 'position:fixed;top:0;left:0';
+      document.body.appendChild(i);
+    }, ()=>{ document.getElementById('__prueba')?.remove(); });
+    out.enAlta = await probar(
+      ()=>{ document.getElementById('business-select-screen').classList.remove('hide'); },
+      ()=>{ document.getElementById('business-select-screen').classList.add('hide'); });
+    window.aplicarVersionNueva = aplicarReal;
+    window.fetch = originalFetch;
+    return out;
+  });
+  Object.entries(casos).forEach(([nombre, c]) => {
+    assert.ok(!c.aplicado, `${nombre}: NO puede recargar por su cuenta`);
+    assert.ok(c.barra, `${nombre}: debe preguntar con la barra`);
+  });
+  return 'con algo tocado, un modal, texto sin guardar o el alta a medias: pregunta';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
