@@ -108,9 +108,9 @@
      15%. Con las cifras infladas el mes pasado salía en PÉRDIDAS, y una demo
      que enseña un restaurante que pierde dinero no vende nada. */
   DB.ge.fijos = [
-    {id: 9401, nombre:'Alquiler del local', importe: 1500, periodicidadMeses: 1, iva: 21, categoria:'LOCAL'},
-    {id: 9402, nombre:'Nóminas y seguros sociales', importe: 6200, periodicidadMeses: 1, iva: 0, categoria:'PERSONAL'},
-    {id: 9403, nombre:'Luz, agua y gas', importe: 600, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
+    {id: 9401, nombre:'Alquiler del local', importe: 1350, periodicidadMeses: 1, iva: 21, categoria:'LOCAL'},
+    {id: 9402, nombre:'Nóminas y seguros sociales', importe: 5300, periodicidadMeses: 1, iva: 0, categoria:'PERSONAL'},
+    {id: 9403, nombre:'Luz, agua y gas', importe: 540, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
     {id: 9404, nombre:'Gestoría', importe: 180, periodicidadMeses: 1, iva: 21, categoria:'SERVICIOS'},
     {id: 9405, nombre:'Seguro del negocio', importe: 780, periodicidadMeses: 12, iva: 0, categoria:'SEGUROS'},
     {id: 9406, nombre:'Internet y telefonía', importe: 65, periodicidadMeses: 1, iva: 21, categoria:'SUMINISTROS'},
@@ -118,7 +118,12 @@
   DB.ge.variables = [];
   for(let m = 0; m < 3; m++){
     const f = new Date(hoyD); f.setMonth(f.getMonth() - m);
-    const año = f.getFullYear(), mes = f.getMonth() + 1;
+    /* ⚠️ La app guarda el mes en BASE 0 (enero = 0), igual que
+       Date.getMonth() — ver operations.js, donde se crean los gastos
+       variables de un pedido. Poniéndolo en base 1, las compras de agosto se
+       contaban como de septiembre: el panel enseñaba 4.926 € de gastos contra
+       181 € de facturación y un resultado de −13.371 € en rojo. */
+    const año = f.getFullYear(), mes = f.getMonth();
     const compras = [
       ['Hortalisses Vic', 970], ['Peix del Port', 1450],
       ['Cárnicas Pérez', 1680], ['Forn Vell', 300], ['Distribucions Camp', 500],
@@ -129,7 +134,7 @@
          no, el día 1 el resultado del mes salía con un mes entero de compras
          contra un día de ventas: una pérdida enorme que no es real. */
       if(m === 0 && diaCompra > hoyD.getDate()) return;
-      const fecha = `${año}-${String(mes).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
+      const fecha = `${año}-${String(mes+1).padStart(2,'0')}-${String(diaCompra).padStart(2,'0')}`;
       DB.ge.variables.push({id: 9500 + m*10 + i, concepto: 'Compras ' + prov, proveedor: prov,
         importe: Math.round(base * (0.9 + Math.random()*0.2)), iva: 10,
         fecha, mes, 'año': año, pagada: m > 0, fechaPago: fecha});

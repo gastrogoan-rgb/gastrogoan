@@ -135,28 +135,38 @@ await caso('Las pantallas de datos salen LLENAS, no con guiones', async ()=>{
 });
 
 await caso('Las cuentas del negocio son las de un bistró que va bien', async ()=>{
-  /* El resultado del mes salía igual que la facturación porque no había NI UN
-     gasto: un P&L con costes a cero es lo primero que delata una demo. Y con
-     las primeras cifras que puse, el mes pasado salía en pérdidas — que no
-     vende mucho mejor. */
+  /* Tres cosas se torcieron aquí, y las tres se veían en el vídeo:
+     1) No había NI UN gasto: el resultado del mes salía igual que la
+        facturación. Un P&L con costes a cero delata una demo al instante.
+     2) Al meterlos con cifras infladas, el mes pasado salía en PÉRDIDAS.
+     3) Y el mes se guardaba en base 1 cuando la app lo guarda en BASE 0
+        (enero = 0, como Date.getMonth() — ver operations.js): las compras de
+        agosto contaban como de septiembre y el panel enseñaba 4.926 € de
+        gastos contra 181 € de ventas, con −13.371 € en rojo. */
   const r = await page.evaluate(()=>{
     const hoy = new Date();
     const f = new Date(hoy); f.setMonth(f.getMonth() - 1);
-    const mp = f.toISOString().slice(0,7);
-    const ventas = (DB.sales||[]).filter(v => String(v.date).slice(0,7) === mp).reduce((s,v) => s+v.total, 0);
-    const compras = geTotalVariablesNetoMes(f.getFullYear(), f.getMonth()+1);
-    const fijos = geTotalFijosNeto();
-    return {ventas, compras, fijos, resultado: ventas - compras - fijos,
-            personal: typeof geTotalPersonalNeto === 'function' ? geTotalPersonalNeto() : 0};
+    const año = f.getFullYear(), mes = f.getMonth();   // BASE 0, como la app
+    const neta = geFacturacionNetaMes(año, mes);
+    return {
+      neta,
+      variables: geTotalVariablesNetoMes(año, mes),
+      fijos: geTotalFijosNetoForMonth(año, mes),
+      resultado: geResultadoAntesImpMes(año, mes),
+      // La convención del campo `mes`, que es donde estuvo el fallo
+      mesesUsados: [...new Set((DB.ge.variables||[]).map(v => v.mes))].sort((a,b)=>a-b),
+    };
   });
-  assert.ok(r.ventas > 10000, 'un mes cerrado tiene que tener facturación de verdad');
-  assert.ok(r.compras > 0 && r.fijos > 0, 'y gastos: sin ellos el P&L es de mentira');
-  const fc = r.compras / r.ventas * 100;
-  const margen = r.resultado / r.ventas * 100;
-  assert.ok(fc > 22 && fc < 38, `el food cost del mes tiene que ser creíble, es ${fc.toFixed(1)}%`);
+  assert.ok(r.neta > 10000, 'un mes cerrado tiene que tener facturación de verdad');
+  assert.ok(r.variables > 0 && r.fijos > 0, 'y gastos: sin ellos el P&L es de mentira');
+  assert.ok(r.mesesUsados.every(m => m >= 0 && m <= 11),
+    'el mes se guarda en base 0 como en la app: ' + r.mesesUsados.join(','));
+  const fc = r.variables / r.neta * 100;
+  const margen = r.resultado / r.neta * 100;
+  assert.ok(fc > 25 && fc < 42, `el food cost del mes tiene que ser creíble, es ${fc.toFixed(1)}%`);
   assert.ok(margen > 5 && margen < 25, `y el margen también: ${margen.toFixed(1)}%`);
   assert.ok(r.resultado > 0, 'una demo que enseña un restaurante en pérdidas no vende nada');
-  return `${Math.round(r.ventas)} € · food cost ${fc.toFixed(1)}% · margen ${margen.toFixed(1)}%`;
+  return `${Math.round(r.neta)} € netos · food cost ${fc.toFixed(1)}% · margen ${margen.toFixed(1)}%`;
 });
 
 await caso('El guion del vídeo no apunta a ninguna pantalla inexistente', async ()=>{

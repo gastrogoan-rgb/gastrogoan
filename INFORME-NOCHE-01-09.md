@@ -55,12 +55,23 @@ Tres fallos que salieron al hacerlo, y que se habrían visto en el vídeo:
 | **Clientes con guiones y ceros**, y "Personal" en blanco | Nombres de campo y de pantalla inventados: `nombre` en vez de `name`, `empleados` en vez de `horarios` |
 | **El resultado del mes igual que la facturación** | La demo no tenía ni un gasto. Un P&L con costes a cero es lo primero que delata una demo |
 | Y al meterlos, **el mes pasado en pérdidas** | Cifras infladas. Un restaurante que pierde dinero no vende la app |
+| **−13.371 € en rojo** en el panel | La app guarda el mes en **base 0** (enero = 0) y yo lo puse en base 1: las compras de agosto contaban como de septiembre |
 
-Ahora las cuentas son las de un bistró que va bien: **~15.500 € de
-facturación, 31% de food cost, 13% de margen**, con nóminas, alquiler,
+Ese último es el más instructivo: **el error no estaba en el nombre del campo
+sino en su convención**, y la app no se queja — pinta el número mal y ya está.
+Se encontró mirando el vídeo, no ejecutando pruebas.
+
+Ahora las cuentas son las de un bistró que va bien: **13.900 € netos de
+facturación, 35% de food cost, 10,7% de margen**, con nóminas, alquiler,
 suministros y las compras a proveedores mes a mes. Y del mes en curso solo
 entran las compras que ya habrían ocurrido: si no, el día 1 salía un mes
 entero de gastos contra un día de ventas.
+
+⚠️ **Queda un detalle que no es un fallo**: el "Resultado del mes" del panel,
+un día 1, compara un mes entero de gastos fijos contra un día de ventas, así
+que sale en rojo. Le pasa igual a cualquier cliente real el primer día de mes
+—el propio manual de la app lo advierte— pero conviene saberlo antes de
+enseñar el vídeo un día 1.
 
 El último es el importante: **`navigate('empleados')` no da error, deja la
 pantalla en blanco.** Se grabó un vídeo entero con el rótulo "Personal —
