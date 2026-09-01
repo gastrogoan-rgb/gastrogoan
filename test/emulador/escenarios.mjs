@@ -52,6 +52,21 @@ async function nuevoDispositivo(){
     // La constante nace al cargar core.js, así que se insiste hasta que exista.
     const iv = setInterval(() => { if(parche()) clearInterval(iv); }, 5);
     setTimeout(() => clearInterval(iv), 4000);
+    /* Y la guía de la plataforma se desactiva del todo. connectCloud() la
+       escribe ANTES de conectar con la nube del negocio, y aquí la plataforma
+       no es alcanzable: si esa llamada tarda o lanza, el aparato se queda sin
+       conectar y TODOS los escenarios de dos dispositivos fallan sin que se
+       vea por qué. Lo que se prueba aquí es la sincronización entre aparatos,
+       no la guía — eso lo cubre el escenario 4 aparte. */
+    const iv2 = setInterval(() => {
+      if(typeof window.publishTenantLookup === 'function' && !window.publishTenantLookup.__mudo){
+        const mudo = () => Promise.resolve();
+        mudo.__mudo = true;
+        window.publishTenantLookup = mudo;
+        clearInterval(iv2);
+      }
+    }, 5);
+    setTimeout(() => clearInterval(iv2), 6000);
   });
   return {page, errs};
 }
