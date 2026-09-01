@@ -763,6 +763,74 @@ function confirmTextPrompt(){
   closeModal();
   if(resolve) resolve(val);
 }
+/* Los dos botones de una tarjeta de carpeta: renombrar y borrar.
+   Están aquí y no copiados cinco veces porque son CINCO las pantallas que
+   pintan carpetas —Mega Lista, Stock (ingredientes y elaboraciones),
+   Escandallo y Fichas Técnicas— y hasta ahora cada una hacía una cosa
+   distinta: en Mega Lista se podía renombrar y en las demás no, y borrar no
+   se podía en ninguna. Es la MISMA carpeta vista desde otro sitio; que la app
+   se comporte distinto según por dónde entres se lee como un fallo.
+   "Sin categoría" no lleva botones: no es una carpeta de verdad, es el hueco
+   donde cae lo que no tiene ninguna. */
+function botonesDeCarpeta(clave, tipo){
+  if(!clave || clave === '__none__') return '';
+  const c = String(clave).replace(/'/g, "\\'");
+  const renombrar = tipo === 'recipe' ? 'renameRecipeCategory' : 'renameIngredientCategory';
+  const borrar    = tipo === 'recipe' ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
+  return `
+    <span style="margin-left:auto;display:flex;gap:2px;flex-shrink:0">
+      <button class="owner-only btn btn-sm btn-icon" title="${t('title.renameCategory')}"
+        onclick="event.stopPropagation();${renombrar}('${c}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+      <button class="owner-only btn btn-sm btn-icon btn-danger" title="${t('title.deleteCategory')}"
+        onclick="event.stopPropagation();${borrar}('${c}')"><i class="ti ti-trash" style="font-size:13px"></i></button>
+    </span>`;
+}
+
+/* Borrar una carpeta que TIENE cosas dentro no puede ser un sí o no.
+   Una categoría no es una caja: es un campo de cada ingrediente o receta. Si
+   se borrase a secas, lo de dentro se quedaría huérfano y desaparecería de las
+   listas sin que nadie lo haya borrado — lo peor que puede hacer una app con
+   el trabajo de alguien. Así que antes se pregunta a dónde va, y solo cuando
+   está contestado se borra la carpeta.
+   Devuelve el destino elegido (puede ser '' = sin categoría) o null si se
+   cancela. */
+let pendingPickResolve = null;
+function pickOption(titulo, texto, opciones, opts){
+  opts = opts || {};
+  if(pendingPickResolve){ const r = pendingPickResolve; pendingPickResolve = null; r(null); }
+  return new Promise(resolve => {
+    pendingPickResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ${escapeHtml(opts.icon || 'ti-arrow-move-right')}"></i> ${escapeHtml(titulo)}</h3>
+        <button class="modal-close" onclick="cancelPickOption()">&times;</button>
+      </div>
+      <p style="font-size:13px;line-height:1.6;margin-bottom:14px">${escapeHtml(texto)}</p>
+      <div class="field">
+        <label>${escapeHtml(opts.label || t('common.category'))}</label>
+        <select id="generic-pick">${opciones.map(o =>
+          `<option value="${escapeHtml(o.valor)}">${escapeHtml(o.texto)}</option>`).join('')}</select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelPickOption()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmPickOption()">${escapeHtml(opts.ok || t('common.confirm'))}</button>
+      </div>
+    `);
+  });
+}
+function cancelPickOption(){
+  const r = pendingPickResolve; pendingPickResolve = null;
+  closeModal();
+  if(r) r(null);
+}
+function confirmPickOption(){
+  const el = document.getElementById('generic-pick');
+  const r = pendingPickResolve; pendingPickResolve = null;
+  const val = el ? el.value : null;
+  closeModal();
+  if(r) r(val);
+}
+
 // Sustituto de confirm() nativo del navegador — mismo cuadro gris feo del
 // sistema en todos los sitios que usaban confirm('¿Seguro?'), fuera de
 // lugar en una app con su propio diseño. Devuelve una Promise<boolean>,

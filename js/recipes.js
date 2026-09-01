@@ -200,6 +200,84 @@ function getEscandalloFolders(recipes){
   return result;
 }
 
+/* Renombrar y borrar las carpetas de Escandallo y Fichas Técnicas.
+   Hasta ahora solo se podía cambiarles el icono: un nombre mal escrito se
+   quedaba así para siempre y una carpeta que sobraba no había forma de
+   quitarla. En Mega Lista sí se podía renombrar, lo que hacía la app
+   incoherente consigo misma según por dónde entraras a la MISMA carpeta.
+
+   Las categorías de receta no son una lista aparte: son lo que pone en el
+   campo `category` de cada plato. Por eso renombrar es reasignar, y borrar
+   obliga a decir a dónde va lo de dentro. Nunca se borra un plato. */
+async function renameRecipeCategory(key){
+  if(key === '__none__') return;   // "Sin categoría" no es una carpeta de verdad
+  const nuevo = await promptText(t('msg.renameCategoryPrompt'), key);
+  if(nuevo === null) return;
+  const trimmed = nuevo.trim();
+  if(!trimmed || trimmed === key) return;
+  // Solo las recetas de ESTA área: Cocina y Sala pueden tener, por
+  // coincidencia, una categoría con el mismo nombre.
+  DB.recipes.forEach(r => {
+    if(r.category === key && (r.area||'cocina') === currentArea()) r.category = trimmed;
+  });
+  const idx = DB.recipeCategories.findIndex(c =>
+    (typeof c === 'object' ? c.name : c) === key &&
+    (typeof c === 'object' ? (!c.area || c.area === currentArea()) : true));
+  if(idx >= 0) DB.recipeCategories.splice(idx, 1);
+  const yaEsta = DB.recipeCategories.some(c =>
+    (typeof c === 'object' ? c.name : c) === trimmed);
+  if(!yaEsta) DB.recipeCategories.push({name: trimmed, area: currentArea()});
+  // El icono se traspasa: no se pierde por corregir el texto.
+  if(DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key] != null){
+    DB.categoryIcons.recipe[trimmed] = DB.categoryIcons.recipe[key];
+    delete DB.categoryIcons.recipe[key];
+  }
+  saveDB();
+  if(escandalloFolder === key) escandalloFolder = trimmed;
+  if(typeof fichasFolder !== 'undefined' && fichasFolder === key) fichasFolder = trimmed;
+  renderEscandallo();
+  if(typeof renderFichas === 'function') renderFichas();
+  showToast(t('msg.categoryRenamed'));
+}
+
+async function deleteRecipeCategory(key){
+  if(key === '__none__') return;
+  const dentro = DB.recipes.filter(r =>
+    r.category === key && (r.area||'cocina') === currentArea());
+  const quitarDeLaLista = () => {
+    const idx = DB.recipeCategories.findIndex(c =>
+      (typeof c === 'object' ? c.name : c) === key &&
+      (typeof c === 'object' ? (!c.area || c.area === currentArea()) : true));
+    if(idx >= 0) DB.recipeCategories.splice(idx, 1);
+    if(DB.categoryIcons && DB.categoryIcons.recipe) delete DB.categoryIcons.recipe[key];
+  };
+
+  if(!dentro.length){
+    if(!(await confirmModal(t('msg.confirmDeleteCategory').replace('${n}', key),
+        {icon:'ti-trash', danger:true}))) return;
+    quitarDeLaLista();
+  } else {
+    const otras = [...new Set(DB.recipes
+      .filter(r => (r.area||'cocina') === currentArea() && r.category && r.category !== key)
+      .map(r => r.category))].sort();
+    const opciones = [...otras.map(c => ({valor: c, texto: c})),
+                      {valor: '', texto: t('label.noCategory')}];
+    const destino = await pickOption(
+      t('title.deleteCategory'),
+      t('msg.categoryHasDishes').replace('${n}', key).replace('${c}', dentro.length),
+      opciones, {icon:'ti-trash', ok: t('btn.moveAndDelete')});
+    if(destino === null) return;
+    dentro.forEach(r => { r.category = destino; });
+    quitarDeLaLista();
+  }
+  saveDB();
+  if(escandalloFolder === key) escandalloFolder = null;
+  if(typeof fichasFolder !== 'undefined' && fichasFolder === key) fichasFolder = null;
+  renderEscandallo();
+  if(typeof renderFichas === 'function') renderFichas();
+  showToast(t('msg.categoryDeleted'));
+}
+
 function renderEscandallo(){
   maybeShowCategoryIconHint();
   const isElab = escandalloTab === 'elaboraciones';
@@ -247,7 +325,7 @@ function renderEscandallo(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
       </div>
     `).join('')}</div>`;
@@ -1329,7 +1407,7 @@ function renderFichas(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
       </div>
     `).join('')}</div>`;

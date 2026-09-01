@@ -816,7 +816,7 @@ function renderMegalista(){
         <h3 style="flex-wrap:nowrap;align-items:flex-start">
           <span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
           <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
-          <button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+          ${botonesDeCarpeta(cat, 'ingredient')}
         </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
@@ -1201,6 +1201,52 @@ async function renameIngredientCategory(oldName){
   renderMegalista();
   showToast(t('msg.categoryRenamed'));
 }
+/* Borrar una carpeta de la Mega Lista / del Stock.
+   Una categoría no existe por sí sola: es lo que pone en el campo `category`
+   de cada ingrediente. "Borrarla" es, en realidad, dejar a sus ingredientes
+   sin ella. Por eso:
+     · si está vacía, se quita y ya está;
+     · si tiene cosas dentro, NO se borra hasta saber a dónde van. Se elige
+       otra carpeta (o "sin categoría") y se mueven ahí.
+   Nunca se borra un ingrediente: el hostelero ha metido sus precios uno a uno
+   y perderlos por reorganizar carpetas sería imperdonable. */
+async function deleteIngredientCategory(cat){
+  const dentro = (DB.ingredients || []).filter(i =>
+    i.category === cat && (i.area || 'cocina') === currentArea());
+  const quitarDeLaLista = () => {
+    const idx = DB.ingredientCategories.indexOf(cat);
+    if(idx >= 0) DB.ingredientCategories.splice(idx, 1);
+    if(DB.categoryIcons && DB.categoryIcons.ingredient) delete DB.categoryIcons.ingredient[cat];
+  };
+
+  if(!dentro.length){
+    if(!(await confirmModal(t('msg.confirmDeleteCategory').replace('${n}', ingredientCategoryLabel(cat)),
+        {icon:'ti-trash', danger:true}))) return;
+    quitarDeLaLista();
+  } else {
+    // Las demás carpetas del área, más "sin categoría".
+    const otras = [...new Set((DB.ingredients || [])
+      .filter(i => (i.area || 'cocina') === currentArea() && i.category && i.category !== cat)
+      .map(i => i.category))].sort();
+    const opciones = [...otras.map(c => ({valor: c, texto: ingredientCategoryLabel(c)})),
+                      {valor: '', texto: t('label.noCategory')}];
+    const destino = await pickOption(
+      t('title.deleteCategory'),
+      t('msg.categoryHasItems').replace('${n}', ingredientCategoryLabel(cat))
+        .replace('${c}', dentro.length),
+      opciones, {icon:'ti-trash', ok: t('btn.moveAndDelete')});
+    if(destino === null) return;
+    dentro.forEach(i => { i.category = destino; });
+    quitarDeLaLista();
+  }
+  saveDB();
+  if(typeof megalistaFolder !== 'undefined' && megalistaFolder === cat) megalistaFolder = null;
+  if(typeof stockFolder !== 'undefined' && stockFolder === cat) stockFolder = null;
+  renderMegalista();
+  if(typeof renderStock === 'function') renderStock();
+  showToast(t('msg.categoryDeleted'));
+}
+
 function cancelNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   state.category = ingredientCategories()[0];
@@ -1508,7 +1554,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>${botonesDeCarpeta(cat, 'ingredient')}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -1567,7 +1613,7 @@ function renderStock(){
       const n = (elabsByRecipeCat[key]||[]).length;
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
       </div>`;
     }).join('')}</div>`;
