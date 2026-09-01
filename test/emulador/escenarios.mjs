@@ -106,52 +106,7 @@ const conectado = d => d.page.evaluate(()=> typeof cloudRef !== 'undefined' && !
   await A.page.close(); await B.page.close();
 }
 
-/* ═══ 3. AVISOS PUSH: ¿un dispositivo borra los del otro? ════════════ */
-{
-  const CODE='ESCEN003';
-  const A = await nuevoDispositivo(); await arrancar(A, CODE);
-  const B = await nuevoDispositivo(); await arrancar(B, CODE);
-  await new Promise(r=>setTimeout(r,2500));
-  await A.page.evaluate(()=>{ DB.pushSubscriptions=[{deviceId:'tablet',subscription:{a:1},updatedAt:100}]; saveDB(); });
-  await new Promise(r=>setTimeout(r,3000));
-  await B.page.evaluate(()=>{
-    DB.pushSubscriptions = (DB.pushSubscriptions||[]).concat([{deviceId:'movil',subscription:{b:1},updatedAt:200}]);
-    saveDB();
-  });
-  await new Promise(r=>setTimeout(r,4000));
-  const enA = await A.page.evaluate(()=> (DB.pushSubscriptions||[]).map(s=>s.deviceId).sort().join(','));
-  ok('5. Las suscripciones de los dos dispositivos conviven', enA==='movil,tablet', 'la tablet ve: '+enA);
-  await A.page.close(); await B.page.close();
-}
-
-/* ═══ 4. MISMA MESA A LA VEZ: ¿se pierde alguna comanda? ═════════════ */
-{
-  const CODE='ESCEN004';
-  const A = await nuevoDispositivo(); await arrancar(A, CODE);
-  const B = await nuevoDispositivo(); await arrancar(B, CODE);
-  await new Promise(r=>setTimeout(r,2500));
-  await A.page.evaluate(()=>{
-    DB.tables=[{id:1,name:'Mesa 1',zona:'Salón',plazas:4}];
-    DB.tpvOrders=[{id:5000,tableId:1,tipo:'mesa',status:'abierta',items:[],tandas:[],createdAt:new Date().toISOString()}];
-    saveDB();
-  });
-  await new Promise(r=>setTimeout(r,3500));
-  // Los dos camareros añaden a la MISMA comanda casi a la vez
-  await Promise.all([
-    A.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===5000); o.items.push({lineId:genId(),platoId:1,name:'PLATO_DE_LA_TABLET',qty:1,price:10,tanda:'',notas:''}); saveDB(); }),
-    B.page.evaluate(()=>{ const o=DB.tpvOrders.find(x=>x.id===5000); o.items.push({lineId:genId(),platoId:2,name:'PLATO_DEL_MOVIL',qty:1,price:8,tanda:'',notas:''}); saveDB(); }),
-  ]);
-  await new Promise(r=>setTimeout(r,6000));
-  const final = await A.page.evaluate(()=>{
-    const o=(DB.tpvOrders||[]).find(x=>x.id===5000);
-    return o ? o.items.map(i=>i.name).sort() : null;
-  });
-  ok('6. Dos camareros en la misma mesa: no se pierde ninguna línea',
-     final && final.length===2, 'quedó: '+JSON.stringify(final));
-  await A.page.close(); await B.page.close();
-}
-
-/* ═══ 5. BORRAR UNA CARPETA: ¿la resucita el otro dispositivo? ═══════
+/* ═══ 3. BORRAR UNA CARPETA: ¿la resucita el otro dispositivo? ═══════
    Las carpetas (ingredientCategories / recipeCategories) son NOMBRES: no
    tienen id, así que mergeArraysById las dejaba pasar de largo y mandaba la
    lista de la nube entera. Con dos aparatos, el que no se había enterado del
@@ -185,11 +140,60 @@ const conectado = d => d.page.evaluate(()=> typeof cloudRef !== 'undefined' && !
 
   const final = await A.page.evaluate(()=> [...(DB.ingredientCategories||[])].sort());
   const finalB = await B.page.evaluate(()=> [...(DB.ingredientCategories||[])].sort());
-  ok('7. Una carpeta borrada no vuelve cuando sincroniza el otro aparato',
+  ok('5. Una carpeta borrada no vuelve cuando sincroniza el otro aparato',
      arrancaIgual === 4 && !final.includes('Salsas') && !finalB.includes('Salsas'),
      'tablet: '+JSON.stringify(final)+' · móvil: '+JSON.stringify(finalB));
-  ok('8. Y la que creó el otro aparato sí llega',
+  ok('6. Y la que creó el otro aparato sí llega',
      final.includes('DesdeElMovil'), 'tablet: '+JSON.stringify(final));
+  await A.page.close(); await B.page.close();
+}
+
+/* ═══ 4. AVISOS PUSH: ¿un dispositivo borra los del otro? ════════════ */
+{
+  const CODE='ESCEN003';
+  const A = await nuevoDispositivo(); await arrancar(A, CODE);
+  const B = await nuevoDispositivo(); await arrancar(B, CODE);
+  await new Promise(r=>setTimeout(r,2500));
+  await A.page.evaluate(()=>{ DB.pushSubscriptions=[{deviceId:'tablet',subscription:{a:1},updatedAt:100}]; saveDB(); });
+  await new Promise(r=>setTimeout(r,3000));
+  await B.page.evaluate(()=>{
+    DB.pushSubscriptions = (DB.pushSubscriptions||[]).concat([{deviceId:'movil',subscription:{b:1},updatedAt:200}]);
+    saveDB();
+  });
+  await new Promise(r=>setTimeout(r,4000));
+  const enA = await A.page.evaluate(()=> (DB.pushSubscriptions||[]).map(s=>s.deviceId).sort().join(','));
+  ok('5. Las suscripciones de los dos dispositivos conviven', enA==='movil,tablet', 'la tablet ve: '+enA);
+  await A.page.close(); await B.page.close();
+}
+
+/* ═══ 5. MISMA MESA A LA VEZ: ¿se pierde alguna comanda? ═════════════ */
+{
+  const CODE='ESCEN004';
+  const A = await nuevoDispositivo(); await arrancar(A, CODE);
+  const B = await nuevoDispositivo(); await arrancar(B, CODE);
+  await new Promise(r=>setTimeout(r,2500));
+  await A.page.evaluate(()=>{
+    DB.tables=[{id:1,name:'Mesa 1',zona:'Salón',plazas:4}];
+    DB.tpvOrders=[{id:5000,tableId:1,tipo:'mesa',status:'abierta',items:[],tandas:[],createdAt:new Date().toISOString()}];
+    saveDB();
+  });
+  await new Promise(r=>setTimeout(r,3500));
+  // Los dos camareros añaden a la MISMA comanda casi a la vez
+  /* Si la comanda no llegó al otro aparato, este escenario no puede hacer su
+     trabajo — pero tampoco puede REVENTAR: hacía caer el proceso entero y los
+     escenarios de después ni se ejecutaban, así que un problema de entorno
+     escondía todo lo demás. */
+  await Promise.all([
+    A.page.evaluate(()=>{ const o=(DB.tpvOrders||[]).find(x=>x.id===5000); if(o) o.items.push({lineId:genId(),platoId:1,name:'PLATO_DE_LA_TABLET',qty:1,price:10,tanda:'',notas:''}); saveDB(); }),
+    B.page.evaluate(()=>{ const o=(DB.tpvOrders||[]).find(x=>x.id===5000); if(o) o.items.push({lineId:genId(),platoId:2,name:'PLATO_DEL_MOVIL',qty:1,price:8,tanda:'',notas:''}); saveDB(); }),
+  ]);
+  await new Promise(r=>setTimeout(r,6000));
+  const final = await A.page.evaluate(()=>{
+    const o=(DB.tpvOrders||[]).find(x=>x.id===5000);
+    return o ? o.items.map(i=>i.name).sort() : null;
+  });
+  ok('6. Dos camareros en la misma mesa: no se pierde ninguna línea',
+     final && final.length===2, 'quedó: '+JSON.stringify(final));
   await A.page.close(); await B.page.close();
 }
 
