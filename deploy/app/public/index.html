@@ -2809,7 +2809,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 14:45';
+const GG_BUILD = '01/09/2026 17:22';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -10122,6 +10122,8 @@ const I18N = {
     'label.secretKey': 'Clave secreta (Firma)',
     'title.editMode': 'Modo edición',
     'title.editModeDesc': 'Introduce el PIN de acceso para activar la edición en esta sección.',
+    'msg.staffOwnerOnly': 'Las fichas del personal (alta, datos y PIN) las lleva solo el propietario. Tú sí puedes organizar los turnos de tu equipo desde Día y Semana.',
+    'hr.personal.employeeScopeNote': 'Aquí ves solo tu ficha: los datos de contacto y el PIN de tus compañeros son cosa del propietario. Para organizar los turnos del equipo, usa las pestañas Día y Semana.',
     'msg.gestionOwnerOnly': 'Gestión es solo para el propietario del negocio.',
     'msg.needsEditPermission': 'Necesitas permiso de edición para entrar aquí. Pídeselo al propietario.',
     'title.bossAccess': 'Acceso como Jefe/a',
@@ -12205,6 +12207,8 @@ const I18N = {
     'label.secretKey': 'Clau secreta (Signatura)',
     'title.editMode': 'Mode edició',
     'title.editModeDesc': 'Introdueix el PIN d\'accés per activar l\'edició en aquesta secció.',
+    'msg.staffOwnerOnly': 'Les fitxes del personal (alta, dades i PIN) les porta només el propietari. Tu sí que pots organitzar els torns del teu equip des de Dia i Setmana.',
+    'hr.personal.employeeScopeNote': 'Aquí veus només la teva fitxa: les dades de contacte i el PIN dels teus companys són cosa del propietari. Per organitzar els torns de l\'equip, fes servir les pestanyes Dia i Setmana.',
     'msg.gestionOwnerOnly': 'Gestió és només per al propietari del negoci.',
     'msg.needsEditPermission': 'Necessites permís d\'edició per entrar aquí. Demana-l\'hi al propietari.',
     'title.bossAccess': 'Accés com a Cap',
@@ -14291,6 +14295,8 @@ const I18N = {
     'label.secretKey': 'Secret key (Signature)',
     'title.editMode': 'Edit mode',
     'title.editModeDesc': 'Enter the access PIN to enable editing in this section.',
+    'msg.staffOwnerOnly': 'Staff records (adding people, their details and PINs) are the owner\'s job. You can still organise your team\'s shifts from Day and Week.',
+    'hr.personal.employeeScopeNote': 'You only see your own card here: your colleagues\' contact details and PINs are the owner\'s business. To organise the team\'s shifts, use the Day and Week tabs.',
     'msg.gestionOwnerOnly': 'Management is for the business owner only.',
     'msg.needsEditPermission': 'You need edit permission to enter here. Ask the owner for it.',
     'title.bossAccess': 'Manager access',
@@ -32810,6 +32816,10 @@ function renderHorariosPersonal(){
       </div>
     </div>
     ` : ''}
+    ${myEmployeeId != null ? `
+    <div class="manual-warning" style="margin-bottom:12px">
+      <i class="ti ti-info-circle"></i> ${t('hr.personal.employeeScopeNote')}
+    </div>` : ''}
     ${emps.length ? listHtml : `<div class="empty"><i class="ti ${allEmps.length?'ti-search-off':'ti-users'}"></i>${allEmps.length?t('common.noResults'):t("empty.employees")}</div>`}
   `;
 }
@@ -33070,7 +33080,14 @@ function saveEmployee(id){
   // comprobación es la que de verdad impide dar de alta un empleado o
   // tocar canUnlockEdit (acceso a costes/márgenes) llamando a la función
   // directamente sin ser el propietario.
-  if(!isOwnerSession()) return;
+  //
+  // ⚠️ Y tiene que DECIRLO. Hacía `return` a secas: el jefe de cocina, que
+  // sí tiene permiso de edición de su área, llegaba al formulario, rellenaba,
+  // pulsaba Guardar y no pasaba nada — ni se cerraba la ventana ni le decían
+  // por qué. Lo contó el dueño como "entro como cocinero con edición y no me
+  // deja editar los empleados": no era que no le dejara, era que no se lo
+  // explicaba. Un permiso que se niega en silencio se lee como una app rota.
+  if(!isOwnerSession()){ showToast(t('msg.staffOwnerOnly'), 5000); return; }
   const name = document.getElementById('emp-name').value.trim();
   if(!name){ showToast(t('msg.nameRequired')); return; }
   const rol = document.getElementById('emp-rol').value.trim();
