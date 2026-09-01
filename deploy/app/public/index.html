@@ -1978,6 +1978,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .pp-item{flex-wrap:wrap}
   .pp-item .btn{margin-left:38px}
 }
+
+/* El botón de opciones de una tarjeta de carpeta.
+   Es una opción por si acaso, no lo que se viene a hacer a esta pantalla:
+   sin fondo, sin borde, en gris y en un lado. Solo se tiñe al pasar por
+   encima.
+   ⚠️ Dos cosas que costaron y no se ven en el diseño:
+   · 32 px de alto en escritorio, no 26. Por debajo de 32 la app entera lo
+     considera un objetivo demasiado pequeño y la prueba de pestañas lo canta.
+   · 44 px en táctil, PERO con margen negativo para que el área pulsable
+     sobresalga de la tarjeta en vez de robarle ancho al nombre — el mismo
+     truco que ya usaba el lápiz suelto de Mega Lista. Sin eso, en una tablet
+     en vertical "Embutidos y Fiambres" se quedaba en 16 px de ancho. */
+.folder-act{margin-left:auto;background:none;border:none;padding:0;cursor:pointer;
+  color:var(--muted);opacity:.5;font-size:17px;line-height:1;display:inline-flex;
+  align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;
+  flex:none;align-self:flex-start;margin-top:-4px;margin-right:-4px;
+  transition:opacity .12s ease,background .12s ease}
+.folder-act:hover{opacity:1;background:rgba(28,26,23,.07)}
+@media (pointer: coarse){
+  .folder-act{width:44px;height:44px;opacity:.65;margin-top:-8px;margin-right:-8px;margin-bottom:-8px}
+}
 </style>
 </head>
 <body>
@@ -2876,7 +2897,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '01/09/2026 19:26';
+const GG_BUILD = '01/09/2026 22:51';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -3643,6 +3664,100 @@ function confirmTextPrompt(){
   closeModal();
   if(resolve) resolve(val);
 }
+/* El botón de opciones de una tarjeta de carpeta.
+   Está aquí y no copiado cinco veces porque son CINCO las pantallas que
+   pintan carpetas —Mega Lista, Stock (ingredientes y elaboraciones),
+   Escandallo y Fichas Técnicas— y hasta ahora cada una hacía una cosa
+   distinta: en Mega Lista se podía renombrar y en las demás no, y borrar no
+   se podía en ninguna. Es la MISMA carpeta vista desde otro sitio.
+
+   Es UN botón, no dos, y por una razón medida: dos botones de 44 px (el
+   mínimo táctil) son 88 px que le robaba al nombre de la carpeta, y en una
+   tablet en vertical "Embutidos y Fiambres" se quedaba en 16 px de ancho,
+   ilegible. Con un solo punto de entrada cabe, es más discreto —que es lo
+   que se pedía— y de paso las dos acciones se leen con su nombre entero en
+   vez de adivinarse por un icono.
+
+   "Sin categoría" no lo lleva: no es una carpeta de verdad, es el hueco
+   donde cae lo que no tiene ninguna. */
+function botonesDeCarpeta(clave, tipo){
+  if(!clave || clave === '__none__') return '';
+  const c = String(clave).replace(/'/g, "\\'");
+  return `<button class="owner-only folder-act" title="${t('title.folderOptions')}"
+    onclick="event.stopPropagation();menuDeCarpeta('${c}','${tipo}')"><i class="ti ti-dots-vertical"></i></button>`;
+}
+
+function menuDeCarpeta(clave, tipo){
+  if(!clave) return;
+  const esReceta = tipo === 'recipe';
+  const nombre = esReceta ? clave
+    : (typeof ingredientCategoryLabel === 'function' ? ingredientCategoryLabel(clave) : clave);
+  const c = String(clave).replace(/'/g, "\\'");
+  const renombrar = esReceta ? 'renameRecipeCategory' : 'renameIngredientCategory';
+  const borrar    = esReceta ? 'deleteRecipeCategory' : 'deleteIngredientCategory';
+  openModal(`
+    <div class="modal-header">
+      <h3><i class="ti ti-folder"></i> ${escapeHtml(nombre)}</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" style="justify-content:flex-start" onclick="closeModal();${renombrar}('${c}')">
+        <i class="ti ti-pencil"></i> ${t('title.renameCategory')}</button>
+      <button class="btn btn-danger" style="justify-content:flex-start" onclick="closeModal();${borrar}('${c}')">
+        <i class="ti ti-trash"></i> ${t('title.deleteCategory')}</button>
+    </div>
+  `);
+}
+
+/* Borrar una carpeta que TIENE cosas dentro no puede ser un sí o no.
+   Una categoría no es una caja: es un campo de cada ingrediente o receta. Si
+   se borrase a secas, lo de dentro se quedaría huérfano y desaparecería de las
+   listas sin que nadie lo haya borrado — lo peor que puede hacer una app con
+   el trabajo de alguien. Así que antes se pregunta a dónde va, y solo cuando
+   está contestado se borra la carpeta.
+   Devuelve el destino elegido (puede ser '' = sin categoría) o null si se
+   cancela. */
+let pendingPickResolve = null;
+function pickOption(titulo, texto, opciones, opts){
+  opts = opts || {};
+  // Sin opciones no hay nada que elegir. Sale así por la prueba que abre
+  // TODAS las ventanas sin argumentos, pero también protege de una carpeta
+  // que se quedara sin destinos posibles.
+  opciones = Array.isArray(opciones) ? opciones : [];
+  if(pendingPickResolve){ const r = pendingPickResolve; pendingPickResolve = null; r(null); }
+  return new Promise(resolve => {
+    pendingPickResolve = resolve;
+    openModal(`
+      <div class="modal-header">
+        <h3><i class="ti ${escapeHtml(opts.icon || 'ti-arrow-move-right')}"></i> ${escapeHtml(titulo)}</h3>
+        <button class="modal-close" onclick="cancelPickOption()">&times;</button>
+      </div>
+      <p style="font-size:13px;line-height:1.6;margin-bottom:14px">${escapeHtml(texto)}</p>
+      <div class="field">
+        <label>${escapeHtml(opts.label || t('common.category'))}</label>
+        <select id="generic-pick">${opciones.map(o =>
+          `<option value="${escapeHtml(o.valor)}">${escapeHtml(o.texto)}</option>`).join('')}</select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cancelPickOption()">${t('common.cancel')}</button>
+        <button class="btn btn-primary" onclick="confirmPickOption()">${escapeHtml(opts.ok || t('common.confirm'))}</button>
+      </div>
+    `);
+  });
+}
+function cancelPickOption(){
+  const r = pendingPickResolve; pendingPickResolve = null;
+  closeModal();
+  if(r) r(null);
+}
+function confirmPickOption(){
+  const el = document.getElementById('generic-pick');
+  const r = pendingPickResolve; pendingPickResolve = null;
+  const val = el ? el.value : null;
+  closeModal();
+  if(r) r(val);
+}
+
 // Sustituto de confirm() nativo del navegador — mismo cuadro gris feo del
 // sistema en todos los sitios que usaban confirm('¿Seguro?'), fuera de
 // lugar en una app con su propio diseño. Devuelve una Promise<boolean>,
@@ -9948,6 +10063,13 @@ const I18N = {
     'label.minAbbrev': 'Mín.', 'label.currentAbbrev': 'Actual:', 'common.adjust': 'Ajustar', 'title.editCostingSheet': 'Editar escandallo',
     'title.chooseFolderIcon': 'Elegir icono de la carpeta', 'btn.removeIcon': 'Quitar icono', 'carta.sectionIconHint': 'Este es el icono que verán tus clientes en la web de reservas y pedidos, donde cada sección es una carpeta.',
     'title.clickToEnlarge': 'Pulsa para ver en grande',
+    'title.folderOptions': 'Opciones de la carpeta',
+    'title.deleteCategory': 'Borrar carpeta',
+    'msg.confirmDeleteCategory': '¿Borrar la carpeta "${n}"? Está vacía, así que no se pierde nada.',
+    'msg.categoryHasItems': 'La carpeta "${n}" tiene ${c} artículos dentro. No se borra ninguno: elige a qué carpeta quieres moverlos y después se quita esta.',
+    'msg.categoryHasDishes': 'La carpeta "${n}" tiene ${c} fichas dentro. No se borra ninguna: elige a qué carpeta quieres moverlas y después se quita esta.',
+    'btn.moveAndDelete': 'Mover y borrar la carpeta',
+    'msg.categoryDeleted': 'Carpeta borrada',
     'title.renameCategory': 'Renombrar categoría', 'msg.renameCategoryPrompt': 'Nuevo nombre para esta categoría:',
     'msg.categoryRenamed': 'Categoría renombrada',
     'label.oneProduct': '1 producto', 'label.nProducts': '${n} productos', 'label.categories': 'Categorías', 'common.sections': 'Secciones',
@@ -12069,6 +12191,13 @@ const I18N = {
     'label.minAbbrev': 'Mín.', 'label.currentAbbrev': 'Actual:', 'common.adjust': 'Ajustar', 'title.editCostingSheet': 'Editar escandall',
     'title.chooseFolderIcon': 'Triar icona de la carpeta', 'btn.removeIcon': 'Treure icona', 'carta.sectionIconHint': 'Aquesta és la icona que veuran els teus clients al web de reserves i comandes, on cada secció és una carpeta.',
     'title.clickToEnlarge': 'Prem per veure-la en gran',
+    'title.folderOptions': 'Opcions de la carpeta',
+    'title.deleteCategory': 'Esborrar carpeta',
+    'msg.confirmDeleteCategory': 'Esborrar la carpeta "${n}"? És buida, així que no es perd res.',
+    'msg.categoryHasItems': 'La carpeta "${n}" té ${c} articles a dins. No se n\'esborra cap: tria a quina carpeta els vols moure i després es treu aquesta.',
+    'msg.categoryHasDishes': 'La carpeta "${n}" té ${c} fitxes a dins. No se n\'esborra cap: tria a quina carpeta les vols moure i després es treu aquesta.',
+    'btn.moveAndDelete': 'Moure i esborrar la carpeta',
+    'msg.categoryDeleted': 'Carpeta esborrada',
     'title.renameCategory': 'Reanomenar categoria', 'msg.renameCategoryPrompt': 'Nou nom per a aquesta categoria:',
     'msg.categoryRenamed': 'Categoria reanomenada',
     'label.oneProduct': '1 producte', 'label.nProducts': '${n} productes', 'label.categories': 'Categories', 'common.sections': 'Seccions',
@@ -14194,6 +14323,13 @@ const I18N = {
     'label.minAbbrev': 'Min.', 'label.currentAbbrev': 'Current:', 'common.adjust': 'Adjust', 'title.editCostingSheet': 'Edit costing sheet',
     'title.chooseFolderIcon': 'Choose folder icon', 'btn.removeIcon': 'Remove icon', 'carta.sectionIconHint': 'This is the icon your customers will see on your bookings and orders website, where each section is a folder.',
     'title.clickToEnlarge': 'Click to enlarge',
+    'title.folderOptions': 'Folder options',
+    'title.deleteCategory': 'Delete folder',
+    'msg.confirmDeleteCategory': 'Delete the folder "${n}"? It is empty, so nothing is lost.',
+    'msg.categoryHasItems': 'The folder "${n}" has ${c} items in it. None of them will be deleted: choose which folder to move them to and this one is then removed.',
+    'msg.categoryHasDishes': 'The folder "${n}" has ${c} recipe cards in it. None of them will be deleted: choose which folder to move them to and this one is then removed.',
+    'btn.moveAndDelete': 'Move and delete the folder',
+    'msg.categoryDeleted': 'Folder deleted',
     'title.renameCategory': 'Rename category', 'msg.renameCategoryPrompt': 'New name for this category:',
     'msg.categoryRenamed': 'Category renamed',
     'label.oneProduct': '1 product', 'label.nProducts': '${n} products', 'label.categories': 'Categories', 'common.sections': 'Sections',
@@ -18681,7 +18817,7 @@ function renderMegalista(){
         <h3 style="flex-wrap:nowrap;align-items:flex-start">
           <span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${safeCat}','${safeCat}','renderMegalista','ingredient')">${getCategoryIcon(cat,'ingredient')}</span>
           <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>
-          <button class="btn btn-sm btn-icon" style="margin-left:auto;flex-shrink:0" title="${t('title.renameCategory')}" onclick="event.stopPropagation();renameIngredientCategory('${safeCat}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+          ${botonesDeCarpeta(cat, 'ingredient')}
         </h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
@@ -19066,6 +19202,52 @@ async function renameIngredientCategory(oldName){
   renderMegalista();
   showToast(t('msg.categoryRenamed'));
 }
+/* Borrar una carpeta de la Mega Lista / del Stock.
+   Una categoría no existe por sí sola: es lo que pone en el campo `category`
+   de cada ingrediente. "Borrarla" es, en realidad, dejar a sus ingredientes
+   sin ella. Por eso:
+     · si está vacía, se quita y ya está;
+     · si tiene cosas dentro, NO se borra hasta saber a dónde van. Se elige
+       otra carpeta (o "sin categoría") y se mueven ahí.
+   Nunca se borra un ingrediente: el hostelero ha metido sus precios uno a uno
+   y perderlos por reorganizar carpetas sería imperdonable. */
+async function deleteIngredientCategory(cat){
+  const dentro = (DB.ingredients || []).filter(i =>
+    i.category === cat && (i.area || 'cocina') === currentArea());
+  const quitarDeLaLista = () => {
+    const idx = DB.ingredientCategories.indexOf(cat);
+    if(idx >= 0) DB.ingredientCategories.splice(idx, 1);
+    if(DB.categoryIcons && DB.categoryIcons.ingredient) delete DB.categoryIcons.ingredient[cat];
+  };
+
+  if(!dentro.length){
+    if(!(await confirmModal(t('msg.confirmDeleteCategory').replace('${n}', ingredientCategoryLabel(cat)),
+        {icon:'ti-trash', danger:true}))) return;
+    quitarDeLaLista();
+  } else {
+    // Las demás carpetas del área, más "sin categoría".
+    const otras = [...new Set((DB.ingredients || [])
+      .filter(i => (i.area || 'cocina') === currentArea() && i.category && i.category !== cat)
+      .map(i => i.category))].sort();
+    const opciones = [...otras.map(c => ({valor: c, texto: ingredientCategoryLabel(c)})),
+                      {valor: '', texto: t('label.noCategory')}];
+    const destino = await pickOption(
+      t('title.deleteCategory'),
+      t('msg.categoryHasItems').replace('${n}', ingredientCategoryLabel(cat))
+        .replace('${c}', dentro.length),
+      opciones, {icon:'ti-trash', ok: t('btn.moveAndDelete')});
+    if(destino === null) return;
+    dentro.forEach(i => { i.category = destino; });
+    quitarDeLaLista();
+  }
+  saveDB();
+  if(typeof megalistaFolder !== 'undefined' && megalistaFolder === cat) megalistaFolder = null;
+  if(typeof stockFolder !== 'undefined' && stockFolder === cat) stockFolder = null;
+  renderMegalista();
+  if(typeof renderStock === 'function') renderStock();
+  showToast(t('msg.categoryDeleted'));
+}
+
 function cancelNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   state.category = ingredientCategories()[0];
@@ -19373,7 +19555,7 @@ function renderStock(){
     // Vista de carpetas por categoría.
     groupsWrap.innerHTML = `<div class="grid grid-compact">${cats.map(cat => `
       <div class="card card-compact" style="cursor:pointer" onclick="openStockFolder('${cat.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${cat.replace(/'/g,"\\'")}','${cat.replace(/'/g,"\\'")}','renderStock','ingredient')">${getCategoryIcon(cat,'ingredient')}</span> <span class="folder-card-name">${escapeHtml(ingredientCategoryLabel(cat))}</span>${botonesDeCarpeta(cat, 'ingredient')}</h3>
         <div style="font-size:12px;color:var(--muted)">${byCat[cat].length===1 ? t('label.oneProduct') : t('label.nProducts').replace('${n}', byCat[cat].length)}</div>
       </div>
     `).join('')}</div>`;
@@ -19432,7 +19614,7 @@ function renderStock(){
       const n = (elabsByRecipeCat[key]||[]).length;
       return `
       <div class="card card-compact" style="cursor:pointer" onclick="openElabFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderStock','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${n===1 ? t('label.oneElaboration') : t('label.nElaborations').replace('${n}', n)}</div>
       </div>`;
     }).join('')}</div>`;
@@ -19928,6 +20110,84 @@ function getEscandalloFolders(recipes){
   return result;
 }
 
+/* Renombrar y borrar las carpetas de Escandallo y Fichas Técnicas.
+   Hasta ahora solo se podía cambiarles el icono: un nombre mal escrito se
+   quedaba así para siempre y una carpeta que sobraba no había forma de
+   quitarla. En Mega Lista sí se podía renombrar, lo que hacía la app
+   incoherente consigo misma según por dónde entraras a la MISMA carpeta.
+
+   Las categorías de receta no son una lista aparte: son lo que pone en el
+   campo `category` de cada plato. Por eso renombrar es reasignar, y borrar
+   obliga a decir a dónde va lo de dentro. Nunca se borra un plato. */
+async function renameRecipeCategory(key){
+  if(key === '__none__') return;   // "Sin categoría" no es una carpeta de verdad
+  const nuevo = await promptText(t('msg.renameCategoryPrompt'), key);
+  if(nuevo === null) return;
+  const trimmed = nuevo.trim();
+  if(!trimmed || trimmed === key) return;
+  // Solo las recetas de ESTA área: Cocina y Sala pueden tener, por
+  // coincidencia, una categoría con el mismo nombre.
+  DB.recipes.forEach(r => {
+    if(r.category === key && (r.area||'cocina') === currentArea()) r.category = trimmed;
+  });
+  const idx = DB.recipeCategories.findIndex(c =>
+    (typeof c === 'object' ? c.name : c) === key &&
+    (typeof c === 'object' ? (!c.area || c.area === currentArea()) : true));
+  if(idx >= 0) DB.recipeCategories.splice(idx, 1);
+  const yaEsta = DB.recipeCategories.some(c =>
+    (typeof c === 'object' ? c.name : c) === trimmed);
+  if(!yaEsta) DB.recipeCategories.push({name: trimmed, area: currentArea()});
+  // El icono se traspasa: no se pierde por corregir el texto.
+  if(DB.categoryIcons && DB.categoryIcons.recipe && DB.categoryIcons.recipe[key] != null){
+    DB.categoryIcons.recipe[trimmed] = DB.categoryIcons.recipe[key];
+    delete DB.categoryIcons.recipe[key];
+  }
+  saveDB();
+  if(escandalloFolder === key) escandalloFolder = trimmed;
+  if(typeof fichasFolder !== 'undefined' && fichasFolder === key) fichasFolder = trimmed;
+  renderEscandallo();
+  if(typeof renderFichas === 'function') renderFichas();
+  showToast(t('msg.categoryRenamed'));
+}
+
+async function deleteRecipeCategory(key){
+  if(key === '__none__') return;
+  const dentro = DB.recipes.filter(r =>
+    r.category === key && (r.area||'cocina') === currentArea());
+  const quitarDeLaLista = () => {
+    const idx = DB.recipeCategories.findIndex(c =>
+      (typeof c === 'object' ? c.name : c) === key &&
+      (typeof c === 'object' ? (!c.area || c.area === currentArea()) : true));
+    if(idx >= 0) DB.recipeCategories.splice(idx, 1);
+    if(DB.categoryIcons && DB.categoryIcons.recipe) delete DB.categoryIcons.recipe[key];
+  };
+
+  if(!dentro.length){
+    if(!(await confirmModal(t('msg.confirmDeleteCategory').replace('${n}', key),
+        {icon:'ti-trash', danger:true}))) return;
+    quitarDeLaLista();
+  } else {
+    const otras = [...new Set(DB.recipes
+      .filter(r => (r.area||'cocina') === currentArea() && r.category && r.category !== key)
+      .map(r => r.category))].sort();
+    const opciones = [...otras.map(c => ({valor: c, texto: c})),
+                      {valor: '', texto: t('label.noCategory')}];
+    const destino = await pickOption(
+      t('title.deleteCategory'),
+      t('msg.categoryHasDishes').replace('${n}', key).replace('${c}', dentro.length),
+      opciones, {icon:'ti-trash', ok: t('btn.moveAndDelete')});
+    if(destino === null) return;
+    dentro.forEach(r => { r.category = destino; });
+    quitarDeLaLista();
+  }
+  saveDB();
+  if(escandalloFolder === key) escandalloFolder = null;
+  if(typeof fichasFolder !== 'undefined' && fichasFolder === key) fichasFolder = null;
+  renderEscandallo();
+  if(typeof renderFichas === 'function') renderFichas();
+  showToast(t('msg.categoryDeleted'));
+}
+
 function renderEscandallo(){
   maybeShowCategoryIconHint();
   const isElab = escandalloTab === 'elaboraciones';
@@ -19975,7 +20235,7 @@ function renderEscandallo(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openEscandalloFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderEscandallo','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${group.length} ${currentArea()==='sala' ? (group.length===1?t('noun.drink'):t('noun.drinks')) : (group.length===1?t('noun.dish'):t('noun.dishes'))}</div>
       </div>
     `).join('')}</div>`;
@@ -21057,7 +21317,7 @@ function renderFichas(){
     const folders = getEscandalloFolders(areaRecipes);
     box.innerHTML = `<div class="grid grid-compact">${folders.map(([key, label, group]) => `
       <div class="card card-compact" style="cursor:pointer" onclick="openFichaFolder('${key.replace(/'/g,"\\'")}')">
-        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span></h3>
+        <h3 style="flex-wrap:nowrap;align-items:flex-start"><span class="cat-icon-btn" title="${t('title.chooseFolderIcon')}" onclick="event.stopPropagation();openCategoryIconModal('${key.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}','renderFichas','recipe')">${getCategoryIcon(key,'recipe')}</span> <span class="folder-card-name">${escapeHtml(label)}</span>${botonesDeCarpeta(key, 'recipe')}</h3>
         <div style="font-size:12px;color:var(--muted)">${currentArea()==='sala' ? (group.length===1?t('label.oneDrink'):t('label.nDrinks').replace('${n}', group.length)) : (group.length===1?t('label.oneDish'):t('label.nDishes').replace('${n}', group.length))}</div>
       </div>
     `).join('')}</div>`;
