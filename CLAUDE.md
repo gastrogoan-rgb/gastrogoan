@@ -28,10 +28,66 @@ mientras haya alternativa técnica.
 
 ### Dónde se publica
 
-Hoy en **Render** (dos sitios estáticos). **La intención es volver a Netlify.**
-Al hacerlo hay que tener presente lo que ya pasó una vez: el plan gratuito de
-Netlify limita las PUBLICACIONES, y se agotaron dejando la app congelada dos
-semanas. Publicar en tandas, no cada arreglo suelto.
+**Cloudflare Pages** (dos proyectos, desde este repositorio). Ver
+`deploy/README.md` para la configuración exacta.
+
+Se eligió por una razón que a 5.000 licencias es decisiva: **ancho de banda
+ilimitado** para contenido estático, y **500 publicaciones al mes**.
+
+Lo que se descartó y por qué:
+- **Netlify** (donde estaba): en 2026 va por créditos — 300 al mes, 15 por
+  publicación (o sea **20 publicaciones**) y 20 por GB (**15 GB como mucho**).
+  Ya congeló la app dos semanas una vez. Con 5.000 negocios harían falta unos
+  270 GB/mes. No da ni pagando el plan Pro.
+- **Render** (el paso intermedio): 5 GB/mes. Da para unos 20-70 negocios.
+- **Cloudflare Workers** (primer intento): para asignarle un dominio propio
+  exige el dominio ENTERO en Cloudflare, nameservers incluidos, y el
+  registrador (Canva) no lo permite. **Pages sí acepta un subdominio con un
+  simple CNAME desde el DNS de fuera** — esa es toda la diferencia, y es lo
+  que desbloqueó la mudanza.
+
+---
+
+## El espejo público vive en la nube de CADA negocio
+
+Lo que lee `reservagastrogoan.html` (carta, aforo, reservas que entran) estaba
+en la Firebase compartida de la plataforma. No escala, y el techo llega mucho
+antes de lo que parece: el plan gratuito da **100 conexiones simultáneas**, y
+una conexión es **una pestaña abierta**. Con el espejo compartido, cada app de
+gestión y cada cliente mirando la carta ocupaban una conexión del MISMO
+proyecto — a partir de unos 50-100 negocios, la web de reservas falla para
+todos a la vez, un viernes por la noche.
+
+- `getPublicMirrorApp()` devuelve la nube del negocio (que ya está conectada:
+  **no abre ninguna conexión nueva**) o la compartida como respaldo.
+- La web pública pregunta por REST (`consultarPlataforma`) en qué nube está
+  ese negocio: **una petición HTTP no abre socket**, así que no gasta
+  conexiones ni crea cuentas anónimas. Solo si eso falla usa el SDK.
+- En la plataforma queda únicamente una guía mínima: `publicLookup/{publicId}`
+  y `publicSlugs/{slug}`, ambas de lectura abierta. No son secretos.
+
+⚠️ **Nadie se muda hasta que su nube lo demuestra.** `comprobarEspejoEnNubePropia()`
+escribe de prueba en los nodos que las reglas VIEJAS no tenían; solo si
+funciona publica la guía. Un negocio con reglas antiguas sigue en la
+compartida y se muda solo cuando su dueño las actualice. Los textos para pegar
+están en `reglas/`.
+
+---
+
+## El programa se guarda, los datos vuelan
+
+La app pesa 4 MB. El service worker la servía pidiéndola SIEMPRE a la red: un
+negocio abriéndola 20 veces al día son 2,4 GB al mes de un solo cliente.
+
+Ahora `sw.js` sirve la copia guardada (arranque instantáneo, cero tráfico) y
+lo que se consulta es `version.json`: **29 bytes**. Si hay versión nueva y la
+app se acaba de abrir sin que nadie haya tocado nada, **se actualiza sola**;
+si se está trabajando (modal abierto, algo escrito, ya hubo un toque), avisa
+con una barra y decide el hostelero. El botón "Actualizar" de la cabecera
+fuerza la comprobación saltándose el ciclo de 6 h.
+
+⚠️ Esto NO afecta a los datos: suben en 0,8 s (`CLOUD_SYNC_DELAY`) y bajan al
+instante por bloques. Lo que se cachea es el programa.
 
 ---
 
