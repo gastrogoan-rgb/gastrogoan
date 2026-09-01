@@ -1532,6 +1532,87 @@ function idrCasarLinea(ing){
   }
   return null;
 }
+/* Un plato de carta no es una lista plana de ingredientes: es un montaje de
+   elaboraciones. Un salmón con vinagreta de cítricos, puré de apionabo y
+   crujiente de piel son CUATRO recetas, cada una con su rendimiento, sus
+   pasos y su coste.
+   Hasta ahora todo eso se fundía en la ficha del plato: 22 líneas seguidas
+   sin decir qué iba con qué. El cocinero no podía producir el puré por
+   separado, ni saber lo que le cuesta, ni reutilizarlo en otro plato. Ahora
+   cada elaboración nace como su propia ficha base y el plato la usa con
+   {type:'base'}, que es lo que encadena el coste solo.
+
+   Y no todas van al stock. En una cocina se lleva inventario de lo que se
+   produce en tanda y se guarda —un fondo, un confitado, una masa—; una
+   vinagreta que se monta en el momento no se inventaría, y meterla en la
+   lista de producción solo añade ruido a la pantalla que el equipo mira cada
+   día. Esa decisión la toma el modelo con ese criterio, y el cocinero puede
+   cambiarla desde la ficha. */
+function idrCrearElaboracionDelPlato(elab){
+  if(!elab || !elab.nombre) return null;
+  const nombre = String(elab.nombre).slice(0, 80);
+  const rinde = elab.rinde || {};
+  const unidad = idrUnidadDeElaboracion(rinde.unidad);
+  // La CIFRA se convierte junto con la unidad. Cambiar "800 ml" a litros sin
+  // tocar el 800 deja una elaboración que rinde 800 litros, y el coste por
+  // ración sale mil veces más barato — el mismo error de escala que ya se
+  // pisó con los 120 kg de queso.
+  const rendimiento = Math.max(0.001,
+    idrConvertirCantidad(parseFloat(rinde.cantidad) || 1, rinde.unidad, unidad) || 1);
+
+  const lineas = [];
+  const faltan = [];
+  (Array.isArray(elab.ingredientes) ? elab.ingredientes : []).forEach(ing => {
+    const linea = idrCasarLinea(ing);
+    if(linea) lineas.push(linea);
+    else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
+  });
+
+  // Si ya tiene esa elaboración, se REUTILIZA. Crear un segundo "Fondo oscuro"
+  // cada vez que un plato lo usa es justo lo contrario de lo que sirve para
+  // algo: el valor está en que el fondo sea uno y su coste se encadene.
+  const existente = idrBuscarElaboracion(nombre);
+  const receta = existente || {
+    id: genId(), name: nombre, price: 0, priceBase: 0,
+    ivaPct: (DB.business && DB.business.ivaPct) || 10,
+    comensales: 1, consumiblesPct: 0,
+    category: (typeof areaRecipeCategories === 'function' && areaRecipeCategories()[0]) || '',
+    ingredients: lineas, allergens: [], area: 'cocina',
+    isBase: true, baseYield: rendimiento, baseUnit: unidad,
+    steps: Array.isArray(elab.pasos) ? elab.pasos.join('\n') : '',
+    presentation: String(elab.descripcion || ''),
+  };
+  if(existente){
+    // Una elaboración que ya existe es del negocio, no del asistente: se
+    // respeta lo que tenga. Solo se completa lo que esté en blanco.
+    if(!(receta.ingredients||[]).length) receta.ingredients = lineas;
+    if(!receta.steps && Array.isArray(elab.pasos)) receta.steps = elab.pasos.join('\n');
+  } else {
+    DB.recipes.push(receta);
+  }
+
+  const conStock = elab.stock !== false;
+  if(typeof syncElaboracionForRecipe === 'function'){
+    // Solo se toca el stock de las que NACEN aquí: si el negocio ya la tenía
+    // inventariada, quitársela porque el modelo opine otra cosa sería borrarle
+    // trabajo hecho.
+    if(!existente) syncElaboracionForRecipe(receta.id, conStock, receta.name, receta.baseUnit);
+  }
+  return {receta, faltan, conStock, nueva: !existente,
+          porRacion: elab.porRacion || elab.cantidadPorRacion || null};
+}
+
+// La unidad de una elaboración es de bulto (litros, kilos o unidades): se
+// produce una tanda y se sirve por cucharadas. Si el modelo contesta en
+// gramos o mililitros, se sube de escala — si no, "rinde 800" con la unidad
+// en ml y el plato pidiendo 0,04 L no cuadra por mil.
+function idrUnidadDeElaboracion(u){
+  const s = String(u || '').trim().toLowerCase();
+  if(s === 'g' || s === 'gr' || s === 'kg') return 'kg';
+  if(s === 'ml' || s === 'l' || s === 'cl') return 'L';
+  return s === 'ud' || s === 'u' || s === 'uds' ? 'ud' : 'L';
+}
+
 function idrBuscarElaboracion(nombre){
   const n = (nombre||'').trim().toLowerCase();
   if(!n) return null;
@@ -1560,6 +1641,35 @@ async function idrCrearPlatoReal(id){
     renderIdr();
   }
 }
+/* Monta las líneas de un plato a partir del JSON del modelo: primero las
+   elaboraciones (cada una con su ficha propia) y después lo que va directo al
+   pase. Está aparte porque se usa DOS veces — al crear y al corregir. Cuando
+   solo lo hacía la primera pasada, la corrección reconstruía la ficha con
+   "ingredientes" a secas y se llevaba por delante las cuatro elaboraciones
+   recién creadas: el plato quedaba apuntando a nada y su coste, a la mitad. */
+function idrMontarLineasDePlato(j){
+  const lineas = [], faltan = [], elaboraciones = [];
+  (Array.isArray(j.elaboraciones) ? j.elaboraciones : []).forEach(e => {
+    const hecha = idrCrearElaboracionDelPlato(e);
+    if(!hecha) return;
+    elaboraciones.push(hecha);
+    hecha.faltan.forEach(f => faltan.push(f));
+    const por = hecha.porRacion || {};
+    const qty = Math.max(0, idrConvertirCantidad(
+      parseFloat(por.cantidad) || 0, por.unidad || hecha.receta.baseUnit, hecha.receta.baseUnit));
+    // Sin cantidad por ración la elaboración existe pero no entra en el
+    // escandallo: mejor avisar que colar un plato con la mitad del coste.
+    if(qty > 0) lineas.push({type:'base', baseRecipeId: hecha.receta.id, qty, merma: 0});
+    else faltan.push(`${hecha.receta.name} (falta cuánto lleva por ración)`);
+  });
+  (Array.isArray(j.ingredientes) ? j.ingredientes : []).forEach(ing => {
+    const linea = idrCasarLinea(ing);
+    if(linea) lineas.push(linea);
+    else if(ing && ing.nombre) faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
+  });
+  return {lineas, faltan, elaboraciones};
+}
+
 async function idrCrearPlatoRealInterno(id){
   const c = idrCreacion(id);
   if(!c || c.tipo !== 'plato') return;
@@ -1575,7 +1685,13 @@ async function idrCrearPlatoRealInterno(id){
 ${resumen}
 
 Escribe la receta. Responde SOLO con este JSON:
-{"nombre":"...","descripcion":"descripción corta de carta","comensales":2,"pasos":["paso 1","paso 2"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}]}
+{"nombre":"...","descripcion":"descripción corta de carta","comensales":2,"pasos":["montaje y pase, paso a paso"],"ingredientes":[{"nombre":"tal y como lo llamaría el negocio","cantidad":120,"unidad":"g"}],"elaboraciones":[{"nombre":"Vinagreta de cítricos","rinde":{"cantidad":500,"unidad":"ml"},"porRacion":{"cantidad":25,"unidad":"ml"},"stock":false,"porque":"se monta en el momento","pasos":["..."],"ingredientes":[{"nombre":"...","cantidad":200,"unidad":"ml"}]}]}
+
+SEPARA LAS ELABORACIONES. Un plato de carta es un montaje: el producto principal, su salsa, su guarnición, su crujiente. Cada parte que se prepara APARTE va en "elaboraciones", con su propio rendimiento de tanda, sus pasos y sus ingredientes; la aplicación le crea su ficha y encadena el coste. En "ingredientes" deja solo lo que va directo al plato en el pase (la pieza de pescado, la hoja de ensalada, el pan). Y en "pasos", el montaje: no repitas ahí cómo se hace cada elaboración.
+No te inventes elaboraciones para adornar: si el plato no las tiene —una ensalada, un producto a la brasa— deja la lista vacía.
+"porRacion" es lo que lleva UNA ración de esa elaboración, en la misma unidad del rendimiento.
+
+"stock" dice si esa elaboración se inventaría, y es una decisión de cocina, no de formato: va a TRUE lo que se produce en tanda y se guarda para varios servicios (fondos, salsas madre, confitados, masas, purés, helados); va a FALSE lo que se monta en el momento con género que ya está en la nevera (una vinagreta, un aliño, un aceite aromatizado del día). Escribe en "porque" el motivo en cinco palabras.
 
 Escríbela para UNA RACIÓN (un comensal), que es como se escandalla un plato de carta, y pon 1 en "comensales". Solo pon otro número si el cocinero ha pedido expresamente una producción para varios (por ejemplo cuarenta del menú del día).
 Y ojo al escalar: la sal, el picante y las especias NO suben en proporción, y una reducción no tarda el doble por doblar el volumen. Ajusta con criterio, no multiplicando.
@@ -1591,14 +1707,7 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
   const j = idrExtraerJson(r.texto);
   if(!j || !j.nombre || !Array.isArray(j.ingredientes)){ showToast(t('idr.err.unreadable')); return; }
 
-  const lineas = [];
-  const faltan = [];
-  j.ingredientes.forEach(ing => {
-    const linea = idrCasarLinea(ing);
-    if(linea) lineas.push(linea);
-    else faltan.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
-  });
-
+  const {lineas, faltan, elaboraciones} = idrMontarLineasDePlato(j);
   const nombre = String(j.nombre).slice(0, 80);
   // Si esta prueba ya creó su ficha, se REESCRIBE esa misma. Antes, pedirle
   // al asistente una versión más barata dejaba dos platos casi iguales en
@@ -1651,6 +1760,13 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
 
   c.recipeId = receta.id;
   c.faltan = faltan;
+  // Qué se ha creado aparte, para poder contárselo al cocinero al cerrar: si
+  // no, aparecen cuatro fichas nuevas en Escandallo sin que nadie le haya
+  // dicho que iban a aparecer.
+  c.elaboraciones = elaboraciones.map(e => ({
+    id: e.receta.id, nombre: e.receta.name, stock: e.conStock, nueva: e.nueva,
+    rinde: `${fmtNum(e.receta.baseYield)} ${e.receta.baseUnit}`,
+  }));
 
   // NIVEL 3 + 4: la app juzga el plato en frío contra sus datos, y lo que
   // falla vuelve al modelo para que lo corrija ANTES de que el cocinero lo
@@ -1666,14 +1782,13 @@ Aprovecha los ingredientes que YA COMPRA cuando encajen, con el mismo nombre con
     ], {maxTokens: 3000});
     const j2 = arreglo.ok ? idrExtraerJson(arreglo.texto) : null;
     if(j2 && Array.isArray(j2.ingredientes)){
-      const lineas2 = []; const faltan2 = [];
-      j2.ingredientes.forEach(ing => {
-        const linea = idrCasarLinea(ing);
-        if(linea) lineas2.push(linea);
-        else if(ing.nombre) faltan2.push(`${ing.nombre}${ing.cantidad ? ` (${ing.cantidad} ${ing.unidad||''})` : ''}`);
-      });
+      const {lineas: lineas2, faltan: faltan2, elaboraciones: elabs2} = idrMontarLineasDePlato(j2);
       if(lineas2.length){
         receta.ingredients = lineas2;
+        if(elabs2.length) c.elaboraciones = elabs2.map(e => ({
+          id: e.receta.id, nombre: e.receta.name, stock: e.conStock, nueva: e.nueva,
+          rinde: `${fmtNum(e.receta.baseYield)} ${e.receta.baseUnit}`,
+        }));
         if(j2.nombre) receta.name = String(j2.nombre).slice(0,80);
         if(Array.isArray(j2.pasos)) receta.steps = j2.pasos.join('\n');
         if(j2.descripcion) receta.presentation = String(j2.descripcion);
@@ -1895,6 +2010,17 @@ function idrCerrarConLaFicha(c, receta){
       .replace('${comensales}', receta.comensales || 2)
       .replace('${coste}', fmtMoney(coste))
       .replace('${pvp}', fmtMoney(pvp)));
+  }
+  /* Las elaboraciones que ha creado el plato. Van ANTES que los avisos porque
+     no son un problema: son trabajo hecho, y el cocinero tiene que saber que
+     ahora tiene cuatro fichas más y cuáles de ellas le van a aparecer en la
+     lista de producción. */
+  const elabs = c.elaboraciones || [];
+  if(elabs.length){
+    const linea = e => `· ${e.nombre} (${e.rinde})` +
+      (e.stock ? ` — ${t('idr.elabInStock')}` : ` — ${t('idr.elabNoStock')}`) +
+      (e.nueva ? '' : ` — ${t('idr.elabReused')}`);
+    partes.push(t('idr.doneElabs').replace('${n}', elabs.length) + '\n' + elabs.map(linea).join('\n'));
   }
   if((c.faltan||[]).length) partes.push(t('idr.doneMissing').replace('${n}', c.faltan.length).replace('${lista}', c.faltan.join(', ')));
   if((c.avisos||[]).length) partes.push(t('idr.doneWarnings') + '\n· ' + c.avisos.join('\n· '));

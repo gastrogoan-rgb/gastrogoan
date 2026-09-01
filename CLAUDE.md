@@ -465,15 +465,21 @@ Pruebas nuevas permanentes: `test/cuentas.mjs` (13 casos de aislamiento entre
 cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
 `test/simulacion/` y `test/idr.mjs` (81 casos). La batería pasa de 25 a 27.
 
+### Verificado el 1 de septiembre de 2026
+
+- **El aislamiento entre cuentas EN LA NUBE**, por el dueño, con dos cuentas
+  reales en dos aparatos: la plataforma le devuelve a cada una sus negocios y
+  no los del otro. Era el único hueco que quedaba del modelo de cuentas — los
+  14 casos de `test/cuentas.mjs` cubren el dispositivo, pero corren sin nube.
+- **La app entera en los tres idiomas** (`test/traducciones.mjs`, 41 pantallas
+  × es/ca/en). Ver la sección de i18n en las convenciones.
+
 ### Pendiente
 
 0. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
    circuitos: en la simulación el asistente lo escribía una IA haciendo de
    modelo, no el proveedor del cliente. Que Gemini conteste con ese criterio
    está sin comprobar, y es lo que decide si el módulo vale.
-0bis. **El aislamiento entre cuentas EN LA NUBE.** Lo del dispositivo está
-   verificado (13 casos). Que la lista que devuelve la plataforma sea la de
-   cada cuenta necesita dos cuentas reales y dos dispositivos.
 1. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
    antes de manejar pagos de forma continuada.
 2. iPhone/iPad: todo se ha probado en Chromium y Android.

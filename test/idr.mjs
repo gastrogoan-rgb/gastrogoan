@@ -2265,6 +2265,100 @@ await caso('El menú se cuesta ENTERO, no pase a pase', async ()=>{
   return 'la suma por comensal, que es lo que decide';
 });
 
+/* ─── Un plato es un MONTAJE de elaboraciones, no una lista plana ─── */
+const PLATO_CON_ELABS = JSON.stringify({
+  nombre:'Salmón con vinagreta de cítricos', descripcion:'x', comensales:1,
+  pasos:['Marcar el salmón.','Napar al pase.'],
+  ingredientes:[{nombre:'Bacalao', cantidad:160, unidad:'g'}],
+  elaboraciones:[
+    {nombre:'Vinagreta de cítricos', rinde:{cantidad:800, unidad:'ml'},
+     porRacion:{cantidad:25, unidad:'ml'}, stock:false, porque:'se monta en el momento',
+     pasos:['Emulsionar.'],
+     ingredientes:[{nombre:'Aceite de oliva virgen', cantidad:500, unidad:'ml'}]},
+    {nombre:'Puré de apionabo', rinde:{cantidad:2, unidad:'kg'},
+     porRacion:{cantidad:90, unidad:'g'}, stock:true, porque:'se hace en tanda',
+     pasos:['Cocer y triturar.'],
+     ingredientes:[{nombre:'Mantequilla', cantidad:200, unidad:'g'}]},
+  ]});
+
+const crearPlatoConElabs = async () => {
+  await fingir(PLATO_CON_ELABS);
+  return await page.evaluate(async ()=>{
+    idrGuardarConfig('google','clave-de-prueba','');
+    Object.assign(idrAdn(), {cocina:'Catalana de mercado', nivel:'Bistró', publico:'Barrio'});
+    idrEmpezar('plato');
+    encargoHecho();
+    const c = idrCreacion(idrCreacionActiva);
+    c.mensajes = [{r:'yo', t:'Un salmón con vinagreta y puré'}]; saveDB();
+    await idrCrearPlatoReal(c.id);
+    const plato = getRecipe(c.recipeId);
+    const base = n => (DB.recipes||[]).find(r => r.isBase && r.name === n);
+    const vin = base('Vinagreta de cítricos'), pur = base('Puré de apionabo');
+    return {
+      lineasDelPlato: (plato.ingredients||[]).length,
+      lineasBase: (plato.ingredients||[]).filter(l => l.type === 'base').length,
+      apuntaAVinagreta: (plato.ingredients||[]).some(l => l.type==='base' && l.baseRecipeId===(vin||{}).id),
+      vinagreta: vin ? {rinde: vin.baseYield, unidad: vin.baseUnit, lineas: vin.ingredients.length} : null,
+      pure: pur ? {rinde: pur.baseYield, unidad: pur.baseUnit} : null,
+      enStock: (DB.elaboraciones||[]).map(e => e.name),
+      coste: recipeCost(plato),
+      contadas: (c.elaboraciones||[]).length,
+    };
+  });
+};
+
+await caso('Un plato con varias elaboraciones crea una ficha para cada una', async ()=>{
+  const r = await crearPlatoConElabs();
+  assert.ok(r.vinagreta, 'la vinagreta tiene que existir como elaboración propia');
+  assert.ok(r.pure, 'el puré también');
+  assert.equal(r.lineasBase, 2, 'el plato debe apuntar a las DOS elaboraciones');
+  assert.ok(r.apuntaAVinagreta, 'y apuntar a la ficha de verdad, no a una copia');
+  assert.equal(r.lineasDelPlato, 3, 'más el ingrediente que va directo al pase');
+  assert.equal(r.contadas, 2, 'y quedar anotadas para poder contárselo al cocinero');
+  return `${r.lineasBase} elaboraciones + 1 ingrediente directo`;
+});
+
+await caso('El asistente decide cuál se inventaría: la vinagreta no', async ()=>{
+  /* Lo pidió el dueño probando la app: en una cocina se lleva stock de lo que
+     se produce en tanda y se guarda, no de una vinagreta que se monta en el
+     momento. Meterla en la lista de producción solo añade ruido a la pantalla
+     que el equipo mira cada día. */
+  const r = await crearPlatoConElabs();
+  assert.ok(r.enStock.includes('Puré de apionabo'), 'el puré se produce en tanda: va al stock');
+  assert.ok(!r.enStock.includes('Vinagreta de cítricos'), 'la vinagreta NO debería estar en el stock');
+  return `en stock: ${r.enStock.join(', ') || '(nada)'}`;
+});
+
+await caso('El rendimiento de una elaboración no se escala mal', async ()=>{
+  /* "800 ml" pasado a litros sin tocar la cifra deja una elaboración que
+     rinde 800 LITROS, y el coste por ración sale mil veces más barato. Es el
+     mismo error de escala de los 120 kg de queso. */
+  const r = await crearPlatoConElabs();
+  assert.equal(r.vinagreta.unidad, 'L', 'una elaboración se mide de bulto, en litros');
+  assert.ok(Math.abs(r.vinagreta.rinde - 0.8) < 0.001, `800 ml son 0,8 L, no ${r.vinagreta.rinde}`);
+  assert.equal(r.pure.unidad, 'kg');
+  assert.ok(Math.abs(r.pure.rinde - 2) < 0.001, `2 kg deberían seguir siendo 2, no ${r.pure.rinde}`);
+  assert.ok(r.coste > 0, 'y el coste del plato tiene que encadenarse por las elaboraciones');
+  return `vinagreta ${r.vinagreta.rinde} L · puré ${r.pure.rinde} kg · plato ${r.coste.toFixed(3)} €`;
+});
+
+await caso('Una elaboración que el negocio YA tiene se reutiliza, no se duplica', async ()=>{
+  /* Crear un segundo "Puré de apionabo" cada vez que un plato lo usa es lo
+     contrario de lo que sirve: el valor está en que la elaboración sea una y
+     su coste se encadene en todos los platos que la lleven. */
+  await crearPlatoConElabs();
+  const r = await crearPlatoConElabs();
+  const cuantas = await page.evaluate(()=> ({
+    pures: (DB.recipes||[]).filter(r => r.isBase && r.name === 'Puré de apionabo').length,
+    vinagretas: (DB.recipes||[]).filter(r => r.isBase && r.name === 'Vinagreta de cítricos').length,
+  }));
+  assert.equal(cuantas.pures, 1, 'debería haber UN puré, no ' + cuantas.pures);
+  assert.equal(cuantas.vinagretas, 1, 'y UNA vinagreta, no ' + cuantas.vinagretas);
+  const enStock = r.enStock.filter(n => n === 'Puré de apionabo').length;
+  assert.equal(enStock, 1, `ni duplicarse en el stock (sale ${enStock} veces)`);
+  return 'una ficha por elaboración, por muchos platos que la usen';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));

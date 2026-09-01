@@ -17,16 +17,43 @@
       "Colar por estameña sin apretar la verdura y enfriar en el abatidor."
     ],
     "ingredientes": [
-      {"nombre": "Huesos de ternera", "cantidad": 4000, "unidad": "g"},
-      {"nombre": "Cebolla", "cantidad": 600, "unidad": "g"},
-      {"nombre": "Puerro", "cantidad": 300, "unidad": "g"},
-      {"nombre": "Zanahoria", "cantidad": 400, "unidad": "g"},
-      {"nombre": "Tomate maduro", "cantidad": 200, "unidad": "g"},
-      {"nombre": "Vino tinto", "cantidad": 500, "unidad": "ml"},
-      {"nombre": "Aceite de oliva virgen", "cantidad": 50, "unidad": "ml"}
+      {
+        "nombre": "Huesos de ternera",
+        "cantidad": 4000,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Cebolla",
+        "cantidad": 600,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Puerro",
+        "cantidad": 300,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Zanahoria",
+        "cantidad": 400,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Tomate maduro",
+        "cantidad": 200,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Vino tinto",
+        "cantidad": 500,
+        "unidad": "ml"
+      },
+      {
+        "nombre": "Aceite de oliva virgen",
+        "cantidad": 50,
+        "unidad": "ml"
+      }
     ]
   },
-
   "plato:1": {
     "respuesta": "De acuerdo en huir de la crema: la calabaza en crema la tiene todo el mundo y además te deja un plato blando y dulce de principio a fin. Te doy tres caminos distintos.\n\n1) Calabaza a la brasa con panceta ibérica y vinagreta de miel y mostaza. La brasa le da el amargor tostado que a la calabaza le falta, la panceta pone la grasa y la vinagreta corta el dulzor. Es el que yo elegiría: usa la brasa que ya tienes encendida y se adelanta casi entero. Unos 250 g de calabaza en cuñas gruesas, 40 g de panceta y la vinagreta ya hecha.\n\n2) Calabaza asada al horno con picada de piñones y pasas. Más catalán y más de tu casa, la picada es puro oficio de aquí. Riesgo: se queda en la misma familia dulce que la escalivada si ya la tienes en carta.\n\n3) Calabaza escabechada tibia con pan de payés tostado. La acidez del escabeche la levanta y aguanta perfectamente el servicio porque se hace de un día para otro. Es el más raro de los tres y el que menos gente pide a la primera.\n\nOjo con una cosa en los tres: la calabaza suelta mucha agua, así que hay que asarla en tandas y bien separada, o se cuece en vez de tostarse y se te va la textura. ¿Tiro por la brasa?",
     "listo": true,
@@ -45,73 +72,529 @@
       "Emplatar las cuñas, repartir la panceta y los piñones, y napar con la vinagreta al pase."
     ],
     "ingredientes": [
-      {"nombre": "Calabaza", "cantidad": 250, "unidad": "g"},
-      {"nombre": "Panceta ibérica", "cantidad": 40, "unidad": "g"},
-      {"nombre": "Piñones", "cantidad": 10, "unidad": "g"},
-      {"nombre": "Aceite de oliva virgen", "cantidad": 20, "unidad": "ml"},
-      {"nombre": "Vinagre de Jerez", "cantidad": 10, "unidad": "ml"},
-      {"nombre": "Miel", "cantidad": 8, "unidad": "g"},
-      {"nombre": "Mostaza de Dijon", "cantidad": 5, "unidad": "g"}
+      {
+        "nombre": "Calabaza",
+        "cantidad": 250,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Panceta ibérica",
+        "cantidad": 40,
+        "unidad": "g"
+      },
+      {
+        "nombre": "Aceite de oliva virgen",
+        "cantidad": 20,
+        "unidad": "ml"
+      }
+    ],
+    "elaboraciones": [
+      {
+        "nombre": "Vinagreta de miel y mostaza",
+        "rinde": {
+          "cantidad": 500,
+          "unidad": "ml"
+        },
+        "porRacion": {
+          "cantidad": 20,
+          "unidad": "ml"
+        },
+        "stock": false,
+        "porque": "se monta en el momento",
+        "pasos": [
+          "Emulsionar el aceite con el vinagre.",
+          "Añadir la miel y la mostaza y ajustar de sal."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 300,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Vinagre de Jerez",
+            "cantidad": 100,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Miel",
+            "cantidad": 60,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Mostaza de Dijon",
+            "cantidad": 40,
+            "unidad": "g"
+          }
+        ]
+      },
+      {
+        "nombre": "Piñones tostados",
+        "rinde": {
+          "cantidad": 300,
+          "unidad": "g"
+        },
+        "porRacion": {
+          "cantidad": 10,
+          "unidad": "g"
+        },
+        "stock": true,
+        "porque": "se tuestan en tanda y se guardan",
+        "pasos": [
+          "Tostar los piñones en seco a fuego suave.",
+          "Enfriar y guardar en hermético."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Piñones",
+            "cantidad": 300,
+            "unidad": "g"
+          }
+        ]
+      }
     ]
   },
-
   "carta:1": {
     "nombre": "Carta de otoño",
     "logica": "Cinco platos que reparten las técnicas: uno crudo-tibio, uno de brasa, uno de arroz y uno de guiso, con un postre de horno que se adelanta entero. El fondo oscuro de ternera sirve para el arroz y para napar el bacalao, así que una sola producción da servicio a dos platos. De trabajo al momento solo hay dos, el arroz y la brasa, que es lo que dos cocineros y un ayudante pueden sacar sin ahogarse.",
     "bloques": [
-      {"nombre": "Entrantes", "platos": [
-        {"nombre": "Escalivada tibia con anchoa y pan de payés", "descripcion": "Verduras asadas al horno, servidas tibias, con su jugo y pan tostado."},
-        {"nombre": "Espinacas a la catalana con piñones y pasas", "descripcion": "Salteado rápido de espinacas con la picada de siempre."}
-      ]},
-      {"nombre": "Principales", "platos": [
-        {"nombre": "Arroz de sepia y all i oli", "descripcion": "Arroz seco de sepia con fondo oscuro, terminado en el horno."},
-        {"nombre": "Bacalao a la llauna con garbanzos", "descripcion": "El bacalao de la casa, con garbanzos y su sofrito."}
-      ]},
-      {"nombre": "Postres", "platos": [
-        {"nombre": "Manzana asada con crema de chocolate", "descripcion": "Manzana al horno, tibia, con una crema de chocolate al 70%."}
-      ]}
+      {
+        "nombre": "Entrantes",
+        "platos": [
+          {
+            "nombre": "Escalivada tibia con anchoa y pan de payés",
+            "descripcion": "Verduras asadas al horno, servidas tibias, con su jugo y pan tostado."
+          },
+          {
+            "nombre": "Espinacas a la catalana con piñones y pasas",
+            "descripcion": "Salteado rápido de espinacas con la picada de siempre."
+          }
+        ]
+      },
+      {
+        "nombre": "Principales",
+        "platos": [
+          {
+            "nombre": "Arroz de sepia y all i oli",
+            "descripcion": "Arroz seco de sepia con fondo oscuro, terminado en el horno."
+          },
+          {
+            "nombre": "Bacalao a la llauna con garbanzos",
+            "descripcion": "El bacalao de la casa, con garbanzos y su sofrito."
+          }
+        ]
+      },
+      {
+        "nombre": "Postres",
+        "platos": [
+          {
+            "nombre": "Manzana asada con crema de chocolate",
+            "descripcion": "Manzana al horno, tibia, con una crema de chocolate al 70%."
+          }
+        ]
+      }
     ]
   },
   "carta:2": {
     "platos": [
-      {"nombre": "Escalivada tibia con anchoa y pan de payés", "descripcion": "Verduras asadas al horno, servidas tibias, con su jugo y pan tostado.",
-       "pasos": ["Asar la cebolla y el tomate enteros al horno hasta que estén blandos.", "Pelar en caliente y reservar el jugo del asado.", "Aliñar con aceite, sal y unas gotas de vinagre.", "Servir tibia sobre el pan tostado con el jugo por encima."],
-       "ingredientes": [{"nombre":"Cebolla","cantidad":120,"unidad":"g"},{"nombre":"Tomate maduro","cantidad":120,"unidad":"g"},{"nombre":"Pan de payés","cantidad":40,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":20,"unidad":"ml"},{"nombre":"Vinagre de Jerez","cantidad":5,"unidad":"ml"},{"nombre":"Anchoa del Cantábrico","cantidad":15,"unidad":"g"}]},
-      {"nombre": "Espinacas a la catalana con piñones y pasas", "descripcion": "Salteado rápido de espinacas con la picada de siempre.",
-       "pasos": ["Hidratar las pasas en agua templada.", "Tostar los piñones en seco.", "Saltear el ajo laminado en el aceite sin que se queme.", "Añadir las espinacas y saltear fuerte y corto.", "Terminar con los piñones y las pasas."],
-       "ingredientes": [{"nombre":"Espinacas","cantidad":180,"unidad":"g"},{"nombre":"Piñones","cantidad":12,"unidad":"g"},{"nombre":"Pasas","cantidad":15,"unidad":"g"},{"nombre":"Ajo","cantidad":5,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":15,"unidad":"ml"}]}
+      {
+        "nombre": "Escalivada tibia con anchoa y pan de payés",
+        "descripcion": "Verduras asadas al horno, servidas tibias, con su jugo y pan tostado.",
+        "pasos": [
+          "Asar la cebolla y el tomate enteros al horno hasta que estén blandos.",
+          "Pelar en caliente y reservar el jugo del asado.",
+          "Aliñar con aceite, sal y unas gotas de vinagre.",
+          "Servir tibia sobre el pan tostado con el jugo por encima."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Cebolla",
+            "cantidad": 120,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Tomate maduro",
+            "cantidad": 120,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Pan de payés",
+            "cantidad": 40,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 20,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Vinagre de Jerez",
+            "cantidad": 5,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Anchoa del Cantábrico",
+            "cantidad": 15,
+            "unidad": "g"
+          }
+        ]
+      },
+      {
+        "nombre": "Espinacas a la catalana con piñones y pasas",
+        "descripcion": "Salteado rápido de espinacas con la picada de siempre.",
+        "pasos": [
+          "Hidratar las pasas en agua templada.",
+          "Tostar los piñones en seco.",
+          "Saltear el ajo laminado en el aceite sin que se queme.",
+          "Añadir las espinacas y saltear fuerte y corto.",
+          "Terminar con los piñones y las pasas."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Espinacas",
+            "cantidad": 180,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Piñones",
+            "cantidad": 12,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Pasas",
+            "cantidad": 15,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Ajo",
+            "cantidad": 5,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 15,
+            "unidad": "ml"
+          }
+        ]
+      }
     ]
   },
   "carta:3": {
     "platos": [
-      {"nombre": "Arroz de sepia y all i oli", "descripcion": "Arroz seco de sepia con fondo oscuro, terminado en el horno.",
-       "pasos": ["Marcar la sepia en la paella hasta que suelte y recupere sus jugos.", "Sofreír el tomate y el ajo.", "Nacarar el arroz y mojar con el fondo oscuro caliente.", "Terminar en el horno y dejar reposar antes de servir."],
-       "ingredientes": [{"nombre":"Arroz bomba","cantidad":90,"unidad":"g"},{"nombre":"Sepia","cantidad":120,"unidad":"g"},{"nombre":"Fondo oscuro de ternera","cantidad":0.28,"unidad":"L"},{"nombre":"Tomate maduro","cantidad":40,"unidad":"g"},{"nombre":"Ajo","cantidad":5,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":15,"unidad":"ml"}]},
-      {"nombre": "Bacalao a la llauna con garbanzos", "descripcion": "El bacalao de la casa, con garbanzos y su sofrito.",
-       "pasos": ["Enharinar ligeramente el lomo de bacalao y marcarlo en el aceite.", "Hacer el sofrito de cebolla, ajo y tomate.", "Añadir los garbanzos y un poco de fondo.", "Terminar el bacalao en el horno sobre el sofrito."],
-       "ingredientes": [{"nombre":"Bacalao desalado","cantidad":160,"unidad":"g"},{"nombre":"Garbanzos cocidos","cantidad":120,"unidad":"g"},{"nombre":"Cebolla","cantidad":60,"unidad":"g"},{"nombre":"Tomate maduro","cantidad":50,"unidad":"g"},{"nombre":"Ajo","cantidad":5,"unidad":"g"},{"nombre":"Harina","cantidad":10,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":25,"unidad":"ml"},{"nombre":"Fondo oscuro de ternera","cantidad":0.05,"unidad":"L"}]}
+      {
+        "nombre": "Arroz de sepia y all i oli",
+        "descripcion": "Arroz seco de sepia con fondo oscuro, terminado en el horno.",
+        "pasos": [
+          "Marcar la sepia en la paella hasta que suelte y recupere sus jugos.",
+          "Sofreír el tomate y el ajo.",
+          "Nacarar el arroz y mojar con el fondo oscuro caliente.",
+          "Terminar en el horno y dejar reposar antes de servir."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Arroz bomba",
+            "cantidad": 90,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Sepia",
+            "cantidad": 120,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Fondo oscuro de ternera",
+            "cantidad": 0.28,
+            "unidad": "L"
+          },
+          {
+            "nombre": "Tomate maduro",
+            "cantidad": 40,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Ajo",
+            "cantidad": 5,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 15,
+            "unidad": "ml"
+          }
+        ]
+      },
+      {
+        "nombre": "Bacalao a la llauna con garbanzos",
+        "descripcion": "El bacalao de la casa, con garbanzos y su sofrito.",
+        "pasos": [
+          "Enharinar ligeramente el lomo de bacalao y marcarlo en el aceite.",
+          "Hacer el sofrito de cebolla, ajo y tomate.",
+          "Añadir los garbanzos y un poco de fondo.",
+          "Terminar el bacalao en el horno sobre el sofrito."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Bacalao desalado",
+            "cantidad": 160,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Garbanzos cocidos",
+            "cantidad": 120,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Cebolla",
+            "cantidad": 60,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Tomate maduro",
+            "cantidad": 50,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Ajo",
+            "cantidad": 5,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Harina",
+            "cantidad": 10,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 25,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Fondo oscuro de ternera",
+            "cantidad": 0.05,
+            "unidad": "L"
+          }
+        ]
+      }
     ]
   },
   "carta:4": {
     "platos": [
-      {"nombre": "Manzana asada con crema de chocolate", "descripcion": "Manzana al horno, tibia, con una crema de chocolate al 70%.",
-       "pasos": ["Descorazonar la manzana y asarla al horno con azúcar y un poco de mantequilla.", "Calentar la nata y fundir el chocolate para hacer la crema.", "Servir la manzana tibia con la crema por debajo."],
-       "ingredientes": [{"nombre":"Manzana","cantidad":180,"unidad":"g"},{"nombre":"Chocolate 70%","cantidad":30,"unidad":"g"},{"nombre":"Nata 35%","cantidad":40,"unidad":"ml"},{"nombre":"Azúcar","cantidad":15,"unidad":"g"},{"nombre":"Mantequilla","cantidad":10,"unidad":"g"}]}
+      {
+        "nombre": "Manzana asada con crema de chocolate",
+        "descripcion": "Manzana al horno, tibia, con una crema de chocolate al 70%.",
+        "pasos": [
+          "Descorazonar la manzana y asarla al horno con azúcar y un poco de mantequilla.",
+          "Calentar la nata y fundir el chocolate para hacer la crema.",
+          "Servir la manzana tibia con la crema por debajo."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Manzana",
+            "cantidad": 180,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Chocolate 70%",
+            "cantidad": 30,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Nata 35%",
+            "cantidad": 40,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Azúcar",
+            "cantidad": 15,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Mantequilla",
+            "cantidad": 10,
+            "unidad": "g"
+          }
+        ]
+      }
     ]
   },
-
   "menu:1": {
     "nombre": "Menú degustación de otoño",
     "logica": "Cuatro pases que van de menos a más: un bocado frío y ácido para abrir, un entrante de horno, un segundo de brasa con el fondo de la casa, y un postre tibio que cierra con el mismo tostado con el que se abrió el segundo. El fondo oscuro sirve para el segundo y la picada del entrante se comparte con la carta, así que la producción extra es mínima.",
     "bloques": [
-      {"nombre": "Aperitivo", "platos": [{"nombre": "Bocado de escalivada y anchoa", "descripcion": "Un bocado frío, ácido, para abrir boca."}]},
-      {"nombre": "Entrante", "platos": [{"nombre": "Calabaza asada con picada de piñones", "descripcion": "Calabaza de temporada al horno con la picada de la casa."}]},
-      {"nombre": "Segundo", "platos": [{"nombre": "Panceta ibérica a la brasa con su jugo", "descripcion": "Panceta a la brasa napada con el fondo oscuro reducido."}]},
-      {"nombre": "Postre", "platos": [{"nombre": "Manzana asada con chocolate", "descripcion": "Manzana tibia del horno con crema de chocolate."}]}
+      {
+        "nombre": "Aperitivo",
+        "platos": [
+          {
+            "nombre": "Bocado de escalivada y anchoa",
+            "descripcion": "Un bocado frío, ácido, para abrir boca."
+          }
+        ]
+      },
+      {
+        "nombre": "Entrante",
+        "platos": [
+          {
+            "nombre": "Calabaza asada con picada de piñones",
+            "descripcion": "Calabaza de temporada al horno con la picada de la casa."
+          }
+        ]
+      },
+      {
+        "nombre": "Segundo",
+        "platos": [
+          {
+            "nombre": "Panceta ibérica a la brasa con su jugo",
+            "descripcion": "Panceta a la brasa napada con el fondo oscuro reducido."
+          }
+        ]
+      },
+      {
+        "nombre": "Postre",
+        "platos": [
+          {
+            "nombre": "Manzana asada con chocolate",
+            "descripcion": "Manzana tibia del horno con crema de chocolate."
+          }
+        ]
+      }
     ]
   },
-  "menu:2": {"platos": [{"nombre":"Bocado de escalivada y anchoa","descripcion":"Un bocado frío, ácido, para abrir boca.","pasos":["Asar y pelar las verduras.","Montar el bocado sobre el pan tostado."],"ingredientes":[{"nombre":"Cebolla","cantidad":40,"unidad":"g"},{"nombre":"Tomate maduro","cantidad":40,"unidad":"g"},{"nombre":"Pan de payés","cantidad":20,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":8,"unidad":"ml"}]}]},
-  "menu:3": {"platos": [{"nombre":"Calabaza asada con picada de piñones","descripcion":"Calabaza de temporada al horno con la picada de la casa.","pasos":["Asar la calabaza en cuñas.","Hacer la picada con piñones, ajo y aceite.","Napar al pase."],"ingredientes":[{"nombre":"Calabaza","cantidad":200,"unidad":"g"},{"nombre":"Piñones","cantidad":12,"unidad":"g"},{"nombre":"Ajo","cantidad":4,"unidad":"g"},{"nombre":"Aceite de oliva virgen","cantidad":15,"unidad":"ml"}]}]},
-  "menu:4": {"platos": [{"nombre":"Panceta ibérica a la brasa con su jugo","descripcion":"Panceta a la brasa napada con el fondo oscuro reducido.","pasos":["Cocinar la panceta a baja temperatura en el horno mixto.","Marcarla a la brasa al pase.","Reducir el fondo oscuro y napar."],"ingredientes":[{"nombre":"Panceta ibérica","cantidad":160,"unidad":"g"},{"nombre":"Fondo oscuro de ternera","cantidad":0.12,"unidad":"L"},{"nombre":"Cebolla","cantidad":30,"unidad":"g"}]}]},
-  "menu:5": {"platos": [{"nombre":"Manzana asada con chocolate","descripcion":"Manzana tibia del horno con crema de chocolate.","pasos":["Asar la manzana con azúcar y mantequilla.","Fundir el chocolate con la nata."],"ingredientes":[{"nombre":"Manzana","cantidad":150,"unidad":"g"},{"nombre":"Chocolate 70%","cantidad":25,"unidad":"g"},{"nombre":"Nata 35%","cantidad":35,"unidad":"ml"},{"nombre":"Azúcar","cantidad":12,"unidad":"g"},{"nombre":"Mantequilla","cantidad":8,"unidad":"g"}]}]}
+  "menu:2": {
+    "platos": [
+      {
+        "nombre": "Bocado de escalivada y anchoa",
+        "descripcion": "Un bocado frío, ácido, para abrir boca.",
+        "pasos": [
+          "Asar y pelar las verduras.",
+          "Montar el bocado sobre el pan tostado."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Cebolla",
+            "cantidad": 40,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Tomate maduro",
+            "cantidad": 40,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Pan de payés",
+            "cantidad": 20,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 8,
+            "unidad": "ml"
+          }
+        ]
+      }
+    ]
+  },
+  "menu:3": {
+    "platos": [
+      {
+        "nombre": "Calabaza asada con picada de piñones",
+        "descripcion": "Calabaza de temporada al horno con la picada de la casa.",
+        "pasos": [
+          "Asar la calabaza en cuñas.",
+          "Hacer la picada con piñones, ajo y aceite.",
+          "Napar al pase."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Calabaza",
+            "cantidad": 200,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Piñones",
+            "cantidad": 12,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Ajo",
+            "cantidad": 4,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Aceite de oliva virgen",
+            "cantidad": 15,
+            "unidad": "ml"
+          }
+        ]
+      }
+    ]
+  },
+  "menu:4": {
+    "platos": [
+      {
+        "nombre": "Panceta ibérica a la brasa con su jugo",
+        "descripcion": "Panceta a la brasa napada con el fondo oscuro reducido.",
+        "pasos": [
+          "Cocinar la panceta a baja temperatura en el horno mixto.",
+          "Marcarla a la brasa al pase.",
+          "Reducir el fondo oscuro y napar."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Panceta ibérica",
+            "cantidad": 160,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Fondo oscuro de ternera",
+            "cantidad": 0.12,
+            "unidad": "L"
+          },
+          {
+            "nombre": "Cebolla",
+            "cantidad": 30,
+            "unidad": "g"
+          }
+        ]
+      }
+    ]
+  },
+  "menu:5": {
+    "platos": [
+      {
+        "nombre": "Manzana asada con chocolate",
+        "descripcion": "Manzana tibia del horno con crema de chocolate.",
+        "pasos": [
+          "Asar la manzana con azúcar y mantequilla.",
+          "Fundir el chocolate con la nata."
+        ],
+        "ingredientes": [
+          {
+            "nombre": "Manzana",
+            "cantidad": 150,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Chocolate 70%",
+            "cantidad": 25,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Nata 35%",
+            "cantidad": 35,
+            "unidad": "ml"
+          },
+          {
+            "nombre": "Azúcar",
+            "cantidad": 12,
+            "unidad": "g"
+          },
+          {
+            "nombre": "Mantequilla",
+            "cantidad": 8,
+            "unidad": "g"
+          }
+        ]
+      }
+    ]
+  }
 }
