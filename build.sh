@@ -81,5 +81,18 @@ SIZE=$(du -h dist/index.html | cut -f1)
 
 echo "✅ dist/index.html ($LINES líneas, $SIZE)"
 echo "✅ dist/reservagastrogoan.html copiado"
+# La demo sale de la app recién compilada, así que se regenera AQUÍ.
+#
+# Tres veces se quedó vieja tras un build, y no falla de forma limpia: la app
+# detecta que hay versión nueva, se actualiza sola RECARGANDO la página, y eso
+# revienta lo que esté corriendo encima. La primera vez tumbó la grabación del
+# vídeo ("__cursorA is not a function"); las otras dos dejaron test/demo.mjs
+# con cinco fallos que no tenían nada que ver ("DB is not defined"), y se va
+# media hora buscando el bug donde no está.
+if [ -f demo/generar.sh ]; then
+  bash demo/generar.sh > /dev/null 2>&1 && echo "✅ dist/kit-gastrogoan-DEMO.html regenerado" \
+    || echo "⚠️  la demo NO se pudo regenerar — corre 'bash demo/generar.sh' y mira el error"
+fi
+
 echo ""
 echo "📦 Carpeta dist/ lista para entregar al cliente"
