@@ -5469,27 +5469,49 @@ function downloadCSV(rows, filename){
     return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
   };
   const csv = rows.map(r => r.map(csvCell).join(';')).join('\r\n');
-  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  guardarArchivo(new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'}), filename);
 }
 
 function downloadJSON(obj, filename){
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  guardarArchivo(new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'}), filename);
+}
+
+/* Guardar un archivo, también en iPhone y iPad.
+   El `<a download>` de toda la vida funciona en Chrome y en Android, pero en
+   Safari de iOS el atributo `download` sobre un blob se ignora: en vez de
+   guardarlo, ABRE el archivo en la misma pestaña. Y eso no es "no descarga":
+   es que al hostelero se le va la app de delante, con lo que estuviera
+   haciendo. Justo en la copia de seguridad, que es lo último que puede
+   fallar.
+   En iOS se usa la hoja de compartir del sistema (Web Share con archivos),
+   que es de donde se guarda en Archivos, se manda por correo o va a Drive —
+   el gesto que un usuario de iPad ya conoce. Si tampoco estuviera, se abre en
+   una pestaña NUEVA para no perder la app, y se le dice qué hacer. */
+function guardarArchivo(blob, filename){
+  const esApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS se hace pasar por Mac
+  if(esApple && typeof File === 'function' && navigator.canShare){
+    try{
+      const archivo = new File([blob], filename, {type: blob.type});
+      if(navigator.canShare({files: [archivo]})){
+        navigator.share({files: [archivo], title: filename})
+          .catch(() => {});   // si cancela la hoja de compartir, no es un error
+        return;
+      }
+    }catch(e){ /* sigue por el camino de abajo */ }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  if(esApple){ a.target = '_blank'; a.rel = 'noopener'; }
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  if(esApple && typeof showToast === 'function') showToast(t('msg.iosSaveHint'), 6000);
+  // En iOS la pestaña nueva todavía está leyendo el blob cuando esto corre:
+  // revocarlo al instante deja la descarga a medias.
+  setTimeout(() => URL.revokeObjectURL(url), esApple ? 20000 : 0);
 }
 
 function downloadFullBackup(){

@@ -5958,6 +5958,13 @@ function sendPushToAll(title, body){
 // a uno anterior sobre lo mismo (p. ej. no hay ningún caso así hoy).
 function notifyDesktop(title, body, tag){
   if(!desktopNotificationsEnabled()) return;
+  /* Safari de iPhone y iPad no tiene Notification: allí `new Notification`
+     es un ReferenceError. desktopNotificationsEnabled() ya lo comprueba, pero
+     esa comprobación está en OTRA función y aquí abajo hay tres sitios que
+     construyen la notificación — uno dentro de un .then(), donde el error se
+     traga la promesa y no lo ve nadie. Se repite la comprobación aquí, que es
+     donde de verdad se usa. */
+  if(typeof Notification === 'undefined') return;
   const notifTag = tag || (title + '-' + genId());
   try{
     if(navigator.serviceWorker && navigator.serviceWorker.ready){

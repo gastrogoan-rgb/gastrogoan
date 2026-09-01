@@ -66,8 +66,9 @@ lanzar; node test/demo.mjs                 > "$SALIDA/demo.txt"       2>&1 & P32
 lanzar; node test/visual-real.mjs          > "$SALIDA/visualreal.txt" 2>&1 & P33=$!
 lanzar; node test/traducciones.mjs         > "$SALIDA/traduce.txt"    2>&1 & P34=$!
 lanzar; node test/permisos.mjs             > "$SALIDA/permisos.txt"   2>&1 & P35=$!
+lanzar; node test/apple.mjs                > "$SALIDA/apple.txt"      2>&1 & P36=$!
 
-echo "→ 35 pruebas, de $TANDA en $TANDA…"
+echo "→ 36 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -109,5 +110,6 @@ espera $P32 "la demo (datos creibles y sin asistentes)"    "$SALIDA/demo.txt"   
 espera $P33 "visual real en PC, tablet y movil"        "$SALIDA/visualreal.txt" "Nada que señalar"
 espera $P34 "traducciones (es/ca/en, 41 pantallas)"    "$SALIDA/traduce.txt"    "se puede usar en los tres idiomas"
 espera $P35 "los 6 modos de sesion (empleado, edicion, reparto)" "$SALIDA/permisos.txt" "los 10 casos pasaron"
+espera $P36 "iPhone y iPad (trampas de Safari)"        "$SALIDA/apple.txt"     "los 7 casos pasaron"
 
 exit $FALLOS

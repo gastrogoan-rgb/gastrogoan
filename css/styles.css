@@ -785,7 +785,10 @@ td.wrap{white-space:normal}
   width:min(400px, calc(100% - 32px));
   background:#fff;border-radius:18px;
   box-shadow:0 18px 50px rgba(28,26,23,.32);padding:18px 20px 16px;
-  max-height:calc(100vh - 40px);overflow-y:auto;
+  /* El 100dvh de después es para iOS: allí 100vh no cuenta la barra de
+     direcciones, así que la ventana queda más alta que el hueco real y el
+     último botón se va debajo de la barra, donde no se puede pulsar. */
+  max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;
   transition:top .45s cubic-bezier(.22,1,.36,1),left .45s cubic-bezier(.22,1,.36,1);
 }
 .tour-bubble-centered{
@@ -871,7 +874,8 @@ td.wrap{white-space:normal}
    debajo de la cabecera en vez de debajo de un botón flotante. */
 .help-panel{
   display:none;position:fixed;top:calc(var(--header-h) + 10px);right:20px;width:340px;max-width:calc(100vw - 32px);
-  height:480px;max-height:calc(100vh - var(--header-h) - 30px);background:var(--surface);border-radius:var(--radius);
+  height:480px;max-height:calc(100vh - var(--header-h) - 30px);
+  max-height:calc(100dvh - var(--header-h) - 30px);background:var(--surface);border-radius:var(--radius);
   box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:250;flex-direction:column;overflow:hidden;
   border:1px solid var(--border);
 }
@@ -1290,7 +1294,7 @@ td.wrap{white-space:normal}
   /* Toast — ensure visible */
   .toast{bottom:calc(24px + env(safe-area-inset-bottom));max-width:90%;font-size:13px}
 
-  .help-panel{max-height:calc(100vh - var(--header-h) - 20px)}
+  .help-panel{max-height:calc(100vh - var(--header-h) - 20px);max-height:calc(100dvh - var(--header-h) - 20px)}
 
   /* Modals — ensure content visible */
   .modal{max-height:85vh;max-height:85dvh}
@@ -1896,4 +1900,26 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
   .app-header .btn{min-width:44px}
   .btn-icon, .btn-sm.btn-icon{min-width:44px;min-height:44px}
   .btn.btn-sm.btn-icon.comanda-qty-btn, .comanda-qty-btn{min-width:40px;min-height:40px}
+
+  /* iPhone y iPad: Safari hace ZOOM solo al tocar un campo cuya letra mida
+     menos de 16 px, y después deja la pantalla desencuadrada — el hostelero
+     tiene que volver a alejar a pellizcos cada vez que escribe algo. No hay
+     forma de desactivarlo (bloquear el zoom con user-scalable=no rompería la
+     accesibilidad y iOS lo ignora desde hace años); la única cura es que
+     ningún campo baje de 16 px en un aparato táctil.
+     Va con !important porque las reglas que lo bajan a 13-14 px son más
+     específicas (`.filter-compact .field input`, `.dist-field input`…) y si
+     no, ganan ellas. Solo afecta al tamaño de la letra: el alto, el ancho y
+     el relleno de cada campo se quedan como están. */
+  input, select, textarea,
+  .filter-compact .field input, .filter-compact .field select,
+  .help-chat-input-row input, .chat-author-row select,
+  .ge-input-row input, .dist-field input, #reservas-search-input,
+  /* Estos dos hay que nombrarlos: fijan 12 y 14 px con !important y una
+     CLASE, que pesa más que un `input` a secas — con !important en los dos
+     lados gana el más específico, no el que va después. Es la misma trampa
+     que ya se pisó con los botones de la barra de herramientas. */
+  .carta-schedule-time, .mn-horario-time{
+    font-size:16px !important;
+  }
 }
