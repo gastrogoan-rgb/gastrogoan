@@ -95,7 +95,13 @@
       "issuedCodes": {
         "$code": {
           ".read": "auth != null",
-          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && !data.exists()"
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && (!data.exists() || !newData.exists())"
+        }
+      },
+      "revokedCodes": {
+        "$code": {
+          ".read": "auth != null && $code.length == 8",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8"
         }
       },
       "ownerNames": {

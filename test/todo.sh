@@ -52,8 +52,9 @@ node test/cuentas.mjs              > "$SALIDA/cuentas.txt"     2>&1 & P27=$!
 node test/version.mjs              > "$SALIDA/version.txt"     2>&1 & P28=$!
 node test/escala.mjs               > "$SALIDA/escala.txt"      2>&1 & P29=$!
 node test/enlaces-publicos.mjs     > "$SALIDA/enlaces.txt"     2>&1 & P30=$!
+node test/generador.mjs            > "$SALIDA/generador.txt"   2>&1 & P31=$!
 
-echo "→ 30 pruebas corriendo a la vez…"
+echo "→ 31 pruebas corriendo a la vez…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   wait "$1"
@@ -90,5 +91,6 @@ espera $P27 "aislamiento entre cuentas"                "$SALIDA/cuentas.txt"    
 espera $P28 "aviso de version nueva y ahorro de trafico"  "$SALIDA/version.txt"     "casos pasaron"
 espera $P29 "escala: nada crece con el numero de clientes" "$SALIDA/escala.txt"      "casos pasaron"
 espera $P30 "los enlaces de la web publica (QR y nombre corto)" "$SALIDA/enlaces.txt"     "casos pasaron"
+espera $P31 "el generador: emitir y ANULAR licencias"     "$SALIDA/generador.txt"   "casos pasaron"
 
 exit $FALLOS

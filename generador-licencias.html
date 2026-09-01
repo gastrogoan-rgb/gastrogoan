@@ -644,8 +644,15 @@ function copyBox(id){
   navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => alert('Copiado'));
 }
 
+/* ⚠️ BORRAR DEL REGISTRO NO ES ANULAR LA LICENCIA.
+   Son dos cosas distintas y conviene no confundirlas nunca:
+   - Borrar del registro: quita la anotación de tu lista de ventas. El código
+     sigue funcionando y el cliente sigue dentro. Sirve para limpiar una
+     prueba o un apunte duplicado.
+   - Anular: mata el código de verdad. Deja de poder canjearse y, si ya está
+     en uso, la app de ese cliente se bloquea. */
 async function delSale(i){
-  if(!confirm('¿Borrar esta entrada del registro?')) return;
+  if(!confirm('¿Quitar esta entrada de tu registro de ventas?\n\nOJO: esto NO anula la licencia. El código sigue siendo válido y el cliente sigue teniendo acceso.')) return;
   const entry = sales[i];
   sales.splice(i, 1);
   saveSales();
@@ -659,19 +666,140 @@ async function delSale(i){
   }
 }
 
+/* ── Anular un código de negocio ──
+   Tres cosas, y las tres hacen falta:
+   1. `issuedCodes`  — sin esto el código no se reconoce y no se puede canjear.
+   2. `codeClaims`   — libera la reserva, para que el código no quede "cogido"
+                       por un dueño que ya no lo tiene.
+   3. `revokedCodes` — es lo que bloquea a quien YA lo tenga canjeado: la app
+                       lo consulta al arrancar y enseña la pantalla de licencia
+                       revocada.
+   Con solo la 1 y la 2, un cliente que ya está dentro seguiría trabajando
+   indefinidamente, porque su licencia vive en su dispositivo. */
+async function anularCodigo(i){
+  const entry = sales[i];
+  if(!entry || entry.kind !== 'negocio') return;
+  const code = entry.value;
+  if(!confirm('¿ANULAR el código ' + code + '?\n\nDejará de poder canjearse y, si ya está en uso, la app de ese cliente quedará bloqueada la próxima vez que se abra con internet.\n\nEsto no se puede deshacer desde aquí.')) return;
+  const motivo = prompt('Motivo (opcional, para tu registro):', '') || '';
+  const app = await getPlatformFirebaseApp();
+  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
+    alert('Tienes que iniciar sesión como administrador para anular una licencia.');
+    return;
+  }
+  const db = app.database();
+  try{
+    await db.ref('gastrogoan/revokedCodes/' + code).set({at: Date.now(), motivo});
+    await db.ref('gastrogoan/issuedCodes/' + code).remove();
+    await db.ref('gastrogoan/codeClaims/' + code).remove();
+    entry.anulada = new Date().toISOString().slice(0,10);
+    entry.motivo = motivo;
+    saveSales();
+    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: entry.anulada, motivo});
+    renderLog();
+    alert('Código anulado.\n\nSi el cliente ya lo tenía canjeado, su app se bloqueará la próxima vez que se abra con internet.');
+  }catch(e){
+    console.error(e);
+    alert('No se ha podido anular: ' + (e && e.message));
+  }
+}
+
+/* Deshace la anulación. Existe porque el error humano existe: anular el
+   código equivocado a las once de la noche y no poder arreglarlo hasta que
+   alguien toque la base de datos a mano sería mucho peor que este botón.
+   Devuelve el código a la lista de emitidos y quita el bloqueo. */
+async function reactivarCodigo(i){
+  const entry = sales[i];
+  if(!entry || entry.kind !== 'negocio') return;
+  const code = entry.value;
+  if(!confirm('¿Reactivar el código ' + code + '?\n\nVolverá a poder canjearse y se quitará el bloqueo de la app del cliente.')) return;
+  const app = await getPlatformFirebaseApp();
+  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
+    alert('Tienes que iniciar sesión como administrador.');
+    return;
+  }
+  const db = app.database();
+  try{
+    await db.ref('gastrogoan/issuedCodes/' + code).set({at: Date.now(), reactivado: true});
+    await db.ref('gastrogoan/revokedCodes/' + code).remove();
+    delete entry.anulada; delete entry.motivo;
+    saveSales();
+    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: null, motivo: null});
+    renderLog();
+    alert('Código reactivado.');
+  }catch(e){
+    console.error(e);
+    alert('No se ha podido reactivar: ' + (e && e.message));
+  }
+}
+
+/* ── Borrar una cuenta de propietario ──
+   La cuenta vive en una ruta derivada de usuario+PIN, así que para borrarla
+   hace falta el PIN — y por eso solo se puede desde aquí, donde el registro
+   de ventas lo guarda. Se libera también el nombre, para que ese usuario
+   pueda volver a venderse.
+   ⚠️ Los NEGOCIOS de esa cuenta no se tocan: son licencias aparte y se anulan
+   una a una. Borrar la cuenta solo quita la forma de entrar. */
+async function borrarCuenta(i){
+  const entry = sales[i];
+  if(!entry || entry.kind !== 'cuenta') return;
+  const user = entry.owner || entry.value;
+  if(!entry.pin){
+    alert('No tengo el PIN de esta cuenta en el registro, y sin él no se puede borrar: la cuenta vive en una ruta que se calcula con usuario+PIN.\n\nSe puede liberar el nombre igualmente, pero la cuenta seguiría existiendo.');
+  }
+  if(!confirm('¿Borrar la cuenta "' + user + '"?\n\nEsa persona dejará de poder entrar. Sus negocios NO se anulan: si quieres cortarlos también, anula cada código por separado.')) return;
+  const app = await getPlatformFirebaseApp();
+  if(!app || !app.auth().currentUser || !app.auth().currentUser.email){
+    alert('Tienes que iniciar sesión como administrador.');
+    return;
+  }
+  const db = app.database();
+  try{
+    if(entry.pin){
+      const authKey = ggOwnerAuthKey(user, entry.pin);
+      await db.ref('gastrogoan/ownerAuth/' + authKey).remove();
+    }
+    await db.ref('gastrogoan/ownerNames/' + user).remove();
+    entry.anulada = new Date().toISOString().slice(0,10);
+    saveSales();
+    if(entry.id) await db.ref('gastrogoan/adminSalesLog/' + entry.id).update({anulada: entry.anulada});
+    renderLog();
+    alert('Cuenta borrada y nombre liberado.' + (entry.pin ? '' : '\n\nOJO: sin el PIN no se ha podido borrar el acceso, solo el nombre.'));
+  }catch(e){
+    console.error(e);
+    alert('No se ha podido borrar: ' + (e && e.message));
+  }
+}
+
 function renderLog(){
   const has = sales.length > 0;
   document.getElementById('log-table').style.display = has ? 'table' : 'none';
   document.getElementById('empty').style.display = has ? 'none' : 'block';
   document.getElementById('export-row').style.display = has ? 'flex' : 'none';
   document.getElementById('count').textContent = has ? '· ' + sales.length + ' entrada' + (sales.length === 1 ? '' : 's') : '';
-  document.getElementById('log').innerHTML = sales.map((s, i) =>
-    `<tr><td>${s.date}</td><td>${s.name}</td><td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td><td class="key">${s.value}</td><td class="key">${s.owner || '—'}</td><td class="key">${s.pin || '—'}</td><td><button class="del" onclick="delSale(${i})">✕</button></td></tr>`
-  ).join('');
+  document.getElementById('log').innerHTML = sales.map((s, i) => {
+    const anulada = !!s.anulada;
+    // Una licencia anulada se sigue viendo, tachada y con su fecha: es parte
+    // del historial de ventas y hace falta para cuadrar el CSV.
+    const acciones = s.kind === 'negocio'
+      ? (anulada
+          ? `<button class="del" style="background:#1F8A4C" title="Reactivar este código" onclick="reactivarCodigo(${i})">↺</button>`
+          : `<button class="del" title="ANULAR la licencia: deja de funcionar" onclick="anularCodigo(${i})">⊘</button>`)
+      : (anulada ? '' : `<button class="del" title="Borrar la cuenta y liberar el nombre" onclick="borrarCuenta(${i})">⊘</button>`);
+    return `<tr${anulada ? ' style="opacity:.55"' : ''}>
+      <td>${s.date}</td>
+      <td>${s.name}${anulada ? ` <span style="color:#8A4A3B;font-size:11px">· anulada ${s.anulada}${s.motivo ? ' (' + s.motivo + ')' : ''}</span>` : ''}</td>
+      <td>${s.kind === 'cuenta' ? '👤 Cuenta' : '🏪 Negocio'}</td>
+      <td class="key"${anulada ? ' style="text-decoration:line-through"' : ''}>${s.value}</td>
+      <td class="key">${s.owner || '—'}</td>
+      <td class="key">${s.pin || '—'}</td>
+      <td style="white-space:nowrap">${acciones}<button class="del" style="background:#777" title="Quitar del registro (NO anula la licencia)" onclick="delSale(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
 }
 
 function exportCSV(){
-  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;PIN\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner || ''};${s.pin || ''}`).join('\n');
+  const csv = 'Fecha;Cliente;Tipo;Dato;Cuenta;PIN;Anulada;Motivo\n' + sales.map(s => `${s.date};${s.name};${s.kind};${s.value};${s.owner || ''};${s.pin || ''};${s.anulada || ''};${s.motivo || ''}`).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = 'ventas-gastrogoan.csv';

@@ -98,8 +98,16 @@
 
       "issuedCodes": {
         "$code": {
+          "//": "El admin puede BORRAR un codigo (anular una licencia). Antes solo se podia crear (!data.exists()), asi que una venta era irreversible: ni una devolucion ni un error al vender tenian arreglo desde el generador.",
           ".read": "auth != null",
-          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && !data.exists()"
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8 && (!data.exists() || !newData.exists())"
+        }
+      },
+      "revokedCodes": {
+        "$code": {
+          "//": "Codigos anulados. Lo escribe SOLO el admin desde el generador; lo lee la app al arrancar (checkLicenseRevocation) para bloquear una licencia ya canjeada. La lectura es por codigo concreto: nadie puede listar la lista entera de anulados.",
+          ".read": "auth != null && $code.length == 8",
+          ".write": "auth != null && auth.token.email === 'gastrogoan@gmail.com' && $code.length == 8"
         }
       },
 

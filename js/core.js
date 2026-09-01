@@ -1976,7 +1976,23 @@ async function checkLicenseRevocation(){
   }catch(e){
     try{ list = JSON.parse(localStorage.getItem(REVOKED_CACHE_KEY)); }catch(e2){}
   }
-  if(Array.isArray(list) && list.includes(tenantId)) showRevokedGate();
+  if(Array.isArray(list) && list.includes(tenantId)){ showRevokedGate(); return; }
+
+  /* Y la lista de la plataforma, que es la que se puede tocar desde el
+     generador sin editar ficheros a mano. La de GitHub se conserva como red
+     de seguridad: si algún día no hubiera acceso a la plataforma, sigue
+     habiendo forma de cortar una licencia.
+     Igual de FAIL-OPEN a propósito: sin internet no se bloquea a nadie. Un
+     restaurante en hora punta no puede quedarse sin caja porque falle una
+     comprobación nuestra. */
+  try{
+    const code = (getLicense() || {}).code;
+    if(!code) return;
+    const app = await getPlatformFirebaseApp();
+    if(!app) return;
+    const snap = await app.database().ref('gastrogoan/revokedCodes/' + code).once('value');
+    if(snap.val()) showRevokedGate();
+  }catch(e){ /* sin conexión o sin permisos: no se bloquea a nadie */ }
 }
 
 function showRevokedGate(){
