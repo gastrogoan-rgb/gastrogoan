@@ -3485,6 +3485,30 @@ async function comprobarEspejoEnNubePropia(){
     await base.child('orderStatus/_prueba').remove();
     espejoEnNubePropia = true;
     publishPublicLookup(publicId, cfg);
+    /* Y APARTE, los cambios de reglas más recientes, que viven en otro nodo
+       (`requests`) y por eso la comprobación de arriba no los veía:
+         · que se acepte una solicitud de tipo `pago_confirmado` — sin esto,
+           TODA confirmación de pago con tarjeta se rechaza;
+         · que se pueda BORRAR una solicitud ya procesada — sin esto el
+           histórico con nombres, teléfonos y direcciones crece sin fin.
+       Se comprueba por separado a propósito: un negocio al que solo le falte
+       esto tiene el espejo funcionando y NO hay que devolverlo a la nube
+       compartida; simplemente se le avisa de que actualice sus reglas.
+       La solicitud de prueba lleva `_sonda` y el oyente la ignora, para que no
+       se procese como un pago de verdad. */
+    try{
+      const sonda = base.child('requests/_sonda');
+      await sonda.set({type: 'pago_confirmado', createdAt: Date.now(), _sonda: true});
+      await sonda.child('_claimedAt').set(Date.now());
+      await sonda.remove();
+      reglasAntiguas = false;
+    }catch(e2){
+      console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
+      reglasAntiguas = true;
+      // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
+      // el oyente la ignora por el `_sonda`.
+      try{ await base.child('requests/_sonda').remove(); }catch(e3){}
+    }
     return true;
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
@@ -3614,6 +3638,10 @@ function initPublicRequestsListener(){
       const req = snap.val();
       const reqRef = snap.ref;
       if(!req || !req.type){ reqRef.remove(); return; }
+      /* La solicitud que escribe la sonda para comprobar si las reglas de este
+         negocio están al día (ver comprobarEspejoEnNubePropia). Se ignora: si
+         no, entraría aquí como un `pago_confirmado` de verdad. */
+      if(req._sonda) return;
       // Reclamación atómica: si el negocio tiene más de un dispositivo con
       // la app abierta a la vez (dos TPV, tablet de cocina + caja...),
       // TODOS reciben este mismo evento child_added de forma independiente.
@@ -5977,7 +6005,13 @@ function openCloudWizard(){
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
     ${reglasAntiguas ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
-      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${t('gate.oldRulesBody')}
+      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
+        /* Dos casos MUY distintos y no se pueden contar igual:
+           · el espejo no funciona (reglas viejas de verdad): sus reservas
+             pasan por el servidor compartido;
+           · el espejo funciona pero le faltan los cambios recientes: todo va
+             bien salvo los pagos con tarjeta y el borrado del histórico. */
+        espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
       <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:12px">

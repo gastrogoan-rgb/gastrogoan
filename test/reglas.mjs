@@ -102,6 +102,38 @@ caso('La app no borra ningún nodo padre de los holds', () => {
   return 'aforo, mesa y pedidos';
 });
 
+caso('La sonda comprueba también los cambios de reglas MÁS RECIENTES', () => {
+  /* La comprobación de arriba solo miraba aforoHold y orderStatus, así que un
+     negocio al que le faltaran los dos cambios de hoy —que viven en `requests`—
+     no se enteraba de nada: los cobros con tarjeta se le rechazarían y el
+     histórico con nombres y teléfonos crecería sin fin, en silencio.
+     Ahora se prueba escribiendo una solicitud de tipo pago_confirmado,
+     reclamándola y borrándola: eso cubre los dos cambios de una vez. */
+  assert.ok(core.includes("type: 'pago_confirmado', createdAt:"),
+    'la sonda tiene que probar que se acepta pago_confirmado');
+  assert.ok(core.includes("sonda.child('_claimedAt').set"),
+    'y que se puede reclamar');
+  assert.ok(core.includes('await sonda.remove()'),
+    'y que se puede BORRAR una solicitud ya reclamada');
+  return 'pago_confirmado + reclamar + borrar';
+});
+
+caso('La solicitud de prueba nunca se procesa como una de verdad', () => {
+  // Si no, entraría en el oyente como un pago_confirmado real.
+  assert.ok(core.includes('if(req._sonda) return;'),
+    'el oyente de solicitudes tiene que ignorar la sonda');
+  return 'el oyente la ignora';
+});
+
+caso('Se distingue "reglas viejas de verdad" de "una versión por detrás"', () => {
+  /* No es lo mismo y no se puede contar igual: en un caso sus reservas pasan
+     por el servidor compartido; en el otro todo va bien salvo los cobros con
+     tarjeta. Decirle lo mismo en los dos casos le haría desconfiar del aviso. */
+  assert.ok(core.includes("espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')"),
+    'el aviso tiene que explicar el caso concreto');
+  return 'dos avisos distintos';
+});
+
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 7 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 10 casos pasaron`);
 process.exit(fallos ? 1 : 0);
