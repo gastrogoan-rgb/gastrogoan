@@ -3067,7 +3067,19 @@ function recordSyncError(err){
    falta. Devuelve null si no lo reconoce, y entonces se enseña el genérico. */
 function syncErrorHintKey(){
   const code = String(lastSyncErrorCode || '');
+  /* Los tres códigos del MISMO problema — el acceso anónimo no está activado
+     — y solo se reconocía uno. Firebase devuelve uno u otro según cómo esté
+     el proyecto, y son justo los dos que faltaban los que salen en los
+     proyectos creados últimamente:
+      · 'configuration-not-found': nunca se llegó a entrar en Authentication.
+      · 'admin-restricted-operation': se entró, pero el proveedor Anónimo
+        está apagado (es como sale ahora, ya no 'operation-not-allowed').
+     Sin ellos, el hostelero veía "Error de nube" a secas con el consejo
+     genérico de revisar la clave de API — que no tiene nada que ver — y se
+     ponía a cambiar lo único que no estaba mal. */
   if(code.includes('operation-not-allowed')) return 'gate.cloudError.anon';
+  if(code.includes('configuration-not-found')) return 'gate.cloudError.anon';
+  if(code.includes('admin-restricted-operation')) return 'gate.cloudError.anon';
   if(code.includes('unauthorized-domain')) return 'gate.cloudError.domain';
   if(code.includes('api-key') || code.includes('invalid-api-key')) return 'gate.cloudError.apikey';
   if(code.includes('network-request-failed')) return 'gate.cloudError.network';
