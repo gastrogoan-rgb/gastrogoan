@@ -1212,11 +1212,27 @@ function confirmRemoveBusinessSlot(slotId){
   closeModal();
   reallyRemoveBusinessSlot(slotId);
 }
+/* Cierra la conexión abierta con IndexedDB. Hace falta antes de borrar la base
+   de un hueco: `deleteDatabase` sobre una base ABIERTA se queda bloqueado y no
+   borra NADA, sin lanzar ningún error. La app mantiene la conexión viva
+   (`_idbPromise`), así que quitar el negocio activo no borraba sus datos
+   nunca — seguían ahí para el siguiente que cayera en ese hueco. */
+function cerrarIdb(){
+  const p = _idbPromise;
+  _idbPromise = null;
+  if(!p) return Promise.resolve();
+  return p.then(db => { try{ db.close(); }catch(e){} }).catch(() => {});
+}
 function reallyRemoveBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
   if(!slot) return;
-  indexedDB.deleteDatabase(slotIdbName(slotId));
+  const borrarBase = () => {
+    const req = indexedDB.deleteDatabase(slotIdbName(slotId));
+    req.onblocked = () => console.warn('Borrado de datos bloqueado: queda alguna pestaña abierta con este negocio', slotId);
+  };
+  if(slotId === ACTIVE_SLOT) cerrarIdb().then(borrarBase);
+  else borrarBase();
   // Sacarlo también de la cuenta en la nube: si solo se borrara de aquí,
   // syncOwnerBusinessList lo volvería a añadir en el siguiente arranque y
   // daría la sensación de que "no se deja borrar".
@@ -2704,6 +2720,29 @@ async function activateLicenseFromGate(){
     err.textContent = t(reason === 'offline' ? 'gate.licenseOffline' : redeemErrorKey(reason));
     err.style.display = 'block';
     return;
+  }
+  /* ⚠️ EL HUECO NO PUEDE ARRASTRAR LOS DATOS DE OTRO NEGOCIO.
+
+     Un hueco sin código en el registro puede seguir teniendo DENTRO la base de
+     datos del negocio que hubo antes: al quitar un negocio se limpiaba la
+     ficha del registro, pero los datos del hueco seguían ahí. Y como el paso
+     siguiente decide si hace falta configurar la nube mirando
+     `DB.business.ownFirebase`, la encontraba puesta —la del negocio anterior—,
+     SE SALTABA EL ASISTENTE ENTERO y enganchaba el negocio recién canjeado a
+     la nube de otra cuenta. Con la carta, las ventas y los clientes de otro.
+
+     Lo contó el dueño canjeando una licencia con una cuenta nueva: "no me ha
+     pedido nada de configurar, y al ir a ver la nube veo que lo ha copiado
+     todo de newrest, que tenía creado en otra cuenta".
+
+     Volver a canjear EL MISMO código no vacía nada: eso es una reinstalación
+     legítima y sus datos tienen que seguir donde estaban. */
+  const licenciaVieja = DB.license && DB.license.code;
+  const arrastraOtroNegocio = (licenciaVieja && licenciaVieja !== lic.code)
+    || (!licenciaVieja && DB.business && DB.business.ownFirebase);
+  if(arrastraOtroNegocio){
+    console.warn('El hueco arrastraba datos de otro negocio: se vacía antes de activar', licenciaVieja || '(sin licencia, pero con nube)');
+    DB = defaultData();
   }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;

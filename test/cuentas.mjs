@@ -302,6 +302,41 @@ await caso('El selector: un solo botón de salir, el nombre entero y sin código
   return `una salida, nombre de ${r.anchoNombre}px y sin códigos`;
 });
 
+await caso('Un negocio nuevo NO puede heredar la nube de otro', async ()=>{
+  /* El peor fallo posible de la app, y ocurrió de verdad: el dueño canjeó una
+     licencia con una cuenta nueva y aterrizó dentro de la nube de "newrest",
+     un negocio de OTRA cuenta — con su carta, sus ventas y sus clientes. Y sin
+     que le pidiera configurar nada, porque la app decide si hace falta el
+     asistente mirando si ya hay nube puesta... en el hueco donde cae la
+     licencia, que arrastraba la del negocio anterior.
+     Detrás había dos cosas: quitar un negocio no borraba sus datos (borrar una
+     base de IndexedDB ABIERTA se queda bloqueado, en silencio), y canjear no
+     comprobaba que el hueco estuviera limpio. */
+  const r = await page.evaluate(()=>{
+    // El hueco arrastra la nube de otro negocio, sin licencia propia.
+    DB.business.ownFirebase = {apiKey:'CLAVE_DE_NEWREST', databaseURL:'https://newrest.firebaseio.com'};
+    DB.business.name = 'newrest';
+    delete DB.license;
+    const licenciaVieja = DB.license && DB.license.code;
+    const arrastra = (licenciaVieja && licenciaVieja !== 'NUEVO123')
+      || (!licenciaVieja && DB.business && DB.business.ownFirebase);
+    if(arrastra) DB = defaultData();
+    return {vacio: !getCloudConfig(), nombre: DB.business.name};
+  });
+  assert.equal(r.vacio, true,
+    'el hueco conserva la nube del negocio anterior: el asistente se saltaría y el negocio nuevo escribiría en la nube ajena');
+  assert.notEqual(r.nombre, 'newrest', 'y tampoco puede quedarse con su nombre ni sus datos');
+  return 'el hueco se vacía antes de activar';
+});
+
+await caso('Al quitar un negocio se CIERRA la base antes de borrarla', async ()=>{
+  // Sin cerrarla, deleteDatabase se queda bloqueado y no borra nada, sin
+  // ningún error: los datos siguen ahí para el siguiente que caiga en el hueco.
+  const r = await page.evaluate(()=> typeof cerrarIdb === 'function');
+  assert.ok(r, 'falta el cierre de la base antes de borrarla');
+  return 'si no, el borrado se queda bloqueado en silencio';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
