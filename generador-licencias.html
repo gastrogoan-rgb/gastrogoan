@@ -860,6 +860,12 @@ function renderLog(){
   document.getElementById('log').innerHTML = grupos.map(g => {
     // Si se le ha restablecido el PIN, el que vale es el último emitido.
     const ultima = g.cuentas[0];
+    /* ⚠️ La tarjeta tiene que ENSEÑAR que la cuenta está borrada. Antes no lo
+       hacía en ninguna parte: se borraba de verdad en Firebase y en pantalla
+       seguía igual —mismo usuario, mismo PIN, mismo botón de borrar—, así que
+       el dueño lo contó como "le doy a borrar cuenta pero no borra nada".
+       El borrado funcionaba; lo que faltaba era decirlo. */
+    const cuentaBorrada = !!(ultima && ultima.anulada);
     const titulo = g.user
       ? `👤 ${esc(g.user)}`
       : '⚠️ Locales sin cuenta en este registro';
@@ -867,14 +873,20 @@ function renderLog(){
       ? `<span class="pastilla">${esc(ultima.name)}</span>` : '';
 
     const credenciales = g.user ? `
-      <div class="cred">
+      <div class="cred${cuentaBorrada ? ' anulada' : ''}">
         <span class="cred-et">Para ENTRAR en la app</span>
         <span class="cred-val">${esc(g.user)}</span>
+        ${cuentaBorrada ? `
+        <span class="cred-et">Estado</span>
+        <span class="cred-val" style="color:#8A4A3B">Cuenta borrada el ${esc(ultima.anulada)}</span>
+        <button class="acc" title="Quita la anotación de tu lista. La cuenta ya está borrada." onclick="delSale(${ultima.i})">Quitar del registro</button>
+        ` : `
         <span class="cred-et">PIN</span>
         <span class="cred-val">${esc(ultima && ultima.pin || '—')}</span>
         <button class="acc" onclick="copiar('Usuario: ${esc(g.user)}  ·  PIN: ${esc(ultima && ultima.pin || '')}')">Copiar</button>
         ${ultima ? `<button class="acc acc-rojo" title="Borra la cuenta y libera el nombre. El cliente deja de poder entrar." onclick="borrarCuenta(${ultima.i}, '${esc(ultima.id || '')}')">Borrar cuenta</button>` : ''}
         ${g.cuentas.length > 1 ? `<span class="pastilla">PIN restablecido ${g.cuentas.length - 1} vez/veces — vale el de arriba</span>` : ''}
+        `}
       </div>` : '';
 
     const filas = g.locales.length ? g.locales.map(l => {
