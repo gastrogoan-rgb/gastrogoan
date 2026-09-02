@@ -2245,8 +2245,8 @@ const FIREBASE_RULES_JSON = `{
           "requests": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pago_confirmado')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -3374,6 +3374,9 @@ function getPlatformFirebaseApp(){
    hasta ahora. Y en cuanto el hostelero pegue las reglas nuevas, se muda
    solo, sin que nadie tenga que hacer nada. */
 let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprobado
+// El negocio tiene las reglas de una versión anterior: todo funciona, pero sus
+// reservas siguen pasando por la nube compartida. Hay que decírselo.
+let reglasAntiguas = false;
 function getPublicMirrorApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
   if(espejoEnNubePropia === false) return getPlatformFirebaseApp();
@@ -3401,10 +3404,20 @@ async function comprobarEspejoEnNubePropia(){
   try{
     // Se prueban los nodos que las reglas VIEJAS no contemplaban: si estos
     // pasan, el resto también.
+    /* ⚠️ Se limpia el HIJO, no el padre — y esto no es un detalle: era lo que
+       tenía rota la mudanza entera. Las reglas dan `.write` en
+       `aforoHold/$fecha/$turno`, y en Firebase el permiso BAJA pero no SUBE,
+       así que borrar `aforoHold/_prueba` se rechazaba SIEMPRE. O sea que la
+       sonda fallaba incluso en un negocio con las reglas NUEVAS bien pegadas:
+       `espejoEnNubePropia` se quedaba en false y NINGÚN negocio se mudaba
+       nunca a su propia nube. De ahí que la plataforma compartida siguiera
+       aguantando el peso de todos, que es el techo de ~67 negocios. */
     const base = app.database().ref('gastrogoan/public/' + publicId);
     await base.child('aforoHold/_prueba/_prueba').set(0);
-    await base.child('aforoHold/_prueba').remove();
-    await base.child('orderStatus/_prueba').set({ts: Date.now()});
+    await base.child('aforoHold/_prueba/_prueba').remove();
+    // Y con los campos que el `.validate` de orderStatus espera, no un {ts}
+    // inventado: si no, la sonda vuelve a fallar en cuanto ese validate exista.
+    await base.child('orderStatus/_prueba').set({status: '_prueba', updatedAt: Date.now()});
     await base.child('orderStatus/_prueba').remove();
     espejoEnNubePropia = true;
     publishPublicLookup(publicId, cfg);
@@ -3412,8 +3425,13 @@ async function comprobarEspejoEnNubePropia(){
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
     // siguiente arranque, por si el hostelero ya las ha actualizado.
+    /* Antes esto era SOLO un console.warn, sitio al que un hostelero no entra
+       nunca: se quedaba en la nube compartida para siempre sin enterarse, y la
+       mudanza —de la que depende que esto aguante 5.000 negocios— no ocurría
+       jamás para él. Ahora se anota para poder decírselo en el panel de nube. */
     console.warn('La nube del negocio todavía no acepta el espejo público completo; se sigue usando la compartida', e && e.message);
     espejoEnNubePropia = false;
+    reglasAntiguas = true;
     return false;
   }
 }
@@ -5894,6 +5912,10 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+    ${reglasAntiguas ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${t('gate.oldRulesBody')}
+      <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+    </div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
       ${lastSyncErrorCode ? `<button class="btn" style="flex:0 0 auto" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}

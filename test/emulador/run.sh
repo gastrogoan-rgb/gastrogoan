@@ -81,7 +81,19 @@ cat > "$TRABAJO/emu/firebase.json" <<'JSON'
   }
 }
 JSON
-echo '{"rules":{".read":true,".write":true}}' > "$TRABAJO/emu/database.rules.json"
+# ⚠️ LAS REGLAS DE VERDAD, no unas abiertas.
+#
+# Esto corría con {".read":true,".write":true}, o sea que el único sitio del
+# proyecto donde se prueba contra una Firebase real NO probaba nunca las
+# reglas. Por ahí se colaron tres rechazos de permisos que estaban en
+# producción y que ninguna de las 38 pruebas veía:
+#   · borrar los holds de aforo/mesa/pedidos (se borraba el nodo padre, y en
+#     Firebase el permiso BAJA pero no SUBE, así que se rechazaba siempre);
+#   · borrar una solicitud ya procesada;
+#   · la sonda del espejo escribiendo en orderStatus.
+# Todos fallaban EN SILENCIO. Con las reglas reales cargadas aquí, cualquier
+# operación que la app haga y las reglas no permitan sale sola.
+cp "$RAIZ/reglas/reglas-de-cada-negocio.json" "$TRABAJO/emu/database.rules.json"
 
 # 4. Arrancar. Se quita el proxy: el CLI habla con su propio emulador por
 #    localhost y un proxy por medio le corta esa llamada.
