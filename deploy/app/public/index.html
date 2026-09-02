@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 01:27';
+const GG_BUILD = '03/09/2026 01:35';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -6916,6 +6916,10 @@ function initPublicRequestsListener(){
           date: req.date || '', time: req.time || '',
           costeEnvio: req.costeEnvio || 0, propina: typeof req.propina === 'number' ? req.propina : 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
+          /* Marca permanente de que este pedido lo hizo el CLIENTE desde la web.
+             `status` no vale para esto: en cuanto se acepta deja de ser
+             'pendiente-online' y se confundiría con uno tomado por teléfono. */
+          origenOnline: true,
           clientRef: req.clientRef || null, clientId: matchedClientPedido ? matchedClientPedido.id : null,
           pendienteVerificarZona: !!req.pendienteVerificarZona,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
@@ -11684,6 +11688,8 @@ const I18N = {
     'help.bug.mailWhat': 'Qué ha pasado',
     'help.bug.mailExpected': 'Qué esperaba que pasara',
     'help.bug.mailContext': 'Datos técnicos (rellenados por la app)',
+    'tpv.onlineReadOnlyTitle': 'Pedido hecho por el cliente',
+    'tpv.onlineReadOnlyDesc': 'Este pedido llegó por la web, así que aquí solo se consulta: no se le pueden añadir platos. Si el cliente quiere algo más, lo mejor es que haga otro pedido — así el total sigue cuadrando con lo que ya ha pagado.',
     'title.renameSection': 'Cambiar el nombre de la sección',
     'title.renameDish': 'Cambiar el nombre',
     'title.renameGroup': 'Cambiar el nombre del grupo',
@@ -13848,6 +13854,8 @@ const I18N = {
     'help.bug.mailWhat': 'Què ha passat',
     'help.bug.mailExpected': 'Què esperava que passés',
     'help.bug.mailContext': 'Dades tècniques (emplenades per l\'app)',
+    'tpv.onlineReadOnlyTitle': 'Comanda feta pel client',
+    'tpv.onlineReadOnlyDesc': 'Aquesta comanda va arribar per la web, així que aquí només es consulta: no s\'hi poden afegir plats. Si el client vol alguna cosa més, millor que faci una altra comanda — així el total continua quadrant amb el que ja ha pagat.',
     'title.renameSection': 'Canviar el nom de la secció',
     'title.renameDish': 'Canviar el nom',
     'title.renameGroup': 'Canviar el nom del grup',
@@ -16016,6 +16024,8 @@ const I18N = {
     'help.bug.mailWhat': 'What happened',
     'help.bug.mailExpected': 'What I expected to happen',
     'help.bug.mailContext': 'Technical details (filled in by the app)',
+    'tpv.onlineReadOnlyTitle': 'Order placed by the customer',
+    'tpv.onlineReadOnlyDesc': 'This order came in through the website, so here it is view-only: no dishes can be added. If the customer wants more, it is better they place another order — that way the total still matches what they already paid.',
     'title.renameSection': 'Rename this section',
     'title.renameDish': 'Rename',
     'title.renameGroup': 'Rename this group',
@@ -26376,10 +26386,27 @@ function renderTableOrderModal(orderId){
   const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
+  /* ⚠️ UN PEDIDO QUE HIZO EL CLIENTE POR LA WEB NO SE TOCA.
+
+     Al abrirlo se podían añadir platos como en cualquier mesa, y eso es un
+     problema de dinero, no de estética: el cliente ya pidió —y muchas veces ya
+     PAGÓ con tarjeta— una lista concreta. Si alguien añade algo, el total deja
+     de cuadrar con lo cobrado y nadie se entera hasta el cierre de caja.
+     Aquí solo se consulta lo que pidió. */
+  /* `clientRef` como respaldo: lo pone SOLO la web pública (el TPV no lo usa
+     nunca), así que los pedidos que ya entraron antes de existir la marca
+     `origenOnline` también quedan protegidos, sin tener que tocarlos. */
+  const soloConsulta = !!(order.origenOnline || order.clientRef);
   let selectorHtml = '';
   const selectedMenu = activeMenus.find(m=>m.id===tpvSelectedCartaId);
   const selectedCarta = allCartas.find(c=>c.id===tpvSelectedCartaId);
-  if(selectedMenu){
+  if(soloConsulta){
+    selectorHtml = `<div class="empty" style="padding:22px;line-height:1.6">
+      <i class="ti ti-lock"></i>
+      <strong style="display:block;margin-bottom:4px">${t('tpv.onlineReadOnlyTitle')}</strong>
+      <span style="font-size:13px">${t('tpv.onlineReadOnlyDesc')}</span>
+    </div>`;
+  } else if(selectedMenu){
     selectorHtml = renderMenuSelectorInline(order, selectedMenu);
   } else if(selectedCarta){
     selectorHtml = renderCartaSelectorInline(order, selectedCarta);
@@ -26407,7 +26434,7 @@ function renderTableOrderModal(orderId){
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
-      ${cartaTabs}${menuTabs}
+      ${soloConsulta ? '' : cartaTabs + menuTabs}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
          .tpv-mobile-pane-toggle en styles.css); en tablet/PC no existe,
