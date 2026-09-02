@@ -1,0 +1,78 @@
+# Vigilancia diaria de que la app SIGUE EN PIE en el dominio.
+#
+# Por qué existe: la app no tiene servidor, así que no hay nada que avise si
+# el sitio deja de responder — ni un log, ni un panel. Si Cloudflare cambia
+# sus condiciones, caduca el dominio o una publicación sale rota, el primero
+# en enterarse sería un hostelero un viernes por la noche. Esto lo mira cada
+# día antes de que le pase a nadie.
+#
+# Cómo avisa: GitHub manda un correo al dueño del repositorio cuando una
+# tarea programada FALLA. No hace falta ningún servicio de terceros, no
+# cuesta nada y no crece con el número de licencias vendidas.
+#
+# ⚠️ No basta con que el servidor conteste 200: una página de error del
+# hosting también contesta 200. Por eso se comprueba que dentro venga algo
+# que solo está en la app de verdad.
+
+name: Vigilancia del dominio
+
+on:
+  schedule:
+    # 07:15 UTC = 09:15 en Madrid (verano). Antes de que abra ningún local.
+    - cron: '15 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: La app de gestión (app.gastrogoan.com)
+        run: |
+          echo "→ https://app.gastrogoan.com/"
+          codigo=$(curl -sS -o /tmp/app.html -w '%{http_code}' \
+                    --max-time 45 --retry 3 --retry-delay 10 \
+                    https://app.gastrogoan.com/)
+          echo "   HTTP $codigo · $(wc -c < /tmp/app.html) bytes"
+          [ "$codigo" = "200" ] || { echo "❌ La app no responde 200"; exit 1; }
+          grep -q 'GastroGoan' /tmp/app.html \
+            || { echo "❌ Responde, pero lo que sirve NO es la app"; exit 1; }
+          # La app pesa megas. Si vienen cuatro kilobytes, es una página de
+          # error del hosting disfrazada de 200.
+          [ "$(wc -c < /tmp/app.html)" -gt 500000 ] \
+            || { echo "❌ La app viene incompleta"; exit 1; }
+          echo "   ✅ en pie"
+
+      - name: El aviso de versión (version.json)
+        run: |
+          echo "→ https://app.gastrogoan.com/version.json"
+          curl -fsS --max-time 30 --retry 3 --retry-delay 10 \
+            https://app.gastrogoan.com/version.json > /tmp/v.json \
+            || { echo "❌ Sin version.json ningún cliente se entera de las actualizaciones"; exit 1; }
+          cat /tmp/v.json
+          grep -q '"' /tmp/v.json || { echo "❌ version.json no trae nada"; exit 1; }
+          echo "   ✅ en pie"
+
+      - name: La web pública de reservas (reservas.gastrogoan.com)
+        run: |
+          echo "→ https://reservas.gastrogoan.com/"
+          codigo=$(curl -sS -o /tmp/res.html -w '%{http_code}' \
+                    --max-time 45 --retry 3 --retry-delay 10 \
+                    https://reservas.gastrogoan.com/)
+          echo "   HTTP $codigo · $(wc -c < /tmp/res.html) bytes"
+          [ "$codigo" = "200" ] || { echo "❌ La web de reservas no responde 200"; exit 1; }
+          grep -qi 'reserva' /tmp/res.html \
+            || { echo "❌ Responde, pero no es la web de reservas"; exit 1; }
+          echo "   ✅ en pie"
+
+      - name: El certificado no caduca esta semana
+        run: |
+          for d in app.gastrogoan.com reservas.gastrogoan.com; do
+            fin=$(echo | openssl s_client -servername "$d" -connect "$d":443 2>/dev/null \
+                  | openssl x509 -noout -enddate | cut -d= -f2)
+            dias=$(( ( $(date -d "$fin" +%s) - $(date +%s) ) / 86400 ))
+            echo "$d · caduca en $dias días ($fin)"
+            [ "$dias" -gt 7 ] || { echo "❌ El certificado de $d caduca en $dias días"; exit 1; }
+          done
+
+      - name: Todo correcto
+        run: echo "✅ app.gastrogoan.com y reservas.gastrogoan.com, en pie y servidos por HTTPS."
