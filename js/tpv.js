@@ -2002,10 +2002,27 @@ function renderTableOrderModal(orderId){
   const menuTabs = activeMenus.map(m => `<button class="btn btn-sm ${tpvSelectedCartaId===m.id?'btn-primary':''}" onclick="tpvSelectedCartaId=${m.id};tpvSelectedSeccionId=null;renderTableOrderModal(${order.id})"><i class="ti ti-clipboard-list"></i> ${escapeHtml(tItem(m))}</button>`).join('');
 
   // Contenido del selector según la pestaña seleccionada
+  /* ⚠️ UN PEDIDO QUE HIZO EL CLIENTE POR LA WEB NO SE TOCA.
+
+     Al abrirlo se podían añadir platos como en cualquier mesa, y eso es un
+     problema de dinero, no de estética: el cliente ya pidió —y muchas veces ya
+     PAGÓ con tarjeta— una lista concreta. Si alguien añade algo, el total deja
+     de cuadrar con lo cobrado y nadie se entera hasta el cierre de caja.
+     Aquí solo se consulta lo que pidió. */
+  /* `clientRef` como respaldo: lo pone SOLO la web pública (el TPV no lo usa
+     nunca), así que los pedidos que ya entraron antes de existir la marca
+     `origenOnline` también quedan protegidos, sin tener que tocarlos. */
+  const soloConsulta = !!(order.origenOnline || order.clientRef);
   let selectorHtml = '';
   const selectedMenu = activeMenus.find(m=>m.id===tpvSelectedCartaId);
   const selectedCarta = allCartas.find(c=>c.id===tpvSelectedCartaId);
-  if(selectedMenu){
+  if(soloConsulta){
+    selectorHtml = `<div class="empty" style="padding:22px;line-height:1.6">
+      <i class="ti ti-lock"></i>
+      <strong style="display:block;margin-bottom:4px">${t('tpv.onlineReadOnlyTitle')}</strong>
+      <span style="font-size:13px">${t('tpv.onlineReadOnlyDesc')}</span>
+    </div>`;
+  } else if(selectedMenu){
     selectorHtml = renderMenuSelectorInline(order, selectedMenu);
   } else if(selectedCarta){
     selectorHtml = renderCartaSelectorInline(order, selectedCarta);
@@ -2033,7 +2050,7 @@ function renderTableOrderModal(orderId){
     ${esRepartoPropio(order) ? renderRepartoControlCardHtml(order) : ''}
     <!-- Pestañas de cartas/menús -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:10px">
-      ${cartaTabs}${menuTabs}
+      ${soloConsulta ? '' : cartaTabs + menuTabs}
     </div>
     <!-- Interruptor Carta/Comanda — solo se ve en móvil (ver
          .tpv-mobile-pane-toggle en styles.css); en tablet/PC no existe,

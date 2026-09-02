@@ -3992,6 +3992,10 @@ function initPublicRequestsListener(){
           date: req.date || '', time: req.time || '',
           costeEnvio: req.costeEnvio || 0, propina: typeof req.propina === 'number' ? req.propina : 0,
           status: 'pendiente-online', items: onlineItems, tandas: [], createdAt: new Date().toISOString(),
+          /* Marca permanente de que este pedido lo hizo el CLIENTE desde la web.
+             `status` no vale para esto: en cuanto se acepta deja de ser
+             'pendiente-online' y se confundiría con uno tomado por teléfono. */
+          origenOnline: true,
           clientRef: req.clientRef || null, clientId: matchedClientPedido ? matchedClientPedido.id : null,
           pendienteVerificarZona: !!req.pendienteVerificarZona,
           phoneOdd: !!(req.clienteTelefono && req.clienteTelefono.replace(/[^\d]/g,'').length < 9),
