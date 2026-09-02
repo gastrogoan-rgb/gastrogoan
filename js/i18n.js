@@ -1088,8 +1088,10 @@ const I18N = {
     'msg.confirmDuplicateReservation': 'Ya hay otra reserva para este cliente a la misma fecha y hora. ¿Crearla igualmente?',
     'label.noShowCount': 'Veces que no se ha presentado',
     /* Corto, para la cabecera de la columna: el largo no cabe y parte la
-       tabla. El largo se queda como texto de ayuda al pasar por encima. */
-    'label.noShowCol': 'No-shows', 'btn.sendReminder': 'Enviar recordatorio', 'title.sendReminderTo': 'Recordatorio para',
+       tabla. El largo se queda como texto de ayuda al pasar por encima.
+       Y se dice igual que en el resto de la app ("No presentado"), no
+       "no-show": el hostelero lee lo mismo en la reserva y en la ficha. */
+    'label.noShowCol': 'No presentados', 'btn.sendReminder': 'Enviar recordatorio', 'title.sendReminderTo': 'Recordatorio para',
     'label.marketingConsent': 'Acepta recibir promociones y premios por WhatsApp/email', 'btn.viewOrderHistory': 'Ver historial de pedidos',
     'btn.mergeClient': 'Fusionar con otro cliente',
     'merge.desc': 'Une la ficha de otro cliente duplicado con la de "${name}": se suman los puntos y el historial, y las ventas/reservas del duplicado pasan a esta ficha. La ficha duplicada se elimina (recuperable 30 días desde la papelera).',
@@ -3219,7 +3221,7 @@ const I18N = {
     'msg.confirmTableTooSmall': 'La taula ${table} té ${plazas} places i el grup és de ${people} persones. Assignar-la igualment?',
     'msg.confirmDuplicateReservation': 'Ja hi ha una altra reserva per a aquest client a la mateixa data i hora. Crear-la igualment?',
     'label.noShowCount': 'Vegades que no s\'ha presentat',
-    'label.noShowCol': 'No-shows', 'btn.sendReminder': 'Enviar recordatori', 'title.sendReminderTo': 'Recordatori per a',
+    'label.noShowCol': 'No presentats', 'btn.sendReminder': 'Enviar recordatori', 'title.sendReminderTo': 'Recordatori per a',
     'label.marketingConsent': 'Accepta rebre promocions i premis per WhatsApp/email', 'btn.viewOrderHistory': 'Veure historial de comandes',
     'btn.mergeClient': 'Fusionar amb un altre client',
     'merge.desc': 'Uneix la fitxa d\'un altre client duplicat amb la de "${name}": se sumen els punts i l\'historial, i les vendes/reserves del duplicat passen a aquesta fitxa. La fitxa duplicada s\'elimina (recuperable 30 dies des de la paperera).',
