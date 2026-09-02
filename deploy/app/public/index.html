@@ -2862,6 +2862,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
           <button class="btn btn-sm" onclick="copyHelpContactEmail()"><i class="ti ti-copy"></i> <span data-i18n="help.contact.copy"></span></button>
         </div>
       </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+      <!-- Informar de un fallo. Aparte del contacto normal a propósito: lo que
+           hace útil un aviso de fallo es el CONTEXTO técnico, y eso el
+           hostelero no lo sabe contar. Lo rellena la app. -->
+      <i class="ti ti-bug"></i>
+      <h4 data-i18n="help.bug.title"></h4>
+      <p data-i18n="help.bug.desc"></p>
+      <div class="field" style="text-align:left;margin-bottom:10px">
+        <label data-i18n="help.bug.whatHappened"></label>
+        <textarea id="bug-que-paso" rows="3" data-i18n-placeholder="help.bug.whatHappenedPh"></textarea>
+      </div>
+      <div class="field" style="text-align:left;margin-bottom:10px">
+        <label data-i18n="help.bug.expected"></label>
+        <textarea id="bug-que-esperaba" rows="2" data-i18n-placeholder="help.bug.expectedPh"></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="enviarInformeDeFallo()"><i class="ti ti-send"></i> <span data-i18n="help.bug.send"></span></button>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5" data-i18n="help.bug.privacy"></p>
     </div>
   </div>
 </div>
@@ -2897,7 +2914,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '02/09/2026 23:02';
+const GG_BUILD = '03/09/2026 00:03';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -5044,6 +5061,32 @@ async function checkLicenseRevocation(){
   }catch(e){ /* sin conexión o sin permisos: no se bloquea a nadie */ }
 }
 
+/* Canjear otro código sin salir de la cuenta: es lo que necesita quien acaba
+   de comprar una licencia nueva, o aquel a quien se le anuló la suya por
+   error. Se quita la pantalla antes, porque si no el selector se abriría
+   debajo y no se vería. */
+/* ⚠️ La pantalla de revocación es una capa que TAPA TODO (z-index 100001), así
+   que hay que quitarla antes de ir a ningún sitio: si no, se pulsa el botón, la
+   app navega por debajo y en pantalla no cambia nada. Me pasó a mí en el
+   primer intento de este mismo arreglo. */
+function salirDeLaRevocacion(){
+  const g = document.getElementById('revoked-gate');
+  if(g) g.remove();
+}
+// Volver al inicio de sesión de siempre (dueño / empleado). Es la salida que
+// pidió el dueño y tiene razón: es la pantalla que el hostelero conoce, y
+// desde ahí llega a sus otros negocios o a canjear uno nuevo.
+function volverAlAccesoTrasRevocacion(){
+  salirDeLaRevocacion();
+  exitToAccessScreen();
+}
+// Y el atajo para quien acaba de comprar una licencia nueva.
+function canjearTrasRevocacion(){
+  salirDeLaRevocacion();
+  if(typeof redeemFirstBusiness === 'function') redeemFirstBusiness();
+  else if(typeof showBusinessSelectScreen === 'function') showBusinessSelectScreen();
+}
+
 function showRevokedGate(){
   if(document.getElementById('revoked-gate')) return;
   const g = document.createElement('div');
@@ -5054,6 +5097,17 @@ function showRevokedGate(){
       <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-lock"></i></div>
       <h2 style="margin-bottom:4px">${t('access.revokedTitle')}</h2>
       <p style="color:#444;font-size:13.5px;line-height:1.6">${t('access.revokedDesc')}</p>
+      <!-- ⚠️ SIN BOTONES ESTO ERA UN CALLEJÓN SIN SALIDA. Se quedaba la
+           pantalla y ya: no se podía canjear otro código, ni salir de la
+           cuenta, ni nada. La única forma de recuperar el aparato era borrar
+           los datos del navegador, cosa que ningún hostelero sabe hacer.
+           Y no es un caso raro: un cliente que renueva su licencia, o uno
+           anulado por error a las once de la noche, se queda tirado con la
+           app inservible. -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
+        <button class="btn btn-primary" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
+        <button class="btn" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+      </div>
     </div>`;
   document.body.appendChild(g);
 }
@@ -6386,6 +6440,30 @@ async function comprobarEspejoEnNubePropia(){
     await base.child('orderStatus/_prueba').remove();
     espejoEnNubePropia = true;
     publishPublicLookup(publicId, cfg);
+    /* Y APARTE, los cambios de reglas más recientes, que viven en otro nodo
+       (`requests`) y por eso la comprobación de arriba no los veía:
+         · que se acepte una solicitud de tipo `pago_confirmado` — sin esto,
+           TODA confirmación de pago con tarjeta se rechaza;
+         · que se pueda BORRAR una solicitud ya procesada — sin esto el
+           histórico con nombres, teléfonos y direcciones crece sin fin.
+       Se comprueba por separado a propósito: un negocio al que solo le falte
+       esto tiene el espejo funcionando y NO hay que devolverlo a la nube
+       compartida; simplemente se le avisa de que actualice sus reglas.
+       La solicitud de prueba lleva `_sonda` y el oyente la ignora, para que no
+       se procese como un pago de verdad. */
+    try{
+      const sonda = base.child('requests/_sonda');
+      await sonda.set({type: 'pago_confirmado', createdAt: Date.now(), _sonda: true});
+      await sonda.child('_claimedAt').set(Date.now());
+      await sonda.remove();
+      reglasAntiguas = false;
+    }catch(e2){
+      console.warn('Las reglas de este negocio son de una versión anterior', e2 && e2.message);
+      reglasAntiguas = true;
+      // Si quedó a medias, se intenta limpiar; si tampoco deja, no pasa nada:
+      // el oyente la ignora por el `_sonda`.
+      try{ await base.child('requests/_sonda').remove(); }catch(e3){}
+    }
     return true;
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
@@ -6515,6 +6593,10 @@ function initPublicRequestsListener(){
       const req = snap.val();
       const reqRef = snap.ref;
       if(!req || !req.type){ reqRef.remove(); return; }
+      /* La solicitud que escribe la sonda para comprobar si las reglas de este
+         negocio están al día (ver comprobarEspejoEnNubePropia). Se ignora: si
+         no, entraría aquí como un `pago_confirmado` de verdad. */
+      if(req._sonda) return;
       // Reclamación atómica: si el negocio tiene más de un dispositivo con
       // la app abierta a la vez (dos TPV, tablet de cocina + caja...),
       // TODOS reciben este mismo evento child_added de forma independiente.
@@ -8878,7 +8960,13 @@ function openCloudWizard(){
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
     ${reglasAntiguas ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
-      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${t('gate.oldRulesBody')}
+      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${
+        /* Dos casos MUY distintos y no se pueden contar igual:
+           · el espejo no funciona (reglas viejas de verdad): sus reservas
+             pasan por el servidor compartido;
+           · el espejo funciona pero le faltan los cambios recientes: todo va
+             bien salvo los pagos con tarjeta y el borrado del histórico. */
+        espejoEnNubePropia === false ? t('gate.oldRulesBody') : t('gate.oldRulesBodyMenor')}
       <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
     </div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -10767,7 +10855,7 @@ const I18N = {
     'access.pinReset': 'PIN actualizado. Vuelve a entrar con tu nuevo PIN.',
     'access.ownerPinRequiredForReset': 'Para resetear el PIN de un empleado hace falta el PIN del negocio:',
     'title.enterBusinessPin': 'PIN del negocio',
-    'access.revokedTitle': 'Licencia desactivada',
+    'access.revokedTitle': 'Licencia desactivada', 'access.revokedRedeem': 'Canjear otro código', 'access.revokedBack': 'Volver al inicio de sesión',
     'access.revokedDesc': 'Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.',
     'audit.employeePinResetByMaster': 'Reseteó el PIN de ${name} con el código maestro',
     'access.badCredentials': 'Nombre, PIN o código de negocio incorrectos.',
@@ -11493,8 +11581,22 @@ const I18N = {
     'gate.miniStep5': 'Copia tu <code>apiKey</code> y <code>databaseURL</code> y pégalos abajo',
     'gate.miniStep6': 'En <strong>Authentication → Settings → Dominios autorizados</strong>, añade <code>app.gastrogoan.com</code> y <code>reservas.gastrogoan.com</code>. Sin esto Firebase rechaza la conexión: de fábrica solo autoriza sus propias direcciones.',
     'gate.cloudConnected': 'Este negocio está conectado a su nube Firebase', 'gate.connectMoreDevices': 'Para conectar más dispositivos',
+    'help.bug.title': '¿Has encontrado un fallo?',
+    'help.bug.desc': 'Cuéntanoslo y lo arreglamos. No hace falta que sepas explicarlo con palabras técnicas: la app añade sola todo lo que necesitamos para encontrarlo.',
+    'help.bug.whatHappened': '¿Qué ha pasado?',
+    'help.bug.whatHappenedPh': 'Por ejemplo: pulso Guardar en la ficha de un empleado y no pasa nada.',
+    'help.bug.expected': '¿Qué esperabas que pasara? (opcional)',
+    'help.bug.expectedPh': 'Por ejemplo: que se guardaran los cambios.',
+    'help.bug.send': 'Enviar el aviso',
+    'help.bug.needWhat': 'Cuéntanos qué ha pasado, aunque sea en una línea.',
+    'help.bug.sent': 'Se abrirá tu correo con todo escrito. Solo tienes que darle a enviar.',
+    'help.bug.privacy': 'No se envía ningún dato de tu negocio: ni ventas, ni clientes, ni tu código de licencia, ni ningún PIN. Solo en qué pantalla estabas, qué versión tienes y si la nube estaba conectada.',
+    'help.bug.mailWhat': 'Qué ha pasado',
+    'help.bug.mailExpected': 'Qué esperaba que pasara',
+    'help.bug.mailContext': 'Datos técnicos (rellenados por la app)',
     'gate.testCloudNow': 'Probar mi nube ahora',
     'gate.copyRules': 'Copiar las reglas nuevas',
+    'gate.oldRulesBodyMenor': 'Tu nube funciona y tus reservas llegan bien, pero te faltan dos cambios recientes: los cobros con tarjeta se rechazarían al confirmarse, y el histórico de reservas —con nombres y teléfonos— crecería sin fin porque no se pueden borrar las ya procesadas. Copia las reglas nuevas y pégalas en Firebase → Realtime Database → Reglas → Publicar. No pierdes ningún dato: las reglas son solo permisos. Después vuelve aquí y pulsa "Probar mi nube ahora".',
     'gate.oldRulesTitle': 'Tienes las reglas de seguridad de una versión anterior',
     'gate.oldRulesBody': 'Todo funciona y no pierdes nada, pero tus reservas y pedidos online siguen pasando por el servidor compartido de GastroGoan en vez de por tu propia nube. Copia las reglas nuevas y pégalas en Firebase → Realtime Database → Reglas → Publicar. Después vuelve aquí y pulsa "Probar mi nube ahora".',
     'gate.copyError': 'Copiar el error', 'msg.errorCopied': 'Error copiado. Pégalo donde quieras mandarlo.',
@@ -12911,7 +13013,7 @@ const I18N = {
     'access.pinReset': 'PIN actualitzat. Torna a entrar amb el teu nou PIN.',
     'access.ownerPinRequiredForReset': 'Per resetejar el PIN d\'un empleat cal el PIN del negoci:',
     'title.enterBusinessPin': 'PIN del negoci',
-    'access.revokedTitle': 'Llicència desactivada',
+    'access.revokedTitle': 'Llicència desactivada', 'access.revokedRedeem': 'Bescanviar un altre codi', 'access.revokedBack': 'Tornar a l\'inici de sessió',
     'access.revokedDesc': 'Aquesta clau de llicència ha estat desactivada. Si creus que és un error, contacta amb qui et va vendre GastroGoan.',
     'audit.employeePinResetByMaster': 'Va resetejar el PIN de ${name} amb el codi mestre',
     'access.badCredentials': 'Nom, PIN o codi de negoci incorrectes.',
@@ -13634,8 +13736,22 @@ const I18N = {
     'gate.miniStep5': 'Copia el teu <code>apiKey</code> i <code>databaseURL</code> i enganxa\'ls sota',
     'gate.miniStep6': 'A <strong>Authentication → Settings → Dominis autoritzats</strong>, afegeix <code>app.gastrogoan.com</code> i <code>reservas.gastrogoan.com</code>. Sense això Firebase rebutja la connexió: de fàbrica només autoritza les seves pròpies adreces.',
     'gate.cloudConnected': 'Aquest negoci està connectat al seu núvol Firebase', 'gate.connectMoreDevices': 'Per connectar més dispositius',
+    'help.bug.title': 'Has trobat una errada?',
+    'help.bug.desc': 'Explica-ho i ho arreglem. No cal que ho sàpigues explicar amb paraules tècniques: l\'app hi afegeix sola tot el que necessitem per trobar-ho.',
+    'help.bug.whatHappened': 'Què ha passat?',
+    'help.bug.whatHappenedPh': 'Per exemple: premo Desar a la fitxa d\'un empleat i no passa res.',
+    'help.bug.expected': 'Què esperaves que passés? (opcional)',
+    'help.bug.expectedPh': 'Per exemple: que es desessin els canvis.',
+    'help.bug.send': 'Enviar l\'avís',
+    'help.bug.needWhat': 'Explica\'ns què ha passat, encara que sigui en una línia.',
+    'help.bug.sent': 'S\'obrirà el teu correu amb tot escrit. Només has de prémer enviar.',
+    'help.bug.privacy': 'No s\'envia cap dada del teu negoci: ni vendes, ni clients, ni el teu codi de llicència, ni cap PIN. Només en quina pantalla eres, quina versió tens i si el núvol estava connectat.',
+    'help.bug.mailWhat': 'Què ha passat',
+    'help.bug.mailExpected': 'Què esperava que passés',
+    'help.bug.mailContext': 'Dades tècniques (emplenades per l\'app)',
     'gate.testCloudNow': 'Provar el meu núvol ara',
     'gate.copyRules': 'Copiar les regles noves',
+    'gate.oldRulesBodyMenor': 'El teu núvol funciona i les teves reserves arriben bé, però et falten dos canvis recents: els cobraments amb targeta es rebutjarien en confirmar-se, i l\'històric de reserves —amb noms i telèfons— creixeria sense fi perquè no es poden esborrar les ja processades. Copia les regles noves i enganxa-les a Firebase → Realtime Database → Regles → Publicar. No perds cap dada: les regles són només permisos. Després torna aquí i prem "Provar el meu núvol ara".',
     'gate.oldRulesTitle': 'Tens les regles de seguretat d\'una versió anterior',
     'gate.oldRulesBody': 'Tot funciona i no perds res, però les teves reserves i comandes en línia continuen passant pel servidor compartit de GastroGoan en comptes de pel teu propi núvol. Copia les regles noves i enganxa-les a Firebase → Realtime Database → Regles → Publicar. Després torna aquí i prem "Provar el meu núvol ara".',
     'gate.copyError': 'Copiar l\'error', 'msg.errorCopied': 'Error copiat. Enganxa\'l on el vulguis enviar.',
@@ -15055,7 +15171,7 @@ const I18N = {
     'access.pinReset': 'PIN updated. Sign in again with your new PIN.',
     'access.ownerPinRequiredForReset': 'Resetting an employee\'s PIN requires the business PIN:',
     'title.enterBusinessPin': 'Business PIN',
-    'access.revokedTitle': 'License deactivated',
+    'access.revokedTitle': 'License deactivated', 'access.revokedRedeem': 'Redeem another code', 'access.revokedBack': 'Back to sign in',
     'access.revokedDesc': 'This license key has been deactivated. If you think this is a mistake, contact whoever sold you GastroGoan.',
     'audit.employeePinResetByMaster': 'Reset ${name}\'s PIN with the master code',
     'access.badCredentials': 'Wrong name, PIN or business code.',
@@ -15779,8 +15895,22 @@ const I18N = {
     'gate.miniStep5': 'Copy your <code>apiKey</code> and <code>databaseURL</code> and paste them below',
     'gate.miniStep6': 'In <strong>Authentication → Settings → Authorized domains</strong>, add <code>app.gastrogoan.com</code> and <code>reservas.gastrogoan.com</code>. Without this Firebase refuses the connection: out of the box it only authorizes its own addresses.',
     'gate.cloudConnected': 'This business is connected to its Firebase cloud', 'gate.connectMoreDevices': 'To connect more devices',
+    'help.bug.title': 'Found a bug?',
+    'help.bug.desc': 'Tell us and we will fix it. You do not need technical words: the app adds everything we need to find it.',
+    'help.bug.whatHappened': 'What happened?',
+    'help.bug.whatHappenedPh': 'For example: I press Save on a staff record and nothing happens.',
+    'help.bug.expected': 'What did you expect to happen? (optional)',
+    'help.bug.expectedPh': 'For example: that the changes would be saved.',
+    'help.bug.send': 'Send the report',
+    'help.bug.needWhat': 'Tell us what happened, even if it is one line.',
+    'help.bug.sent': 'Your email will open with everything written. Just press send.',
+    'help.bug.privacy': 'No business data is sent: no sales, no customers, no licence code, no PINs. Only which screen you were on, which version you have and whether the cloud was connected.',
+    'help.bug.mailWhat': 'What happened',
+    'help.bug.mailExpected': 'What I expected to happen',
+    'help.bug.mailContext': 'Technical details (filled in by the app)',
     'gate.testCloudNow': 'Test my cloud now',
     'gate.copyRules': 'Copy the new rules',
+    'gate.oldRulesBodyMenor': 'Your cloud works and your bookings arrive fine, but two recent changes are missing: card payments would be rejected on confirmation, and your booking history — with names and phone numbers — would grow without end because processed ones cannot be deleted. Copy the new rules and paste them into Firebase → Realtime Database → Rules → Publish. You lose no data: rules are only permissions. Then come back here and press "Test my cloud now".',
     'gate.oldRulesTitle': 'Your security rules are from an older version',
     'gate.oldRulesBody': 'Everything works and nothing is lost, but your online bookings and orders still go through GastroGoan\'s shared server instead of your own cloud. Copy the new rules and paste them into Firebase → Realtime Database → Rules → Publish. Then come back here and press "Test my cloud now".',
     'gate.copyError': 'Copy the error', 'msg.errorCopied': 'Error copied. Paste it wherever you want to send it.',
@@ -17848,6 +17978,78 @@ function openHelpContactEmail(){
   const body = encodeURIComponent(t('help.contact.bodyIntro') + ((DB.business && DB.business.name) ? ' ' + t('help.contact.businessSuffix').replace('${name}', DB.business.name) : '') + ':\n\n');
   window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject + '&body=' + body;
 }
+/* ============================================================
+   INFORMAR DE UN FALLO
+   ============================================================
+   De los fallos serios encontrados hasta hoy, casi todos los encontró el dueño
+   USANDO la app, no las pruebas. Con 5.000 licencias habrá 5.000 personas
+   usándola de formas que nadie puede simular, y hasta ahora esa información no
+   tenía por dónde llegar: el cliente se encuentra algo raro, se encoge de
+   hombros y sigue. Un fallo que nadie cuenta es un fallo que sigue ahí.
+
+   Lo que hace útil un aviso NO es la descripción —"no me deja editar los
+   empleados" costó una conversación entera de averiguar—, es el CONTEXTO
+   técnico. Y eso el hostelero no lo sabe contar. Lo rellena la app.
+
+   Se manda por `mailto:`, abriendo su propio correo: sin servidor, sin
+   formulario de pago, sin nada que crezca con el número de licencias. A 5.000
+   clientes sigue costando cero. Lo que se pierde es que puede cerrar el correo
+   sin darle a enviar; es un precio justo por no montar un backend.
+
+   ⚠️ NO VIAJA NINGÚN DATO DEL NEGOCIO. Ni ventas, ni clientes, ni el código de
+   licencia, ni PINes. Solo qué pantalla, qué versión, qué navegador y en qué
+   estado está la nube. */
+function contextoParaInformeDeFallo(){
+  const lineas = [];
+  const vista = document.querySelector('.view.active');
+  lineas.push('Pantalla: ' + (vista ? vista.id.replace('view-', '') : '(ninguna)'));
+  lineas.push('Área: ' + (typeof currentArea === 'function' ? currentArea() : '?'));
+  lineas.push('Versión: ' + (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '?'));
+  lineas.push('Idioma: ' + (typeof getLang === 'function' ? getLang() : '?'));
+  // Qué modo de sesión: el mismo fallo se comporta distinto según quién entre,
+  // y es lo primero que hay que saber para reproducirlo.
+  const ses = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  lineas.push('Sesión: ' + (ses ? ses.type + (ses.area ? ' (' + ses.area + ')' : '') : '?'));
+  lineas.push('Nube: ' + (typeof lastSyncBadgeState !== 'undefined' ? (lastSyncBadgeState || 'sin conectar') : '?')
+    + (typeof lastSyncErrorCode !== 'undefined' && lastSyncErrorCode ? ' — ' + lastSyncErrorCode : ''));
+  lineas.push('Pantalla: ' + window.innerWidth + '×' + window.innerHeight);
+  lineas.push('Navegador: ' + navigator.userAgent);
+  if(Array.isArray(window.ggErroresRecientes) && window.ggErroresRecientes.length){
+    lineas.push('Últimos errores: ' + window.ggErroresRecientes.slice(-3).join(' | '));
+  }
+  return lineas.join('\n');
+}
+
+/* Los errores de JavaScript que se hayan producido, para adjuntarlos. Es lo
+   que convierte "se queda en blanco" en algo localizable. Solo los tres
+   últimos y recortados: no se trata de mandar un volcado. */
+if(typeof window !== 'undefined'){
+  window.ggErroresRecientes = [];
+  window.addEventListener('error', e => {
+    const txt = (e && e.message ? e.message : 'error') + (e && e.filename ? ' @' + String(e.filename).split('/').pop() + ':' + e.lineno : '');
+    window.ggErroresRecientes.push(txt.slice(0, 200));
+    if(window.ggErroresRecientes.length > 5) window.ggErroresRecientes.shift();
+  });
+}
+
+function enviarInformeDeFallo(){
+  const quePaso = (document.getElementById('bug-que-paso') || {}).value || '';
+  const queEsperaba = (document.getElementById('bug-que-esperaba') || {}).value || '';
+  if(!quePaso.trim()){
+    showToast(t('help.bug.needWhat'));
+    const el = document.getElementById('bug-que-paso');
+    if(el) el.focus();
+    return;
+  }
+  const nombre = (DB.business && DB.business.name) || '';
+  const asunto = 'FALLO GastroGoan' + (nombre ? ' - ' + nombre : '');
+  const cuerpo = t('help.bug.mailWhat') + ':\n' + quePaso.trim()
+    + '\n\n' + t('help.bug.mailExpected') + ':\n' + (queEsperaba.trim() || '-')
+    + '\n\n--- ' + t('help.bug.mailContext') + ' ---\n' + contextoParaInformeDeFallo() + '\n';
+  window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
+  showToast(t('help.bug.sent'));
+}
+
 // Copia el email de soporte al portapapeles, por si el cliente de correo
 // del dispositivo no se abre automáticamente con el enlace mailto.
 function copyHelpContactEmail(){
