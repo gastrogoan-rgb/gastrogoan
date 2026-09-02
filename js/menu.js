@@ -486,6 +486,7 @@ function renderCartaSecciones(){
           <h4 style="margin:0">${escapeHtml(tItem(sec))}</h4>
         </div>
         <div class="actions-cell">
+          <button class="btn btn-sm btn-icon" title="${t('title.renameSection')}" onclick="renameCartaSeccion(${sec.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addCartaPlato(${sec.id})"><i class="ti ti-plus"></i> ${currentArea()==='sala' ? t('btn.newDrinkManual') : t('btn.newDishManual')}</button>
           <button class="btn btn-sm" onclick="importFromEscandallo(${sec.id})"><i class="ti ti-download"></i> ${t('btn.escandalloShort')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeCartaSection(${sec.id})"><i class="ti ti-trash"></i></button>
@@ -515,7 +516,10 @@ function renderCartaSecciones(){
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveCartaPlato(${sec.id},${pi},-1)`, `moveCartaPlato(${sec.id},${pi},1)`, pi===0, pi===platos.length-1)}</div>
           ${marginDot}
-          <span class="carta-plato-name" style="flex:1;font-weight:600">${escapeHtml(tItem(p))}</span>
+          <!-- Un solo nombre: el lápiz va dentro de .owner-only, así el que no
+               puede editar ve el nombre limpio y sin un botón que no le sirve.
+               La función guarda igualmente el permiso. -->
+          <span class="carta-plato-name" style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameDish')}" onclick="renameCartaPlato(${sec.id},${p.id})">${escapeHtml(tItem(p))} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           <span class="carta-plato-price" style="font-family:monospace;font-weight:600;margin-right:10px">${fmtMoney(p.precio)}</span>
           <button class="btn btn-sm" onclick="openPlatoModsModal(${sec.id},${p.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(p.modificadores||[]).length ? ` (${p.modificadores.length})` : ''}</button>
           <button class="btn btn-sm ${p.disponible===false?'btn-danger':''}" onclick="toggleCartaPlato(${sec.id},${p.id})">${p.disponible===false?t('common.unavailable'):t('common.available')}</button>
@@ -715,6 +719,64 @@ function confirmNewCartaSection(){
   closeModal();
   renderCartaSecciones();
 }
+/* ⚠️ Poder CORREGIR un nombre. Faltaba en los cuatro sitios: la sección y el
+   plato de la carta, y el grupo y la opción de un menú. Sin esto, una falta de
+   ortografía o un "Prueba" que se quedó puesto solo se arreglan borrando y
+   volviendo a crearlo — perdiendo de paso los extras, el límite de raciones y
+   el orden. El dueño lo dijo así: "no deja editar el nombre de la sección o el
+   plato".
+
+   El nombre del plato en la CARTA es suyo, aunque venga de una receta: en la
+   carta puede llamarse "Nuestro steak tartar" y en el escandallo "Steak
+   tartar". Renombrar aquí no toca la receta. */
+async function renameMenuGrupo(grupoId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  if(!g) return;
+  const nuevo = await promptText(t('msg.renameGroupPrompt'), g.nombre);
+  if(nuevo === null) return;
+  const limpio = nuevo.trim();
+  if(!limpio){ showToast(t('msg.nameCannotBeEmpty')); return; }
+  g.nombre = limpio;
+  renderMenuGrupos();
+}
+async function renameMenuOpcion(grupoId, opcionId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  const nuevo = await promptText(t('msg.renameOptionPrompt'), o.nombre);
+  if(nuevo === null) return;
+  const limpio = nuevo.trim();
+  if(!limpio){ showToast(t('msg.nameCannotBeEmpty')); return; }
+  o.nombre = limpio;
+  renderMenuGrupos();
+}
+
+async function renameCartaSeccion(secId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  if(!sec) return;
+  const nuevo = await promptText(t('msg.renameSectionPrompt'), tItem(sec));
+  if(nuevo === null) return;
+  const limpio = nuevo.trim();
+  if(!limpio){ showToast(t('msg.nameCannotBeEmpty')); return; }
+  sec.nombre = limpio;
+  renderCartaSecciones();
+}
+async function renameCartaPlato(secId, platoId){
+  if(!isOwnerSession() && !editUnlocked) return;
+  const sec = cartaEdit.secciones.find(s=>s.id===secId);
+  const p = sec && sec.platos.find(x=>x.id===platoId);
+  if(!p) return;
+  const nuevo = await promptText(t('msg.renameDishPrompt'), tItem(p));
+  if(nuevo === null) return;
+  const limpio = nuevo.trim();
+  if(!limpio){ showToast(t('msg.nameCannotBeEmpty')); return; }
+  p.nombre = limpio;
+  renderCartaSecciones();
+}
+
 async function removeCartaSection(secId){
   if(!isOwnerSession() && !editUnlocked) return;
   if(!(await confirmModal(t('msg.confirmDeleteSection')))) return;
@@ -1201,6 +1263,7 @@ function renderMenuGrupos(){
         </div>
         <div class="actions-cell">
           <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" style="width:auto" ${g.bebida?'checked':''} onchange="toggleGrupoBebida(${g.id},this.checked)"> ${t('label.bebidaGroup')}</label>
+          <button class="btn btn-sm btn-icon" title="${t('title.renameGroup')}" onclick="renameMenuGrupo(${g.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-sm" onclick="addMenuOpcion(${g.id})"><i class="ti ti-plus"></i> ${t('btn.newOption')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuGrupo(${g.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -1210,7 +1273,7 @@ function renderMenuGrupos(){
         return `
         <div class="ge-item">
           <div style="display:flex;align-items:center;gap:2px">${reorderButtons(`moveMenuOpcion(${g.id},${oi},-1)`, `moveMenuOpcion(${g.id},${oi},1)`, oi===0, oi===opciones.length-1)}</div>
-          <span style="flex:1;font-weight:600">${escapeHtml(o.nombre)}</span>
+          <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
