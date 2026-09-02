@@ -420,7 +420,12 @@ await caso('Una lápida caducada deja de estorbar', async ()=>{
     const bloquea = hayLapida('ingredientCategories','Antigua');
     lastSyncedSnapshot = {};
     anotarLapidas();
-    return {bloquea, sigueEnElMapa: 'ingredientCategories:Antigua' in DB.borrados};
+    /* Ojo: al quedarse sin lápidas el mapa NO se queda en {} — se borra
+       entero. Es a propósito: un {} haría que cada sincronización tuviera
+       algo que subir y, como Firebase no guarda objetos vacíos, el
+       indicador de nube se quedaría clavado en "Guardando…". */
+    const mapa = DB.borrados || {};
+    return {bloquea, sigueEnElMapa: 'ingredientCategories:Antigua' in mapa};
   });
   assert.equal(r.bloquea, false, 'una lápida de hace 70 días no puede seguir bloqueando');
   assert.equal(r.sigueEnElMapa, false, 'y se limpia del mapa');
