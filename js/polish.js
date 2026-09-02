@@ -252,7 +252,12 @@ function puestaAPuntoTareas(){
      ir: "currentFolder='gestion'; navigate('minegocio')"},
     {id:'horario', hecho: ppHorarioRevisado(b), icono:'ti-clock-hour-4',
      ir: "currentFolder='gestion'; navigate('minegocio')"},
-    {id:'precios', hecho: conPrecio >= 5, icono:'ti-tag', dato: conPrecio,
+    /* ⚠️ Basta con UNO, como todas las demás. Antes pedía cinco y el dueño lo
+       contó como que la tarea "no se iba nunca": pones precio a un ingrediente,
+       vuelves al inicio y sigue pendiente igual, sin decirte que faltan cuatro.
+       Esto es un asistente que señala por dónde empezar, no un examen: en
+       cuanto sabes poner un precio, ya sabes hacerlo con los demás. */
+    {id:'precios', hecho: conPrecio > 0, icono:'ti-tag', dato: conPrecio,
      ir: "currentFolder='cocina'; navigate('megalista')"},
     {id:'recetas', hecho: recetas > 0, icono:'ti-calculator', dato: recetas,
      ir: "currentFolder='cocina'; navigate('escandallo')"},

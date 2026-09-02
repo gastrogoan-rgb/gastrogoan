@@ -117,7 +117,10 @@ await caso('Los 275 ingredientes sembrados no cuentan: cuentan los que tienen PR
     const tarea = () => puestaAPuntoTareas().esencial.find(x => x.id === 'precios');
     const total = (DB.ingredients||[]).length;
     const alPrincipio = tarea();
-    (DB.ingredients||[]).slice(0, 8).forEach(i => { i.packPrice = 10; });
+    /* UNO basta, como en todas las demás tareas. Con cinco, el dueño ponía
+       un precio, volvía al inicio y la tarea seguía pendiente sin explicar
+       por qué: se leía como que no se iba nunca. */
+    (DB.ingredients||[]).slice(0, 1).forEach(i => { i.packPrice = 10; });
     saveDB();
     return {total, hechoAlPrincipio: alPrincipio.hecho, datoAlPrincipio: alPrincipio.dato,
             hechoDespues: tarea().hecho};
@@ -125,7 +128,7 @@ await caso('Los 275 ingredientes sembrados no cuentan: cuentan los que tienen PR
   assert.ok(r.total > 100, 'el catálogo se siembra entero: ' + r.total);
   assert.equal(r.hechoAlPrincipio, false, 'con todo a cero no puede estar hecha');
   assert.equal(r.datoAlPrincipio, 0, 'y el contador tiene que decir 0, no 275');
-  assert.equal(r.hechoDespues, true, 'al poner precios, hecha');
+  assert.equal(r.hechoDespues, true, 'con UN solo precio puesto, hecha');
   return `${r.total} sembrados, 0 con precio al empezar`;
 });
 
