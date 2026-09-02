@@ -221,6 +221,8 @@ if(typeof window !== 'undefined'){
      Se mira el dato de verdad cada vez que se pinta.
    ──────────────────────────────────────────────────────────────────────── */
 const PUESTA_OCULTA_LS = 'gastrogoan_puesta_oculta';
+// Plegada de entrada: '1' solo si el hostelero la ha desplegado él.
+const PUESTA_ABIERTA_LS = 'gastrogoan_puesta_abierta';
 
 /* Ojo: todo negocio NACE con un horario por defecto, así que "tiene horario"
    sale que sí desde el minuto uno y la tarea aparecería hecha sin que nadie
@@ -335,23 +337,43 @@ function renderPuestaAPunto(){
         <button class="btn btn-sm" onclick="${tarea.ir}">${escapeHtml(t('pp.activate'))}</button>
       </li>`;
 
+  /* PLEGADA de entrada, y es lo que pidió el dueño: nada más entrar, lo
+     primero que se ve tiene que ser SU negocio, no una lista de deberes.
+     Pero se deja la cabecera con la barra de progreso a la vista: un panel
+     plegado del todo, sin ninguna señal de qué hay dentro, no lo abre nadie —
+     y entonces vuelve a ser lo que era antes de existir, un cliente que no
+     sabe qué le falta. Así se ve de un vistazo cuánto lleva, y se despliega
+     si quiere el detalle.
+     Cada dispositivo recuerda cómo lo dejó. */
+  const abierta = (() => { try{ return localStorage.getItem(PUESTA_ABIERTA_LS) === '1'; }catch(e){ return false; } })();
   caja.innerHTML = `
-    <div class="pp-card">
+    <div class="pp-card${abierta ? '' : ' pp-plegada'}">
       <div class="pp-cab">
-        <div>
-          <h2>${escapeHtml(t('pp.title'))}</h2>
-          <p>${escapeHtml(t('pp.subtitle'))}</p>
+        <div class="pp-cab-txt" onclick="alternarPuestaAPunto()" style="cursor:pointer;flex:1;min-width:0">
+          <h2>${escapeHtml(t('pp.title'))} <i class="ti ti-chevron-${abierta ? 'up' : 'down'}" style="font-size:16px;vertical-align:middle;opacity:.6"></i></h2>
+          <p>${escapeHtml(abierta ? t('pp.subtitle') : t('pp.progress').replace('${h}', hechas).replace('${t}', total))}</p>
         </div>
         <button class="pp-cerrar" onclick="ocultarPuestaAPunto()" title="${escapeHtml(t('pp.hide'))}">&times;</button>
       </div>
       <div class="pp-barra"><span style="width:${pct}%"></span></div>
+      ${abierta ? `
       <div class="pp-progreso">${escapeHtml(t('pp.progress').replace('${h}', hechas).replace('${t}', total))}</div>
       <ul class="pp-lista">${esencial.map(linea).join('')}</ul>
       <details class="pp-mas">
         <summary>${escapeHtml(t('pp.optionalTitle'))}</summary>
         <ul class="pp-lista">${opcional.map(lineaOpcional).join('')}</ul>
-      </details>
+      </details>` : ''}
     </div>`;
+}
+
+// Plegar y desplegar. Se recuerda por dispositivo, no en DB.business: es una
+// preferencia de quien mira esta pantalla, no un dato del negocio.
+function alternarPuestaAPunto(){
+  try{
+    const abierta = localStorage.getItem(PUESTA_ABIERTA_LS) === '1';
+    localStorage.setItem(PUESTA_ABIERTA_LS, abierta ? '0' : '1');
+  }catch(e){}
+  renderPuestaAPunto();
 }
 
 /* Esconderla es del cliente, no nuestro: si le estorba, se quita y no vuelve.

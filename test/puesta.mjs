@@ -137,6 +137,9 @@ await caso('Ni una cruz: lo pendiente es un círculo vacío', async ()=>{
      alguien que acaba de pagar por la app. */
   await reset();
   const r = await page.evaluate(()=>{
+    // La lista nace PLEGADA (ver renderPuestaAPunto): hay que desplegarla.
+    localStorage.setItem('gastrogoan_puesta_abierta','1');
+    renderPuestaAPunto();
     const c = document.querySelector('#home-puesta');
     const iconos = [...c.querySelectorAll('.pp-marca i')].map(i => i.className);
     return {iconos, hayCruz: iconos.some(x => /ti-(x|circle-x|square-x|alert)/.test(x))};
@@ -144,6 +147,35 @@ await caso('Ni una cruz: lo pendiente es un círculo vacío', async ()=>{
   assert.equal(r.hayCruz, false, 'hay cruces: ' + r.iconos.join(', '));
   assert.ok(r.iconos.some(x => /ti-circle\b/.test(x)), 'lo pendiente debe ser un círculo vacío');
   return 'círculos vacíos y ticks, ninguna cruz';
+});
+
+await caso('Nace PLEGADA, pero enseñando cuánto lleva hecho', async ()=>{
+  /* Lo pidió el dueño tras hacer el alta: nada más entrar, lo primero que se
+     ve tiene que ser SU negocio, no una lista de deberes.
+     Pero plegada del todo, sin ninguna señal de qué hay dentro, no la abre
+     nadie — y entonces vuelve a ser lo que era antes de existir: un cliente
+     que no sabe qué le falta. Por eso la cabecera se queda con el progreso y
+     la barra a la vista. */
+  await reset();
+  const r = await page.evaluate(()=>{
+    localStorage.removeItem('gastrogoan_puesta_abierta');
+    renderPuestaAPunto();
+    const c = document.querySelector('#home-puesta');
+    const plegada = !!c.querySelector('.pp-card.pp-plegada');
+    const tareasVisibles = c.querySelectorAll('.pp-item').length;
+    const hayBarra = !!c.querySelector('.pp-barra span');
+    const cabecera = (c.querySelector('.pp-cab p')?.textContent || '');
+    // Y al pulsar la cabecera se despliega.
+    alternarPuestaAPunto();
+    const tareasTrasAbrir = document.querySelectorAll('#home-puesta .pp-item').length;
+    return {plegada, tareasVisibles, hayBarra, cabecera, tareasTrasAbrir};
+  });
+  assert.ok(r.plegada, 'la puesta a punto tiene que nacer plegada');
+  assert.equal(r.tareasVisibles, 0, 'plegada no puede enseñar la lista de tareas');
+  assert.ok(r.hayBarra, 'pero sí la barra de progreso, o nadie la abriría');
+  assert.ok(/\d/.test(r.cabecera), 'y cuántas lleva hechas: ' + r.cabecera);
+  assert.ok(r.tareasTrasAbrir > 0, 'al pulsar la cabecera tiene que desplegarse');
+  return `plegada con "${r.cabecera}", y ${r.tareasTrasAbrir} tareas al abrir`;
 });
 
 await caso('Lo opcional no cuenta para el progreso', async ()=>{
