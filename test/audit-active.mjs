@@ -643,5 +643,33 @@ await testAsync('FIX H7: un campo sin valor no puede tumbar la subida entera', a
   assert.equal(JSON.stringify(limpio).includes('undefined'), false, 'no puede quedar ni uno');
 });
 
+
+await testAsync('FIX H8: el espejo público NO puede llevar el PIN ni ninguna clave del negocio', async () => {
+  /* Se publicaba `DB.business` ENTERO en el nodo que lee cualquiera que abra
+     el QR de una mesa: el PIN, la clave de su propia nube, la de su
+     proveedor de facturación, las credenciales de correo, el CIF y las
+     comisiones negociadas con las apps de reparto.
+     La lista es BLANCA a propósito: así un campo nuevo nace privado. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setDB({business: {
+    name: 'Casa Paco', phone: '900', logo: 'x', horario: {}, tiposServicio: {mesa:true},
+    pin: 'H2:secreto', pinSet: true,
+    ownFirebase: {apiKey: 'CLAVE_NUBE', databaseURL: 'https://x'},
+    verifactu: {enabled: true, apiKey: 'CLAVE_FACTURACION'},
+    emailConfirm: {publicKey: 'CLAVE_CORREO'},
+    cif: 'B12345678', prop: 'Paco', facturaCounter: 42,
+    deliveryPlatforms: [{nombre: 'Glovo', comisionPct: 30}],
+    campoNuevoQueAlguienAnadeManana: 'secreto',
+  }});
+  const pub = sandbox.negocioParaElEspejoPublico();
+  const texto = JSON.stringify(pub);
+  ['H2:secreto','CLAVE_NUBE','CLAVE_FACTURACION','CLAVE_CORREO','B12345678','Glovo','secreto']
+    .forEach(x => assert.equal(texto.includes(x), false, `no puede salir "${x}" al espejo público`));
+  assert.equal(pub.name, 'Casa Paco', 'y lo que SÍ es público tiene que seguir saliendo');
+  assert.equal(pub.phone, '900');
+  assert.ok(pub.tiposServicio, 'la web pública lo necesita para saber qué servicios ofrece');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

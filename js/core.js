@@ -3988,6 +3988,57 @@ function getActivePromosForSync(){
     .map(p => ({menuItemPlatoId: p.menuItemPlatoId, discountPct: p.discountPct, horaInicio: p.horaInicio||null, horaFin: p.horaFin||null}));
 }
 
+/* ⚠️ LO QUE SE PUBLICA DEL NEGOCIO ES UNA LISTA BLANCA, NUNCA `DB.business`.
+
+   Se enviaba el objeto ENTERO al nodo público, que lo lee cualquiera que abra
+   el QR de una mesa. Ahí dentro viajaban:
+     · `pin`/`pinSet`  — el PIN del negocio;
+     · `ownFirebase`   — la clave y la dirección de su propia nube;
+     · `verifactu`     — la clave de su proveedor de facturación certificada;
+     · `emailConfirm`  — sus credenciales de EmailJS (mandar correos como él);
+     · `cif`, `prop`, `facturaCounter`, y las comisiones negociadas con Glovo
+       o Uber Eats en `deliveryPlatforms`.
+   Todo eso estaba a la vista de cualquier comensal.
+
+   Es lista blanca y no lista negra a propósito: así un campo NUEVO nace
+   privado. Con una lista negra, cualquier cosa que se añada mañana a
+   `DB.business` se publicaría sola sin que nadie se diera cuenta — que es
+   exactamente cómo llegaron aquí las cinco de arriba. */
+const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
+  'name', 'address', 'phone', 'description', 'logo', 'brandColor',
+  'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
+  'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
+  'cartaAuto', 'tiposServicio',
+  'requireDeposit', 'depositAmount', 'depositType', 'depositInstructions',
+  'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
+];
+function negocioParaElEspejoPublico(){
+  const b = DB.business || {};
+  const out = {};
+  CAMPOS_PUBLICOS_DEL_NEGOCIO.forEach(k => { if(b[k] !== undefined) out[k] = b[k]; });
+  return out;
+}
+
+/* ⚠️ Los permisos de Firebase BAJAN pero no SUBEN: tener `.write` en
+   `aforoHold/$fecha/$turno` NO autoriza a borrar `aforoHold/$fecha`. Se
+   borraba el nodo padre, así que las tres limpiezas de holds se rechazaban
+   SIEMPRE — y encima calladas, con un `.catch(()=>{})`.
+   O sea que el fallo que el comentario de abajo dice haber arreglado ("cada
+   reserva online quedaba contada DOS VECES") seguía vivo: los holds no se
+   soltaban nunca y un turno acababa "lleno" en la web pública sin estarlo.
+   Se borran los HIJOS, uno a uno, que es justo lo que las reglas permiten.
+   Así no hace falta que 5.000 negocios vuelvan a pegar reglas nuevas. */
+function limpiarHolds(app, publicId, rama, fecha){
+  const ref = app.database().ref('gastrogoan/public/' + publicId + '/' + rama + '/' + fecha);
+  ref.once('value').then(snap => {
+    const val = snap.val();
+    if(!val || typeof val !== 'object') return;
+    Object.keys(val).forEach(hijo => {
+      ref.child(hijo).remove().catch(e => console.error('No se pudo soltar el hold', rama, fecha, hijo, e));
+    });
+  }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
+}
+
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -3998,7 +4049,7 @@ function syncPublicMirror(){
     getPublicMirrorApp().then(app => {
       if(!app) return;
       const data = {
-        business: DB.business,
+        business: negocioParaElEspejoPublico(),
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         // Los menús combo (Menú del día, etc.) nunca se publicaban al espejo
@@ -4041,10 +4092,10 @@ function syncPublicMirror(){
       const fechasATocar = new Set(Object.keys(data.reservasResumen));
       DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
-        app.database().ref('gastrogoan/public/' + publicId + '/aforoHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'aforoHold', fecha);
         // mesaHold (candado por mesa concreta que usa la web pública para
         // reservar de forma atómica) mismo motivo y mismo mecanismo.
-        app.database().ref('gastrogoan/public/' + publicId + '/mesaHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'mesaHold', fecha);
       });
       // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
       // (el contador atómico de pedidos por franja): se limpia en cada sync
@@ -4052,7 +4103,7 @@ function syncPublicMirror(){
       const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen));
       DB.tpvOrders.forEach(o => { if(o.date && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
       fechasPedidosATocar.forEach(fecha => {
-        app.database().ref('gastrogoan/public/' + publicId + '/pedidosHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'pedidosHold', fecha);
       });
       // orderStatus (seguimiento público de pedidos, ver syncOrderStatusForPublic)
       // se limpia de entradas de hace más de 24h en cada sync — best-effort, no
@@ -4082,12 +4133,24 @@ function syncPublicMirror(){
 // de Firebase no son secretos (la seguridad la dan las reglas de Firebase,
 // no ocultar esto — así funciona cualquier app web con Firebase), así que
 // publicarlos aquí no reduce la seguridad real de los datos del negocio.
+/* ⚠️ Esto se reescribía EN CADA ARRANQUE de cada dispositivo, y cada escritura
+   abre una conexión con la Firebase COMPARTIDA de la plataforma — que es
+   justo la que no puede crecer con el número de licencias (plan gratuito:
+   100 conexiones simultáneas en total, para todos los negocios del mundo).
+   El dato no cambia casi nunca: se publica una vez y ya. Ahora solo se toca
+   cuando de verdad ha cambiado, así que un negocio ya dado de alta no vuelve
+   a tocar la plataforma en toda su vida. */
+const TENANT_LOOKUP_PUBLICADO_LS = 'gastrogoan_tenantlookup_publicado';
 function publishTenantLookup(tenantId, config){
   if(!tenantId || !config) return;
+  const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
+  try{ if(localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/tenantLookup/' + tenantId).set({
       apiKey: config.apiKey, databaseURL: config.databaseURL
+    }).then(() => {
+      try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
     }).catch(e => console.error('Error publicando la referencia del negocio', e));
   }).catch(()=>{});
 }
