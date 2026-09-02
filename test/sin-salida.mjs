@@ -164,7 +164,7 @@ await caso('Una licencia desactivada NO deja al cliente encerrado', async ()=>{
     return {
       hay: botones.length,
       canjear: botones.some(b => /canjearTrasRevocacion/.test(b.getAttribute('onclick') || '')),
-      salir: botones.some(b => /exitToAccessScreen/.test(b.getAttribute('onclick') || '')),
+      salir: botones.some(b => /volverAlAccesoTrasRevocacion/.test(b.getAttribute('onclick') || '')),
       alcanzables: botones.every(b => b.getClientRects().length > 0),
     };
   });
@@ -172,8 +172,17 @@ await caso('Una licencia desactivada NO deja al cliente encerrado', async ()=>{
   assert.ok(r.canjear, 'tiene que poder canjear otro código sin salir de la cuenta');
   assert.ok(r.salir, 'y poder entrar con otra cuenta');
   assert.ok(r.alcanzables, 'y los botones tienen que verse de verdad');
+  /* ⚠️ Y que las salidas QUITEN la capa. Es una capa que tapa todo: si se
+     navega por debajo sin quitarla, el cliente pulsa y en pantalla no cambia
+     nada — el mismo fallo que la pantalla tenía, otra vez. Lo cometí yo en el
+     primer intento de este arreglo, y lo cazó el dueño preguntando. */
+  const tapada = await page.evaluate(()=>{
+    volverAlAccesoTrasRevocacion();
+    return !!document.getElementById('revoked-gate');
+  });
+  assert.equal(tapada, false, 'la capa de revocación sigue puesta y tapa la pantalla a la que se ha ido');
   await page.evaluate(()=>document.getElementById('revoked-gate')?.remove());
-  return 'canjear otro código y salir de la cuenta';
+  return 'volver al inicio de sesión y canjear otro código';
 });
 
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{

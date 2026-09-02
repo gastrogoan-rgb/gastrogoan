@@ -2147,9 +2147,24 @@ async function checkLicenseRevocation(){
    de comprar una licencia nueva, o aquel a quien se le anuló la suya por
    error. Se quita la pantalla antes, porque si no el selector se abriría
    debajo y no se vería. */
-function canjearTrasRevocacion(){
+/* ⚠️ La pantalla de revocación es una capa que TAPA TODO (z-index 100001), así
+   que hay que quitarla antes de ir a ningún sitio: si no, se pulsa el botón, la
+   app navega por debajo y en pantalla no cambia nada. Me pasó a mí en el
+   primer intento de este mismo arreglo. */
+function salirDeLaRevocacion(){
   const g = document.getElementById('revoked-gate');
   if(g) g.remove();
+}
+// Volver al inicio de sesión de siempre (dueño / empleado). Es la salida que
+// pidió el dueño y tiene razón: es la pantalla que el hostelero conoce, y
+// desde ahí llega a sus otros negocios o a canjear uno nuevo.
+function volverAlAccesoTrasRevocacion(){
+  salirDeLaRevocacion();
+  exitToAccessScreen();
+}
+// Y el atajo para quien acaba de comprar una licencia nueva.
+function canjearTrasRevocacion(){
+  salirDeLaRevocacion();
   if(typeof redeemFirstBusiness === 'function') redeemFirstBusiness();
   else if(typeof showBusinessSelectScreen === 'function') showBusinessSelectScreen();
 }
@@ -2172,8 +2187,8 @@ function showRevokedGate(){
            anulado por error a las once de la noche, se queda tirado con la
            app inservible. -->
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
-        <button class="btn btn-primary" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
-        <button class="btn" style="min-height:44px;background:none;border:none;color:var(--muted)" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+        <button class="btn btn-primary" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
+        <button class="btn" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
       </div>
     </div>`;
   document.body.appendChild(g);
