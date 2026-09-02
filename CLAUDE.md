@@ -410,6 +410,31 @@ fallos que solo aparecen con la nube conectada de verdad:
   botones parecían muertos. Afectaba igual a `shifts`, `chatPinned` y
   `shiftHandoffNotes`, que usan esa misma fusión.
 
+### Lo borrado no vuelve: las lápidas
+
+`mergeArraysById` fusiona quedándose con **todo** lo que hay en los dos lados.
+Eso está bien para no perder trabajo hecho a la vez en dos sitios, pero
+significa que **cualquier cosa borrada aquí vuelve** en cuanto sincroniza un
+aparato que todavía la tenía — el móvil que pasó el día apagado. Llevaba ahí
+desde siempre y solo se ve con dos aparatos de verdad; lo destapó el emulador
+el 1/09.
+
+Lo que faltaba era memoria. La foto de lo último enviado (`lastSyncedSnapshot`)
+no basta: en cuanto se sube el borrado, esa foto ya no contiene el elemento y
+se pierde el rastro. Ahora se anota en `DB.borrados` =
+`{"<bloque>:<clave>": cuándo}`, que viaja como un bloque más y **se suma**
+entre aparatos en vez de pisarse (`mergeLapidas`).
+
+- ⚠️ **La lápida se anota SOLA al subir** (`anotarLapidas`, dentro de
+  `flushCloudSync`), comparando lo que se va a enviar con lo último enviado.
+  A propósito: la app tiene decenas de funciones de borrado y bastaría olvidar
+  una para que ese borrado se siguiera deshaciendo, sin que nadie se entere.
+- Solo en `ARRAYS_CON_LAPIDA` — donde una resurrección se VE y molesta. Las
+  ventas y las comandas no se borran, se anulan.
+- **Caducan a los 60 días**, y volver a crear algo con la misma clave quita su
+  lápida: si no, una carpeta borrada dejaría su nombre inutilizado para
+  siempre.
+
 **Al tocar cualquier cosa que se sincronice, simular la respuesta de la nube**
 (`applyRemoteBlock` / `mergeStockField` a mano) y no darlo por bueno solo
 porque funcione en local. Los dos casos tienen ya prueba permanente en
@@ -510,31 +535,7 @@ cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
 
 ### Pendiente
 
-0. **UNA CARPETA BORRADA VUELVE SI OTRO APARATO TENÍA LA LISTA VIEJA.**
-   Fallo conocido, con prueba en rojo que lo demuestra: el escenario 5 de
-   `test/emulador/escenarios.mjs`. Es el único rojo del banco, y está así a
-   propósito — un fallo con su prueba delante, no escondido.
-
-   Lo que YA está arreglado (publicado el 1/09): que la nube te devuelva tu
-   propio estado de antes del borrado. `mergeListaDeNombres` compara con la
-   foto de lo último que este aparato envió, así que lo que se borró aquí no
-   se resucita.
-
-   Lo que NO cubre: una vez que este aparato sube el borrado, esa foto ya no
-   contiene la carpeta — se pierde la memoria de que se borró. Si el móvil
-   llevaba un día apagado con la lista vieja y la sube, la carpeta vuelve.
-
-   La solución son **lápidas**: anotar qué se borró y cuándo, para que un
-   borrado gane sobre una lista más antigua. Hay que pensarlo con cuidado
-   porque cambia cómo se comportan los borrados en TODA la app —
-   `mergeArraysById` tiene el mismo agujero con ingredientes, recetas y todo
-   lo demás: borras algo aquí, otro aparato lo tenía, y vuelve. No es nuevo de
-   las carpetas; es de siempre y nadie lo había mirado.
-
-   ⚠️ No tocar la capa de sincronización sin correr el emulador después. Es el
-   único sitio donde esto se ve.
-
-1. **REGRABAR EL VÍDEO DE VENTA, con la nube en verde.** Lo pidió el dueño el
+0. **REGRABAR EL VÍDEO DE VENTA, con la nube en verde.** Lo pidió el dueño el
    1/09 para el día siguiente. La grabación que hay (`video/montar-demo.mjs`
    monta la de ese día) sirve a medias: a partir del minuto 4 la cabecera se
    queda en **"Error de nube" en rojo**, el negocio `Pruebaapp` está casi
@@ -555,16 +556,16 @@ cuentas), `test/sin-salida.mjs` (callejones sin salida del alta),
      ffmpeg coge el fotograma del CENTRO del intervalo, así que una hoja de
      contactos hecha con `fps=1/5` viene desplazada 2,5 s y los cortes caen
      donde no es.
-2. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
+1. **Probar el I+D con un modelo de verdad.** Todo lo verificado son los
    circuitos: en la simulación el asistente lo escribía una IA haciendo de
    modelo, no el proveedor del cliente. Que Gemini conteste con ese criterio
    está sin comprobar, y es lo que decide si el módulo vale.
-3. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
+2. *(Recomendado, no urgente)* auditoría de seguridad por un humano externo
    antes de manejar pagos de forma continuada.
-4. iPhone/iPad: las trampas conocidas de Safari están cerradas y hay prueba
+3. iPhone/iPad: las trampas conocidas de Safari están cerradas y hay prueba
    (`test/apple.mjs`), pero **sigue sin probarse en un aparato de verdad**.
-5. La impresora térmica y el cajón con el hardware delante.
-6. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
+4. La impresora térmica y el cajón con el hardware delante.
+5. **Un servicio real, con un cliente al que se pueda llamar.** Es lo que de
    verdad encuentra fallos: de los cinco del 24 de agosto, cuatro los encontró
    el dueño usando la app; y los cuatro del 31 de agosto, todos.
 
