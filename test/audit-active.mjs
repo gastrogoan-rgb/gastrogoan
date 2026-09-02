@@ -338,18 +338,34 @@ test('isOwnerSession() es una comprobación puramente de clase CSS en document.b
 
 console.log('\n--- D. PINs de empleado: ¿es viable un ataque de diccionario contra el hash? ---\n');
 
-test('El espacio de 10.000 PINs sigue siendo precalculable al instante (límite físico, no depende de la sal)', () => {
+/* ⚠️ Se MIDE una muestra y se extrapola, no se recorren los 10.000.
+
+   Recorrerlos de verdad son ~7 minutos, y esta prueba junto con la de la tabla
+   arcoíris se llevaban ELLAS SOLAS los 14 minutos que tardaba la batería
+   entera. Y no aportaban nada más por hacerlo: lo que demuestran es cuánto
+   CUESTA romper un PIN de 4 cifras, y eso se mide igual de bien con una
+   muestra — el coste por hash es constante.
+
+   Una batería que tarda un cuarto de hora se acaba lanzando menos, y una
+   prueba que no se lanza no protege de nada. */
+const MUESTRA_PINS = 150;
+test('El espacio de 10.000 PINs sigue siendo precalculable (límite físico, no depende de la sal)', () => {
   const sandbox = loadCore();
-  const target = sandbox.hashPin('7391', 'NEGOCIOTEST'); // "PIN secreto" de un empleado, negocio conocido
+  const target = sandbox.hashPin('0142', 'NEGOCIOTEST'); // PIN dentro de la muestra, para probar el hallazgo de verdad
   const t0 = Date.now();
   let cracked = null;
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < MUESTRA_PINS; i++) {
     const candidate = String(i).padStart(4, '0');
     if (sandbox.hashPin(candidate, 'NEGOCIOTEST') === target) { cracked = candidate; break; }
   }
   const ms = Date.now() - t0;
-  assert.equal(cracked, '7391');
-  console.log(`   → PIN "secreto" recuperado del hash en ${ms} ms probando las 10.000 combinaciones posibles (conociendo el código del negocio)`);
+  assert.equal(cracked, '0142', 'el ataque de diccionario sigue funcionando: el hallazgo se mantiene');
+  const porHash = ms / Math.max(1, MUESTRA_PINS);
+  const totalSeg = Math.round(porHash * 10000 / 1000);
+  console.log(`   → ${MUESTRA_PINS} candidatos en ${ms} ms · a ese ritmo, los 10.000 PINs posibles son ~${totalSeg} s`);
+  // El hallazgo es que sigue siendo asequible para un atacante. Si algún día
+  // esto pasara de horas, habría dejado de serlo y habría que revisarlo.
+  assert.ok(totalSeg < 3600, `recorrer el espacio entero costaría ${totalSeg} s: el hallazgo habría dejado de ser cierto`);
 });
 
 test('FIX A1: la sal ahora es distinta por negocio — una tabla arcoíris de un negocio ya NO sirve para otro', () => {
@@ -361,11 +377,18 @@ test('FIX A1: la sal ahora es distinta por negocio — una tabla arcoíris de un
     'el mismo PIN debe dar hashes distintos en negocios distintos — antes del fix daba siempre el mismo hash para todos');
   // Confirma que una tabla arcoíris precalculada contra el negocio A no
   // descifra nada del negocio B, aunque el PIN real sea el mismo:
+  /* Con una muestra basta: lo que se comprueba es que un hash del negocio B
+     NO aparece en la tabla del negocio A, y para eso da igual que la tabla
+     tenga 150 entradas o 10.000. El PIN real (7391) tampoco está en la
+     muestra, así que se añade a mano — si no, la prueba pasaría por no
+     haberlo calculado, no por la sal. */
   const rainbowTableA = new Map();
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < MUESTRA_PINS; i++) {
     const candidate = String(i).padStart(4, '0');
     rainbowTableA.set(sandbox.hashPin(candidate, 'CODIGO_NEGOCIO_A'), candidate);
   }
+  rainbowTableA.set(hashBusinessA, pin);
+  assert.equal(rainbowTableA.get(hashBusinessA), pin, 'la tabla del negocio A sí encuentra lo suyo');
   assert.equal(rainbowTableA.get(hashBusinessB), undefined,
     'la tabla arcoíris del negocio A no debería encontrar nada para un hash del negocio B');
   console.log('   → tabla arcoíris de un negocio ya no sirve contra otro negocio distinto');
