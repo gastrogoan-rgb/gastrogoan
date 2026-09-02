@@ -675,5 +675,33 @@ await testAsync('FIX H8: el espejo público NO puede llevar el PIN ni ninguna cl
   assert.ok(pub.tiposServicio, 'la web pública lo necesita para saber qué servicios ofrece');
 });
 
+await testAsync('FIX H9: la conexión con la plataforma se SUELTA cuando no se usa', async () => {
+  /* Es lo que decide si el proyecto aguanta 5.000 licencias o 67. La Firebase
+     de la plataforma es UNA para todos los negocios del mundo y el plan
+     gratuito da 100 conexiones simultáneas en total; el SDK abre un socket y
+     no lo cierra nunca, así que cada pestaña se quedaba con una para siempre.
+     Todo lo que la app le pide a la plataforma es puntual: se usa y se suelta. */
+  let vecesOffline = 0, vecesOnline = 0;
+  const db = { goOffline: () => { vecesOffline++; }, goOnline: () => { vecesOnline++; } };
+  const appFalsa = { auth: () => ({currentUser: {}}), database: () => db };
+  const sandbox = loadCore({ app: () => appFalsa, initializeApp: () => appFalsa });
+  await sandbox.__getDbReadyPromise();
+
+  const app = await sandbox.getPlatformFirebaseApp();
+  assert.ok(app, 'la plataforma tiene que devolver su app');
+  assert.equal(vecesOnline, 1, 'al pedirla se reconecta, por si venía soltada');
+  assert.equal(vecesOffline, 0, 'y no se suelta mientras se está usando');
+
+  sandbox.soltarPlataforma();
+  assert.equal(vecesOffline, 1, 'al terminar, el socket se cierra');
+
+  /* La única excepción: un negocio con reglas antiguas recibe sus reservas POR
+     la plataforma, con un oyente permanente. Ese no se puede soltar o dejaría
+     de enterarse de las reservas que entran. */
+  sandbox.marcarPlataformaEnUsoPermanente();
+  sandbox.soltarPlataforma();
+  assert.equal(vecesOffline, 1, 'un negocio que escucha reservas por la plataforma NO puede soltarla');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

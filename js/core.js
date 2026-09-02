@@ -3315,6 +3315,57 @@ function getActiveKitchenOrdersCount(){
    en ella (sus reglas también exigen auth != null). Devuelve una promesa
    que resuelve con esa instancia ya autenticada, o null si Firebase no
    está disponible. */
+/* ⚠️ LA CONEXIÓN CON LA PLATAFORMA SE SUELTA CUANDO NO SE USA.
+
+   Esto es lo que decide si el proyecto aguanta 5.000 licencias o 67.
+
+   El plan gratuito de Firebase no limita el tráfico: limita CONEXIONES
+   ABIERTAS A LA VEZ, cien. Y la Firebase de la plataforma es UNA SOLA para
+   todos los negocios del mundo, así que esas cien se reparten entre todos.
+   El SDK, en cuanto tocas `app.database()`, abre un socket y NO LO CIERRA
+   NUNCA: cada pestaña de la app de gestión se quedaba con una conexión de la
+   plataforma para toda la sesión. A 5.000 negocios × 2,5 aparatos eso son
+   miles de conexiones contra un límite de cien — y cuando se llega no falla
+   un negocio: falla la plataforma para TODOS a la vez (nadie entra con su
+   cuenta, nadie canjea licencias).
+
+   Pero nada de lo que la app le pide a la plataforma es un flujo continuo:
+   entrar, canjear un código, buscar dónde vive la nube del negocio. Son
+   operaciones puntuales. Así que se hace lo mismo que ya hace la web pública
+   de reservas —y por eso esa parte sí escala—: se usa y se suelta.
+
+   La ÚNICA excepción es un negocio que todavía recibe sus reservas por la
+   plataforma (reglas antiguas, `espejoEnNubePropia === false`): ese sí tiene
+   un oyente permanente y su conexión no se puede tocar. Por eso importa tanto
+   que esos negocios se muden, y por eso ahora se les avisa. */
+const PLATAFORMA_ESPERA_ANTES_DE_SOLTAR = 30000;
+let plataformaSoltarTimer = null;
+let plataformaEnUsoPermanente = false;
+
+// Un oyente permanente contra la plataforma: a partir de aquí no se suelta.
+function marcarPlataformaEnUsoPermanente(){
+  plataformaEnUsoPermanente = true;
+  if(plataformaSoltarTimer){ clearTimeout(plataformaSoltarTimer); plataformaSoltarTimer = null; }
+}
+function soltarPlataforma(){
+  plataformaSoltarTimer = null;
+  if(plataformaEnUsoPermanente) return;
+  try{
+    const app = firebase.app('platform');
+    // goOffline y no delete(): cierra el socket pero deja la app viva, así la
+    // siguiente operación solo tiene que reconectar, sin volver a autenticarse.
+    if(app) app.database().goOffline();
+  }catch(e){ /* nunca llegó a crearse: no hay nada que soltar */ }
+}
+/* Margen generoso a propósito. El riesgo de soltar demasiado pronto es cortar
+   una operación a medias en una conexión mala, y eso sí se nota; el de soltar
+   tarde es tener el socket abierto medio minuto de más, que no se nota. */
+function programarSoltarPlataforma(){
+  if(plataformaEnUsoPermanente) return;
+  if(plataformaSoltarTimer) clearTimeout(plataformaSoltarTimer);
+  plataformaSoltarTimer = setTimeout(soltarPlataforma, PLATAFORMA_ESPERA_ANTES_DE_SOLTAR);
+}
+
 function getPlatformFirebaseApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
   try{
@@ -3330,7 +3381,13 @@ function getPlatformFirebaseApp(){
         ? Promise.resolve(app)
         : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
     }
-    return platformAuthPromise;
+    return platformAuthPromise.then(a => {
+      if(!a) return a;
+      // Por si la conexión estaba soltada de una operación anterior.
+      try{ a.database().goOnline(); }catch(e){}
+      programarSoltarPlataforma();
+      return a;
+    });
   }catch(e){
     console.error('Error iniciando la plataforma', e);
     return Promise.resolve(null);
@@ -3379,7 +3436,14 @@ let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprob
 let reglasAntiguas = false;
 function getPublicMirrorApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
-  if(espejoEnNubePropia === false) return getPlatformFirebaseApp();
+  if(espejoEnNubePropia === false){
+    /* Este negocio recibe sus reservas POR LA PLATAFORMA (reglas antiguas), y
+       eso es un oyente permanente: su conexión no se puede soltar o dejaría de
+       enterarse de las reservas que entran. Es la única excepción, y el motivo
+       de que ahora se le avise para que actualice sus reglas. */
+    marcarPlataformaEnUsoPermanente();
+    return getPlatformFirebaseApp();
+  }
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   if(cfg && cfg.apiKey && cfg.databaseURL){
     try{
