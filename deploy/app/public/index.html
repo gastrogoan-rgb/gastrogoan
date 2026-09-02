@@ -2897,7 +2897,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '02/09/2026 12:34';
+const GG_BUILD = '02/09/2026 13:00';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -5968,7 +5968,19 @@ function recordSyncError(err){
    falta. Devuelve null si no lo reconoce, y entonces se enseña el genérico. */
 function syncErrorHintKey(){
   const code = String(lastSyncErrorCode || '');
+  /* Los tres códigos del MISMO problema — el acceso anónimo no está activado
+     — y solo se reconocía uno. Firebase devuelve uno u otro según cómo esté
+     el proyecto, y son justo los dos que faltaban los que salen en los
+     proyectos creados últimamente:
+      · 'configuration-not-found': nunca se llegó a entrar en Authentication.
+      · 'admin-restricted-operation': se entró, pero el proveedor Anónimo
+        está apagado (es como sale ahora, ya no 'operation-not-allowed').
+     Sin ellos, el hostelero veía "Error de nube" a secas con el consejo
+     genérico de revisar la clave de API — que no tiene nada que ver — y se
+     ponía a cambiar lo único que no estaba mal. */
   if(code.includes('operation-not-allowed')) return 'gate.cloudError.anon';
+  if(code.includes('configuration-not-found')) return 'gate.cloudError.anon';
+  if(code.includes('admin-restricted-operation')) return 'gate.cloudError.anon';
   if(code.includes('unauthorized-domain')) return 'gate.cloudError.domain';
   if(code.includes('api-key') || code.includes('invalid-api-key')) return 'gate.cloudError.apikey';
   if(code.includes('network-request-failed')) return 'gate.cloudError.network';
@@ -7426,8 +7438,17 @@ function applyRemoteBlock(key, remoteValue){
    ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
 function attachCloudChildListeners(){
   const onErr = err => recordSyncError(err);
-  cloudRef.on('child_added', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
-  cloudRef.on('child_changed', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
+  /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
+     por eso quita el rojo igual que lo quitaba una subida buena.
+     Sin esto el indicador se quedaba en rojo horas: una vez marcado, solo
+     salía de ahí con una SUBIDA correcta, y en un negocio donde nadie está
+     tocando nada no hay nada que subir — así que el fallo, ya resuelto,
+     seguía pintado en la cabecera. Es justo el caso de un local con la app
+     abierta en un rincón. Y no es tapar el problema: mientras el problema
+     siga, no llega ningún bloque y el rojo se queda. */
+  const onOk = snap => { marcarNubeAlDia({trasProbarNube: true}); applyRemoteBlock(snap.key, snap.val()); };
+  cloudRef.on('child_added', onOk, onErr);
+  cloudRef.on('child_changed', onOk, onErr);
   cloudRef.on('child_removed', snap => {
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
@@ -8550,6 +8571,13 @@ function openCloudWizard(){
           // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
           // falta en vez de dejar al usuario adivinando entre seis pasos.
           syncErrorHintKey() ? `<div style="font-weight:400;font-size:13px;margin-top:8px;line-height:1.5">${t(syncErrorHintKey())}</div>` : ''
+        }${
+          /* Y SIEMPRE el motivo tal cual lo dice Firebase. Cuando el código no
+             se reconoce, antes no se enseñaba nada: el hostelero veía "Error
+             de nube" a secas y no había forma de saber qué pasaba sin abrir la
+             consola del navegador, sitio al que no entra nadie. Con esto puede
+             copiarlo y mandarlo, que es lo que lo hace resoluble. */
+          lastSyncErrorCode ? `<div style="font-weight:400;font-size:11.5px;margin-top:8px;opacity:.85"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
         }</div>`
       : `<div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>`}
     <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
@@ -8914,12 +8942,23 @@ function saveDB(){
 function pushAllToCloud(){
   if(!cloudRef) return;
   const updates = {};
+  const pendingJson = {};
   Object.keys(DB).forEach(key => {
     updates[key] = DB[key];
-    lastSyncedSnapshot[key] = canonicalStringify(DB[key]);
+    pendingJson[key] = canonicalStringify(DB[key]);
   });
-  cloudRef.set(updates).catch(e => {
+  /* ⚠️ La foto de "lo ya enviado" se apunta DESPUÉS de que la subida salga
+     bien, nunca antes. Apuntarla antes dejaba el peor estado posible cuando
+     fallaba: la app creía que ya estaba todo subido, así que el siguiente
+     envío no encontraba nada que mandar, no reintentaba nunca y el indicador
+     se quedaba en ROJO para siempre sin que nada volviera a intentarlo.
+     Es lo que el dueño contó como "la nube en rojo todo el rato". */
+  cloudRef.set(updates).then(() => {
+    Object.keys(pendingJson).forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+    marcarNubeAlDia({trasSubirBien: true});
+  }).catch(e => {
     recordSyncError(e);
+    scheduleCloudSyncRetry();
   });
 }
 
@@ -8983,8 +9022,10 @@ function scheduleCloudSyncRetry(){
    y se suspende al apagar la pantalla, eso pasa constantemente. */
 function marcarNubeAlDia(opciones){
   if(!socketConnected) return;
-  const trasSubirBien = opciones && opciones.trasSubirBien;
-  if(lastSyncBadgeState === 'pending' || (trasSubirBien && lastSyncBadgeState === 'error')){
+  // Sirve como prueba tanto una SUBIDA correcta como un bloque que LLEGA de
+  // la nube: las dos cosas demuestran que vuelve a funcionar de verdad.
+  const hayPrueba = opciones && (opciones.trasSubirBien || opciones.trasProbarNube);
+  if(lastSyncBadgeState === 'pending' || (hayPrueba && lastSyncBadgeState === 'error')){
     lastSyncErrorCode = null;
     updateSyncBadge('online');
   }
@@ -37786,7 +37827,12 @@ function puestaAPuntoTareas(){
      ir: "currentFolder='gestion'; navigate('minegocio')"},
     {id:'horario', hecho: ppHorarioRevisado(b), icono:'ti-clock-hour-4',
      ir: "currentFolder='gestion'; navigate('minegocio')"},
-    {id:'precios', hecho: conPrecio >= 5, icono:'ti-tag', dato: conPrecio,
+    /* ⚠️ Basta con UNO, como todas las demás. Antes pedía cinco y el dueño lo
+       contó como que la tarea "no se iba nunca": pones precio a un ingrediente,
+       vuelves al inicio y sigue pendiente igual, sin decirte que faltan cuatro.
+       Esto es un asistente que señala por dónde empezar, no un examen: en
+       cuanto sabes poner un precio, ya sabes hacerlo con los demás. */
+    {id:'precios', hecho: conPrecio > 0, icono:'ti-tag', dato: conPrecio,
      ir: "currentFolder='cocina'; navigate('megalista')"},
     {id:'recetas', hecho: recetas > 0, icono:'ti-calculator', dato: recetas,
      ir: "currentFolder='cocina'; navigate('escandallo')"},
