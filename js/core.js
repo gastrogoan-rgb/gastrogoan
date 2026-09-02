@@ -1725,14 +1725,41 @@ const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un sol
    En los objetos la clave se quita —que es lo que Firebase entiende por "no
    está"— y en las listas el hueco se pone a null, porque borrarlo correría
    los índices y cambiaría el dato. */
+/* Firebase tampoco admite estos seis caracteres en una CLAVE: . $ # [ ] /
+   Y hay claves que son texto que escribe el hostelero — el nombre de una
+   carpeta acaba siendo clave en `categoryIcons` y en las lápidas de
+   `borrados`. O sea que una carpeta llamada "Salsas/Fondos" o "Bebidas 1.5L"
+   tumbaba la sincronización ENTERA del negocio, igual que el `undefined`.
+   Y lo peor: bastaba con BORRARLA, porque la lápida se anota sola y ya no
+   había forma de deshacerlo desde la app. */
+/* Y mejor todavía: que no llegue a crearse. Si el nombre lleva uno de esos
+   caracteres se avisa AL ESCRIBIRLO, con palabras del hostelero, en vez de
+   dejar que la nube se rompa después sin que nadie relacione una cosa con la
+   otra. Devuelve true si el nombre vale. */
+function nombreDeCarpetaValido(nombre){
+  if(/[.$#[\]/]/.test(String(nombre || ''))){
+    if(typeof showToast === 'function') showToast(t('msg.folderNameChars'));
+    return false;
+  }
+  return true;
+}
+function claveSeguraFirebase(k){
+  return String(k).replace(/[.$#[\]/]/g, '_');
+}
 function sinIndefinidos(v){
   if(v === undefined) return null;
+  // NaN e Infinity son "number" y se colaban enteros: Firebase los rechaza
+  // igual, y además canonicalStringify los serializa como null, así que un
+  // campo que pasaba a NaN ni siquiera se detectaba como cambio.
+  if(typeof v === 'number' && !Number.isFinite(v)) return null;
   if(v === null || typeof v !== 'object') return v;
-  if(Array.isArray(v)) return v.map(x => x === undefined ? null : sinIndefinidos(x));
+  // Array.from y no .map: map SALTA los huecos de un array esparcido y los
+  // conserva, así que el undefined llegaba igualmente a Firebase.
+  if(Array.isArray(v)) return Array.from(v, x => x === undefined ? null : sinIndefinidos(x));
   const out = {};
   Object.keys(v).forEach(k => {
     if(v[k] === undefined) return; // la clave desaparece, no viaja vacía
-    out[k] = sinIndefinidos(v[k]);
+    out[claveSeguraFirebase(k)] = sinIndefinidos(v[k]);
   });
   return out;
 }
@@ -2297,13 +2324,13 @@ const FIREBASE_GATE_STEPS = [
    body:{
      es:`En el menú de la izquierda, busca el apartado <strong>"Base de datos y almacenamiento"</strong> y dentro pulsa <strong>"Realtime Database"</strong>.<br><br>
         Pulsa el botón <strong>"Crear base de datos"</strong>. En la ubicación, elige <strong>"Bélgica (europe-west1)"</strong> y pulsa "Siguiente".<br><br>
-        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (En el paso 4 pegaremos las reglas correctas).`,
+        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (Más adelante, en el paso "Pega las reglas de seguridad", pondremos las correctas).`,
      ca:`Al menú de l'esquerra, busca l'apartat <strong>"Base de dades i emmagatzematge"</strong> i dins prem <strong>"Realtime Database"</strong>.<br><br>
         Prem el botó <strong>"Crear base de dades"</strong>. A la ubicació, tria <strong>"Bèlgica (europe-west1)"</strong> i prem "Següent".<br><br>
-        Quan et pregunti per les regles de seguretat, tria l'opció <strong>"Mode bloquejat"</strong> i prem "Habilitar". (Al pas 4 enganxarem les regles correctes).`,
+        Quan et pregunti per les regles de seguretat, tria l'opció <strong>"Mode bloquejat"</strong> i prem "Habilitar". (Més endavant, al pas "Enganxa les regles de seguretat", hi posarem les correctes).`,
      en:`In the left menu, find <strong>"Build"</strong> and click <strong>"Realtime Database"</strong>.<br><br>
         Click <strong>"Create Database"</strong>. For location, choose <strong>"Belgium (europe-west1)"</strong> and click "Next".<br><br>
-        When asked about security rules, choose <strong>"Locked mode"</strong> and click "Enable". (In step 4 we'll paste the correct rules).`}},
+        When asked about security rules, choose <strong>"Locked mode"</strong> and click "Enable". (Later, in the "Paste the security rules" step, we'll put the right ones in).`}},
   {title:{es:'Activa el inicio de sesión "Anónimo"', ca:'Activa l\'inici de sessió "Anònim"', en:'Enable "Anonymous" sign-in'},
    body:{
      es:`En el menú de la izquierda, dentro de <strong>"Seguridad"</strong>, pulsa <strong>"Authentication"</strong>.<br><br>
@@ -2746,9 +2773,19 @@ function withDefaults(def, data){
 
 function mergeArraysById(local, remote){
   if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  /* ⚠️ Fuera los huecos ANTES de nada. Firebase devuelve `null` donde una
+     lista tenía un agujero, y con un solo null a la cabeza la decisión de
+     abajo salía "esta lista no tiene ids" y la fusión degeneraba en "manda la
+     nube entera": todo el trabajo hecho sin conexión en este dispositivo se
+     descartaba en silencio, en CADA sincronización. Y el null seguía dentro,
+     reventando después cualquier recorrido (o.items, m.id...). */
+  local = local.filter(x => x != null);
+  remote = remote.filter(x => x != null);
   if(remote.length === 0) return local;
   if(local.length === 0) return remote;
-  const hasIds = remote[0] && typeof remote[0] === 'object' && 'id' in remote[0];
+  // Por el primer elemento REAL, no por el primero a secas.
+  const primero = remote.find(x => typeof x === 'object');
+  const hasIds = !!primero && 'id' in primero;
   if(!hasIds) return remote;
   const remoteMap = new Map();
   remote.forEach(item => remoteMap.set(item.id, item));
@@ -4223,7 +4260,15 @@ function initCloud(){
     if(firebase.auth().currentUser){
       trasEntrar();
     } else {
-      firebase.auth().signInAnonymously().then(trasEntrar).catch(err => recordSyncError(err));
+      /* Reintento también aquí, y es el que más importa: este es el fallo del
+         alta ("falta activar el acceso anónimo"). El hostelero lo activa en
+         Firebase siguiendo el aviso, vuelve a la app... y no pasaba nada,
+         porque nadie volvía a llamar a initCloud(). Tenía que cerrar y abrir
+         sin que nada se lo dijera, así que parecía que el aviso mentía. */
+      firebase.auth().signInAnonymously().then(trasEntrar).catch(err => {
+        recordSyncError(err);
+        reintentarConexionNube(tenantId);
+      });
     }
   }catch(e){
     recordSyncError(e);
@@ -4566,6 +4611,12 @@ function applyRemoteBlock(key, remoteValue){
    datos por cada dispositivo conectado), escuchamos solo los bloques
    ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
 function attachCloudChildListeners(){
+  /* Hay dos caminos que llegaban aquí con la foto sin inicializar (fallo de la
+     transacción de la carrera, y el último recurso al perderla). El primer
+     bloque que llegaba de la nube petaba al escribir en null DENTRO del
+     callback del SDK, así que ese bloque —y todos los siguientes— no se
+     aplicaban nunca: el dispositivo dejaba de recibir, en silencio. */
+  if(!lastSyncedSnapshot) lastSyncedSnapshot = {};
   const onErr = err => recordSyncError(err);
   /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
      por eso quita el rojo igual que lo quitaba una subida buena.
@@ -4694,12 +4745,82 @@ function waitForWinnerAfterLostRace(attempt){
   });
 }
 
+/* ⚠️ SI LA NUBE FALLA AL ARRANCAR, HAY QUE VOLVER A INTENTARLO.
+
+   Sin esto, un tropiezo en el primer contacto dejaba el dispositivo muerto
+   para siempre: `cloudRef` quedaba puesto (así que ningún initCloud posterior
+   volvía a entrar), sin listeners (no baja nada) y con `lastSyncedSnapshot` a
+   null (no sube nada). El hostelero arreglaba lo que la app le pedía —pegar
+   las reglas, activar el acceso anónimo— y NO PASABA NADA, porque nadie
+   volvía a intentarlo hasta cerrar y abrir la app. Y eso nadie se lo decía.
+   Es el caso normal durante el alta, donde las reglas se pegan DESPUÉS de
+   abrir la app por primera vez. */
+let reintentoNubeTimer = null;
+let reintentoNubeIntento = 0;
+function reintentarConexionNube(tenantId){
+  if(reintentoNubeTimer) return;
+  reintentoNubeIntento++;
+  // 5 s, 10 s, 20 s, 40 s… con tope de 5 minutos: se recupera enseguida de un
+  // corte tonto sin machacar la nube del negocio si el problema es de fondo.
+  const espera = Math.min(300000, 5000 * Math.pow(2, reintentoNubeIntento - 1));
+  reintentoNubeTimer = setTimeout(() => {
+    reintentoNubeTimer = null;
+    cloudRef = null;          // sin soltarlo, startCloudSync sale por la puerta de atrás
+    lastSyncedSnapshot = null;
+    startCloudSync(tenantId);
+  }, espera);
+}
+// Reintento a mano, desde el modal de la nube: el hostelero acaba de tocar
+// algo en Firebase y quiere comprobarlo YA, sin esperar al ciclo ni recargar.
+function reintentarNubeAhora(){
+  const tId = getTenantId();
+  if(!tId) return false;
+  if(reintentoNubeTimer){ clearTimeout(reintentoNubeTimer); reintentoNubeTimer = null; }
+  reintentoNubeIntento = 0;
+  cloudRef = null;
+  lastSyncedSnapshot = null;
+  lastSyncErrorCode = null;
+  updateSyncBadge('pending');
+  initCloud();
+  return true;
+}
+
+/* "Probar mi nube ahora". Hasta ahora el hostelero no tenía NINGUNA forma de
+   comprobar por sí mismo si la nube funcionaba: solo mirar un punto de color
+   en la cabecera e interpretarlo. Tocaba algo en Firebase, volvía a la app y
+   se quedaba esperando a ver si el color cambiaba, sin saber cuándo. */
+function probarNubeDesdeElModal(){
+  if(!reintentarNubeAhora()){ showToast(t('gate.testCloudNoLicense')); return; }
+  showToast(t('gate.testCloudRunning'));
+  // Se le contesta pase lo que pase: un botón que no responde es peor que no
+  // tener botón. 8 s es de sobra para conectar, y si no, hay veredicto igual.
+  setTimeout(() => {
+    if(lastSyncErrorCode || lastSyncBadgeState === 'error'){
+      showToast(t('gate.testCloudFail'));
+    } else if(lastSyncBadgeState === 'online'){
+      showToast(t('gate.testCloudOk'));
+    } else {
+      showToast(t('gate.testCloudSlow'));
+    }
+    if(typeof openCloudWizard === 'function' && document.getElementById('modal-overlay')?.classList.contains('active')) openCloudWizard();
+  }, 8000);
+}
+// El código de error no se transcribe a mano: se copia y se manda.
+function copiarErrorDeNube(){
+  const txt = String(lastSyncErrorCode || '');
+  if(!txt) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(() => showToast(t('msg.errorCopied'))).catch(() => {});
+  }
+}
+
 function startCloudSync(tenantId){
   if(cloudRef) return; // ya conectado
   try{
     cloudRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/db');
     cloudRef.once('value').then(snap => {
       const val = snap.val();
+      reintentoNubeIntento = 0;   // conectó: la próxima vez se reintenta rápido otra vez
       updateSyncBadge('online');
       if(val === null){
         // Nube vacía: subir los datos locales como punto de partida. Dos
@@ -4724,8 +4845,13 @@ function startCloudSync(tenantId){
             setTimeout(() => waitForWinnerAfterLostRace(1), 1000);
           }
         }).catch(e => {
+          /* Antes se enganchaban los listeners y ya está, pero
+             `lastSyncedSnapshot` seguía a null y flushCloudSync se iba de
+             vacío SIEMPRE: el negocio no volvía a subir nada en todo el turno,
+             contra una nube además vacía. */
           recordSyncError(e);
           attachCloudChildListeners();
+          reintentarConexionNube(tenantId);
         });
       }else{
         mergeRemoteIntoLocal(val);
@@ -4733,9 +4859,19 @@ function startCloudSync(tenantId){
       }
     }, err => {
       recordSyncError(err);
+      reintentarConexionNube(tenantId);
     });
     firebase.database().ref('.info/connected').on('value', s => {
       socketConnected = !!s.val();
+      /* ⚠️ Esto NO puede borrar un error real. El socket se establece ANTES de
+         que Firebase evalúe las reglas, así que con las reglas mal puestas
+         `.info/connected` vale true igualmente y esta línea pintaba "Nube
+         conectada" en verde con la nube completamente rota. Peor todavía en un
+         móvil, que salta de wifi a datos cada poco: cada salto borraba el rojo
+         y con él la ÚNICA pantalla que explica qué paso falta.
+         Del rojo solo se sale con una prueba de verdad — una subida correcta o
+         un bloque que llega — que es lo que hace marcarNubeAlDia(). */
+      if(lastSyncErrorCode && socketConnected) return;
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
@@ -5695,7 +5831,14 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-    ${lastSyncBadgeState === 'error'
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
+      ${lastSyncErrorCode ? `<button class="btn" style="flex:0 0 auto" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}
+    </div>
+    ${/* Por el error REAL, no por el color de este instante: un corte de red
+          dejaba el estado en 'offline' y este modal daba la nube por buena,
+          escondiendo el motivo justo cuando hacía falta. */
+      lastSyncErrorCode
       ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}${
           // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
           // falta en vez de dejar al usuario adivinando entre seis pasos.
@@ -5724,7 +5867,7 @@ function openCloudWizard(){
       <a class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <details${lastSyncBadgeState === 'error' ? ' open' : ''}>
+    <details${lastSyncErrorCode ? ' open' : ''}>
       <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
       <div style="margin-top:10px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>

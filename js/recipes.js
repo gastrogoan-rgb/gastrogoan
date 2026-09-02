@@ -214,6 +214,9 @@ async function renameRecipeCategory(key){
   const nuevo = await promptText(t('msg.renameCategoryPrompt'), key);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
+  // El nombre acaba siendo una CLAVE de Firebase (iconos y lápidas): con
+  // . $ # [ ] / dentro, la sincronización del negocio entero se cae.
+  if(!nombreDeCarpetaValido(trimmed)) return;
   if(!trimmed || trimmed === key) return;
   // Solo las recetas de ESTA área: Cocina y Sala pueden tener, por
   // coincidencia, una categoría con el mismo nombre.
@@ -699,6 +702,8 @@ function confirmNewRecipeCategory(id){
   const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
+    // Se avisa aquí, no al sincronizar: el nombre acaba siendo clave de Firebase.
+    if(!nombreDeCarpetaValido(cat)) return;
     const exists = areaRecipeCategories().some(c => (typeof c==='object'?c.name:c) === cat);
     if(!exists){ DB.recipeCategories.push({name: cat, area: currentArea()}); saveDB(); }
     state.category = cat;

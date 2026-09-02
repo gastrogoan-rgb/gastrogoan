@@ -1176,6 +1176,9 @@ async function renameIngredientCategory(oldName){
   const nuevo = await promptText(t('msg.renameCategoryPrompt'), oldLabel);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
+  // El nombre acaba siendo una CLAVE de Firebase (iconos y lápidas): con
+  // . $ # [ ] / dentro, la sincronización del negocio entero se cae.
+  if(!nombreDeCarpetaValido(trimmed)) return;
   // Comparar contra la etiqueta TRADUCIDA (lo que de verdad se precargó y
   // ve quien escribe), no contra la clave interna en español: si no,
   // aceptar sin tocar nada en catalán/inglés sobre una categoría de
@@ -1258,6 +1261,8 @@ function confirmNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
+    // Se avisa aquí, no al sincronizar: el nombre acaba siendo clave de Firebase.
+    if(!nombreDeCarpetaValido(cat)) return;
     if(!ingredientCategories().includes(cat) && !DB.ingredientCategories.includes(cat)) DB.ingredientCategories.push(cat);
     state.category = cat;
   } else {
