@@ -2743,7 +2743,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
       <div class="table-wrap clientes-desktop-table">
         <table>
           <thead>
-            <tr><th data-i18n="common.name">Nombre</th><th data-i18n="label.contact">Contacto</th><th class="th-sort" onclick="setClientesSort('visitas30d')" style="cursor:pointer;user-select:none" title="Ordenar"><span data-i18n="label.visits30d">Visitas 30 días</span> <i class="ti ti-arrows-sort" id="clientes-sort-visitas30d" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('visitasYear')" style="cursor:pointer;user-select:none" title="Ordenar"><span data-i18n="label.visitsYear">Visitas año en curso</span> <i class="ti ti-arrows-sort" id="clientes-sort-visitasYear" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('lastDate')" style="cursor:pointer;user-select:none"><span data-i18n="label.lastVisit">Última visita</span> <i class="ti ti-arrows-sort" id="clientes-sort-lastDate" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('ticket')" style="cursor:pointer;user-select:none"><span data-i18n="label.avgTicket">Ticket medio</span> <i class="ti ti-arrows-sort" id="clientes-sort-ticket" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('total30d')" style="cursor:pointer;user-select:none"><span data-i18n="label.total30d">Total 30 días</span> <i class="ti ti-arrows-sort" id="clientes-sort-total30d" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('totalYear')" style="cursor:pointer;user-select:none"><span data-i18n="label.totalYear">Total año en curso</span> <i class="ti ti-arrows-sort" id="clientes-sort-totalYear" style="font-size:12px;opacity:.5"></i></th><th><span data-i18n="label.loyaltyPoints">Puntos de fidelidad</span> <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" data-i18n-title="title.howDoesItWork" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th data-i18n="common.notes">Notas</th><th></th></tr>
+            <tr><th data-i18n="common.name">Nombre</th><th data-i18n="label.contact">Contacto</th><th class="th-sort" onclick="setClientesSort('visitas30d')" style="cursor:pointer;user-select:none" title="Ordenar"><span data-i18n="label.visits30d">Visitas 30 días</span> <i class="ti ti-arrows-sort" id="clientes-sort-visitas30d" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('visitasYear')" style="cursor:pointer;user-select:none" title="Ordenar"><span data-i18n="label.visitsYear">Visitas año en curso</span> <i class="ti ti-arrows-sort" id="clientes-sort-visitasYear" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('lastDate')" style="cursor:pointer;user-select:none"><span data-i18n="label.lastVisit">Última visita</span> <i class="ti ti-arrows-sort" id="clientes-sort-lastDate" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('ticket')" style="cursor:pointer;user-select:none"><span data-i18n="label.avgTicket">Ticket medio</span> <i class="ti ti-arrows-sort" id="clientes-sort-ticket" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('total30d')" style="cursor:pointer;user-select:none"><span data-i18n="label.total30d">Total 30 días</span> <i class="ti ti-arrows-sort" id="clientes-sort-total30d" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('totalYear')" style="cursor:pointer;user-select:none"><span data-i18n="label.totalYear">Total año en curso</span> <i class="ti ti-arrows-sort" id="clientes-sort-totalYear" style="font-size:12px;opacity:.5"></i></th><th class="th-sort" onclick="setClientesSort('noShows')" style="cursor:pointer;user-select:none" data-i18n-title="label.noShowCount" title="Veces que no se ha presentado"><span data-i18n="label.noShowCol">No presentados</span> <i class="ti ti-arrows-sort" id="clientes-sort-noShows" style="font-size:12px;opacity:.5"></i></th><th><span data-i18n="label.loyaltyPoints">Puntos de fidelidad</span> <button class="btn btn-sm btn-icon" onclick="showLoyaltyInfo()" data-i18n-title="title.howDoesItWork" title="¿Cómo funciona?" style="vertical-align:middle"><i class="ti ti-info-circle"></i></button></th><th data-i18n="common.notes">Notas</th><th></th></tr>
           </thead>
           <tbody id="clientes-tbody"></tbody>
         </table>
@@ -2897,7 +2897,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '02/09/2026 13:00';
+const GG_BUILD = '02/09/2026 17:04';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -4611,6 +4611,60 @@ const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un sol
 // OJO: no respeta toJSON(), así que un objeto Date se serializaría como {} y
 // dos fechas distintas parecerían iguales. Hoy no aplica (en DB las fechas
 // se guardan siempre como texto), pero no metas objetos Date en DB.
+/* Firebase RECHAZA la subida ENTERA si en cualquier rincón hay un `undefined`:
+   "update failed: values argument contains undefined in property ...". No es
+   un aviso ni se salta ese campo — tira todo el envío, así que un solo campo
+   suelto deja al negocio sin sincronizar y con el indicador en rojo. Le pasó
+   al dueño en mitad de una prueba, con un `recipeId` de una comanda.
+
+   No basta con arreglar el sitio donde salió: la app guarda cientos de campos
+   y basta con que UNO llegue sin valor (un dato viejo al que le falta la
+   clave, un objeto creado antes de que ese campo existiera) para volver a
+   romperlo todo. Por eso se limpia AQUÍ, justo antes de enviar, que es el
+   único punto por el que pasa todo.
+
+   En los objetos la clave se quita —que es lo que Firebase entiende por "no
+   está"— y en las listas el hueco se pone a null, porque borrarlo correría
+   los índices y cambiaría el dato. */
+/* Firebase tampoco admite estos seis caracteres en una CLAVE: . $ # [ ] /
+   Y hay claves que son texto que escribe el hostelero — el nombre de una
+   carpeta acaba siendo clave en `categoryIcons` y en las lápidas de
+   `borrados`. O sea que una carpeta llamada "Salsas/Fondos" o "Bebidas 1.5L"
+   tumbaba la sincronización ENTERA del negocio, igual que el `undefined`.
+   Y lo peor: bastaba con BORRARLA, porque la lápida se anota sola y ya no
+   había forma de deshacerlo desde la app. */
+/* Y mejor todavía: que no llegue a crearse. Si el nombre lleva uno de esos
+   caracteres se avisa AL ESCRIBIRLO, con palabras del hostelero, en vez de
+   dejar que la nube se rompa después sin que nadie relacione una cosa con la
+   otra. Devuelve true si el nombre vale. */
+function nombreDeCarpetaValido(nombre){
+  if(/[.$#[\]/]/.test(String(nombre || ''))){
+    if(typeof showToast === 'function') showToast(t('msg.folderNameChars'));
+    return false;
+  }
+  return true;
+}
+function claveSeguraFirebase(k){
+  return String(k).replace(/[.$#[\]/]/g, '_');
+}
+function sinIndefinidos(v){
+  if(v === undefined) return null;
+  // NaN e Infinity son "number" y se colaban enteros: Firebase los rechaza
+  // igual, y además canonicalStringify los serializa como null, así que un
+  // campo que pasaba a NaN ni siquiera se detectaba como cambio.
+  if(typeof v === 'number' && !Number.isFinite(v)) return null;
+  if(v === null || typeof v !== 'object') return v;
+  // Array.from y no .map: map SALTA los huecos de un array esparcido y los
+  // conserva, así que el undefined llegaba igualmente a Firebase.
+  if(Array.isArray(v)) return Array.from(v, x => x === undefined ? null : sinIndefinidos(x));
+  const out = {};
+  Object.keys(v).forEach(k => {
+    if(v[k] === undefined) return; // la clave desaparece, no viaja vacía
+    out[claveSeguraFirebase(k)] = sinIndefinidos(v[k]);
+  });
+  return out;
+}
+
 function canonicalStringify(value){
   if(Array.isArray(value)) return '[' + value.map(canonicalStringify).join(',') + ']';
   if(value && typeof value === 'object'){
@@ -5171,13 +5225,13 @@ const FIREBASE_GATE_STEPS = [
    body:{
      es:`En el menú de la izquierda, busca el apartado <strong>"Base de datos y almacenamiento"</strong> y dentro pulsa <strong>"Realtime Database"</strong>.<br><br>
         Pulsa el botón <strong>"Crear base de datos"</strong>. En la ubicación, elige <strong>"Bélgica (europe-west1)"</strong> y pulsa "Siguiente".<br><br>
-        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (En el paso 4 pegaremos las reglas correctas).`,
+        Cuando te pregunte por las reglas de seguridad, elige la opción <strong>"Modo bloqueado"</strong> y pulsa "Habilitar". (Más adelante, en el paso "Pega las reglas de seguridad", pondremos las correctas).`,
      ca:`Al menú de l'esquerra, busca l'apartat <strong>"Base de dades i emmagatzematge"</strong> i dins prem <strong>"Realtime Database"</strong>.<br><br>
         Prem el botó <strong>"Crear base de dades"</strong>. A la ubicació, tria <strong>"Bèlgica (europe-west1)"</strong> i prem "Següent".<br><br>
-        Quan et pregunti per les regles de seguretat, tria l'opció <strong>"Mode bloquejat"</strong> i prem "Habilitar". (Al pas 4 enganxarem les regles correctes).`,
+        Quan et pregunti per les regles de seguretat, tria l'opció <strong>"Mode bloquejat"</strong> i prem "Habilitar". (Més endavant, al pas "Enganxa les regles de seguretat", hi posarem les correctes).`,
      en:`In the left menu, find <strong>"Build"</strong> and click <strong>"Realtime Database"</strong>.<br><br>
         Click <strong>"Create Database"</strong>. For location, choose <strong>"Belgium (europe-west1)"</strong> and click "Next".<br><br>
-        When asked about security rules, choose <strong>"Locked mode"</strong> and click "Enable". (In step 4 we'll paste the correct rules).`}},
+        When asked about security rules, choose <strong>"Locked mode"</strong> and click "Enable". (Later, in the "Paste the security rules" step, we'll put the right ones in).`}},
   {title:{es:'Activa el inicio de sesión "Anónimo"', ca:'Activa l\'inici de sessió "Anònim"', en:'Enable "Anonymous" sign-in'},
    body:{
      es:`En el menú de la izquierda, dentro de <strong>"Seguridad"</strong>, pulsa <strong>"Authentication"</strong>.<br><br>
@@ -5620,9 +5674,19 @@ function withDefaults(def, data){
 
 function mergeArraysById(local, remote){
   if(!Array.isArray(local) || !Array.isArray(remote)) return remote;
+  /* ⚠️ Fuera los huecos ANTES de nada. Firebase devuelve `null` donde una
+     lista tenía un agujero, y con un solo null a la cabeza la decisión de
+     abajo salía "esta lista no tiene ids" y la fusión degeneraba en "manda la
+     nube entera": todo el trabajo hecho sin conexión en este dispositivo se
+     descartaba en silencio, en CADA sincronización. Y el null seguía dentro,
+     reventando después cualquier recorrido (o.items, m.id...). */
+  local = local.filter(x => x != null);
+  remote = remote.filter(x => x != null);
   if(remote.length === 0) return local;
   if(local.length === 0) return remote;
-  const hasIds = remote[0] && typeof remote[0] === 'object' && 'id' in remote[0];
+  // Por el primer elemento REAL, no por el primero a secas.
+  const primero = remote.find(x => typeof x === 'object');
+  const hasIds = !!primero && 'id' in primero;
   if(!hasIds) return remote;
   const remoteMap = new Map();
   remote.forEach(item => remoteMap.set(item.id, item));
@@ -6825,6 +6889,57 @@ function getActivePromosForSync(){
     .map(p => ({menuItemPlatoId: p.menuItemPlatoId, discountPct: p.discountPct, horaInicio: p.horaInicio||null, horaFin: p.horaFin||null}));
 }
 
+/* ⚠️ LO QUE SE PUBLICA DEL NEGOCIO ES UNA LISTA BLANCA, NUNCA `DB.business`.
+
+   Se enviaba el objeto ENTERO al nodo público, que lo lee cualquiera que abra
+   el QR de una mesa. Ahí dentro viajaban:
+     · `pin`/`pinSet`  — el PIN del negocio;
+     · `ownFirebase`   — la clave y la dirección de su propia nube;
+     · `verifactu`     — la clave de su proveedor de facturación certificada;
+     · `emailConfirm`  — sus credenciales de EmailJS (mandar correos como él);
+     · `cif`, `prop`, `facturaCounter`, y las comisiones negociadas con Glovo
+       o Uber Eats en `deliveryPlatforms`.
+   Todo eso estaba a la vista de cualquier comensal.
+
+   Es lista blanca y no lista negra a propósito: así un campo NUEVO nace
+   privado. Con una lista negra, cualquier cosa que se añada mañana a
+   `DB.business` se publicaría sola sin que nadie se diera cuenta — que es
+   exactamente cómo llegaron aquí las cinco de arriba. */
+const CAMPOS_PUBLICOS_DEL_NEGOCIO = [
+  'name', 'address', 'phone', 'description', 'logo', 'brandColor',
+  'tipo', 'anyo', 'web', 'ig', 'fb', 'gmaps', 'tiktok',
+  'horario', 'aforo', 'mesasInterior', 'mesasTerraza',
+  'cartaAuto', 'tiposServicio',
+  'requireDeposit', 'depositAmount', 'depositType', 'depositInstructions',
+  'leadTimeMin', 'leadTimeMinReservas', 'leadTimeMinPedidos',
+];
+function negocioParaElEspejoPublico(){
+  const b = DB.business || {};
+  const out = {};
+  CAMPOS_PUBLICOS_DEL_NEGOCIO.forEach(k => { if(b[k] !== undefined) out[k] = b[k]; });
+  return out;
+}
+
+/* ⚠️ Los permisos de Firebase BAJAN pero no SUBEN: tener `.write` en
+   `aforoHold/$fecha/$turno` NO autoriza a borrar `aforoHold/$fecha`. Se
+   borraba el nodo padre, así que las tres limpiezas de holds se rechazaban
+   SIEMPRE — y encima calladas, con un `.catch(()=>{})`.
+   O sea que el fallo que el comentario de abajo dice haber arreglado ("cada
+   reserva online quedaba contada DOS VECES") seguía vivo: los holds no se
+   soltaban nunca y un turno acababa "lleno" en la web pública sin estarlo.
+   Se borran los HIJOS, uno a uno, que es justo lo que las reglas permiten.
+   Así no hace falta que 5.000 negocios vuelvan a pegar reglas nuevas. */
+function limpiarHolds(app, publicId, rama, fecha){
+  const ref = app.database().ref('gastrogoan/public/' + publicId + '/' + rama + '/' + fecha);
+  ref.once('value').then(snap => {
+    const val = snap.val();
+    if(!val || typeof val !== 'object') return;
+    Object.keys(val).forEach(hijo => {
+      ref.child(hijo).remove().catch(e => console.error('No se pudo soltar el hold', rama, fecha, hijo, e));
+    });
+  }).catch(e => console.error('No se pudieron leer los holds', rama, fecha, e));
+}
+
 function syncPublicMirror(){
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
@@ -6835,7 +6950,7 @@ function syncPublicMirror(){
     getPublicMirrorApp().then(app => {
       if(!app) return;
       const data = {
-        business: DB.business,
+        business: negocioParaElEspejoPublico(),
         cartas: DB.cartas,
         activeCartaIds: DB.activeCartaIds,
         // Los menús combo (Menú del día, etc.) nunca se publicaban al espejo
@@ -6856,7 +6971,10 @@ function syncPublicMirror(){
       // página pública de reservas/pedidos podía quedarse con datos
       // desactualizados (horario, carta, precios...) sin que nadie se
       // enterara. Ahora al menos se loguea y se avisa al usuario.
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set(data).catch(e => {
+      // Mismo motivo que en las subidas del negocio: un solo `undefined` en
+      // cualquier rincón (la carta, un menú, una mesa) tumbaría el envío
+      // entero y la web pública se quedaría con datos viejos.
+      app.database().ref('gastrogoan/public/' + publicId + '/info').set(sinIndefinidos(data)).catch(e => {
         console.error('Error publicando el espejo público', e);
         if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
       });
@@ -6875,10 +6993,10 @@ function syncPublicMirror(){
       const fechasATocar = new Set(Object.keys(data.reservasResumen));
       DB.reservations.forEach(r => { if(r.date) fechasATocar.add(r.date); });
       fechasATocar.forEach(fecha => {
-        app.database().ref('gastrogoan/public/' + publicId + '/aforoHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'aforoHold', fecha);
         // mesaHold (candado por mesa concreta que usa la web pública para
         // reservar de forma atómica) mismo motivo y mismo mecanismo.
-        app.database().ref('gastrogoan/public/' + publicId + '/mesaHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'mesaHold', fecha);
       });
       // Mismo motivo y mismo mecanismo que aforoHold, aplicado a pedidosHold
       // (el contador atómico de pedidos por franja): se limpia en cada sync
@@ -6886,7 +7004,7 @@ function syncPublicMirror(){
       const fechasPedidosATocar = new Set(Object.keys(data.pedidosResumen));
       DB.tpvOrders.forEach(o => { if(o.date && (o.tipo === 'takeaway' || o.tipo === 'delivery')) fechasPedidosATocar.add(o.date); });
       fechasPedidosATocar.forEach(fecha => {
-        app.database().ref('gastrogoan/public/' + publicId + '/pedidosHold/' + fecha).remove().catch(() => {});
+        limpiarHolds(app, publicId, 'pedidosHold', fecha);
       });
       // orderStatus (seguimiento público de pedidos, ver syncOrderStatusForPublic)
       // se limpia de entradas de hace más de 24h en cada sync — best-effort, no
@@ -6916,12 +7034,24 @@ function syncPublicMirror(){
 // de Firebase no son secretos (la seguridad la dan las reglas de Firebase,
 // no ocultar esto — así funciona cualquier app web con Firebase), así que
 // publicarlos aquí no reduce la seguridad real de los datos del negocio.
+/* ⚠️ Esto se reescribía EN CADA ARRANQUE de cada dispositivo, y cada escritura
+   abre una conexión con la Firebase COMPARTIDA de la plataforma — que es
+   justo la que no puede crecer con el número de licencias (plan gratuito:
+   100 conexiones simultáneas en total, para todos los negocios del mundo).
+   El dato no cambia casi nunca: se publica una vez y ya. Ahora solo se toca
+   cuando de verdad ha cambiado, así que un negocio ya dado de alta no vuelve
+   a tocar la plataforma en toda su vida. */
+const TENANT_LOOKUP_PUBLICADO_LS = 'gastrogoan_tenantlookup_publicado';
 function publishTenantLookup(tenantId, config){
   if(!tenantId || !config) return;
+  const huella = tenantId + '|' + config.apiKey + '|' + config.databaseURL;
+  try{ if(localStorage.getItem(TENANT_LOOKUP_PUBLICADO_LS) === huella) return; }catch(e){}
   getPlatformFirebaseApp().then(app => {
     if(!app) return;
     app.database().ref('gastrogoan/tenantLookup/' + tenantId).set({
       apiKey: config.apiKey, databaseURL: config.databaseURL
+    }).then(() => {
+      try{ localStorage.setItem(TENANT_LOOKUP_PUBLICADO_LS, huella); }catch(e){}
     }).catch(e => console.error('Error publicando la referencia del negocio', e));
   }).catch(()=>{});
 }
@@ -7094,7 +7224,15 @@ function initCloud(){
     if(firebase.auth().currentUser){
       trasEntrar();
     } else {
-      firebase.auth().signInAnonymously().then(trasEntrar).catch(err => recordSyncError(err));
+      /* Reintento también aquí, y es el que más importa: este es el fallo del
+         alta ("falta activar el acceso anónimo"). El hostelero lo activa en
+         Firebase siguiendo el aviso, vuelve a la app... y no pasaba nada,
+         porque nadie volvía a llamar a initCloud(). Tenía que cerrar y abrir
+         sin que nada se lo dijera, así que parecía que el aviso mentía. */
+      firebase.auth().signInAnonymously().then(trasEntrar).catch(err => {
+        recordSyncError(err);
+        reintentarConexionNube(tenantId);
+      });
     }
   }catch(e){
     recordSyncError(e);
@@ -7437,6 +7575,12 @@ function applyRemoteBlock(key, remoteValue){
    datos por cada dispositivo conectado), escuchamos solo los bloques
    ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
 function attachCloudChildListeners(){
+  /* Hay dos caminos que llegaban aquí con la foto sin inicializar (fallo de la
+     transacción de la carrera, y el último recurso al perderla). El primer
+     bloque que llegaba de la nube petaba al escribir en null DENTRO del
+     callback del SDK, así que ese bloque —y todos los siguientes— no se
+     aplicaban nunca: el dispositivo dejaba de recibir, en silencio. */
+  if(!lastSyncedSnapshot) lastSyncedSnapshot = {};
   const onErr = err => recordSyncError(err);
   /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
      por eso quita el rojo igual que lo quitaba una subida buena.
@@ -7565,12 +7709,82 @@ function waitForWinnerAfterLostRace(attempt){
   });
 }
 
+/* ⚠️ SI LA NUBE FALLA AL ARRANCAR, HAY QUE VOLVER A INTENTARLO.
+
+   Sin esto, un tropiezo en el primer contacto dejaba el dispositivo muerto
+   para siempre: `cloudRef` quedaba puesto (así que ningún initCloud posterior
+   volvía a entrar), sin listeners (no baja nada) y con `lastSyncedSnapshot` a
+   null (no sube nada). El hostelero arreglaba lo que la app le pedía —pegar
+   las reglas, activar el acceso anónimo— y NO PASABA NADA, porque nadie
+   volvía a intentarlo hasta cerrar y abrir la app. Y eso nadie se lo decía.
+   Es el caso normal durante el alta, donde las reglas se pegan DESPUÉS de
+   abrir la app por primera vez. */
+let reintentoNubeTimer = null;
+let reintentoNubeIntento = 0;
+function reintentarConexionNube(tenantId){
+  if(reintentoNubeTimer) return;
+  reintentoNubeIntento++;
+  // 5 s, 10 s, 20 s, 40 s… con tope de 5 minutos: se recupera enseguida de un
+  // corte tonto sin machacar la nube del negocio si el problema es de fondo.
+  const espera = Math.min(300000, 5000 * Math.pow(2, reintentoNubeIntento - 1));
+  reintentoNubeTimer = setTimeout(() => {
+    reintentoNubeTimer = null;
+    cloudRef = null;          // sin soltarlo, startCloudSync sale por la puerta de atrás
+    lastSyncedSnapshot = null;
+    startCloudSync(tenantId);
+  }, espera);
+}
+// Reintento a mano, desde el modal de la nube: el hostelero acaba de tocar
+// algo en Firebase y quiere comprobarlo YA, sin esperar al ciclo ni recargar.
+function reintentarNubeAhora(){
+  const tId = getTenantId();
+  if(!tId) return false;
+  if(reintentoNubeTimer){ clearTimeout(reintentoNubeTimer); reintentoNubeTimer = null; }
+  reintentoNubeIntento = 0;
+  cloudRef = null;
+  lastSyncedSnapshot = null;
+  lastSyncErrorCode = null;
+  updateSyncBadge('pending');
+  initCloud();
+  return true;
+}
+
+/* "Probar mi nube ahora". Hasta ahora el hostelero no tenía NINGUNA forma de
+   comprobar por sí mismo si la nube funcionaba: solo mirar un punto de color
+   en la cabecera e interpretarlo. Tocaba algo en Firebase, volvía a la app y
+   se quedaba esperando a ver si el color cambiaba, sin saber cuándo. */
+function probarNubeDesdeElModal(){
+  if(!reintentarNubeAhora()){ showToast(t('gate.testCloudNoLicense')); return; }
+  showToast(t('gate.testCloudRunning'));
+  // Se le contesta pase lo que pase: un botón que no responde es peor que no
+  // tener botón. 8 s es de sobra para conectar, y si no, hay veredicto igual.
+  setTimeout(() => {
+    if(lastSyncErrorCode || lastSyncBadgeState === 'error'){
+      showToast(t('gate.testCloudFail'));
+    } else if(lastSyncBadgeState === 'online'){
+      showToast(t('gate.testCloudOk'));
+    } else {
+      showToast(t('gate.testCloudSlow'));
+    }
+    if(typeof openCloudWizard === 'function' && document.getElementById('modal-overlay')?.classList.contains('active')) openCloudWizard();
+  }, 8000);
+}
+// El código de error no se transcribe a mano: se copia y se manda.
+function copiarErrorDeNube(){
+  const txt = String(lastSyncErrorCode || '');
+  if(!txt) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(() => showToast(t('msg.errorCopied'))).catch(() => {});
+  }
+}
+
 function startCloudSync(tenantId){
   if(cloudRef) return; // ya conectado
   try{
     cloudRef = firebase.database().ref('gastrogoan/tenants/' + tenantId + '/db');
     cloudRef.once('value').then(snap => {
       const val = snap.val();
+      reintentoNubeIntento = 0;   // conectó: la próxima vez se reintenta rápido otra vez
       updateSyncBadge('online');
       if(val === null){
         // Nube vacía: subir los datos locales como punto de partida. Dos
@@ -7595,8 +7809,13 @@ function startCloudSync(tenantId){
             setTimeout(() => waitForWinnerAfterLostRace(1), 1000);
           }
         }).catch(e => {
+          /* Antes se enganchaban los listeners y ya está, pero
+             `lastSyncedSnapshot` seguía a null y flushCloudSync se iba de
+             vacío SIEMPRE: el negocio no volvía a subir nada en todo el turno,
+             contra una nube además vacía. */
           recordSyncError(e);
           attachCloudChildListeners();
+          reintentarConexionNube(tenantId);
         });
       }else{
         mergeRemoteIntoLocal(val);
@@ -7604,9 +7823,19 @@ function startCloudSync(tenantId){
       }
     }, err => {
       recordSyncError(err);
+      reintentarConexionNube(tenantId);
     });
     firebase.database().ref('.info/connected').on('value', s => {
       socketConnected = !!s.val();
+      /* ⚠️ Esto NO puede borrar un error real. El socket se establece ANTES de
+         que Firebase evalúe las reglas, así que con las reglas mal puestas
+         `.info/connected` vale true igualmente y esta línea pintaba "Nube
+         conectada" en verde con la nube completamente rota. Peor todavía en un
+         móvil, que salta de wifi a datos cada poco: cada salto borraba el rojo
+         y con él la ÚNICA pantalla que explica qué paso falta.
+         Del rojo solo se sale con una prueba de verdad — una subida correcta o
+         un bloque que llega — que es lo que hace marcarNubeAlDia(). */
+      if(lastSyncErrorCode && socketConnected) return;
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
@@ -8566,7 +8795,14 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
-    ${lastSyncBadgeState === 'error'
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
+      ${lastSyncErrorCode ? `<button class="btn" style="flex:0 0 auto" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}
+    </div>
+    ${/* Por el error REAL, no por el color de este instante: un corte de red
+          dejaba el estado en 'offline' y este modal daba la nube por buena,
+          escondiendo el motivo justo cuando hacía falta. */
+      lastSyncErrorCode
       ? `<div style="background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-off"></i> ${t('gate.cloudErrorLong')}${
           // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
           // falta en vez de dejar al usuario adivinando entre seis pasos.
@@ -8595,7 +8831,7 @@ function openCloudWizard(){
       <a class="btn" style="flex:1;background:#188842;color:#fff;border-color:#188842;text-decoration:none;justify-content:center;display:inline-flex" href="https://wa.me/?text=${encodeURIComponent(t('mn.online.whatsappMsg').replace('${name}', DB.business?.name || t('mn.online.ourRestaurant')) + link)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-    <details${lastSyncBadgeState === 'error' ? ' open' : ''}>
+    <details${lastSyncErrorCode ? ' open' : ''}>
       <summary style="font-size:12.5px;font-weight:700;cursor:pointer;color:var(--muted)"><i class="ti ti-settings"></i> ${t('gate.changeFirebaseConfig')}</summary>
       <div style="margin-top:10px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:10px">${t('gate.emptyToDisconnect')}</p>
@@ -8953,7 +9189,7 @@ function pushAllToCloud(){
      envío no encontraba nada que mandar, no reintentaba nunca y el indicador
      se quedaba en ROJO para siempre sin que nada volviera a intentarlo.
      Es lo que el dueño contó como "la nube en rojo todo el rato". */
-  cloudRef.set(updates).then(() => {
+  cloudRef.set(sinIndefinidos(updates)).then(() => {
     Object.keys(pendingJson).forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
     marcarNubeAlDia({trasSubirBien: true});
   }).catch(e => {
@@ -9053,7 +9289,7 @@ function flushCloudSync(){
     scheduleCloudSyncRetry();
   };
   try{
-    cloudRef.update(updates).then(() => {
+    cloudRef.update(sinIndefinidos(updates)).then(() => {
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio
@@ -10706,7 +10942,12 @@ const I18N = {
     'btn.undoNoShow': 'Deshacer no presentado',
     'msg.confirmTableTooSmall': 'La mesa ${table} tiene ${plazas} plazas y el grupo es de ${people} personas. ¿Asignarla igualmente?',
     'msg.confirmDuplicateReservation': 'Ya hay otra reserva para este cliente a la misma fecha y hora. ¿Crearla igualmente?',
-    'label.noShowCount': 'Veces que no se ha presentado', 'btn.sendReminder': 'Enviar recordatorio', 'title.sendReminderTo': 'Recordatorio para',
+    'label.noShowCount': 'Veces que no se ha presentado',
+    /* Corto, para la cabecera de la columna: el largo no cabe y parte la
+       tabla. El largo se queda como texto de ayuda al pasar por encima.
+       Y se dice igual que en el resto de la app ("No presentado"), no
+       "no-show": el hostelero lee lo mismo en la reserva y en la ficha. */
+    'label.noShowCol': 'No presentados', 'btn.sendReminder': 'Enviar recordatorio', 'title.sendReminderTo': 'Recordatorio para',
     'label.marketingConsent': 'Acepta recibir promociones y premios por WhatsApp/email', 'btn.viewOrderHistory': 'Ver historial de pedidos',
     'btn.mergeClient': 'Fusionar con otro cliente',
     'merge.desc': 'Une la ficha de otro cliente duplicado con la de "${name}": se suman los puntos y el historial, y las ventas/reservas del duplicado pasan a esta ficha. La ficha duplicada se elimina (recuperable 30 días desde la papelera).',
@@ -11166,7 +11407,15 @@ const I18N = {
     'gate.miniStep5': 'Copia tu <code>apiKey</code> y <code>databaseURL</code> y pégalos abajo',
     'gate.miniStep6': 'En <strong>Authentication → Settings → Dominios autorizados</strong>, añade <code>app.gastrogoan.com</code> y <code>reservas.gastrogoan.com</code>. Sin esto Firebase rechaza la conexión: de fábrica solo autoriza sus propias direcciones.',
     'gate.cloudConnected': 'Este negocio está conectado a su nube Firebase', 'gate.connectMoreDevices': 'Para conectar más dispositivos',
-    'gate.cloudError.anon': '⚠️ Falta activar el inicio de sesión "Anónimo" en tu proyecto de Firebase (paso 3 de la guía de aquí abajo): Authentication → Método de acceso → Anónimo → activar y guardar.', 'gate.cloudError.domain': '⚠️ La dirección desde la que estás abriendo la app no está autorizada en tu Firebase. Añádela en Authentication → Settings → Dominios autorizados.', 'gate.cloudError.apikey': '⚠️ La clave de API no es válida. Vuelve a copiarla del paso 5 de la guía, sin espacios ni comillas.', 'gate.cloudError.network': '⚠️ No hay conexión a internet. Los datos se guardan en este dispositivo y se sincronizarán solos al recuperarla.', 'gate.cloudError.rules': '⚠️ Tu base de datos está rechazando la conexión: faltan las reglas de seguridad. Cópialas del paso 4 de la guía y pégalas en Realtime Database → Reglas.',
+    'gate.testCloudNow': 'Probar mi nube ahora',
+    'gate.copyError': 'Copiar el error', 'msg.errorCopied': 'Error copiado. Pégalo donde quieras mandarlo.',
+    'gate.testCloudRunning': 'Probando la conexión con tu nube…',
+    'gate.testCloudOk': '✅ Tu nube funciona. Los datos se están sincronizando.',
+    'gate.testCloudFail': '❌ Sigue sin conectar. Mira el motivo que sale aquí arriba.',
+    'gate.testCloudSlow': 'Está tardando más de lo normal. Vuelve a probar en un momento.',
+    'gate.testCloudNoLicense': 'Primero hay que activar el negocio con su código.',
+    'msg.folderNameChars': 'El nombre de una carpeta no puede llevar . $ # [ ] ni /. Escríbelo sin esos caracteres.',
+    'gate.cloudError.anon': '⚠️ Falta activar el inicio de sesión "Anónimo" en tu proyecto de Firebase (paso "Activa el inicio de sesión Anónimo" de la guía de aquí abajo): Authentication → Método de acceso → Anónimo → activar y guardar.', 'gate.cloudError.domain': '⚠️ La dirección desde la que estás abriendo la app no está autorizada en tu Firebase. Añádela en Authentication → Settings → Dominios autorizados.', 'gate.cloudError.apikey': '⚠️ La clave de API no es válida. Vuelve a copiarla del paso "Crea una app web y copia tus datos" de la guía de aquí abajo, sin espacios ni comillas.', 'gate.cloudError.network': '⚠️ No hay conexión a internet. Los datos se guardan en este dispositivo y se sincronizarán solos al recuperarla.', 'gate.cloudError.rules': '⚠️ Tu nube te rechaza. Casi siempre es una de estas dos cosas: (1) no pegaste las reglas de seguridad — están en el paso "Pega las reglas de seguridad" de la guía de aquí abajo, y van en Realtime Database → Reglas → Publicar; o (2) la URL de la base de datos que pegaste no es la de este proyecto. Comprueba primero la URL de aquí abajo.',
     'gate.cloudErrorLong': 'Hay un error de conexión con tu nube Firebase: los datos NO se están sincronizando. Revisa la configuración de abajo (clave de API y URL de la base de datos).',
     'gate.connectMoreDevicesBody': '(móviles de camareros, tablet de cocina): instala GastroGoan en ese dispositivo y activa la misma clave de licencia (${key}). Se sincronizará solo, automáticamente, sin pasos adicionales.',
     'gate.changeFirebaseConfig': 'Cambiar la configuración de Firebase', 'gate.emptyToDisconnect': 'Deja ambos campos vacíos y guarda para desconectar la nube de este negocio.',
@@ -12835,7 +13084,8 @@ const I18N = {
     'btn.undoNoShow': 'Desfer no presentat',
     'msg.confirmTableTooSmall': 'La taula ${table} té ${plazas} places i el grup és de ${people} persones. Assignar-la igualment?',
     'msg.confirmDuplicateReservation': 'Ja hi ha una altra reserva per a aquest client a la mateixa data i hora. Crear-la igualment?',
-    'label.noShowCount': 'Vegades que no s\'ha presentat', 'btn.sendReminder': 'Enviar recordatori', 'title.sendReminderTo': 'Recordatori per a',
+    'label.noShowCount': 'Vegades que no s\'ha presentat',
+    'label.noShowCol': 'No presentats', 'btn.sendReminder': 'Enviar recordatori', 'title.sendReminderTo': 'Recordatori per a',
     'label.marketingConsent': 'Accepta rebre promocions i premis per WhatsApp/email', 'btn.viewOrderHistory': 'Veure historial de comandes',
     'btn.mergeClient': 'Fusionar amb un altre client',
     'merge.desc': 'Uneix la fitxa d\'un altre client duplicat amb la de "${name}": se sumen els punts i l\'historial, i les vendes/reserves del duplicat passen a aquesta fitxa. La fitxa duplicada s\'elimina (recuperable 30 dies des de la paperera).',
@@ -13295,7 +13545,15 @@ const I18N = {
     'gate.miniStep5': 'Copia el teu <code>apiKey</code> i <code>databaseURL</code> i enganxa\'ls sota',
     'gate.miniStep6': 'A <strong>Authentication → Settings → Dominis autoritzats</strong>, afegeix <code>app.gastrogoan.com</code> i <code>reservas.gastrogoan.com</code>. Sense això Firebase rebutja la connexió: de fàbrica només autoritza les seves pròpies adreces.',
     'gate.cloudConnected': 'Aquest negoci està connectat al seu núvol Firebase', 'gate.connectMoreDevices': 'Per connectar més dispositius',
-    'gate.cloudError.anon': '⚠️ Falta activar l\'inici de sessió "Anònim" al teu projecte de Firebase (pas 3 de la guia de sota): Authentication → Mètode d\'accés → Anònim → activar i desar.', 'gate.cloudError.domain': '⚠️ L\'adreça des d\'on obres l\'app no està autoritzada al teu Firebase. Afegeix-la a Authentication → Settings → Dominis autoritzats.', 'gate.cloudError.apikey': '⚠️ La clau d\'API no és vàlida. Torna a copiar-la del pas 5 de la guia, sense espais ni cometes.', 'gate.cloudError.network': '⚠️ No hi ha connexió a internet. Les dades es guarden en aquest dispositiu i se sincronitzaran soles en recuperar-la.', 'gate.cloudError.rules': '⚠️ La teva base de dades rebutja la connexió: falten les regles de seguretat. Copia-les del pas 4 de la guia i enganxa-les a Realtime Database → Regles.',
+    'gate.testCloudNow': 'Provar el meu núvol ara',
+    'gate.copyError': 'Copiar l\'error', 'msg.errorCopied': 'Error copiat. Enganxa\'l on el vulguis enviar.',
+    'gate.testCloudRunning': 'Provant la connexió amb el teu núvol…',
+    'gate.testCloudOk': '✅ El teu núvol funciona. Les dades s\'estan sincronitzant.',
+    'gate.testCloudFail': '❌ Continua sense connectar. Mira el motiu que surt aquí dalt.',
+    'gate.testCloudSlow': 'Està trigant més del normal. Torna a provar-ho d\'aquí a una estona.',
+    'gate.testCloudNoLicense': 'Primer cal activar el negoci amb el seu codi.',
+    'msg.folderNameChars': 'El nom d\'una carpeta no pot portar . $ # [ ] ni /. Escriu-lo sense aquests caràcters.',
+    'gate.cloudError.anon': '⚠️ Falta activar l\'inici de sessió "Anònim" al teu projecte de Firebase (pas "Activa l\'inici de sessió Anònim" de la guia de sota): Authentication → Mètode d\'accés → Anònim → activar i desar.', 'gate.cloudError.domain': '⚠️ L\'adreça des d\'on obres l\'app no està autoritzada al teu Firebase. Afegeix-la a Authentication → Settings → Dominis autoritzats.', 'gate.cloudError.apikey': '⚠️ La clau d\'API no és vàlida. Torna a copiar-la del pas "Crea una app web i copia les teves dades" de la guia de sota, sense espais ni cometes.', 'gate.cloudError.network': '⚠️ No hi ha connexió a internet. Les dades es guarden en aquest dispositiu i se sincronitzaran soles en recuperar-la.', 'gate.cloudError.rules': '⚠️ El teu núvol et rebutja. Gairebé sempre és una d\'aquestes dues coses: (1) no vas enganxar les regles de seguretat — són al pas "Enganxa les regles de seguretat" de la guia de sota, i van a Realtime Database → Regles → Publicar; o (2) la URL de la base de dades que vas enganxar no és la d\'aquest projecte. Comprova primer la URL de sota.',
     'gate.cloudErrorLong': 'Hi ha un error de connexió amb el teu núvol Firebase: les dades NO s\'estan sincronitzant. Revisa la configuració de sota (clau d\'API i URL de la base de dades).',
     'gate.connectMoreDevicesBody': '(mòbils de cambrers, tauleta de cuina): instal·la GastroGoan en aquest dispositiu i activa la mateixa clau de llicència (${key}). Es sincronitzarà sol, automàticament, sense passos addicionals.',
     'gate.changeFirebaseConfig': 'Canviar la configuració de Firebase', 'gate.emptyToDisconnect': 'Deixa els dos camps buits i desa per desconnectar el núvol d\'aquest negoci.',
@@ -14967,7 +15225,8 @@ const I18N = {
     'btn.undoNoShow': 'Undo no-show',
     'msg.confirmTableTooSmall': 'Table ${table} seats ${plazas} and the party is ${people}. Assign it anyway?',
     'msg.confirmDuplicateReservation': 'There\'s already another reservation for this customer at the same date and time. Create it anyway?',
-    'label.noShowCount': 'Times marked as no-show', 'btn.sendReminder': 'Send reminder', 'title.sendReminderTo': 'Reminder for',
+    'label.noShowCount': 'Times marked as no-show',
+    'label.noShowCol': 'No-shows', 'btn.sendReminder': 'Send reminder', 'title.sendReminderTo': 'Reminder for',
     'label.marketingConsent': 'Accepts promotions and rewards by WhatsApp/email', 'btn.viewOrderHistory': 'View order history',
     'btn.mergeClient': 'Merge with another customer',
     'merge.desc': 'Merges another duplicate customer\'s record into "${name}": points and history are combined, and the duplicate\'s sales/reservations move to this record. The duplicate record is deleted (recoverable for 30 days from the trash).',
@@ -15428,7 +15687,15 @@ const I18N = {
     'gate.miniStep5': 'Copy your <code>apiKey</code> and <code>databaseURL</code> and paste them below',
     'gate.miniStep6': 'In <strong>Authentication → Settings → Authorized domains</strong>, add <code>app.gastrogoan.com</code> and <code>reservas.gastrogoan.com</code>. Without this Firebase refuses the connection: out of the box it only authorizes its own addresses.',
     'gate.cloudConnected': 'This business is connected to its Firebase cloud', 'gate.connectMoreDevices': 'To connect more devices',
-    'gate.cloudError.anon': '⚠️ You need to enable "Anonymous" sign-in in your Firebase project (step 3 of the guide below): Authentication → Sign-in method → Anonymous → enable and save.', 'gate.cloudError.domain': '⚠️ The address you are opening the app from is not authorised in your Firebase. Add it under Authentication → Settings → Authorised domains.', 'gate.cloudError.apikey': '⚠️ The API key is not valid. Copy it again from step 5 of the guide, with no spaces or quotes.', 'gate.cloudError.network': '⚠️ No internet connection. Data is saved on this device and will sync on its own once it is back.', 'gate.cloudError.rules': '⚠️ Your database is refusing the connection: the security rules are missing. Copy them from step 4 of the guide and paste them into Realtime Database → Rules.',
+    'gate.testCloudNow': 'Test my cloud now',
+    'gate.copyError': 'Copy the error', 'msg.errorCopied': 'Error copied. Paste it wherever you want to send it.',
+    'gate.testCloudRunning': 'Testing the connection to your cloud…',
+    'gate.testCloudOk': '✅ Your cloud works. Your data is syncing.',
+    'gate.testCloudFail': '❌ Still not connecting. Check the reason shown above.',
+    'gate.testCloudSlow': 'This is taking longer than usual. Try again in a moment.',
+    'gate.testCloudNoLicense': 'You need to activate the business with its code first.',
+    'msg.folderNameChars': 'A folder name cannot contain . $ # [ ] or /. Please write it without those characters.',
+    'gate.cloudError.anon': '⚠️ You need to enable "Anonymous" sign-in in your Firebase project (the "Enable Anonymous sign-in" step of the guide below): Authentication → Sign-in method → Anonymous → enable and save.', 'gate.cloudError.domain': '⚠️ The address you are opening the app from is not authorised in your Firebase. Add it under Authentication → Settings → Authorised domains.', 'gate.cloudError.apikey': '⚠️ The API key is not valid. Copy it again from the "Create a web app and copy your details" step of the guide below, with no spaces or quotes.', 'gate.cloudError.network': '⚠️ No internet connection. Data is saved on this device and will sync on its own once it is back.', 'gate.cloudError.rules': '⚠️ Your cloud is refusing you. It is almost always one of two things: (1) you did not paste the security rules — they are in the "Paste the security rules" step of the guide below, and go into Realtime Database → Rules → Publish; or (2) the database URL you pasted is not the one for this project. Check the URL below first.',
     'gate.cloudErrorLong': 'There is a connection error with your Firebase cloud: data is NOT syncing. Check the configuration below (API key and database URL).',
     'gate.connectMoreDevicesBody': '(waiters\' phones, kitchen tablet): install GastroGoan on that device and activate the same license key (${key}). It will sync automatically, with no extra steps.',
     'gate.changeFirebaseConfig': 'Change Firebase settings', 'gate.emptyToDisconnect': 'Leave both fields empty and save to disconnect this business\'s cloud.',
@@ -18518,8 +18785,8 @@ function renderDashboard(){
   // reponen y no deberían generar aviso) como elaboraciones (fondos, salsas,
   // caldos) por debajo de mínimo — antes el aviso principal del dashboard
   // solo miraba ingredientes, así que un fondo agotado no se notaba aquí.
-  const lowStockIngCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && ing.activo !== false && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
-  const lowStockElabCount = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===currentArea() && (e.qty||0) <= (e.min||0)).length;
+  const lowStockIngCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && ing.activo !== false && getStockEntry(ing.id).qty < getStockEntry(ing.id).min).length;
+  const lowStockElabCount = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===currentArea() && (e.qty||0) < (e.min||0)).length;
   const lowStockCount = lowStockIngCount + lowStockElabCount;
   // Antes el mantenimiento vencido (control de plagas, revisiones, etc.) solo
   // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
@@ -19407,6 +19674,9 @@ async function renameIngredientCategory(oldName){
   const nuevo = await promptText(t('msg.renameCategoryPrompt'), oldLabel);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
+  // El nombre acaba siendo una CLAVE de Firebase (iconos y lápidas): con
+  // . $ # [ ] / dentro, la sincronización del negocio entero se cae.
+  if(!nombreDeCarpetaValido(trimmed)) return;
   // Comparar contra la etiqueta TRADUCIDA (lo que de verdad se precargó y
   // ve quien escribe), no contra la clave interna en español: si no,
   // aceptar sin tocar nada en catalán/inglés sobre una categoría de
@@ -19489,6 +19759,8 @@ function confirmNewIngredientCategory(id){
   const state = ingredientFormStateBeforeCategory || currentIngredientFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
+    // Se avisa aquí, no al sincronizar: el nombre acaba siendo clave de Firebase.
+    if(!nombreDeCarpetaValido(cat)) return;
     if(!ingredientCategories().includes(cat) && !DB.ingredientCategories.includes(cat)) DB.ingredientCategories.push(cat);
     state.category = cat;
   } else {
@@ -19697,12 +19969,12 @@ function renderStock(){
   // render — y esto se repinta en cada +/- que se pulsa).
   let items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
     .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}))
-    .filter(row => onlyAlerts ? row.qty <= row.min : true);
+    .filter(row => onlyAlerts ? row.qty < row.min : true);
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
     const matchSearch = !search || e.name.toLowerCase().includes(search);
-    const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
+    const matchAlert = !onlyAlerts || (e.qty||0) < (e.min||0);
     return matchArea && matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, recipeId: e.recipeId||null, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
@@ -19714,8 +19986,8 @@ function renderStock(){
     const activeArea = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && ing.activo !== false);
     const allIngCount = activeArea.length;
     const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
-    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty <= s.min; }).length;
-    const lowElabCount = allElabList.filter(e => (e.qty||0) <= (e.min||0)).length;
+    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty < s.min; }).length;
+    const lowElabCount = allElabList.filter(e => (e.qty||0) < (e.min||0)).length;
     kpisBox.innerHTML = `
       <div class="kpi"><div class="label">${t('label.products')}</div><div class="value">${allIngCount}</div></div>
       <div class="kpi"><div class="label">${t('label.elaborations')}</div><div class="value">${allElabList.length}</div></div>
@@ -19725,15 +19997,25 @@ function renderStock(){
   }
 
   const renderRow = row => {
-    const low = row.qty <= row.min;
+    /* ⚠️ Bajo mínimo es ESTRICTAMENTE menor, no "menor o igual". Lo pidió el
+       dueño y tiene razón: con el mínimo justo todavía TIENES tu mínimo, no
+       te falta nada, y pintarlo en rojo enseña a desconfiar del rojo.
+       El mismo criterio en el contador de alertas y en el filtro "solo
+       alertas" (ver arriba): si no, una fila en verde seguiría contando como
+       alerta y el número de arriba no cuadraría con lo que se ve. */
+    const low = row.qty < row.min;
+    const ok = !low && row.min > 0;
     const isElab = row.type === 'elab';
     const fromEscandallo = isElab && !!row.recipeId;
-    // Antes el aviso de "bajo mínimo" era una pequeña etiqueta roja/verde
-    // fácil de pasar por alto en una lista larga — ahora todo el recuadro
-    // se pone en rojo, así se ve de un vistazo qué hay que reponer sin
-    // tener que leer cada fila una a una.
+    /* Antes el aviso de "bajo mínimo" era una pequeña etiqueta fácil de pasar
+       por alto en una lista larga: ahora se pinta el RECUADRO ENTERO, rojo si
+       falta y verde si está cubierto. Lo pidió así el dueño y probándolo se
+       ve por qué: con solo el número en verde hay que leer fila a fila, y con
+       el recuadro se recorre la lista de un vistazo.
+       Sin mínimo puesto (min = 0) no se pinta nada: ahí no hay nada que
+       cumplir, y teñirlo todo de verde quitaría valor al verde de verdad. */
     return `
-      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
+      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':ok?'background:var(--green-l);border:1px solid var(--green);border-radius:8px':''}">
         <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10.5px">${t('label.costingSheet')}</span>` : ''}</div>
         <div class="stock-row-values">
           <span class="stock-row-field">
@@ -19742,8 +20024,8 @@ function renderStock(){
               onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
           </span>
           <span class="stock-row-field">
-            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
-            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':ok?'color:var(--green);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
+            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':ok?'var(--green)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
               onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
             <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
           </span>
@@ -20354,6 +20636,9 @@ async function renameRecipeCategory(key){
   const nuevo = await promptText(t('msg.renameCategoryPrompt'), key);
   if(nuevo === null) return;
   const trimmed = nuevo.trim();
+  // El nombre acaba siendo una CLAVE de Firebase (iconos y lápidas): con
+  // . $ # [ ] / dentro, la sincronización del negocio entero se cae.
+  if(!nombreDeCarpetaValido(trimmed)) return;
   if(!trimmed || trimmed === key) return;
   // Solo las recetas de ESTA área: Cocina y Sala pueden tener, por
   // coincidencia, una categoría con el mismo nombre.
@@ -20839,6 +21124,8 @@ function confirmNewRecipeCategory(id){
   const state = recipeFormStateBeforeCategory || currentRecipeFormState(id);
   if(name && name.trim()){
     const cat = name.trim();
+    // Se avisa aquí, no al sincronizar: el nombre acaba siendo clave de Firebase.
+    if(!nombreDeCarpetaValido(cat)) return;
     const exists = areaRecipeCategories().some(c => (typeof c==='object'?c.name:c) === cat);
     if(!exists){ DB.recipeCategories.push({name: cat, area: currentArea()}); saveDB(); }
     state.category = cat;
@@ -23199,6 +23486,8 @@ function renderMenuList(){
               <td>${renderItemScheduleHtml(m)}</td>
               <td>${ngrupos}</td>
               <td class="actions-cell">
+                <button class="btn btn-sm ${m.disponible===false?'btn-danger':''}" onclick="toggleMenuDisponible(${m.id})">${m.disponible===false?t('common.unavailable'):t('common.available')}</button>
+                <button class="btn btn-sm ${m.stock!=null && m.stock<=0?'btn-danger':''}" style="${m.stock!=null && m.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuStock(${m.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${m.stock!=null ? t('label.portionsLeft').replace('${n}', m.stock) : t('btn.limitPortions')}</button>
                 <button class="owner-only btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
                 <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
               </td>
@@ -23208,6 +23497,43 @@ function renderMenuList(){
       </table>
     </div>
   `;
+}
+
+/* Disponible y raciones limitadas para el MENÚ entero, igual que para
+   cualquier plato de la Carta.
+
+   Faltaban aquí y es justo donde más falta hacen: el menú del día se agota
+   antes que ningún plato suelto ("hoy solo hay 20"), y hasta ahora la única
+   forma de quitarlo era el panel rápido del TPV — que no aparece por ningún
+   lado en la pantalla donde se gestionan los menús. El dueño lo contó como
+   que "las opciones no están", y tenía razón: en Carta cada plato tiene sus
+   dos botones y aquí no había ninguno. */
+function toggleMenuDisponible(id){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  m.disponible = m.disponible===false ? true : false;
+  logAudit('availability', t(m.disponible===false ? 'audit.dishMarkedOut' : 'audit.dishMarkedAvailable').replace('${name}', tItem(m)));
+  saveDB();
+  renderMenu();
+}
+// Mismo criterio que setCartaPlatoStock: vacío = sin límite (lo normal), un
+// número = raciones que quedan. El TPV lo va descontando al marchar y al
+// llegar a 0 el menú pasa a "No disponible" solo. No se resetea cada día a
+// propósito: hay que volver aquí y ponerle la cantidad de mañana.
+async function setMenuStock(id){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  const current = m.stock!=null ? String(m.stock) : '';
+  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(trimmed === ''){ delete m.stock; saveDB(); renderMenu(); return; }
+  const n = parseInt(trimmed);
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  m.stock = n;
+  m.disponible = n > 0;
+  saveDB();
+  renderMenu();
 }
 
 function newMenu(){
@@ -24830,6 +25156,7 @@ async function acceptOnlineOrder(orderId, auto){
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
+        decrementMenuStock(l.menuId, l.qty);
       }
     });
     order.cerrada = false;
@@ -25318,7 +25645,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       .filter(Boolean);
     const modExtra = selectedMods.reduce((s,mod) => s + (mod.precio||0), 0);
     extrasTotal += modExtra;
-    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId ?? null, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
   });
   const price = m.precio + suplementoTotal + extrasTotal;
   const notas = selections.map(s => {
@@ -25354,7 +25681,7 @@ function confirmAddMenuToOrder(orderId, menuId){
     } else {
       line = {
         lineId: genId(),
-        menuId: m.id, recipeId: s.recipeId, platoId: null,
+        menuId: m.id, recipeId: s.recipeId ?? null, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
         modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount
@@ -25430,6 +25757,7 @@ function marcharValeCompleto(orderId){
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
+        decrementMenuStock(line.menuId, qtyFired);
       }
     });
   }
@@ -25456,6 +25784,7 @@ function marcharLine(orderId, idx){
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -26007,6 +26336,7 @@ function marcharComanda(orderId, tanda, isMenu){
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
+      decrementMenuStock(l.menuId, qtyFired);
     }
   });
   order.cerrada = false;
@@ -26473,6 +26803,18 @@ function decrementDishStock(platoId, qty){
   p.stock = Math.max(0, p.stock - qty);
   if(p.stock === 0) p.disponible = false;
 }
+/* Lo mismo para un MENÚ entero ("hoy solo hay 20 menús del día"), que es
+   justo donde más falta hace: el menú se agota antes que ningún plato
+   suelto. Antes solo se podían limitar raciones de un plato de la Carta, así
+   que quien vendía menús no tenía forma de decir cuántos le quedaban y se
+   enteraba cuando ya los había vendido de más. */
+function decrementMenuStock(menuId, qty){
+  if(menuId == null || !qty || qty <= 0) return;
+  const m = (DB.menus||[]).find(x => x.id === menuId);
+  if(!m || m.stock == null) return;
+  m.stock = Math.max(0, m.stock - qty);
+  if(m.stock === 0) m.disponible = false;
+}
 // Tipo de IVA repercutido real de una línea de comanda, buscando en el
 // menú/plato/receta que la originó — se guarda (se "estampa") en cada línea
 // de la venta en el momento de cobrar, para que quede fijo en el histórico
@@ -26550,6 +26892,7 @@ function autoSendTakeawayLine(order, line){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
 }
 
@@ -26581,6 +26924,7 @@ function autoSendFirstCourse(order, line, tanda){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
 }
 
@@ -26605,7 +26949,13 @@ function addOrderItem(orderId, secId, platoId){
   let line;
   if(existing){ existing.qty += 1; line = existing; }
   else{
-    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    /* `?? null` y no `p.recipeId` a secas: un plato de la carta creado a mano
+       (o de datos antiguos) no tiene siquiera la clave, y la comanda se
+       quedaba con recipeId undefined. Firebase rechaza la subida ENTERA por
+       un solo undefined, así que una comanda así dejaba al negocio sin
+       sincronizar. El saneado de core.js ya lo cubre; esto lo arregla también
+       en el origen, para que el dato local sea correcto. */
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -26679,7 +27029,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   } else {
     line = {
       lineId: genId(),
-      platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
+      platoId: p.id, recipeId: p.recipeId ?? null, name, price: p.precio + extra, qty:1, tanda,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;
@@ -26873,6 +27223,18 @@ function restockForVoidedItems(items, opts){
         const wasOut = p.stock === 0;
         p.stock = p.stock + (line.qty||0);
         if(wasOut) p.disponible = true;
+      }
+    }
+    /* Y la ración del MENÚ entero. Sin esto, anular una comanda con menús
+       dejaba su contador por debajo de lo real: el restaurante se quedaba
+       creyendo que había servido menús que nunca salieron, y a media noche
+       el menú se marcaba agotado con raciones todavía por vender. */
+    if(!line.isShipping && line.menuId != null){
+      const m = (DB.menus||[]).find(x => x.id === line.menuId);
+      if(m && m.stock != null){
+        const wasOut = m.stock === 0;
+        m.stock = m.stock + (line.qty||0);
+        if(wasOut) m.disponible = true;
       }
     }
     // Una opción de menú elegida por stock directo (bebida de Carta con
@@ -39724,6 +40086,11 @@ function renderClientes(){
         else if(clientesSortField === 'total30d'){ va = a.stats.total30d; vb = b.stats.total30d; }
         else if(clientesSortField === 'totalYear'){ va = a.stats.totalYear; vb = b.stats.totalYear; }
         else if(clientesSortField === 'lastDate'){ va = a.stats.lastDate || ''; vb = b.stats.lastDate || ''; }
+        /* Los no-shows no salen de las estadísticas calculadas: es un contador
+           que vive en la ficha del cliente y se sube a mano al marcar la
+           reserva. Ordenar por aquí es lo que hace útil la columna — de un
+           vistazo, quién te está dejando mesas vacías. */
+        else if(clientesSortField === 'noShows'){ va = a.c.noShows || 0; vb = b.c.noShows || 0; }
         return va < vb ? -1*dir : va > vb ? 1*dir : 0;
       })
       .map(x => x.c);
@@ -39738,7 +40105,7 @@ function renderClientes(){
   const cardsBox = document.getElementById('clientes-cards');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
     if(cardsBox) cardsBox.innerHTML = `<div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div>`;
     return;
   }
@@ -39773,6 +40140,7 @@ function renderClientes(){
       <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
       <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>
       <td data-label="${t('label.totalYear')}">${fmtMoney(stats.totalYear)}</td>
+      <td data-label="${t('label.noShowCount')}">${c.noShows ? `<span class="badge badge-red"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td data-label="${t('label.loyaltyPoints')}"><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap" data-label="${t('common.notes')}">${escapeHtml(c.notes||'—')}</td>
       <td class="actions-cell" data-label="">
