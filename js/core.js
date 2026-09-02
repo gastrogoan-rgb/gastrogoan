@@ -2162,6 +2162,16 @@ function volverAlAccesoTrasRevocacion(){
   salirDeLaRevocacion();
   exitToAccessScreen();
 }
+/* Quitar del aparato el negocio anulado. Es la única salida que rompe el
+   bucle: mientras siga siendo el negocio activo, cada arranque vuelve a
+   comprobar la anulación y vuelve a bloquear, se entre por donde se entre.
+   Los datos de ese negocio están en su propia nube: si la licencia se
+   reactiva, se recuperan volviendo a canjear el código. */
+function quitarNegocioRevocado(){
+  salirDeLaRevocacion();
+  if(typeof removeBusinessSlot === 'function') removeBusinessSlot(getActiveSlot());
+  else exitToAccessScreen();
+}
 // Y el atajo para quien acaba de comprar una licencia nueva.
 function canjearTrasRevocacion(){
   salirDeLaRevocacion();
@@ -2199,8 +2209,15 @@ function showRevokedGate(){
            anulado por error a las once de la noche, se queda tirado con la
            app inservible. -->
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
-        <button class="btn btn-primary" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
-        <button class="btn" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+        <button class="btn btn-primary" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+        <button class="btn" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
+        <!-- ⚠️ La tercera salida, y la que de verdad resuelve el caso: sin
+             ella el negocio anulado se queda pegado al aparato PARA SIEMPRE.
+             Volver al login no sirve, porque al entrar otra vez se carga el
+             mismo negocio y vuelve a bloquear. El dueño lo contó como "cada
+             vez que entro en la URL de la app me salta esa pantalla". -->
+        <button class="btn btn-danger" style="min-height:44px" onclick="quitarNegocioRevocado()"><i class="ti ti-trash"></i> ${t('access.revokedRemove')}</button>
+        <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.5">${t('access.revokedRemoveHint')}</p>
       </div>
     </div>`;
   document.body.appendChild(g);
