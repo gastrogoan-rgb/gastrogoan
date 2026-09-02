@@ -69,8 +69,9 @@ lanzar; node test/permisos.mjs             > "$SALIDA/permisos.txt"   2>&1 & P35
 lanzar; node test/apple.mjs                > "$SALIDA/apple.txt"      2>&1 & P36=$!
 lanzar; node test/puesta.mjs               > "$SALIDA/puesta.txt"     2>&1 & P37=$!
 lanzar; node test/categorias.mjs           > "$SALIDA/categorias.txt" 2>&1 & P38=$!
+lanzar; node test/reglas.mjs               > "$SALIDA/reglas.txt" 2>&1 & P39=$!
 
-echo "→ 38 pruebas, de $TANDA en $TANDA…"
+echo "→ 39 pruebas, de $TANDA en $TANDA…"
 FALLOS=0
 espera(){ # pid, nombre, fichero, patrón de éxito
   # ⚠️ El patrón NO puede llevar el número de casos a pelo ("los 10 casos
@@ -119,5 +120,6 @@ espera $P35 "los 6 modos de sesion (empleado, edicion, reparto)" "$SALIDA/permis
 espera $P36 "iPhone y iPad (trampas de Safari)"        "$SALIDA/apple.txt"     "los [0-9]+ casos pasaron"
 espera $P37 "la puesta a punto del negocio"            "$SALIDA/puesta.txt"    "los [0-9]+ casos pasaron"
 espera $P38 "renombrar y borrar carpetas"              "$SALIDA/categorias.txt" "los [0-9]+ casos pasaron"
+espera $P39 "las reglas de Firebase, coherentes"        "$SALIDA/reglas.txt"     "los [0-9]+ casos pasaron"
 
 exit $FALLOS
