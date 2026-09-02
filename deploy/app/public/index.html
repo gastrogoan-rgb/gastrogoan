@@ -2897,7 +2897,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '02/09/2026 17:04';
+const GG_BUILD = '02/09/2026 23:02';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -5146,8 +5146,8 @@ const FIREBASE_RULES_JSON = `{
           "requests": {
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
-              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && !data.exists()",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
+              ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pago_confirmado')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -6216,6 +6216,57 @@ function getActiveKitchenOrdersCount(){
    en ella (sus reglas también exigen auth != null). Devuelve una promesa
    que resuelve con esa instancia ya autenticada, o null si Firebase no
    está disponible. */
+/* ⚠️ LA CONEXIÓN CON LA PLATAFORMA SE SUELTA CUANDO NO SE USA.
+
+   Esto es lo que decide si el proyecto aguanta 5.000 licencias o 67.
+
+   El plan gratuito de Firebase no limita el tráfico: limita CONEXIONES
+   ABIERTAS A LA VEZ, cien. Y la Firebase de la plataforma es UNA SOLA para
+   todos los negocios del mundo, así que esas cien se reparten entre todos.
+   El SDK, en cuanto tocas `app.database()`, abre un socket y NO LO CIERRA
+   NUNCA: cada pestaña de la app de gestión se quedaba con una conexión de la
+   plataforma para toda la sesión. A 5.000 negocios × 2,5 aparatos eso son
+   miles de conexiones contra un límite de cien — y cuando se llega no falla
+   un negocio: falla la plataforma para TODOS a la vez (nadie entra con su
+   cuenta, nadie canjea licencias).
+
+   Pero nada de lo que la app le pide a la plataforma es un flujo continuo:
+   entrar, canjear un código, buscar dónde vive la nube del negocio. Son
+   operaciones puntuales. Así que se hace lo mismo que ya hace la web pública
+   de reservas —y por eso esa parte sí escala—: se usa y se suelta.
+
+   La ÚNICA excepción es un negocio que todavía recibe sus reservas por la
+   plataforma (reglas antiguas, `espejoEnNubePropia === false`): ese sí tiene
+   un oyente permanente y su conexión no se puede tocar. Por eso importa tanto
+   que esos negocios se muden, y por eso ahora se les avisa. */
+const PLATAFORMA_ESPERA_ANTES_DE_SOLTAR = 30000;
+let plataformaSoltarTimer = null;
+let plataformaEnUsoPermanente = false;
+
+// Un oyente permanente contra la plataforma: a partir de aquí no se suelta.
+function marcarPlataformaEnUsoPermanente(){
+  plataformaEnUsoPermanente = true;
+  if(plataformaSoltarTimer){ clearTimeout(plataformaSoltarTimer); plataformaSoltarTimer = null; }
+}
+function soltarPlataforma(){
+  plataformaSoltarTimer = null;
+  if(plataformaEnUsoPermanente) return;
+  try{
+    const app = firebase.app('platform');
+    // goOffline y no delete(): cierra el socket pero deja la app viva, así la
+    // siguiente operación solo tiene que reconectar, sin volver a autenticarse.
+    if(app) app.database().goOffline();
+  }catch(e){ /* nunca llegó a crearse: no hay nada que soltar */ }
+}
+/* Margen generoso a propósito. El riesgo de soltar demasiado pronto es cortar
+   una operación a medias en una conexión mala, y eso sí se nota; el de soltar
+   tarde es tener el socket abierto medio minuto de más, que no se nota. */
+function programarSoltarPlataforma(){
+  if(plataformaEnUsoPermanente) return;
+  if(plataformaSoltarTimer) clearTimeout(plataformaSoltarTimer);
+  plataformaSoltarTimer = setTimeout(soltarPlataforma, PLATAFORMA_ESPERA_ANTES_DE_SOLTAR);
+}
+
 function getPlatformFirebaseApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
   try{
@@ -6231,7 +6282,13 @@ function getPlatformFirebaseApp(){
         ? Promise.resolve(app)
         : app.auth().signInAnonymously().then(()=>app).catch(err => { console.error('Error de autenticación con la plataforma', err); platformAuthPromise = null; return null; });
     }
-    return platformAuthPromise;
+    return platformAuthPromise.then(a => {
+      if(!a) return a;
+      // Por si la conexión estaba soltada de una operación anterior.
+      try{ a.database().goOnline(); }catch(e){}
+      programarSoltarPlataforma();
+      return a;
+    });
   }catch(e){
     console.error('Error iniciando la plataforma', e);
     return Promise.resolve(null);
@@ -6275,9 +6332,19 @@ function getPlatformFirebaseApp(){
    hasta ahora. Y en cuanto el hostelero pegue las reglas nuevas, se muda
    solo, sin que nadie tenga que hacer nada. */
 let espejoEnNubePropia = null;   // null = sin comprobar · true/false = comprobado
+// El negocio tiene las reglas de una versión anterior: todo funciona, pero sus
+// reservas siguen pasando por la nube compartida. Hay que decírselo.
+let reglasAntiguas = false;
 function getPublicMirrorApp(){
   if(typeof firebase === 'undefined') return Promise.resolve(null);
-  if(espejoEnNubePropia === false) return getPlatformFirebaseApp();
+  if(espejoEnNubePropia === false){
+    /* Este negocio recibe sus reservas POR LA PLATAFORMA (reglas antiguas), y
+       eso es un oyente permanente: su conexión no se puede soltar o dejaría de
+       enterarse de las reservas que entran. Es la única excepción, y el motivo
+       de que ahora se le avise para que actualice sus reglas. */
+    marcarPlataformaEnUsoPermanente();
+    return getPlatformFirebaseApp();
+  }
   const cfg = (typeof getCloudConfig === 'function') ? getCloudConfig() : null;
   if(cfg && cfg.apiKey && cfg.databaseURL){
     try{
@@ -6302,10 +6369,20 @@ async function comprobarEspejoEnNubePropia(){
   try{
     // Se prueban los nodos que las reglas VIEJAS no contemplaban: si estos
     // pasan, el resto también.
+    /* ⚠️ Se limpia el HIJO, no el padre — y esto no es un detalle: era lo que
+       tenía rota la mudanza entera. Las reglas dan `.write` en
+       `aforoHold/$fecha/$turno`, y en Firebase el permiso BAJA pero no SUBE,
+       así que borrar `aforoHold/_prueba` se rechazaba SIEMPRE. O sea que la
+       sonda fallaba incluso en un negocio con las reglas NUEVAS bien pegadas:
+       `espejoEnNubePropia` se quedaba en false y NINGÚN negocio se mudaba
+       nunca a su propia nube. De ahí que la plataforma compartida siguiera
+       aguantando el peso de todos, que es el techo de ~67 negocios. */
     const base = app.database().ref('gastrogoan/public/' + publicId);
     await base.child('aforoHold/_prueba/_prueba').set(0);
-    await base.child('aforoHold/_prueba').remove();
-    await base.child('orderStatus/_prueba').set({ts: Date.now()});
+    await base.child('aforoHold/_prueba/_prueba').remove();
+    // Y con los campos que el `.validate` de orderStatus espera, no un {ts}
+    // inventado: si no, la sonda vuelve a fallar en cuanto ese validate exista.
+    await base.child('orderStatus/_prueba').set({status: '_prueba', updatedAt: Date.now()});
     await base.child('orderStatus/_prueba').remove();
     espejoEnNubePropia = true;
     publishPublicLookup(publicId, cfg);
@@ -6313,8 +6390,13 @@ async function comprobarEspejoEnNubePropia(){
   }catch(e){
     // Reglas antiguas: se queda donde estaba y se vuelve a intentar en el
     // siguiente arranque, por si el hostelero ya las ha actualizado.
+    /* Antes esto era SOLO un console.warn, sitio al que un hostelero no entra
+       nunca: se quedaba en la nube compartida para siempre sin enterarse, y la
+       mudanza —de la que depende que esto aguante 5.000 negocios— no ocurría
+       jamás para él. Ahora se anota para poder decírselo en el panel de nube. */
     console.warn('La nube del negocio todavía no acepta el espejo público completo; se sigue usando la compartida', e && e.message);
     espejoEnNubePropia = false;
+    reglasAntiguas = true;
     return false;
   }
 }
@@ -8795,6 +8877,10 @@ function openCloudWizard(){
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <p style="font-size:11.5px;color:var(--muted);margin:-6px 0 10px"><i class="ti ti-key"></i> ${t('gate.licenseActivatedFor')}: <strong>${lic.code}</strong></p>
+    ${reglasAntiguas ? `<div style="background:var(--amber-l,#FDF3E0);border-left:3px solid var(--amber,#D98F3F);padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.55">
+      <strong><i class="ti ti-alert-triangle"></i> ${t('gate.oldRulesTitle')}</strong><br>${t('gate.oldRulesBody')}
+      <div style="margin-top:10px"><button class="btn btn-sm" onclick="copyFirebaseRules()"><i class="ti ti-copy"></i> ${t('gate.copyRules')}</button></div>
+    </div>` : ''}
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="btn" style="flex:1" onclick="probarNubeDesdeElModal()"><i class="ti ti-refresh"></i> ${t('gate.testCloudNow')}</button>
       ${lastSyncErrorCode ? `<button class="btn" style="flex:0 0 auto" onclick="copiarErrorDeNube()"><i class="ti ti-copy"></i> ${t('gate.copyError')}</button>` : ''}
@@ -11408,6 +11494,9 @@ const I18N = {
     'gate.miniStep6': 'En <strong>Authentication → Settings → Dominios autorizados</strong>, añade <code>app.gastrogoan.com</code> y <code>reservas.gastrogoan.com</code>. Sin esto Firebase rechaza la conexión: de fábrica solo autoriza sus propias direcciones.',
     'gate.cloudConnected': 'Este negocio está conectado a su nube Firebase', 'gate.connectMoreDevices': 'Para conectar más dispositivos',
     'gate.testCloudNow': 'Probar mi nube ahora',
+    'gate.copyRules': 'Copiar las reglas nuevas',
+    'gate.oldRulesTitle': 'Tienes las reglas de seguridad de una versión anterior',
+    'gate.oldRulesBody': 'Todo funciona y no pierdes nada, pero tus reservas y pedidos online siguen pasando por el servidor compartido de GastroGoan en vez de por tu propia nube. Copia las reglas nuevas y pégalas en Firebase → Realtime Database → Reglas → Publicar. Después vuelve aquí y pulsa "Probar mi nube ahora".',
     'gate.copyError': 'Copiar el error', 'msg.errorCopied': 'Error copiado. Pégalo donde quieras mandarlo.',
     'gate.testCloudRunning': 'Probando la conexión con tu nube…',
     'gate.testCloudOk': '✅ Tu nube funciona. Los datos se están sincronizando.',
@@ -13546,6 +13635,9 @@ const I18N = {
     'gate.miniStep6': 'A <strong>Authentication → Settings → Dominis autoritzats</strong>, afegeix <code>app.gastrogoan.com</code> i <code>reservas.gastrogoan.com</code>. Sense això Firebase rebutja la connexió: de fàbrica només autoritza les seves pròpies adreces.',
     'gate.cloudConnected': 'Aquest negoci està connectat al seu núvol Firebase', 'gate.connectMoreDevices': 'Per connectar més dispositius',
     'gate.testCloudNow': 'Provar el meu núvol ara',
+    'gate.copyRules': 'Copiar les regles noves',
+    'gate.oldRulesTitle': 'Tens les regles de seguretat d\'una versió anterior',
+    'gate.oldRulesBody': 'Tot funciona i no perds res, però les teves reserves i comandes en línia continuen passant pel servidor compartit de GastroGoan en comptes de pel teu propi núvol. Copia les regles noves i enganxa-les a Firebase → Realtime Database → Regles → Publicar. Després torna aquí i prem "Provar el meu núvol ara".',
     'gate.copyError': 'Copiar l\'error', 'msg.errorCopied': 'Error copiat. Enganxa\'l on el vulguis enviar.',
     'gate.testCloudRunning': 'Provant la connexió amb el teu núvol…',
     'gate.testCloudOk': '✅ El teu núvol funciona. Les dades s\'estan sincronitzant.',
@@ -15688,6 +15780,9 @@ const I18N = {
     'gate.miniStep6': 'In <strong>Authentication → Settings → Authorized domains</strong>, add <code>app.gastrogoan.com</code> and <code>reservas.gastrogoan.com</code>. Without this Firebase refuses the connection: out of the box it only authorizes its own addresses.',
     'gate.cloudConnected': 'This business is connected to its Firebase cloud', 'gate.connectMoreDevices': 'To connect more devices',
     'gate.testCloudNow': 'Test my cloud now',
+    'gate.copyRules': 'Copy the new rules',
+    'gate.oldRulesTitle': 'Your security rules are from an older version',
+    'gate.oldRulesBody': 'Everything works and nothing is lost, but your online bookings and orders still go through GastroGoan\'s shared server instead of your own cloud. Copy the new rules and paste them into Firebase → Realtime Database → Rules → Publish. Then come back here and press "Test my cloud now".',
     'gate.copyError': 'Copy the error', 'msg.errorCopied': 'Error copied. Paste it wherever you want to send it.',
     'gate.testCloudRunning': 'Testing the connection to your cloud…',
     'gate.testCloudOk': '✅ Your cloud works. Your data is syncing.',
