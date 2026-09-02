@@ -876,6 +876,23 @@
           <button class="btn btn-sm" onclick="copyHelpContactEmail()"><i class="ti ti-copy"></i> <span data-i18n="help.contact.copy"></span></button>
         </div>
       </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0">
+      <!-- Informar de un fallo. Aparte del contacto normal a propósito: lo que
+           hace útil un aviso de fallo es el CONTEXTO técnico, y eso el
+           hostelero no lo sabe contar. Lo rellena la app. -->
+      <i class="ti ti-bug"></i>
+      <h4 data-i18n="help.bug.title"></h4>
+      <p data-i18n="help.bug.desc"></p>
+      <div class="field" style="text-align:left;margin-bottom:10px">
+        <label data-i18n="help.bug.whatHappened"></label>
+        <textarea id="bug-que-paso" rows="3" data-i18n-placeholder="help.bug.whatHappenedPh"></textarea>
+      </div>
+      <div class="field" style="text-align:left;margin-bottom:10px">
+        <label data-i18n="help.bug.expected"></label>
+        <textarea id="bug-que-esperaba" rows="2" data-i18n-placeholder="help.bug.expectedPh"></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="enviarInformeDeFallo()"><i class="ti ti-send"></i> <span data-i18n="help.bug.send"></span></button>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5" data-i18n="help.bug.privacy"></p>
     </div>
   </div>
 </div>

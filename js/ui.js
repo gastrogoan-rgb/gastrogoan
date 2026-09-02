@@ -1178,6 +1178,78 @@ function openHelpContactEmail(){
   const body = encodeURIComponent(t('help.contact.bodyIntro') + ((DB.business && DB.business.name) ? ' ' + t('help.contact.businessSuffix').replace('${name}', DB.business.name) : '') + ':\n\n');
   window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + subject + '&body=' + body;
 }
+/* ============================================================
+   INFORMAR DE UN FALLO
+   ============================================================
+   De los fallos serios encontrados hasta hoy, casi todos los encontró el dueño
+   USANDO la app, no las pruebas. Con 5.000 licencias habrá 5.000 personas
+   usándola de formas que nadie puede simular, y hasta ahora esa información no
+   tenía por dónde llegar: el cliente se encuentra algo raro, se encoge de
+   hombros y sigue. Un fallo que nadie cuenta es un fallo que sigue ahí.
+
+   Lo que hace útil un aviso NO es la descripción —"no me deja editar los
+   empleados" costó una conversación entera de averiguar—, es el CONTEXTO
+   técnico. Y eso el hostelero no lo sabe contar. Lo rellena la app.
+
+   Se manda por `mailto:`, abriendo su propio correo: sin servidor, sin
+   formulario de pago, sin nada que crezca con el número de licencias. A 5.000
+   clientes sigue costando cero. Lo que se pierde es que puede cerrar el correo
+   sin darle a enviar; es un precio justo por no montar un backend.
+
+   ⚠️ NO VIAJA NINGÚN DATO DEL NEGOCIO. Ni ventas, ni clientes, ni el código de
+   licencia, ni PINes. Solo qué pantalla, qué versión, qué navegador y en qué
+   estado está la nube. */
+function contextoParaInformeDeFallo(){
+  const lineas = [];
+  const vista = document.querySelector('.view.active');
+  lineas.push('Pantalla: ' + (vista ? vista.id.replace('view-', '') : '(ninguna)'));
+  lineas.push('Área: ' + (typeof currentArea === 'function' ? currentArea() : '?'));
+  lineas.push('Versión: ' + (typeof GG_BUILD !== 'undefined' ? GG_BUILD : '?'));
+  lineas.push('Idioma: ' + (typeof getLang === 'function' ? getLang() : '?'));
+  // Qué modo de sesión: el mismo fallo se comporta distinto según quién entre,
+  // y es lo primero que hay que saber para reproducirlo.
+  const ses = (typeof getAccessSession === 'function') ? getAccessSession() : null;
+  lineas.push('Sesión: ' + (ses ? ses.type + (ses.area ? ' (' + ses.area + ')' : '') : '?'));
+  lineas.push('Nube: ' + (typeof lastSyncBadgeState !== 'undefined' ? (lastSyncBadgeState || 'sin conectar') : '?')
+    + (typeof lastSyncErrorCode !== 'undefined' && lastSyncErrorCode ? ' — ' + lastSyncErrorCode : ''));
+  lineas.push('Pantalla: ' + window.innerWidth + '×' + window.innerHeight);
+  lineas.push('Navegador: ' + navigator.userAgent);
+  if(Array.isArray(window.ggErroresRecientes) && window.ggErroresRecientes.length){
+    lineas.push('Últimos errores: ' + window.ggErroresRecientes.slice(-3).join(' | '));
+  }
+  return lineas.join('\n');
+}
+
+/* Los errores de JavaScript que se hayan producido, para adjuntarlos. Es lo
+   que convierte "se queda en blanco" en algo localizable. Solo los tres
+   últimos y recortados: no se trata de mandar un volcado. */
+if(typeof window !== 'undefined'){
+  window.ggErroresRecientes = [];
+  window.addEventListener('error', e => {
+    const txt = (e && e.message ? e.message : 'error') + (e && e.filename ? ' @' + String(e.filename).split('/').pop() + ':' + e.lineno : '');
+    window.ggErroresRecientes.push(txt.slice(0, 200));
+    if(window.ggErroresRecientes.length > 5) window.ggErroresRecientes.shift();
+  });
+}
+
+function enviarInformeDeFallo(){
+  const quePaso = (document.getElementById('bug-que-paso') || {}).value || '';
+  const queEsperaba = (document.getElementById('bug-que-esperaba') || {}).value || '';
+  if(!quePaso.trim()){
+    showToast(t('help.bug.needWhat'));
+    const el = document.getElementById('bug-que-paso');
+    if(el) el.focus();
+    return;
+  }
+  const nombre = (DB.business && DB.business.name) || '';
+  const asunto = 'FALLO GastroGoan' + (nombre ? ' - ' + nombre : '');
+  const cuerpo = t('help.bug.mailWhat') + ':\n' + quePaso.trim()
+    + '\n\n' + t('help.bug.mailExpected') + ':\n' + (queEsperaba.trim() || '-')
+    + '\n\n--- ' + t('help.bug.mailContext') + ' ---\n' + contextoParaInformeDeFallo() + '\n';
+  window.location.href = 'mailto:gastrogoan@gmail.com?subject=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
+  showToast(t('help.bug.sent'));
+}
+
 // Copia el email de soporte al portapapeles, por si el cliente de correo
 // del dispositivo no se abre automáticamente con el enlace mailto.
 function copyHelpContactEmail(){
