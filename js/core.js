@@ -5658,6 +5658,13 @@ function openCloudWizard(){
           // Si Firebase dijo POR QUÉ falló, se enseña el paso concreto que
           // falta en vez de dejar al usuario adivinando entre seis pasos.
           syncErrorHintKey() ? `<div style="font-weight:400;font-size:13px;margin-top:8px;line-height:1.5">${t(syncErrorHintKey())}</div>` : ''
+        }${
+          /* Y SIEMPRE el motivo tal cual lo dice Firebase. Cuando el código no
+             se reconoce, antes no se enseñaba nada: el hostelero veía "Error
+             de nube" a secas y no había forma de saber qué pasaba sin abrir la
+             consola del navegador, sitio al que no entra nadie. Con esto puede
+             copiarlo y mandarlo, que es lo que lo hace resoluble. */
+          lastSyncErrorCode ? `<div style="font-weight:400;font-size:11.5px;margin-top:8px;opacity:.85"><code>${escapeHtml(String(lastSyncErrorCode))}</code></div>` : ''
         }</div>`
       : `<div style="background:var(--green-l);color:var(--green);padding:12px 16px;border-radius:10px;font-weight:700;margin-bottom:14px"><i class="ti ti-cloud-check"></i> ${t('gate.cloudConnected')}</div>`}
     <p style="font-size:13.5px;margin-bottom:14px"><strong>${t('gate.connectMoreDevices')}</strong> ${t('gate.connectMoreDevicesBody').replace('${key}', `<code>${lic.code}</code>`)}</p>
@@ -6022,12 +6029,23 @@ function saveDB(){
 function pushAllToCloud(){
   if(!cloudRef) return;
   const updates = {};
+  const pendingJson = {};
   Object.keys(DB).forEach(key => {
     updates[key] = DB[key];
-    lastSyncedSnapshot[key] = canonicalStringify(DB[key]);
+    pendingJson[key] = canonicalStringify(DB[key]);
   });
-  cloudRef.set(updates).catch(e => {
+  /* ⚠️ La foto de "lo ya enviado" se apunta DESPUÉS de que la subida salga
+     bien, nunca antes. Apuntarla antes dejaba el peor estado posible cuando
+     fallaba: la app creía que ya estaba todo subido, así que el siguiente
+     envío no encontraba nada que mandar, no reintentaba nunca y el indicador
+     se quedaba en ROJO para siempre sin que nada volviera a intentarlo.
+     Es lo que el dueño contó como "la nube en rojo todo el rato". */
+  cloudRef.set(updates).then(() => {
+    Object.keys(pendingJson).forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
+    marcarNubeAlDia({trasSubirBien: true});
+  }).catch(e => {
     recordSyncError(e);
+    scheduleCloudSyncRetry();
   });
 }
 
