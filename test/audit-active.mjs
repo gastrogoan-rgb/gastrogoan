@@ -594,5 +594,29 @@ await testAsync('FIX H5: el indicador ROJO vuelve a verde cuando la nube funcion
     'tras una subida correcta, el indicador tiene que volver a verde');
 });
 
+await testAsync('FIX H6: el rojo tampoco se queda clavado en un negocio donde nadie toca nada', async () => {
+  /* Lo contó el dueño: "la nube me sale en rojo mucho rato". H5 solo quitaba
+     el rojo tras una SUBIDA correcta, y en un local con la app abierta en un
+     rincón no hay nada que subir en horas — así que un fallo pasajero, ya
+     resuelto, seguía pintado en la cabecera toda la tarde.
+     Un bloque que LLEGA de la nube demuestra igual de bien que funciona. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setSocketConnected(true);
+  sandbox.__setDB({ingredients: ['a']});
+  sandbox.__setLastSyncedSnapshot({ingredients: sandbox.canonicalStringify([])});
+
+  sandbox.__setCloudRef({update: async () => { throw new Error('wifi caída'); }});
+  sandbox.flushCloudSync();
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(sandbox.__getSyncBadgeState(), 'error', 'un envío fallido tiene que verse');
+  sandbox.__clearCloudSyncRetryTimer();
+
+  // Nadie toca nada, pero la nube vuelve y manda un bloque: verde.
+  sandbox.marcarNubeAlDia({trasProbarNube: true});
+  assert.equal(sandbox.__getSyncBadgeState(), 'online',
+    'un bloque que llega de la nube demuestra que funciona y tiene que quitar el rojo');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

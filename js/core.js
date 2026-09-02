@@ -4525,8 +4525,17 @@ function applyRemoteBlock(key, remoteValue){
    ("ingredients", "tpvOrders", "clients"...) que realmente cambian. */
 function attachCloudChildListeners(){
   const onErr = err => recordSyncError(err);
-  cloudRef.on('child_added', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
-  cloudRef.on('child_changed', snap => applyRemoteBlock(snap.key, snap.val()), onErr);
+  /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
+     por eso quita el rojo igual que lo quitaba una subida buena.
+     Sin esto el indicador se quedaba en rojo horas: una vez marcado, solo
+     salía de ahí con una SUBIDA correcta, y en un negocio donde nadie está
+     tocando nada no hay nada que subir — así que el fallo, ya resuelto,
+     seguía pintado en la cabecera. Es justo el caso de un local con la app
+     abierta en un rincón. Y no es tapar el problema: mientras el problema
+     siga, no llega ningún bloque y el rojo se queda. */
+  const onOk = snap => { marcarNubeAlDia({trasProbarNube: true}); applyRemoteBlock(snap.key, snap.val()); };
+  cloudRef.on('child_added', onOk, onErr);
+  cloudRef.on('child_changed', onOk, onErr);
   cloudRef.on('child_removed', snap => {
     const def = defaultData();
     if(!def.hasOwnProperty(snap.key)) return;
@@ -6082,8 +6091,10 @@ function scheduleCloudSyncRetry(){
    y se suspende al apagar la pantalla, eso pasa constantemente. */
 function marcarNubeAlDia(opciones){
   if(!socketConnected) return;
-  const trasSubirBien = opciones && opciones.trasSubirBien;
-  if(lastSyncBadgeState === 'pending' || (trasSubirBien && lastSyncBadgeState === 'error')){
+  // Sirve como prueba tanto una SUBIDA correcta como un bloque que LLEGA de
+  // la nube: las dos cosas demuestran que vuelve a funcionar de verdad.
+  const hayPrueba = opciones && (opciones.trasSubirBien || opciones.trasProbarNube);
+  if(lastSyncBadgeState === 'pending' || (hayPrueba && lastSyncBadgeState === 'error')){
     lastSyncErrorCode = null;
     updateSyncBadge('online');
   }
