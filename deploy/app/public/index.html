@@ -2914,7 +2914,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 00:03';
+const GG_BUILD = '03/09/2026 00:57';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -4130,11 +4130,27 @@ function confirmRemoveBusinessSlot(slotId){
   closeModal();
   reallyRemoveBusinessSlot(slotId);
 }
+/* Cierra la conexión abierta con IndexedDB. Hace falta antes de borrar la base
+   de un hueco: `deleteDatabase` sobre una base ABIERTA se queda bloqueado y no
+   borra NADA, sin lanzar ningún error. La app mantiene la conexión viva
+   (`_idbPromise`), así que quitar el negocio activo no borraba sus datos
+   nunca — seguían ahí para el siguiente que cayera en ese hueco. */
+function cerrarIdb(){
+  const p = _idbPromise;
+  _idbPromise = null;
+  if(!p) return Promise.resolve();
+  return p.then(db => { try{ db.close(); }catch(e){} }).catch(() => {});
+}
 function reallyRemoveBusinessSlot(slotId){
   const slots = getBusinessSlots();
   const slot = slots.find(s => s.id === slotId);
   if(!slot) return;
-  indexedDB.deleteDatabase(slotIdbName(slotId));
+  const borrarBase = () => {
+    const req = indexedDB.deleteDatabase(slotIdbName(slotId));
+    req.onblocked = () => console.warn('Borrado de datos bloqueado: queda alguna pestaña abierta con este negocio', slotId);
+  };
+  if(slotId === ACTIVE_SLOT) cerrarIdb().then(borrarBase);
+  else borrarBase();
   // Sacarlo también de la cuenta en la nube: si solo se borrara de aquí,
   // syncOwnerBusinessList lo volvería a añadir en el siguiente arranque y
   // daría la sensación de que "no se deja borrar".
@@ -4352,11 +4368,11 @@ async function confirmChangeOwnerPassword(){
   if(!ok){ showToast(t(reason === 'offline' ? 'access.pinChangeOffline' : 'access.badCredentials')); return; }
   closeModal();
   showToast(t('msg.pinUpdated'));
-  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; reanudarAltaDelPropietario(); }
 }
 function closeOwnerPassPrompt(){
   closeModal();
-  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; reanudarAltaDelPropietario(); }
 }
 
 function renderBsGroups(allSlots){
@@ -5080,6 +5096,16 @@ function volverAlAccesoTrasRevocacion(){
   salirDeLaRevocacion();
   exitToAccessScreen();
 }
+/* Quitar del aparato el negocio anulado. Es la única salida que rompe el
+   bucle: mientras siga siendo el negocio activo, cada arranque vuelve a
+   comprobar la anulación y vuelve a bloquear, se entre por donde se entre.
+   Los datos de ese negocio están en su propia nube: si la licencia se
+   reactiva, se recuperan volviendo a canjear el código. */
+function quitarNegocioRevocado(){
+  salirDeLaRevocacion();
+  if(typeof removeBusinessSlot === 'function') removeBusinessSlot(getActiveSlot());
+  else exitToAccessScreen();
+}
 // Y el atajo para quien acaba de comprar una licencia nueva.
 function canjearTrasRevocacion(){
   salirDeLaRevocacion();
@@ -5089,6 +5115,18 @@ function canjearTrasRevocacion(){
 
 function showRevokedGate(){
   if(document.getElementById('revoked-gate')) return;
+  /* ⚠️ ACTUALIZAR A LA FUERZA, y sin preguntar.
+
+     Esta pantalla se muerde la cola: tapa toda la app (z-index 100001) y la
+     barra de "hay una versión nueva" sale por debajo (99998). O sea que un
+     aparato bloqueado aquí NO PUEDE ACTUALIZARSE, porque el aviso para
+     actualizar está tapado justo por la pantalla de la que hay que salir. Si
+     el arreglo llega en una versión nueva —como pasó con las salidas de esta
+     misma pantalla—, no llega nunca.
+
+     Y aquí actualizar es seguro por definición: no hay nada a medias que
+     perder, la app está bloqueada y no se puede tocar nada. */
+  if(typeof comprobarVersionPublicada === 'function') comprobarVersionPublicada(true).catch(()=>{});
   const g = document.createElement('div');
   g.id = 'revoked-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100001;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -5105,8 +5143,15 @@ function showRevokedGate(){
            anulado por error a las once de la noche, se queda tirado con la
            app inservible. -->
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
-        <button class="btn btn-primary" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
-        <button class="btn" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+        <button class="btn btn-primary" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+        <button class="btn" style="min-height:44px" onclick="volverAlAccesoTrasRevocacion()"><i class="ti ti-logout"></i> ${t('access.revokedBack')}</button>
+        <!-- ⚠️ La tercera salida, y la que de verdad resuelve el caso: sin
+             ella el negocio anulado se queda pegado al aparato PARA SIEMPRE.
+             Volver al login no sirve, porque al entrar otra vez se carga el
+             mismo negocio y vuelve a bloquear. El dueño lo contó como "cada
+             vez que entro en la URL de la app me salta esa pantalla". -->
+        <button class="btn btn-danger" style="min-height:44px" onclick="quitarNegocioRevocado()"><i class="ti ti-trash"></i> ${t('access.revokedRemove')}</button>
+        <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.5">${t('access.revokedRemoveHint')}</p>
       </div>
     </div>`;
   document.body.appendChild(g);
@@ -5594,6 +5639,29 @@ async function activateLicenseFromGate(){
     err.style.display = 'block';
     return;
   }
+  /* ⚠️ EL HUECO NO PUEDE ARRASTRAR LOS DATOS DE OTRO NEGOCIO.
+
+     Un hueco sin código en el registro puede seguir teniendo DENTRO la base de
+     datos del negocio que hubo antes: al quitar un negocio se limpiaba la
+     ficha del registro, pero los datos del hueco seguían ahí. Y como el paso
+     siguiente decide si hace falta configurar la nube mirando
+     `DB.business.ownFirebase`, la encontraba puesta —la del negocio anterior—,
+     SE SALTABA EL ASISTENTE ENTERO y enganchaba el negocio recién canjeado a
+     la nube de otra cuenta. Con la carta, las ventas y los clientes de otro.
+
+     Lo contó el dueño canjeando una licencia con una cuenta nueva: "no me ha
+     pedido nada de configurar, y al ir a ver la nube veo que lo ha copiado
+     todo de newrest, que tenía creado en otra cuenta".
+
+     Volver a canjear EL MISMO código no vacía nada: eso es una reinstalación
+     legítima y sus datos tienen que seguir donde estaban. */
+  const licenciaVieja = DB.license && DB.license.code;
+  const arrastraOtroNegocio = (licenciaVieja && licenciaVieja !== lic.code)
+    || (!licenciaVieja && DB.business && DB.business.ownFirebase);
+  if(arrastraOtroNegocio){
+    console.warn('El hueco arrastraba datos de otro negocio: se vacía antes de activar', licenciaVieja || '(sin licencia, pero con nube)');
+    DB = defaultData();
+  }
   localStorage.setItem(LICENSE_LS, JSON.stringify(lic));
   DB.license = lic;
   saveDB();
@@ -5655,6 +5723,22 @@ function continuePendingOwnerSetup(){
 // justo tras activarla, se anima a cambiarla por una propia. Se pregunta
 // solo una vez por dispositivo (aceptar o no queda guardado igual, para no
 // insistir en cada sesión).
+/* ⚠️ RETOMAR EL ALTA DONDE SE QUEDÓ.
+
+   `continuePendingOwnerSetup()` devuelve false cuando ya no hay ningún paso
+   que enseñar — y para una cuenta RECIÉN CREADA eso pasa enseguida, porque
+   todavía no tiene ningún negocio que configurar. El problema es que los tres
+   sitios que lo llamaban al cerrar el modal del PIN no hacían nada con ese
+   false: el modal se cerraba y el cliente se quedaba DENTRO DE LA APP vacía,
+   sin selector, sin pedirle el código ni la nube. Justo lo que contó el dueño
+   al entrar con una cuenta nueva: "entro de golpe, sin pedir configuración".
+
+   El selector vacío, con su botón de canjear, es lo que toca ahí. */
+function reanudarAltaDelPropietario(){
+  if(continuePendingOwnerSetup()) return;
+  showBusinessSelectScreen();
+}
+
 function promptChangeOwnerPasswordFirstTime(){
   openModal(`
     <div class="modal-header">
@@ -5662,7 +5746,7 @@ function promptChangeOwnerPasswordFirstTime(){
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('access.changePasswordFirstDesc')}</p>
     <div class="modal-footer">
-      <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();continuePendingOwnerSetup()">${t('common.later')}</button>
+      <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();reanudarAltaDelPropietario()">${t('common.later')}</button>
       <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword(true)">${t('access.changePassword')}</button>
     </div>
   `);
@@ -10855,7 +10939,7 @@ const I18N = {
     'access.pinReset': 'PIN actualizado. Vuelve a entrar con tu nuevo PIN.',
     'access.ownerPinRequiredForReset': 'Para resetear el PIN de un empleado hace falta el PIN del negocio:',
     'title.enterBusinessPin': 'PIN del negocio',
-    'access.revokedTitle': 'Licencia desactivada', 'access.revokedRedeem': 'Canjear otro código', 'access.revokedBack': 'Volver al inicio de sesión',
+    'access.revokedTitle': 'Licencia desactivada', 'access.revokedRedeem': 'Canjear otro código', 'access.revokedBack': 'Volver al inicio de sesión', 'access.revokedRemove': 'Quitar este negocio de este dispositivo', 'access.revokedRemoveHint': 'Es lo único que quita este aviso del todo: mientras el negocio siga aquí, la app volverá a bloquearse cada vez que la abras. Sus datos siguen en su nube y se recuperan volviendo a canjear el código si se reactiva.',
     'access.revokedDesc': 'Esta clave de licencia ha sido desactivada. Si crees que es un error, ponte en contacto con quien te vendió GastroGoan.',
     'audit.employeePinResetByMaster': 'Reseteó el PIN de ${name} con el código maestro',
     'access.badCredentials': 'Nombre, PIN o código de negocio incorrectos.',
@@ -13013,7 +13097,7 @@ const I18N = {
     'access.pinReset': 'PIN actualitzat. Torna a entrar amb el teu nou PIN.',
     'access.ownerPinRequiredForReset': 'Per resetejar el PIN d\'un empleat cal el PIN del negoci:',
     'title.enterBusinessPin': 'PIN del negoci',
-    'access.revokedTitle': 'Llicència desactivada', 'access.revokedRedeem': 'Bescanviar un altre codi', 'access.revokedBack': 'Tornar a l\'inici de sessió',
+    'access.revokedTitle': 'Llicència desactivada', 'access.revokedRedeem': 'Bescanviar un altre codi', 'access.revokedBack': 'Tornar a l\'inici de sessió', 'access.revokedRemove': 'Treure aquest negoci d\'aquest dispositiu', 'access.revokedRemoveHint': 'És l\'única cosa que treu aquest avís del tot: mentre el negoci segueixi aquí, l\'app es tornarà a bloquejar cada cop que l\'obris. Les seves dades segueixen al seu núvol i es recuperen tornant a bescanviar el codi si es reactiva.',
     'access.revokedDesc': 'Aquesta clau de llicència ha estat desactivada. Si creus que és un error, contacta amb qui et va vendre GastroGoan.',
     'audit.employeePinResetByMaster': 'Va resetejar el PIN de ${name} amb el codi mestre',
     'access.badCredentials': 'Nom, PIN o codi de negoci incorrectes.',
@@ -15171,7 +15255,7 @@ const I18N = {
     'access.pinReset': 'PIN updated. Sign in again with your new PIN.',
     'access.ownerPinRequiredForReset': 'Resetting an employee\'s PIN requires the business PIN:',
     'title.enterBusinessPin': 'Business PIN',
-    'access.revokedTitle': 'License deactivated', 'access.revokedRedeem': 'Redeem another code', 'access.revokedBack': 'Back to sign in',
+    'access.revokedTitle': 'License deactivated', 'access.revokedRedeem': 'Redeem another code', 'access.revokedBack': 'Back to sign in', 'access.revokedRemove': 'Remove this business from this device', 'access.revokedRemoveHint': 'This is the only thing that clears this notice for good: while the business is still here, the app will lock again every time you open it. Its data stays in its own cloud and comes back by redeeming the code again if it is reactivated.',
     'access.revokedDesc': 'This license key has been deactivated. If you think this is a mistake, contact whoever sold you GastroGoan.',
     'audit.employeePinResetByMaster': 'Reset ${name}\'s PIN with the master code',
     'access.badCredentials': 'Wrong name, PIN or business code.',
@@ -38393,7 +38477,11 @@ function mostrarAvisoVersionNueva(build){
   barra.style.cssText = [
     'position:fixed', 'left:12px', 'right:12px',
     'bottom:calc(12px + env(safe-area-inset-bottom, 0px))',
-    'z-index:99998', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
+    // Por encima de CUALQUIER capa, incluidas las pantallas de bloqueo que
+    // ocupan toda la ventana: si el aviso de actualizar queda debajo de una
+    // de ellas, ese aparato no se puede actualizar nunca — que es justo lo
+    // que pasó con la pantalla de licencia desactivada.
+    'z-index:100002', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
     'padding:14px 18px', 'border-radius:12px',
     'box-shadow:0 6px 24px rgba(0,0,0,.28)',
     'display:flex', 'align-items:center', 'justify-content:center',
