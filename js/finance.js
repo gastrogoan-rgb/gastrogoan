@@ -1504,12 +1504,15 @@ function renderStock(){
     const ok = !low && row.min > 0;
     const isElab = row.type === 'elab';
     const fromEscandallo = isElab && !!row.recipeId;
-    // Antes el aviso de "bajo mínimo" era una pequeña etiqueta roja/verde
-    // fácil de pasar por alto en una lista larga — ahora todo el recuadro
-    // se pone en rojo, así se ve de un vistazo qué hay que reponer sin
-    // tener que leer cada fila una a una.
+    /* Antes el aviso de "bajo mínimo" era una pequeña etiqueta fácil de pasar
+       por alto en una lista larga: ahora se pinta el RECUADRO ENTERO, rojo si
+       falta y verde si está cubierto. Lo pidió así el dueño y probándolo se
+       ve por qué: con solo el número en verde hay que leer fila a fila, y con
+       el recuadro se recorre la lista de un vistazo.
+       Sin mínimo puesto (min = 0) no se pinta nada: ahí no hay nada que
+       cumplir, y teñirlo todo de verde quitaría valor al verde de verdad. */
     return `
-      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':''}">
+      <div class="list-row stock-row" style="padding:8px 10px;${low?'background:var(--red-l);border:1px solid var(--red);border-radius:8px':ok?'background:var(--green-l);border:1px solid var(--green);border-radius:8px':''}">
         <div class="list-row-name"><span title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</span>${fromEscandallo ? ` <span class="badge badge-gray" style="font-size:10.5px">${t('label.costingSheet')}</span>` : ''}</div>
         <div class="stock-row-values">
           <span class="stock-row-field">
