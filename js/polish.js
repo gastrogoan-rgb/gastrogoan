@@ -159,7 +159,11 @@ function mostrarAvisoVersionNueva(build){
   barra.style.cssText = [
     'position:fixed', 'left:12px', 'right:12px',
     'bottom:calc(12px + env(safe-area-inset-bottom, 0px))',
-    'z-index:99998', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
+    // Por encima de CUALQUIER capa, incluidas las pantallas de bloqueo que
+    // ocupan toda la ventana: si el aviso de actualizar queda debajo de una
+    // de ellas, ese aparato no se puede actualizar nunca — que es justo lo
+    // que pasó con la pantalla de licencia desactivada.
+    'z-index:100002', 'background:var(--brand-orange,#D97C3F)', 'color:#fff',
     'padding:14px 18px', 'border-radius:12px',
     'box-shadow:0 6px 24px rgba(0,0,0,.28)',
     'display:flex', 'align-items:center', 'justify-content:center',

@@ -2171,6 +2171,18 @@ function canjearTrasRevocacion(){
 
 function showRevokedGate(){
   if(document.getElementById('revoked-gate')) return;
+  /* ⚠️ ACTUALIZAR A LA FUERZA, y sin preguntar.
+
+     Esta pantalla se muerde la cola: tapa toda la app (z-index 100001) y la
+     barra de "hay una versión nueva" sale por debajo (99998). O sea que un
+     aparato bloqueado aquí NO PUEDE ACTUALIZARSE, porque el aviso para
+     actualizar está tapado justo por la pantalla de la que hay que salir. Si
+     el arreglo llega en una versión nueva —como pasó con las salidas de esta
+     misma pantalla—, no llega nunca.
+
+     Y aquí actualizar es seguro por definición: no hay nada a medias que
+     perder, la app está bloqueada y no se puede tocar nada. */
+  if(typeof comprobarVersionPublicada === 'function') comprobarVersionPublicada(true).catch(()=>{});
   const g = document.createElement('div');
   g.id = 'revoked-gate';
   g.style.cssText = 'position:fixed;inset:0;z-index:100001;background:var(--brand-cream);overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px';
