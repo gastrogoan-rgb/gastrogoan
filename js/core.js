@@ -1710,6 +1710,33 @@ const CLOUD_SYNC_DELAY = 800; // ms — agrupa varios cambios rápidos en un sol
 // OJO: no respeta toJSON(), así que un objeto Date se serializaría como {} y
 // dos fechas distintas parecerían iguales. Hoy no aplica (en DB las fechas
 // se guardan siempre como texto), pero no metas objetos Date en DB.
+/* Firebase RECHAZA la subida ENTERA si en cualquier rincón hay un `undefined`:
+   "update failed: values argument contains undefined in property ...". No es
+   un aviso ni se salta ese campo — tira todo el envío, así que un solo campo
+   suelto deja al negocio sin sincronizar y con el indicador en rojo. Le pasó
+   al dueño en mitad de una prueba, con un `recipeId` de una comanda.
+
+   No basta con arreglar el sitio donde salió: la app guarda cientos de campos
+   y basta con que UNO llegue sin valor (un dato viejo al que le falta la
+   clave, un objeto creado antes de que ese campo existiera) para volver a
+   romperlo todo. Por eso se limpia AQUÍ, justo antes de enviar, que es el
+   único punto por el que pasa todo.
+
+   En los objetos la clave se quita —que es lo que Firebase entiende por "no
+   está"— y en las listas el hueco se pone a null, porque borrarlo correría
+   los índices y cambiaría el dato. */
+function sinIndefinidos(v){
+  if(v === undefined) return null;
+  if(v === null || typeof v !== 'object') return v;
+  if(Array.isArray(v)) return v.map(x => x === undefined ? null : sinIndefinidos(x));
+  const out = {};
+  Object.keys(v).forEach(k => {
+    if(v[k] === undefined) return; // la clave desaparece, no viaja vacía
+    out[k] = sinIndefinidos(v[k]);
+  });
+  return out;
+}
+
 function canonicalStringify(value){
   if(Array.isArray(value)) return '[' + value.map(canonicalStringify).join(',') + ']';
   if(value && typeof value === 'object'){
@@ -3955,7 +3982,10 @@ function syncPublicMirror(){
       // página pública de reservas/pedidos podía quedarse con datos
       // desactualizados (horario, carta, precios...) sin que nadie se
       // enterara. Ahora al menos se loguea y se avisa al usuario.
-      app.database().ref('gastrogoan/public/' + publicId + '/info').set(data).catch(e => {
+      // Mismo motivo que en las subidas del negocio: un solo `undefined` en
+      // cualquier rincón (la carta, un menú, una mesa) tumbaría el envío
+      // entero y la web pública se quedaría con datos viejos.
+      app.database().ref('gastrogoan/public/' + publicId + '/info').set(sinIndefinidos(data)).catch(e => {
         console.error('Error publicando el espejo público', e);
         if(typeof showToast === 'function') showToast(t('msg.publicSyncFailed'));
       });
@@ -6052,7 +6082,7 @@ function pushAllToCloud(){
      envío no encontraba nada que mandar, no reintentaba nunca y el indicador
      se quedaba en ROJO para siempre sin que nada volviera a intentarlo.
      Es lo que el dueño contó como "la nube en rojo todo el rato". */
-  cloudRef.set(updates).then(() => {
+  cloudRef.set(sinIndefinidos(updates)).then(() => {
     Object.keys(pendingJson).forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
     marcarNubeAlDia({trasSubirBien: true});
   }).catch(e => {
@@ -6152,7 +6182,7 @@ function flushCloudSync(){
     scheduleCloudSyncRetry();
   };
   try{
-    cloudRef.update(updates).then(() => {
+    cloudRef.update(sinIndefinidos(updates)).then(() => {
       keys.forEach(key => { lastSyncedSnapshot[key] = pendingJson[key]; });
       // Solo se vuelve a "conectado" si ya no queda ningún bloque distinto
       // del último sincronizado — si mientras tanto se hizo otro cambio

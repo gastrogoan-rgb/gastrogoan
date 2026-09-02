@@ -618,5 +618,30 @@ await testAsync('FIX H6: el rojo tampoco se queda clavado en un negocio donde na
     'un bloque que llega de la nube demuestra que funciona y tiene que quitar el rojo');
 });
 
+await testAsync('FIX H7: un campo sin valor no puede tumbar la subida entera', async () => {
+  /* Lo pilló el dueño en mitad de una prueba:
+       "update failed: values argument contains undefined in property
+        ...db.tpvOrders.9.items.0.recipeId"
+     Firebase no se salta ese campo: RECHAZA EL ENVÍO COMPLETO. O sea que una
+     comanda de un plato sin receta vinculada dejaba al negocio entero sin
+     sincronizar, con el indicador en rojo. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  sandbox.__setSocketConnected(true);
+
+  const limpio = sandbox.sinIndefinidos({
+    tpvOrders: [{id: 9, items: [{recipeId: undefined, platoId: 3, name: 'Plato'}]}],
+    business: {name: 'X', telefono: undefined},
+    lista: [1, undefined, 3],
+  });
+  assert.ok(!('recipeId' in limpio.tpvOrders[0].items[0]),
+    'la clave sin valor tiene que desaparecer, que es lo que Firebase entiende por "no está"');
+  assert.equal(limpio.tpvOrders[0].items[0].platoId, 3, 'y el resto del objeto se conserva');
+  assert.ok(!('telefono' in limpio.business), 'a cualquier profundidad');
+  assert.deepEqual(limpio.lista, [1, null, 3],
+    'en una lista el hueco va a null: quitarlo correría los índices y cambiaría el dato');
+  assert.equal(JSON.stringify(limpio).includes('undefined'), false, 'no puede quedar ni uno');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

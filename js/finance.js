@@ -287,8 +287,8 @@ function renderDashboard(){
   // reponen y no deberían generar aviso) como elaboraciones (fondos, salsas,
   // caldos) por debajo de mínimo — antes el aviso principal del dashboard
   // solo miraba ingredientes, así que un fondo agotado no se notaba aquí.
-  const lowStockIngCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && ing.activo !== false && getStockEntry(ing.id).qty <= getStockEntry(ing.id).min).length;
-  const lowStockElabCount = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===currentArea() && (e.qty||0) <= (e.min||0)).length;
+  const lowStockIngCount = DB.ingredients.filter(ing => (ing.area||'cocina')===currentArea() && ing.activo !== false && getStockEntry(ing.id).qty < getStockEntry(ing.id).min).length;
+  const lowStockElabCount = (DB.elaboraciones||[]).filter(e => (e.area||'cocina')===currentArea() && (e.qty||0) < (e.min||0)).length;
   const lowStockCount = lowStockIngCount + lowStockElabCount;
   // Antes el mantenimiento vencido (control de plagas, revisiones, etc.) solo
   // se veía si entrabas manualmente a la pestaña de Limpieza > Mantenimiento —
@@ -1466,12 +1466,12 @@ function renderStock(){
   // render — y esto se repinta en cada +/- que se pulsa).
   let items = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && (!search || ing.name.toLowerCase().includes(search)))
     .map(ing => ({type:'ing', id: ing.id, name: ing.name, unit: ing.unit, category: ing.category || t('label.noCategory'), ...getStockEntry(ing.id)}))
-    .filter(row => onlyAlerts ? row.qty <= row.min : true);
+    .filter(row => onlyAlerts ? row.qty < row.min : true);
 
   let elabs = (DB.elaboraciones||[]).filter(e => {
     const matchArea = (e.area||'cocina') === currentArea();
     const matchSearch = !search || e.name.toLowerCase().includes(search);
-    const matchAlert = !onlyAlerts || (e.qty||0) <= (e.min||0);
+    const matchAlert = !onlyAlerts || (e.qty||0) < (e.min||0);
     return matchArea && matchSearch && matchAlert;
   }).map(e => ({type:'elab', id: e.id, recipeId: e.recipeId||null, name: e.name, unit: e.unit, qty: e.qty||0, min: e.min||0}));
 
@@ -1483,8 +1483,8 @@ function renderStock(){
     const activeArea = DB.ingredients.filter(ing => (ing.area||'cocina') === currentArea() && ing.activo !== false);
     const allIngCount = activeArea.length;
     const allElabList = (DB.elaboraciones||[]).filter(e => (e.area||'cocina') === currentArea());
-    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty <= s.min; }).length;
-    const lowElabCount = allElabList.filter(e => (e.qty||0) <= (e.min||0)).length;
+    const lowIngCount = activeArea.filter(ing => { const s = getStockEntry(ing.id); return s.qty < s.min; }).length;
+    const lowElabCount = allElabList.filter(e => (e.qty||0) < (e.min||0)).length;
     kpisBox.innerHTML = `
       <div class="kpi"><div class="label">${t('label.products')}</div><div class="value">${allIngCount}</div></div>
       <div class="kpi"><div class="label">${t('label.elaborations')}</div><div class="value">${allElabList.length}</div></div>
@@ -1494,7 +1494,14 @@ function renderStock(){
   }
 
   const renderRow = row => {
-    const low = row.qty <= row.min;
+    /* ⚠️ Bajo mínimo es ESTRICTAMENTE menor, no "menor o igual". Lo pidió el
+       dueño y tiene razón: con el mínimo justo todavía TIENES tu mínimo, no
+       te falta nada, y pintarlo en rojo enseña a desconfiar del rojo.
+       El mismo criterio en el contador de alertas y en el filtro "solo
+       alertas" (ver arriba): si no, una fila en verde seguiría contando como
+       alerta y el número de arriba no cuadraría con lo que se ve. */
+    const low = row.qty < row.min;
+    const ok = !low && row.min > 0;
     const isElab = row.type === 'elab';
     const fromEscandallo = isElab && !!row.recipeId;
     // Antes el aviso de "bajo mínimo" era una pequeña etiqueta roja/verde
@@ -1511,8 +1518,8 @@ function renderStock(){
               onchange="${isElab ? `updateElaboracionMin(${row.id}, this.value)` : `updateStockMin(${row.id}, this.value)`}">
           </span>
           <span class="stock-row-field">
-            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
-            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
+            <span style="font-size:11.5px;${low?'color:var(--red);font-weight:700':ok?'color:var(--green);font-weight:700':'color:var(--muted)'}">${t('label.currentAbbrev')}</span>
+            <input type="number" value="${row.qty}" step="0.01" min="0" style="width:65px;padding:3px 5px;border:1px solid ${low?'var(--red)':ok?'var(--green)':'var(--border)'};border-radius:6px;font-size:13px" ${editUnlocked?'':'disabled'}
               onchange="${isElab ? `updateElaboracionQty(${row.id}, this.value)` : `updateStockQty(${row.id}, this.value)`}">
             <span style="font-size:12.5px;color:var(--muted)">${escapeHtml(row.unit)}</span>
           </span>

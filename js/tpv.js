@@ -1748,7 +1748,7 @@ function confirmAddMenuToOrder(orderId, menuId){
       .filter(Boolean);
     const modExtra = selectedMods.reduce((s,mod) => s + (mod.precio||0), 0);
     extrasTotal += modExtra;
-    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId ?? null, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
   });
   const price = m.precio + suplementoTotal + extrasTotal;
   const notas = selections.map(s => {
@@ -1784,7 +1784,7 @@ function confirmAddMenuToOrder(orderId, menuId){
     } else {
       line = {
         lineId: genId(),
-        menuId: m.id, recipeId: s.recipeId, platoId: null,
+        menuId: m.id, recipeId: s.recipeId ?? null, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
         modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount
@@ -3052,7 +3052,13 @@ function addOrderItem(orderId, secId, platoId){
   let line;
   if(existing){ existing.qty += 1; line = existing; }
   else{
-    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
+    /* `?? null` y no `p.recipeId` a secas: un plato de la carta creado a mano
+       (o de datos antiguos) no tiene siquiera la clave, y la comanda se
+       quedaba con recipeId undefined. Firebase rechaza la subida ENTERA por
+       un solo undefined, así que una comanda así dejaba al negocio sin
+       sincronizar. El saneado de core.js ya lo cubre; esto lo arregla también
+       en el origen, para que el dato local sea correcto. */
+    line = {lineId: genId(), platoId: p.id, recipeId: p.recipeId ?? null, name: tItem(p), price: p.precio, qty:1, tanda, notas:''};
     if(isSeccionBebida(secId)) line.bebida = true;
     applyActivePromoToLine(line);
     order.items.push(line);
@@ -3126,7 +3132,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
   } else {
     line = {
       lineId: genId(),
-      platoId: p.id, recipeId: p.recipeId, name, price: p.precio + extra, qty:1, tanda,
+      platoId: p.id, recipeId: p.recipeId ?? null, name, price: p.precio + extra, qty:1, tanda,
       notas, modificadores: selectedMods.map(m=>({nombre:m.nombre, precio:m.precio}))
     };
     if(isSeccionBebida(secId)) line.bebida = true;
