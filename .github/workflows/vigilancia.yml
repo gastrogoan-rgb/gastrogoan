@@ -64,6 +64,31 @@ jobs:
             || { echo "❌ Responde, pero no es la web de reservas"; exit 1; }
           echo "   ✅ en pie"
 
+      - name: La plataforma responde (cuentas y licencias)
+        run: |
+          # Por qué esto importa más de lo que parece: si la Firebase compartida
+          # de la plataforma se cae o agota su cuota gratuita, NINGÚN cliente
+          # nuevo puede entrar con su cuenta ni canjear una licencia, y las
+          # webs de reservas de los negocios que aún no se han mudado dejan de
+          # resolver. No falla un negocio: fallan todos a la vez.
+          #
+          # Se consulta por HTTPS (no por el SDK) contra un nodo de lectura
+          # abierta a propósito: no hacen falta credenciales, no abre ninguna
+          # conexión y no gasta cuota apreciable. Es la misma llamada que hace
+          # la web pública de reservas de cada cliente, así que si esto
+          # responde, a ellos también les responde.
+          BASE=https://plataforma-gastrogoan-default-rtdb.europe-west1.firebasedatabase.app
+          echo "→ $BASE/gastrogoan/publicSlugs.json?shallow=true"
+          codigo=$(curl -sS -o /tmp/plat.json -w '%{http_code}' \
+                    --max-time 45 --retry 3 --retry-delay 10 \
+                    "$BASE/gastrogoan/publicSlugs.json?shallow=true")
+          echo "   HTTP $codigo · $(wc -c < /tmp/plat.json) bytes"
+          # 401/403 = las reglas de lectura abierta se han despublicado (y
+          # entonces cada visitante abriría una conexión con el SDK: caída en
+          # cadena). 5xx o sin respuesta = plataforma caída o sin cuota.
+          [ "$codigo" = "200" ] || { echo "❌ La plataforma no responde 200 (HTTP $codigo). Nadie puede entrar con su cuenta ni canjear licencias."; exit 1; }
+          echo "   ✅ en pie"
+
       - name: El certificado no caduca esta semana
         run: |
           for d in app.gastrogoan.com reservas.gastrogoan.com; do
