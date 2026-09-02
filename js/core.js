@@ -2143,6 +2143,17 @@ async function checkLicenseRevocation(){
   }catch(e){ /* sin conexión o sin permisos: no se bloquea a nadie */ }
 }
 
+/* Canjear otro código sin salir de la cuenta: es lo que necesita quien acaba
+   de comprar una licencia nueva, o aquel a quien se le anuló la suya por
+   error. Se quita la pantalla antes, porque si no el selector se abriría
+   debajo y no se vería. */
+function canjearTrasRevocacion(){
+  const g = document.getElementById('revoked-gate');
+  if(g) g.remove();
+  if(typeof redeemFirstBusiness === 'function') redeemFirstBusiness();
+  else if(typeof showBusinessSelectScreen === 'function') showBusinessSelectScreen();
+}
+
 function showRevokedGate(){
   if(document.getElementById('revoked-gate')) return;
   const g = document.createElement('div');
@@ -2153,6 +2164,17 @@ function showRevokedGate(){
       <div style="width:54px;height:54px;border-radius:14px;background:#8A4A3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px"><i class="ti ti-lock"></i></div>
       <h2 style="margin-bottom:4px">${t('access.revokedTitle')}</h2>
       <p style="color:#444;font-size:13.5px;line-height:1.6">${t('access.revokedDesc')}</p>
+      <!-- ⚠️ SIN BOTONES ESTO ERA UN CALLEJÓN SIN SALIDA. Se quedaba la
+           pantalla y ya: no se podía canjear otro código, ni salir de la
+           cuenta, ni nada. La única forma de recuperar el aparato era borrar
+           los datos del navegador, cosa que ningún hostelero sabe hacer.
+           Y no es un caso raro: un cliente que renueva su licencia, o uno
+           anulado por error a las once de la noche, se queda tirado con la
+           app inservible. -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
+        <button class="btn btn-primary" style="min-height:44px" onclick="canjearTrasRevocacion()"><i class="ti ti-key"></i> ${t('access.revokedRedeem')}</button>
+        <button class="btn" style="min-height:44px;background:none;border:none;color:var(--muted)" onclick="exitToAccessScreen()"><i class="ti ti-logout"></i> ${t('bs.exitAccount')}</button>
+      </div>
     </div>`;
   document.body.appendChild(g);
 }

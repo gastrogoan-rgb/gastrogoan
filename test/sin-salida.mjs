@@ -151,6 +151,31 @@ await caso('La nube es OBLIGATORIA: no se puede pasar sin configurarla', async (
   return 'avisa, no guarda nada y no deja colarse por el selector';
 });
 
+await caso('Una licencia desactivada NO deja al cliente encerrado', async ()=>{
+  /* La pantalla de "Licencia desactivada" no tenía ni un botón: el aparato se
+     quedaba inservible y la única salida era borrar los datos del navegador,
+     cosa que ningún hostelero sabe hacer. Y no es un caso raro — le pasa a
+     quien renueva su licencia, y a quien se la anulan por error. */
+  const r = await page.evaluate(()=>{
+    document.getElementById('revoked-gate')?.remove();
+    showRevokedGate();
+    const g = document.getElementById('revoked-gate');
+    const botones = [...g.querySelectorAll('button')];
+    return {
+      hay: botones.length,
+      canjear: botones.some(b => /canjearTrasRevocacion/.test(b.getAttribute('onclick') || '')),
+      salir: botones.some(b => /exitToAccessScreen/.test(b.getAttribute('onclick') || '')),
+      alcanzables: botones.every(b => b.getClientRects().length > 0),
+    };
+  });
+  assert.ok(r.hay >= 2, 'la pantalla de licencia desactivada se quedó sin salidas');
+  assert.ok(r.canjear, 'tiene que poder canjear otro código sin salir de la cuenta');
+  assert.ok(r.salir, 'y poder entrar con otra cuenta');
+  assert.ok(r.alcanzables, 'y los botones tienen que verse de verdad');
+  await page.evaluate(()=>document.getElementById('revoked-gate')?.remove());
+  return 'canjear otro código y salir de la cuenta';
+});
+
 await caso('Ningún error de JavaScript en todo el recorrido', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales, [], reales.join(' | '));
