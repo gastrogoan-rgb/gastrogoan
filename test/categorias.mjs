@@ -309,6 +309,124 @@ await caso('Una carpeta guardada como texto y como objeto es la MISMA', async ()
   return r.nombres.join(', ');
 });
 
+/* ─── LÁPIDAS: que un borrado no se deshaga solo ─── */
+await caso('La lápida se anota SOLA al subir, sin tocar la función de borrado', async ()=>{
+  /* Se anota comparando lo que se va a subir con lo último subido. Si hubiera
+     que anotarla en cada función de borrado, la app tiene decenas y bastaría
+     olvidar una para que ese borrado se deshiciera solo. */
+  await sembrar();
+  const r = await page.evaluate(async ()=>{
+    DB.borrados = {};
+    lastSyncedSnapshot = {ingredientCategories: JSON.stringify(DB.ingredientCategories)};
+    await window.__conRespuestas(() => deleteIngredientCategory('VaciaIng'), {confirma:true});
+    anotarLapidas();
+    return {lapidas: Object.keys(DB.borrados),
+            tiene: hayLapida('ingredientCategories','VaciaIng')};
+  });
+  assert.ok(r.tiene, 'debería haber quedado anotada: ' + r.lapidas.join(', '));
+  return r.lapidas.join(', ');
+});
+
+await caso('Con lápida, el otro aparato NO puede resucitar la carpeta', async ()=>{
+  /* El caso que el emulador destapó: A borra y sube; el móvil, que llevaba un
+     día apagado con la lista vieja, la sube entera y la carpeta volvía. */
+  await sembrar();
+  const r = await page.evaluate(async ()=>{
+    DB.borrados = {};
+    const listaVieja = [...DB.ingredientCategories];
+    lastSyncedSnapshot = {ingredientCategories: JSON.stringify(listaVieja)};
+    await window.__conRespuestas(() => deleteIngredientCategory('VaciaIng'), {confirma:true});
+    anotarLapidas();
+    // Se sube el borrado: a partir de aquí la foto ya NO contiene la carpeta,
+    // que es justo donde se perdía el rastro antes.
+    lastSyncedSnapshot.ingredientCategories = JSON.stringify(DB.ingredientCategories);
+    // Y ahora el móvil sube su lista de ayer, con la carpeta dentro.
+    applyRemoteBlock('ingredientCategories', [...listaVieja, 'DesdeElMovil']);
+    return [...DB.ingredientCategories];
+  });
+  assert.ok(!r.includes('VaciaIng'), 'volvió a colarse: ' + r.join(', '));
+  assert.ok(r.includes('DesdeElMovil'), 'y lo que hizo el otro aparato sí tiene que llegar');
+  return r.join(', ');
+});
+
+await caso('Un ingrediente borrado tampoco vuelve', async ()=>{
+  /* No es solo cosa de carpetas: mergeArraysById se queda con TODO lo de los
+     dos lados, así que cualquier cosa borrada volvía. */
+  await sembrar();
+  const r = await page.evaluate(async ()=>{
+    DB.borrados = {};
+    const todos = DB.ingredients.map(i => ({...i}));
+    lastSyncedSnapshot = {ingredients: JSON.stringify(todos)};
+    const fuera = DB.ingredients[0].id;
+    DB.ingredients = DB.ingredients.filter(i => i.id !== fuera);
+    anotarLapidas();
+    lastSyncedSnapshot.ingredients = JSON.stringify(DB.ingredients);
+    applyRemoteBlock('ingredients', todos);   // el otro aparato aún los tenía todos
+    return {quedan: DB.ingredients.length, sigue: DB.ingredients.some(i => i.id === fuera)};
+  });
+  assert.equal(r.sigue, false, 'el ingrediente borrado ha vuelto');
+  assert.equal(r.quedan, 2, 'y los otros dos tienen que seguir ahí');
+  return '2 de 3, el borrado no vuelve';
+});
+
+await caso('Volver a crear algo con el mismo nombre quita su lápida', async ()=>{
+  /* Si no, una carpeta borrada dejaría su nombre inutilizado para siempre. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    DB.borrados = {'ingredientCategories:Salsas': Date.now()};
+    const antes = hayLapida('ingredientCategories','Salsas');
+    DB.ingredientCategories.push('Salsas');
+    lastSyncedSnapshot = {ingredientCategories: JSON.stringify(['Pescados'])};
+    anotarLapidas();
+    return {antes, despues: hayLapida('ingredientCategories','Salsas')};
+  });
+  assert.ok(r.antes, 'la lápida tenía que estar puesta al empezar');
+  assert.equal(r.despues, false, 'al volver a crearla, la lápida tiene que irse');
+  return 'se puede reutilizar el nombre';
+});
+
+await caso('Las lápidas de los dos aparatos se suman', async ()=>{
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    DB.borrados = {'ingredients:1': 1000};
+    applyRemoteBlock('borrados', {'ingredients:2': 2000, 'ingredients:1': 500});
+    return DB.borrados;
+  });
+  assert.ok(r['ingredients:2'], 'la lápida del otro aparato tiene que llegar');
+  assert.equal(r['ingredients:1'], 1000, 'y ante la misma clave gana la más reciente');
+  return 'se suman, y gana la más nueva';
+});
+
+await caso('Al llegar la lápida del otro aparato, aquí desaparece lo borrado', async ()=>{
+  /* Si solo se filtrara al fusionar la lista, lo que él borró se seguiría
+     viendo aquí hasta que cambiara cualquier otra cosa. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    DB.borrados = {};
+    applyRemoteBlock('borrados', {'ingredientCategories:Verduras': Date.now()});
+    return [...DB.ingredientCategories];
+  });
+  assert.ok(!r.includes('Verduras'), 'debería haber desaparecido al llegar la lápida: ' + r.join(', '));
+  return r.join(', ') || '(vacía)';
+});
+
+await caso('Una lápida caducada deja de estorbar', async ()=>{
+  /* A los 60 días. Sin caducidad el mapa crece para siempre, y un nombre
+     borrado hace un año no puede seguir bloqueado. */
+  await sembrar();
+  const r = await page.evaluate(()=>{
+    const hace70dias = Date.now() - 70*86400000;
+    DB.borrados = {'ingredientCategories:Antigua': hace70dias};
+    const bloquea = hayLapida('ingredientCategories','Antigua');
+    lastSyncedSnapshot = {};
+    anotarLapidas();
+    return {bloquea, sigueEnElMapa: 'ingredientCategories:Antigua' in DB.borrados};
+  });
+  assert.equal(r.bloquea, false, 'una lápida de hace 70 días no puede seguir bloqueando');
+  assert.equal(r.sigueEnElMapa, false, 'y se limpia del mapa');
+  return 'caducan a los 60 días y se limpian solas';
+});
+
 await caso('Ningún error de JavaScript', async ()=>{
   const reales = errs.filter(e => !/Failed to fetch|NetworkError/i.test(e));
   assert.deepEqual(reales.slice(0,4), [], reales.slice(0,2).join(' | '));

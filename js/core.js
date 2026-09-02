@@ -2855,6 +2855,110 @@ function mergeNestedArraysByKey(localObj, remoteObj, arrayKeys){
    porque ahí acabarían en `return remote` y un borrado local se desharía. */
 const LISTAS_DE_NOMBRES = new Set(['ingredientCategories', 'recipeCategories']);
 
+/* ── LÁPIDAS ────────────────────────────────────────────────────────────
+   Borras algo aquí, el otro aparato todavía lo tenía, y vuelve.
+
+   No es un fallo nuevo ni de las carpetas: `mergeArraysById` fusiona
+   quedándose con TODO lo que hay en los dos lados, así que cualquier
+   elemento que la nube todavía tenga se vuelve a colar. Lleva ahí desde
+   siempre y nadie lo había mirado, porque solo se ve con dos aparatos y uno
+   de ellos desincronizado — el móvil que pasó el día apagado.
+
+   Lo que faltaba es MEMORIA de que algo se borró. La foto de lo último que se
+   envió no sirve: en cuanto se sube el borrado, esa foto ya no contiene el
+   elemento y se pierde el rastro.
+
+   Así que se anota: `DB.borrados = {"<bloque>:<clave>": cuándo}`. Y se anota
+   SOLA, al subir, comparando lo que se va a enviar con lo último enviado — de
+   ese modo no hay que tocar ni una de las decenas de funciones de borrado que
+   tiene la app, que es donde se colarían los olvidos.
+
+   Tres decisiones:
+   · Solo en los bloques donde una resurrección se VE y molesta (el catálogo,
+     las fichas, el equipo). Las ventas y las comandas no se borran, se anulan,
+     y ponerles lápida solo llenaría el mapa.
+   · Al volver a crear algo con la misma clave, su lápida desaparece — si no,
+     no se podría reutilizar el nombre de una carpeta borrada nunca más.
+   · Caducan a los 60 días. Un aparato que lleva dos meses sin encenderse
+     tiene problemas mayores, y sin caducidad el mapa crece para siempre. */
+const ARRAYS_CON_LAPIDA = new Set([
+  'ingredientCategories', 'recipeCategories', 'ingredients', 'recipes',
+  'fichas', 'providers', 'tables', 'employees', 'cartas', 'menus',
+  'clients', 'elaboraciones',
+]);
+const LAPIDA_DIAS = 60;
+
+// La clave con la que se reconoce un elemento: su id si lo tiene, su nombre
+// si es una carpeta, y el texto tal cual si es una lista de nombres.
+function claveDeElemento(x){
+  if(x == null) return null;
+  if(typeof x !== 'object') return String(x);
+  if(x.id != null) return String(x.id);
+  if(x.name != null) return String(x.name);
+  return null;
+}
+
+function lapidas(){
+  if(!DB.borrados || typeof DB.borrados !== 'object') DB.borrados = {};
+  return DB.borrados;
+}
+function hayLapida(key, clave){
+  if(clave == null) return false;
+  const t = lapidas()[key + ':' + clave];
+  return !!t && (Date.now() - t) < LAPIDA_DIAS * 86400000;
+}
+
+/* Se llama justo ANTES de subir. Compara bloque a bloque lo que se va a
+   enviar con lo último enviado: lo que estaba y ya no está, se borró aquí.
+   Y lo que está presente pierde su lápida, que es lo que permite volver a
+   crear una carpeta con un nombre que se borró hace meses. */
+function anotarLapidas(){
+  if(!lastSyncedSnapshot) return;
+  const mapa = lapidas();
+  let cambio = false;
+  ARRAYS_CON_LAPIDA.forEach(key => {
+    if(!Array.isArray(DB[key])) return;
+    const ahora = new Set(DB[key].map(claveDeElemento).filter(c => c != null));
+    ahora.forEach(c => { if(mapa[key + ':' + c] != null){ delete mapa[key + ':' + c]; cambio = true; } });
+    if(!lastSyncedSnapshot[key]) return;
+    let antes;
+    try{ antes = JSON.parse(lastSyncedSnapshot[key]); }catch(e){ return; }
+    if(!Array.isArray(antes)) return;
+    antes.forEach(x => {
+      const c = claveDeElemento(x);
+      if(c != null && !ahora.has(c) && mapa[key + ':' + c] == null){
+        mapa[key + ':' + c] = Date.now();
+        cambio = true;
+      }
+    });
+  });
+  // Las caducadas se van solas, para que el mapa no crezca sin fin.
+  const limite = Date.now() - LAPIDA_DIAS * 86400000;
+  Object.keys(mapa).forEach(k => { if(!(mapa[k] > limite)){ delete mapa[k]; cambio = true; } });
+  return cambio;
+}
+
+// Quita de una lista lo que ya se borró. Se aplica DESPUÉS de fusionar: la
+// fusión mete lo que la nube todavía tenga, y esto lo vuelve a sacar.
+function quitarResucitados(key, arr){
+  if(!ARRAYS_CON_LAPIDA.has(key) || !Array.isArray(arr)) return arr;
+  return arr.filter(x => !hayLapida(key, claveDeElemento(x)));
+}
+
+/* Las lápidas de los dos aparatos se SUMAN: un borrado hecho allí vale aquí
+   igual. Ante la misma clave gana la anotación más reciente. */
+function mergeLapidas(local, remoto){
+  const out = {};
+  [local, remoto].forEach(m => {
+    if(!m || typeof m !== 'object') return;
+    Object.keys(m).forEach(k => {
+      const t = Number(m[k]) || 0;
+      if(!out[k] || t > out[k]) out[k] = t;
+    });
+  });
+  return out;
+}
+
 const MERGEABLE_ARRAYS = new Set([
   'ingredients','recipes','fichas','menuItems','cartas','menus',
   'purchaseOrders','providers','tables','tpvOrders','sales',
@@ -4212,6 +4316,21 @@ function applyRemoteBlock(key, remoteValue){
     warnIfConcurrentEditLost(key, DB[key], merged);
     merged = mergeArraysById(DB[key], merged);
   }
+  /* Y lo que se borró, fuera otra vez. La fusión se queda con TODO lo de los
+     dos lados, así que vuelve a meter lo que el otro aparato aún tenía. */
+  merged = quitarResucitados(key, merged);
+  /* Las lápidas del otro aparato se suman a las de aquí, y al llegar hay que
+     repasar las listas: si no, lo que él borró se sigue viendo aquí hasta que
+     cambie cualquier otra cosa. */
+  if(key === 'borrados'){
+    merged = mergeLapidas(DB.borrados, merged);
+    DB.borrados = merged;
+    ARRAYS_CON_LAPIDA.forEach(k => {
+      if(!Array.isArray(DB[k])) return;
+      const limpio = quitarResucitados(k, DB[k]);
+      if(limpio.length !== DB[k].length) DB[k] = limpio;
+    });
+  }
   if(key === 'stock' && DB[key] && typeof merged === 'object'){
     merged = mergeStockField(DB[key], merged, lastSyncedSnapshot && lastSyncedSnapshot[key]);
   }
@@ -4426,6 +4545,10 @@ function mergeRemoteIntoLocal(val){
     if(MERGEABLE_ARRAYS.has(key) && Array.isArray(DB[key]) && Array.isArray(value)){
       value = mergeArraysById(DB[key], value);
     }
+    if(key === 'borrados') value = mergeLapidas(DB.borrados, value);
+    // Lo mismo que en applyRemoteBlock: lo borrado no vuelve por la puerta de
+    // atrás del arranque, que es justo cuando llega la nube entera de golpe.
+    value = quitarResucitados(key, value);
     if(key === 'stock' && DB[key] && typeof value === 'object'){
       value = mergeStockField(DB[key], value, lastSyncedSnapshot && lastSyncedSnapshot[key]);
     }
@@ -5711,6 +5834,10 @@ function defaultData(){
       // gestoría no puedan modificarse sin querer.
       cierres: []
     },
+    // Lo que se ha borrado y cuándo: {"<bloque>:<clave>": momento}. Sin esto
+    // un borrado se deshace solo en cuanto sincroniza un aparato que aún lo
+    // tenía. Ver ARRAYS_CON_LAPIDA.
+    borrados: {},
     nextId: 1
   };
 }
@@ -5951,6 +6078,10 @@ function marcarNubeAlDia(opciones){
 function flushCloudSync(){
   cloudSyncTimer = null;
   if(!cloudRef || !lastSyncedSnapshot) return;
+  /* Antes de subir, se anota lo que se ha borrado desde la última vez. Aquí y
+     no en cada función de borrado: la app tiene decenas y bastaría olvidar una
+     para que ese borrado se deshiciera solo. */
+  anotarLapidas();
   const updates = {};
   const pendingJson = {};
   Object.keys(DB).forEach(key => {
