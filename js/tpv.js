@@ -1259,6 +1259,7 @@ async function acceptOnlineOrder(orderId, auto){
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
+        decrementMenuStock(l.menuId, l.qty);
       }
     });
     order.cerrada = false;
@@ -1859,6 +1860,7 @@ function marcharValeCompleto(orderId){
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
+        decrementMenuStock(line.menuId, qtyFired);
       }
     });
   }
@@ -1885,6 +1887,7 @@ function marcharLine(orderId, idx){
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -2436,6 +2439,7 @@ function marcharComanda(orderId, tanda, isMenu){
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
+      decrementMenuStock(l.menuId, qtyFired);
     }
   });
   order.cerrada = false;
@@ -2902,6 +2906,18 @@ function decrementDishStock(platoId, qty){
   p.stock = Math.max(0, p.stock - qty);
   if(p.stock === 0) p.disponible = false;
 }
+/* Lo mismo para un MENÚ entero ("hoy solo hay 20 menús del día"), que es
+   justo donde más falta hace: el menú se agota antes que ningún plato
+   suelto. Antes solo se podían limitar raciones de un plato de la Carta, así
+   que quien vendía menús no tenía forma de decir cuántos le quedaban y se
+   enteraba cuando ya los había vendido de más. */
+function decrementMenuStock(menuId, qty){
+  if(menuId == null || !qty || qty <= 0) return;
+  const m = (DB.menus||[]).find(x => x.id === menuId);
+  if(!m || m.stock == null) return;
+  m.stock = Math.max(0, m.stock - qty);
+  if(m.stock === 0) m.disponible = false;
+}
 // Tipo de IVA repercutido real de una línea de comanda, buscando en el
 // menú/plato/receta que la originó — se guarda (se "estampa") en cada línea
 // de la venta en el momento de cobrar, para que quede fijo en el histórico
@@ -2979,6 +2995,7 @@ function autoSendTakeawayLine(order, line){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
 }
 
@@ -3010,6 +3027,7 @@ function autoSendFirstCourse(order, line, tanda){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
+  decrementMenuStock(line.menuId, qtyFired);
   order.cerrada = false;
 }
 
@@ -3302,6 +3320,18 @@ function restockForVoidedItems(items, opts){
         const wasOut = p.stock === 0;
         p.stock = p.stock + (line.qty||0);
         if(wasOut) p.disponible = true;
+      }
+    }
+    /* Y la ración del MENÚ entero. Sin esto, anular una comanda con menús
+       dejaba su contador por debajo de lo real: el restaurante se quedaba
+       creyendo que había servido menús que nunca salieron, y a media noche
+       el menú se marcaba agotado con raciones todavía por vender. */
+    if(!line.isShipping && line.menuId != null){
+      const m = (DB.menus||[]).find(x => x.id === line.menuId);
+      if(m && m.stock != null){
+        const wasOut = m.stock === 0;
+        m.stock = m.stock + (line.qty||0);
+        if(wasOut) m.disponible = true;
       }
     }
     // Una opción de menú elegida por stock directo (bebida de Carta con

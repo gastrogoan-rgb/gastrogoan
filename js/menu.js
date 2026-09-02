@@ -1035,6 +1035,8 @@ function renderMenuList(){
               <td>${renderItemScheduleHtml(m)}</td>
               <td>${ngrupos}</td>
               <td class="actions-cell">
+                <button class="btn btn-sm ${m.disponible===false?'btn-danger':''}" onclick="toggleMenuDisponible(${m.id})">${m.disponible===false?t('common.unavailable'):t('common.available')}</button>
+                <button class="btn btn-sm ${m.stock!=null && m.stock<=0?'btn-danger':''}" style="${m.stock!=null && m.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuStock(${m.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${m.stock!=null ? t('label.portionsLeft').replace('${n}', m.stock) : t('btn.limitPortions')}</button>
                 <button class="owner-only btn btn-sm btn-icon" onclick="openMenu(${m.id})"><i class="ti ti-edit"></i></button>
                 <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="deleteMenu(${m.id})"><i class="ti ti-trash"></i></button>
               </td>
@@ -1044,6 +1046,43 @@ function renderMenuList(){
       </table>
     </div>
   `;
+}
+
+/* Disponible y raciones limitadas para el MENÚ entero, igual que para
+   cualquier plato de la Carta.
+
+   Faltaban aquí y es justo donde más falta hacen: el menú del día se agota
+   antes que ningún plato suelto ("hoy solo hay 20"), y hasta ahora la única
+   forma de quitarlo era el panel rápido del TPV — que no aparece por ningún
+   lado en la pantalla donde se gestionan los menús. El dueño lo contó como
+   que "las opciones no están", y tenía razón: en Carta cada plato tiene sus
+   dos botones y aquí no había ninguno. */
+function toggleMenuDisponible(id){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  m.disponible = m.disponible===false ? true : false;
+  logAudit('availability', t(m.disponible===false ? 'audit.dishMarkedOut' : 'audit.dishMarkedAvailable').replace('${name}', tItem(m)));
+  saveDB();
+  renderMenu();
+}
+// Mismo criterio que setCartaPlatoStock: vacío = sin límite (lo normal), un
+// número = raciones que quedan. El TPV lo va descontando al marchar y al
+// llegar a 0 el menú pasa a "No disponible" solo. No se resetea cada día a
+// propósito: hay que volver aquí y ponerle la cantidad de mañana.
+async function setMenuStock(id){
+  const m = DB.menus.find(x=>x.id===id);
+  if(!m) return;
+  const current = m.stock!=null ? String(m.stock) : '';
+  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(trimmed === ''){ delete m.stock; saveDB(); renderMenu(); return; }
+  const n = parseInt(trimmed);
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  m.stock = n;
+  m.disponible = n > 0;
+  saveDB();
+  renderMenu();
 }
 
 function newMenu(){

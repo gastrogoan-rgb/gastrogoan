@@ -144,6 +144,39 @@ test('decrementDishStock resta raciones y no baja de 0', () => {
   assert.equal(DB.cartas[0].secciones[0].platos[0].stock, 0);
 });
 
+/* --- Lo mismo para un MENÚ entero ("hoy solo hay 20 menús del día") ---
+   Faltaba: solo se podían limitar raciones de un plato suelto, y el menú es
+   justo lo que se agota antes. Lo vio el dueño en la pantalla de Menús, donde
+   no había ni el botón de disponible ni el de raciones. */
+function makeDbWithMenu(stock) {
+  return { business: {}, cartas: [], menus: [{ id: 7, stock, disponible: true }] };
+}
+
+test('decrementMenuStock resta raciones del menú y no baja de 0', () => {
+  const DB = makeDbWithMenu(20);
+  const sandbox = loadTpv(DB);
+  sandbox.decrementMenuStock(7, 3);
+  assert.equal(DB.menus[0].stock, 17);
+  sandbox.decrementMenuStock(7, 50);
+  assert.equal(DB.menus[0].stock, 0);
+});
+
+test('un menú agotado se marca "no disponible" solo', () => {
+  const DB = makeDbWithMenu(2);
+  const sandbox = loadTpv(DB);
+  sandbox.decrementMenuStock(7, 2);
+  assert.equal(DB.menus[0].disponible, false,
+    'al llegar a 0 tiene que desaparecer del TPV y de la web pública, que filtran por disponible');
+});
+
+test('decrementMenuStock no toca los menús sin límite (lo normal)', () => {
+  const DB = makeDbWithMenu(null);
+  const sandbox = loadTpv(DB);
+  sandbox.decrementMenuStock(7, 3);
+  assert.equal(DB.menus[0].stock, null);
+  assert.equal(DB.menus[0].disponible, true);
+});
+
 test('decrementDishStock marca "no disponible" al llegar a 0', () => {
   const DB = makeDbWithDish(2);
   const sandbox = loadTpv(DB);
