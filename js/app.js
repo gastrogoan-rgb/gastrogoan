@@ -1784,6 +1784,11 @@ function renderClientes(){
         else if(clientesSortField === 'total30d'){ va = a.stats.total30d; vb = b.stats.total30d; }
         else if(clientesSortField === 'totalYear'){ va = a.stats.totalYear; vb = b.stats.totalYear; }
         else if(clientesSortField === 'lastDate'){ va = a.stats.lastDate || ''; vb = b.stats.lastDate || ''; }
+        /* Los no-shows no salen de las estadísticas calculadas: es un contador
+           que vive en la ficha del cliente y se sube a mano al marcar la
+           reserva. Ordenar por aquí es lo que hace útil la columna — de un
+           vistazo, quién te está dejando mesas vacías. */
+        else if(clientesSortField === 'noShows'){ va = a.c.noShows || 0; vb = b.c.noShows || 0; }
         return va < vb ? -1*dir : va > vb ? 1*dir : 0;
       })
       .map(x => x.c);
@@ -1798,7 +1803,7 @@ function renderClientes(){
   const cardsBox = document.getElementById('clientes-cards');
 
   if(!items.length){
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div></td></tr>`;
     if(cardsBox) cardsBox.innerHTML = `<div class="empty"><i class="ti ti-address-book"></i>${t("empty.clients")}</div>`;
     return;
   }
@@ -1833,6 +1838,7 @@ function renderClientes(){
       <td data-label="${t('label.avgTicket')}">${fmtMoney(stats.ticketMedio)}</td>
       <td data-label="${t('label.total30d')}">${fmtMoney(stats.total30d)}</td>
       <td data-label="${t('label.totalYear')}">${fmtMoney(stats.totalYear)}</td>
+      <td data-label="${t('label.noShowCount')}">${c.noShows ? `<span class="badge badge-red"><i class="ti ti-user-x"></i> ${c.noShows}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td data-label="${t('label.loyaltyPoints')}"><span class="badge ${loyaltyCls}">${points}/10</span> ${loyaltyBtn}</td>
       <td class="wrap" data-label="${t('common.notes')}">${escapeHtml(c.notes||'—')}</td>
       <td class="actions-cell" data-label="">
