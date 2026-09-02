@@ -2898,13 +2898,22 @@ function claveDeElemento(x){
   return null;
 }
 
-function lapidas(){
-  if(!DB.borrados || typeof DB.borrados !== 'object') DB.borrados = {};
-  return DB.borrados;
+/* ⚠️ El mapa NO se crea si no hace falta, y esto no es un detalle:
+   · crear `DB.borrados = {}` en cada lectura hacía que TODA sincronización
+     tuviera "algo que subir" aunque nadie hubiera tocado nada, y el indicador
+     de nube se quedaba en "Guardando…" — exactamente el fallo que el dueño
+     había reportado en dos capturas y que ya estaba arreglado;
+   · y Firebase NO GUARDA objetos vacíos, así que un `{}` subido desaparece
+     allí y vuelve como inexistente: la diferencia contra la foto local no se
+     cerraría nunca y el indicador se quedaría clavado para siempre. */
+function lapidasLeer(){
+  return (DB.borrados && typeof DB.borrados === 'object') ? DB.borrados : null;
 }
 function hayLapida(key, clave){
   if(clave == null) return false;
-  const t = lapidas()[key + ':' + clave];
+  const mapa = lapidasLeer();
+  if(!mapa) return false;
+  const t = mapa[key + ':' + clave];
   return !!t && (Date.now() - t) < LAPIDA_DIAS * 86400000;
 }
 
@@ -2913,8 +2922,8 @@ function hayLapida(key, clave){
    Y lo que está presente pierde su lápida, que es lo que permite volver a
    crear una carpeta con un nombre que se borró hace meses. */
 function anotarLapidas(){
-  if(!lastSyncedSnapshot) return;
-  const mapa = lapidas();
+  if(!lastSyncedSnapshot) return false;
+  const mapa = lapidasLeer() || {};
   let cambio = false;
   ARRAYS_CON_LAPIDA.forEach(key => {
     if(!Array.isArray(DB[key])) return;
@@ -2935,6 +2944,9 @@ function anotarLapidas(){
   // Las caducadas se van solas, para que el mapa no crezca sin fin.
   const limite = Date.now() - LAPIDA_DIAS * 86400000;
   Object.keys(mapa).forEach(k => { if(!(mapa[k] > limite)){ delete mapa[k]; cambio = true; } });
+  // Solo se materializa cuando hay algo que anotar de verdad (ver arriba).
+  if(cambio && Object.keys(mapa).length) DB.borrados = mapa;
+  else if(cambio && DB.borrados) delete DB.borrados;
   return cambio;
 }
 
@@ -4324,7 +4336,7 @@ function applyRemoteBlock(key, remoteValue){
      cambie cualquier otra cosa. */
   if(key === 'borrados'){
     merged = mergeLapidas(DB.borrados, merged);
-    DB.borrados = merged;
+    if(Object.keys(merged).length) DB.borrados = merged; else delete DB.borrados;
     ARRAYS_CON_LAPIDA.forEach(k => {
       if(!Array.isArray(DB[k])) return;
       const limpio = quitarResucitados(k, DB[k]);
@@ -5834,10 +5846,11 @@ function defaultData(){
       // gestoría no puedan modificarse sin querer.
       cierres: []
     },
-    // Lo que se ha borrado y cuándo: {"<bloque>:<clave>": momento}. Sin esto
-    // un borrado se deshace solo en cuanto sincroniza un aparato que aún lo
-    // tenía. Ver ARRAYS_CON_LAPIDA.
-    borrados: {},
+    /* `borrados` — lo que se ha borrado y cuándo, {"<bloque>:<clave>": momento}
+       — NO se declara aquí a propósito: nace solo cuando hay algo que anotar.
+       Un `{}` por defecto haría que cada sincronización tuviera algo que subir
+       y que Firebase, que no guarda objetos vacíos, lo devolviera como
+       inexistente para siempre. Ver ARRAYS_CON_LAPIDA y anotarLapidas(). */
     nextId: 1
   };
 }
