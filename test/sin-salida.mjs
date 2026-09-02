@@ -151,6 +151,36 @@ await caso('La nube es OBLIGATORIA: no se puede pasar sin configurarla', async (
   return 'avisa, no guarda nada y no deja colarse por el selector';
 });
 
+await caso('Una cuenta NUEVA aterriza en el alta, no dentro de la app vacía', async ()=>{
+  /* Al entrar por primera vez sale el modal de "cambia tu PIN". Al cerrarlo
+     se llamaba a continuePendingOwnerSetup(), que para una cuenta sin ningún
+     negocio devuelve false —no hay paso que enseñar— y ahí NADIE enseñaba el
+     selector: el cliente se quedaba dentro de la app vacía, sin que le
+     pidieran el código ni la nube. Lo contó el dueño al crear su cuenta de
+     prueba: "entro de golpe, sin pedir ninguna configuración". */
+  const r = await page.evaluate(()=>{
+    /* La situación exacta: cuenta recién creada, sin ningún negocio. Ahí
+       continuePendingOwnerSetup() devuelve false —no hay paso que enseñar— y
+       es justo cuando se perdía al cliente. Se simula esa respuesta en vez de
+       desmontar el aparato sembrado, que es lo que de verdad importa. */
+    const real = window.continuePendingOwnerSetup;
+    window.continuePendingOwnerSetup = () => false;
+    document.getElementById('business-select-screen')?.classList.add('hide');
+    closeModal();
+    reanudarAltaDelPropietario();
+    const sel = document.getElementById('business-select-screen');
+    const out = {selectorVisible: !!sel && !sel.classList.contains('hide'),
+                 // Con algo dentro: un selector visible pero vacío sería otro
+                 // callejón sin salida distinto.
+                 tieneContenido: !!sel && sel.innerHTML.trim().length > 50};
+    window.continuePendingOwnerSetup = real;
+    return out;
+  });
+  assert.ok(r.selectorVisible, 'tras cerrar el aviso del PIN, una cuenta nueva se quedaba sin selector y dentro de la app');
+  assert.ok(r.tieneContenido, 'el selector sale pero vacío: otro callejón sin salida');
+  return 'sale el selector de negocios, no la app vacía';
+});
+
 await caso('Una licencia desactivada NO deja al cliente encerrado', async ()=>{
   /* La pantalla de "Licencia desactivada" no tenía ni un botón: el aparato se
      quedaba inservible y la única salida era borrar los datos del navegador,

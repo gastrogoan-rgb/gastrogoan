@@ -1434,11 +1434,11 @@ async function confirmChangeOwnerPassword(){
   if(!ok){ showToast(t(reason === 'offline' ? 'access.pinChangeOffline' : 'access.badCredentials')); return; }
   closeModal();
   showToast(t('msg.pinUpdated'));
-  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; reanudarAltaDelPropietario(); }
 }
 function closeOwnerPassPrompt(){
   closeModal();
-  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; continuePendingOwnerSetup(); }
+  if(ownerPassPromptDuringSetup){ ownerPassPromptDuringSetup = false; reanudarAltaDelPropietario(); }
 }
 
 function renderBsGroups(allSlots){
@@ -2766,6 +2766,22 @@ function continuePendingOwnerSetup(){
 // justo tras activarla, se anima a cambiarla por una propia. Se pregunta
 // solo una vez por dispositivo (aceptar o no queda guardado igual, para no
 // insistir en cada sesión).
+/* ⚠️ RETOMAR EL ALTA DONDE SE QUEDÓ.
+
+   `continuePendingOwnerSetup()` devuelve false cuando ya no hay ningún paso
+   que enseñar — y para una cuenta RECIÉN CREADA eso pasa enseguida, porque
+   todavía no tiene ningún negocio que configurar. El problema es que los tres
+   sitios que lo llamaban al cerrar el modal del PIN no hacían nada con ese
+   false: el modal se cerraba y el cliente se quedaba DENTRO DE LA APP vacía,
+   sin selector, sin pedirle el código ni la nube. Justo lo que contó el dueño
+   al entrar con una cuenta nueva: "entro de golpe, sin pedir configuración".
+
+   El selector vacío, con su botón de canjear, es lo que toca ahí. */
+function reanudarAltaDelPropietario(){
+  if(continuePendingOwnerSetup()) return;
+  showBusinessSelectScreen();
+}
+
 function promptChangeOwnerPasswordFirstTime(){
   openModal(`
     <div class="modal-header">
@@ -2773,7 +2789,7 @@ function promptChangeOwnerPasswordFirstTime(){
     </div>
     <p style="font-size:13px;color:var(--muted)">${t('access.changePasswordFirstDesc')}</p>
     <div class="modal-footer">
-      <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();continuePendingOwnerSetup()">${t('common.later')}</button>
+      <button class="btn" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();reanudarAltaDelPropietario()">${t('common.later')}</button>
       <button class="btn btn-primary" onclick="localStorage.setItem('${OWNER_PASS_PROMPTED_LS}','1');closeModal();promptChangeOwnerPassword(true)">${t('access.changePassword')}</button>
     </div>
   `);
