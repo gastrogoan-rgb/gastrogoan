@@ -54,7 +54,24 @@ caso('El asistente no cita números de paso', () => {
   return 'se nombra el paso, no se numera';
 });
 
-const TIPOS = ['reserva','pedido','nps_response','reserva_cancelar','reserva_modificar','pago_confirmado'];
+const TIPOS = ['reserva','pedido','nps_response','reserva_cancelar','reserva_modificar'];
+caso('Un cliente NO puede declarar pagado su propio pedido', () => {
+  /* ⚠️ `pago_confirmado` NO puede estar en la lista blanca del buzón público.
+     Ese buzón tiene que estar abierto para que cualquier comensal reserve, así
+     que si el tipo se acepta ahí, cualquiera puede escribir desde la consola
+     "mi pedido está pagado, 0 €": la app se lo cree, lo marca cobrado y lo
+     manda a cocina. Comida gratis, y el identificador del pedido lo genera su
+     propio navegador.
+     No hace falta permitirlo: el Worker de Redsys escribe con la clave de
+     administrador de la base (FIREBASE_DB_SECRET), que se salta las reglas.
+     Se añadió por error el 2/09 creyendo que los pagos se rechazaban. */
+  [negocio, plataforma, incrustadas].forEach(reglas => {
+    assert.ok(!reglas.includes("'pago_confirmado'"),
+      'el buzón público acepta pago_confirmado: cualquier cliente puede declararse pagado');
+  });
+  return 'el Worker escribe como administrador, no hace falta abrirlo';
+});
+
 caso('Todos los tipos de solicitud que la app usa están permitidos', () => {
   const publico = leer('reservagastrogoan.html') + core;
   [negocio, plataforma, incrustadas].forEach(reglas => {
@@ -109,13 +126,13 @@ caso('La sonda comprueba también los cambios de reglas MÁS RECIENTES', () => {
      histórico con nombres y teléfonos crecería sin fin, en silencio.
      Ahora se prueba escribiendo una solicitud de tipo pago_confirmado,
      reclamándola y borrándola: eso cubre los dos cambios de una vez. */
-  assert.ok(core.includes("type: 'pago_confirmado', createdAt:"),
-    'la sonda tiene que probar que se acepta pago_confirmado');
+  assert.ok(!core.includes("type: 'pago_confirmado'"),
+    'la sonda no puede usar pago_confirmado: ese tipo ya no está permitido y fallaría siempre');
   assert.ok(core.includes("sonda.child('_claimedAt').set"),
     'y que se puede reclamar');
   assert.ok(core.includes('await sonda.remove()'),
     'y que se puede BORRAR una solicitud ya reclamada');
-  return 'pago_confirmado + reclamar + borrar';
+  return 'reclamar y borrar una solicitud';
 });
 
 caso('La solicitud de prueba nunca se procesa como una de verdad', () => {
@@ -135,5 +152,5 @@ caso('Se distingue "reglas viejas de verdad" de "una versión por detrás"', () 
 });
 
 console.log('\n' + '═'.repeat(64));
-console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 10 casos pasaron`);
+console.log(fallos ? `❌ ${fallos} fallaron` : `✅ los 11 casos pasaron`);
 process.exit(fallos ? 1 : 0);

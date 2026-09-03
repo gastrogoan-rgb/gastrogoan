@@ -2328,7 +2328,7 @@ const FIREBASE_RULES_JSON = `{
             ".read": "auth != null && $publicId.length >= 4 && $publicId.length <= 30",
             "$requestId": {
               ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && (!data.exists() || (!newData.exists() && data.child('_claimedAt').exists()))",
-              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar' || newData.child('type').val() === 'pago_confirmado')",
+              ".validate": "newData.hasChildren(['type', 'createdAt']) && newData.child('type').isString() && (newData.child('type').val() === 'reserva' || newData.child('type').val() === 'pedido' || newData.child('type').val() === 'nps_response' || newData.child('type').val() === 'reserva_cancelar' || newData.child('type').val() === 'reserva_modificar')",
               "_claimedAt": {
                 ".write": "auth != null && $publicId.length >= 4 && $publicId.length <= 30 && data.parent().exists() && !data.exists()",
                 ".validate": "newData.isNumber()"
@@ -3642,8 +3642,14 @@ async function comprobarEspejoEnNubePropia(){
        La solicitud de prueba lleva `_sonda` y el oyente la ignora, para que no
        se procese como un pago de verdad. */
     try{
+      /* ⚠️ La sonda usa un tipo PERMITIDO, no `pago_confirmado`. Ese tipo se
+         quitó de la lista blanca a propósito (si el buzón público lo acepta,
+         cualquier comensal puede declararse pagado desde la consola), así que
+         usarlo aquí haría fallar la sonda siempre y todos los negocios verían
+         el aviso de "reglas antiguas". Lo que se comprueba de verdad es que se
+         pueda RECLAMAR y BORRAR una solicitud, que es el cambio reciente. */
       const sonda = base.child('requests/_sonda');
-      await sonda.set({type: 'pago_confirmado', createdAt: Date.now(), _sonda: true});
+      await sonda.set({type: 'reserva', createdAt: Date.now(), _sonda: true});
       await sonda.child('_claimedAt').set(Date.now());
       await sonda.remove();
       reglasAntiguas = false;
