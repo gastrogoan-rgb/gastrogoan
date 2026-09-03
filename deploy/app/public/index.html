@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 10:46';
+const GG_BUILD = '03/09/2026 10:59';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -23726,6 +23726,33 @@ function confirmNewCartaSection(){
    El nombre del plato en la CARTA es suyo, aunque venga de una receta: en la
    carta puede llamarse "Nuestro steak tartar" y en el escandallo "Steak
    tartar". Renombrar aquí no toca la receta. */
+/* Disponible y raciones de CADA PLATO del menú, que es donde está el límite
+   real de una cocina: se compran 8 merluzas, no 20 menús. Al agotarse una
+   opción, el TPV y la web pública dejan de ofrecerla y el menú se sigue
+   vendiendo con las demás — que es exactamente lo que pasa en un servicio. */
+function toggleMenuOpcionDisponible(grupoId, opcionId){
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  o.disponible = o.disponible===false ? true : false;
+  renderMenuGrupos();
+}
+async function setMenuOpcionStock(grupoId, opcionId){
+  const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
+  const o = g && (g.opciones||[]).find(x=>x.id===opcionId);
+  if(!o) return;
+  const current = o.stock!=null ? String(o.stock) : '';
+  const val = await promptText(t('msg.setStockPrompt'), current, {allowEmpty:true});
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(trimmed === ''){ delete o.stock; renderMenuGrupos(); return; }
+  const n = parseInt(trimmed);
+  if(isNaN(n) || n < 0){ showToast(t('msg.invalidStockNumber')); return; }
+  o.stock = n;
+  o.disponible = n > 0;
+  renderMenuGrupos();
+}
+
 async function renameMenuGrupo(grupoId){
   if(!isOwnerSession() && !editUnlocked) return;
   const g = menuEdit && menuEdit.grupos.find(x=>x.id===grupoId);
@@ -24273,6 +24300,8 @@ function renderMenuGrupos(){
           <span style="flex:1;font-weight:600;cursor:pointer" title="${t('title.renameOption')}" onclick="renameMenuOpcion(${g.id},${o.id})">${escapeHtml(o.nombre)} <i class="ti ti-pencil owner-only" style="font-size:12px;opacity:.45"></i></span>
           ${o.suplemento ? `<span style="font-family:monospace;font-weight:600;margin-right:10px;color:var(--brand-orange)">+${fmtMoney(o.suplemento)}</span>` : ''}
           <button class="btn btn-sm" onclick="openMenuOpcionModsModal(${g.id},${o.id})"><i class="ti ti-adjustments"></i> ${t('title.extras')}${(o.modificadores||[]).length ? ` (${o.modificadores.length})` : ''}</button>
+          <button class="btn btn-sm ${o.disponible===false?'btn-danger':''}" onclick="toggleMenuOpcionDisponible(${g.id},${o.id})">${o.disponible===false?t('common.unavailable'):t('common.available')}</button>
+          <button class="btn btn-sm ${o.stock!=null && o.stock<=0?'btn-danger':''}" style="${o.stock!=null && o.stock>0?'background:var(--amber-l);border-color:var(--amber)':''}" onclick="setMenuOpcionStock(${g.id},${o.id})" title="${t('title.limitPortions')}"><i class="ti ti-stack-2"></i> ${o.stock!=null ? t('label.portionsLeft').replace('${n}', o.stock) : t('btn.limitPortions')}</button>
           <button class="owner-only btn btn-sm btn-icon btn-danger" onclick="removeMenuOpcion(${g.id},${o.id})"><i class="ti ti-x"></i></button>
         </div>
       `;}).join('') : `<div class="empty" style="padding:14px">${q ? t('empty.noSearchResults') : t('empty.groupOptions')}</div>`}
@@ -25765,7 +25794,7 @@ async function acceptOnlineOrder(orderId, auto){
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
-        decrementMenuStock(order, l, l.qty);
+        decrementMenuStock(order, l, l.qty); decrementMenuOptionStock(l, l.qty);
       }
     });
     order.cerrada = false;
@@ -26260,7 +26289,11 @@ function confirmAddMenuToOrder(orderId, menuId){
       .filter(Boolean);
     const modExtra = selectedMods.reduce((s,mod) => s + (mod.precio||0), 0);
     extrasTotal += modExtra;
-    return {grupoNombre: g.nombre, opcionNombre: o.nombre, recipeId: o.recipeId ?? null, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
+    /* `grupoId`/`opcionId` para poder descontar las raciones DE ESA OPCIÓN
+       ("quedan 8 merluzas"), que es donde está el límite de verdad en una
+       cocina: cuando se acaba la merluza no se deja de vender el menú, se deja
+       de ofrecer merluza. */
+    return {grupoNombre: g.nombre, opcionNombre: o.nombre, grupoId: g.id, opcionId: o.id, recipeId: o.recipeId ?? null, suplemento: o.suplemento||0, modificadores: selectedMods.map(mod => ({nombre: mod.nombre, precio: mod.precio}))};
   });
   const price = m.precio + suplementoTotal + extrasTotal;
   const notas = selections.map(s => {
@@ -26296,7 +26329,7 @@ function confirmAddMenuToOrder(orderId, menuId){
     } else {
       line = {
         lineId: genId(),
-        menuId: m.id, recipeId: s.recipeId ?? null, platoId: null,
+        menuId: m.id, grupoId: s.grupoId, opcionId: s.opcionId, recipeId: s.recipeId ?? null, platoId: null,
         name: lineName, price: linePrice,
         qty:1, tanda: s.grupoNombre, notas: `Menú: ${m.nombre}`,
         modificadores: s.modificadores, menuInstanceId, menuBaseAmount: baseAmount
@@ -26372,7 +26405,7 @@ function marcharValeCompleto(orderId){
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
-        decrementMenuStock(order, line, qtyFired);
+        decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
       }
     });
   }
@@ -26399,7 +26432,7 @@ function marcharLine(orderId, idx){
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(order, line, qtyFired);
+  decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -26968,7 +27001,7 @@ function marcharComanda(orderId, tanda, isMenu){
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
-      decrementMenuStock(order, l, qtyFired);
+      decrementMenuStock(order, l, qtyFired); decrementMenuOptionStock(l, qtyFired);
     }
   });
   order.cerrada = false;
@@ -27451,6 +27484,32 @@ function decrementDishStock(platoId, qty){
    menú— y solo descuenta la primera línea de cada instancia. Se usa ese campo
    y no el precio base porque `reassignMenuBasePrice` lo mueve de línea al
    borrar, y un menú a precio 0 tampoco tendría portadora. */
+/* Las raciones de UNA OPCIÓN del menú ("quedan 8 merluzas"). Es donde está el
+   límite real de una cocina: se compran 8 merluzas, no 20 menús. Al llegar a 0
+   la opción se marca no disponible y el TPV y la web pública dejan de
+   ofrecerla, pero el menú se sigue vendiendo con las demás opciones. */
+function opcionDeMenuDeLinea(linea){
+  if(!linea || linea.menuId == null || linea.opcionId == null) return null;
+  const m = (DB.menus||[]).find(x => x.id === linea.menuId);
+  const g = m && (m.grupos||[]).find(x => x.id === linea.grupoId);
+  return (g && (g.opciones||[]).find(x => x.id === linea.opcionId)) || null;
+}
+function decrementMenuOptionStock(linea, qty){
+  if(!qty || qty <= 0) return;
+  const o = opcionDeMenuDeLinea(linea);
+  if(!o || o.stock == null) return;
+  o.stock = Math.max(0, o.stock - qty);
+  if(o.stock === 0) o.disponible = false;
+}
+function restockMenuOptionStock(linea, qty){
+  if(!qty || qty <= 0) return;
+  const o = opcionDeMenuDeLinea(linea);
+  if(!o || o.stock == null) return;
+  const seHabiaAgotado = o.stock === 0;
+  o.stock = o.stock + qty;
+  if(seHabiaAgotado) o.disponible = true;
+}
+
 function decrementMenuStock(order, linea, qty){
   if(!linea || linea.menuId == null || !qty || qty <= 0) return;
   if(linea.menuInstanceId){
@@ -27539,7 +27598,7 @@ function autoSendTakeawayLine(order, line){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(order, line, qtyFired);
+  decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
 }
 
@@ -27571,7 +27630,7 @@ function autoSendFirstCourse(order, line, tanda){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(order, line, qtyFired);
+  decrementMenuStock(order, line, qtyFired); decrementMenuOptionStock(line, qtyFired);
   order.cerrada = false;
 }
 
@@ -27886,6 +27945,9 @@ function restockForVoidedItems(items, opts){
        mismo `menuId`, así que devolver línea a línea inflaba el contador:
        anular un menú de tres platos devolvía tres raciones. Se agrupa por
        `menuInstanceId`, igual que al descontar. */
+    // Y las raciones de la OPCIÓN concreta que se eligió (la merluza), que sí
+    // van una por línea: cada línea es un plato del menú.
+    if(!line.isShipping) restockMenuOptionStock(line, line.qty || 0);
     if(!line.isShipping && line.menuId != null && !line.menuStockYaDevuelto){
       if(line.menuInstanceId){
         (items||[]).forEach(l => { if(l.menuInstanceId === line.menuInstanceId) l.menuStockYaDevuelto = true; });
