@@ -194,25 +194,39 @@ await caso('Un cobro duplicado se detecta y se anota una sola vez', async ()=>{
   const r = await page.evaluate(()=>{
     DB.auditLog = [];
     const ahora = new Date().toISOString();
-    // Un cobro duplicado es el MISMO pedido cobrado dos veces (mismo
-    // orderId), no dos ventas que casualmente sumen igual.
+    /* ⚠️ Un cobro duplicado es el MISMO pedido cobrado dos veces, y una venta
+       se guarda con `id` = el id del pedido (ver finalizeCharge). Esta prueba
+       sembraba un `orderId` que NINGUNA venta real lleva, así que pasaba por
+       el motivo equivocado: el detector funcionaba aquí y en producción no
+       saltaba jamás. Se siembra ahora como se guarda de verdad. */
     const dosIguales = [
-      {id:1, orderId:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
-      {id:2, orderId:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
+      {id:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
+      {id:99, total:42.5, createdAt:ahora, items:[{name:'X',qty:1,price:42.5}]},
     ];
     avisarSiCobroDuplicado(dosIguales);
     const tras1 = (DB.auditLog||[]).length;
     avisarSiCobroDuplicado(dosIguales);   // otra vez: no debe duplicar el aviso
     const tras2 = (DB.auditLog||[]).length;
     DB.auditLog = [];
-    avisarSiCobroDuplicado([{id:3, orderId:100, total:10, createdAt:ahora, items:[]}]);
+    avisarSiCobroDuplicado([{id:100, total:10, createdAt:ahora, items:[]}]);
     const unaSola = (DB.auditLog||[]).length;
     return {tras1, tras2, unaSola};
   });
   assert.ok(r.tras1 >= 1, 'dos cobros idénticos seguidos deberían dejar aviso');
   assert.equal(r.tras2, r.tras1, 'y no repetirlo cada vez que se mira');
   assert.equal(r.unaSola, 0, 'una venta sola no es un duplicado');
-  return 'avisa una vez y no se repite';
+  // Y que una venta ANULADA no cuente: el campo es `status`, no `anulada`.
+  const anuladas = await page.evaluate(()=>{
+    DB.auditLog = [];
+    const ahora = new Date().toISOString();
+    avisarSiCobroDuplicado([
+      {id:77, total:10, status:'anulada', createdAt:ahora, items:[]},
+      {id:77, total:10, status:'anulada', createdAt:ahora, items:[]},
+    ]);
+    return (DB.auditLog||[]).length;
+  });
+  assert.equal(anuladas, 0, 'dos ventas anuladas del mismo pedido no son un cobro duplicado');
+  return 'avisa una vez, no se repite y no cuenta las anuladas';
 });
 
 /* ─── Raciones limitadas ─── */
