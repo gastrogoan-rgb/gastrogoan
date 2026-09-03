@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 23:44';
+const GG_BUILD = '04/09/2026 00:01';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -39222,7 +39222,11 @@ function renderPuestaAPunto(){
     <div class="pp-card${abierta ? '' : ' pp-plegada'}">
       <div class="pp-cab">
         <div class="pp-cab-txt" onclick="alternarPuestaAPunto()" style="cursor:pointer;flex:1;min-width:0">
-          <h2>${escapeHtml(t('pp.title'))} <i class="ti ti-chevron-${abierta ? 'up' : 'down'}" style="font-size:16px;vertical-align:middle;opacity:.6"></i></h2>
+          <!-- La flecha tiene que quedarse SIEMPRE junto al texto, nunca caer
+               a su propia línea: "Puesta a punto de tu negocio" es largo, y en
+               un móvil estrecho el texto solo se envolvía y empujaba la
+               flecha abajo, descolgada y sola. -->
+          <h2 style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t('pp.title'))}</span> <i class="ti ti-chevron-${abierta ? 'up' : 'down'}" style="flex:none;font-size:16px;opacity:.6"></i></h2>
           <p>${escapeHtml(abierta ? t('pp.subtitle') : t('pp.progress').replace('${h}', hechas).replace('${t}', total))}</p>
         </div>
         <button class="pp-cerrar" onclick="ocultarPuestaAPunto()" title="${escapeHtml(t('pp.hide'))}">&times;</button>
