@@ -244,6 +244,43 @@ test('esPedidoProgramadoLejano: sin fecha/hora (mesa normal) no cuenta como leja
   assert.equal(sandbox.esPedidoProgramadoLejano({}), false);
 });
 
+/* --- Un pedido online: estático de verdad --- */
+
+test('esPedidoSoloLectura: online (origenOnline o clientRef) es de solo lectura', () => {
+  const sandbox = loadTpv({});
+  assert.equal(sandbox.esPedidoSoloLectura({origenOnline: true}), true);
+  assert.equal(sandbox.esPedidoSoloLectura({clientRef: 'abc'}), true);
+  assert.equal(sandbox.esPedidoSoloLectura({}), false, 'una mesa normal no es de solo lectura');
+});
+
+function pedidoOnlineConLinea(){
+  return {id: 1, origenOnline: true, tandas: [],
+    items: [{lineId: 'l1', name: 'Plato', qty: 1, price: 10, estado: 'cocina', marchada: 1}]};
+}
+
+test('Un pedido online no deja cambiar la cantidad ni borrar la línea', () => {
+  /* Se podía tocar +/-, notas, marchar y borrar sueltos en la fila, aunque el
+     selector de platos ya estuviera bloqueado — el dueño lo pilló probando:
+     "sigue dejando editar cosas como poner más o menos platos". */
+  const DB = {business: {}, tpvOrders: [pedidoOnlineConLinea()]};
+  const sandbox = loadTpv(DB);
+  const antes = JSON.stringify(DB.tpvOrders[0].items);
+  sandbox.changeOrderItemQty(1, 0, 1);
+  sandbox.removeOrderItem(1, 0);
+  assert.equal(JSON.stringify(DB.tpvOrders[0].items), antes, 'el pedido online no cambió nada');
+});
+
+test('Una mesa normal SÍ deja cambiar la cantidad (no se rompe lo de siempre)', () => {
+  const DB = {business: {}, employees: [], tables: [], tpvOrders: [{id: 2, tandas: [],
+    items: [{lineId: 'l1', name: 'Plato', qty: 1, price: 10}]}]};
+  const sandbox = loadTpv(DB);
+  // El render final es cosa del DOM, no de esta prueba: se sustituye por un
+  // stub para comprobar solo el cambio de datos.
+  sandbox.renderTableOrderModal = () => {};
+  sandbox.changeOrderItemQty(2, 0, 1);
+  assert.equal(DB.tpvOrders[0].items[0].qty, 2);
+});
+
 test('Se agota la MERLUZA, no el menú entero', () => {
   const DB = dbConOpcionesDeMenu(2);
   const sandbox = loadTpv(DB);

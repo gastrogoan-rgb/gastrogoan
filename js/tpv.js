@@ -1764,6 +1764,7 @@ function confirmAddMenuToOrder(orderId, menuId){
   const order = DB.tpvOrders.find(o=>o.id===orderId);
   const m = DB.menus.find(x=>x.id===menuId);
   if(!order || !m) return;
+  if(esPedidoSoloLectura(order)) return;
   let suplementoTotal = 0;
   let extrasTotal = 0;
   const selections = (m.grupos||[]).map(g => {
@@ -1911,6 +1912,7 @@ function marcharValeCompleto(orderId){
 function marcharLine(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  if(esPedidoSoloLectura(order)) return;
   const line = (order.items||[])[idx];
   if(!line || line.qty <= (line.marchada||0)){ showToast(t('msg.noNewDishes')); return; }
   const qtyFired = line.qty - (line.marchada||0);
@@ -2045,7 +2047,7 @@ function renderTableOrderModal(orderId){
   /* `clientRef` como respaldo: lo pone SOLO la web pública (el TPV no lo usa
      nunca), así que los pedidos que ya entraron antes de existir la marca
      `origenOnline` también quedan protegidos, sin tener que tocarlos. */
-  const soloConsulta = !!(order.origenOnline || order.clientRef);
+  const soloConsulta = esPedidoSoloLectura(order);
   let selectorHtml = '';
   const selectedMenu = activeMenus.find(m=>m.id===tpvSelectedCartaId);
   const selectedCarta = allCartas.find(c=>c.id===tpvSelectedCartaId);
@@ -2066,9 +2068,27 @@ function renderTableOrderModal(orderId){
 
   // Estado del servicio y botones de acción
   const allDelivered = order.items.length > 0 && (order.items||[]).filter(l=>!l.bebida).every(l=>l.estado==='entregado');
+  /* ⚠️ Si ya está TODO pagado online, el botón no puede decir "Cobrar · 25 €".
+     Antes mostraba siempre el total ENTERO del pedido, aunque no quedara nada
+     por cobrar de verdad — un botón así invita a cobrar en caja algo que el
+     cliente ya pagó con tarjeta desde el móvil. Se calcula lo que falta de
+     verdad (orderAmountPaidOnline) y, si es 0, se ofrece solo cerrar el
+     pedido, sin ningún importe ni acción de cobro. */
+  const yaPagadoDelTodo = order.items.length > 0 && Math.max(0, roundMoney(total - orderAmountPaidOnline(order))) <= 0.001;
+  /* El modal de pago (openPaymentModal) sigue siendo el único sitio que abre
+     el formulario de cobro — finalizeCharge lee campos que solo existen ahí
+     dentro, así que se llega a él siempre por ese camino. Lo que cambia es
+     el rótulo: "Cobrar · 25 €" con un pedido ya pagado invita a cobrarlo
+     otra vez en caja. Dentro, el modal ya calcula bien que no queda nada
+     pendiente y lo muestra con el aviso de pago online. */
+  const botonCobrarOCerrar = yaPagadoDelTodo
+    ? `<button class="btn btn-primary" style="white-space:nowrap" onclick="openPaymentModal(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
+    : `<button class="btn" style="white-space:nowrap" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`;
   const actionButtons = allDelivered && order.items.length
-    ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`
-    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}<button class="btn" style="white-space:nowrap" onclick="openPaymentModal(${order.id})" ${!order.items.length?'disabled':''}><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button></div>`;
+    ? (yaPagadoDelTodo
+        ? `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-check"></i> ${t('btn.closeOrderPaidOnline')}</button>`
+        : `<button class="btn btn-primary" style="width:100%" onclick="openPaymentModal(${order.id})"><i class="ti ti-cash"></i> ${t('btn.charge')} · ${fmtMoney(total)}</button>`)
+    : `<div style="display:flex;gap:8px;flex-wrap:wrap">${renderOrderMarcharButtons(order)}${botonCobrarOCerrar}</div>`;
 
   openModal(`
     <div id="table-order-modal-marker" data-order-id="${order.id}" style="display:none"></div>
@@ -2113,6 +2133,16 @@ function renderTableOrderModal(orderId){
 // varias secciones grandes, había que hacer scroll largo para encontrar el
 // plato que se busca. Mismo patrón que ya usa la configuración de menús
 // (getOrderMenuFolders/openTpvMenuFolder), aplicado aquí a la carta suelta.
+/* ⚠️ UN PEDIDO QUE HIZO EL CLIENTE POR LA WEB NO SE TOCA, y esto tiene que
+   defenderse en las funciones que MODIFICAN, no solo en el botón que las
+   llama — el botón se escondía, pero +/- de cantidad, notas, marchar y
+   borrar seguían sueltos en la fila de la línea, sin ninguna comprobación.
+   Es la misma función que ya decide el selector (soloConsulta ahí dentro);
+   se saca a un sitio único para que todo lo que toque una línea de un
+   pedido online pase por el mismo criterio. */
+function esPedidoSoloLectura(order){
+  return !!(order && (order.origenOnline || order.clientRef));
+}
 function renderCartaSelectorInline(order, carta){
   const secciones = (carta.secciones||[]).filter(sec => (sec.platos||[]).some(p=>p.disponible!==false));
   if(!secciones.length) return `<div class="empty" style="padding:10px">${t('empty.noDishesInCarta')}</div>`;
@@ -2201,7 +2231,7 @@ function renderTandaGroupCard(order, g, isMenu){
       <strong style="font-size:12px;text-transform:uppercase;color:var(--muted)">${g.tanda ? escapeHtml(g.tanda) : t('label.noCategory')}</strong>
       <div style="display:flex;gap:4px;align-items:center">
         ${statusBadge}
-        ${pendingCount ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11.5px;padding:6px 10px" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
+        ${pendingCount && !esPedidoSoloLectura(order) ? `<button class="btn btn-sm" style="background:var(--brand-orange);color:#fff;border-color:var(--brand-orange);font-size:11.5px;padding:6px 10px" onclick="marcharComanda(${order.id}, '${escapeJsAttr(g.tanda)}', ${isMenu})"><i class="ti ti-chef-hat"></i> ${t('btn.sendToKitchen')}</button>` : ''}
       </div>
     </div>
     ${allInGroup.map(({line, idx}) => {
@@ -2232,11 +2262,13 @@ function renderTandaGroupCard(order, g, isMenu){
       <div class="comanda-item-row" style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);${menu?'border-left:3px solid var(--blue,#4E5A63);padding-left:6px':''}">
         <span style="flex:1;overflow:visible;text-overflow:clip;white-space:normal"><strong>${line.qty}×</strong> ${escapeHtml(line.name)}${lineStatus}${menuBadge}${line.promoId ? ` <span class="badge badge-green" style="font-size:9px"><i class="ti ti-discount-2"></i> -${line.promoPct}%</span>` : ''}${line.pagadoOnline ? ` <span class="badge badge-green" style="font-size:9px" title="${escapeHtml((line.pagadorNombre?t('label.paidOnlineByHint').replace('${name}', line.pagadorNombre):t('label.paidOnline')))}"><i class="ti ti-credit-card"></i></span>` : line.pagoOnlinePendiente ? ` <span class="badge badge-amber" style="font-size:9px" title="${escapeHtml(t('label.paymentPending'))}"><i class="ti ti-clock-exclamation"></i></span>` : ''}${line.priceMismatch ? ` <i class="ti ti-alert-triangle" style="color:var(--brand-orange)" title="${escapeHtml(t('msg.priceChangedSinceOrder'))}"></i>` : ''}${line.unavailableNow ? ` <i class="ti ti-alert-circle" style="color:var(--red)" title="${escapeHtml(t('msg.dishNoLongerInCarta'))}"></i>` : ''}</span>
         <span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--brand-orange);white-space:nowrap">${fmtMoney(line.price * line.qty)}</span>
+        ${esPedidoSoloLectura(order) ? '' : `
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, -1)"><i class="ti ti-minus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="changeOrderItemQty(${order.id}, ${idx}, 1)"><i class="ti ti-plus"></i></button>
         <button class="btn btn-sm btn-icon comanda-qty-btn" onclick="openLineNotesModal(${order.id}, ${idx})" title="${t('common.notes')}"><i class="ti ti-note"></i></button>
         ${line.qty > (line.marchada||0) ? `<button class="btn btn-sm btn-icon comanda-qty-btn" style="color:var(--brand-orange)" title="${t('title.sendDishToKitchen')}" onclick="marcharLine(${order.id}, ${idx})"><i class="ti ti-chef-hat"></i></button>` : ''}
         ${line.estado==='entregado' ? '' : `<button class="btn btn-sm btn-icon btn-danger comanda-qty-btn" onclick="removeOrderItem(${order.id}, ${idx})"><i class="ti ti-x"></i></button>`}
+        `}
       </div>
       ${line.notas ? `<div style="font-size:10.5px;color:var(--muted);padding:2px 0"><i class="ti ti-note"></i> ${escapeHtml(line.notas)}</div>` : ''}
     `;}).join('')}
@@ -2475,6 +2507,7 @@ function orderPendingKitchenLines(order, tanda, isMenu){
 function marcharComanda(orderId, tanda, isMenu){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order) return;
+  if(esPedidoSoloLectura(order)) return;
   const pending = orderPendingKitchenLines(order, tanda, isMenu);
   if(!pending.length){ showToast(t('msg.noNewDishes')); return; }
 
@@ -3235,6 +3268,10 @@ function openAddItemModal(orderId, secId, platoId){
   setTimeout(()=>document.getElementById('add-item-notas')?.focus(), 50);
 }
 function confirmAddOrderItem(orderId, secId, platoId){
+  {
+    const order0 = DB.tpvOrders.find(o => o.id === orderId);
+    if(esPedidoSoloLectura(order0)) return;   // aunque se llame a mano/consola
+  }
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const p = findCartaPlato(secId, platoId);
   if(!order || !p) return;
@@ -3278,6 +3315,7 @@ function confirmAddOrderItem(orderId, secId, platoId){
 function changeOrderItemQty(orderId, idx, delta){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items[idx]) return;
+  if(esPedidoSoloLectura(order)) return;   // defensa real: no solo el botón escondido
   const line = order.items[idx];
   // Bajar la cantidad de un plato que ya se ha marchado a cocina (o servido)
   // exige PIN y motivo: si no, se podría reducir en silencio la venta de
@@ -3301,6 +3339,7 @@ function changeOrderItemQty(orderId, idx, delta){
 function removeOrderItem(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   if(!order || !order.items[idx]) return;
+  if(esPedidoSoloLectura(order)) return;
   const line = order.items[idx];
   // Si el plato ya se ha marchado a cocina (incluido si ya se ha entregado),
   // o si ya lo pagó el cliente por su cuenta desde el móvil (confirmado o
@@ -3592,6 +3631,7 @@ function openLineNotesModal(orderId, idx){
   const order = DB.tpvOrders.find(o => o.id === orderId);
   const line = order && order.items[idx];
   if(!line) return;
+  if(esPedidoSoloLectura(order)) return;
   const options = [...new Set([...getCourseOptions(), ...(order.tandas||[]), line.tanda||''])].filter(o=>o!=='');
   openModal(`
     <div class="modal-header">
