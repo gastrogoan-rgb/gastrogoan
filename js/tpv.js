@@ -1259,7 +1259,7 @@ async function acceptOnlineOrder(orderId, auto){
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
-        decrementMenuStock(l.menuId, l.qty);
+        decrementMenuStock(order, l, l.qty);
       }
     });
     order.cerrada = false;
@@ -1303,10 +1303,16 @@ function cancelAcceptedOnlineOrder(orderId){
   if(!order) return;
   requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
     if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
-    // El stock ya se había descontado al aceptar el pedido (líneas ya
-    // "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
-    // contador de raciones/ingredientes queda corto para siempre.
-    restockForVoidedItems(order.items);
+    /* El stock ya se había descontado al aceptar el pedido (líneas ya
+       "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
+       contador de raciones queda corto para siempre.
+       ⚠️ SOLO las raciones, NO los ingredientes. Los ingredientes se
+       descuentan al COBRAR (discountStockForOrder), y este botón solo existe
+       mientras el pedido NO está cobrado: devolvía a Mega Lista un consumo que
+       nunca se había restado, así que cancelar un pedido de cuatro
+       hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
+       había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
+    restockForVoidedItems(order.items, {includeIngredients: false});
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -1860,7 +1866,7 @@ function marcharValeCompleto(orderId){
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
-        decrementMenuStock(line.menuId, qtyFired);
+        decrementMenuStock(order, line, qtyFired);
       }
     });
   }
@@ -1887,7 +1893,7 @@ function marcharLine(orderId, idx){
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -2456,7 +2462,7 @@ function marcharComanda(orderId, tanda, isMenu){
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
-      decrementMenuStock(l.menuId, qtyFired);
+      decrementMenuStock(order, l, qtyFired);
     }
   });
   order.cerrada = false;
@@ -2928,9 +2934,24 @@ function decrementDishStock(platoId, qty){
    suelto. Antes solo se podían limitar raciones de un plato de la Carta, así
    que quien vendía menús no tenía forma de decir cuántos le quedaban y se
    enteraba cuando ya los había vendido de más. */
-function decrementMenuStock(menuId, qty){
-  if(menuId == null || !qty || qty <= 0) return;
-  const m = (DB.menus||[]).find(x => x.id === menuId);
+/* ⚠️ UN MENÚ DESCUENTA UNA RACIÓN, no una por plato.
+
+   Un menú se añade a la comanda como UNA LÍNEA POR GRUPO (entrante, segundo,
+   postre) y todas llevan el mismo `menuId`. Como se descontaba línea a línea,
+   un menú de tres platos gastaba TRES raciones: con 20 puestas, el menú se
+   marcaba agotado a los 7 vendidos, en pleno mediodía y con 13 por vender.
+
+   Se agrupa por `menuInstanceId` —el identificador de ESA ración concreta del
+   menú— y solo descuenta la primera línea de cada instancia. Se usa ese campo
+   y no el precio base porque `reassignMenuBasePrice` lo mueve de línea al
+   borrar, y un menú a precio 0 tampoco tendría portadora. */
+function decrementMenuStock(order, linea, qty){
+  if(!linea || linea.menuId == null || !qty || qty <= 0) return;
+  if(linea.menuInstanceId){
+    const primera = ((order && order.items) || []).find(l => l.menuInstanceId === linea.menuInstanceId);
+    if(primera && primera !== linea) return;   // esta ración ya la descontó su primera línea
+  }
+  const m = (DB.menus||[]).find(x => x.id === linea.menuId);
   if(!m || m.stock == null) return;
   m.stock = Math.max(0, m.stock - qty);
   if(m.stock === 0) m.disponible = false;
@@ -3012,7 +3033,7 @@ function autoSendTakeawayLine(order, line){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
 }
 
@@ -3044,7 +3065,7 @@ function autoSendFirstCourse(order, line, tanda){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
 }
 
@@ -3330,12 +3351,17 @@ function requestCancelSale(saleId){
   if(!sale || sale.status === 'anulada') return;
   requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
+/* La marca `menuStockYaDevuelto` es de USAR Y TIRAR dentro de este recorrido:
+   sirve para no devolver la misma ración de menú una vez por cada plato. Se
+   limpia al salir para que una anulación posterior de las mismas líneas no se
+   la encuentre puesta. */
 function restockForVoidedItems(items, opts){
   // includeIngredients=false: solo se restituyen las raciones directas del
   // plato (p.stock), no los ingredientes de su escandallo — para el caso de
   // anular ANTES de cobrar, donde discountStockForOrder todavía no se ha
   // ejecutado y no hay nada que devolver a Mega Lista (ver confirmVoidLine).
   const includeIngredients = !opts || opts.includeIngredients !== false;
+  (items||[]).forEach(l => { delete l.menuStockYaDevuelto; });   // por si quedó de una vuelta anterior
   (items||[]).forEach(line => {
     if(!line.isShipping && line.platoId != null){
       const p = findCartaPlatoById(line.platoId);
@@ -3349,7 +3375,15 @@ function restockForVoidedItems(items, opts){
        dejaba su contador por debajo de lo real: el restaurante se quedaba
        creyendo que había servido menús que nunca salieron, y a media noche
        el menú se marcaba agotado con raciones todavía por vender. */
-    if(!line.isShipping && line.menuId != null){
+    /* ⚠️ Una ración por MENÚ, no una por plato — el espejo exacto del
+       descuento. Un menú son varias líneas (entrante, segundo, postre) con el
+       mismo `menuId`, así que devolver línea a línea inflaba el contador:
+       anular un menú de tres platos devolvía tres raciones. Se agrupa por
+       `menuInstanceId`, igual que al descontar. */
+    if(!line.isShipping && line.menuId != null && !line.menuStockYaDevuelto){
+      if(line.menuInstanceId){
+        (items||[]).forEach(l => { if(l.menuInstanceId === line.menuInstanceId) l.menuStockYaDevuelto = true; });
+      }
       const m = (DB.menus||[]).find(x => x.id === line.menuId);
       if(m && m.stock != null){
         const wasOut = m.stock === 0;

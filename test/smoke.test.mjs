@@ -152,19 +152,42 @@ function makeDbWithMenu(stock) {
   return { business: {}, cartas: [], menus: [{ id: 7, stock, disponible: true }] };
 }
 
+// Una ración de menú son VARIAS líneas (entrante, segundo, postre) con el
+// mismo menuId y el mismo menuInstanceId.
+function comandaConMenu(nGrupos){
+  const items = [];
+  for(let i = 0; i < nGrupos; i++){
+    items.push({lineId: 'l'+i, menuId: 7, menuInstanceId: 'inst1', qty: 1, name: 'Plato '+i});
+  }
+  return {id: 1, items};
+}
+
+test('UN menú de tres platos descuenta UNA ración, no tres', () => {
+  /* ⚠️ El fallo real: se descontaba línea a línea, así que un menú de tres
+     platos gastaba tres raciones. Con 20 puestas, el menú se marcaba agotado
+     a los 7 vendidos y con 13 por vender, en pleno mediodía. */
+  const DB = makeDbWithMenu(20);
+  const sandbox = loadTpv(DB);
+  const order = comandaConMenu(3);
+  order.items.forEach(l => sandbox.decrementMenuStock(order, l, 1));
+  assert.equal(DB.menus[0].stock, 19, 'un menú vendido = una ración menos');
+});
+
 test('decrementMenuStock resta raciones del menú y no baja de 0', () => {
   const DB = makeDbWithMenu(20);
   const sandbox = loadTpv(DB);
-  sandbox.decrementMenuStock(7, 3);
+  const order = comandaConMenu(1);
+  sandbox.decrementMenuStock(order, order.items[0], 3);
   assert.equal(DB.menus[0].stock, 17);
-  sandbox.decrementMenuStock(7, 50);
+  sandbox.decrementMenuStock(order, order.items[0], 50);
   assert.equal(DB.menus[0].stock, 0);
 });
 
 test('un menú agotado se marca "no disponible" solo', () => {
   const DB = makeDbWithMenu(2);
   const sandbox = loadTpv(DB);
-  sandbox.decrementMenuStock(7, 2);
+  const order = comandaConMenu(1);
+  sandbox.decrementMenuStock(order, order.items[0], 2);
   assert.equal(DB.menus[0].disponible, false,
     'al llegar a 0 tiene que desaparecer del TPV y de la web pública, que filtran por disponible');
 });
@@ -172,9 +195,18 @@ test('un menú agotado se marca "no disponible" solo', () => {
 test('decrementMenuStock no toca los menús sin límite (lo normal)', () => {
   const DB = makeDbWithMenu(null);
   const sandbox = loadTpv(DB);
-  sandbox.decrementMenuStock(7, 3);
+  const order = comandaConMenu(1);
+  sandbox.decrementMenuStock(order, order.items[0], 3);
   assert.equal(DB.menus[0].stock, null);
   assert.equal(DB.menus[0].disponible, true);
+});
+
+test('Al anular, un menú de tres platos devuelve UNA ración, no tres', () => {
+  const DB = makeDbWithMenu(19);
+  const sandbox = loadTpv(DB);
+  const order = comandaConMenu(3);
+  sandbox.restockForVoidedItems(order.items, {includeIngredients: false});
+  assert.equal(DB.menus[0].stock, 20, 'devolver línea a línea inflaba el contador');
 });
 
 test('decrementDishStock marca "no disponible" al llegar a 0', () => {

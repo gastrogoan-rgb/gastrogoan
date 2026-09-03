@@ -3070,6 +3070,14 @@ const ARRAYS_CON_LAPIDA = new Set([
   'ingredientCategories', 'recipeCategories', 'ingredients', 'recipes',
   'fichas', 'providers', 'tables', 'employees', 'cartas', 'menus',
   'clients', 'elaboraciones',
+  /* ⚠️ `tpvOrders` también, y el comentario de "las comandas no se borran, se
+     anulan" era falso: se borran al juntar dos mesas, al rechazar o cancelar
+     un pedido online, al liberar una mesa vacía y al purgar las pagadas.
+     Sin lápida, juntar la mesa 3 con la 4 y sincronizar hacía REAPARECER la
+     mesa 3 con los mismos platos que ya estaban en la 4: o se cobran dos
+     veces, o queda una mesa fantasma ocupada toda la noche. Y un pedido
+     online rechazado volvía a la pantalla de Cocina y se preparaba. */
+  'tpvOrders',
 ]);
 const LAPIDA_DIAS = 60;
 
@@ -3318,7 +3326,23 @@ function refreshAfterRemoteChange(){
 // Botón "Actualizar" de la cabecera: vuelve a leer los datos guardados
 // (por si otro dispositivo los cambió) y refresca la pantalla actual.
 async function manualRefresh(){
-  DB = await loadDB();
+  /* ⚠️ Si la lectura FALLA, no se toca `DB`.
+
+     `loadDB()` no distingue "no hay datos" de "no se pudo leer": ante
+     cualquier fallo (cuota, modo privado de Safari, la base bloqueada un
+     instante) devuelve un negocio VACÍO. Y esta línea lo asignaba a ciegas,
+     así que pulsar "Actualizar" en el momento malo dejaba la app en blanco
+     y el siguiente guardado escribía ese vacío ENCIMA de los datos buenos —
+     y lo subía a la nube, borrándoselo también a los demás dispositivos.
+     Un botón de refrescar no puede destruir nada. */
+  dbLoadFailedFlag = false;
+  const recargado = await loadDB();
+  if(dbLoadFailedFlag){
+    dbLoadFailedFlag = false;   // ya se avisa aquí; no se reabre el modal del arranque
+    showToast(t('msg.refreshReadFailed'), 6000);
+    return;
+  }
+  DB = recargado;
   refreshAfterRemoteChange();
   /* Y de paso, comprobar si hay una versión nueva publicada — SIN esperar a
      las 6 horas del ciclo normal. Este botón se llama "Actualizar": si el
@@ -3746,12 +3770,35 @@ function renderModuleBadges(){
 }
 
 let publicRequestsListenerAttached = false;
+/* ⚠️ EL OYENTE NO SE ENGANCHA HASTA SABER DÓNDE VIVE EL ESPEJO.
+
+   `espejoEnNubePropia` empieza en `null` en cada recarga y la sonda que lo
+   decide es asíncrona. El oyente se enganchaba en el mismo instante del
+   arranque, con el veredicto todavía sin llegar, así que `getPublicMirrorApp()`
+   devolvía la nube DEL NEGOCIO por defecto. En un negocio con reglas antiguas
+   —cuyas reservas siguen entrando por la plataforma compartida— eso significa
+   escuchar donde no escribe nadie: LAS RESERVAS ONLINE NO LLEGAN NUNCA AL
+   PANEL, sin ningún error, y recargar no lo arregla porque la carrera se
+   repite igual.
+   Se espera al veredicto UNA vez; si la sonda no puede ni ejecutarse, se sigue
+   igualmente para no quedarse sin oyente. */
+let esperandoVeredictoDelEspejo = false;
 function initPublicRequestsListener(){
   if(publicRequestsListenerAttached) return;
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
   const publicId = getPublicId();
   if(!publicId) return;
+  const hayNubePropia = (typeof getCloudConfig === 'function') && !!getCloudConfig();
+  if(hayNubePropia && espejoEnNubePropia === null && !esperandoVeredictoDelEspejo){
+    esperandoVeredictoDelEspejo = true;
+    Promise.resolve()
+      .then(() => comprobarEspejoEnNubePropia())
+      .catch(() => {})
+      .then(() => { esperandoVeredictoDelEspejo = false; initPublicRequestsListener(); });
+    return;
+  }
+  if(esperandoVeredictoDelEspejo) return;   // ya hay uno esperando: no duplicar
   getPublicMirrorApp().then(app => {
     if(!app || publicRequestsListenerAttached) return;
     publicRequestsListenerAttached = true;
@@ -4569,7 +4616,9 @@ function initCloud(){
       });
     }
   }catch(e){
+    // Sin reintento aquí también quedaba muerto: ver reintentarConexionNube.
     recordSyncError(e);
+    reintentarConexionNube(tenantId);
   }
 }
 
@@ -4650,10 +4699,16 @@ function avisarSiCobroDuplicado(ventas){
   try{
     if(!Array.isArray(ventas) || !DB.auditLog) return;
     const porPedido = new Map();
+    /* ⚠️ Esto era CÓDIGO MUERTO y nadie se había dado cuenta. Ninguna venta
+       lleva `orderId` (se guardan con `id`, que ya ES el id del pedido) ni
+       `anulada` (la anulación pone `status:'anulada'`), así que el bucle salía
+       en la primera línea SIEMPRE y no avisaba jamás.
+       Importa porque CLAUDE.md acepta a conciencia el riesgo de cobro
+       duplicado precisamente por esta red — que no existía. */
     ventas.forEach(v => {
-      if(!v || v.orderId == null || v.anulada) return;
-      if(!porPedido.has(v.orderId)) porPedido.set(v.orderId, []);
-      porPedido.get(v.orderId).push(v);
+      if(!v || v.id == null || v.status === 'anulada') return;
+      if(!porPedido.has(v.id)) porPedido.set(v.id, []);
+      porPedido.get(v.id).push(v);
     });
     porPedido.forEach((lista, orderId) => {
       if(lista.length < 2 || cobrosDuplicadosAvisados.has(orderId)) return;
@@ -4694,10 +4749,54 @@ function mergeOrderLines(localOrder, remoteOrder){
   const vistas = new Set();
   locales.forEach(l => {
     vistas.add(l.lineId);
-    unidas.push(remotasPorId.has(l.lineId) ? remotasPorId.get(l.lineId) : l);
+    /* ⚠️ En una línea que existe en los dos lados, ganaba la remota ENTERA —
+       incluidos `estado` y `marchada`. Así, cocina marcaba un plato entregado
+       y la versión de sala, que llegaba después, lo devolvía al pase: el plato
+       reaparecía y se cocinaba dos veces. Estos dos campos solo pueden
+       AVANZAR, nunca retroceder. */
+    unidas.push(remotasPorId.has(l.lineId) ? fusionarLinea(l, remotasPorId.get(l.lineId)) : l);
   });
   remotas.forEach(l => { if(!vistas.has(l.lineId)) unidas.push(l); });
-  return Object.assign({}, remoteOrder, {items: unidas});
+  /* ⚠️ Y la CABECERA no puede venir entera de la nube.
+
+     `Object.assign({}, remoteOrder, ...)` traía `status`, `cerrada` y
+     `closedAt` del otro aparato, sin ninguna regla. Consecuencia real: la
+     tablet cobra la mesa 4; el móvil, que aún no lo sabe, añade un café y sube
+     su versión con `status:'abierta'`; la mesa cobrada VUELVE A ABRIRSE, la
+     guarda de `finalizeCharge` ya no protege y se cobra dos veces — con el
+     escandallo descontado dos veces del inventario.
+     Y al revés: la versión "pagada" llega al móvil y el café marchado
+     desaparece de Cocina sin haberse servido, porque esa pantalla filtra las
+     pagadas.
+     Cobrar es un punto de no retorno: si un lado ya cobró, la comanda se queda
+     cobrada, y las líneas que llegaron después se avisan en vez de perderse. */
+  const fusionada = Object.assign({}, remoteOrder, {items: unidas});
+  const yaCobrada = localOrder.status === 'pagada' || remoteOrder.status === 'pagada';
+  if(yaCobrada && fusionada.status !== 'pagada'){
+    const cobrado = localOrder.status === 'pagada' ? localOrder : remoteOrder;
+    fusionada.status = 'pagada';
+    fusionada.cerrada = true;
+    fusionada.closedAt = cobrado.closedAt || localOrder.closedAt || remoteOrder.closedAt;
+    fusionada.lineasTrasCobro = true;   // para poder avisar de que llegó algo después
+  }
+  return fusionada;
+}
+
+/* Une una línea que existe en los dos aparatos. La remota manda en lo
+   editable (nombre, cantidad, notas), pero el avance del servicio no puede ir
+   hacia atrás: lo marchado sigue marchado y lo entregado sigue entregado. */
+const ORDEN_ESTADOS = ['', 'cocina', 'preparando', 'listo', 'recogido', 'entregado'];
+function fusionarLinea(local, remota){
+  const out = Object.assign({}, remota);
+  out.marchada = Math.max(parseFloat(local.marchada) || 0, parseFloat(remota.marchada) || 0);
+  const iLocal = ORDEN_ESTADOS.indexOf(local.estado || '');
+  const iRemoto = ORDEN_ESTADOS.indexOf(remota.estado || '');
+  if(iLocal > iRemoto && iLocal !== -1) out.estado = local.estado;
+  // Las marcas de tiempo del servicio se conservan si existen en cualquiera.
+  ['enviadoAt', 'recogidoAt', 'entregadoAt'].forEach(k => {
+    if(!out[k] && local[k]) out[k] = local[k];
+  });
+  return out;
 }
 
 function applyRemoteBlock(key, remoteValue){
@@ -4915,7 +5014,13 @@ function attachCloudChildListeners(){
      callback del SDK, así que ese bloque —y todos los siguientes— no se
      aplicaban nunca: el dispositivo dejaba de recibir, en silencio. */
   if(!lastSyncedSnapshot) lastSyncedSnapshot = {};
-  const onErr = err => recordSyncError(err);
+  /* ⚠️ Firebase CANCELA el listener cuando salta este callback (permisos
+     revocados, reglas tocadas a mitad de servicio, token caducado). Antes solo
+     se pintaba el rojo: el dispositivo se quedaba SORDO el resto del turno,
+     sin recibir nada de los demás, y ningún initCloud posterior volvía a
+     entrar porque `cloudRef` seguía puesto. El mismo estado muerto que los
+     reintentos vinieron a eliminar, alcanzado por otra puerta. */
+  const onErr = err => { recordSyncError(err); reintentarConexionNube(getTenantId()); };
   /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
      por eso quita el rojo igual que lo quitaba una subida buena.
      Sin esto el indicador se quedaba en rojo horas: una vez marcado, solo
@@ -5169,11 +5274,22 @@ function startCloudSync(tenantId){
          y con él la ÚNICA pantalla que explica qué paso falta.
          Del rojo solo se sale con una prueba de verdad — una subida correcta o
          un bloque que llega — que es lo que hace marcarNubeAlDia(). */
-      if(lastSyncErrorCode && socketConnected) return;
+      /* El error manda sobre el estado del socket, en LOS DOS sentidos. Con
+         `&& socketConnected` solo se protegía la reconexión: al perderse la
+         red, 'offline' pisaba el rojo, y al volver el guard ya no dejaba
+         repintarlo — el indicador se quedaba en ámbar "sin conexión" con la
+         conexión perfecta y el problema de fondo intacto. El hostelero
+         culpaba al wifi en vez de ver el paso de Firebase que le falta. */
+      if(lastSyncErrorCode){ updateSyncBadge('error'); return; }
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
+    /* `cloudRef` ya está asignado arriba, antes del `once` y del listener de
+       conexión: si algo lanza a partir de ahí, el dispositivo se quedaba con
+       la referencia puesta, sin listeners y con la foto a null — ni sube ni
+       baja nada, y ningún initCloud posterior vuelve a entrar. */
     recordSyncError(e);
+    reintentarConexionNube(tenantId);
   }
 }
 

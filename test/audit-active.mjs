@@ -726,5 +726,60 @@ await testAsync('FIX H9: la conexión con la plataforma se SUELTA cuando no se u
   assert.equal(vecesOffline, 1, 'un negocio que escucha reservas por la plataforma NO puede soltarla');
 });
 
+await testAsync('FIX H10: una mesa YA COBRADA no vuelve a abrirse al sincronizar', async () => {
+  /* La tablet cobra la mesa 4. El móvil, que aún no lo sabe, añade un café y
+     sube su versión con status 'abierta'. Antes la cabecera venía entera del
+     otro aparato: la mesa cobrada VOLVÍA A ABRIRSE, la guarda de finalizeCharge
+     ya no protegía y se cobraba dos veces, con el escandallo descontado dos
+     veces del inventario. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  const local = {id: 1, status: 'pagada', cerrada: true, closedAt: 'ayer',
+                 items: [{lineId: 'a', qty: 1, estado: 'entregado', marchada: 1}]};
+  const remoto = {id: 1, status: 'abierta', cerrada: false,
+                  items: [{lineId: 'a', qty: 1, estado: 'cocina', marchada: 0},
+                          {lineId: 'b', qty: 1, name: 'Café'}]};
+  const r = sandbox.mergeOrderLines(local, remoto);
+  assert.equal(r.status, 'pagada', 'cobrar es un punto de no retorno');
+  assert.equal(r.lineasTrasCobro, true, 'y tiene que quedar constancia de que llegó algo después');
+  assert.equal(r.items.length, 2, 'sin perder el café que añadió el otro aparato');
+});
+
+await testAsync('FIX H11: un plato entregado no vuelve al pase', async () => {
+  /* Cocina marca "entregado" mientras sala toca la misma línea. La versión de
+     sala llegaba después y el estado RETROCEDÍA: el plato reaparecía en el
+     pase y se cocinaba dos veces. El avance del servicio no puede ir atrás. */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  const r = sandbox.mergeOrderLines(
+    {id: 2, status: 'abierta', items: [{lineId: 'a', estado: 'entregado', marchada: 2, entregadoAt: 'x'}]},
+    {id: 2, status: 'abierta', items: [{lineId: 'a', estado: 'cocina', marchada: 0, notas: 'sin sal'}]});
+  const l = r.items[0];
+  assert.equal(l.estado, 'entregado', 'el estado más avanzado gana');
+  assert.equal(l.marchada, 2, 'lo marchado sigue marchado');
+  assert.equal(l.notas, 'sin sal', 'pero lo editable sí se actualiza');
+  assert.equal(l.entregadoAt, 'x', 'y no se pierde la hora de entrega');
+});
+
+await testAsync('FIX H12: las comandas borradas no resucitan', async () => {
+  /* Se borran al juntar mesas, al rechazar un pedido online y al liberar una
+     mesa vacía. Sin lápida, juntar la mesa 3 con la 4 hacía REAPARECER la 3
+     con los mismos platos que ya estaban en la 4: o se cobran dos veces, o
+     queda una mesa fantasma ocupada toda la noche.
+     Se comprueba el COMPORTAMIENTO y no la lista: las constantes del sandbox
+     no se ven desde fuera (trampa ya documentada en CLAUDE.md). */
+  const sandbox = loadCore();
+  await sandbox.__getDbReadyPromise();
+  // Estaban las mesas 3 y 4; se juntan y la 3 desaparece.
+  sandbox.__setDB({tpvOrders: [{id: 4, items: []}]});
+  sandbox.__setLastSyncedSnapshot({
+    tpvOrders: sandbox.canonicalStringify([{id: 3, items: []}, {id: 4, items: []}]),
+  });
+  sandbox.anotarLapidas();
+  const borrados = sandbox.__getDB().borrados || {};
+  assert.ok('tpvOrders:3' in borrados,
+    'sin lápida, la mesa juntada reaparece en cuanto sincroniza el otro aparato');
+});
+
 console.log(`\n${failures === 0 ? '✅ Todas las pruebas activas confirmaron los hallazgos' : `❌ ${failures} prueba(s) no se comportaron como se esperaba`}`);
 process.exit(0); // exit 0 siempre: el objetivo es DEMOSTRAR los hallazgos, no que "pasen" como tests de regresión

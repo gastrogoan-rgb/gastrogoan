@@ -5493,6 +5493,11 @@ function downloadJSON(obj, filename){
    que es de donde se guarda en Archivos, se manda por correo o va a Drive —
    el gesto que un usuario de iPad ya conoce. Si tampoco estuviera, se abre en
    una pestaña NUEVA para no perder la app, y se le dice qué hacer. */
+/* Devuelve una PROMESA que solo resuelve si el archivo se guardó de verdad.
+   Antes no devolvía nada y no lanzaba nunca: en Apple, cancelar la hoja de
+   compartir se tragaba con un `.catch(()=>{})`. Quien archivaba datos (que
+   BORRA el histórico después) tenía un try/catch que era código muerto: en un
+   iPad, cancelar dejaba al hostelero sin archivo Y sin ventas. */
 function guardarArchivo(blob, filename){
   const esApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS se hace pasar por Mac
@@ -5500,9 +5505,9 @@ function guardarArchivo(blob, filename){
     try{
       const archivo = new File([blob], filename, {type: blob.type});
       if(navigator.canShare({files: [archivo]})){
-        navigator.share({files: [archivo], title: filename})
-          .catch(() => {});   // si cancela la hoja de compartir, no es un error
-        return;
+        // Cancelar NO es un error para una descarga normal, pero sí tiene que
+        // notarse para quien vaya a borrar algo después.
+        return navigator.share({files: [archivo], title: filename});
       }
     }catch(e){ /* sigue por el camino de abajo */ }
   }
@@ -5518,6 +5523,10 @@ function guardarArchivo(blob, filename){
   // En iOS la pestaña nueva todavía está leyendo el blob cuando esto corre:
   // revocarlo al instante deja la descarga a medias.
   setTimeout(() => URL.revokeObjectURL(url), esApple ? 20000 : 0);
+  /* Por este camino el navegador no dice si el archivo llegó a guardarse. Se
+     resuelve, pero quien vaya a BORRAR algo después no debe fiarse de esto:
+     tiene que preguntar (ver archiveOldData). */
+  return Promise.resolve();
 }
 
 function downloadFullBackup(){
@@ -5660,10 +5669,20 @@ async function archiveOldData(){
   const total = sales.length + reservations.length + cashClosures.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
   if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before)))) return;
+  /* ⚠️ Aquí se BORRA el histórico, así que la copia tiene que estar guardada
+     de verdad. Dos redes: se espera a que el guardado resuelva (en Apple,
+     cancelar la hoja de compartir ahora sí se nota), y además se PREGUNTA,
+     porque por el camino de la descarga normal el navegador no informa de
+     nada y no hay forma de saberlo. Antes se borraba sin comprobar ninguna de
+     las dos cosas. */
   try{
-    downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+    await downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
-    showToast(t('msg.backupFailedNoDelete'));
+    showToast(t('msg.backupFailedNoDelete'), 6000);
+    return;
+  }
+  if(!(await confirmModal(t('msg.confirmArchiveFileSaved')))){
+    showToast(t('msg.backupFailedNoDelete'), 6000);
     return;
   }
   DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
