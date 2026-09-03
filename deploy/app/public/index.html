@@ -2920,7 +2920,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1C1A17;box-sh
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <script>
-const GG_BUILD = '03/09/2026 01:35';
+const GG_BUILD = '03/09/2026 10:46';
 
 /* ============================================================
    GASTROGOAN · KIT DE GESTIÓN HOSTELERA
@@ -5994,6 +5994,14 @@ const ARRAYS_CON_LAPIDA = new Set([
   'ingredientCategories', 'recipeCategories', 'ingredients', 'recipes',
   'fichas', 'providers', 'tables', 'employees', 'cartas', 'menus',
   'clients', 'elaboraciones',
+  /* ⚠️ `tpvOrders` también, y el comentario de "las comandas no se borran, se
+     anulan" era falso: se borran al juntar dos mesas, al rechazar o cancelar
+     un pedido online, al liberar una mesa vacía y al purgar las pagadas.
+     Sin lápida, juntar la mesa 3 con la 4 y sincronizar hacía REAPARECER la
+     mesa 3 con los mismos platos que ya estaban en la 4: o se cobran dos
+     veces, o queda una mesa fantasma ocupada toda la noche. Y un pedido
+     online rechazado volvía a la pantalla de Cocina y se preparaba. */
+  'tpvOrders',
 ]);
 const LAPIDA_DIAS = 60;
 
@@ -6242,7 +6250,23 @@ function refreshAfterRemoteChange(){
 // Botón "Actualizar" de la cabecera: vuelve a leer los datos guardados
 // (por si otro dispositivo los cambió) y refresca la pantalla actual.
 async function manualRefresh(){
-  DB = await loadDB();
+  /* ⚠️ Si la lectura FALLA, no se toca `DB`.
+
+     `loadDB()` no distingue "no hay datos" de "no se pudo leer": ante
+     cualquier fallo (cuota, modo privado de Safari, la base bloqueada un
+     instante) devuelve un negocio VACÍO. Y esta línea lo asignaba a ciegas,
+     así que pulsar "Actualizar" en el momento malo dejaba la app en blanco
+     y el siguiente guardado escribía ese vacío ENCIMA de los datos buenos —
+     y lo subía a la nube, borrándoselo también a los demás dispositivos.
+     Un botón de refrescar no puede destruir nada. */
+  dbLoadFailedFlag = false;
+  const recargado = await loadDB();
+  if(dbLoadFailedFlag){
+    dbLoadFailedFlag = false;   // ya se avisa aquí; no se reabre el modal del arranque
+    showToast(t('msg.refreshReadFailed'), 6000);
+    return;
+  }
+  DB = recargado;
   refreshAfterRemoteChange();
   /* Y de paso, comprobar si hay una versión nueva publicada — SIN esperar a
      las 6 horas del ciclo normal. Este botón se llama "Actualizar": si el
@@ -6670,12 +6694,35 @@ function renderModuleBadges(){
 }
 
 let publicRequestsListenerAttached = false;
+/* ⚠️ EL OYENTE NO SE ENGANCHA HASTA SABER DÓNDE VIVE EL ESPEJO.
+
+   `espejoEnNubePropia` empieza en `null` en cada recarga y la sonda que lo
+   decide es asíncrona. El oyente se enganchaba en el mismo instante del
+   arranque, con el veredicto todavía sin llegar, así que `getPublicMirrorApp()`
+   devolvía la nube DEL NEGOCIO por defecto. En un negocio con reglas antiguas
+   —cuyas reservas siguen entrando por la plataforma compartida— eso significa
+   escuchar donde no escribe nadie: LAS RESERVAS ONLINE NO LLEGAN NUNCA AL
+   PANEL, sin ningún error, y recargar no lo arregla porque la carrera se
+   repite igual.
+   Se espera al veredicto UNA vez; si la sonda no puede ni ejecutarse, se sigue
+   igualmente para no quedarse sin oyente. */
+let esperandoVeredictoDelEspejo = false;
 function initPublicRequestsListener(){
   if(publicRequestsListenerAttached) return;
   if(typeof firebase === 'undefined') return;
   if(!getLicense()) return;
   const publicId = getPublicId();
   if(!publicId) return;
+  const hayNubePropia = (typeof getCloudConfig === 'function') && !!getCloudConfig();
+  if(hayNubePropia && espejoEnNubePropia === null && !esperandoVeredictoDelEspejo){
+    esperandoVeredictoDelEspejo = true;
+    Promise.resolve()
+      .then(() => comprobarEspejoEnNubePropia())
+      .catch(() => {})
+      .then(() => { esperandoVeredictoDelEspejo = false; initPublicRequestsListener(); });
+    return;
+  }
+  if(esperandoVeredictoDelEspejo) return;   // ya hay uno esperando: no duplicar
   getPublicMirrorApp().then(app => {
     if(!app || publicRequestsListenerAttached) return;
     publicRequestsListenerAttached = true;
@@ -7493,7 +7540,9 @@ function initCloud(){
       });
     }
   }catch(e){
+    // Sin reintento aquí también quedaba muerto: ver reintentarConexionNube.
     recordSyncError(e);
+    reintentarConexionNube(tenantId);
   }
 }
 
@@ -7574,10 +7623,16 @@ function avisarSiCobroDuplicado(ventas){
   try{
     if(!Array.isArray(ventas) || !DB.auditLog) return;
     const porPedido = new Map();
+    /* ⚠️ Esto era CÓDIGO MUERTO y nadie se había dado cuenta. Ninguna venta
+       lleva `orderId` (se guardan con `id`, que ya ES el id del pedido) ni
+       `anulada` (la anulación pone `status:'anulada'`), así que el bucle salía
+       en la primera línea SIEMPRE y no avisaba jamás.
+       Importa porque CLAUDE.md acepta a conciencia el riesgo de cobro
+       duplicado precisamente por esta red — que no existía. */
     ventas.forEach(v => {
-      if(!v || v.orderId == null || v.anulada) return;
-      if(!porPedido.has(v.orderId)) porPedido.set(v.orderId, []);
-      porPedido.get(v.orderId).push(v);
+      if(!v || v.id == null || v.status === 'anulada') return;
+      if(!porPedido.has(v.id)) porPedido.set(v.id, []);
+      porPedido.get(v.id).push(v);
     });
     porPedido.forEach((lista, orderId) => {
       if(lista.length < 2 || cobrosDuplicadosAvisados.has(orderId)) return;
@@ -7618,10 +7673,54 @@ function mergeOrderLines(localOrder, remoteOrder){
   const vistas = new Set();
   locales.forEach(l => {
     vistas.add(l.lineId);
-    unidas.push(remotasPorId.has(l.lineId) ? remotasPorId.get(l.lineId) : l);
+    /* ⚠️ En una línea que existe en los dos lados, ganaba la remota ENTERA —
+       incluidos `estado` y `marchada`. Así, cocina marcaba un plato entregado
+       y la versión de sala, que llegaba después, lo devolvía al pase: el plato
+       reaparecía y se cocinaba dos veces. Estos dos campos solo pueden
+       AVANZAR, nunca retroceder. */
+    unidas.push(remotasPorId.has(l.lineId) ? fusionarLinea(l, remotasPorId.get(l.lineId)) : l);
   });
   remotas.forEach(l => { if(!vistas.has(l.lineId)) unidas.push(l); });
-  return Object.assign({}, remoteOrder, {items: unidas});
+  /* ⚠️ Y la CABECERA no puede venir entera de la nube.
+
+     `Object.assign({}, remoteOrder, ...)` traía `status`, `cerrada` y
+     `closedAt` del otro aparato, sin ninguna regla. Consecuencia real: la
+     tablet cobra la mesa 4; el móvil, que aún no lo sabe, añade un café y sube
+     su versión con `status:'abierta'`; la mesa cobrada VUELVE A ABRIRSE, la
+     guarda de `finalizeCharge` ya no protege y se cobra dos veces — con el
+     escandallo descontado dos veces del inventario.
+     Y al revés: la versión "pagada" llega al móvil y el café marchado
+     desaparece de Cocina sin haberse servido, porque esa pantalla filtra las
+     pagadas.
+     Cobrar es un punto de no retorno: si un lado ya cobró, la comanda se queda
+     cobrada, y las líneas que llegaron después se avisan en vez de perderse. */
+  const fusionada = Object.assign({}, remoteOrder, {items: unidas});
+  const yaCobrada = localOrder.status === 'pagada' || remoteOrder.status === 'pagada';
+  if(yaCobrada && fusionada.status !== 'pagada'){
+    const cobrado = localOrder.status === 'pagada' ? localOrder : remoteOrder;
+    fusionada.status = 'pagada';
+    fusionada.cerrada = true;
+    fusionada.closedAt = cobrado.closedAt || localOrder.closedAt || remoteOrder.closedAt;
+    fusionada.lineasTrasCobro = true;   // para poder avisar de que llegó algo después
+  }
+  return fusionada;
+}
+
+/* Une una línea que existe en los dos aparatos. La remota manda en lo
+   editable (nombre, cantidad, notas), pero el avance del servicio no puede ir
+   hacia atrás: lo marchado sigue marchado y lo entregado sigue entregado. */
+const ORDEN_ESTADOS = ['', 'cocina', 'preparando', 'listo', 'recogido', 'entregado'];
+function fusionarLinea(local, remota){
+  const out = Object.assign({}, remota);
+  out.marchada = Math.max(parseFloat(local.marchada) || 0, parseFloat(remota.marchada) || 0);
+  const iLocal = ORDEN_ESTADOS.indexOf(local.estado || '');
+  const iRemoto = ORDEN_ESTADOS.indexOf(remota.estado || '');
+  if(iLocal > iRemoto && iLocal !== -1) out.estado = local.estado;
+  // Las marcas de tiempo del servicio se conservan si existen en cualquiera.
+  ['enviadoAt', 'recogidoAt', 'entregadoAt'].forEach(k => {
+    if(!out[k] && local[k]) out[k] = local[k];
+  });
+  return out;
 }
 
 function applyRemoteBlock(key, remoteValue){
@@ -7839,7 +7938,13 @@ function attachCloudChildListeners(){
      callback del SDK, así que ese bloque —y todos los siguientes— no se
      aplicaban nunca: el dispositivo dejaba de recibir, en silencio. */
   if(!lastSyncedSnapshot) lastSyncedSnapshot = {};
-  const onErr = err => recordSyncError(err);
+  /* ⚠️ Firebase CANCELA el listener cuando salta este callback (permisos
+     revocados, reglas tocadas a mitad de servicio, token caducado). Antes solo
+     se pintaba el rojo: el dispositivo se quedaba SORDO el resto del turno,
+     sin recibir nada de los demás, y ningún initCloud posterior volvía a
+     entrar porque `cloudRef` seguía puesto. El mismo estado muerto que los
+     reintentos vinieron a eliminar, alcanzado por otra puerta. */
+  const onErr = err => { recordSyncError(err); reintentarConexionNube(getTenantId()); };
   /* ⚠️ Un bloque que LLEGA de la nube es la prueba de que la nube funciona, y
      por eso quita el rojo igual que lo quitaba una subida buena.
      Sin esto el indicador se quedaba en rojo horas: una vez marcado, solo
@@ -8093,11 +8198,22 @@ function startCloudSync(tenantId){
          y con él la ÚNICA pantalla que explica qué paso falta.
          Del rojo solo se sale con una prueba de verdad — una subida correcta o
          un bloque que llega — que es lo que hace marcarNubeAlDia(). */
-      if(lastSyncErrorCode && socketConnected) return;
+      /* El error manda sobre el estado del socket, en LOS DOS sentidos. Con
+         `&& socketConnected` solo se protegía la reconexión: al perderse la
+         red, 'offline' pisaba el rojo, y al volver el guard ya no dejaba
+         repintarlo — el indicador se quedaba en ámbar "sin conexión" con la
+         conexión perfecta y el problema de fondo intacto. El hostelero
+         culpaba al wifi en vez de ver el paso de Firebase que le falta. */
+      if(lastSyncErrorCode){ updateSyncBadge('error'); return; }
       updateSyncBadge(socketConnected ? 'online' : 'offline');
     });
   }catch(e){
+    /* `cloudRef` ya está asignado arriba, antes del `once` y del listener de
+       conexión: si algo lanza a partir de ahí, el dispositivo se quedaba con
+       la referencia puesta, sin listeners y con la foto a null — ni sube ni
+       baja nada, y ningún initCloud posterior vuelve a entrar. */
     recordSyncError(e);
+    reintentarConexionNube(tenantId);
   }
 }
 
@@ -11690,6 +11806,8 @@ const I18N = {
     'help.bug.mailContext': 'Datos técnicos (rellenados por la app)',
     'tpv.onlineReadOnlyTitle': 'Pedido hecho por el cliente',
     'tpv.onlineReadOnlyDesc': 'Este pedido llegó por la web, así que aquí solo se consulta: no se le pueden añadir platos. Si el cliente quiere algo más, lo mejor es que haga otro pedido — así el total sigue cuadrando con lo que ya ha pagado.',
+    'msg.refreshReadFailed': 'No se han podido leer los datos guardados en este dispositivo. No se ha tocado nada: tus datos siguen donde estaban. Cierra y vuelve a abrir la app.',
+    'msg.confirmArchiveFileSaved': '¿Se ha guardado el archivo?\n\nCompruébalo en tus descargas ANTES de continuar: al aceptar se borrarán del histórico las ventas, reservas y cierres archivados. Si no lo ves, cancela y vuelve a intentarlo.',
     'title.renameSection': 'Cambiar el nombre de la sección',
     'title.renameDish': 'Cambiar el nombre',
     'title.renameGroup': 'Cambiar el nombre del grupo',
@@ -13856,6 +13974,8 @@ const I18N = {
     'help.bug.mailContext': 'Dades tècniques (emplenades per l\'app)',
     'tpv.onlineReadOnlyTitle': 'Comanda feta pel client',
     'tpv.onlineReadOnlyDesc': 'Aquesta comanda va arribar per la web, així que aquí només es consulta: no s\'hi poden afegir plats. Si el client vol alguna cosa més, millor que faci una altra comanda — així el total continua quadrant amb el que ja ha pagat.',
+    'msg.refreshReadFailed': 'No s\'han pogut llegir les dades desades en aquest dispositiu. No s\'ha tocat res: les teves dades continuen on eren. Tanca i torna a obrir l\'app.',
+    'msg.confirmArchiveFileSaved': 'S\'ha desat l\'arxiu?\n\nComprova-ho a les teves baixades ABANS de continuar: en acceptar s\'esborraran de l\'històric les vendes, reserves i tancaments arxivats. Si no el veus, cancel·la i torna-ho a provar.',
     'title.renameSection': 'Canviar el nom de la secció',
     'title.renameDish': 'Canviar el nom',
     'title.renameGroup': 'Canviar el nom del grup',
@@ -16026,6 +16146,8 @@ const I18N = {
     'help.bug.mailContext': 'Technical details (filled in by the app)',
     'tpv.onlineReadOnlyTitle': 'Order placed by the customer',
     'tpv.onlineReadOnlyDesc': 'This order came in through the website, so here it is view-only: no dishes can be added. If the customer wants more, it is better they place another order — that way the total still matches what they already paid.',
+    'msg.refreshReadFailed': 'The data saved on this device could not be read. Nothing was touched: your data is still where it was. Close the app and open it again.',
+    'msg.confirmArchiveFileSaved': 'Has the file been saved?\n\nCheck your downloads BEFORE continuing: on accepting, the archived sales, bookings and cash closures will be deleted from the history. If you cannot see it, cancel and try again.',
     'title.renameSection': 'Rename this section',
     'title.renameDish': 'Rename',
     'title.renameGroup': 'Rename this group',
@@ -25643,7 +25765,7 @@ async function acceptOnlineOrder(orderId, auto){
         l.enviadoAt = ahora;
         l.marchada = l.qty;
         if(dish && !l.bebida) decrementDishStock(dish.id, l.qty);
-        decrementMenuStock(l.menuId, l.qty);
+        decrementMenuStock(order, l, l.qty);
       }
     });
     order.cerrada = false;
@@ -25687,10 +25809,16 @@ function cancelAcceptedOnlineOrder(orderId){
   if(!order) return;
   requestBusinessPinAction(t('title.cancelOrder'), t('msg.confirmCancelOrder'), () => {
     if(typeof sendOrderCancellationEmail === 'function') sendOrderCancellationEmail(order).catch(()=>{});
-    // El stock ya se había descontado al aceptar el pedido (líneas ya
-    // "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
-    // contador de raciones/ingredientes queda corto para siempre.
-    restockForVoidedItems(order.items);
+    /* El stock ya se había descontado al aceptar el pedido (líneas ya
+       "marchadas" arriba) — al cancelarlo hay que devolverlo, si no el
+       contador de raciones queda corto para siempre.
+       ⚠️ SOLO las raciones, NO los ingredientes. Los ingredientes se
+       descuentan al COBRAR (discountStockForOrder), y este botón solo existe
+       mientras el pedido NO está cobrado: devolvía a Mega Lista un consumo que
+       nunca se había restado, así que cancelar un pedido de cuatro
+       hamburguesas SUBÍA el stock de pan, carne y queso por encima de lo que
+       había antes. Es el mismo criterio que ya se aplica en confirmVoidLine. */
+    restockForVoidedItems(order.items, {includeIngredients: false});
     if(typeof syncOrderStatusForPublic === 'function') syncOrderStatusForPublic(order, 'rechazado');
     moveToTrash('order', order);
     logAudit('delete', t('audit.cancelledOnlineOrder').replace('${name}', order.clienteNombre||'?'), 'critical');
@@ -26244,7 +26372,7 @@ function marcharValeCompleto(orderId){
         line.enviadoAt = ahora;
         line.marchada = line.qty;
         decrementDishStock(line.platoId, qtyFired);
-        decrementMenuStock(line.menuId, qtyFired);
+        decrementMenuStock(order, line, qtyFired);
       }
     });
   }
@@ -26271,7 +26399,7 @@ function marcharLine(orderId, idx){
   line.enviadoAt = new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
   saveDB();
   if(typeof flushCloudSync === 'function') flushCloudSync();
@@ -26840,7 +26968,7 @@ function marcharComanda(orderId, tanda, isMenu){
       l.enviadoAt = ahora;
       l.marchada = l.qty;
       if(!l.bebida) decrementDishStock(l.platoId, qtyFired);
-      decrementMenuStock(l.menuId, qtyFired);
+      decrementMenuStock(order, l, qtyFired);
     }
   });
   order.cerrada = false;
@@ -27312,9 +27440,24 @@ function decrementDishStock(platoId, qty){
    suelto. Antes solo se podían limitar raciones de un plato de la Carta, así
    que quien vendía menús no tenía forma de decir cuántos le quedaban y se
    enteraba cuando ya los había vendido de más. */
-function decrementMenuStock(menuId, qty){
-  if(menuId == null || !qty || qty <= 0) return;
-  const m = (DB.menus||[]).find(x => x.id === menuId);
+/* ⚠️ UN MENÚ DESCUENTA UNA RACIÓN, no una por plato.
+
+   Un menú se añade a la comanda como UNA LÍNEA POR GRUPO (entrante, segundo,
+   postre) y todas llevan el mismo `menuId`. Como se descontaba línea a línea,
+   un menú de tres platos gastaba TRES raciones: con 20 puestas, el menú se
+   marcaba agotado a los 7 vendidos, en pleno mediodía y con 13 por vender.
+
+   Se agrupa por `menuInstanceId` —el identificador de ESA ración concreta del
+   menú— y solo descuenta la primera línea de cada instancia. Se usa ese campo
+   y no el precio base porque `reassignMenuBasePrice` lo mueve de línea al
+   borrar, y un menú a precio 0 tampoco tendría portadora. */
+function decrementMenuStock(order, linea, qty){
+  if(!linea || linea.menuId == null || !qty || qty <= 0) return;
+  if(linea.menuInstanceId){
+    const primera = ((order && order.items) || []).find(l => l.menuInstanceId === linea.menuInstanceId);
+    if(primera && primera !== linea) return;   // esta ración ya la descontó su primera línea
+  }
+  const m = (DB.menus||[]).find(x => x.id === linea.menuId);
   if(!m || m.stock == null) return;
   m.stock = Math.max(0, m.stock - qty);
   if(m.stock === 0) m.disponible = false;
@@ -27396,7 +27539,7 @@ function autoSendTakeawayLine(order, line){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
 }
 
@@ -27428,7 +27571,7 @@ function autoSendFirstCourse(order, line, tanda){
   line.enviadoAt = line.enviadoAt || new Date().toISOString();
   line.marchada = line.qty;
   if(!line.bebida) decrementDishStock(line.platoId, qtyFired);
-  decrementMenuStock(line.menuId, qtyFired);
+  decrementMenuStock(order, line, qtyFired);
   order.cerrada = false;
 }
 
@@ -27714,12 +27857,17 @@ function requestCancelSale(saleId){
   if(!sale || sale.status === 'anulada') return;
   requestBusinessPinAction(t('title.cancelSale'), t('msg.confirmCancelSale'), (pin) => reallyCancelSale(saleId, pin));
 }
+/* La marca `menuStockYaDevuelto` es de USAR Y TIRAR dentro de este recorrido:
+   sirve para no devolver la misma ración de menú una vez por cada plato. Se
+   limpia al salir para que una anulación posterior de las mismas líneas no se
+   la encuentre puesta. */
 function restockForVoidedItems(items, opts){
   // includeIngredients=false: solo se restituyen las raciones directas del
   // plato (p.stock), no los ingredientes de su escandallo — para el caso de
   // anular ANTES de cobrar, donde discountStockForOrder todavía no se ha
   // ejecutado y no hay nada que devolver a Mega Lista (ver confirmVoidLine).
   const includeIngredients = !opts || opts.includeIngredients !== false;
+  (items||[]).forEach(l => { delete l.menuStockYaDevuelto; });   // por si quedó de una vuelta anterior
   (items||[]).forEach(line => {
     if(!line.isShipping && line.platoId != null){
       const p = findCartaPlatoById(line.platoId);
@@ -27733,7 +27881,15 @@ function restockForVoidedItems(items, opts){
        dejaba su contador por debajo de lo real: el restaurante se quedaba
        creyendo que había servido menús que nunca salieron, y a media noche
        el menú se marcaba agotado con raciones todavía por vender. */
-    if(!line.isShipping && line.menuId != null){
+    /* ⚠️ Una ración por MENÚ, no una por plato — el espejo exacto del
+       descuento. Un menú son varias líneas (entrante, segundo, postre) con el
+       mismo `menuId`, así que devolver línea a línea inflaba el contador:
+       anular un menú de tres platos devolvía tres raciones. Se agrupa por
+       `menuInstanceId`, igual que al descontar. */
+    if(!line.isShipping && line.menuId != null && !line.menuStockYaDevuelto){
+      if(line.menuInstanceId){
+        (items||[]).forEach(l => { if(l.menuInstanceId === line.menuInstanceId) l.menuStockYaDevuelto = true; });
+      }
       const m = (DB.menus||[]).find(x => x.id === line.menuId);
       if(m && m.stock != null){
         const wasOut = m.stock === 0;
@@ -44325,6 +44481,11 @@ function downloadJSON(obj, filename){
    que es de donde se guarda en Archivos, se manda por correo o va a Drive —
    el gesto que un usuario de iPad ya conoce. Si tampoco estuviera, se abre en
    una pestaña NUEVA para no perder la app, y se le dice qué hacer. */
+/* Devuelve una PROMESA que solo resuelve si el archivo se guardó de verdad.
+   Antes no devolvía nada y no lanzaba nunca: en Apple, cancelar la hoja de
+   compartir se tragaba con un `.catch(()=>{})`. Quien archivaba datos (que
+   BORRA el histórico después) tenía un try/catch que era código muerto: en un
+   iPad, cancelar dejaba al hostelero sin archivo Y sin ventas. */
 function guardarArchivo(blob, filename){
   const esApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS se hace pasar por Mac
@@ -44332,9 +44493,9 @@ function guardarArchivo(blob, filename){
     try{
       const archivo = new File([blob], filename, {type: blob.type});
       if(navigator.canShare({files: [archivo]})){
-        navigator.share({files: [archivo], title: filename})
-          .catch(() => {});   // si cancela la hoja de compartir, no es un error
-        return;
+        // Cancelar NO es un error para una descarga normal, pero sí tiene que
+        // notarse para quien vaya a borrar algo después.
+        return navigator.share({files: [archivo], title: filename});
       }
     }catch(e){ /* sigue por el camino de abajo */ }
   }
@@ -44350,6 +44511,10 @@ function guardarArchivo(blob, filename){
   // En iOS la pestaña nueva todavía está leyendo el blob cuando esto corre:
   // revocarlo al instante deja la descarga a medias.
   setTimeout(() => URL.revokeObjectURL(url), esApple ? 20000 : 0);
+  /* Por este camino el navegador no dice si el archivo llegó a guardarse. Se
+     resuelve, pero quien vaya a BORRAR algo después no debe fiarse de esto:
+     tiene que preguntar (ver archiveOldData). */
+  return Promise.resolve();
 }
 
 function downloadFullBackup(){
@@ -44492,10 +44657,20 @@ async function archiveOldData(){
   const total = sales.length + reservations.length + cashClosures.length;
   if(total === 0){ showToast(t('msg.noDataToArchive')); return; }
   if(!(await confirmModal(t('msg.confirmArchiveDataStrong').replace('${sales}', sales.length).replace('${reservations}', reservations.length).replace('${closures}', cashClosures.length).replace('${date}', before)))) return;
+  /* ⚠️ Aquí se BORRA el histórico, así que la copia tiene que estar guardada
+     de verdad. Dos redes: se espera a que el guardado resuelva (en Apple,
+     cancelar la hoja de compartir ahora sí se nota), y además se PREGUNTA,
+     porque por el camino de la descarga normal el navegador no informa de
+     nada y no hay forma de saberlo. Antes se borraba sin comprobar ninguna de
+     las dos cosas. */
   try{
-    downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
+    await downloadJSON({ before, sales, reservations, cashClosures }, `gastrogoan-archivo-hasta-${before}.json`);
   }catch(e){
-    showToast(t('msg.backupFailedNoDelete'));
+    showToast(t('msg.backupFailedNoDelete'), 6000);
+    return;
+  }
+  if(!(await confirmModal(t('msg.confirmArchiveFileSaved')))){
+    showToast(t('msg.backupFailedNoDelete'), 6000);
     return;
   }
   DB.sales = DB.sales.filter(s => !(s.date && s.date < before));
